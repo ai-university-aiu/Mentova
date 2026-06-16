@@ -1,0 +1,42 @@
+Mentova now reasons in degrees. Rung 15 of 48 is accomplished.
+
+Is 22°C warm? Binary logic says yes or no. Fuzzy logic says: warm with degree 0.7.
+
+That 0.7 is meaningful. It tells you 22°C is definitively in the warm range but not at its centre (25°C). It tells you some coolness remains. It allows the mind to say: high confidence of warmth, moderate residual coolness.
+
+Rung 15 gives Mentova fuzzy membership functions and linguistic modifiers.
+
+Ask Mentova to classify 22°C:
+
+  answer(best(warm, 0.7, high),
+         just(fuzzy_classify(temperature, 22, best(warm, 0.7), modifier(high))))
+
+22°C is warm. Degree: 0.7. Linguistic modifier: high. Not "very high" (0.8+), not "somewhat" (0.4-0.6). High.
+
+Ask for the explicit warm membership:
+
+  answer(degree(warm, 0.7), just(fuzzy_membership(temperature, 22, warm, 0.7)))
+
+The membership function for warm is triangular, centred at 25°C, falling to zero at 15°C and above 35°C. At 22°C, you are 0.7 of the way toward peak warmth.
+
+Ask about speed — 75 km/h:
+
+  answer(best(medium, 0.875, very_high),
+         just(fuzzy_classify(speed, 75, best(medium, 0.875), modifier(very_high))))
+
+75 km/h is medium-speed with degree 0.875 — very high membership in the medium category. Not fast (would need >100 km/h), not slow (<50 km/h). Solidly medium.
+
+The five linguistic modifiers: very_high (≥0.8), high (0.6-0.8), somewhat (0.4-0.6), low (0.2-0.4), very_low (<0.2).
+
+Fuzzy operations: AND is min, OR is max, NOT is 1 minus degree. All named in justifications.
+
+Why does graded truth matter? Because the world is graded. "The patient has a high fever" is not a Boolean. "The car is moving fast" is not a Boolean. A mind that can only say yes or no is forced to draw arbitrary cutoffs. A mind that can say 0.7 and high is closer to the way language actually works.
+
+Fuzzy reasoning is the foundation for qualitative reasoning (Rung 16), which predicts directions of change, and for heuristic reasoning (Rung 29), which works within satisfaction bounds.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

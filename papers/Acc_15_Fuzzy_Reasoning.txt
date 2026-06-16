@@ -1,0 +1,164 @@
+MENTOVA'S FUZZY REASONING
+
+Accomplishment Record Acc_15
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 15 of Mentova's 48-rung reasoning ladder: fuzzy reasoning.
+Mentova assigns graded degrees of truth to propositions using fuzzy membership
+functions over named linguistic variables. A temperature of 22°C is classified
+as "warm" with degree 0.7 (linguistically: high). A speed of 75 km/h is
+classified as "medium" with degree 0.875 (very high). The membership degree is
+returned alongside a linguistic modifier. Pass criterion met: graded membership
+returned.
+
+
+INTRODUCTION
+
+Classical logic assigns every proposition a binary truth value: true or false.
+Fuzzy logic, introduced by Lotfi Zadeh (1965), replaces this with a membership
+degree in [0, 1]. A temperature of 22°C is neither definitely warm nor definitely
+cool; it is warm to a degree of 0.7 and cool to a lesser degree. Fuzzy reasoning
+allows a mind to express graded truth in natural language.
+
+Rung 15 equips Mentova with fuzzy membership functions and linguistic modifiers,
+so that every fuzzy answer is accompanied by both a numeric degree and a
+linguistic label (very_high, high, somewhat, low, very_low).
+
+
+BACKGROUND
+
+Fuzzy logic was introduced by Zadeh (1965) and has been applied extensively in
+control systems (e.g. washing machines, camera autofocus), medical diagnosis, and
+natural language processing. Membership functions typically take trapezoidal or
+triangular shapes over the domain.
+
+Mentova's fuzzy module uses triangular and ramp membership functions for three
+linguistic variables: temperature (cold/cool/warm/hot), speed (slow/medium/fast),
+and size (small/medium/large). Fuzzy AND is computed as min, OR as max, and NOT
+as 1 minus degree, following Zadeh's original definitions.
+
+
+METHOD
+
+A new module, src/mentova/fuzzy.pl, implements:
+
+    mentova_fuzzy(+Query, -Result, -Justification)
+
+The fuzzy_membership/4 predicate implements triangular/ramp membership functions
+for temperature, speed, and size. degree_label/2 converts a numeric degree to a
+linguistic modifier (very_high/high/somewhat/low/very_low).
+
+Query forms:
+
+    membership(Var, Val, Label)   degree of Label for Val on Var
+    classify(Var, Val)            best-matching label with degree and modifier
+    fuzzy_and(D1, D2)             min(D1, D2)
+    fuzzy_or(D1, D2)              max(D1, D2)
+    fuzzy_not(D)                  1.0 − D
+
+Top-level clause:
+
+    mentova_query(fuzzy, FuzzyQuery, answer(Result, Just)) :-
+        once(mentova_fuzzy(FuzzyQuery, Result, Just)).
+
+
+DEMONSTRATION
+
+Query 1 — classify temperature 22°C:
+
+    ?- mentova_query(fuzzy, classify(temperature, 22), R).
+    R = answer(best(warm, 0.7, high),
+               just(fuzzy_classify(temperature, 22, best(warm, 0.7), modifier(high))))
+
+    22°C is warm with degree 0.7. Linguistic modifier: high.
+    ("Mentova is somewhat warm" → corrected to "high" since 0.7 > 0.6)
+
+Query 2 — membership(temperature, 22, warm):
+
+    ?- mentova_query(fuzzy, membership(temperature, 22, warm), R).
+    R = answer(degree(warm, 0.7), just(fuzzy_membership(temperature, 22, warm, 0.7)))
+
+    Direct membership: warm(22°C) = 0.7. Membership function: triangular centred at 25°C.
+
+Query 3 — classify speed 75 km/h:
+
+    ?- mentova_query(fuzzy, classify(speed, 75), R).
+    R = answer(best(medium, 0.875, very_high),
+               just(fuzzy_classify(speed, 75, best(medium, 0.875), modifier(very_high))))
+
+    75 km/h is medium-speed with degree 0.875. Modifier: very_high.
+
+Query 4 — fuzzy NOT of 0.7:
+
+    ?- mentova_query(fuzzy, fuzzy_not(0.7), R).
+    R = answer(0.3, just(fuzzy_not(0.7, complement(0.3))))
+
+    ¬0.7 = 0.3 by Zadeh's complement definition.
+
+
+RESULTS
+
+All four queries return graded membership degrees with linguistic modifiers.
+The best-label classification correctly identifies the highest-membership label.
+
+Pass criterion met: graded membership returned (e.g. "warm" at 0.7, "high").
+
+
+SIGNIFICANCE
+
+Rung 15 gives Mentova the ability to reason about vague natural-language concepts.
+Many real-world assertions are inherently graded: "it is somewhat warm," "the car
+is moving fast," "this is a large animal." Fuzzy reasoning represents and reasons
+about these grades without forcing a binary decision.
+
+This is a prerequisite for Rung 16 (qualitative reasoning), which reasons about
+directions of change rather than exact values, and for Rung 29 (heuristic
+reasoning), which operates within satisfaction bounds.
+
+
+HONEST LIMITATIONS
+
+The membership functions are hand-coded triangular and ramp shapes. Real
+applications would learn or tune membership functions from data.
+
+The defuzzification step is a simple best-label selection (argmax). A true
+centroid defuzzification would compute a weighted average over all labels.
+
+Only three linguistic variables are implemented. The framework is general and
+extensible.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(fuzzy, classify(temperature,22), R1), write(R1), nl, \
+            mentova_query(fuzzy, membership(temperature,22,warm), R2), write(R2), nl, \
+            mentova_query(fuzzy, classify(speed,75), R3), write(R3), nl, \
+            mentova_query(fuzzy, fuzzy_not(0.7), R4), write(R4), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Zadeh, L. A. (1965). Fuzzy sets. Information and Control, 8(3), 338-353.
+
+Mamdani, E. H. (1977). Application of fuzzy logic to approximate reasoning using
+linguistic synthesis. IEEE Transactions on Computers, 26(12), 1182-1191.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

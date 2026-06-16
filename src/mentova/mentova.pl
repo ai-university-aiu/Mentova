@@ -29,6 +29,7 @@
 :- use_module(logical).
 :- use_module(formal).
 :- use_module(mathematical).
+:- use_module(fuzzy).
 
 :- use_module(library(lists), [member/2]).
 
@@ -80,6 +81,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 15 — fuzzy: graded membership / degree of truth
+mentova_query(fuzzy, FuzzyQuery, answer(Result, Just)) :-
+    once(mentova_fuzzy(FuzzyQuery, Result, Just)).
 
 % Rung 14 — mathematical: compute quantitative answer
 mentova_query(mathematical, MathQuery, answer(Result, Just)) :-
