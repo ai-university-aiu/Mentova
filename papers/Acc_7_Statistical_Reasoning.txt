@@ -1,0 +1,168 @@
+MENTOVA'S STATISTICAL REASONING
+
+Accomplishment Record Acc_7
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 7 of Mentova's 48-rung reasoning ladder: statistical reasoning.
+Mentova analyses the observation table in its Small-World knowledge base to
+find patterns: which property dominates, what proportion a property holds,
+and the direction of a trend between two properties. Given the penguin
+observation table (swims=95, flies=0), Mentova correctly identifies that
+penguins swim far more than they fly, returning trend(more(swims)). Given the
+canary table (yellow=47, green=3), it correctly identifies yellow as dominant
+with 94% of observations. The reported trend matches the data. Pass criterion met.
+
+
+INTRODUCTION
+
+Statistical reasoning is the ability to find regularities in data and report
+them in a form that supports further inference. A mind that can read individual
+facts but cannot summarise patterns across a collection of observations is limited
+in its ability to generalise or to notice anomalies.
+
+Rung 7 equips Mentova with a statistical analysis layer over the observation
+table stored in Layer 4 of the Small-World knowledge base. Every analysis is
+returned with a justification that names the counts and totals used.
+
+
+BACKGROUND
+
+The observation table in small_world.pl records facts of the form:
+    observation(Subject, Property, Count)
+
+These represent how many times a given property was observed for a given subject.
+For example:
+    observation(canary,  yellow, 47).
+    observation(canary,  green,   3).
+    observation(penguin, swims,  95).
+    observation(penguin, flies,   0).
+
+Statistical reasoning over such tables is one of the oldest forms of quantitative
+inference, predating modern machine learning by centuries.
+
+
+METHOD
+
+A new module, src/mentova/statistical.pl, implements:
+
+    mentova_stat(+Query, -Result, -Justification)
+
+Supported query forms:
+
+    dominant(Subject)            — most frequent property
+    most_common(Subject)         — dominant property with percentage
+    proportion(Subject, Prop)    — fraction of observations with property
+    trend(Subject, PropA, PropB) — which of two properties is more prevalent
+    compare(S1, S2, Property)    — which subject has higher rate for property
+
+All queries aggregate over observation/3 facts using SWI-Prolog's built-in
+aggregate_all/3 for total counts and msort/2 for finding maxima.
+
+The top-level clause added to mentova_query/3:
+
+    mentova_query(statistical, StatQuery, answer(Result, Just)) :-
+        mentova_stat(StatQuery, Result, Just).
+
+
+DEMONSTRATION
+
+Query 1 — dominant property of canary:
+
+    ?- mentova_query(statistical, dominant(canary), R).
+    R = answer(dominant(canary, yellow, 47),
+               just(dominant(canary, yellow, 47, out_of(50))))
+
+    47 of 50 canary observations are yellow. Yellow is dominant.
+
+Query 2 — most common property of rose with percentage:
+
+    ?- mentova_query(statistical, most_common(rose), R).
+    R = answer(most_common(rose, red, 82),
+               just(most_common(rose, red, 82, total(100), pct(82))))
+
+    82% of rose observations are red.
+
+Query 3 — trend (penguin, swims vs flies):
+
+    ?- mentova_query(statistical, trend(penguin, swims, flies), R).
+    R = answer(trend(penguin, swims, flies, more(swims)),
+               just(trend(penguin, swims, 95, flies, 0, more(swims))))
+
+    Penguins swim 95 times, fly 0 times. Trend: more(swims).
+    This matches the data: penguins are aquatic, not aerial.
+
+Query 4 — proportion (eagle hunts):
+
+    ?- mentova_query(statistical, proportion(eagle, hunts), R).
+    R = answer(0.71, just(proportion(eagle, hunts, 71, 100, 0.71)))
+
+    71% of eagle observations show hunting.
+
+
+RESULTS
+
+All four test queries return results that match the data exactly. The trend query
+correctly identifies that penguins swim far more than they fly (95 vs 0). The
+dominant and most_common queries correctly identify the majority property in each
+subject's observation table.
+
+Pass criterion met: reported trend matches the data.
+
+
+SIGNIFICANCE
+
+Rung 7 gives Mentova the ability to move from individual facts to aggregate
+patterns. A knowledge base of observations becomes a source of statistical
+regularities, each one justified by the raw counts.
+
+This is the foundation for Rung 26 (scientific reasoning), where Mentova will
+form a hypothesis, test it against the observation table, and score it. Statistical
+pattern-finding is the data analysis step before the hypothesis evaluation step.
+
+
+HONEST LIMITATIONS
+
+The observation table is toy-sized: each subject has at most two properties,
+each with a small count. Real statistical analysis would require larger tables
+and more rigorous significance testing (e.g., chi-squared tests for independence).
+
+The trend query compares two named properties; it does not automatically discover
+which properties exist for a subject or rank all of them.
+
+The independence assumption is implicit: observations are treated as independent
+draws, without accounting for sequential or grouped data.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(statistical, dominant(canary), R1), write(R1), nl, \
+            mentova_query(statistical, most_common(rose), R2), write(R2), nl, \
+            mentova_query(statistical, trend(penguin,swims,flies), R3), write(R3), nl, \
+            mentova_query(statistical, proportion(eagle,hunts), R4), write(R4), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Fisher, R. A. (1925). Statistical Methods for Research Workers. Oliver and Boyd.
+
+Agresti, A. (2002). Categorical Data Analysis. Wiley-Interscience.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

@@ -21,6 +21,7 @@
 :- use_module(probabilistic).
 :- use_module(bayesian).
 :- use_module(causal).
+:- use_module(statistical).
 
 :- use_module(library(lists), [member/2]).
 
@@ -72,6 +73,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 7 — statistical: find pattern in observation table
+mentova_query(statistical, StatQuery, answer(Result, Just)) :-
+    mentova_stat(StatQuery, Result, Just).
 
 % Rung 6 — causal: predict effect of intervention vs observation
 mentova_query(causal, CausalQuery, answer(Result, Just)) :-

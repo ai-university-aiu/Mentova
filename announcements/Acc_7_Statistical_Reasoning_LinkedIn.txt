@@ -1,0 +1,52 @@
+Mentova now reads patterns from data. Rung 7 of 48 is accomplished.
+
+Individual facts are not enough. A mind that holds "canary observation: yellow, count 47; canary observation: green, count 3" has two facts. A mind that can conclude "canary is overwhelmingly yellow (94%)" has extracted a pattern. That extraction is statistical reasoning.
+
+Rung 7 gives Mentova statistical analysis over its observation table.
+
+Ask which property dominates in canary observations:
+
+  answer(dominant(canary, yellow, 47),
+         just(dominant(canary, yellow, 47, out_of(50))))
+
+47 out of 50 canary observations are yellow. Yellow is the dominant property. Justified: the raw count is shown alongside the total.
+
+Ask about roses:
+
+  answer(most_common(rose, red, 82),
+         just(most_common(rose, red, 82, total(100), pct(82))))
+
+82% of rose observations are red. The percentage is computed and returned alongside the justification.
+
+Ask about penguins — do they swim or fly?
+
+  answer(trend(penguin, swims, flies, more(swims)),
+         just(trend(penguin, swims, 95, flies, 0, more(swims))))
+
+Swims: 95 observations. Flies: 0 observations. Trend: more(swims). This is the pass criterion for Rung 7 — the reported trend must match the data. It does, exactly.
+
+This connects directly to what was already known from Rung 17 (defeasible reasoning): penguins are the exception to "birds fly." The statistical table now confirms the same truth from a different direction — empirically, not just by rule.
+
+Ask what fraction of eagle observations show hunting:
+
+  answer(0.71, just(proportion(eagle, hunts, 71, 100, 0.71)))
+
+71% of eagle observations involve hunting. The count, total, and proportion are all named in the justification.
+
+Four query types now available:
+  — dominant(Subject): find the most frequently observed property
+  — most_common(Subject): dominant property with percentage
+  — proportion(Subject, Property): fraction showing a given property
+  — trend(Subject, PropA, PropB): which of two properties dominates
+  — compare(S1, S2, Property): which subject shows higher rate
+
+Every result names the raw counts so the reasoning can be audited against the data.
+
+This rung is the statistical foundation for Rung 26, where Mentova will form and score scientific hypotheses. You cannot score a hypothesis without being able to read the data first.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
