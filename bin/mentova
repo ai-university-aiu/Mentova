@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Mentova Console Launcher (Acc_68)
+# Starts the Mentova REPL by loading the thin wrapper with SWI-Prolog.
+# Usage: bin/mentova    (from the Mentova repository root)
+#        ./mentova      (from the bin/ directory)
+
+# Resolve the directory this script lives in.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Launch SWI-Prolog with the REPL wrapper, which pre-loads the platform.
+exec swipl -l "$SCRIPT_DIR/mentova_repl.pl"
