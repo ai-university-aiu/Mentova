@@ -1,0 +1,79 @@
+MENTOVA PASSES THREE CLASSIC TESTS OF HUMAN COGNITION
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+Three cognitive-science benchmarks. Three glass-box passes. Zero black boxes.
+
+THE SALLY-ANNE TEST
+
+Sally puts a marble in a basket. She leaves. Anne moves the marble to a box. Sally comes back.
+
+Where will Sally look for her marble?
+
+Most humans over four years old answer correctly: the basket. Because that is where SALLY believes it is.
+
+This is theory of mind: reasoning about another agent's belief state, not just about physical reality.
+
+Mentova's answer:
+
+answer(false_belief(sally, marble_in_basket, their_belief(true), others_differ),
+       just(epistemic(false_belief_test(sally, marble_in_basket),
+                      agent_believes(true),
+                      note(Agent holds belief others contradict))))
+
+Sally believes the marble is in the basket (true). Anne contradicts her (false). False belief detected. Sally searches the basket.
+
+AC-PR53-001: PASS.
+
+THE WASON SELECTION TASK
+
+Rule: If a card has a vowel on one side, it has an even number on the other.
+Cards: A (vowel), K (consonant), 4 (even), 7 (odd).
+Which cards must you turn to verify the rule?
+
+Fewer than 10 percent of untrained adults answer correctly. Most pick A and 4.
+
+The correct answer is A and 7.
+
+Why not 4? Because the rule is vowel-implies-even, not even-implies-vowel. A card with an even back tells you nothing about whether the rule holds. That's not modus tollens — it's confirmation bias.
+
+Why 7? By modus tollens: if a card has an odd back, it must not have a vowel front. If it does have a vowel front, the rule is falsified.
+
+Mentova's selection: [card_a, card_seven].
+
+Every card's decision is printed with its logical reason. The common error is named explicitly. Reasoning is glass-box from the first card to the last.
+
+AC-PR53-002: PASS.
+
+THE WISCONSIN CARD SORTING TASK
+
+A hidden rule (colour, shape, or number) governs how cards should be sorted. The rule changes without warning. The task: detect the change and adapt.
+
+Phase 1 (hidden rule: colour): Mentova sorts by colour.
+Phase 2 (rule changes to shape — no announcement): Mentova gets one incorrect response, identifies the new dimension from the next match, adapts.
+
+Rule change detected in 1 error. Threshold: 3 errors.
+
+The transition point is named. The new rule dimension is identified. Perseveration is minimal.
+
+AC-PR53-003: PASS.
+
+WHY THIS MATTERS
+
+These three tests are chosen because human reasoners regularly fail them.
+
+The Sally-Anne test is failed by children under four and by many AI systems that rely on statistical text patterns — which break when the surface form changes.
+
+The Wason task is failed by most untrained adults, due to confirmation bias.
+
+The Wisconsin task shows perseveration failure after a rule change — a classic frontal-lobe marker in neuropsychology.
+
+Mentova reasons correctly on all three. Glass-box. Every step readable. No pretrained statistical regularities. Reasoning from first principles.
+
+This is what transparent AI looks like.
+
+Available now:
+https://github.com/ai-university-aiu/Mentova
+
+#PrologAI #Mentova #CognitiveScience #TheoryOfMind #SallyAnne #WasonTask #Wisconsin #ExplainableAI #AIU #TransparentAI
