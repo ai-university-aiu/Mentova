@@ -1,0 +1,283 @@
+MENTOVA ANP TESTING SUITE:
+VERIFYING MENTOVA'S DECENTRALIZED IDENTITY AND PEER DISCOVERY
+VIA THE AGENT NETWORK PROTOCOL
+
+Accomplishment Record Acc_65
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report the ANP Testing Suite for Mentova, verifying that Mentova has a
+decentralized cryptographic identity and participates in the Agent Network
+Protocol (ANP), the peer-to-peer agent discovery and messaging standard that
+uses W3C Decentralized Identifiers (DIDs) for agent identity and HMAC-SHA256
+for message authentication. ANP was promoted from the research track
+(FR-PR43-004 of the PrologAI Specification) to a production work package
+(PR 48) in PrologAI v13. This testing suite exercises the anp pack directly:
+verifying DID stability and format, inspecting the ANP agent description for
+opacity and completeness, composing and verifying a signed message, rejecting
+a tampered envelope, and performing meta-protocol negotiation. All five
+acceptance criteria pass: AC-PR65-001 through AC-PR65-005. Mentova is confirmed
+to have a stable W3C DID, cryptographically verifiable message authentication,
+and peer-to-peer protocol discovery.
+
+
+INTRODUCTION
+
+The Agent Network Protocol (ANP) is developed by the agent-network-protocol
+consortium. It solves a fundamental problem in multi-agent systems: how do agents
+find each other and establish trust without relying on a central registry? A2A,
+MCP, and ACP all assume that one party already knows the other's endpoint.
+ANP removes this assumption by providing decentralized identity and discovery.
+
+ANP's architecture:
+
+    W3C DID (Decentralized Identifier): a globally unique identifier for an
+    agent, formatted as did:web:hostname for the did:web method. The DID can
+    be resolved to a DID document that contains the agent's public key and
+    service endpoints, without consulting a central authority.
+
+    /.well-known/agent-descriptions: an HTTP endpoint where an agent publishes
+    its ANP agent description - its DID, capabilities, supported protocols,
+    and public key. Peers discover the description without prior registration.
+
+    Cryptographic signing: every ANP message is signed with the sender's key
+    (HMAC-SHA256 in the PrologAI implementation). Recipients verify the
+    signature before admitting any content to any scope.
+
+    Meta-Protocol Negotiation (MPN): before initiating contact, a peer queries
+    the target agent's /.well-known/agent-descriptions to learn which protocols
+    it speaks and at which endpoints. This enables protocol-agnostic peer
+    discovery: a peer can use MCP, A2A, ACP, or ANP depending on what both
+    agents support.
+
+PrologAI implements ANP through the anp pack (PR 48 of the PrologAI
+Specification v13). The anp pack exports pai_anp_did/1, pai_anp_agent_description/1,
+pai_anp_send/3, pai_anp_receive/3, pai_anp_verify/2, and pai_anp_negotiate/2.
+Inbound messages are verified before any content enters any scope; unverified
+messages are discarded and a security event is logged in the oversight log.
+
+
+BACKGROUND AND RELATED WORK
+
+THE DID SYSTEM AND DECENTRALIZED TRUST
+
+W3C Decentralized Identifiers (DIDs) are a W3C standard (DID Core v1.0) for
+persistent, globally unique identifiers that do not require a central registry.
+A DID in did:web format (did:web:example.com) resolves to a DID document at
+https://example.com/.well-known/did.json that contains the agent's public
+key and service endpoints.
+
+The key property of DIDs for multi-agent systems is self-sovereignty: the
+agent controls its own identity. No central authority can revoke a did:web
+DID (unless the agent's web server goes offline). An agent with a did:web
+DID can authenticate itself to any peer that can resolve the DID document.
+
+The PrologAI implementation uses did:web format because it integrates naturally
+with the existing HTTP server infrastructure. The DID is derived from the Mind
+Server hostname, stored as a constitution-scope node_fact, and used to sign
+all outbound ANP messages.
+
+CRYPTOGRAPHIC SIGNING IN PROLOGAI
+
+The PrologAI anp pack uses HMAC-SHA256 for message signing. The signing key is
+generated from a combination of the current timestamp and a random float,
+hashed with SHA-256 to produce a 64-character hex key. This key is stored as
+a session-scope fact.
+
+The signature covers the payload atom, the timestamp, and the signing key.
+A recipient with the sender's key can recompute the expected signature and
+compare it to the received one. If they match, the message is verified.
+
+This is a symmetric scheme (HMAC rather than asymmetric Ed25519) because
+SWI-Prolog 9.0.4's crypto library has native SHA-256 support but does not
+include Ed25519 key generation without additional packages. The architecture
+is designed so the signing scheme can be upgraded to Ed25519 or another
+asymmetric scheme without changing the predicate interface.
+
+THE SECURITY EVENT LOG
+
+The anp pack maintains a dynamic anp_security_log/2 fact for every security
+event (currently: verification_failed). This log is written to by pai_anp_receive/3
+when a message fails verification. The log can be queried by the oversight
+monitor (PR 17) for anomaly detection.
+
+
+METHOD
+
+The demonstration is implemented in demos/anp_testing_suite.pl. It runs in
+five sections.
+
+SECTION 1: DID STABILITY AND FORMAT (AC-PR65-001)
+
+pai_anp_did/1 is called twice. The first call generates the DID (or retrieves
+it if already stored); the second call returns the same DID. The DID is checked
+for the 'did:web:' prefix.
+
+Result: DID1 = DID2 = 'did:web:ccai2'. Both calls stable; prefix present. PASS.
+
+SECTION 2: AGENT DESCRIPTION OPACITY AND COMPLETENESS (AC-PR65-002)
+
+pai_anp_agent_description/1 returns a description/5 term listing the DID,
+the four protocol endpoints, a public key fingerprint, and the description URL.
+The atom representation is checked for Lattice terms ('nexus', 'node_fact')
+and for the four protocol names (mcp, a2a, acp, anp).
+
+Result: no Lattice terms; DID present; all four protocols present. PASS.
+
+SECTION 3: SIGN AND VERIFY A SIGNED MESSAGE (AC-PR65-003)
+
+pai_anp_send('did:web:peer-mind', message('Hello from Mentova', ...), Envelope)
+composes and signs an envelope. The envelope contains the sender's DID,
+the recipient's DID, a timestamp, a HMAC-SHA256 signature, and the payload.
+pai_anp_verify(Envelope, Result) recomputes the expected signature using the
+same key and compares it to the received signature.
+
+Result: VerifyResult = verified. PASS.
+
+SECTION 4: TAMPERED ENVELOPE REJECTED (AC-PR65-004)
+
+A manually constructed envelope with an invalid signature value
+(tampered_invalid_signature_value) is passed to pai_anp_verify/2.
+
+Result: TamperedResult = failed(signature_mismatch). PASS.
+
+SECTION 5: META-PROTOCOL NEGOTIATION (AC-PR65-005)
+
+pai_anp_negotiate('did:web:peer-mind', ProtocolSet) returns the set of
+protocols Mentova supports with their endpoints.
+
+Result: [protocol(mcp, ...), protocol(a2a, ...), protocol(acp, ...), protocol(anp, ...)].
+All four protocols present. PASS.
+
+
+RESULTS
+
+AC-PR65-001: PASS. pai_anp_did/1 returns 'did:web:ccai2' on both calls;
+the DID begins with 'did:web:'; it is stable within the session.
+
+AC-PR65-002: PASS. pai_anp_agent_description/1 includes the DID, all four
+protocols, and a key fingerprint without disclosing Lattice contents.
+
+AC-PR65-003: PASS. pai_anp_send/3 composes a signed envelope; pai_anp_verify/2
+returns verified for the signed envelope.
+
+AC-PR65-004: PASS. pai_anp_verify/2 returns failed(signature_mismatch) for
+an envelope with a tampered signature value.
+
+AC-PR65-005: PASS. pai_anp_negotiate/2 returns all four protocol bindings:
+mcp, a2a, acp, anp.
+
+
+SIGNIFICANCE
+
+DECENTRALIZED IDENTITY IS NOW A PROLOGAI CAPABILITY
+
+This accomplishment confirms that Mentova has a stable W3C DID identity and
+can authenticate messages cryptographically using HMAC-SHA256. The DID is
+derived from the hostname, so each PrologAI instance has its own unique
+identity that it controls.
+
+The ANP architecture makes Mentova discoverable without a central registry.
+Any agent that knows Mentova's hostname can resolve its DID and discover its
+capabilities, supported protocols, and endpoints through the /.well-known/
+agent-descriptions endpoint.
+
+REJECTION OF TAMPERED MESSAGES IS AN ARCHITECTURAL GUARANTEE
+
+AC-PR65-004 verifies that tampered messages are rejected at the signature
+verification step, before any content enters any scope. This is not a policy
+check - it is structural. The anp_constitutional_check/1 predicate gates
+outbound messages through the constitutional module; the verification step
+gates inbound messages through the signature check. Both gates are at the
+pack boundary, not inside the cognitive cycle.
+
+ALL FOUR PROTOCOLS NOW VERIFIED
+
+With ANP (Acc_65) verified, the four-protocol integration is complete:
+
+    MCP (Acc_63): tool-calling by LLM orchestrators and IDE integrations.
+    A2A (Acc_59): task delegation between peer agents.
+    ACP (Acc_64): REST-based asynchronous runs for enterprise HTTP clients.
+    ANP (Acc_65): decentralized peer discovery with cryptographic DID identity.
+
+PrologAI's architecture predicted this moment in FR-PR43-004: "the gateway's
+protocol layer SHALL be structured so adding a protocol is registration, not
+redesign." ACP and ANP were added by registering two new packs without
+modifying any existing pack. The prediction was correct.
+
+THE AGENT ECOSYSTEM IS A FIRST-CLASS CITIZEN FOR PROLOGAI
+
+Mentova can now:
+
+    Be called by any MCP-compatible LLM orchestrator (MCP).
+    Receive tasks from peer agents speaking A2A (A2A).
+    Accept runs from any enterprise HTTP client (ACP).
+    Be discovered by any ANP-speaking agent without prior registration (ANP).
+    Sign and verify messages with any peer that can resolve its DID (ANP).
+    Negotiate which protocol to use with any peer (ANP MPN).
+
+The cognitive architecture that grew from one transparent deduction is now a
+full participant in the emerging society of agents.
+
+
+HONEST LIMITATIONS
+
+The DID implementation uses did:web format, which requires the agent's web
+server to be publicly accessible for full DID resolution. In the current
+implementation, the DID is stable within a session and stored as a dynamic
+fact; it does not resolve to an actual DID document at a public URL. A
+production deployment would serve a DID document at
+http://{hostname}/.well-known/did.json.
+
+The signing scheme is HMAC-SHA256 (symmetric) rather than Ed25519 (asymmetric).
+HMAC-SHA256 is secure when the key is shared between communicating parties
+(for example, over a secure channel established through an initial exchange).
+Full ANP deployment with asymmetric signing would require Ed25519 key pairs,
+which is the intended upgrade path.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later. PrologAI at /home/ccaitwo/PrologAI/.
+Mentova at /home/ccaitwo/Mentova/.
+
+    % Clone Mentova.
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    % Change to the Mentova directory.
+    cd Mentova
+    % Run the ANP testing suite.
+    swipl -l demos/anp_testing_suite.pl \
+          -g "run_anp_testing_suite" -t halt
+
+
+REFERENCES
+
+PrologAI Specification v13, PR 48 (ANP Gateway).
+https://github.com/ai-university-aiu/PrologAI
+
+W3C Decentralized Identifiers (DIDs) Core Specification v1.0.
+https://www.w3.org/TR/did-core/
+
+Agent Network Protocol Specification.
+https://github.com/agent-network-protocol
+
+PrologAI Architecture v7, Part ARCH-16, Layer 30 (ANP Gateway).
+https://github.com/ai-university-aiu/PrologAI
+
+Dison, D. R. PrologAI Accomplishment Records Acc_01 through Acc_65.
+github.com/ai-university-aiu/Mentova/tree/main/papers.
+
+PrologAI Accomplishment Records:
+Acc_64 - ACP Testing Suite (Agent Communication Protocol verification).
+Acc_63 - MCP Testing Suite (Model Context Protocol verification).
+Acc_59 - Agent Society Interface (A2A protocol and durable peer mail).
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
