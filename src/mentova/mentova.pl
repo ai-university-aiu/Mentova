@@ -129,6 +129,8 @@
 :- use_module(games/baba).
 % Load the Pokemon stub driver so the Pokemon emulator interface is registered.
 :- use_module(games/pokemon).
+% Load the global workspace integration — PR 18 cycle and PR 32 attention economy.
+:- use_module(global_workspace).
 
 % Import [member/2] from the built-in 'lists' library.
 :- use_module(library(lists), [member/2]).
@@ -159,6 +161,8 @@ mentova_boot :-
            [NPrinciples, NOverseers]),
     % Write formatted output to the current output stream.
     format("Knowledge: Small-World Commonsense loaded~n"),
+    % Activate the Global Workspace cycle — open the APEX_MIND nexus and subscribe the broadcast logger.
+    catch(workspace_boot, _, true),
     % Write formatted output to the current output stream.
     format("~nMentova is ready. Born at Rung 1 — transparent deduction.~n~n").
 
@@ -222,6 +226,19 @@ mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent,
 mentova_query(track_a, TAQuery, answer(Result, Just)) :-
     % Delegate to the Track A module which handles GO, DO, and cross-scope queries.
     once(mentova_track_a(TAQuery, answer(Result, Just), _)).
+
+% Global workspace — broadcast the highest-salience coalition and return the report
+% Define a clause for 'mentova_query' handling workspace queries.
+mentova_query(workspace, run_cycle(N), answer(Report, Just)) :-
+    % Run N workspace cycles, broadcasting the winner of each.
+    workspace_run_cycle(N),
+    % Build the glass-box workspace report.
+    workspace_report(Report),
+    % Justify: one broadcast per cycle, learning attached, habituation active.
+    Just = just(workspace_cycle, cycles(N),
+                broadcast_channel('broadcast://APEX_MIND/cycle'),
+                salience_formula(novelty_0_4 + goal_relevance_0_3 + affect_0_2 - habituation),
+                learning_attached(sona_absorb_each_broadcast)).
 
 % Game harness — perceive-reason-act over enrolled game bodies
 % Define a clause for 'mentova_query' handling game reasoning queries.
