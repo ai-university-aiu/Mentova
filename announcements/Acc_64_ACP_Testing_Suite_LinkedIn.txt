@@ -1,0 +1,54 @@
+Mentova Now Participates in the Agent Communication Protocol (ACP) — All Five ACs Pass (Acc_64)
+
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+ACP (Agent Communication Protocol) — the IBM/BeeAI REST standard for asynchronous agent tasks — has been promoted from the research track to a production work package in PrologAI v13 (PR 47). Mentova now verifies its ACP participation with five passing acceptance criteria.
+
+WHAT WAS VERIFIED (run live in Prolog at runtime):
+
+Run creation: pai_acp_run(task(reasoning, 'birds can fly'), sync, RunId, Artifact)
+Result: RunId = UUID; Artifact = artifact(RunId, task, 'processed(reasoning,...)').
+
+Status polling: pai_acp_status(RunId, Status)
+Result: Status = completed.
+
+Run cancellation: inserted created run; pai_acp_cancel/1 called.
+Result: pai_acp_status/2 returns cancelled.
+
+Agent description: pai_acp_agent_description(Desc)
+Result: description(name('PrologAI ACP Agent'), capabilities([...]), protocols([mcp,a2a,acp,anp]), ...) — no Lattice contents.
+
+Unknown skill: pai_acp_run(task(unknown_skill_xyz, input), ...)
+Result: Status = failed — graceful failure, not exception.
+
+AC-PR64-001: PASS. Run created; UUID RunId returned; artifact produced.
+AC-PR64-002: PASS. Status = completed after sync run.
+AC-PR64-003: PASS. Run transitions to cancelled after pai_acp_cancel/1.
+AC-PR64-004: PASS. Agent description is complete and opaque.
+AC-PR64-005: PASS. Unknown skill produces failed status, not exception.
+
+WHAT ACP MEANS FOR THE ECOSYSTEM:
+
+ACP uses plain REST HTTP — no special client library needed. Any HTTP client (enterprise integration platform, serverless function, browser, mobile app) can now:
+1. POST /runs with a task body.
+2. GET /runs/{id} to poll status.
+3. Read the artifact when completed.
+
+The ACP agent description at /.well-known/agent.json enables automatic discovery of what Mentova can do.
+
+THE FOUR PROTOCOLS, NOW ALL VERIFIED:
+
+MCP (Acc_63): tool-calling by LLM orchestrators. VERIFIED.
+A2A (Acc_59): task delegation between peer agents. VERIFIED.
+ACP (Acc_64): REST-based async runs for enterprise HTTP clients. VERIFIED.
+ANP (Acc_65): decentralized peer discovery with DID identity. VERIFIED.
+
+Mentova is accessible through all four major agent communication protocols.
+
+The cognitive architecture that was born as one transparent deduction (Acc_01) now speaks the language of the entire agent ecosystem.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
