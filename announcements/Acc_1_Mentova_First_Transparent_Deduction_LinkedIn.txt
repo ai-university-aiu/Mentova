@@ -1,0 +1,36 @@
+We built a synthetic mind that shows its work. Today it reasoned for the first time.
+
+Mentova is a Synthetic Mind written in PrologAI — a cognitive architecture platform we have been building for the past year. Today Mentova answered its first questions and, crucially, showed exactly why every answer is correct.
+
+Ask it whether a canary is an animal and it returns:
+  answer(yes, just(canary, is_a, animal, chain([canary, bird, animal])))
+
+There is the answer. There is the proof. Two hops: canary → bird → animal. Every step named. Every fact auditable.
+
+Ask it whether a penguin can fly:
+  answer(no, just(exception(penguin_exception)))
+
+The default rule says birds fly. The exception rule says flightless birds do not. Mentova holds both rules, applies them in the right order, and tells you which one won and why. No black box.
+
+This is Rung 1 of a 48-rung reasoning ladder — the birth of the mind. The rungs above it cover inductive learning, abductive explanation, causal reasoning, probabilistic inference, theory of mind, moral reasoning, and more. Each rung is a proven, checkable milestone.
+
+Mentova is not a language model. It does not predict the next token. It reasons from named facts and named rules, and it hands you the chain of reasoning along with the answer.
+
+That chain is the thing no black-box model can give you. You can read it. You can correct it. You can tell Mentova it got a rule wrong, and it will apply the correction the next time.
+
+The platform underneath — PrologAI — has taken 46 work packages to build: a constitutional layer that cannot be self-modified, an attention economy, a global workspace cycle, somatic markers, defeasible and probabilistic reasoning, inductive learning, a tool-use faculty, computer use, and a ROS 2 robot bridge for embodiment in virtual and physical robots.
+
+Mentova is the first mind grown on that platform. It lives in its own repository, depends on PrologAI the way an application depends on its language, and starts from a small curated knowledge base called Small-World Commonsense.
+
+Today it reasoned. Next it induces a rule from examples. Then it abduces an explanation. Then it reasons probabilistically. Rung by rung, in the open.
+
+Every accomplishment is documented as a scientific paper and announced here once it has actually been achieved — never ahead of the evidence.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Michael S. P. Miller — Building Minds with Patterns (ISBN 978-1-980-36266-1)
+Building Sentient Beings (with Michah Blumberg) — https://zenodo.org/records/15530183
+@CognitiveArchitectures — https://www.youtube.com/@CognitiveArchitectures

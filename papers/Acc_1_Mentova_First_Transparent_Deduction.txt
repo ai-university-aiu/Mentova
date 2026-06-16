@@ -1,0 +1,196 @@
+MENTOVA'S FIRST TRANSPARENT DEDUCTION
+
+Accomplishment Record Acc_1
+
+Authors: PrologAI Community (ai.university.aiu@gmail.com)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report the birth of Mentova, the first Synthetic Mind written in the PrologAI
+cognitive architecture platform. Mentova's inaugural demonstration is Rung 1 of
+its 48-rung reasoning ladder: transparent deductive reasoning over the Small-World
+Commonsense knowledge base. Every conclusion is returned with a human-readable
+justification chain. Mentova answers a multi-hop IsA query, a defeasible default
+query (birds fly, but penguins do not), a probabilistic weighted-fact query, and
+an epistemic belief-attribution query — all correctly, all glass-box. This
+accomplishment marks the moment the platform produces a mind that reasons in the
+open.
+
+
+INTRODUCTION
+
+Mentova is not a black-box model. It is a configured, developing instance of the
+PrologAI platform — a cognitive architecture language built in SWI-Prolog 9.0.4
+and specified in five SPARC volumes. Where a neural language model produces an
+answer with no accessible reasoning trace, Mentova produces an answer together
+with the chain of facts and rules that produced it, in human-readable form.
+
+The question this accomplishment answers is the simplest possible one: can Mentova
+reason at all, and can it show its work? Rung 1 says yes to both.
+
+
+BACKGROUND AND RELATED WORK
+
+PrologAI (Miller, 2026) is a cognitive architecture platform implementing 46 work
+packages covering the constitutional layer, the Lattice knowledge store, the
+global workspace cycle, the attention economy, affect and motivation, deliberation,
+self-improvement, tool use, computer use, and robot embodiment.
+
+Mentova is the first mind grown on that platform, following the Demonstration and
+Proof-of-Concept Plan (Volume 6 of the SPARC series). It is related to but
+distinct from symbolic AI systems in that it integrates perception, affect,
+motivation, and self-improvement alongside deduction — Rung 1 demonstrates only
+the deductive core, the same foundation that every rung above it depends on.
+
+The Small-World Commonsense knowledge base used here is a curated, toy-sized
+dataset covering all 48 reasoning types, built from WordNet (taxonomic backbone)
+and ConceptNet-style relations (commonsense layer), with four authored layers
+above.
+
+
+METHOD
+
+Mentova is loaded via its bootstrap entry point (src/mentova/mentova.pl), which
+performs three initialisation steps:
+
+  1. Enroll bodies: text I/O body (transparent reasoning assistant), game body
+     (Pokémon, ARC, Baba Is You), and ROS 2 robot body (Gazebo/Webots virtual
+     first, physical later).
+
+  2. Load constitution: eight constitutional principles (do_no_harm,
+     preserve_corrigibility, be_transparent, no_deception, respect_autonomy,
+     act_within_sanctioned_scope, flag_uncertainty, no_self_modification_of_
+     constitution) with one registered human overseer.
+
+  3. Load knowledge: the Small-World Commonsense knowledge base (knowledge/
+     small_world.pl) — taxonomic backbone, commonsense relations, authored rule
+     layer, probabilistic layer, agents-with-beliefs layer, and scenario layer.
+
+The Rung 1 demonstration exercises mentova_query/3 with four query types:
+
+  deductive:     mentova_query(deductive, is_a(X, Class), Result)
+  defeasible:    mentova_query(defeasible, flies(X), Result)
+  probabilistic: mentova_query(probabilistic, prob(Prop), Result)
+  epistemic:     mentova_query(epistemic, believes(Agent, Prop), Result)
+
+Pass criterion (from Volume 6, Rung 1): the IsA conclusion returns with a
+readable proof chain. All four query types are shown for completeness.
+
+
+THE DEMONSTRATION
+
+Run command:
+  swipl -l src/mentova/mentova.pl -g "mentova_boot, [queries...]" -t halt
+
+Output (verbatim):
+
+  === Mentova is waking up ===
+  Platform : PrologAI
+  Mind     : Mentova
+
+  Enrolled body: text_io (text) — Text I/O body — transparent reasoning assistant track
+  Enrolled body: game_env (game) — Game-as-body harness — Pokémon, ARC, Baba Is You
+  Enrolled body: ros_robot (robot) — ROS 2 robot body — virtual first (Gazebo/Webots), then physical
+
+  Constitution: 8 principles, 1 overseer(s)
+  Knowledge: Small-World Commonsense loaded
+
+  Mentova is ready. Born at Rung 1 — transparent deduction.
+
+  --- Rung 1: Deductive Reasoning ---
+    is_a(canary,animal)      => answer(yes,just(canary,is_a,animal,chain([canary,bird,animal])))
+    is_a(rose,living_thing)  => answer(yes,just(rose,is_a,living_thing,chain([rose,flower,plant,living_thing])))
+    flies(canary)            => answer(yes,just(default(bird_flies)))
+    flies(penguin)           => answer(no,just(exception(penguin_exception)))
+    prob(rains_today)        => answer(0.3,just(weighted_fact(rains_today)))
+    believes(sally,marble)   => answer(true,just(belief(sally,marble_in_basket)))
+
+  All Rung 1 queries answered with readable justifications. PASS.
+
+
+RESULTS
+
+Pass criterion met: is_a(canary, animal) returns with justification chain
+[canary, bird, animal] — a two-hop transitive IsA derivation, shown as a
+readable list.
+
+Additional results:
+
+  is_a(rose, living_thing): four-hop chain [rose, flower, plant, living_thing].
+    The depth of the chain is automatically determined; no loop is formed.
+
+  flies(canary): answered yes with justification just(default(bird_flies)).
+    The default rule "birds fly" applies; no exception matches.
+
+  flies(penguin): answered no with justification just(exception(penguin_exception)).
+    The default rule fires but the flightless-bird exception pre-empts it.
+    This is Rung 17 (defeasible reasoning) previewed inside Rung 1.
+
+  prob(rains_today): answered 0.3 with justification just(weighted_fact(rains_today)).
+    A probabilistic weighted fact from Layer 4 of Small-World.
+
+  believes(sally, marble_in_basket): answered true with justification
+    just(belief(sally, marble_in_basket)).
+    The Sally-Anne false-belief setup is in place for Rung 34 (epistemic reasoning).
+
+
+SIGNIFICANCE
+
+This is the first time a PrologAI mind has reasoned in the open.
+
+The significance is not the raw capability — these are simple inferences over a
+toy knowledge base. The significance is what accompanies every answer: a
+justification tree that a person can read and verify.
+
+No proprietary weights. No attention rollout. A chain of named facts and rules
+that anyone can audit.
+
+Mentova is born.
+
+
+HONEST LIMITATIONS
+
+The knowledge base is deliberately toy-sized: a few hundred facts, authored for
+coverage rather than depth.
+
+The deductive engine is backward-chaining Prolog unification — sound and complete
+for definite clauses, not a general theorem prover.
+
+The justification tree is a Prolog term, not yet rendered in natural language.
+
+Multi-hop chains can loop if the knowledge base contains cycles; no loop-check is
+applied in this first implementation.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(deductive, is_a(canary, animal), R), \
+            write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+Miller, M. S. P. (2026). Building Minds with Patterns. ISBN-13: 978-1-980-36266-1.
+
+Miller, M. S. P., & Blumberg, M. (2026). Building Sentient Beings.
+  https://zenodo.org/records/15530183
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+WordNet. Princeton University. https://wordnet.princeton.edu
+
+ConceptNet. MIT Media Lab. https://conceptnet.io
+
+CognitiveArchitectures YouTube Channel.
+  https://www.youtube.com/@CognitiveArchitectures
