@@ -1,0 +1,34 @@
+ACCOMPLISHMENT: Acc_71 - Mentova Completes the Full ARC-AGI-1 Benchmark: 17/400 Tasks, Every Answer Glass-Box
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+Honest number first: 17 out of 400. That is 4.25%.
+
+Mentova just completed the full ARC-AGI-1 (Abstraction and Reasoning Corpus for Artificial General Intelligence) public benchmark - all 400 training tasks - using pure induction from examples with no pretraining on the corpus.
+
+For every one of the 17 tasks it solved, Mentova names the rule it used:
+
+gravity_down. rotate_180. vertical_flip. transpose. scale_up(3). tile(1,2). swap(2,6). reverse_rows. fill_border(8). rotate_90_ccw. And more.
+
+These are not black-box predictions. They are named, verifiable transformations. You can run the rule yourself on the input and get the same output.
+
+For the 383 tasks Mentova did not solve, the reason is known and honest: those tasks require object-level reasoning - detecting connected regions, counting them, moving them, completing patterns - which goes beyond the pixel-level named transforms in the current library. That is the next step, not a hidden failure.
+
+This is growth path milestone 2 from Acc_60. It builds on the methodology established in Acc_55 (3/3 pedagogical tasks). The full run required:
+
+- A data pipeline that converts all 400 JSON tasks to Prolog facts.
+- A library of 130+ named grid transforms in Prolog.
+- A benchmark runner that attempts every task, names the rule for each pass, and reports the honest total.
+
+4.25% by genuine induction is a different kind of result than 90% by memorizing the corpus.
+
+The infrastructure is now in place. Every new named transformation added to the library is a potential new task solved. The growth path continues.
+
+Mentova repository: https://github.com/ai-university-aiu/Mentova
+
+This is Acc_71.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+ORCID: 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
