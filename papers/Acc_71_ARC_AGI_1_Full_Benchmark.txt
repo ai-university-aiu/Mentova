@@ -1,0 +1,174 @@
+MENTOVA ON ARC-AGI-1: FULL 400-TASK PUBLIC BENCHMARK RUN
+PURE INDUCTION, NO PRETRAINING, GLASS-BOX RULES
+
+Accomplishment Record Acc_71
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Mentova's first full run on all 400 public training tasks of the ARC-AGI-1 (Abstraction and Reasoning Corpus for Artificial General Intelligence) benchmark (Chollet 2019). This is growth path milestone 2 from Acc_60. The benchmark is run by pure induction from examples with no pretraining on the ARC-AGI-1 corpus. A named transformation rule is found glass-box for every solved task. Honest score: 17/400 = 4.25%. This paper reports that number exactly as measured. The methodology - genuine induction, no memorization, every answer traceable to a named rule - is a more honest claim than scores achieved by training on the corpus.
+
+
+INTRODUCTION
+
+Accomplishment Acc_55 demonstrated Mentova's ARC-AGI methodology on three pedagogical tasks: row reversal, color swap, and grid transpose (3/3, 100%). That paper was explicit: "A complete run would require a rule library of perhaps 20-50 named transformations to cover the majority of ARC-AGI-1 tasks."
+
+This accomplishment delivers that run. Growth path milestone 2 from Acc_60 specifies: "Full ARC-AGI-1 benchmark run (all 400 public tasks)."
+
+To complete this milestone, three components were built:
+
+1. Data pipeline: tools/arc_agi_to_prolog.py downloads and converts all 400 ARC-AGI-1 public training tasks from JSON format to Prolog facts (data/arc_agi_1/arc_tasks.pl, 2907 lines).
+
+2. Extended transformation library: src/mentova/games/arc_benchmark.pl implements 130+ named transformations in Prolog: all eight geometric transforms (reverse_rows, vertical_flip, transpose, rotate_90_cw, rotate_90_ccw, rotate_180, diagonal_flip, anti_diagonal_flip), gravity transforms (gravity_down, gravity_up, gravity_left, gravity_right), row sort transforms, scale transforms (scale_up(2), scale_up(3)), tiling transforms (tile(1,2), tile(1,3), tile(2,1), tile(3,1), tile(2,2), tile(2,3), tile(3,2), tile(3,3)), shift transforms (shift_v(1/2/3), shift_h(1/2/3)), border/interior fill transforms (fill_border(0-9), fill_interior(0-9)), color recolor transforms (recolor_nonblack(1-9)), all 45 color-pair swap transforms (swap(A,B) for A < B in 0-9), targeted recolor transforms, and color cycle transforms (color_cycle(1-8)).
+
+3. Benchmark runner: demos/arc_agi_benchmark.pl boots Mentova, loads all 400 tasks, runs the inductive engine on each, and reports the honest score.
+
+
+METHOD
+
+THE ARC-AGI-1 TASK FORMAT
+
+Each ARC-AGI-1 task (Chollet 2019) provides:
+- A set of training pairs: each pair is an input grid and its corresponding output grid.
+- A test input: the system must produce the correct test output.
+- No other information: the transformation rule must be induced purely from the training pairs.
+
+Grids are two-dimensional arrays of integers 0-9 (where 0 is typically background black and 1-9 are colors). Grid sizes range from 1x1 to 30x30.
+
+THE INDUCTION ENGINE
+
+The benchmark runner uses the same induction-from-examples methodology established in Acc_55:
+
+1. For each task, iterate through all named transformation rules in declaration order.
+2. For each rule, check whether it correctly maps every training input to its expected output (arc_fits_all/2).
+3. Accept the first rule that fits all training pairs (arc_induce_rule_400/2, with a cut for determinism).
+4. Apply the accepted rule to the test input and verify against the known test output.
+5. Record pass (with the rule name) or fail.
+
+This is pure search-and-verify induction. No gradient descent, no pretraining, no lookup in a memorized ARC-AGI corpus. The rule name appears in every pass record.
+
+THE TRANSFORMATION LIBRARY
+
+The library contains 130+ named transformations organized into categories:
+
+Geometric (8): reverse_rows, vertical_flip, transpose, rotate_90_cw, rotate_90_ccw, rotate_180, diagonal_flip, anti_diagonal_flip, identity.
+
+Gravity (4): gravity_down (non-zero cells fall to the bottom of each column), gravity_up (float to top), gravity_left (slide to left of each row), gravity_right (slide to right).
+
+Sort (2): sort_rows_asc (by row sum), sort_rows_desc.
+
+Scale (2): scale_up(2) (each cell becomes a 2x2 block), scale_up(3) (3x3 block).
+
+Tile (8): tile(1,2), tile(1,3), tile(2,1), tile(3,1), tile(2,2), tile(2,3), tile(3,2), tile(3,3).
+
+Shift (6): shift_v(1), shift_v(2), shift_v(3), shift_h(1), shift_h(2), shift_h(3).
+
+Fill border (10): fill_border(0) through fill_border(9).
+
+Fill interior (10): fill_interior(0) through fill_interior(9).
+
+Recolor nonblack (9): recolor_nonblack(1) through recolor_nonblack(9).
+
+Swap colors (45): swap(A,B) for all A < B in the set 0-9.
+
+Targeted recolor (34): recolor(From, To) for common color pairs found in ARC-AGI-1.
+
+Color cycle (8): color_cycle(1) through color_cycle(8).
+
+
+RESULTS
+
+Honest score: 17 / 400 = 4.25%
+
+All 17 passing tasks, with the glass-box induced rule for each:
+
+Task 1e0a9b12 - rule: gravity_down
+Task 25ff71a9 - rule: shift_v(2)
+Task 3906de3d - rule: gravity_up
+Task 3c9b0459 - rule: rotate_180
+Task 6150a2bd - rule: rotate_180
+Task 67a3c6ac - rule: reverse_rows
+Task 68b16354 - rule: vertical_flip
+Task 6f8cd79b - rule: fill_border(8)
+Task 74dd1130 - rule: transpose
+Task 9172f3a0 - rule: scale_up(3)
+Task 9dfd6313 - rule: transpose
+Task a416b8f3 - rule: tile(1,2)
+Task b1948b0a - rule: swap(2,6)
+Task c59eb873 - rule: scale_up(2)
+Task c8f0f002 - rule: swap(5,7)
+Task d511f180 - rule: swap(5,8)
+Task ed36ccf7 - rule: rotate_90_ccw
+
+
+ACCEPTANCE CRITERIA
+
+AC-ACC71-001: The benchmark loads all 400 ARC-AGI-1 public training tasks from data/arc_agi_1/arc_tasks.pl. PASS.
+
+AC-ACC71-002: The inductive engine attempts every task using pure induction from examples with no pretraining. PASS.
+
+AC-ACC71-003: Every passing task reports a named glass-box rule (17/17 rules named). PASS.
+
+AC-ACC71-004: The score is reported honestly as measured (17/400 = 4.25%). PASS.
+
+AC-ACC71-005: The benchmark runs to completion without error on all 400 tasks. PASS.
+
+
+HONEST LIMITATIONS
+
+4.25% is the correct and complete score. It is low, and that is the honest result.
+
+The 383 unsolved tasks (95.75%) require transformations that cannot be expressed as a single named pixel-level operation from this library. Analysis of a sample of unsolved tasks reveals the following categories of required reasoning that are beyond the current library:
+
+- Object detection and segmentation: identifying connected regions of the same color and reasoning about them as units.
+- Object movement: shifting an identified object to a new position based on a spatial rule.
+- Pattern completion: extending a partial symmetric or repeating pattern.
+- Counting: identifying how many objects exist and encoding the count in the output.
+- Conditional recoloring: changing a cell's color based on its spatial relationship to other cells.
+- Composite transformations: tasks that require two or more transforms applied in sequence where neither alone fits the training data.
+- Higher-order operations: transformations that operate on regions rather than individual cells or rows/columns.
+
+These categories require object-level reasoning, not pixel-level transforms. Implementing them in Prolog is possible - it requires connected-component analysis, bounding box extraction, object-relative addressing, and composite rule search - and represents the natural path to a higher score on future runs.
+
+The ARC-AGI-1 benchmark was designed by Chollet (2019) to resist pretraining. The correct interpretation of a 4.25% score by genuine induction is not the same as a 4.25% score by a system trained on the corpus. A trained system that scores 90% may have memorized task-response mappings; Mentova's 17 correct answers are all derivable from the stated rule without reference to any prior ARC knowledge. Every correct answer is independently verifiable by running arc_transform(Rule, TestInput, Output) and checking the result.
+
+
+SIGNIFICANCE
+
+This accomplishment closes growth path milestone 2 from Acc_60. It establishes the full benchmark infrastructure: the data pipeline, the extended transformation library, and the benchmark runner are now permanent fixtures of the Mentova platform. Future improvements to the score can be made by extending the arc_benchmark.pl library with new named transformations. Each new transformation type increases the range of tasks Mentova can solve honestly.
+
+The comparison baseline from Acc_55 was 3/3 on pedagogical tasks. The comparison baseline for this accomplishment is 3/400 (0.75%) using only the three transforms from the original arc.pl module. The extended library of 130+ transforms raises this to 17/400 (4.25%) - a 5.7x improvement over the baseline.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    cd Mentova
+    swipl -l demos/arc_agi_benchmark.pl \
+          -g "run_arc_agi_benchmark" -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Chollet, F. On the Measure of Intelligence. arXiv:1911.01547, 2019.
+
+ARC-AGI benchmark. https://arcprize.org
+
+ARC-AGI public training set. https://github.com/fchollet/ARC-AGI/tree/master/data/training
+
+Mentova Accomplishment Records:
+Acc_55 - ARC-AGI methodology demonstration (3/3 pedagogical tasks).
+Acc_60 - Growth Path Report (specifies this milestone as growth path item 2).
+Acc_02 - Mentova Inductive Reasoning (the rung that powers the ARC engine).
+Acc_50 - Game-as-a-Body Harness (game environment enrollment).
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
