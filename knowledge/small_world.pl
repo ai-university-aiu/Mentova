@@ -34,6 +34,8 @@
 
 :- discontiguous is_a/2.
 :- discontiguous has_property/2.
+:- dynamic is_a/2.
+:- dynamic has_property/2.
 
 % ---------------------------------------------------------------------------
 % LAYER 1 — TAXONOMIC BACKBONE (IsA, part_of)

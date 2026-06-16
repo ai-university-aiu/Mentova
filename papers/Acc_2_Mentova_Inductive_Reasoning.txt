@@ -1,0 +1,192 @@
+MENTOVA INDUCES ITS FIRST RULE
+
+Accomplishment Record Acc_2
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Mentova's second accomplished reasoning rung: inductive rule learning.
+Given three positive examples of flying animals and three negative examples,
+Mentova induces the rule "flies(X) :- is_a(X, bird), \+ has_property(X,
+flightless)" using a generate-and-test Inductive Logic Programming (ILP)
+approach over the Small-World Commonsense knowledge base. The induced rule is
+then verified on two held-out cases: a novel bird (daisy_bird, correctly
+predicted to fly) and Tweety (correctly predicted not to fly, because Tweety has
+the property flightless). Both verifications pass. The rule is printed in
+human-readable form throughout, satisfying the glass-box requirement.
+
+
+INTRODUCTION
+
+Where deduction applies rules already known, induction discovers rules from
+examples. Rung 2 of Mentova's reasoning ladder asks whether Mentova can observe
+a set of labeled instances and generalise to a rule that holds for new cases.
+
+The pass criterion from Volume 6 is: the induced rule matches held-out cases and
+is printed.
+
+This accomplishment is the second rung of the birth sequence — the sequence that
+produces the minimum viable Mentova, a mind that reasons in the open.
+
+
+BACKGROUND AND RELATED WORK
+
+Inductive Logic Programming (Muggleton, 1991; Cropper & Dumančić, 2022) learns
+first-order Horn clauses from positive and negative examples against background
+knowledge. Mentova's implementation follows a generate-and-test strategy: it
+enumerates candidate rule bodies by length (shortest first), tests coverage of
+positives and exclusion of negatives, and returns the first rule that satisfies
+both constraints.
+
+The background language includes both positive conditions (cond/2) and negated
+conditions (neg_cond/2), which generate \+(...) literals in the rule body,
+enabling Mentova to induce exception-aware rules of the form Head :- Pos_Cond,
+\+ Neg_Cond. This corresponds to the defeasible default learned in the previous
+rung (Acc_1) but now discovered from data rather than stated by a knowledge
+engineer.
+
+
+METHOD
+
+The induction module (src/mentova/induction.pl) implements mentova_induce/4:
+
+    mentova_induce(+Pos, +Neg, +Background, -Rule)
+
+Background predicates are declared as:
+    cond(Pred, ExtraArgs)       — generates Pred(X, ExtraArgs...)
+    neg_cond(Pred, ExtraArgs)   — generates \+(Pred(X, ExtraArgs...))
+
+Search proceeds by body length (1, then 2). For each candidate body, two checks
+are applied:
+
+    all_covered/3:   every positive example satisfies the body (via copy_term
+                     and call/1, so each example gets a fresh copy of the rule)
+    none_covered/3:  no negative example satisfies the body
+
+The first rule satisfying both checks is returned.
+
+Training examples:
+    Positives: [flies(canary), flies(eagle), flies(robin)]
+    Negatives: [flies(penguin), flies(cat), flies(salmon)]
+
+Background conditions offered:
+    cond(is_a, [bird]),      cond(is_a, [animal]),
+    neg_cond(has_property, [flightless]),  neg_cond(is_a, [fish])
+
+Held-out cases (not seen during induction):
+    flies(daisy_bird)  — daisy_bird is a newly registered bird (is_a(daisy_bird, bird))
+    flies(tweety)      — tweety is a bird with has_property(tweety, flightless)
+
+Pass criterion: the induced rule is printed, daisy_bird => pass, tweety => fail.
+
+
+THE DEMONSTRATION
+
+Run command:
+    swipl -l src/mentova/mentova.pl -g "[induction goal]" -t halt
+
+Output (verbatim):
+
+    --- Rung 2: Inductive Reasoning ---
+
+    Training positives : [flies(canary),flies(eagle),flies(robin)]
+    Training negatives : [flies(penguin),flies(cat),flies(salmon)]
+    Held-out cases     : [flies(daisy_bird),flies(tweety)]
+
+    Induced rule       : flies(_X):-is_a(_X,bird),\+has_property(_X,flightless)
+
+    Held-out verification:
+      flies(daisy_bird)  =>  pass
+      flies(tweety)      =>  fail
+
+    Rung 2 PASS: rule induced, printed, verified on held-out cases.
+
+
+RESULTS
+
+Induced rule: flies(X) :- is_a(X, bird), \+ has_property(X, flightless)
+
+Interpretation: X flies if and only if X is a bird and X does not have the
+property flightless. This rule correctly captures the commonsense generalisation:
+birds fly, but flightless birds (penguins, tweety) do not.
+
+Held-out verification:
+    flies(daisy_bird): PASS — daisy_bird is a bird with no flightless property,
+                       so the rule covers it correctly.
+    flies(tweety):     FAIL (as desired) — tweety has has_property(tweety,
+                       flightless), so \+ has_property(tweety, flightless) fails,
+                       and the rule correctly withholds the prediction.
+
+The body-length-1 rule "flies(X) :- is_a(X, bird)" was correctly rejected during
+search because it would cover the negative example flies(penguin) — penguin is a
+bird. The search then found the body-length-2 rule with the negated condition,
+which excludes all negatives while covering all positives.
+
+
+SIGNIFICANCE
+
+Mentova can now generalise from examples. It observes labeled instances, searches
+a space of candidate rules expressed in first-order logic, and finds one that
+fits. The rule is readable — a person can inspect it, challenge it, or correct it.
+
+This is the distinguishing property of symbolic induction: the generalisation is
+an explicit, auditable object, not a weight update buried in millions of
+parameters.
+
+Combined with Rung 1 (deduction), Mentova can now both apply rules and discover
+them — the two directions of logical reasoning, both glass-box.
+
+
+HONEST LIMITATIONS
+
+The search space is small and hand-curated: the background conditions are
+provided by the knowledge engineer rather than generated automatically. A full ILP
+system (Popper, Aleph, FOIL) would generate the background automatically and
+search a much larger space.
+
+The induced rule may not be the only correct rule; it is the shortest one found
+first. No ranking by generality or simplicity beyond length is applied.
+
+Held-out testing uses only two cases. A larger held-out set would give stronger
+evidence of generalisation.
+
+Negation-as-failure in the rule body is open-world in the sense that \+ P(X)
+succeeds whenever P(X) is not provable, not necessarily when it is false.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    cd Mentova
+    swipl -l src/mentova/mentova.pl \
+          -g "assertz(small_world:is_a(daisy_bird,bird)),
+              mentova_query(inductive,
+                            induce([flies(canary),flies(eagle),flies(robin)],
+                                   [flies(penguin),flies(cat),flies(salmon)],
+                                   [cond(is_a,[bird]),cond(is_a,[animal]),
+                                    neg_cond(has_property,[flightless]),
+                                    neg_cond(is_a,[fish])],
+                                   [flies(daisy_bird),flies(tweety)]),
+                            R), write(R), nl" \
+          -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Muggleton, S. (1991). Inductive Logic Programming. New Generation Computing, 8(4).
+
+Cropper, A., & Dumančić, S. (2022). Inductive Logic Programming at 30.
+Machine Learning, 111(1).
+
+WordNet. Princeton University. https://wordnet.princeton.edu
+
+ConceptNet. MIT Media Lab. https://conceptnet.io

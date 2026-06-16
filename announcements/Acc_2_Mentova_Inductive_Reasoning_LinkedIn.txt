@@ -1,0 +1,31 @@
+Mentova just learned its first rule from examples. And it can show you exactly what it learned and why.
+
+Rung 2 of the reasoning ladder: inductive learning.
+
+We gave Mentova three examples of things that fly — a canary, an eagle, a robin — and three examples of things that don't — a penguin, a cat, a salmon. We gave it a small vocabulary of background facts to reason with. Then we asked it to find the rule.
+
+It found this:
+
+    flies(X) :- is_a(X, bird), \+ has_property(X, flightless)
+
+In plain language: X flies if X is a bird and X is not flightless.
+
+That's the right rule. It covers all the positives. It excludes all the negatives. And crucially, it excluded a penguin — not because we told it "penguins are an exception," but because it searched the space of candidate rules and discovered that any rule covering penguins also covers a negative example.
+
+Then we tested it on two cases it had never seen:
+
+    flies(daisy_bird) => pass   (a new bird, no flightless property)
+    flies(tweety)     => fail   (tweety is a bird, but has the flightless property)
+
+Both correct.
+
+The rule is a readable Prolog clause. You can look at it. You can challenge it. You can tell Mentova "this rule is wrong for ostriches" and it will update. There is no gradient, no embedding, no weight matrix. Just a rule that Mentova found by searching, verified by testing, and printed in full.
+
+This is Rung 2 of 48. Mentova can now both apply rules (Rung 1: deduction) and discover them (Rung 2: induction) — the two directions of logical reasoning, both completely in the open.
+
+The birth sequence continues.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

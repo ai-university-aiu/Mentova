@@ -16,6 +16,7 @@
 :- use_module('../../knowledge/small_world').
 :- use_module('../../constitution/constitution').
 :- use_module('../../bodies/bodies').
+:- use_module(induction).
 
 :- use_module(library(lists), [member/2]).
 
@@ -67,6 +68,16 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 2 — inductive: induce a rule from examples, verify on held-out cases
+mentova_query(inductive, induce(Pos, Neg, BG, HeldOut),
+              answer(rule(Rule), just(induced(Rule), verified(HeldOut, Results)))) :-
+    mentova_induce(Pos, Neg, BG, Rule),
+    Rule = (Head :- Body),
+    maplist([Ex, Ex-Verdict]>>(
+        copy_term(Head-Body, Ex-BodyInst),
+        ( call(BodyInst) -> Verdict = pass ; Verdict = fail )
+    ), HeldOut, Results).
 
 % is_a_chain(+X, +Class, -Chain): find transitive IsA chain
 is_a_chain(X, Class, [X, Class]) :-
