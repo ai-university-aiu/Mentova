@@ -1,0 +1,170 @@
+MENTOVA'S FORMAL REASONING
+
+Accomplishment Record Acc_13
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 13 of Mentova's 48-rung reasoning ladder: formal reasoning.
+Mentova checks a derivation against the Minimal PrologAI Kernel (MPK), a
+four-rule proof system that defines the only allowed transitions for PrologAI
+reasoning. A three-step proof — fact lookup for is_a(canary, bird), fact lookup
+for is_a(bird, animal), and MPK-4 IsA-chain transitivity to conclude
+is_a(canary, animal) — is verified as valid, with each step marked ok. The
+proof uses only kernel transitions. Pass criterion met.
+
+
+INTRODUCTION
+
+A cognitive architecture must be able to verify that its own reasoning respects
+its foundational axioms. Rung 13 is Mentova's proof checker: it takes a
+derivation — a sequence of inference steps — and verifies that every step
+is sanctioned by the Minimal PrologAI Kernel.
+
+This is formal reasoning in the strict sense: reasoning about the validity of
+reasoning, checked against a formal specification.
+
+
+BACKGROUND
+
+Proof checking is one of the oldest problems in logic and computer science.
+The Curry-Howard correspondence (Curry, 1934; Howard, 1980) relates proofs to
+programs. Modern proof assistants such as Coq and Lean verify formal proofs
+against type systems.
+
+The Minimal PrologAI Kernel is PrologAI's foundational proof theory: the
+smallest set of transitions sufficient to justify all reasoning performed by
+the platform. It is defined in the PrologAI SPARC Specification (Volume 1).
+
+
+METHOD
+
+A new module, src/mentova/formal.pl, implements:
+
+    mentova_formal(+Query, -Result, -Justification)
+
+The Minimal PrologAI Kernel defines four transitions:
+
+    MPK-1  Fact:        A ∈ KB  ⊢  A
+    MPK-2  Modus Ponens: (A→B) ∈ KB, ⊢A  ⊢  B
+    MPK-3  Conjunction: ⊢A, ⊢B  ⊢  A ∧ B
+    MPK-4  IsA Chain:   is_a(X,Y), is_a(Y,Z) ∈ KB  ⊢  is_a(X,Z)
+
+A derivation is a list of steps, each of the form:
+    step(Type, Conclusion, Premises)
+
+The checker (check_derivation/5) verifies each step with mpk_valid/3, which
+checks that the step type is one of the four kernel transitions and that all
+premises are in the knowledge base or previously derived.
+
+Query form:
+    check_proof(KB, Steps) — check a derivation against KB
+
+Top-level clause:
+
+    mentova_query(formal, FormalQuery, answer(Result, Just)) :-
+        mentova_formal(FormalQuery, Result, Just).
+
+
+DEMONSTRATION
+
+Derivation to check:
+    KB = [is_a(canary,bird), is_a(bird,animal), (is_a(canary,bird) -> is_animal(canary))]
+    Steps:
+      step(fact, is_a(canary,bird), [])
+      step(fact, is_a(bird,animal), [])
+      step(isa_chain, is_a(canary,animal), [is_a(canary,bird), is_a(bird,animal)])
+
+    ?- mentova_query(formal, check_proof(KB, Steps), R).
+    R = answer(valid, just(mpk_check(..., result(valid),
+                                      report([check(step(fact, is_a(canary,bird), []), ok),
+                                              check(step(fact, is_a(bird,animal), []), ok),
+                                              check(step(isa_chain, is_a(canary,animal),
+                                                         [is_a(canary,bird), is_a(bird,animal)]), ok)]))))
+
+    All three steps marked ok. Derivation: valid.
+
+    Step 1 uses MPK-1: is_a(canary,bird) is a fact in KB.
+    Step 2 uses MPK-1: is_a(bird,animal) is a fact in KB.
+    Step 3 uses MPK-4: is_a(canary,bird) and is_a(bird,animal) justify is_a(canary,animal)
+                       by transitivity.
+
+Kernel info query:
+
+    ?- mentova_query(formal, kernel_info, R).
+    R = answer(kernel(mpk_transitions), just(transitions([
+        'MPK-1: Fact — A ∈ KB ⊢ A',
+        'MPK-2: Modus Ponens — (A→B) ∈ KB, ⊢A ⊢ B',
+        'MPK-3: Conjunction — ⊢A, ⊢B ⊢ A∧B',
+        'MPK-4: IsA Chain — is_a(X,Y), is_a(Y,Z) ⊢ is_a(X,Z)'
+    ])))
+
+
+RESULTS
+
+The three-step proof is verified as valid. Each step is individually checked
+against the kernel and marked ok. A proof that uses a non-kernel transition
+would be marked invalid with the offending step identified.
+
+Pass criterion met: proof uses only kernel transitions.
+
+
+SIGNIFICANCE
+
+Rung 13 gives Mentova the ability to check its own reasoning against its
+constitutional specification. This is the foundation of the glass-box guarantee:
+not only does every answer come with a justification, but the justification
+itself can be verified against the minimal kernel.
+
+This is the PrologAI equivalent of a type checker: a formal gate that ensures
+reasoning respects the platform's axiomatic foundation.
+
+
+HONEST LIMITATIONS
+
+The MPK covers four basic inference patterns. A full proof system would also
+include universal instantiation, existential elimination, and more complex
+inference rules for probabilistic and modal reasoning.
+
+The checker currently validates steps independently and in sequence; it does
+not implement full resolution-based theorem proving.
+
+Derivations must be supplied in explicit step form. The system does not
+automatically construct a proof; it only verifies a supplied one.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            KB = [is_a(canary,bird), is_a(bird,animal)], \
+            Steps = [step(fact,is_a(canary,bird),[]), \
+                     step(fact,is_a(bird,animal),[]), \
+                     step(isa_chain,is_a(canary,animal), \
+                          [is_a(canary,bird),is_a(bird,animal)])], \
+            mentova_query(formal, check_proof(KB,Steps), R), write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Howard, W. A. (1980). The formulae-as-types notion of construction.
+In Seldin & Hindley (Eds.), To H. B. Curry: Essays on Combinatory Logic.
+
+Barendregt, H., & Geuvers, H. (2001). Proof-assistants using dependent type systems.
+In Handbook of Automated Reasoning.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

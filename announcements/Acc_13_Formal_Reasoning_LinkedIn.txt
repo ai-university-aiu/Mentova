@@ -1,0 +1,48 @@
+Mentova now checks its own proofs against its kernel. Rung 13 of 48 is accomplished.
+
+Every reasoning system makes claims. But can it verify that its claims follow only from sanctioned rules? Can it examine a proof and tell you whether every step is legitimate?
+
+Rung 13 gives Mentova a proof checker against the Minimal PrologAI Kernel (MPK).
+
+The MPK defines four and only four allowed proof transitions:
+
+  MPK-1: Fact — A is in the knowledge base, therefore A is provable.
+  MPK-2: Modus Ponens — if A→B is in KB and A is proved, then B is proved.
+  MPK-3: Conjunction — if A is proved and B is proved, then A∧B is proved.
+  MPK-4: IsA Chain — if is_a(X,Y) and is_a(Y,Z) hold, then is_a(X,Z) holds.
+
+Submit a proof. Mentova checks every step.
+
+Derivation: prove is_a(canary, animal) from a KB containing is_a(canary,bird) and is_a(bird,animal).
+
+Steps:
+  1. step(fact, is_a(canary,bird), [])
+  2. step(fact, is_a(bird,animal), [])
+  3. step(isa_chain, is_a(canary,animal), [is_a(canary,bird), is_a(bird,animal)])
+
+Result:
+
+  answer(valid, just(mpk_check(..., result(valid), report([
+    check(step(fact, is_a(canary,bird), []), ok),
+    check(step(fact, is_a(bird,animal), []), ok),
+    check(step(isa_chain, is_a(canary,animal), [...]), ok)
+  ]))))
+
+All three steps: ok. Proof: valid.
+
+Step 1 uses MPK-1. Step 2 uses MPK-1. Step 3 uses MPK-4 — IsA transitivity. Every step is sanctioned by the kernel.
+
+Now try submitting a step that invents a transition the kernel does not recognise. Mentova marks it invalid and names the offending step. The kernel holds.
+
+This is what formal reasoning means in a cognitive architecture: not just deriving conclusions, but being able to verify that the derivation respects the foundational specification. It is the difference between a system that says "trust me" and one that says "check this yourself."
+
+In software terms, this is a type checker for reasoning. In logic terms, this is a proof verifier. In AI safety terms, this is a machine that can audit its own inference against constitutional constraints.
+
+The Minimal PrologAI Kernel is the constitutional layer of PrologAI reasoning. Rung 13 makes that layer checkable from the inside.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
