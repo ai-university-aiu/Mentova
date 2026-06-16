@@ -47,11 +47,6 @@ Mentova depends on PrologAI (SWI-Prolog 9.0.4+).
 :- use_module(library(mentova)).
 ```
 
-## Authors
+## Author
 
-PrologAI Community — ai.university.aiu@gmail.com
-
-Published works of Michael S. P. Miller:
-- *Building Minds with Patterns* ISBN-13: 978-1-980-36266-1
-- *Building Sentient Beings* (with Michah Blumberg) https://zenodo.org/records/15530183
-- YouTube: @CognitiveArchitectures https://www.youtube.com/@CognitiveArchitectures
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

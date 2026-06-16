@@ -181,16 +181,8 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
 REFERENCES
 
-Miller, M. S. P. (2026). Building Minds with Patterns. ISBN-13: 978-1-980-36266-1.
-
-Miller, M. S. P., & Blumberg, M. (2026). Building Sentient Beings.
-  https://zenodo.org/records/15530183
-
 PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
 
 WordNet. Princeton University. https://wordnet.princeton.edu
 
 ConceptNet. MIT Media Lab. https://conceptnet.io
-
-CognitiveArchitectures YouTube Channel.
-  https://www.youtube.com/@CognitiveArchitectures

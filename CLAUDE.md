@@ -17,6 +17,13 @@ Every paper (papers/Acc_N_*.txt) and every announcement
 
 No AI tools are credited as authors or co-authors anywhere.
 
+PUBLISHED WORKS — NOTICE FILE ONLY
+
+The author's published works (books, papers, YouTube channel) must appear ONLY
+in the NOTICE file of the PrologAI repository. They must never appear in any
+paper, announcement, README, source file, or any other file in this repository
+or any other repository.
+
 ACCOMPLISHMENT NUMBERING
 
 Papers and announcements share a sequential tracking number: Acc_1, Acc_2, ...
