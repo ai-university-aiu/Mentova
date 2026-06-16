@@ -1,0 +1,27 @@
+MENTOVA CHOOSES THE RIGHT ACTION FOR THE RIGHT GOAL — Rung 38 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 38 of the Mentova reasoning ladder: Practical Reasoning.
+
+Mentova can now select the best available action for any registered agent goal, weighing feasibility and cost.
+
+Demonstrated live:
+
+    mentova_query(practical, best_action(alice, learn_programming), R)
+    → action(enrol_in_course, feasibility(0.9), cost(low), towards(learn_programming))
+
+    mentova_query(practical, goal_plan(alice, get_fit), R)
+    → plan(alice, get_fit, actions([join_gym, exercise_regularly, eat_healthy]))
+
+    mentova_query(practical, why_do(alice, enrol_in_course), R)
+    → because(alice, enrol_in_course, serves_goal(learn_programming))
+
+Every decision traces to the goal it serves and the feasibility/cost weighting — fully auditable practical deliberation.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_38) on the Mentova repository.
+
+#PrologAI #Mentova #PracticalReasoning #AIU #SyntheticMind #GlassBoxAI #GoalDirected

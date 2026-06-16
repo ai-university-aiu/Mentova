@@ -1,0 +1,78 @@
+MENTOVA DETECTS THE FLAW IN AN ARGUMENT
+
+Accomplishment Record Acc_46
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Rung 46 accomplishes informal reasoning: identifying logical fallacies by
+name, type, and explanatory note. Demonstrated: arg1 → ad_hominem ('attacks
+the person not the argument'); arg2 → straw_man ('misrepresents the
+opponent's position'); arg3 → false_dilemma ('presents only two options
+when more exist'); arg4 → slippery_slope ('assumes one step leads
+inevitably to extreme outcome'). All detections include the fallacy name
+and rationale.
+
+
+INTRODUCTION
+
+Informal logic catalogues rhetorical and argumentative errors that are
+valid-seeming but fail on closer examination. Detecting them is essential
+for critical thinking and adversarial reasoning.
+
+Pass criterion (Rung 46): "fallacy named and explained for given argument."
+
+
+METHOD
+
+The informal module stores: informal_fallacy(ArgId, FallacyName, Type,
+Explanation). Implements: detect_fallacy(ArgId) → fallacy name and
+explanation; list_fallacies → all known fallacy types.
+
+
+THE DEMONSTRATION
+
+    detect_fallacy(arg1): → fallacy(arg1, ad_hominem, 'attacks the person not the argument')
+    detect_fallacy(arg2): → fallacy(arg2, straw_man, 'misrepresents the opponent\'s position')
+    detect_fallacy(arg3): → fallacy(arg3, false_dilemma, 'presents only two options when more exist')
+    detect_fallacy(arg4): → fallacy(arg4, slippery_slope, 'assumes one step leads inevitably to extreme outcome')
+
+
+RESULTS
+
+Pass criterion met: each argument is matched to its named fallacy with
+a one-sentence explanation drawn from the informal_fallacy/4 knowledge base.
+
+
+SIGNIFICANCE
+
+Informal reasoning gives Mentova the ability to critique arguments, not just
+evaluate them logically. A valid-seeming inference that commits a fallacy
+should be flagged, not accepted.
+
+
+HONEST LIMITATIONS
+
+Fallacy detection requires arguments to be pre-coded. Detecting fallacies
+in natural-language text requires additional parsing not implemented here.
+
+
+REPRODUCIBILITY
+
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(informal, detect_fallacy(arg1), R), write(R), nl" -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+Walton, D. (1995). A Pragmatic Theory of Fallacy. University of Alabama Press.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

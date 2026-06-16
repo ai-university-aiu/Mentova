@@ -1,0 +1,33 @@
+Mentova now detects fallacies. Rung 46 of 48 is accomplished.
+
+"Your argument is wrong because you are inexperienced." That is not a refutation. That is an ad hominem — attacking the person instead of the argument.
+
+"All swans I have seen are white, therefore all swans are white." That is a hasty generalisation — drawing a broad conclusion from too few examples.
+
+"I ate an apple, then I got sick. The apple caused it." That is a post hoc fallacy — assuming causation from sequence.
+
+Rung 46 gives Mentova informal reasoning — the ability to detect logical fallacies and score argument plausibility.
+
+  Query: detect_fallacy(arg1)
+  Answer: fallacy(arg1, ad_hominem, 'attacks the person not the argument')
+
+  Query: detect_fallacy(arg5)
+  Answer: fallacy(arg5, hasty_generalisation, 'draws broad conclusion from few examples')
+
+  Query: plausibility(arg4)
+  Answer: plausibility(arg4, 0.2, implausible)
+
+Post hoc argument: 0.2 plausibility. Implausible.
+
+Eight fallacy types: ad_hominem, straw_man, false_dilemma, slippery_slope, appeal_to_authority, circular, hasty_generalisation, post_hoc. All with explanations.
+
+Also: rhetorical move identification (analogy, concession, rebuttal, modus_ponens) and Gricean implicature reasoning ("It is not bad" implies "Speaker thinks it is quite good").
+
+Informal reasoning is what you need to navigate everyday argument. It is the difference between being persuaded by rhetoric and being persuaded by evidence.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

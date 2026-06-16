@@ -1,0 +1,79 @@
+MENTOVA IDENTIFIES THE DRIVE BEHIND AN ACTION
+
+Accomplishment Record Acc_45
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Rung 45 accomplishes motivational reasoning: identifying an agent's highest-
+priority drive and the action it recommends. Demonstrated: alice top_drive
+→ achieve_recognition (high); alice drive→action: achieve_recognition
+→ compete_and_excel; Maslow hierarchy: safety needs precede esteem needs.
+All answers include drive name, strength, and recommended action.
+
+
+INTRODUCTION
+
+Maslow's hierarchy of needs and goal-directed motivation theories hold
+that agents prioritise drives according to urgency and salience. The most
+pressing unsatisfied drive determines behaviour.
+
+Pass criterion (Rung 45): "highest-priority drive identified for each agent."
+
+
+METHOD
+
+The motivational module stores: agent_drive(Agent, Drive, Strength, Action).
+Implements: top_drive(Agent) → highest-strength drive; drive_to_action(Drive)
+→ recommended action; hierarchy(Need) → Maslow-level preconditions.
+
+
+THE DEMONSTRATION
+
+    top_drive(alice): → drive(alice, achieve_recognition, high)
+    top_drive(bob):   → drive(bob, belong_and_connect, high)
+
+    drive_to_action(achieve_recognition): → compete_and_excel
+    drive_to_action(ensure_safety):       → avoid_threat
+
+    hierarchy(esteem):
+      → must_first_satisfy([physiological, safety, belonging])
+
+
+RESULTS
+
+Pass criterion met: the highest-strength drive is identified per agent and
+the recommended action is returned alongside Maslow preconditions.
+
+
+SIGNIFICANCE
+
+Motivational reasoning enables Mentova to explain why agents act — not merely
+what they do. Every action recommendation traces to a drive strength.
+
+
+HONEST LIMITATIONS
+
+Drive strengths are static. Dynamic drive satisfaction (eating resolves
+hunger drive) is not modelled.
+
+
+REPRODUCIBILITY
+
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(motivational, top_drive(alice), R), write(R), nl" -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+Maslow, A. H. (1943). A theory of human motivation. Psychological Review, 50(4), 370-396.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

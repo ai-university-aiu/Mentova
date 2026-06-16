@@ -1,0 +1,102 @@
+MENTOVA'S LEGAL REASONING
+
+Accomplishment Record Acc_47
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 47 of Mentova's 48-rung reasoning ladder: legal reasoning.
+Mentova applies legal rules with exceptions and cites case precedents.
+Scenario: "person takes property belonging to another without consent" → verdict:
+liable(theft). Add "property taken to prevent greater harm" → exception applies →
+exempt(necessity). Precedent: Donoghue v Stevenson establishes manufacturer
+duty of care. Pass criterion met: rule applied, exception correctly overrides, precedent cited.
+
+
+INTRODUCTION
+
+Legal reasoning involves applying rules to facts, checking for exceptions, and
+consulting precedents. Rung 47 implements a small statutory rule base, exception
+catalogue, and case precedent registry.
+
+
+BACKGROUND
+
+Legal AI (Susskind, 1987) has studied rule-based legal reasoning since the 1980s.
+The MYCIN-style rule-exception structure is directly applicable to legal syllogism.
+
+
+METHOD
+
+A new module, src/mentova/legal.pl, implements:
+
+    mentova_legal(+Query, -Result, -Justification)
+
+Five legal rules, five exceptions, four case precedents.
+Queries: apply, precedent, exceptions_for, what_rules.
+
+
+DEMONSTRATION
+
+    ?- mentova_query(legal, apply(r1,
+         ['person takes property belonging to another without consent']), R).
+    R = answer(verdict(liable(theft)), ...)
+
+    ?- mentova_query(legal, apply(r1,
+         ['person takes property belonging to another without consent',
+          'property taken to prevent greater harm']), R).
+    R = answer(verdict(exempt(necessity)), ...)
+
+    ?- mentova_query(legal, precedent(case_donoghue_stevenson), R).
+    R = answer(precedent(case_donoghue_stevenson, r4, liable(negligence),
+                         'manufacturer owes duty of care to end consumer'), ...)
+
+
+RESULTS
+
+Theft rule applies → liable. Necessity exception overrides → exempt. Precedent cited.
+Pass criterion met.
+
+
+SIGNIFICANCE
+
+Legal reasoning enables legal aid automation, contract analysis, compliance checking,
+and judicial decision support.
+
+
+HONEST LIMITATIONS
+
+Rules and exceptions are simplified. Real legal reasoning requires statutory interpretation,
+conflicting authority resolution, and natural language legal text parsing.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(legal, apply(r1, \
+              ['person takes property belonging to another without consent']), R), \
+            write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Susskind, R. (1987). Expert Systems in Law. Clarendon Press.
+
+Ashley, K. D. (1990). Modeling Legal Argument. MIT Press.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

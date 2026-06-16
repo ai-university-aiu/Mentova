@@ -1,0 +1,27 @@
+MENTOVA FOLLOWS A STORY'S CAUSAL THREAD — Rung 41 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 41 of the Mentova reasoning ladder: Narrative Reasoning.
+
+Mentova can now extract the causal-temporal structure of a story: setup, conflict, resolution, character roles, and the causal chain between events.
+
+Demonstrated live:
+
+    mentova_query(narrative, arc(tortoise_hare), R)
+    → arc(setup(hare_boasts), conflict(race_begins), resolution(tortoise_wins))
+
+    mentova_query(narrative, causal_chain(boy_wolf), R)
+    → chain: boy_lies_wolf → villagers_respond → boy_lies_again → villagers_ignore → real_wolf_comes → boy_cries_for_help → villagers_ignore → wolf_eats_sheep
+
+    mentova_query(narrative, role(tortoise_hare, tortoise), R)
+    → protagonist (slow but steady)
+
+Every story element — who, what, why, when — is traceable to a structured narrative fact.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_41) on the Mentova repository.
+
+#PrologAI #Mentova #NarrativeReasoning #AIU #SyntheticMind #GlassBoxAI #StoryUnderstanding

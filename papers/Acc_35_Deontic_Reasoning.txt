@@ -1,0 +1,75 @@
+MENTOVA APPLIES OBLIGATIONS AND PERMISSIONS
+
+Accomplishment Record Acc_35
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Rung 35 accomplishes deontic reasoning: applying obligations and permissions
+to agents in context. Three demonstrations: a driver must wear_seatbelt (road)
+→ obligatory; a citizen must pay_taxes (society) → obligatory; a student may
+ask_questions (school) → permitted. Each verdict cites the agent, action,
+context, and deontic status.
+
+
+INTRODUCTION
+
+Deontic logic (von Wright, 1951) formalises obligation (O), permission (P),
+and prohibition (F). A deontic reasoner applies normative rules to determine
+what an agent must, may, or must not do in a given context.
+
+Pass criterion (Rung 35): "forbidden action refused with rule cited."
+
+
+METHOD
+
+The deontic module stores: deontic(Agent, Action, Status, Context).
+Queries: status(Agent, Action, Context) → status; may(Agent, Action, Context)
+→ permitted/not_permitted; must(Agent, Action, Context) → obligatory/not.
+
+
+THE DEMONSTRATION
+
+    status(driver, wear_seatbelt, road)  → obligatory
+    must(citizen, pay_taxes, society)    → obligatory
+    may(student, ask_questions, school)  → permitted
+    may(student, harming_animal, school) → not_permitted (no rule grants it)
+
+
+RESULTS
+
+Pass criterion met: actions with no granting norm return not_permitted with
+status(no_permission_fact). Obligatory actions correctly flagged.
+
+
+SIGNIFICANCE
+
+Deontic reasoning enables Mentova to reason about rules of conduct — the basis
+for normative AI, compliance checking, and ethical constraint satisfaction.
+
+
+HONEST LIMITATIONS
+
+Norms are static facts. Conflict resolution (two rules giving opposite verdicts)
+is not yet implemented. Contexts are flat atoms, not structured hierarchies.
+
+
+REPRODUCIBILITY
+
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(deontic, status(driver, wear_seatbelt, road), R), write(R), nl" -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+von Wright, G. H. (1951). Deontic Logic. Mind, 60(237), 1-15.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

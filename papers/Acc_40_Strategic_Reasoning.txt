@@ -1,0 +1,97 @@
+MENTOVA'S STRATEGIC REASONING
+
+Accomplishment Record Acc_40
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 40 of Mentova's 48-rung reasoning ladder: strategic reasoning.
+Mentova uses minimax search in a game tree and computes Nash equilibria and
+dominant strategies in matrix games. In a three-branch game tree, minimax selects
+move=a (value=3). In the Prisoner's Dilemma, the Nash equilibrium is
+[defect-defect] and the dominant strategy for the row player is defect.
+Pass criterion met: optimal move found with minimax value.
+
+
+INTRODUCTION
+
+Strategic reasoning concerns decision-making in the presence of other agents with
+potentially opposing interests. Game theory (von Neumann and Morgenstern, 1944)
+formalises optimal strategies. Rung 40 implements minimax and Nash equilibrium.
+
+
+BACKGROUND
+
+Minimax (Shannon, 1950) is the core algorithm for two-player zero-sum games.
+Nash equilibrium (Nash, 1950) identifies stable strategy profiles in general games.
+
+
+METHOD
+
+A new module, src/mentova/strategic.pl, implements:
+
+    mentova_strategic(+Query, -Result, -Justification)
+
+Games: three-branch minimax tree, Prisoner's Dilemma, Matching Pennies.
+Queries: minimax(Position), nash(Game), dominant(Game, Player), payoff(Game, Row, Col).
+
+
+DEMONSTRATION
+
+    ?- mentova_query(strategic, minimax(root), R).
+    R = answer(move(a, value(3)),
+               just(strategic(minimax_search(root), best_move(a), value(3))))
+
+    ?- mentova_query(strategic, nash(prisoners_dilemma), R).
+    R = answer(equilibria(prisoners_dilemma, [defect-defect]), ...)
+
+    ?- mentova_query(strategic, dominant(prisoners_dilemma, row), R).
+    R = answer(dominant(prisoners_dilemma, row, defect), ...)
+
+
+RESULTS
+
+Minimax selects a=3. Nash equilibrium: defect-defect. Dominant strategy: defect.
+All results align with classical game theory. Pass criterion met.
+
+
+SIGNIFICANCE
+
+Strategic reasoning is the foundation of competitive AI (chess, Go, poker),
+auction design, mechanism design, and multi-agent coordination.
+
+
+HONEST LIMITATIONS
+
+The game tree is static and small. Real game AI uses alpha-beta pruning, Monte
+Carlo tree search, or neural evaluation functions for large state spaces.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(strategic, minimax(root), R), write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+von Neumann, J., & Morgenstern, O. (1944). Theory of Games and Economic Behavior.
+Princeton University Press.
+
+Nash, J. (1950). Equilibrium points in n-person games. PNAS, 36(1), 48-49.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

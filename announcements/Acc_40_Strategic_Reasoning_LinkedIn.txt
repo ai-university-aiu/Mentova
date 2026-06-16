@@ -1,0 +1,27 @@
+MENTOVA FINDS THE DOMINANT STRATEGY — Rung 40 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 40 of the Mentova reasoning ladder: Strategic Reasoning.
+
+Mentova can now analyse strategic interactions using game theory, compute Nash equilibria, and identify dominant strategies.
+
+Demonstrated live:
+
+    mentova_query(strategic, nash_equilibrium(prisoners_dilemma), R)
+    → equilibrium(prisoners_dilemma, [defect, defect], jointly_suboptimal)
+
+    mentova_query(strategic, dominant_strategy(prisoners_dilemma, player_a), R)
+    → dominant(player_a, defect, always_best_regardless_of_opponent)
+
+    mentova_query(strategic, best_response(coordination_game, player_a, right), R)
+    → best_response(player_a, right, payoff(10))
+
+The justification explains why defect dominates even though mutual cooperation would benefit both — the classic prisoner's dilemma insight, derived transparently.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_40) on the Mentova repository.
+
+#PrologAI #Mentova #StrategicReasoning #GameTheory #NashEquilibrium #AIU #SyntheticMind

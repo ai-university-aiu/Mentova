@@ -1,0 +1,26 @@
+MENTOVA SNAPS TO A JUDGMENT — Rung 43 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 43 of the Mentova reasoning ladder: Intuitive Reasoning.
+
+Mentova now has System 1: fast prototype-matching that returns a confident classification without exhaustive rule traversal.
+
+Demonstrated live:
+
+    mentova_query(intuitive, classify([has_wings, has_feathers, lays_eggs]), R)
+    → match(bird, robin, confidence(0.75))
+
+    mentova_query(intuitive, gut([has_fins, breathes_water, lays_eggs]), R)
+    → gut(fish, triggered_by(has_fins))
+
+3 of 4 bird features → 0.75 confidence → snap judgment: bird. Same answer as the full is_a chain — reached instantly by prototype similarity.
+
+Intuitive and deliberate reasoning now co-exist in Mentova. Easy cases go fast. Hard cases go deep.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_43) on the Mentova repository.
+
+#PrologAI #Mentova #IntuitiveReasoning #System1 #Kahneman #AIU #SyntheticMind #GlassBoxAI

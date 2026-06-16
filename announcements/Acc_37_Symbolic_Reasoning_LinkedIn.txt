@@ -1,0 +1,27 @@
+MENTOVA MANIPULATES SYMBOLS AND TRANSFORMS EXPRESSIONS — Rung 37 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 37 of the Mentova reasoning ladder: Symbolic Reasoning.
+
+Mentova can now apply rewrite rules, evaluate symbolic expressions, and perform algebraic simplification.
+
+Demonstrated live:
+
+    mentova_query(symbolic, simplify(plus(0, x)), R)
+    → simplified(x, by(identity_add_zero))
+
+    mentova_query(symbolic, rewrite(neg(neg(x))), R)
+    → rewritten(x, by(double_negation))
+
+    mentova_query(symbolic, eval(plus(3, times(2, 4))), R)
+    → value(11)
+
+Each result names the transformation rule applied — the justification is the rewrite trace itself.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_37) on the Mentova repository.
+
+#PrologAI #Mentova #SymbolicAI #AIU #SyntheticMind #GlassBoxAI #SymbolicReasoning

@@ -1,0 +1,27 @@
+MENTOVA UNDERSTANDS ROLES AND RELATIONSHIPS — Rung 42 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 42 of the Mentova reasoning ladder: Social Reasoning.
+
+Mentova can now reason about social roles, relationships, and norms — predicting contextually appropriate behaviour from the social structure of a situation.
+
+Demonstrated live:
+
+    mentova_query(social, role(alice, school), R)
+    → role(alice, teacher, school)
+
+    mentova_query(social, relationship(alice, bob), R)
+    → teacher_student, strength(0.8)
+
+    mentova_query(social, norms(teacher, school), R)
+    → [prepare_lessons(obligatory), treat_fairly(obligatory), grade_objectively(obligatory)]
+
+Every answer includes the role, context, and applicable norms — not just a label.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_42) on the Mentova repository.
+
+#PrologAI #Mentova #SocialReasoning #AIU #SyntheticMind #GlassBoxAI #SocialAI

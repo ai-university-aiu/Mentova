@@ -42,6 +42,27 @@
 :- use_module(constraint_based).
 :- use_module(scientific).
 :- use_module(system_reasoning).
+:- use_module(model_based).
+:- use_module(heuristic).
+:- use_module(critical).
+:- use_module(dialectical).
+:- use_module(metacognitive).
+:- use_module(modal).
+:- use_module(epistemic).
+:- use_module(deontic).
+:- use_module(procedural).
+:- use_module(symbolic).
+:- use_module(practical).
+:- use_module(teleological).
+:- use_module(strategic).
+:- use_module(narrative).
+:- use_module(social).
+:- use_module(intuitive).
+:- use_module(emotional).
+:- use_module(motivational).
+:- use_module(informal).
+:- use_module(legal).
+:- use_module(moral).
 
 :- use_module(library(lists), [member/2]).
 
@@ -94,6 +115,90 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
 
+% Rung 48 — moral: multi-framework ethical reasoning
+mentova_query(moral, MorQuery, answer(Result, Just)) :-
+    once(mentova_moral(MorQuery, Result, Just)).
+
+% Rung 47 — legal: rule-exception-precedent reasoning
+mentova_query(legal, LQuery, answer(Result, Just)) :-
+    once(mentova_legal(LQuery, Result, Just)).
+
+% Rung 46 — informal: fallacy detection and rhetoric analysis
+mentova_query(informal, InfQuery, answer(Result, Just)) :-
+    once(mentova_informal(InfQuery, Result, Just)).
+
+% Rung 45 — motivational: drive and need hierarchy reasoning
+mentova_query(motivational, MotQuery, answer(Result, Just)) :-
+    once(mentova_motivational(MotQuery, Result, Just)).
+
+% Rung 44 — emotional: appraisal-based emotion reasoning
+mentova_query(emotional, EmoQuery, answer(Result, Just)) :-
+    once(mentova_emotional(EmoQuery, Result, Just)).
+
+% Rung 43 — intuitive: fast prototype-based pattern matching
+mentova_query(intuitive, IQuery, answer(Result, Just)) :-
+    once(mentova_intuitive(IQuery, Result, Just)).
+
+% Rung 42 — social: roles, relationships, trust, group reasoning
+mentova_query(social, SocQuery, answer(Result, Just)) :-
+    once(mentova_social(SocQuery, Result, Just)).
+
+% Rung 41 — narrative: story structure and plot reasoning
+mentova_query(narrative, NQuery, answer(Result, Just)) :-
+    once(mentova_narrative(NQuery, Result, Just)).
+
+% Rung 40 — strategic: game-theoretic optimal move selection
+mentova_query(strategic, StQuery, answer(Result, Just)) :-
+    once(mentova_strategic(StQuery, Result, Just)).
+
+% Rung 39 — teleological: purpose and final-cause reasoning
+mentova_query(teleological, TQuery, answer(Result, Just)) :-
+    once(mentova_teleological(TQuery, Result, Just)).
+
+% Rung 38 — practical: means-ends action selection
+mentova_query(practical, PQuery, answer(Result, Just)) :-
+    once(mentova_practical(PQuery, Result, Just)).
+
+% Rung 37 — symbolic: symbol manipulation and algebraic identities
+mentova_query(symbolic, SQuery, answer(Result, Just)) :-
+    once(mentova_symbolic(SQuery, Result, Just)).
+
+% Rung 36 — procedural: step-by-step plan reasoning
+mentova_query(procedural, ProcQuery, answer(Result, Just)) :-
+    once(mentova_procedural(ProcQuery, Result, Just)).
+
+% Rung 35 — deontic: obligation/permission/prohibition reasoning
+mentova_query(deontic, DeoQuery, answer(Result, Just)) :-
+    once(mentova_deontic(DeoQuery, Result, Just)).
+
+% Rung 34 — epistemic: knowledge/belief/ignorance reasoning
+mentova_query(epistemic, EQuery, answer(Result, Just)) :-
+    once(mentova_epistemic(EQuery, Result, Just)).
+
+% Rung 33 — modal: possible/necessary/contingent world reasoning
+mentova_query(modal, MQuery, answer(Result, Just)) :-
+    once(mentova_modal(MQuery, Result, Just)).
+
+% Rung 32 — metacognitive: reason about own capabilities
+mentova_query(metacognitive, MCQuery, answer(Result, Just)) :-
+    once(mentova_metacognitive(MCQuery, Result, Just)).
+
+% Rung 31 — dialectical: weigh pro/con arguments
+mentova_query(dialectical, DQuery, answer(Result, Just)) :-
+    once(mentova_dialectical(DQuery, Result, Just)).
+
+% Rung 30 — critical: evaluate claim support
+mentova_query(critical, CritQuery, answer(Result, Just)) :-
+    once(mentova_critical(CritQuery, Result, Just)).
+
+% Rung 29 — heuristic: good-enough answer within budget
+mentova_query(heuristic, HeurQuery, answer(Result, Just)) :-
+    once(mentova_heuristic(HeurQuery, Result, Just)).
+
+% Rung 28 — model-based: predict from explicit model
+mentova_query(model_based, ModelQuery, answer(Result, Just)) :-
+    once(mentova_model(ModelQuery, Result, Just)).
+
 % Rung 27 — system: reason about parts and interactions
 mentova_query(system, SysQuery, answer(Result, Just)) :-
     once(mentova_system(SysQuery, Result, Just)).
@@ -136,7 +241,7 @@ mentova_query(paraconsistent, ParaQuery, answer(Result, Just)) :-
 
 % Rung 17 — non-monotonic: defeasible default retraction
 mentova_query(nonmonotonic, NMQuery, answer(Result, Just)) :-
-    mentova_defeasible(query(NMQuery), Result, Just).
+    mentova_defeasible(NMQuery, Result, Just).
 
 % Rung 16 — qualitative: predict direction of change
 mentova_query(qualitative, QualQuery, answer(Result, Just)) :-

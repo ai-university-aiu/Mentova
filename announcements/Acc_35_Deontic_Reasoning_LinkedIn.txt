@@ -1,0 +1,27 @@
+MENTOVA KNOWS WHAT IT OUGHT TO DO — Rung 35 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 35 of the Mentova reasoning ladder: Deontic Reasoning.
+
+Mentova can now distinguish obligation from permission from prohibition — and report what it ought to do in any registered context.
+
+Demonstrated live:
+
+    mentova_query(deontic, obligation(mentor, teach_honestly), R)
+    → obligatory(mentor, teach_honestly, context(academic))
+
+    mentova_query(deontic, permitted(alice, share_notes), R)
+    → permitted(alice, share_notes, context(study_group))
+
+    mentova_query(deontic, what_must(mentor), R)
+    → obligations(mentor, [teach_honestly, cite_sources, protect_privacy])
+
+The glass-box justification cites the deontic rule, the agent, and the context — no black box.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_35) on the Mentova repository.
+
+#PrologAI #Mentova #DeonticLogic #AIU #SyntheticMind #GlassBoxAI #AIReasoning

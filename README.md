@@ -62,20 +62,20 @@ The birth sequence (Rungs 1-9) is the minimum viable Mentova.
 | 32 | Metacognitive | ✅ Accomplished |
 | 33 | Modal | ✅ Accomplished |
 | 34 | Epistemic | ✅ Accomplished |
-| 35 | Deontic | Pending |
-| 36 | Procedural | Pending |
-| 37 | Symbolic | Pending |
-| 38 | Practical | Pending |
-| 39 | Teleological | Pending |
-| 40 | Strategic | Pending |
-| 41 | Narrative | Pending |
-| 42 | Social | Pending |
-| 43 | Intuitive | Pending |
-| 44 | Emotional | Pending |
-| 45 | Motivational | Pending |
-| 46 | Informal | Pending |
-| 47 | Legal | Pending |
-| 48 | Moral | Pending |
+| 35 | Deontic | ✅ Accomplished |
+| 36 | Procedural | ✅ Accomplished |
+| 37 | Symbolic | ✅ Accomplished |
+| 38 | Practical | ✅ Accomplished |
+| 39 | Teleological | ✅ Accomplished |
+| 40 | Strategic | ✅ Accomplished |
+| 41 | Narrative | ✅ Accomplished |
+| 42 | Social | ✅ Accomplished |
+| 43 | Intuitive | ✅ Accomplished |
+| 44 | Emotional | ✅ Accomplished |
+| 45 | Motivational | ✅ Accomplished |
+| 46 | Informal | ✅ Accomplished |
+| 47 | Legal | ✅ Accomplished |
+| 48 | Moral | ✅ Accomplished |
 
 ## Platform dependency
 

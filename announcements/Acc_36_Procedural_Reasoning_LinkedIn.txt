@@ -1,0 +1,27 @@
+MENTOVA FOLLOWS A PROCEDURE STEP BY STEP — Rung 36 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 36 of the Mentova reasoning ladder: Procedural Reasoning.
+
+Mentova can now execute a procedure step by step, report the next action, and detect when a step is missing.
+
+Demonstrated live:
+
+    mentova_query(procedural, next_step(make_tea, [boil_water]), R)
+    → next(add_tea_bag)
+
+    mentova_query(procedural, full_procedure(make_tea), R)
+    → steps(make_tea, [boil_water, add_tea_bag, steep_3_minutes, remove_bag, serve])
+
+    mentova_query(procedural, missing_steps(make_tea, [boil_water, serve]), R)
+    → missing([add_tea_bag, steep_3_minutes, remove_bag])
+
+Every step traces to a procedure/3 fact and its predecessor — a fully auditable execution trace.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_36) on the Mentova repository.
+
+#PrologAI #Mentova #ProceduralReasoning #AIU #SyntheticMind #GlassBoxAI

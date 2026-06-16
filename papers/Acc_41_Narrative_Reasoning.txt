@@ -1,0 +1,97 @@
+MENTOVA'S NARRATIVE REASONING
+
+Accomplishment Record Acc_41
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 41 of Mentova's 48-rung reasoning ladder: narrative reasoning.
+Mentova understands story structure: setup, conflict, resolution, character roles,
+causal chains, and lessons. For "The Tortoise and the Hare," the arc is
+setup=hare_boasts, conflict=race_begins, resolution=tortoise_wins. The tortoise's
+role is hero; the hare's role is foil. Pass criterion met: narrative arc and
+character roles returned from story identifier.
+
+
+INTRODUCTION
+
+Narrative reasoning concerns comprehension of story structure, plot causality,
+and character roles. It is central to natural language understanding and the
+cognitive basis of human reasoning.
+
+
+BACKGROUND
+
+Narrative intelligence (Schank and Abelson, 1977) uses scripts and story grammars
+to model sequential event comprehension. Propp's morphology (1928) identifies
+canonical character roles (hero, antagonist, helper) and narrative stages.
+
+
+METHOD
+
+A new module, src/mentova/narrative.pl, implements:
+
+    mentova_narrative(+Query, -Result, -Justification)
+
+Three stories: tortoise_hare, boy_wolf, cinderella. Each with events, roles,
+arc, and lesson. Queries: arc, characters, role, causal_chain, lesson, what_stories.
+
+
+DEMONSTRATION
+
+    ?- mentova_query(narrative, arc(tortoise_hare), R).
+    R = answer(arc(hare_boasts, race_begins, tortoise_wins), ...)
+
+    ?- mentova_query(narrative, lesson(boy_wolf), R).
+    R = answer(lesson(liars_not_believed), ...)
+
+    ?- mentova_query(narrative, role(cinderella, cinderella), R).
+    R = answer(role(cinderella, hero), ...)
+
+
+RESULTS
+
+Arcs, lessons, roles correctly retrieved for all three stories.
+Pass criterion met.
+
+
+SIGNIFICANCE
+
+Narrative reasoning is foundational to reading comprehension, story generation,
+summarization, and the cultural transmission of knowledge through fables and myths.
+
+
+HONEST LIMITATIONS
+
+Stories are manually encoded. Narrative understanding from free text requires
+natural language processing beyond this symbolic representation.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(narrative, arc(tortoise_hare), R), write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Schank, R. C., & Abelson, R. P. (1977). Scripts, Plans, Goals and Understanding.
+Erlbaum.
+
+Propp, V. (1928/1968). Morphology of the Folktale. University of Texas Press.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

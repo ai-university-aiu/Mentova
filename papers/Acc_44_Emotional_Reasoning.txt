@@ -1,0 +1,84 @@
+MENTOVA APPRAISES EMOTIONAL SIGNIFICANCE
+
+Accomplishment Record Acc_44
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Rung 44 accomplishes emotional reasoning: primary appraisal (desirable or
+threatening?), secondary appraisal (handle or flee?), and emotion prediction.
+Demonstrated: alice/win_competition → joy/high/approach; bob/exam_tomorrow
+→ anxiety/moderate/prepare; alice/lose_contest → sadness/moderate/withdraw.
+All responses include emotion category, intensity, and action tendency.
+
+
+INTRODUCTION
+
+Lazarus's cognitive appraisal theory holds that emotions arise from a
+two-stage appraisal: Is this event relevant and positive or negative?
+(primary), and Can I cope? (secondary).
+
+Pass criterion (Rung 44): "emotion correctly assigned from situation description."
+
+
+METHOD
+
+The emotional module stores: situation_appraisal(Agent, Event, Valence,
+Coping, Emotion, Intensity, Tendency). Implements: appraise(Agent, Event)
+→ emotion; how_might_feel(Agent, Situation) → predicted emotion with
+appraisal rationale.
+
+
+THE DEMONSTRATION
+
+    appraise(alice, win_competition):
+      Valence: positive, Coping: approach
+      → emotion(joy, high, approach)
+
+    how_might_feel(bob, exam_tomorrow):
+      Valence: negative, Coping: manageable
+      → likely_emotion(anxiety, moderate, prepare)
+
+    appraise(alice, lose_contest):
+      Valence: negative, Coping: unavoidable
+      → emotion(sadness, moderate, withdraw)
+
+
+RESULTS
+
+Pass criterion met: emotion is correctly assigned for each appraisal pair.
+Intensity reflects goal-relevance and coping capacity.
+
+
+SIGNIFICANCE
+
+Emotional reasoning allows Mentova to model affect — not to simulate feelings,
+but to reason correctly about how emotional states influence behaviour and
+decision-making for any agent in the knowledge base.
+
+
+HONEST LIMITATIONS
+
+Emotions are statically stored as appraisal triples. Emotion dynamics
+(escalation, regulation, recovery) are not modelled.
+
+
+REPRODUCIBILITY
+
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(emotional, appraise(alice, win_competition), R), write(R), nl" -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+Lazarus, R. S. (1991). Emotion and Adaptation. Oxford University Press.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

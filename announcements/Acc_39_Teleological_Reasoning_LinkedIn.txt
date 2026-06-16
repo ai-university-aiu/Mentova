@@ -1,0 +1,27 @@
+MENTOVA KNOWS WHAT THINGS ARE FOR — Rung 39 Accomplished
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 39 of the Mentova reasoning ladder: Teleological Reasoning.
+
+Mentova can now reason about the purpose of any artifact, organ, or institution — and trace the full teleological chain from proximate function to ultimate goal.
+
+Demonstrated live:
+
+    mentova_query(teleological, purpose_of(heart), R)
+    → purpose(heart, pump_blood, serves(circulatory_system, enables(oxygen_delivery, enables(cell_survival))))
+
+    mentova_query(teleological, purpose_of(knife), R)
+    → purpose(knife, cut_material, serves(food_preparation, enables(cutting_food, enables(meal_preparation))))
+
+    mentova_query(teleological, ultimate_goal(school), R)
+    → ultimate(school, societal_function)
+
+Mentova does not just label — it traces the entire chain: this for that, that enabling the other.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_39) on the Mentova repository.
+
+#PrologAI #Mentova #TeleologicalReasoning #AIU #SyntheticMind #GlassBoxAI #FinalCause

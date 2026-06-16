@@ -1,0 +1,103 @@
+MENTOVA'S MORAL REASONING
+
+Accomplishment Record Acc_48
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 48 — the final rung — of Mentova's 48-rung reasoning ladder: moral reasoning.
+Mentova analyses moral dilemmas from three ethical frameworks (utilitarian, deontological,
+virtue ethics) and synthesises an integrated verdict. For the trolley problem: utilitarian
+verdict = pull_lever (save five), deontological verdict = pull_lever (no rule broken),
+virtue verdict = do_nothing (virtuous restraint). Integrated: pull_lever (plurality).
+Pass criterion met: dilemma analysed from multiple frameworks with integrated verdict.
+
+
+INTRODUCTION
+
+Moral reasoning is the apex of Mentova's reasoning ladder. It requires integrating
+consequentialist, deontological, and virtue-based perspectives on ethical dilemmas.
+Rung 48 implements all three frameworks and a plurality-vote integration.
+
+
+BACKGROUND
+
+Three major ethical traditions: utilitarianism (Bentham/Mill) — maximise welfare;
+deontology (Kant) — follow universal rules; virtue ethics (Aristotle) — act as a
+virtuous person would. Each gives different verdicts on hard cases.
+
+
+METHOD
+
+A new module, src/mentova/moral.pl, implements:
+
+    mentova_moral(+Query, -Result, -Justification)
+
+Four dilemmas: trolley_problem, lying_to_protect, doctors_dilemma, whistleblowing.
+Three frameworks with independent verdict predicates. Integrated judgement by
+plurality vote. Queries: analyse, utilitarian, deontological, virtue, describe, what_dilemmas.
+
+
+DEMONSTRATION
+
+    ?- mentova_query(moral, analyse(trolley_problem), R).
+    R = answer(moral_analysis(trolley_problem,
+                               utilitarian(pull_lever),
+                               deontological(pull_lever),
+                               virtue(do_nothing),
+                               integrated(pull_lever)), ...)
+
+    ?- mentova_query(moral, virtue(doctors_dilemma), R).
+    R = answer(verdict(refuse), ...)
+
+
+RESULTS
+
+Trolley: utilitarian and deontological agree on pull_lever; virtue recommends do_nothing.
+Integrated: pull_lever (2 of 3 frameworks). Doctors dilemma virtue verdict: refuse.
+Pass criterion met.
+
+
+SIGNIFICANCE
+
+Moral reasoning is the most demanding capability for an AI system. Mentova does not
+impose a single framework but shows all three verdicts transparently, leaving the
+integrated judgement open to human review. This is the spirit of PrologAI: glass-box
+reasoning where every conclusion is justified.
+
+
+HONEST LIMITATIONS
+
+Dilemma options and their moral properties are manually specified. Real moral
+reasoning would require situational parsing, value learning, and cultural sensitivity.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(moral, analyse(trolley_problem), R), write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Mill, J. S. (1863). Utilitarianism. Parker, Son, and Bourn.
+
+Kant, I. (1785/1964). Groundwork of the Metaphysic of Morals. Harper & Row.
+
+Aristotle (350 BCE/2009). Nicomachean Ethics. Oxford University Press.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

@@ -1,0 +1,94 @@
+MENTOVA'S PRACTICAL REASONING
+
+Accomplishment Record Acc_38
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 38 of Mentova's 48-rung reasoning ladder: practical reasoning.
+Mentova selects the lowest-cost action to achieve a goal from the current state
+using means-ends analysis. Given goal=not_hungry and state=[has(food)], the best
+action is eat_food (cost 1). Given goal=has(food) and state=[has(money)], the best
+action is buy_food (cost 2). Pass criterion met: best action selected with
+means-ends justification.
+
+
+INTRODUCTION
+
+Practical reasoning concerns what to do to achieve a goal. Means-ends analysis
+(Newell and Simon, 1963) selects the action that reduces the gap between current
+and goal state. Rung 38 implements this for an action base with preconditions,
+effects, and costs.
+
+
+BACKGROUND
+
+Means-ends analysis is the core of the General Problem Solver (GPS) and STRIPS-based
+planners. It decomposes goals into sub-goals and selects actions to reduce each gap.
+
+
+METHOD
+
+A new module, src/mentova/practical.pl, implements:
+
+    mentova_practical(+Query, -Result, -Justification)
+
+Eleven actions across domains: food, travel, fitness, learning. Each with
+preconditions, effects, and cost. Queries: best_action, achieves_what, how_to.
+
+
+DEMONSTRATION
+
+    ?- mentova_query(practical, best_action(not_hungry, [has(food)]), R).
+    R = answer(action(eat_food, cost(1)),
+               just(practical(means_ends(goal(not_hungry), state([has(food)]),
+                                          best_action(eat_food), cost(1)))))
+
+    ?- mentova_query(practical, best_action(has(food), [has(money)]), R).
+    R = answer(action(buy_food, cost(2)), ...)
+
+
+RESULTS
+
+eat_food selected for not_hungry (lowest cost when food available).
+buy_food selected for has(food) when money available. Pass criterion met.
+
+
+SIGNIFICANCE
+
+Practical reasoning bridges goals and actions. It is foundational to autonomous
+agents, robotics, and decision support systems.
+
+
+HONEST LIMITATIONS
+
+The action selection is greedy (lowest cost), not globally optimal (no lookahead).
+A planner would also handle chained sub-goals and resource constraints.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(practical, best_action(not_hungry, [has(food)]), R), write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Newell, A., & Simon, H. A. (1963). GPS, a program that simulates human thought.
+In E. Feigenbaum & J. Feldman (Eds.), Computers and Thought. McGraw-Hill.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
