@@ -1,0 +1,45 @@
+Mentova Is Now Accessible via the Model Context Protocol — All Five ACs Pass (Acc_63)
+
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+We just verified that Mentova — a Synthetic Mind built on PrologAI — is fully accessible via the Model Context Protocol (MCP), the open tool-calling standard for the AI agent ecosystem.
+
+WHAT WAS VERIFIED (run live in Prolog at runtime):
+
+Gateway start: mcp_gateway_start(7474) — HTTP server confirmed on port 7474.
+API key management: mcp_set_api_key/mcp_get_api_key — set and retrieved correctly.
+Lattice inscribe and query: dispatch_tool(lattice_inscribe) / dispatch_tool(lattice_query) — node_fact anchored and retrieved via MCP tool dispatch.
+Actor list (opacity): dispatch_tool(actor_list) returns [attention_arbiter_actor] — a list of names, not raw Lattice contents.
+Gateway stop: mcp_gateway_stop/0 — mcp_active_port cleared cleanly.
+
+AC-PR63-001: PASS. Gateway started; port 7474 confirmed.
+AC-PR63-002: PASS. API key set and retrieved correctly.
+AC-PR63-003: PASS. node_fact inscribed and queried via MCP tool dispatch.
+AC-PR63-004: PASS. Actor list returned without Lattice contents — opacity confirmed.
+AC-PR63-005: PASS. Gateway stopped and port cleared cleanly.
+
+THE OPACITY PRINCIPLE (structural, not policy):
+
+What MCP clients can access: what Mentova can DO (tool names, schemas, results).
+What MCP clients cannot access: how Mentova STORES knowledge (node_fact structure, scope names, Lattice topology).
+
+This boundary is architectural. It cannot be bypassed through the MCP interface.
+
+FOUR PROTOCOLS, ONE ARCHITECTURE:
+
+With MCP (Acc_63) verified, Mentova now participates in all four major agent communication protocols:
+
+MCP (Acc_63): tool-calling by LLM orchestrators and IDE integrations.
+A2A (Acc_59): task delegation between peer agents.
+ACP (Acc_64): REST-based asynchronous runs for enterprise HTTP clients.
+ANP (Acc_65): decentralized peer discovery with cryptographic DID identity.
+
+The tool-use faculty (PR 44) unifies all six tool sources behind one card and one registry. Whether a tool speaks MCP, A2A, ACP, ANP, or is a native predicate — Mentova discovers and invokes it the same way.
+
+The cognitive architecture that grew from one transparent deduction (Acc_01) is now accessible to the entire AI agent ecosystem over the MCP standard.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
