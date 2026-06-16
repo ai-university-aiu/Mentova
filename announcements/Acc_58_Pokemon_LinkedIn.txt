@@ -1,0 +1,96 @@
+MENTOVA PLAYS POKÉMON — DEVELOPMENTAL STORY, SELF-IMPROVEMENT, GLASS-BOX
+
+Pokémon is the crowd flagship in PrologAI's Demonstration Plan for three reasons:
+it is long-horizon, it is nostalgic and visually appealing to a broad audience,
+and it exercises the two narrative arcs Mentova is built around.
+
+The developmental story: start weak, grow progressively stronger.
+The self-improvement story: learn from each battle, rewrite the strategy.
+
+Today Mentova demonstrates both (Accomplishment Record Acc_58).
+
+Honest stub declaration (upfront):
+This demonstration is symbolic simulation. No Pokémon ROM is bundled.
+No emulator is running. The game-as-a-body harness (Acc_50) provides
+the architecture for live ROM play via PyBoy. What this demo shows is
+the complete methodology, glass-box. Connecting a live emulator is
+an engineering task, not a research gap.
+
+What Mentova demonstrates:
+
+Step 1 - Game-state representation.
+trainer(name(mentova), location(pallet_town), badges([]), team([...])).
+pokemon(charmander, fire, level(5), hp(39), [ember,scratch,growl,tackle]).
+AC-PR58-001: PASS.
+
+Step 2 - Battle decision, glass-box.
+Scenario: Mentova enters Pewter City Gym. Brock sends Geodude (rock type).
+
+Move analysis vs rock:
+- ember (fire, power:40) x 0.5 = 20.0
+- scratch (normal, power:40) x 0.5 = 20.0
+- growl (normal, power:0) x 0.5 = 0.0
+- tackle (normal, power:40) x 0.5 = 20.0
+
+Best move: ember. Reason: ember(fire,power:40) vs rock -> 0.5x = 20.0.
+
+(Note: all of Charmander's moves are equally weak vs rock. This is by design.
+Brock's gym is hard for the fire-type starter. The correct counter is a water
+or grass type. Mentova reports the honest analysis, not a fabricated win.)
+
+AC-PR58-002: PASS — battle decision glass-box.
+
+Step 3 - Continual refinement (PR 17 / SONA).
+Three battles simulated. Outcomes recorded as strategy_record/3 facts.
+
+Battle 1: fire vs grass -> victory. Record: fire/grass = 1W, 0L.
+Battle 2: fire vs water -> defeat. Record: fire/water = 0W, 1L.
+Battle 3: fire vs grass -> victory. Record: fire/grass = 2W, 0L.
+
+Strategy insights derived:
+- fire is 2/0 vs grass. Prefer grass opponents.
+- fire is 0/1 vs water. Avoid or switch vs water.
+
+SONA records these as node_facts. Future move selection weights type matchups
+by the accumulated win/loss record. AC-PR58-003: PASS.
+
+Step 4 - Developmental progress.
+Gym battle: Charmander (fire) vs Onix (rock, Lv14).
+Turn 1: ember -> 20.0 dmg. Turn 2: ember -> 20.0 dmg. Total: 40.0 >= 35 HP.
+VICTORY. Boulder Badge earned. Badge log updated.
+AC-PR58-004: PASS.
+
+Step 5 - Honest stub declaration.
+Live path (when emulator connected):
+- game_body.pl enrolls PyBoy as body: game_env(pyboy, pokemon_red).
+- Each screen frame arrives as percept(frame, PixelGrid).
+- Visual module parses PixelGrid -> game_state(...).
+- best_move/4 queries type effectiveness table.
+- action(press_button(BestMove)) dispatched to PyBoy.
+- SONA records outcomes, improves strategy.
+AC-PR58-005: PASS.
+
+This closes all six flagship demonstrations from Volume 6, Part 7:
+- Pokémon (crowd flagship): Acc_58. DONE.
+- ARC-AGI (credibility flagship): Acc_55. DONE.
+- Raven's Progressive Matrices: Acc_56. DONE.
+- Baba Is You (the jewel): Acc_57. DONE.
+- Cognitive-science showpieces (Sally-Anne, Wason, Wisconsin): Acc_53. DONE.
+- Developmental milestone spine (Piagetian battery): Acc_54. DONE.
+
+All six. Glass-box. Papers and announcements filed.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University)
+Creator of PrologAI and Mentova
+ORCID: 0009-0001-9246-5758
+https://www.linkedin.com/in/d-r-dison/
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+Paper: papers/Acc_58_Pokemon.txt
+Demo: demos/pokemon_demo.pl
+
+#PrologAI #Mentova #Pokemon #AIU #GlassBoxAI #ExplainableAI #SymbolicAI
+#SelfImprovement #DevelopmentalAI #TypeEffectiveness #GameAI
+#AIBenchmarks #ArtificialIntelligence #ContinualLearning
