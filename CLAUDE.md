@@ -17,6 +17,14 @@ Every paper (papers/Acc_N_*.txt) and every announcement
 
 No AI tools are credited as authors or co-authors anywhere.
 
+COPYRIGHT ACKNOWLEDGMENT — END OF EVERY PAPER
+
+Every paper (papers/Acc_N_*.txt) must end with this block, verbatim,
+as the very last content in the file:
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
+
 PUBLISHED WORKS — NOTICE FILE ONLY
 
 The author's published works (books, papers, YouTube channel) must appear ONLY
