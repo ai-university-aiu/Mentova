@@ -1,0 +1,312 @@
+MENTOVA PART 10 COMPLIANCE VERIFICATION:
+RECORDING AND ANNOUNCING EVERY ACCOMPLISHMENT,
+AND EVALUATING THE CLOSING NOTE OF THE DEMONSTRATION PLAN
+
+Accomplishment Record Acc_62
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report the Part 10 Compliance Verification for Mentova, closing the final
+explicit obligation of the PrologAI Demonstration and Proof-of-Concept Plan.
+Part 10 requires that every accomplishment produces both a scientific paper and
+a public announcement, and that capability is shown before it is announced. This
+accomplishment verifies compliance programmatically: the papers/ and announcements/
+directories are scanned at runtime, confirming 61 papers and 61 announcements for
+Acc_01 through Acc_61, with no gaps in coverage. The Part 10 discipline is
+confirmed across all five phases of Mentova's development. The Closing Note of
+the Demonstration Plan is evaluated claim by claim against the developmental
+record. All five acceptance criteria pass: AC-PR62-001 through AC-PR62-005.
+Parts 1 through 10 of the PrologAI Demonstration and Proof-of-Concept Plan are
+complete.
+
+
+INTRODUCTION
+
+Part 10 of the PrologAI Demonstration and Proof-of-Concept Plan states:
+
+    "For every accomplishment in this plan - each rung of the reasoning
+     ladder, each practical track, and each flagship demonstration - two
+     documents are produced once the accomplishment is achieved: a
+     scientific paper and a public announcement.
+
+     One discipline governs both, in the spirit of Part 38 of the
+     Specification: a paper or announcement is written for an accomplishment
+     only once it has actually been achieved and its result has been measured.
+
+     Capability is shown first and announced second, never announced ahead
+     of the evidence."
+
+Part 10 is not a capability to demonstrate. It is an administrative discipline.
+But disciplines are more meaningful when verified, not merely declared. This
+accomplishment verifies Part 10 compliance programmatically, using Prolog's
+directory_files/2 to scan the actual document tree and confirm that every
+Acc number from 1 through 61 has both a paper and an announcement on disk.
+
+The Closing Note of the Demonstration Plan — two short paragraphs that describe
+what the plan accomplishes — is then evaluated claim by claim against the
+developmental record. Each claim is either confirmed by evidence or not. All six
+claims confirm.
+
+This is the final accomplishment in the Demonstration Plan. With Acc_62 merged,
+the plan that began at Acc_01 (the first transparent deduction) is complete.
+
+
+BACKGROUND AND RELATED WORK
+
+THE DISCIPLINE OF RECORDING BEFORE ANNOUNCING
+
+Part 10's discipline — capability shown first, announced second — has a clear
+rationale from research integrity: announcements made before results are measured
+are claims, not findings. Claims can be calibrated to what the audience wants to
+hear. Findings are what the system actually did.
+
+This discipline is not unique to PrologAI. It mirrors the pre-registration
+practice in experimental science, where hypotheses and methods are registered
+before data is collected, preventing unconscious calibration of the hypothesis to
+the result.
+
+For AI systems specifically, the discipline matters because AI capabilities are
+easy to misrepresent: a system that passes 3 pedagogical tasks can be described
+as having "solved ARC-AGI" or as "passing 3 out of 400 tasks." The second
+description is honest; the first is not. Part 10's requirement that every
+accomplishment is "a paper or announcement written for an accomplishment only once
+it has actually been achieved and its result has been measured" enforces the honest
+description.
+
+THE CLOSING NOTE AS A TESTABLE PREDICTION
+
+The Closing Note of the Demonstration Plan is not a summary of what was done.
+It was written at the start of the plan, before Mentova was built. Its six claims
+are therefore predictions about what the plan would accomplish.
+
+Evaluating them now — after the plan is complete — is a form of retrospective
+validation. Each claim either holds or does not. A plan whose own Closing Note
+is falsified by the developmental record is a failed plan. A plan whose Closing
+Note is confirmed claim by claim is a plan that delivered what it promised.
+
+PROGRAMMATIC COMPLIANCE VERIFICATION
+
+The compliance verification in this accomplishment uses Prolog's
+directory_files/2 predicate to list the contents of the papers/ and
+announcements/ directories at runtime. The predicate is_acc_file/2 extracts
+the Acc number from each filename by sub_atom/5 parsing. The scan_acc_files/2
+predicate filters and sorts the result.
+
+This approach is self-documenting: the Prolog code that performs the verification
+is itself part of the glass-box record. A human evaluator can read the code and
+confirm that it counts the right things. The result (61 papers, 61 announcements,
+no gaps) is produced by the code itself, not asserted by the paper.
+
+
+METHOD
+
+The demonstration is implemented in demos/part10_compliance_demo.pl. It runs
+in five sections.
+
+SECTION 1: PAPERS DIRECTORY SCAN
+
+directory_files('/home/ccaitwo/Mentova/papers', AllFiles) returns all filenames
+in the papers/ directory. is_acc_file/2 filters to Acc_ prefixed files and
+extracts the numeric N from the Acc_N_ prefix. scan_acc_files/2 collects and
+sorts the result.
+
+Result: 61 papers found. Acc numbers: [1, 2, 3, ..., 61]. Complete.
+
+SECTION 2: ANNOUNCEMENTS DIRECTORY SCAN
+
+Same methodology applied to the announcements/ directory.
+
+Result: 61 announcements found. Acc numbers: [1, 2, 3, ..., 61]. Complete.
+
+SECTION 3: COVERAGE VERIFICATION
+
+numlist(1, 61, Expected) generates the expected set. subtract/3 finds any
+gaps. MissingPapers, MissingAnn, PaperOnly, AnnOnly: all empty lists.
+
+Result: every Acc number 1 through 61 has both a paper and an announcement.
+No gaps.
+
+SECTION 4: PART 10 DISCIPLINE
+
+Five phase records confirm the discipline:
+- Reasoning ladder (Acc_01-Acc_48): each rung demo passed before paper written.
+- Practical tracks (Acc_49-Acc_52): each track verified before paper written.
+- Flagships (Acc_53-Acc_58): all ACs passed before paper written; honest scores declared.
+- Part 8 interface and audit (Acc_59-Acc_60): all ACs passed before announcement.
+- Part 9 honest criteria (Acc_61): promise evaluated before announced.
+
+SECTION 5: CLOSING NOTE EVALUATION
+
+Six claims from the Closing Note evaluated against the developmental record:
+
+Claim 1: "This volume turns the platform into a path."
+Evidence: PrologAI (platform) at github.com/ai-university-aiu/PrologAI. Mentova
+(the path) grew from Acc_01 to Acc_62 without modifying the platform.
+Result: CONFIRMED.
+
+Claim 2: "From one transparent deduction, up a ladder proven a rung at a time."
+Evidence: Acc_01 deduced is_a(tweety, bird) with chain([tweety, bird, animal]).
+Acc_48 demonstrated modal reasoning. 48 rungs, each demonstrated before the next.
+Result: CONFIRMED.
+
+Claim 3: "Into a useful assistant and an embodied robot."
+Evidence: Track A (Acc_49): transparent reasoning assistant. Acc_50: game-as-body
+harness and ROS 2 robot body enrolled.
+Result: CONFIRMED.
+
+Claim 4: "Through recognized benchmarks."
+Evidence: ARC-AGI (Acc_55), Ravens Progressive Matrices (Acc_56), Baba Is You
+(Acc_57), Piagetian battery (Acc_54). All with honest scores.
+Result: CONFIRMED.
+
+Claim 5: "Onward toward a full Synthetic Brain."
+Evidence: Growth path stated in Acc_60. Six next milestones defined. Four autonomy
+gates stated. The path continues beyond the Demonstration Plan.
+Result: CONFIRMED.
+
+Claim 6: "Mentova is the first mind grown on PrologAI."
+Evidence: Repository at github.com/ai-university-aiu/Mentova. Born at Acc_01.
+62 accomplishments across 62 feature branches. No other mind grown on PrologAI.
+Result: CONFIRMED.
+
+
+RESULTS
+
+AC-PR62-001: PASS. Papers directory scan: 61 Acc_ papers found (Acc_01-Acc_61).
+Acc numbers: [1, 2, ..., 61]. No gaps.
+
+AC-PR62-002: PASS. Announcements directory scan: 61 Acc_ announcements found
+(Acc_01-Acc_61). Acc numbers: [1, 2, ..., 61]. No gaps.
+
+AC-PR62-003: PASS. Coverage verified: MissingPapers = [], MissingAnn = [],
+PaperOnly = [], AnnOnly = []. Every Acc number 1 through 61 has both a paper
+and an announcement.
+
+AC-PR62-004: PASS. Part 10 discipline confirmed across all 5 development phases.
+No announcement was published before its demonstration passed.
+
+AC-PR62-005: PASS. All 6 Closing Note claims evaluate to CONFIRMED.
+
+
+SIGNIFICANCE
+
+THIS ACCOMPLISHMENT CLOSES THE DEMONSTRATION PLAN
+
+Acc_62 is the final accomplishment in the PrologAI Demonstration and
+Proof-of-Concept Plan. With its completion, Parts 1 through 10 are all closed:
+
+Part 1 (The Premise): honored — Mentova composed existing PrologAI work packages
+into demonstrations rather than inventing new mechanisms.
+
+Part 2 (Mentova's Repository): honored — Mentova lives in its own repository,
+separate from PrologAI, with the substrate-versus-instance distinction maintained.
+
+Part 3 (The Method: Small Chunks): honored — 62 feature branches, 62 PRs, 62
+demonstrations, each passing its own acceptance criteria before the next.
+
+Part 4 (The Toy Dataset): honored — Small-World Commonsense knowledge base used
+across all 48 reasoning rungs.
+
+Part 5 (The Reasoning Ladder): honored — all 48 rungs demonstrated (Acc_01-Acc_48).
+
+Part 6 (The Practical Tracks): honored — Track A (Acc_49) and Track B with
+game-as-body harness and ROS 2 robot body (Acc_50).
+
+Part 7 (The Flagship Demonstrations): honored — all 6 flagships demonstrated
+(Acc_53-Acc_58).
+
+Part 8 (The Growth Path): honored — all 4 Part 8 items demonstrated; Acc_60
+growth path audit; Part 8 closed.
+
+Part 9 (Honest Success Criteria): honored — formal evaluation of all 3 criteria
+and 4 caveats; promise evaluated and confirmed kept (Acc_61).
+
+Part 10 (Recording and Announcing): honored — 61 papers, 61 announcements,
+discipline maintained throughout; this Closing Note confirmed (Acc_62).
+
+THE DEVELOPMENTAL RECORD AS A SCIENTIFIC CONTRIBUTION
+
+The 61 papers in the Mentova repository constitute a developmental record of
+a Synthetic Mind from birth (Acc_01) through a comprehensive growth phase
+(Acc_62). This record is:
+- Timestamped: each paper carries a date.
+- Versioned: each paper is tied to a git commit and PR.
+- Inspectable: the code that produced each result is in the repository.
+- Honest: scores are reported with explicit limitations.
+- Falsifiable: the results can be reproduced by anyone with SWI-Prolog 9.x.
+
+This kind of developmental record for a Synthetic Mind is rare. Most AI systems
+are reported in terms of their final performance on a benchmark. Mentova's record
+shows the growth trajectory, the failures, the revisions, and the honest scores
+at each stage.
+
+THE PATH CONTINUES
+
+Part 8 stated the growth path beyond the Demonstration Plan. The completion of
+the Demonstration Plan does not end Mentova's development. It ends the obligation
+defined in the plan. The growth continues along the path stated in Acc_60:
+Piagetian Levels 1, 4, 6, 8; the full ARC-AGI-1 benchmark; live Pokemon emulator
+connection; live multi-agent deployment; wider embodiment staged per Part 38; the
+full CHC cognitive-abilities battery.
+
+The promise of Part 9 — "a foundation worth building upward from" — is the
+correct frame. The Demonstration Plan was a foundation. What is built upward
+from it is the next story.
+
+
+HONEST LIMITATIONS
+
+The Part 10 compliance check scans the disk at runtime. It confirms that the
+files exist and that their names match the Acc_N_ pattern. It does not verify
+that each file is complete, that the paper contains all required sections, or that
+the announcement is within the target length. A more rigorous audit would parse
+each file and check its structure.
+
+The Closing Note evaluation is self-assessment: the evidence for each claim comes
+from the same developmental record that the Demonstration Plan produced. An
+independent evaluator reviewing the same GitHub repository and running the same
+demos would reach the same conclusions, but the evaluation in this paper is not
+independent in that sense.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later. PrologAI at /home/ccaitwo/PrologAI/.
+Mentova at /home/ccaitwo/Mentova/.
+
+    % Clone Mentova.
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    % Change to the Mentova directory.
+    cd Mentova
+    % Run the Part 10 compliance verification.
+    swipl -l demos/part10_compliance_demo.pl \
+          -g "run_part10_compliance_demo" -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+PrologAI Demonstration Plan (Vol. 6), Part 10 (Recording and Announcing Each
+Accomplishment) and Closing Note.
+
+Chambers, C. D. et al. Registered reports: a new publishing initiative at
+Cortex. Cortex, 49(3), 609-610, 2013. (Pre-registration and evaluation integrity.)
+
+Dison, D. R. PrologAI Accomplishment Records Acc_01 through Acc_62.
+github.com/ai-university-aiu/Mentova/tree/main/papers.
+
+PrologAI Accomplishment Records:
+Acc_61 — Honest Success Criteria and Caveats (Part 9).
+Acc_60 — Growth Path Report (Part 8 audit).
+Acc_01 — First Transparent Deduction (birth of Mentova).
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
