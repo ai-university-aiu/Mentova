@@ -1,0 +1,39 @@
+Mentova now reasons through contradiction. Rung 18 of 48 is accomplished.
+
+In classical logic, a single contradiction destroys everything. From "A is true" and "A is false," you can prove anything — absolutely anything. This is called explosion (ex contradictione quodlibet). It means that a knowledge base with even one contradiction becomes useless.
+
+The real world contains contradictions. Not theoretical ones — real ones. Two sensors disagree. Two witnesses give inconsistent accounts. A default rule and an exception both apply to the same entity.
+
+A mind that explodes on contradiction cannot function in the real world.
+
+Rung 18 gives Mentova paraconsistent reasoning: the ability to contain contradictions without explosion.
+
+The Small-World knowledge base contains a deliberate contradiction about tweety. By the bird default, tweety flies. By the flightless exception, tweety does not fly. Both conclusions are derivable from the facts. This is a real contradiction.
+
+Ask Mentova to check flies(tweety):
+
+  answer(both, just(paraconsistent(flies(tweety), tag(both), isolated(yes))))
+
+Tag: both. The contradiction is acknowledged. It is tagged, labelled, and isolated.
+
+Now ask about flies(canary) — completely unrelated to tweety:
+
+  answer(true, just(paraconsistent_isolation(
+                     contradiction(flies(tweety), both),
+                     unrelated(flies(canary), true),
+                     explosion_avoided)))
+
+flies(canary) is true, unaffected, and the justification explicitly states: explosion_avoided.
+
+The contradiction for tweety does not propagate. It does not infect canary. It does not infect the rest of the knowledge base. It sits in its quarantine, labelled, auditable, correctable.
+
+This is the critical difference between paraconsistent reasoning and classical reasoning in the presence of contradictions. Classical logic collapses. Paraconsistent logic continues.
+
+Every real AI system that reads data from the world must handle this. Medical records contain contradictions. Legal documents contain contradictions. News databases contain contradictions. A mind that can reason through them rather than collapse on them is a mind that can function in the real world.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

@@ -1,0 +1,42 @@
+Mentova now retracts defaults when exceptions arise. Rung 17 of 48 is accomplished.
+
+All birds fly. Canaries are birds. So canaries fly.
+
+All birds fly. Penguins are birds. But penguins are flightless. So — penguins do not fly.
+
+This is non-monotonic reasoning: the conclusion changes when new information arrives. Adding the fact that penguins are flightless does not just add to what we know — it retracts a conclusion we had already drawn.
+
+Classical logic cannot do this. In classical logic, once a conclusion is proved, it holds forever. Adding new facts only adds new conclusions. Non-monotonic logic allows retractions.
+
+Rung 17 gives Mentova defeasible default reasoning with named exception retraction.
+
+Ask about canary:
+
+  answer(holds(default),
+         just(defeasible(flies(canary), default(bird_flies), no_exception_found, conclusion(flies))))
+
+Canary is a bird. Default applies. No exception found. Status: holds(default). The canary flies.
+
+Ask about penguin:
+
+  answer(withdrawn(exception(penguin_exception)),
+         just(defeasible(flies(penguin), default(bird_flies),
+                          exception(penguin_exception), conclusion(does_not_fly))))
+
+Penguin is a bird. Default applies. But the exception rule fires: has_property(penguin, flightless) triggers penguin_exception. The default is retracted. Exception name: penguin_exception. Status: withdrawn.
+
+The justification names:
+  — Which default was applied (bird_flies)
+  — Which exception fired (penguin_exception)
+  — What the conclusion is after retraction (does_not_fly)
+
+No black box. No silent override. Every retraction is named and auditable.
+
+This is one of the most practically important reasoning modes in AI. Real knowledge is full of defaults: employees are salaried (except contractors), animals breathe oxygen (except anaerobic bacteria), vehicles have wheels (except boats). Non-monotonic reasoning handles the exceptions without breaking the defaults that apply in the normal case.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

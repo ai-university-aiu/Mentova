@@ -1,0 +1,146 @@
+MENTOVA'S PARACONSISTENT REASONING
+
+Accomplishment Record Acc_18
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 18 of Mentova's 48-rung reasoning ladder: paraconsistent reasoning.
+The Small-World knowledge base contains a deliberate contradiction for tweety: both
+"tweety flies" (from the bird default) and "tweety does not fly" (from the
+flightless exception) are derivable. Mentova's paraconsistent engine tags
+flies(tweety) as both (contradictory), keeps the contradiction isolated, and
+correctly reports flies(canary) as true — demonstrating that the contradiction
+does not collapse all other conclusions (explosion avoided). Pass criterion met.
+
+
+INTRODUCTION
+
+In classical logic, a single contradiction implies everything: from A and ¬A, any
+proposition B can be derived (ex contradictione quodlibet). This makes classical
+logic unsuitable for reasoning in the presence of any inconsistency. Paraconsistent
+logic avoids this by localising contradictions and preventing them from propagating.
+
+Rung 18 equips Mentova with a paraconsistent tagging system. Each proposition is
+tagged as true, false, both (contradictory), or unknown. A contradiction in one
+corner of the knowledge base does not infect the rest.
+
+
+BACKGROUND
+
+Paraconsistent logic was pioneered by da Costa (1963) and developed by Priest (1987)
+and others. The Logic of Paradox (LP) assigns propositions one of four truth values:
+true, false, both, or neither. Mentova's implementation uses the both and true tags
+as the relevant subset for the Small-World demonstration.
+
+The deliberate contradiction in the Small-World knowledge base is the tweety case:
+is_a(tweety, bird) triggers the bird_flies default, while has_property(tweety,
+flightless) triggers the penguin_exception, yielding both flies(tweety) and
+does_not_fly(tweety) in the same derivation.
+
+
+METHOD
+
+A new module, src/mentova/paraconsistent.pl, implements:
+
+    mentova_paraconsistent(+Query, -Result, -Justification)
+
+The para_tag/2 predicate assigns truth tags:
+    both:  tweety flies (default) and tweety is flightless (exception)
+    true:  canary flies (default, no exception)
+    true:  any is_a fact
+
+Query forms:
+
+    check(Prop)             tag for a proposition
+    unaffected(Prop)        tag for an unrelated proposition (explosion avoided)
+    explain_contradiction(Prop)  why Prop is contradictory
+    true_elsewhere(Subject)     what is true about Subject despite contradiction
+
+Top-level clause:
+
+    mentova_query(paraconsistent, ParaQuery, answer(Result, Just)) :-
+        once(mentova_paraconsistent(ParaQuery, Result, Just)).
+
+
+DEMONSTRATION
+
+Query 1 — check(flies(tweety)):
+
+    ?- mentova_query(paraconsistent, check(flies(tweety)), R).
+    R = answer(both, just(paraconsistent(flies(tweety), tag(both), isolated(yes))))
+
+    flies(tweety) has truth tag: both. Contradiction is noted and isolated.
+
+Query 2 — unaffected(flies(canary)):
+
+    ?- mentova_query(paraconsistent, unaffected(flies(canary)), R).
+    R = answer(true, just(paraconsistent_isolation(
+                           contradiction(flies(tweety), both),
+                           unrelated(flies(canary), true),
+                           explosion_avoided)))
+
+    Despite the contradiction for tweety, flies(canary) is true and unaffected.
+    Explosion avoided: the contradiction does not propagate.
+
+
+RESULTS
+
+flies(tweety) is correctly tagged as both (contradictory). flies(canary) is
+correctly tagged as true and unaffected. The contradiction is localised.
+
+Pass criterion met: contradictory pair does not collapse all other conclusions.
+
+
+SIGNIFICANCE
+
+Paraconsistent reasoning is essential for any AI system that must operate on
+real-world data, which inevitably contains contradictions from multiple sources.
+A mind that collapses on the first contradiction it encounters is not robust.
+
+Mentova's paraconsistent engine keeps contradictions in a quarantine: they are
+noted, labelled, and isolated, while the rest of the knowledge base continues
+to function normally.
+
+
+HONEST LIMITATIONS
+
+The current implementation is a tagging system, not a full paraconsistent logic.
+A complete implementation would use a four-valued semantics (true, false, both,
+neither) throughout all inference rules.
+
+The tagging is applied to pre-identified contradictory propositions. Automatic
+contradiction detection across arbitrary knowledge bases would require
+consistency checking at assertion time.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(paraconsistent, check(flies(tweety)), R1), write(R1), nl, \
+            mentova_query(paraconsistent, unaffected(flies(canary)), R2), write(R2), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+da Costa, N. C. A. (1974). On the theory of inconsistent formal systems. Notre Dame Journal
+of Formal Logic, 15(4), 497-510.
+
+Priest, G. (1987). In Contradiction: A Study of the Transconsistent. Martinus Nijhoff.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

@@ -1,0 +1,48 @@
+Mentova now reasons about suppositions without committing to them. Rung 20 of 48 is accomplished.
+
+"Suppose we start a fire. What follows?"
+
+This is not an assertion that there is a fire. It is a temporary supposition — a question about what would follow if we suppose fire to be true, without adding fire to our knowledge of the world.
+
+A mind that cannot hold a supposition without committing to it cannot think ahead. It cannot evaluate plans. It cannot explore ideas. It can only reason about what it believes to be true.
+
+Rung 20 gives Mentova hypothetical reasoning: the ability to reason from a supposition without asserting it.
+
+Ask: suppose fire — what follows?
+
+  answer(consequents(fire, [smoke]),
+         just(hypothetical(suppose(fire),
+                            derived_without_kb_pollution([smoke]),
+                            note('KB unchanged; supposition is temporary'))))
+
+Supposition: fire is true (temporarily).
+Consequence: smoke (via causes(fire, smoke)).
+Note: KB unchanged. Supposition is temporary.
+
+The knowledge base is not modified. Fire is not in the KB. Smoke is not added to the KB. The derivation lives only in the query result.
+
+The justification says so explicitly: "derived without KB pollution." You can verify this with a second query:
+
+  mentova_query(hypothetical, verify_kb_intact(fire), R)
+  → answer(kb_intact, ...)
+
+Fire was never asserted. The KB is clean.
+
+This is the difference between hypothetical and counterfactual reasoning:
+  — Counterfactual (Rung 19): what if the actual world had been different?
+  — Hypothetical (Rung 20): what follows if we suppose this, without claiming it?
+
+And both differ from causal reasoning (Rung 6):
+  — Causal: what does a real intervention produce?
+  — Hypothetical: what does a temporary supposition suggest?
+
+Hypothetical reasoning is the substrate for safe deliberation. When Mentova plans (Rung 38), it will hypothetically evaluate each candidate action before committing to one. When it forms a scientific hypothesis (Rung 26), it will test that hypothesis hypothetically before asserting it.
+
+Suppose. Derive. Do not pollute. Choose.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

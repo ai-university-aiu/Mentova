@@ -31,6 +31,10 @@
 :- use_module(mathematical).
 :- use_module(fuzzy).
 :- use_module(qualitative).
+:- use_module(nonmonotonic).
+:- use_module(paraconsistent).
+:- use_module(counterfactual).
+:- use_module(hypothetical).
 
 :- use_module(library(lists), [member/2]).
 
@@ -82,6 +86,22 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 20 — hypothetical: explore supposition without asserting it
+mentova_query(hypothetical, HypQuery, answer(Result, Just)) :-
+    mentova_hypothetical(HypQuery, Result, Just).
+
+% Rung 19 — counterfactual: what if this were different
+mentova_query(counterfactual, CFQuery, answer(Result, Just)) :-
+    mentova_counterfactual(CFQuery, Result, Just).
+
+% Rung 18 — paraconsistent: reason despite contradiction
+mentova_query(paraconsistent, ParaQuery, answer(Result, Just)) :-
+    once(mentova_paraconsistent(ParaQuery, Result, Just)).
+
+% Rung 17 — non-monotonic: defeasible default retraction
+mentova_query(nonmonotonic, NMQuery, answer(Result, Just)) :-
+    mentova_defeasible(NMQuery, Result, Just).
 
 % Rung 16 — qualitative: predict direction of change
 mentova_query(qualitative, QualQuery, answer(Result, Just)) :-

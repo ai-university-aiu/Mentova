@@ -1,0 +1,47 @@
+Mentova now reasons about worlds that did not happen. Rung 19 of 48 is accomplished.
+
+It did not rain today. The ground is dry. That is the actual world.
+
+But what if it had rained?
+
+This is a counterfactual question — a question about a world that differs from the actual world in a specific respect. The answer is not a lookup. It is a derivation in the alternative world: if rain had occurred, then by causes(rain, wet_ground), the ground would be wet.
+
+Rung 19 gives Mentova counterfactual reasoning.
+
+Ask: what if it had rained today — would the ground be wet?
+
+  answer(yes, just(counterfactual(
+                    antecedent(rains_today_yes),
+                    query(ground_wet),
+                    actual(no),
+                    counterfactual(yes),
+                    mechanism(causes(rain, wet_ground)),
+                    differs(yes))))
+
+Actual: no. Counterfactual: yes. Mechanism: causes(rain, wet_ground). Differs: yes.
+
+The justification shows everything:
+  — What the antecedent is (it rained today)
+  — What the actual answer is (ground not wet)
+  — What the counterfactual answer is (ground would be wet)
+  — What mechanism produces the counterfactual (causes relation)
+  — Whether the two answers differ (yes — pass criterion)
+
+Ask: what if the penguin were not flightless — would it fly?
+
+  answer(yes, just(counterfactual(antecedent(penguin_not_flightless),
+                                   query(penguin_flies), actual(no),
+                                   counterfactual(yes), ...)))
+
+Yes. If the penguin were not flightless, it would fly. The actual answer is no. The counterfactual answer is yes. They differ — correctly.
+
+Counterfactual reasoning is at the top of Pearl's causal hierarchy: above observation (Rung 4), above intervention (Rung 6). To reason counterfactually is to reason about causation in the most powerful sense: not just what happened, not just what would happen if you acted, but what would have happened if the world had been different.
+
+This is how moral responsibility is attributed. This is how policy counterfactuals are evaluated. This is how a mind asks the deepest causal question: was this necessary?
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

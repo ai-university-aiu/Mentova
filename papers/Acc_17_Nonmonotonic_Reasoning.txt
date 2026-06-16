@@ -1,0 +1,150 @@
+MENTOVA'S NON-MONOTONIC (DEFEASIBLE) REASONING
+
+Accomplishment Record Acc_17
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 17 of Mentova's 48-rung reasoning ladder: non-monotonic
+(defeasible) reasoning. Mentova applies the default rule "birds fly" to a
+canary and returns holds(default), then applies the same default to a penguin
+and returns withdrawn(exception(penguin_exception)) — the default is retracted
+because the flightless exception fires. The exception is named in the
+justification. Pass criterion met: "birds fly" withdrawn for penguin with
+exception named.
+
+
+INTRODUCTION
+
+Classical logic is monotonic: adding new facts never invalidates previous
+conclusions. But common sense reasoning is non-monotonic. We assume birds fly
+until we learn that a particular bird is a penguin, at which point we retract
+the conclusion. Non-monotonic (defeasible) reasoning formalises this retraction
+pattern.
+
+Rung 17 provides a dedicated defeasible reasoning module with full exception
+handling, going beyond the preview at Rung 1 to expose the full retraction
+mechanism with named exceptions and rule chain.
+
+
+BACKGROUND
+
+Non-monotonic reasoning was introduced by McCarthy (1980) as circumscription and
+by McDermott and Doyle (1980) as non-monotonic logic. Reiter's Default Logic
+(1980) provides a formal framework for default rules with exceptions.
+
+Mentova's implementation follows the closed-world default pattern:
+  1. Apply the default if the triggering condition holds.
+  2. Check all exception rules; if any exception condition holds, retract.
+  3. Report either holds(default) or withdrawn(exception(Name)).
+
+
+METHOD
+
+A new module, src/mentova/nonmonotonic.pl, implements:
+
+    mentova_defeasible(+Query, -Result, -Justification)
+
+The core predicate defeasible_conclusion/3 checks the default_rule/2 condition
+and then checks all exception_rule/3 entries. If an exception fires, its name
+is recorded in the withdrawn/1 status and in the justification.
+
+Query forms:
+
+    query(Prop)             defeasible status of Prop
+    exceptions(Prop)        list all exceptions for Prop
+    is_exception(Prop, X)   is X an exception case?
+
+Top-level clause:
+
+    mentova_query(nonmonotonic, NMQuery, answer(Result, Just)) :-
+        mentova_defeasible(NMQuery, Result, Just).
+
+
+DEMONSTRATION
+
+Query 1 — flies(canary):
+
+    ?- mentova_query(nonmonotonic, query(flies(canary)), R).
+    R = answer(holds(default),
+               just(defeasible(flies(canary), default(bird_flies),
+                               no_exception_found, conclusion(flies))))
+
+    Default "birds fly" applies to canary. No exception fires. Status: holds.
+
+Query 2 — flies(penguin):
+
+    ?- mentova_query(nonmonotonic, query(flies(penguin)), R).
+    R = answer(withdrawn(exception(penguin_exception)),
+               just(defeasible(flies(penguin), default(bird_flies),
+                               exception(penguin_exception), conclusion(does_not_fly))))
+
+    Default applies (penguin is_a bird). But exception fires:
+    has_property(penguin, flightless) triggers penguin_exception.
+    Default is retracted. Status: withdrawn. Exception name: penguin_exception.
+
+
+RESULTS
+
+The default "birds fly" is correctly applied to canary and correctly withdrawn
+for penguin, with the exception name (penguin_exception) named in the justification.
+
+Pass criterion met: "birds fly" withdrawn for penguin with exception named.
+
+
+SIGNIFICANCE
+
+Non-monotonic reasoning is one of the most practically important reasoning modes.
+Real-world knowledge is full of defaults that admit exceptions: employees get paid
+monthly (except contractors), customers pay before delivery (except trusted partners),
+birds fly (except penguins, emus, and kiwis).
+
+Mentova's defeasible engine handles these patterns cleanly, reporting not just the
+conclusion but which rule was retracted, which exception fired, and what name the
+exception carries.
+
+
+HONEST LIMITATIONS
+
+The implementation uses Prolog's built-in negation-as-failure (\+) to check for
+the absence of exceptions. This is a closed-world assumption: if an exception is
+not found, it is assumed not to exist.
+
+Multiple exceptions are handled by collecting them all and using the first one found.
+A priority ordering among exceptions is not implemented.
+
+Interaction between multiple defaults (e.g., default-A overrides default-B overrides
+default-C) would require an explicit conflict-resolution mechanism (e.g., specificity
+or recency ordering).
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(nonmonotonic, query(flies(canary)), R1), write(R1), nl, \
+            mentova_query(nonmonotonic, query(flies(penguin)), R2), write(R2), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Reiter, R. (1980). A logic for default reasoning. Artificial Intelligence, 13(1-2), 81-132.
+
+McCarthy, J. (1980). Circumscription — a form of non-monotonic reasoning.
+Artificial Intelligence, 13(1-2), 27-39.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
