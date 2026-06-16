@@ -1,0 +1,337 @@
+MENTOVA CONSOLE REPL LAUNCHER:
+A THIN WRAPPER FOR TUTORIAL-FRIENDLY INTERACTIVE ACCESS TO THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_68
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We describe the Mentova Console REPL Launcher: a thin wrapper that pre-loads
+the full PrologAI / Mentova platform and drops the user into SWI-Prolog's
+standard interactive toplevel with every tutorial predicate immediately
+available. Prior to this accomplishment, every interactive session with
+Mentova required the user to manually register library paths, load multiple
+modules, and call mentova_boot before any query could be issued. The launcher
+reduces this to a single command: swipl -l bin/mentova_repl.pl (or bin/mentova
+via the companion shell script). All five acceptance criteria pass: AC-PR68-001
+through AC-PR68-005.
+
+
+INTRODUCTION
+
+SWI-Prolog provides a full interactive REPL (Read-Eval-Print Loop) as its
+native interface: the ?- prompt appears automatically when SWI-Prolog is
+started without a -t halt flag. Every capability of the PrologAI platform is
+accessible at this prompt — but only after the correct library paths have been
+registered, the correct modules have been loaded, and mentova_boot has been
+called to open the APEX_MIND nexus and enroll the bodies.
+
+For a developer who has read the platform documentation and the prior
+accomplishment records, this setup is straightforward. For a tutorial user
+encountering the platform for the first time, the setup is a barrier. The
+tutorial should begin with: "type this query and observe the result" — not
+with: "first register four library paths, then load six modules, then call
+boot."
+
+The Mentova Console REPL Launcher removes the barrier. It is a thin wrapper:
+a single Prolog file (bin/mentova_repl.pl) and a companion shell script
+(bin/mentova) that together encode the setup sequence so the user never
+needs to perform it manually.
+
+DESIGN PRINCIPLE: THIN WRAPPER, NOT A NEW REPL
+
+The design choice is explicit and intentional. A friendlier interface with
+custom commands (:help, :query deductive is_a(tweety, bird), :assess piaget 8)
+would hide SWI-Prolog's syntax from the tutorial user — but it would also
+introduce a parser and command dispatcher that:
+
+    Requires maintenance every time the platform changes.
+    Teaches users a PrologAI-specific syntax rather than actual Prolog syntax.
+    Adds a layer that can break in ways the Prolog layer does not.
+
+The thin wrapper avoids all three costs. It encodes the setup once, in
+standard Prolog, and then hands control to SWI-Prolog's native ?- prompt.
+Tutorial users learn real Prolog syntax. The wrapper stays current
+automatically because it is just a boot file — not a parser.
+
+The friendlier command interface is reserved for a future extension. The
+current accomplishment establishes the foundation.
+
+
+BACKGROUND
+
+PRIOR SESSION SETUP SEQUENCE
+
+Every prior Mentova demo file includes boilerplate at the top:
+
+    :- initialization(
+        assertz(user:file_search_path(library,
+            '/home/ccaitwo/PrologAI/packs/assessment/prolog')), now).
+    :- use_module('../src/mentova/mentova').
+    :- use_module(library(assessment), [assess_piaget/3, assess_all/2]).
+    :- use_module(library(node_facts), [anchor_node/4, default_nexus/1]).
+
+This boilerplate exists in every demo file because there is no canonical entry
+point that performs it. The REPL launcher is that canonical entry point.
+
+SWI-PROLOG'S NATIVE INTERACTIVE TOPLEVEL
+
+When SWI-Prolog is started with swipl -l file.pl, it:
+
+    1. Runs all :- directives in file.pl during loading.
+    2. Runs all initialization(Goal, now) goals.
+    3. Drops to the ?- interactive toplevel automatically.
+
+This means the REPL launcher does not need to call prolog/0 explicitly. The
+interactive session starts as a natural consequence of how SWI-Prolog handles
+the -l flag. The launcher only needs to set up the environment before the
+session starts — which is exactly what a thin wrapper does.
+
+THE APEX_MIND NEXUS AND BODY ENROLLMENT
+
+mentova_boot (defined in src/mentova/mentova.pl) does three things:
+
+    1. Opens the APEX_MIND nexus (the Lattice storage layer).
+    2. Enrolls all registered bodies (text_io, game bodies, any ROS body).
+    3. Activates the global workspace cycle and attention schema subscriber.
+
+After mentova_boot, the Lattice is open and accepting node_facts. The
+assessment predicates can immediately check the nexus for milestone evidence.
+The workspace can broadcast coalitions. Game bodies are ready to perceive.
+
+
+METHOD
+
+The launcher consists of two files:
+
+FILE 1: bin/mentova_repl.pl (the Prolog wrapper)
+
+    Step 1 — Path registration (initialization/2 with now):
+        Registers the assessment pack directory (which also contains node_facts,
+        lattice, and scopes — one path covers all four).
+        Registers the sona pack directory (episodic memory).
+        Registers the actors pack directory (cyclic actors, pubsub, receptors).
+
+    Step 2 — Load Mentova:
+        use_module('../src/mentova/mentova') loads all 48+ reasoning rungs,
+        the global workspace (PR 18/32), the attention schema (PR 42), and
+        all game bodies (ARC, Raven's, Baba, Pokemon stub).
+
+    Step 3 — Load assessment pack and import predicates:
+        use_module(library(assessment), [...]) imports assess_piaget/3,
+        assess_bayley/2, assess_chc/2, and assess_all/2 into user scope.
+        use_module(library(node_facts), [...]) imports anchor_node/4,
+        live_node_facts/2, and default_nexus/1 into user scope.
+        Importing into user scope means these predicates are callable at
+        the ?- prompt without any module qualification.
+
+    Step 4 — Boot and banner:
+        mentova_repl_start/0 calls mentova_boot, then prints a welcome
+        banner listing the key predicates and tutorial examples.
+        initialization(mentova_repl_start, now) runs this immediately
+        when the file finishes loading.
+
+FILE 2: bin/mentova (the shell launcher)
+
+    A bash script that resolves its own directory (so it works from any
+    working directory) and calls:
+        swipl -l "$SCRIPT_DIR/mentova_repl.pl"
+
+    Made executable with chmod +x.
+
+ACCEPTANCE CRITERIA VERIFICATION
+
+AC-PR68-001: Platform boots at load time.
+
+    Loading bin/mentova_repl.pl causes:
+        - All :- initialization(..., now) goals to fire in order.
+        - Mentova to load (48+ reasoning rungs, workspace, schema, bodies).
+        - mentova_boot to run (nexus opened, bodies enrolled).
+        - Welcome banner to print.
+        - SWI-Prolog to drop to the ?- prompt.
+    No errors expected on a clean installation with SWI-Prolog 9.0.4+.
+
+    Verification: swipl -l bin/mentova_repl.pl -g "true" -t halt exits 0.
+
+AC-PR68-002: mentova_query/3 is immediately callable.
+
+    Mentova is loaded by use_module('../src/mentova/mentova'), which exports
+    mentova_query/3 and mentova_boot/0. Both are available without
+    qualification at the ?- prompt because they are loaded into the
+    mentova_repl module which is loaded into user.
+
+    Verification: mentova_query(deductive, is_a(tweety, bird), R) succeeds.
+
+AC-PR68-003: assess_piaget/3 is immediately callable.
+
+    Imported via use_module(library(assessment), [assess_piaget/3, ...]).
+    Importing into user scope makes it available without module:predicate
+    syntax at the ?- prompt.
+
+    Verification: assess_piaget(mentova, 8, R) succeeds (returns
+    milestone_achieved if a formal_proof node_fact is in the nexus, or
+    milestone_not_achieved on a fresh session — both are valid results;
+    what is verified is that the predicate is callable without error).
+
+AC-PR68-004: anchor_node/4 and live_node_facts/2 are immediately callable.
+
+    Imported via use_module(library(node_facts), [anchor_node/4,
+    live_node_facts/2, default_nexus/1]).
+
+    Verification:
+        default_nexus(N), live_node_facts(N, Ids), length(Ids, Count).
+    succeeds and binds Count to the number of node_facts currently in
+    the nexus (0 on a fresh boot).
+
+AC-PR68-005: Welcome banner names the key predicates.
+
+    The banner printed by mentova_repl_start/0 lists:
+        mentova_query/3 (with all query type names)
+        assess_piaget/3
+        assess_all/2
+        anchor_node/4
+        live_node_facts/2
+        default_nexus/1
+    and provides four tutorial example queries.
+
+    Verification: visual inspection of the banner output.
+
+
+RESULTS
+
+AC-PR68-001: PASS. swipl -l bin/mentova_repl.pl loads cleanly, boots Mentova,
+and drops to the ?- prompt.
+
+AC-PR68-002: PASS. mentova_query(deductive, is_a(tweety, bird), R) is
+callable at the prompt without additional loading.
+
+AC-PR68-003: PASS. assess_piaget(mentova, 8, R) is callable at the prompt.
+Returns milestone_not_achieved on a fresh session (no formal_proof node_fact
+in the nexus yet) — which is the correct result for a just-booted session.
+
+AC-PR68-004: PASS. anchor_node/4, live_node_facts/2, and default_nexus/1 are
+callable without module qualification.
+
+AC-PR68-005: PASS. The welcome banner lists six key predicates and four
+tutorial example queries.
+
+
+SIGNIFICANCE
+
+LOWERING THE ENTRY BARRIER
+
+The PrologAI platform has 48 work packages, 48+ reasoning rungs in Mentova,
+and a Lattice with a structured nexus architecture. For a developer who has
+read the full platform documentation, the setup sequence is straightforward.
+For a new tutorial user, it is a prerequisite that must be understood before
+any query can be issued.
+
+The REPL launcher moves this prerequisite from the user's task list to the
+platform's infrastructure. The tutorial can begin with:
+
+    Run: bin/mentova
+    Type: ?- mentova_query(deductive, is_a(tweety, bird), R).
+
+instead of:
+
+    Step 1: Register four library paths.
+    Step 2: Load the Mentova module.
+    Step 3: Load the assessment module.
+    Step 4: Call mentova_boot.
+    Step 5: Now you can type your first query.
+
+THE THIN WRAPPER AS A DESIGN PATTERN
+
+The thin wrapper pattern — encode the setup, hand control to the native
+runtime — is a recurring pattern in developer tooling. It appears in Python
+virtual environments (activate encodes path setup; the Python interpreter is
+unchanged), in Ruby's bundler (bundle exec encodes gem path setup; ruby is
+unchanged), and in many shell initialization scripts.
+
+The pattern is appropriate here because:
+
+    The underlying REPL (SWI-Prolog) is mature, documented, and trusted.
+    Tutorial users benefit from learning the real Prolog syntax, not a
+    PrologAI-specific dialect.
+    Maintenance cost is minimal: the wrapper changes only when the setup
+    sequence changes, which happens rarely.
+
+THE FUTURE EXTENSION PATH
+
+A future extension could add a friendlier command interface by replacing the
+call to SWI-Prolog's native ?- prompt with a custom read-eval-print loop that
+accepts commands like:
+
+    ?- :help
+    ?- :query deductive is_a(tweety, bird)
+    ?- :assess piaget 8
+    ?- :lattice
+
+This extension would add a parser and command dispatcher on top of the thin
+wrapper. The thin wrapper (bin/mentova_repl.pl) would remain as the foundation
+and could continue to be used directly by users who prefer the native Prolog
+syntax.
+
+The two-level design — thin wrapper now, friendlier interface later — keeps
+the current accomplishment small and reversible while reserving the extension
+path.
+
+
+HONEST LIMITATIONS
+
+The REPL launcher does not add any reasoning capability. It is infrastructure:
+it reduces the number of steps a user must perform before their first query.
+
+The launcher hardcodes the PrologAI installation path
+(/home/ccaitwo/PrologAI/packs/...). On a system where PrologAI is installed
+in a different location, the path registrations in mentova_repl.pl must be
+updated. A future version could read the installation path from an environment
+variable (PROLOGAI_HOME) or from a configuration file.
+
+The shell script (bin/mentova) requires bash. On systems where bash is not
+available at /usr/bin/env bash, the script must be adapted.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later. PrologAI at /home/ccaitwo/PrologAI/.
+Mentova at /home/ccaitwo/Mentova/. Bash shell.
+
+    % Clone Mentova.
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    % Change to the Mentova directory.
+    cd Mentova
+    % Start the console REPL.
+    swipl -l bin/mentova_repl.pl
+    % Or via the shell launcher:
+    bin/mentova
+
+    % At the ?- prompt, try:
+    ?- mentova_query(deductive, is_a(tweety, bird), R).
+    ?- assess_piaget(mentova, 7, R).
+    ?- assess_all(mentova, R).
+    ?- default_nexus(N), live_node_facts(N, Ids), length(Ids, Count).
+    ?- halt.
+
+
+REFERENCES
+
+SWI-Prolog Reference Manual: initialization/2, use_module/2,
+file_search_path/2. https://www.swi-prolog.org/pldoc/
+
+PrologAI Specification v13, PR 4 (node_facts), PR 11 (SONA), PR 12
+(Intelligence Assessment), PR 18/32 (Global Workspace), PR 42 (Attention
+Schema).
+
+Dison, D. R. Accomplishment Records Acc_54 (Piagetian Battery), Acc_60
+(Growth Path Report), Acc_67 (Piagetian Milestone Ladder Complete).
+github.com/ai-university-aiu/Mentova/tree/main/papers.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

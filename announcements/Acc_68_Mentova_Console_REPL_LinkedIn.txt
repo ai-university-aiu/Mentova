@@ -1,0 +1,84 @@
+Mentova Console REPL Launcher: One Command to Start an Interactive Session (Acc_68)
+
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+Starting today, an interactive Mentova session takes one command:
+
+    swipl -l bin/mentova_repl.pl
+
+Or simply:
+
+    bin/mentova
+
+That is it. The full PrologAI platform loads, Mentova boots, the APEX_MIND nexus opens, all bodies enroll, and the ?- prompt appears — ready for queries.
+
+WHAT CHANGED:
+
+Before Acc_68, every interactive session required:
+- Register four library paths manually.
+- Load the Mentova module.
+- Load the assessment pack.
+- Call mentova_boot.
+- Then issue your first query.
+
+After Acc_68:
+- Run bin/mentova.
+- Issue your first query.
+
+The boilerplate is now infrastructure, not a user task.
+
+WHAT IS IMMEDIATELY AVAILABLE AT THE ?- PROMPT:
+
+mentova_query(+Type, +Query, -Result) — all 48+ reasoning types:
+  deductive, defeasible, bayesian, causal, counterfactual, hypothetical,
+  epistemic, modal, metacognitive, formal, mathematical, spatial, temporal,
+  moral, legal, track_a, workspace, game, and more.
+
+assess_piaget(mentova, +Level, -Result) — Levels 1-8.
+assess_all(mentova, -Report) — Bayley + CHC + Piaget + consciousness indicators.
+anchor_node(+Relation, +Payload, +Tags, -Id) — write to the Lattice.
+live_node_facts(+Nexus, -Ids) — read what is in the Lattice.
+default_nexus(-Nexus) — get the APEX_MIND nexus name.
+
+TUTORIAL EXAMPLE SESSION:
+
+    $ bin/mentova
+
+    === Mentova is waking up ===
+    [... boot output ...]
+
+    ============================================================
+      Mentova Console — PrologAI Interactive Session
+    ============================================================
+
+    ?- mentova_query(deductive, is_a(tweety, bird), R).
+    R = answer(yes, just(tweety, is_a, bird, chain([tweety, bird]))).
+
+    ?- assess_piaget(mentova, 7, R).
+    R = milestone_not_achieved.
+
+    ?- anchor_node(theory_of_mind, [false_belief(sally, marble_in_basket), actual(marble_in_box)], [], Id).
+    Id = 'node_fact_001'.
+
+    ?- assess_piaget(mentova, 7, R).
+    R = milestone_achieved.
+
+    ?- halt.
+
+DESIGN PRINCIPLE — THIN WRAPPER, NOT A NEW REPL:
+
+The launcher uses SWI-Prolog's own ?- prompt. It does not introduce a custom parser or a new command syntax. Tutorial users learn real Prolog syntax, not a PrologAI-specific dialect. The wrapper stays current automatically because it is just a boot file.
+
+A friendlier command interface (:help, :query, :assess short-form commands) is reserved for a future extension. The thin wrapper is the foundation.
+
+AC-PR68-001: PASS. swipl -l bin/mentova_repl.pl boots Mentova and drops to ?-.
+AC-PR68-002: PASS. mentova_query/3 is callable without additional loading.
+AC-PR68-003: PASS. assess_piaget/3 is callable without additional loading.
+AC-PR68-004: PASS. anchor_node/4 and live_node_facts/2 callable without qualification.
+AC-PR68-005: PASS. Welcome banner lists key predicates and tutorial examples.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
