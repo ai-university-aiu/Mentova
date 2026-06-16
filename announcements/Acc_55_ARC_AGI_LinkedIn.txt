@@ -1,0 +1,76 @@
+MENTOVA SOLVES ARC-AGI TASKS BY PURE INDUCTION, RULE NAMED GLASS-BOX
+
+The Abstraction and Reasoning Corpus - ARC-AGI (Chollet 2019) - was proposed as a
+measure of general fluid intelligence in AI systems. The design goal is to resist
+pretraining: give the solver a few input-output grid examples, and it must find the
+transformation rule from those examples alone.
+
+The "honest claim" in PrologAI's Demonstration Plan is exactly this: solve each task
+by genuine induction from the provided examples, no pretraining on the corpus, and
+name the induced rule explicitly so anyone can read it.
+
+Today Mentova demonstrates that methodology (Accomplishment Record Acc_55).
+
+Three ARC-like tasks, three induced rules, three correct outputs:
+
+Task 1 - Row reversal
+Training: [[1,2,3],[4,5,6]] to [[3,2,1],[6,5,4]]
+         [[7,8,9]] to [[9,8,7]]
+Induced rule: reverse_rows
+Test input: [[2,1,3],[0,5,4]]
+Computed: [[3,1,2],[4,5,0]] - correct.
+AC-PR55-001: PASS
+
+Task 2 - Colour swap (0 and 1)
+Training: [[0,1,0],[1,0,1]] to [[1,0,1],[0,1,0]]
+Induced rule: swap_colors_0_1
+Test input: [[0,0,1],[1,1,0]]
+Computed: [[1,1,0],[0,0,1]] - correct.
+AC-PR55-002: PASS
+
+Task 3 - Grid transpose
+Training: [[1,2],[3,4],[5,6]] to [[1,3,5],[2,4,6]]
+Induced rule: transpose
+Test input: [[7,8],[9,0]]
+Computed: [[7,9],[8,0]] - correct.
+AC-PR55-003: PASS
+
+AC-PR55-004: PASS - all three induced rules named explicitly in the output.
+
+What makes this the correct methodology:
+
+• No pretraining. The candidate transformation library (reverse_rows,
+  swap_colors_0_1, transpose) was written by the developer, not trained
+  on the ARC corpus. The induction engine finds which library entry fits
+  the training pairs.
+
+• Glass-box. The induced rule is a named Prolog atom, not a hidden vector.
+  You can read: "Induced rule: reverse_rows" and know exactly what the system did.
+
+• Honest score. The score is 3/3 on three pedagogical tasks. This paper
+  does not claim to lead the ARC-AGI-1 leaderboard. The ARC-AGI-1 benchmark
+  has approximately 400 tasks; a full run would require extending the library
+  to cover more transformation types.
+
+What is next:
+
+The game-as-a-body harness (Acc_50) already enrolls the ARC environment as a body.
+Extending the rule library to cover rotation, reflection, counting, tiling,
+symmetry, and gravity would enable a genuine ARC-AGI-1 benchmark run.
+ARC-AGI-3 (interactive) maps directly onto Mentova's faculty list: exploration,
+planning, memory, goal acquisition.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University)
+Creator of PrologAI and Mentova
+ORCID: 0009-0001-9246-5758
+https://www.linkedin.com/in/d-r-dison/
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+Paper: papers/Acc_55_ARC_AGI.txt
+Demo: demos/arc_agi_demo.pl
+
+#PrologAI #Mentova #ARCAGI #AbstractionAndReasoningCorpus #SymbolicAI
+#AIU #InductiveReasoning #GlassBoxAI #ExplainableAI #FluidIntelligence
+#AIBenchmarks #CognitiveSystems #ArtificialIntelligence
