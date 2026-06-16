@@ -43,11 +43,13 @@ ultimate_goal, what_serves, why.
 
 DEMONSTRATION
 
+    % Query Mentova for teleological reasoning about 'purpose_of(heart)'.
     ?- mentova_query(teleological, purpose_of(heart), R).
     R = answer(purpose(heart, pump_blood,
                        serves(circulatory_system, enables(oxygen_delivery, enables(cell_survival)))),
                ...)
 
+    % Query Mentova for teleological reasoning about 'ultimate_goal(roots)'.
     ?- mentova_query(teleological, ultimate_goal(roots), R).
     R = answer(ultimate(roots, plant_growth), ...)
 
@@ -76,8 +78,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(teleological, purpose_of(heart), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

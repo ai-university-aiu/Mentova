@@ -72,9 +72,13 @@ performs three initialisation steps:
 
 The Rung 1 demonstration exercises mentova_query/3 with four query types:
 
+  % Query Mentova for deductive reasoning about 'is_a(X'.
   deductive:     mentova_query(deductive, is_a(X, Class), Result)
+  % Query Mentova for defeasible reasoning about 'flies(X)'.
   defeasible:    mentova_query(defeasible, flies(X), Result)
+  % Query Mentova for probabilistic reasoning about 'prob(Prop)'.
   probabilistic: mentova_query(probabilistic, prob(Prop), Result)
+  % Query Mentova for epistemic reasoning about 'believes(Agent'.
   epistemic:     mentova_query(epistemic, believes(Agent, Prop), Result)
 
 Pass criterion (from Volume 6, Rung 1): the IsA conclusion returns with a
@@ -84,6 +88,7 @@ readable proof chain. All four query types are shown for completeness.
 THE DEMONSTRATION
 
 Run command:
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl -g "mentova_boot, [queries...]" -t halt
 
 Output (verbatim):
@@ -172,10 +177,14 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for deductive reasoning about 'is_a(canary'.
             mentova_query(deductive, is_a(canary, animal), R), \
             write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

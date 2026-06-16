@@ -56,6 +56,7 @@ that platform.
 Every answer Mentova produces includes two components: Result and Justification.
 The Justification is a structured term naming the reasoning type, the facts and
 rules consulted, and the chain of inference steps that produced the Result. This
+% Call the top-level Mentova query interface (mentova_query/3).
 is not optional: the top-level interface mentova_query(+Type, +Query, -answer(Result,
 Justification)) requires both components by construction. A correct result with
 an absent or invalid justification does not count as a pass.
@@ -159,9 +160,13 @@ performs three initialisation steps:
 
 The Rung 1 demonstration exercises mentova_query/3 with four query types:
 
+  % Query Mentova for deductive reasoning about 'is_a(X'.
   deductive:     mentova_query(deductive, is_a(X, Class), Result)
+  % Query Mentova for defeasible reasoning about 'flies(X)'.
   defeasible:    mentova_query(defeasible, flies(X), Result)
+  % Query Mentova for probabilistic reasoning about 'prob(Prop)'.
   probabilistic: mentova_query(probabilistic, prob(Prop), Result)
+  % Query Mentova for epistemic reasoning about 'believes(Agent'.
   epistemic:     mentova_query(epistemic, believes(Agent, Prop), Result)
 
 Pass criterion (from Volume 6, Rung 1): the IsA conclusion returns with a
@@ -171,6 +176,7 @@ readable proof chain. All four query types are shown for completeness.
 2..THE DEMONSTRATION
 
 Run command:
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl -g "mentova_boot, [queries...]" -t halt
 
 Output (verbatim):
@@ -259,10 +265,14 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for deductive reasoning about 'is_a(canary'.
             mentova_query(deductive, is_a(canary, animal), R), \
             write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -358,6 +368,7 @@ Pass criterion: the induced rule is printed, daisy_bird => pass, tweety => fail.
 3..THE DEMONSTRATION
 
 Run command:
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl -g "[induction goal]" -t halt
 
 Output (verbatim):
@@ -435,8 +446,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
     git clone https://github.com/ai-university-aiu/Mentova.git
     cd Mentova
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Supply a goal or termination instruction to the SWI-Prolog command.
           -g "assertz(small_world:is_a(daisy_bird,bird)),
+              % Call the top-level Mentova query interface (mentova_query/3).
               mentova_query(inductive,
                             induce([flies(canary),flies(eagle),flies(robin)],
                                    [flies(penguin),flies(cat),flies(salmon)],
@@ -445,6 +459,7 @@ Requirements: SWI-Prolog 9.0.4 or later.
                                     neg_cond(is_a,[fish])],
                                    [flies(daisy_bird),flies(tweety)]),
                             R), write(R), nl" \
+          % Supply a goal or termination instruction to the SWI-Prolog command.
           -t halt
 
 
@@ -532,6 +547,7 @@ Each explanation is returned as:
                 evidence(cause(H, Obs), prior(P), likelihood(L), note(N)))
 
 The mentova_query/3 interface exposes this as:
+    % Query Mentova for abductive reasoning about 'explain(Observation)'.
     mentova_query(abductive, explain(Observation), answer(Best, Justification))
 
 
@@ -644,8 +660,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
     git clone https://github.com/ai-university-aiu/Mentova.git
     cd Mentova
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a abductive query 'explain(wet_ground)' via Mentova and write the result.
           -g "mentova_query(abductive, explain(wet_ground), R), write(R), nl" \
+          % Supply a goal or termination instruction to the SWI-Prolog command.
           -t halt
 
 
@@ -723,7 +742,9 @@ Five query forms are supported:
 
 The top-level mentova_query/3 predicate is extended with a new clause:
 
+    % Query Mentova for probabilistic reasoning about 'ProbQuery'.
     mentova_query(probabilistic, ProbQuery, answer(P, Just)) :-
+        % State the fact: mentova prob(...).
         mentova_prob(ProbQuery, P, Just).
 
 The module is loaded by the mentova.pl bootstrap via use_module(probabilistic).
@@ -733,6 +754,7 @@ DEMONSTRATION
 
 Query 1 — direct lookup:
 
+    % Query Mentova for probabilistic reasoning about 'prob(rain)'.
     ?- mentova_query(probabilistic, prob(rain), R).
     R = answer(0.3, just(weighted_fact(rain)))
 
@@ -740,6 +762,7 @@ Query 1 — direct lookup:
 
 Query 2 — conjunction (rain ∧ exercise):
 
+    % Query Mentova for probabilistic reasoning about 'and(rain'.
     ?- mentova_query(probabilistic, and(rain, exercise), R).
     R = answer(0.21, just(conjunction(just(direct(rain,0.3)),
                                       just(direct(exercise,0.7)))))
@@ -748,6 +771,7 @@ Query 2 — conjunction (rain ∧ exercise):
 
 Query 3 — disjunction (rain ∨ sprinkler):
 
+    % Query Mentova for probabilistic reasoning about 'or(rain'.
     ?- mentova_query(probabilistic, or(rain, sprinkler), R).
     R = answer(0.72, just(disjunction(just(direct(rain,0.3)),
                                       just(direct(sprinkler,0.6)))))
@@ -756,6 +780,7 @@ Query 3 — disjunction (rain ∨ sprinkler):
 
 Query 4 — complement (¬illness):
 
+    % Query Mentova for probabilistic reasoning about 'not(illness)'.
     ?- mentova_query(probabilistic, not(illness), R).
     R = answer(0.8, just(complement(just(direct(illness,0.2)))))
 
@@ -809,12 +834,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for probabilistic reasoning about 'prob(rain)'.
             mentova_query(probabilistic, prob(rain), R1), write(R1), nl, \
+            % Query Mentova for probabilistic reasoning about 'and(rain'.
             mentova_query(probabilistic, and(rain,exercise), R2), write(R2), nl, \
+            % Query Mentova for probabilistic reasoning about 'or(rain'.
             mentova_query(probabilistic, or(rain,sprinkler), R3), write(R3), nl, \
+            % Query Mentova for probabilistic reasoning about 'not(illness)'.
             mentova_query(probabilistic, not(illness), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -891,7 +923,9 @@ The justification term names every quantity used.
 
 The top-level clause added to mentova_query/3:
 
+    % Query Mentova for bayesian reasoning about 'update(H'.
     mentova_query(bayesian, update(H, E), answer(Posterior, Just)) :-
+        % State the fact: mentova bayes(...).
         mentova_bayes(H, E, Posterior, Just).
 
 
@@ -971,10 +1005,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for bayesian reasoning about 'update(rain'.
             mentova_query(bayesian, update(rain, wet_ground), R1), write(R1), nl, \
+            % Query Mentova for bayesian reasoning about 'update(illness'.
             mentova_query(bayesian, update(illness, fatigue), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -1057,7 +1096,9 @@ path retained".
 
 The top-level clause added to mentova_query/3:
 
+    % Query Mentova for causal reasoning about 'CausalQuery'.
     mentova_query(causal, CausalQuery, answer(Result, Just)) :-
+        % State the fact: mentova causal(...).
         mentova_causal(CausalQuery, Result, Just).
 
 
@@ -1065,6 +1106,7 @@ DEMONSTRATION
 
 Query 1 — interventional: do(sprinkler) → wet_ground:
 
+    % Query Mentova for causal reasoning about 'intervene(sprinkler'.
     ?- mentova_query(causal, intervene(sprinkler, wet_ground), R).
     R = answer(0.9, just(intervention(do(sprinkler), wet_ground, 0.9,
                note('incoming edges to Cause severed; only causal path retained'))))
@@ -1074,6 +1116,7 @@ Query 1 — interventional: do(sprinkler) → wet_ground:
 
 Query 2 — observational: observe(sprinkler) → wet_ground:
 
+    % Query Mentova for causal reasoning about 'observe(sprinkler'.
     ?- mentova_query(causal, observe(sprinkler, wet_ground), R).
     R = answer(0.72, just(observation(sprinkler, wet_ground, 0.72,
                note('no edge severing; all paths to Effect included'))))
@@ -1084,6 +1127,7 @@ Query 2 — observational: observe(sprinkler) → wet_ground:
 
 Query 3 — comparison:
 
+    % Query Mentova for causal reasoning about 'compare(sprinkler'.
     ?- mentova_query(causal, compare(sprinkler, wet_ground), R).
     R = answer(compare(0.9, 0.72, 0.18), just(compare(...)))
 
@@ -1093,6 +1137,7 @@ Query 3 — comparison:
 
 Query 4 — causal chain:
 
+    % Query Mentova for causal reasoning about 'chain(fire)'.
     ?- mentova_query(causal, chain(fire), R).
     R = answer(chain(fire, [smoke]), just(causal_chain(fire, [smoke])))
 
@@ -1144,11 +1189,17 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for causal reasoning about 'intervene(sprinkler'.
             mentova_query(causal, intervene(sprinkler,wet_ground), R1), write(R1), nl, \
+            % Query Mentova for causal reasoning about 'observe(sprinkler'.
             mentova_query(causal, observe(sprinkler,wet_ground), R2), write(R2), nl, \
+            % Query Mentova for causal reasoning about 'compare(sprinkler'.
             mentova_query(causal, compare(sprinkler,wet_ground), R3), write(R3), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -1195,9 +1246,13 @@ The observation table in small_world.pl records facts of the form:
 
 These represent how many times a given property was observed for a given subject.
 For example:
+    % State the fact: observation(...).
     observation(canary,  yellow, 47).
+    % State the fact: observation(...).
     observation(canary,  green,   3).
+    % State the fact: observation(...).
     observation(penguin, swims,  95).
+    % State the fact: observation(...).
     observation(penguin, flies,   0).
 
 Statistical reasoning over such tables is one of the oldest forms of quantitative
@@ -1223,7 +1278,9 @@ aggregate_all/3 for total counts and msort/2 for finding maxima.
 
 The top-level clause added to mentova_query/3:
 
+    % Query Mentova for statistical reasoning about 'StatQuery'.
     mentova_query(statistical, StatQuery, answer(Result, Just)) :-
+        % State the fact: mentova stat(...).
         mentova_stat(StatQuery, Result, Just).
 
 
@@ -1231,6 +1288,7 @@ DEMONSTRATION
 
 Query 1 — dominant property of canary:
 
+    % Query Mentova for statistical reasoning about 'dominant(canary)'.
     ?- mentova_query(statistical, dominant(canary), R).
     R = answer(dominant(canary, yellow, 47),
                just(dominant(canary, yellow, 47, out_of(50))))
@@ -1239,6 +1297,7 @@ Query 1 — dominant property of canary:
 
 Query 2 — most common property of rose with percentage:
 
+    % Query Mentova for statistical reasoning about 'most_common(rose)'.
     ?- mentova_query(statistical, most_common(rose), R).
     R = answer(most_common(rose, red, 82),
                just(most_common(rose, red, 82, total(100), pct(82))))
@@ -1247,6 +1306,7 @@ Query 2 — most common property of rose with percentage:
 
 Query 3 — trend (penguin, swims vs flies):
 
+    % Query Mentova for statistical reasoning about 'trend(penguin'.
     ?- mentova_query(statistical, trend(penguin, swims, flies), R).
     R = answer(trend(penguin, swims, flies, more(swims)),
                just(trend(penguin, swims, 95, flies, 0, more(swims))))
@@ -1256,6 +1316,7 @@ Query 3 — trend (penguin, swims vs flies):
 
 Query 4 — proportion (eagle hunts):
 
+    % Query Mentova for statistical reasoning about 'proportion(eagle'.
     ?- mentova_query(statistical, proportion(eagle, hunts), R).
     R = answer(0.71, just(proportion(eagle, hunts, 71, 100, 0.71)))
 
@@ -1302,12 +1363,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for statistical reasoning about 'dominant(canary)'.
             mentova_query(statistical, dominant(canary), R1), write(R1), nl, \
+            % Query Mentova for statistical reasoning about 'most_common(rose)'.
             mentova_query(statistical, most_common(rose), R2), write(R2), nl, \
+            % Query Mentova for statistical reasoning about 'trend(penguin'.
             mentova_query(statistical, trend(penguin,swims,flies), R3), write(R3), nl, \
+            % Query Mentova for statistical reasoning about 'proportion(eagle'.
             mentova_query(statistical, proportion(eagle,hunts), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -1387,6 +1455,7 @@ relation types via which the analogy was established.
 
 The top-level clause:
 
+    % Query Mentova for analogical reasoning about 'AnalogyQuery'.
     mentova_query(analogical, AnalogyQuery, answer(D, Just)) :-
         once(mentova_analogy(AnalogyQuery, D, Just)).
 
@@ -1395,6 +1464,7 @@ DEMONSTRATION
 
 Query 1 — taxonomic analogy (is_a):
 
+    % Query Mentova for analogical reasoning about 'analogy(canary'.
     ?- mentova_query(analogical, analogy(canary, bird, eagle, ?), R).
     R = answer(bird, just(analogy(canary, bird, eagle, bird, via([is_a]))))
 
@@ -1403,6 +1473,7 @@ Query 1 — taxonomic analogy (is_a):
 
 Query 2 — functional analogy (capable_of):
 
+    % Query Mentova for analogical reasoning about 'analogy(knife'.
     ?- mentova_query(analogical, analogy(knife, cut, hammer, ?), R).
     R = answer(drive_nail, just(analogy(knife, cut, hammer, drive_nail, via([capable_of]))))
 
@@ -1413,6 +1484,7 @@ Query 2 — functional analogy (capable_of):
 
 Query 3 — taxonomic analogy at a different level (is_a):
 
+    % Query Mentova for analogical reasoning about 'analogy(rose'.
     ?- mentova_query(analogical, analogy(rose, flower, oak, ?), R).
     R = answer(tree, just(analogy(rose, flower, oak, tree, via([is_a]))))
 
@@ -1421,6 +1493,7 @@ Query 3 — taxonomic analogy at a different level (is_a):
 
 Query 4 — causal analogy (causes):
 
+    % Query Mentova for analogical reasoning about 'analogy(rain'.
     ?- mentova_query(analogical, analogy(rain, wet_ground, fire, ?), R).
     R = answer(smoke, just(analogy(rain, wet_ground, fire, smoke, via([causes]))))
 
@@ -1471,12 +1544,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for analogical reasoning about 'analogy(canary'.
             mentova_query(analogical, analogy(canary,bird,eagle,?), R1), write(R1), nl, \
+            % Query Mentova for analogical reasoning about 'analogy(knife'.
             mentova_query(analogical, analogy(knife,cut,hammer,?), R2), write(R2), nl, \
+            % Query Mentova for analogical reasoning about 'analogy(rose'.
             mentova_query(analogical, analogy(rose,flower,oak,?), R3), write(R3), nl, \
+            % Query Mentova for analogical reasoning about 'analogy(rain'.
             mentova_query(analogical, analogy(rain,wet_ground,fire,?), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -1553,6 +1633,7 @@ every step in the chain.
 
 The top-level clause:
 
+    % Query Mentova for relational reasoning about 'RelQuery'.
     mentova_query(relational, RelQuery, answer(Result, Just)) :-
         once(mentova_relational(RelQuery, Result, Just)).
 
@@ -1561,6 +1642,7 @@ DEMONSTRATION
 
 Query 1 — two-hop is_a: canary→?→?
 
+    % Query Mentova for relational reasoning about 'two_hop(canary'.
     ?- mentova_query(relational, two_hop(canary, is_a, is_a), R).
     R = answer(animal, just(two_hop(canary, is_a, bird, is_a, animal)))
 
@@ -1568,6 +1650,7 @@ Query 1 — two-hop is_a: canary→?→?
 
 Query 2 — three-hop is_a: canary→?→?→?
 
+    % Query Mentova for relational reasoning about 'three_hop(canary'.
     ?- mentova_query(relational, three_hop(canary, is_a, is_a, is_a), R).
     R = answer(living_thing,
                just(three_hop(canary, is_a, bird, is_a, animal, is_a, living_thing)))
@@ -1576,6 +1659,7 @@ Query 2 — three-hop is_a: canary→?→?→?
 
 Query 3 — ancestor chain: canary ... living_thing
 
+    % Query Mentova for relational reasoning about 'ancestor(canary'.
     ?- mentova_query(relational, ancestor(canary, living_thing), R).
     R = answer(yes, just(ancestor(canary, living_thing,
                                   chain([canary, bird, animal, living_thing]))))
@@ -1586,6 +1670,7 @@ Query 3 — ancestor chain: canary ... living_thing
 
 Query 4 — common is_a target: canary and penguin
 
+    % Query Mentova for relational reasoning about 'common(canary'.
     ?- mentova_query(relational, common(canary, penguin, is_a), R).
     R = answer([bird], just(common(canary, penguin, is_a, [bird])))
 
@@ -1641,12 +1726,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for relational reasoning about 'two_hop(canary'.
             mentova_query(relational, two_hop(canary,is_a,is_a), R1), write(R1), nl, \
+            % Query Mentova for relational reasoning about 'three_hop(canary'.
             mentova_query(relational, three_hop(canary,is_a,is_a,is_a), R2), write(R2), nl, \
+            % Query Mentova for relational reasoning about 'ancestor(canary'.
             mentova_query(relational, ancestor(canary,living_thing), R3), write(R3), nl, \
+            % Query Mentova for relational reasoning about 'common(canary'.
             mentova_query(relational, common(canary,penguin,is_a), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -1725,7 +1817,9 @@ The classify(Features, K) query:
 
 Top-level clause:
 
+    % Query Mentova for transductive reasoning about 'TransQuery'.
     mentova_query(transductive, TransQuery, answer(Label, Just)) :-
+        % State the fact: mentova transduce(...).
         mentova_transduce(TransQuery, Label, Just).
 
 
@@ -1733,6 +1827,7 @@ DEMONSTRATION
 
 Query 1 — new point: [wings=yes, feathers=yes, beak=yes, flies=yes, size=medium], K=3:
 
+    % Call the top-level Mentova query interface (mentova_query/3).
     ?- mentova_query(transductive,
                      classify([wings=yes,feathers=yes,beak=yes,flies=yes,size=medium], 3), R).
     R = answer(bird, just(knn(k(3),
@@ -1744,6 +1839,7 @@ Query 1 — new point: [wings=yes, feathers=yes, beak=yes, flies=yes, size=mediu
 
 Query 2 — new point: [wings=no, feathers=no, beak=no, flies=no, size=large], K=3:
 
+    % Call the top-level Mentova query interface (mentova_query/3).
     ?- mentova_query(transductive,
                      classify([wings=no,feathers=no,beak=no,flies=no,size=large], 3), R).
     R = answer(mammal, just(knn(k(3),
@@ -1799,14 +1895,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Call the top-level Mentova query interface (mentova_query/3).
             mentova_query(transductive, \
               classify([wings=yes,feathers=yes,beak=yes,flies=yes,size=medium],3), R1), \
             write(R1), nl, \
+            % Call the top-level Mentova query interface (mentova_query/3).
             mentova_query(transductive, \
               classify([wings=no,feathers=no,beak=no,flies=no,size=large],3), R2), \
             write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -1880,6 +1981,7 @@ is_a chains (e.g. canary → bird → at_location sky).
 
 Top-level clause:
 
+    % Query Mentova for commonsense reasoning about 'CSQuery'.
     mentova_query(commonsense, CSQuery, answer(Ans, Just)) :-
         once(mentova_commonsense(CSQuery, Ans, Just)).
 
@@ -1888,6 +1990,7 @@ DEMONSTRATION
 
 Query 1 — what is a canary?
 
+    % Query Mentova for commonsense reasoning about 'what_is(canary)'.
     ?- mentova_query(commonsense, what_is(canary), R).
     R = answer(bird, just(is_a(canary, bird)))
 
@@ -1895,6 +1998,7 @@ Query 1 — what is a canary?
 
 Query 2 — what can an eagle do?
 
+    % Query Mentova for commonsense reasoning about 'what_can(eagle)'.
     ?- mentova_query(commonsense, what_can(eagle), R).
     R = answer(hunt, just(capable_of(eagle, hunt, via(direct))))
 
@@ -1902,6 +2006,7 @@ Query 2 — what can an eagle do?
 
 Query 3 — where is a penguin?
 
+    % Query Mentova for commonsense reasoning about 'where_is(penguin)'.
     ?- mentova_query(commonsense, where_is(penguin), R).
     R = answer(antarctica, just(at_location(penguin, antarctica, via(direct))))
 
@@ -1909,6 +2014,7 @@ Query 3 — where is a penguin?
 
 Query 4 — what does rain cause?
 
+    % Query Mentova for commonsense reasoning about 'what_causes(rain)'.
     ?- mentova_query(commonsense, what_causes(rain), R).
     R = answer(wet_ground, just(causes(rain, wet_ground)))
 
@@ -1916,6 +2022,7 @@ Query 4 — what does rain cause?
 
 Query 5 — is a rose a living thing?
 
+    % Query Mentova for commonsense reasoning about 'is_living(rose)'.
     ?- mentova_query(commonsense, is_living(rose), R).
     R = answer(yes, just(is_living(rose, yes, via([rose, flower, plant, living_thing]))))
 
@@ -1962,13 +2069,21 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for commonsense reasoning about 'what_is(canary)'.
             mentova_query(commonsense, what_is(canary), R1), write(R1), nl, \
+            % Query Mentova for commonsense reasoning about 'what_can(eagle)'.
             mentova_query(commonsense, what_can(eagle), R2), write(R2), nl, \
+            % Query Mentova for commonsense reasoning about 'where_is(penguin)'.
             mentova_query(commonsense, where_is(penguin), R3), write(R3), nl, \
+            % Query Mentova for commonsense reasoning about 'what_causes(rain)'.
             mentova_query(commonsense, what_causes(rain), R4), write(R4), nl, \
+            % Query Mentova for commonsense reasoning about 'is_living(rose)'.
             mentova_query(commonsense, is_living(rose), R5), write(R5), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -2047,7 +2162,9 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for logical reasoning about 'LogQuery'.
     mentova_query(logical, LogQuery, answer(Result, Just)) :-
+        % State the fact: mentova logical(...).
         mentova_logical(LogQuery, Result, Just).
 
 
@@ -2055,6 +2172,7 @@ DEMONSTRATION
 
 Query: prove can_fly(canary) from [is_bird(canary), not_flightless(canary)]:
 
+    % Call the top-level Mentova query interface (mentova_query/3).
     ?- mentova_query(logical,
                      prove(can_fly(canary), [is_bird(canary), not_flightless(canary)]),
                      R).
@@ -2129,12 +2247,17 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for logical reasoning about 'prove(can_fly(canary)'.
             mentova_query(logical, prove(can_fly(canary), \
               [is_bird(canary),not_flightless(canary)]), R1), write(R1), nl, \
+            % Query Mentova for logical reasoning about 'prove(needs_water(canary)'.
             mentova_query(logical, prove(needs_water(canary), \
               [is_bird(canary),not_flightless(canary)]), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -2210,7 +2333,9 @@ Query form:
 
 Top-level clause:
 
+    % Query Mentova for formal reasoning about 'FormalQuery'.
     mentova_query(formal, FormalQuery, answer(Result, Just)) :-
+        % State the fact: mentova formal(...).
         mentova_formal(FormalQuery, Result, Just).
 
 
@@ -2223,6 +2348,7 @@ Derivation to check:
       step(fact, is_a(bird,animal), [])
       step(isa_chain, is_a(canary,animal), [is_a(canary,bird), is_a(bird,animal)])
 
+    % Query Mentova for formal reasoning about 'check_proof(KB'.
     ?- mentova_query(formal, check_proof(KB, Steps), R).
     R = answer(valid, just(mpk_check(..., result(valid),
                                       report([check(step(fact, is_a(canary,bird), []), ok),
@@ -2239,6 +2365,7 @@ Derivation to check:
 
 Kernel info query:
 
+    % Query Mentova for formal reasoning about 'kernel_info'.
     ?- mentova_query(formal, kernel_info, R).
     R = answer(kernel(mpk_transitions), just(transitions([
         'MPK-1: Fact — A ∈ KB ⊢ A',
@@ -2287,14 +2414,18 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
             KB = [is_a(canary,bird), is_a(bird,animal)], \
             Steps = [step(fact,is_a(canary,bird),[]), \
                      step(fact,is_a(bird,animal),[]), \
                      step(isa_chain,is_a(canary,animal), \
                           [is_a(canary,bird),is_a(bird,animal)])], \
+            % Query Mentova for formal reasoning about 'check_proof(KB'.
             mentova_query(formal, check_proof(KB,Steps), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -2369,28 +2500,35 @@ between clauses without warning.
 
 Top-level clause:
 
+    % Query Mentova for mathematical reasoning about 'MathQuery'.
     mentova_query(mathematical, MathQuery, answer(Result, Just)) :-
+        % State the fact: mentova math(...).
         mentova_math(MathQuery, Result, Just).
 
 
 DEMONSTRATION
 
+    % Query Mentova for mathematical reasoning about 'factorial(7)'.
     ?- mentova_query(mathematical, factorial(7), R).
     R = answer(5040, just(factorial(7, 5040)))
     Correct: 7! = 5040.
 
+    % Query Mentova for mathematical reasoning about 'fibonacci(10)'.
     ?- mentova_query(mathematical, fibonacci(10), R).
     R = answer(55, just(fibonacci(10, 55)))
     Correct: F(10) = 55.
 
+    % Query Mentova for mathematical reasoning about 'gcd(48'.
     ?- mentova_query(mathematical, gcd(48, 18), R).
     R = answer(6, just(gcd(48, 18, 6)))
     Correct: GCD(48, 18) = 6.
 
+    % Query Mentova for mathematical reasoning about 'is_prime(17)'.
     ?- mentova_query(mathematical, is_prime(17), R).
     R = answer(yes, just(prime_check(17, yes)))
     Correct: 17 is prime.
 
+    % Query Mentova for mathematical reasoning about 'mean([4'.
     ?- mentova_query(mathematical, mean([4,7,13,2]), R).
     R = answer(6.5, just(mean([4,7,13,2], 6.5)))
     Correct: (4+7+13+2)/4 = 26/4 = 6.5.
@@ -2434,13 +2572,21 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for mathematical reasoning about 'factorial(7)'.
             mentova_query(mathematical, factorial(7), R1), write(R1), nl, \
+            % Query Mentova for mathematical reasoning about 'fibonacci(10)'.
             mentova_query(mathematical, fibonacci(10), R2), write(R2), nl, \
+            % Query Mentova for mathematical reasoning about 'gcd(48'.
             mentova_query(mathematical, gcd(48,18), R3), write(R3), nl, \
+            % Query Mentova for mathematical reasoning about 'is_prime(17)'.
             mentova_query(mathematical, is_prime(17), R4), write(R4), nl, \
+            % Query Mentova for mathematical reasoning about 'mean([4'.
             mentova_query(mathematical, mean([4,7,13,2]), R5), write(R5), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -2515,6 +2661,7 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for fuzzy reasoning about 'FuzzyQuery'.
     mentova_query(fuzzy, FuzzyQuery, answer(Result, Just)) :-
         once(mentova_fuzzy(FuzzyQuery, Result, Just)).
 
@@ -2523,6 +2670,7 @@ DEMONSTRATION
 
 Query 1 — classify temperature 22°C:
 
+    % Query Mentova for fuzzy reasoning about 'classify(temperature'.
     ?- mentova_query(fuzzy, classify(temperature, 22), R).
     R = answer(best(warm, 0.7, high),
                just(fuzzy_classify(temperature, 22, best(warm, 0.7), modifier(high))))
@@ -2532,6 +2680,7 @@ Query 1 — classify temperature 22°C:
 
 Query 2 — membership(temperature, 22, warm):
 
+    % Query Mentova for fuzzy reasoning about 'membership(temperature'.
     ?- mentova_query(fuzzy, membership(temperature, 22, warm), R).
     R = answer(degree(warm, 0.7), just(fuzzy_membership(temperature, 22, warm, 0.7)))
 
@@ -2539,6 +2688,7 @@ Query 2 — membership(temperature, 22, warm):
 
 Query 3 — classify speed 75 km/h:
 
+    % Query Mentova for fuzzy reasoning about 'classify(speed'.
     ?- mentova_query(fuzzy, classify(speed, 75), R).
     R = answer(best(medium, 0.875, very_high),
                just(fuzzy_classify(speed, 75, best(medium, 0.875), modifier(very_high))))
@@ -2547,6 +2697,7 @@ Query 3 — classify speed 75 km/h:
 
 Query 4 — fuzzy NOT of 0.7:
 
+    % Query Mentova for fuzzy reasoning about 'fuzzy_not(0.7)'.
     ?- mentova_query(fuzzy, fuzzy_not(0.7), R).
     R = answer(0.3, just(fuzzy_not(0.7, complement(0.3))))
 
@@ -2591,12 +2742,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for fuzzy reasoning about 'classify(temperature'.
             mentova_query(fuzzy, classify(temperature,22), R1), write(R1), nl, \
+            % Query Mentova for fuzzy reasoning about 'membership(temperature'.
             mentova_query(fuzzy, membership(temperature,22,warm), R2), write(R2), nl, \
+            % Query Mentova for fuzzy reasoning about 'classify(speed'.
             mentova_query(fuzzy, classify(speed,75), R3), write(R3), nl, \
+            % Query Mentova for fuzzy reasoning about 'fuzzy_not(0.7)'.
             mentova_query(fuzzy, fuzzy_not(0.7), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -2664,6 +2822,7 @@ Supported query forms:
 
 Top-level clause:
 
+    % Query Mentova for qualitative reasoning about 'QualQuery'.
     mentova_query(qualitative, QualQuery, answer(Result, Just)) :-
         once(mentova_qualitative(QualQuery, Result, Just)).
 
@@ -2727,12 +2886,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for qualitative reasoning about 'direction(sunlight'.
             mentova_query(qualitative, direction(sunlight,plant_growth), R1), write(R1), nl, \
+            % Query Mentova for qualitative reasoning about 'direction(exercise'.
             mentova_query(qualitative, direction(exercise,weight), R2), write(R2), nl, \
+            % Query Mentova for qualitative reasoning about 'chain(sunlight'.
             mentova_query(qualitative, chain(sunlight,temperature,evaporation), R3), write(R3), nl, \
+            % Query Mentova for qualitative reasoning about 'predict(rainfall'.
             mentova_query(qualitative, predict(rainfall,up), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -2808,7 +2974,9 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for nonmonotonic reasoning about 'NMQuery'.
     mentova_query(nonmonotonic, NMQuery, answer(Result, Just)) :-
+        % State the fact: mentova defeasible(...).
         mentova_defeasible(NMQuery, Result, Just).
 
 
@@ -2816,6 +2984,7 @@ DEMONSTRATION
 
 Query 1 — flies(canary):
 
+    % Query Mentova for nonmonotonic reasoning about 'query(flies(canary))'.
     ?- mentova_query(nonmonotonic, query(flies(canary)), R).
     R = answer(holds(default),
                just(defeasible(flies(canary), default(bird_flies),
@@ -2825,6 +2994,7 @@ Query 1 — flies(canary):
 
 Query 2 — flies(penguin):
 
+    % Query Mentova for nonmonotonic reasoning about 'query(flies(penguin))'.
     ?- mentova_query(nonmonotonic, query(flies(penguin)), R).
     R = answer(withdrawn(exception(penguin_exception)),
                just(defeasible(flies(penguin), default(bird_flies),
@@ -2875,10 +3045,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for nonmonotonic reasoning about 'query(flies(canary))'.
             mentova_query(nonmonotonic, query(flies(canary)), R1), write(R1), nl, \
+            % Query Mentova for nonmonotonic reasoning about 'query(flies(penguin))'.
             mentova_query(nonmonotonic, query(flies(penguin)), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -2951,6 +3126,7 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for paraconsistent reasoning about 'ParaQuery'.
     mentova_query(paraconsistent, ParaQuery, answer(Result, Just)) :-
         once(mentova_paraconsistent(ParaQuery, Result, Just)).
 
@@ -2959,6 +3135,7 @@ DEMONSTRATION
 
 Query 1 — check(flies(tweety)):
 
+    % Query Mentova for paraconsistent reasoning about 'check(flies(tweety))'.
     ?- mentova_query(paraconsistent, check(flies(tweety)), R).
     R = answer(both, just(paraconsistent(flies(tweety), tag(both), isolated(yes))))
 
@@ -2966,6 +3143,7 @@ Query 1 — check(flies(tweety)):
 
 Query 2 — unaffected(flies(canary)):
 
+    % Query Mentova for paraconsistent reasoning about 'unaffected(flies(canary))'.
     ?- mentova_query(paraconsistent, unaffected(flies(canary)), R).
     R = answer(true, just(paraconsistent_isolation(
                            contradiction(flies(tweety), both),
@@ -3012,10 +3190,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for paraconsistent reasoning about 'check(flies(tweety))'.
             mentova_query(paraconsistent, check(flies(tweety)), R1), write(R1), nl, \
+            % Query Mentova for paraconsistent reasoning about 'unaffected(flies(canary))'.
             mentova_query(paraconsistent, unaffected(flies(canary)), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3081,7 +3264,9 @@ actual answer and reports whether they differ.
 
 Top-level clause:
 
+    % Query Mentova for counterfactual reasoning about 'CFQuery'.
     mentova_query(counterfactual, CFQuery, answer(Result, Just)) :-
+        % State the fact: mentova counterfactual(...).
         mentova_counterfactual(CFQuery, Result, Just).
 
 
@@ -3089,6 +3274,7 @@ DEMONSTRATION
 
 Query 1 — what if it had rained today?
 
+    % Query Mentova for counterfactual reasoning about 'what_if(rains_today_yes'.
     ?- mentova_query(counterfactual, what_if(rains_today_yes, ground_wet), R).
     R = answer(yes, just(counterfactual(
                           antecedent(rains_today_yes),
@@ -3147,10 +3333,14 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for counterfactual reasoning about 'what_if(rains_today_yes'.
             mentova_query(counterfactual, what_if(rains_today_yes,ground_wet), R1), \
             write(R1), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3225,7 +3415,9 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for hypothetical reasoning about 'HypQuery'.
     mentova_query(hypothetical, HypQuery, answer(Result, Just)) :-
+        % State the fact: mentova hypothetical(...).
         mentova_hypothetical(HypQuery, Result, Just).
 
 
@@ -3233,6 +3425,7 @@ DEMONSTRATION
 
 Query 1 — suppose(fire):
 
+    % Query Mentova for hypothetical reasoning about 'suppose(fire)'.
     ?- mentova_query(hypothetical, suppose(fire), R).
     R = answer(consequents(fire, [smoke]),
                just(hypothetical(suppose(fire),
@@ -3287,9 +3480,13 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for hypothetical reasoning about 'suppose(fire)'.
             mentova_query(hypothetical, suppose(fire), R1), write(R1), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3353,11 +3550,13 @@ Supported queries:
 
 DEMONSTRATION
 
+    % Query Mentova for spatial reasoning about 'chain(cat)'.
     ?- mentova_query(spatial, chain(cat), R).
     R = answer(chain(cat, [cat, mat, kitchen, house]), ...)
 
     cat on mat in kitchen in house. Full chain returned.
 
+    % Query Mentova for spatial reasoning about 'in_trans(cat'.
     ?- mentova_query(spatial, in_trans(cat, house), R).
     R = answer(yes, just(transitive_in(cat, house, yes, chain([cat, mat, kitchen, house]))))
 
@@ -3389,10 +3588,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for spatial reasoning about 'chain(cat)'.
             mentova_query(spatial, chain(cat), R1), write(R1), nl, \
+            % Query Mentova for spatial reasoning about 'in_trans(cat'.
             mentova_query(spatial, in_trans(cat,house), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3444,11 +3648,13 @@ Named grids stored: example (4×4), simple3x3, cross (3×3).
 
 DEMONSTRATION
 
+    % Query Mentova for diagrammatic reasoning about 'centre(cross)'.
     ?- mentova_query(diagrammatic, centre(cross), R).
     R = answer(x, just(diagrammatic(cross, centre_cell(x))))
 
     The centre cell of the 3×3 cross grid is x.
 
+    % Query Mentova for diagrammatic reasoning about 'count(cross'.
     ?- mentova_query(diagrammatic, count(cross, x), R).
     R = answer(5, just(diagrammatic(cross, symbol(x), count(5))))
 
@@ -3479,10 +3685,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for diagrammatic reasoning about 'centre(cross)'.
             mentova_query(diagrammatic, centre(cross), R1), write(R1), nl, \
+            % Query Mentova for diagrammatic reasoning about 'count(cross'.
             mentova_query(diagrammatic, count(cross,x), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3533,11 +3744,13 @@ Supported queries: before, after, between, gap, duration, when, sequence_order, 
 
 DEMONSTRATION
 
+    % Query Mentova for temporal reasoning about 'before(breakfast'.
     ?- mentova_query(temporal, before(breakfast, lunch), R).
     R = answer(yes, just(temporal(breakfast, before, lunch, t1(7), t2(12), result(yes))))
 
     Breakfast at tick 7 is before lunch at tick 12.
 
+    % Query Mentova for temporal reasoning about 'gap(wake_up'.
     ?- mentova_query(temporal, gap(wake_up, dinner), R).
     R = answer(13, just(temporal_gap(wake_up, dinner, hours(13))))
 
@@ -3569,10 +3782,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for temporal reasoning about 'before(breakfast'.
             mentova_query(temporal, before(breakfast,lunch), R1), write(R1), nl, \
+            % Query Mentova for temporal reasoning about 'gap(wake_up'.
             mentova_query(temporal, gap(wake_up,dinner), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3624,6 +3842,7 @@ Query forms: solve(ProbFeatures), retrieve(ProbFeatures).
 
 DEMONSTRATION
 
+    % Query Mentova for case based reasoning about 'solve([problem=flat'.
     ?- mentova_query(case_based, solve([problem=flat,vehicle=car,tools=yes]), R).
     R = answer(change_tyre, just(cbr(problem([...]), retrieved(c1,3), solution(change_tyre), cycle(retrieve_reuse))))
 
@@ -3654,9 +3873,13 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for case based reasoning about 'solve([problem=flat'.
             mentova_query(case_based, solve([problem=flat,vehicle=car,tools=yes]), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3712,6 +3935,7 @@ steps that force each assignment.
 
 DEMONSTRATION
 
+    % Query Mentova for constraint reasoning about 'solve_zebra'.
     ?- mentova_query(constraint, solve_zebra, R).
     R = answer([alice-fish, bob-dog, carol-cat],
                just(constraint_solve(puzzle(zebra_lite),
@@ -3751,8 +3975,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(constraint, solve_zebra, R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3804,6 +4031,7 @@ Grade: confirmed (≥0.8), supported (≥0.6), weakly_supported (≥0.4), not_su
 
 DEMONSTRATION
 
+    % Query Mentova for scientific reasoning about 'test_hypothesis(dominant_colour(canary'.
     ?- mentova_query(scientific, test_hypothesis(dominant_colour(canary,yellow)), R).
     R = answer(result(0.94, confirmed, evidence(canary,yellow,47,of(50))),
                just(scientific_test(..., score(0.94), grade(confirmed))))
@@ -3836,9 +4064,13 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for scientific reasoning about 'test_hypothesis(dominant_colour(canary'.
             mentova_query(scientific, test_hypothesis(dominant_colour(canary,yellow)), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3896,12 +4128,14 @@ Supported queries: parts, role, behavior, if_fails, trace.
 
 DEMONSTRATION
 
+    % Query Mentova for system reasoning about 'behavior(bicycle)'.
     ?- mentova_query(system, behavior(bicycle), R).
     R = answer(moves_forward, just(system_behavior(bicycle, moves_forward,
                mechanism([wheel(rolls), pedal(drives), chain(transmits)]))))
 
     Bicycle moves_forward via the mechanism of wheel, pedal, and chain.
 
+    % Query Mentova for system reasoning about 'trace(bicycle'.
     ?- mentova_query(system, trace(bicycle, pedal, chain), R).
     R = answer(drives_chain, just(interaction_trace(bicycle,pedal,chain,effect(drives_chain))))
 
@@ -3930,8 +4164,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(system, behavior(bicycle), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -3985,11 +4222,13 @@ state-transition (predict_transition). State machines: weather_fsm
 
 DEMONSTRATION
 
+    % Query Mentova for model reasoning about 'predict_linear(temp_sensor'.
     ?- mentova_query(model, predict_linear(temp_sensor, 10), R).
     R = answer(25, just(linear_model(temp_sensor, slope(2), intercept(5), input(10), output(25))))
 
     Linear model: y = 2*10 + 5 = 25.
 
+    % Query Mentova for model reasoning about 'predict_transition(dry'.
     ?- mentova_query(model, predict_transition(dry, rain), R).
     R = answer(wet, just(fsm_transition(weather_fsm, dry, rain, wet)))
 
@@ -4022,8 +4261,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(model, predict_transition(dry,rain), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4078,12 +4320,14 @@ Supported queries: greedy(Start,Goal,Cost), shortest(Start,Goal).
 
 DEMONSTRATION
 
+    % Query Mentova for heuristic reasoning about 'greedy(a'.
     ?- mentova_query(heuristic, greedy(a, e, Cost), R).
     R = answer(path([a, c, e], cost(10)),
                just(greedy_search(a, e, path([a,c,e]), cost(10))))
 
     Greedy search finds [a, c, e] with cost 10.
 
+    % Query Mentova for heuristic reasoning about 'shortest(a'.
     ?- mentova_query(heuristic, shortest(a, e), R).
     R = answer(path([a,c,e], cost(10)), just(dijkstra(a, e, path([a,c,e]), cost(10))))
 
@@ -4113,8 +4357,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(heuristic, greedy(a,e,10), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4243,8 +4490,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
     git clone https://github.com/ai-university-aiu/Mentova.git
     cd Mentova
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a critical query 'evaluate(canary_yellow)' via Mentova and write the result.
           -g "mentova_query(critical, evaluate(canary_yellow), R), write(R), nl" \
+          % Supply a goal or termination instruction to the SWI-Prolog command.
           -t halt
 
 
@@ -4304,6 +4554,7 @@ scores and names the winning synthesis argument.
 
 DEMONSTRATION
 
+    % Query Mentova for dialectical reasoning about 'debate(nuclear_energy_good)'.
     ?- mentova_query(dialectical, debate(nuclear_energy_good), R).
     R = answer(verdict(pro, synthesis(low_carbon_emission)),
                just(dialectical(proposition(nuclear_energy_good),
@@ -4337,8 +4588,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(dialectical, debate(nuclear_energy_good), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4390,9 +4644,11 @@ Queries: what_can_i_do, confidence_for(Tag), self_describe, can_i_do(Tag).
 
 DEMONSTRATION
 
+    % Query Mentova for metacognitive reasoning about 'confidence_for(causal)'.
     ?- mentova_query(metacognitive, confidence_for(causal), R).
     R = answer(conf(causal, high), just(metacognitive(confidence_query(causal), confidence(high))))
 
+    % Query Mentova for metacognitive reasoning about 'self_describe'.
     ?- mentova_query(metacognitive, self_describe, R).
     R = answer(desc(mentova, 28, prologai), ...)
 
@@ -4422,8 +4678,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(metacognitive, self_describe, R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4472,9 +4731,11 @@ possibly/1, contingent/1, classify/1.
 
 DEMONSTRATION
 
+    % Query Mentova for modal reasoning about 'necessarily(fire_is_hot)'.
     ?- mentova_query(modal, necessarily(fire_is_hot), R).
     R = answer(true, just(modal(necessarily(fire_is_hot), worlds_checked(all_accessible), result(true))))
 
+    % Query Mentova for modal reasoning about 'classify(it_rains)'.
     ?- mentova_query(modal, classify(it_rains), R).
     R = answer(contingent, just(modal(classify(it_rains), classification(contingent))))
 
@@ -4503,8 +4764,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(modal, classify(it_rains), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4557,9 +4821,11 @@ Queries: knows, believes, ignorant, common_knowledge, what_does.
 
 DEMONSTRATION
 
+    % Query Mentova for epistemic reasoning about 'knows(alice'.
     ?- mentova_query(epistemic, knows(alice, canary_is_yellow), R).
     R = answer(knows(alice, canary_is_yellow, 0.9), ...)
 
+    % Query Mentova for epistemic reasoning about 'ignorant(bob'.
     ?- mentova_query(epistemic, ignorant(bob, tweety_is_canary), R).
     R = answer(ignorant(bob, tweety_is_canary), ...)
 
@@ -4589,8 +4855,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(epistemic, knows(alice, canary_is_yellow), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4659,7 +4928,9 @@ is not yet implemented. Contexts are flat atoms, not structured hierarchies.
 
 36..REPRODUCIBILITY
 
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a deontic query 'status(driver' via Mentova and write the result.
           -g "mentova_query(deontic, status(driver, wear_seatbelt, road), R), write(R), nl" -t halt
 
 
@@ -4707,6 +4978,7 @@ Queries: plan_for(Goal), execute(Goal, InitState), step_n(Goal, N), what_goals.
 
 DEMONSTRATION
 
+    % Query Mentova for procedural reasoning about 'step_n(make_tea'.
     ?- mentova_query(procedural, step_n(make_tea, 3), R).
     R = answer(step(3, add_teabag, [has(teabag), cup_ready], [teabag_in_cup]),
                just(procedural(step_lookup(make_tea, 3),
@@ -4739,8 +5011,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(procedural, plan_for(make_tea), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4792,10 +5067,12 @@ absorption_and, de_morgan_not_and. Queries: simplify, identify, substitute, matc
 
 DEMONSTRATION
 
+    % Query Mentova for symbolic reasoning about 'simplify(add(x'.
     ?- mentova_query(symbolic, simplify(add(x, 0)), R).
     R = answer(simplified(add(x,0), x, additive_identity),
                just(symbolic(simplification(add(x,0)), rule(additive_identity), result(x))))
 
+    % Query Mentova for symbolic reasoning about 'simplify(neg(neg(z)))'.
     ?- mentova_query(symbolic, simplify(neg(neg(z))), R).
     R = answer(simplified(neg(neg(z)), z, double_negation), ...)
 
@@ -4825,8 +5102,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(symbolic, simplify(neg(neg(z))), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4877,11 +5157,13 @@ preconditions, effects, and cost. Queries: best_action, achieves_what, how_to.
 
 DEMONSTRATION
 
+    % Query Mentova for practical reasoning about 'best_action(not_hungry'.
     ?- mentova_query(practical, best_action(not_hungry, [has(food)]), R).
     R = answer(action(eat_food, cost(1)),
                just(practical(means_ends(goal(not_hungry), state([has(food)]),
                                           best_action(eat_food), cost(1)))))
 
+    % Query Mentova for practical reasoning about 'best_action(has(food)'.
     ?- mentova_query(practical, best_action(has(food), [has(money)]), R).
     R = answer(action(buy_food, cost(2)), ...)
 
@@ -4910,8 +5192,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(practical, best_action(not_hungry, [has(food)]), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -4961,11 +5246,13 @@ ultimate_goal, what_serves, why.
 
 DEMONSTRATION
 
+    % Query Mentova for teleological reasoning about 'purpose_of(heart)'.
     ?- mentova_query(teleological, purpose_of(heart), R).
     R = answer(purpose(heart, pump_blood,
                        serves(circulatory_system, enables(oxygen_delivery, enables(cell_survival)))),
                ...)
 
+    % Query Mentova for teleological reasoning about 'ultimate_goal(roots)'.
     ?- mentova_query(teleological, ultimate_goal(roots), R).
     R = answer(ultimate(roots, plant_growth), ...)
 
@@ -4994,8 +5281,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(teleological, purpose_of(heart), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -5046,13 +5336,16 @@ Queries: minimax(Position), nash(Game), dominant(Game, Player), payoff(Game, Row
 
 DEMONSTRATION
 
+    % Query Mentova for strategic reasoning about 'minimax(root)'.
     ?- mentova_query(strategic, minimax(root), R).
     R = answer(move(a, value(3)),
                just(strategic(minimax_search(root), best_move(a), value(3))))
 
+    % Query Mentova for strategic reasoning about 'nash(prisoners_dilemma)'.
     ?- mentova_query(strategic, nash(prisoners_dilemma), R).
     R = answer(equilibria(prisoners_dilemma, [defect-defect]), ...)
 
+    % Query Mentova for strategic reasoning about 'dominant(prisoners_dilemma'.
     ?- mentova_query(strategic, dominant(prisoners_dilemma, row), R).
     R = answer(dominant(prisoners_dilemma, row, defect), ...)
 
@@ -5081,8 +5374,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(strategic, minimax(root), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -5140,12 +5436,15 @@ arc, and lesson. Queries: arc, characters, role, causal_chain, lesson, what_stor
 
 DEMONSTRATION
 
+    % Query Mentova for narrative reasoning about 'arc(tortoise_hare)'.
     ?- mentova_query(narrative, arc(tortoise_hare), R).
     R = answer(arc(hare_boasts, race_begins, tortoise_wins), ...)
 
+    % Query Mentova for narrative reasoning about 'lesson(boy_wolf)'.
     ?- mentova_query(narrative, lesson(boy_wolf), R).
     R = answer(lesson(liars_not_believed), ...)
 
+    % Query Mentova for narrative reasoning about 'role(cinderella'.
     ?- mentova_query(narrative, role(cinderella, cinderella), R).
     R = answer(role(cinderella, hero), ...)
 
@@ -5174,8 +5473,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(narrative, arc(tortoise_hare), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -5226,12 +5528,15 @@ Relations, trust levels, group memberships, and norms fully encoded.
 
 DEMONSTRATION
 
+    % Query Mentova for social reasoning about 'role(alice'.
     ?- mentova_query(social, role(alice, school), R).
     R = answer(role(alice, teacher, school), ...)
 
+    % Query Mentova for social reasoning about 'trust(bob'.
     ?- mentova_query(social, trust(bob, alice), R).
     R = answer(trust(bob, alice, high), ...)
 
+    % Query Mentova for social reasoning about 'norms_for(teacher'.
     ?- mentova_query(social, norms_for(teacher, school), R).
     R = answer(norms(teacher, school, [prepare_lessons, treat_fairly]), ...)
 
@@ -5260,8 +5565,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(social, role(alice, school), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -5313,9 +5621,11 @@ Queries: classify, gut, prototypes, match_detail.
 
 DEMONSTRATION
 
+    % Query Mentova for intuitive reasoning about 'classify([has_wings'.
     ?- mentova_query(intuitive, classify([has_wings, has_feathers, can_fly, lays_eggs]), R).
     R = answer(match(bird, robin, confidence(1.0)), ...)
 
+    % Query Mentova for intuitive reasoning about 'gut([cold_blooded'.
     ?- mentova_query(intuitive, gut([cold_blooded, has_scales]), R).
     R = answer(gut(fish, triggered_by(cold_blooded)), ...)
 
@@ -5344,10 +5654,14 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for intuitive reasoning about 'classify([has_wings'.
             mentova_query(intuitive, classify([has_wings,has_feathers,can_fly,lays_eggs]), R), \
             write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -5391,14 +5705,17 @@ appraisal rationale.
 
 45..THE DEMONSTRATION
 
+    % Demonstrate the 'appraise' query (result shown on next line).
     appraise(alice, win_competition):
       Valence: positive, Coping: approach
       → emotion(joy, high, approach)
 
+    % Demonstrate the 'how might feel' query (result shown on next line).
     how_might_feel(bob, exam_tomorrow):
       Valence: negative, Coping: manageable
       → likely_emotion(anxiety, moderate, prepare)
 
+    % Demonstrate the 'appraise' query (result shown on next line).
     appraise(alice, lose_contest):
       Valence: negative, Coping: unavoidable
       → emotion(sadness, moderate, withdraw)
@@ -5425,7 +5742,9 @@ Emotions are statically stored as appraisal triples. Emotion dynamics
 
 45..REPRODUCIBILITY
 
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a emotional query 'appraise(alice' via Mentova and write the result.
           -g "mentova_query(emotional, appraise(alice, win_competition), R), write(R), nl" -t halt
 
 
@@ -5471,6 +5790,7 @@ Implements: top_drive(Agent) → highest-strength drive; drive_to_action(Drive)
     drive_to_action(achieve_recognition): → compete_and_excel
     drive_to_action(ensure_safety):       → avoid_threat
 
+    % Demonstrate the 'hierarchy' query (result shown on next line).
     hierarchy(esteem):
       → must_first_satisfy([physiological, safety, belonging])
 
@@ -5495,7 +5815,9 @@ hunger drive) is not modelled.
 
 46..REPRODUCIBILITY
 
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a motivational query 'top_drive(alice)' via Mentova and write the result.
           -g "mentova_query(motivational, top_drive(alice), R), write(R), nl" -t halt
 
 
@@ -5564,7 +5886,9 @@ in natural-language text requires additional parsing not implemented here.
 
 47..REPRODUCIBILITY
 
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a informal query 'detect_fallacy(arg1)' via Mentova and write the result.
           -g "mentova_query(informal, detect_fallacy(arg1), R), write(R), nl" -t halt
 
 
@@ -5612,15 +5936,18 @@ Queries: apply, precedent, exceptions_for, what_rules.
 
 DEMONSTRATION
 
+    % Query Mentova for legal reasoning about 'apply(r1'.
     ?- mentova_query(legal, apply(r1,
          ['person takes property belonging to another without consent']), R).
     R = answer(verdict(liable(theft)), ...)
 
+    % Query Mentova for legal reasoning about 'apply(r1'.
     ?- mentova_query(legal, apply(r1,
          ['person takes property belonging to another without consent',
           'property taken to prevent greater harm']), R).
     R = answer(verdict(exempt(necessity)), ...)
 
+    % Query Mentova for legal reasoning about 'precedent(case_donoghue_stevenson)'.
     ?- mentova_query(legal, precedent(case_donoghue_stevenson), R).
     R = answer(precedent(case_donoghue_stevenson, r4, liable(negligence),
                          'manufacturer owes duty of care to end consumer'), ...)
@@ -5650,11 +5977,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for legal reasoning about 'apply(r1'.
             mentova_query(legal, apply(r1, \
               ['person takes property belonging to another without consent']), R), \
             write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
@@ -5707,6 +6038,7 @@ plurality vote. Queries: analyse, utilitarian, deontological, virtue, describe, 
 
 DEMONSTRATION
 
+    % Query Mentova for moral reasoning about 'analyse(trolley_problem)'.
     ?- mentova_query(moral, analyse(trolley_problem), R).
     R = answer(moral_analysis(trolley_problem,
                                utilitarian(pull_lever),
@@ -5714,6 +6046,7 @@ DEMONSTRATION
                                virtue(do_nothing),
                                integrated(pull_lever)), ...)
 
+    % Query Mentova for moral reasoning about 'virtue(doctors_dilemma)'.
     ?- mentova_query(moral, virtue(doctors_dilemma), R).
     R = answer(verdict(refuse), ...)
 
@@ -5745,8 +6078,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(moral, analyse(trolley_problem), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

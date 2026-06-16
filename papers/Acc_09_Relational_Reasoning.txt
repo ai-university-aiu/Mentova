@@ -67,6 +67,7 @@ every step in the chain.
 
 The top-level clause:
 
+    % Query Mentova for relational reasoning about 'RelQuery'.
     mentova_query(relational, RelQuery, answer(Result, Just)) :-
         once(mentova_relational(RelQuery, Result, Just)).
 
@@ -75,6 +76,7 @@ DEMONSTRATION
 
 Query 1 — two-hop is_a: canary→?→?
 
+    % Query Mentova for relational reasoning about 'two_hop(canary'.
     ?- mentova_query(relational, two_hop(canary, is_a, is_a), R).
     R = answer(animal, just(two_hop(canary, is_a, bird, is_a, animal)))
 
@@ -82,6 +84,7 @@ Query 1 — two-hop is_a: canary→?→?
 
 Query 2 — three-hop is_a: canary→?→?→?
 
+    % Query Mentova for relational reasoning about 'three_hop(canary'.
     ?- mentova_query(relational, three_hop(canary, is_a, is_a, is_a), R).
     R = answer(living_thing,
                just(three_hop(canary, is_a, bird, is_a, animal, is_a, living_thing)))
@@ -90,6 +93,7 @@ Query 2 — three-hop is_a: canary→?→?→?
 
 Query 3 — ancestor chain: canary ... living_thing
 
+    % Query Mentova for relational reasoning about 'ancestor(canary'.
     ?- mentova_query(relational, ancestor(canary, living_thing), R).
     R = answer(yes, just(ancestor(canary, living_thing,
                                   chain([canary, bird, animal, living_thing]))))
@@ -100,6 +104,7 @@ Query 3 — ancestor chain: canary ... living_thing
 
 Query 4 — common is_a target: canary and penguin
 
+    % Query Mentova for relational reasoning about 'common(canary'.
     ?- mentova_query(relational, common(canary, penguin, is_a), R).
     R = answer([bird], just(common(canary, penguin, is_a, [bird])))
 
@@ -155,12 +160,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for relational reasoning about 'two_hop(canary'.
             mentova_query(relational, two_hop(canary,is_a,is_a), R1), write(R1), nl, \
+            % Query Mentova for relational reasoning about 'three_hop(canary'.
             mentova_query(relational, three_hop(canary,is_a,is_a,is_a), R2), write(R2), nl, \
+            % Query Mentova for relational reasoning about 'ancestor(canary'.
             mentova_query(relational, ancestor(canary,living_thing), R3), write(R3), nl, \
+            % Query Mentova for relational reasoning about 'common(canary'.
             mentova_query(relational, common(canary,penguin,is_a), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

@@ -39,9 +39,13 @@ The observation table in small_world.pl records facts of the form:
 
 These represent how many times a given property was observed for a given subject.
 For example:
+    % State the fact: observation(...).
     observation(canary,  yellow, 47).
+    % State the fact: observation(...).
     observation(canary,  green,   3).
+    % State the fact: observation(...).
     observation(penguin, swims,  95).
+    % State the fact: observation(...).
     observation(penguin, flies,   0).
 
 Statistical reasoning over such tables is one of the oldest forms of quantitative
@@ -67,7 +71,9 @@ aggregate_all/3 for total counts and msort/2 for finding maxima.
 
 The top-level clause added to mentova_query/3:
 
+    % Query Mentova for statistical reasoning about 'StatQuery'.
     mentova_query(statistical, StatQuery, answer(Result, Just)) :-
+        % State the fact: mentova stat(...).
         mentova_stat(StatQuery, Result, Just).
 
 
@@ -75,6 +81,7 @@ DEMONSTRATION
 
 Query 1 — dominant property of canary:
 
+    % Query Mentova for statistical reasoning about 'dominant(canary)'.
     ?- mentova_query(statistical, dominant(canary), R).
     R = answer(dominant(canary, yellow, 47),
                just(dominant(canary, yellow, 47, out_of(50))))
@@ -83,6 +90,7 @@ Query 1 — dominant property of canary:
 
 Query 2 — most common property of rose with percentage:
 
+    % Query Mentova for statistical reasoning about 'most_common(rose)'.
     ?- mentova_query(statistical, most_common(rose), R).
     R = answer(most_common(rose, red, 82),
                just(most_common(rose, red, 82, total(100), pct(82))))
@@ -91,6 +99,7 @@ Query 2 — most common property of rose with percentage:
 
 Query 3 — trend (penguin, swims vs flies):
 
+    % Query Mentova for statistical reasoning about 'trend(penguin'.
     ?- mentova_query(statistical, trend(penguin, swims, flies), R).
     R = answer(trend(penguin, swims, flies, more(swims)),
                just(trend(penguin, swims, 95, flies, 0, more(swims))))
@@ -100,6 +109,7 @@ Query 3 — trend (penguin, swims vs flies):
 
 Query 4 — proportion (eagle hunts):
 
+    % Query Mentova for statistical reasoning about 'proportion(eagle'.
     ?- mentova_query(statistical, proportion(eagle, hunts), R).
     R = answer(0.71, just(proportion(eagle, hunts, 71, 100, 0.71)))
 
@@ -146,12 +156,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for statistical reasoning about 'dominant(canary)'.
             mentova_query(statistical, dominant(canary), R1), write(R1), nl, \
+            % Query Mentova for statistical reasoning about 'most_common(rose)'.
             mentova_query(statistical, most_common(rose), R2), write(R2), nl, \
+            % Query Mentova for statistical reasoning about 'trend(penguin'.
             mentova_query(statistical, trend(penguin,swims,flies), R3), write(R3), nl, \
+            % Query Mentova for statistical reasoning about 'proportion(eagle'.
             mentova_query(statistical, proportion(eagle,hunts), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

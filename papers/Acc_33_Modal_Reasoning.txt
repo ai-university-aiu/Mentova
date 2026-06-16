@@ -43,9 +43,11 @@ possibly/1, contingent/1, classify/1.
 
 DEMONSTRATION
 
+    % Query Mentova for modal reasoning about 'necessarily(fire_is_hot)'.
     ?- mentova_query(modal, necessarily(fire_is_hot), R).
     R = answer(true, just(modal(necessarily(fire_is_hot), worlds_checked(all_accessible), result(true))))
 
+    % Query Mentova for modal reasoning about 'classify(it_rains)'.
     ?- mentova_query(modal, classify(it_rains), R).
     R = answer(contingent, just(modal(classify(it_rains), classification(contingent))))
 
@@ -74,8 +76,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(modal, classify(it_rains), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

@@ -36,14 +36,17 @@ appraisal rationale.
 
 THE DEMONSTRATION
 
+    % Demonstrate the 'appraise' query (result shown on next line).
     appraise(alice, win_competition):
       Valence: positive, Coping: approach
       → emotion(joy, high, approach)
 
+    % Demonstrate the 'how might feel' query (result shown on next line).
     how_might_feel(bob, exam_tomorrow):
       Valence: negative, Coping: manageable
       → likely_emotion(anxiety, moderate, prepare)
 
+    % Demonstrate the 'appraise' query (result shown on next line).
     appraise(alice, lose_contest):
       Valence: negative, Coping: unavoidable
       → emotion(sadness, moderate, withdraw)
@@ -70,7 +73,9 @@ Emotions are statically stored as appraisal triples. Emotion dynamics
 
 REPRODUCIBILITY
 
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a emotional query 'appraise(alice' via Mentova and write the result.
           -g "mentova_query(emotional, appraise(alice, win_competition), R), write(R), nl" -t halt
 
 

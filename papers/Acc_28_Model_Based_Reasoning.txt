@@ -46,11 +46,13 @@ state-transition (predict_transition). State machines: weather_fsm
 
 DEMONSTRATION
 
+    % Query Mentova for model reasoning about 'predict_linear(temp_sensor'.
     ?- mentova_query(model, predict_linear(temp_sensor, 10), R).
     R = answer(25, just(linear_model(temp_sensor, slope(2), intercept(5), input(10), output(25))))
 
     Linear model: y = 2*10 + 5 = 25.
 
+    % Query Mentova for model reasoning about 'predict_transition(dry'.
     ?- mentova_query(model, predict_transition(dry, rain), R).
     R = answer(wet, just(fsm_transition(weather_fsm, dry, rain, wet)))
 
@@ -83,8 +85,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(model, predict_transition(dry,rain), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

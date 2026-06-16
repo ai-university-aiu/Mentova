@@ -72,6 +72,7 @@ relation types via which the analogy was established.
 
 The top-level clause:
 
+    % Query Mentova for analogical reasoning about 'AnalogyQuery'.
     mentova_query(analogical, AnalogyQuery, answer(D, Just)) :-
         once(mentova_analogy(AnalogyQuery, D, Just)).
 
@@ -80,6 +81,7 @@ DEMONSTRATION
 
 Query 1 — taxonomic analogy (is_a):
 
+    % Query Mentova for analogical reasoning about 'analogy(canary'.
     ?- mentova_query(analogical, analogy(canary, bird, eagle, ?), R).
     R = answer(bird, just(analogy(canary, bird, eagle, bird, via([is_a]))))
 
@@ -88,6 +90,7 @@ Query 1 — taxonomic analogy (is_a):
 
 Query 2 — functional analogy (capable_of):
 
+    % Query Mentova for analogical reasoning about 'analogy(knife'.
     ?- mentova_query(analogical, analogy(knife, cut, hammer, ?), R).
     R = answer(drive_nail, just(analogy(knife, cut, hammer, drive_nail, via([capable_of]))))
 
@@ -98,6 +101,7 @@ Query 2 — functional analogy (capable_of):
 
 Query 3 — taxonomic analogy at a different level (is_a):
 
+    % Query Mentova for analogical reasoning about 'analogy(rose'.
     ?- mentova_query(analogical, analogy(rose, flower, oak, ?), R).
     R = answer(tree, just(analogy(rose, flower, oak, tree, via([is_a]))))
 
@@ -106,6 +110,7 @@ Query 3 — taxonomic analogy at a different level (is_a):
 
 Query 4 — causal analogy (causes):
 
+    % Query Mentova for analogical reasoning about 'analogy(rain'.
     ?- mentova_query(analogical, analogy(rain, wet_ground, fire, ?), R).
     R = answer(smoke, just(analogy(rain, wet_ground, fire, smoke, via([causes]))))
 
@@ -156,12 +161,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for analogical reasoning about 'analogy(canary'.
             mentova_query(analogical, analogy(canary,bird,eagle,?), R1), write(R1), nl, \
+            % Query Mentova for analogical reasoning about 'analogy(knife'.
             mentova_query(analogical, analogy(knife,cut,hammer,?), R2), write(R2), nl, \
+            % Query Mentova for analogical reasoning about 'analogy(rose'.
             mentova_query(analogical, analogy(rose,flower,oak,?), R3), write(R3), nl, \
+            % Query Mentova for analogical reasoning about 'analogy(rain'.
             mentova_query(analogical, analogy(rain,wet_ground,fire,?), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

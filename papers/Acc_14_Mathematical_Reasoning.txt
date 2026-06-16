@@ -65,28 +65,35 @@ between clauses without warning.
 
 Top-level clause:
 
+    % Query Mentova for mathematical reasoning about 'MathQuery'.
     mentova_query(mathematical, MathQuery, answer(Result, Just)) :-
+        % State the fact: mentova math(...).
         mentova_math(MathQuery, Result, Just).
 
 
 DEMONSTRATION
 
+    % Query Mentova for mathematical reasoning about 'factorial(7)'.
     ?- mentova_query(mathematical, factorial(7), R).
     R = answer(5040, just(factorial(7, 5040)))
     Correct: 7! = 5040.
 
+    % Query Mentova for mathematical reasoning about 'fibonacci(10)'.
     ?- mentova_query(mathematical, fibonacci(10), R).
     R = answer(55, just(fibonacci(10, 55)))
     Correct: F(10) = 55.
 
+    % Query Mentova for mathematical reasoning about 'gcd(48'.
     ?- mentova_query(mathematical, gcd(48, 18), R).
     R = answer(6, just(gcd(48, 18, 6)))
     Correct: GCD(48, 18) = 6.
 
+    % Query Mentova for mathematical reasoning about 'is_prime(17)'.
     ?- mentova_query(mathematical, is_prime(17), R).
     R = answer(yes, just(prime_check(17, yes)))
     Correct: 17 is prime.
 
+    % Query Mentova for mathematical reasoning about 'mean([4'.
     ?- mentova_query(mathematical, mean([4,7,13,2]), R).
     R = answer(6.5, just(mean([4,7,13,2], 6.5)))
     Correct: (4+7+13+2)/4 = 26/4 = 6.5.
@@ -130,13 +137,21 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for mathematical reasoning about 'factorial(7)'.
             mentova_query(mathematical, factorial(7), R1), write(R1), nl, \
+            % Query Mentova for mathematical reasoning about 'fibonacci(10)'.
             mentova_query(mathematical, fibonacci(10), R2), write(R2), nl, \
+            % Query Mentova for mathematical reasoning about 'gcd(48'.
             mentova_query(mathematical, gcd(48,18), R3), write(R3), nl, \
+            % Query Mentova for mathematical reasoning about 'is_prime(17)'.
             mentova_query(mathematical, is_prime(17), R4), write(R4), nl, \
+            % Query Mentova for mathematical reasoning about 'mean([4'.
             mentova_query(mathematical, mean([4,7,13,2]), R5), write(R5), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

@@ -59,6 +59,7 @@ Supported query forms:
 
 Top-level clause:
 
+    % Query Mentova for qualitative reasoning about 'QualQuery'.
     mentova_query(qualitative, QualQuery, answer(Result, Just)) :-
         once(mentova_qualitative(QualQuery, Result, Just)).
 
@@ -122,12 +123,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for qualitative reasoning about 'direction(sunlight'.
             mentova_query(qualitative, direction(sunlight,plant_growth), R1), write(R1), nl, \
+            % Query Mentova for qualitative reasoning about 'direction(exercise'.
             mentova_query(qualitative, direction(exercise,weight), R2), write(R2), nl, \
+            % Query Mentova for qualitative reasoning about 'chain(sunlight'.
             mentova_query(qualitative, chain(sunlight,temperature,evaporation), R3), write(R3), nl, \
+            % Query Mentova for qualitative reasoning about 'predict(rainfall'.
             mentova_query(qualitative, predict(rainfall,up), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

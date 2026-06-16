@@ -57,7 +57,9 @@ actual answer and reports whether they differ.
 
 Top-level clause:
 
+    % Query Mentova for counterfactual reasoning about 'CFQuery'.
     mentova_query(counterfactual, CFQuery, answer(Result, Just)) :-
+        % State the fact: mentova counterfactual(...).
         mentova_counterfactual(CFQuery, Result, Just).
 
 
@@ -65,6 +67,7 @@ DEMONSTRATION
 
 Query 1 — what if it had rained today?
 
+    % Query Mentova for counterfactual reasoning about 'what_if(rains_today_yes'.
     ?- mentova_query(counterfactual, what_if(rains_today_yes, ground_wet), R).
     R = answer(yes, just(counterfactual(
                           antecedent(rains_today_yes),
@@ -123,10 +126,14 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for counterfactual reasoning about 'what_if(rains_today_yes'.
             mentova_query(counterfactual, what_if(rains_today_yes,ground_wet), R1), \
             write(R1), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

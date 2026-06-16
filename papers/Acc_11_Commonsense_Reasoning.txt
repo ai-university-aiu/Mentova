@@ -65,6 +65,7 @@ is_a chains (e.g. canary → bird → at_location sky).
 
 Top-level clause:
 
+    % Query Mentova for commonsense reasoning about 'CSQuery'.
     mentova_query(commonsense, CSQuery, answer(Ans, Just)) :-
         once(mentova_commonsense(CSQuery, Ans, Just)).
 
@@ -73,6 +74,7 @@ DEMONSTRATION
 
 Query 1 — what is a canary?
 
+    % Query Mentova for commonsense reasoning about 'what_is(canary)'.
     ?- mentova_query(commonsense, what_is(canary), R).
     R = answer(bird, just(is_a(canary, bird)))
 
@@ -80,6 +82,7 @@ Query 1 — what is a canary?
 
 Query 2 — what can an eagle do?
 
+    % Query Mentova for commonsense reasoning about 'what_can(eagle)'.
     ?- mentova_query(commonsense, what_can(eagle), R).
     R = answer(hunt, just(capable_of(eagle, hunt, via(direct))))
 
@@ -87,6 +90,7 @@ Query 2 — what can an eagle do?
 
 Query 3 — where is a penguin?
 
+    % Query Mentova for commonsense reasoning about 'where_is(penguin)'.
     ?- mentova_query(commonsense, where_is(penguin), R).
     R = answer(antarctica, just(at_location(penguin, antarctica, via(direct))))
 
@@ -94,6 +98,7 @@ Query 3 — where is a penguin?
 
 Query 4 — what does rain cause?
 
+    % Query Mentova for commonsense reasoning about 'what_causes(rain)'.
     ?- mentova_query(commonsense, what_causes(rain), R).
     R = answer(wet_ground, just(causes(rain, wet_ground)))
 
@@ -101,6 +106,7 @@ Query 4 — what does rain cause?
 
 Query 5 — is a rose a living thing?
 
+    % Query Mentova for commonsense reasoning about 'is_living(rose)'.
     ?- mentova_query(commonsense, is_living(rose), R).
     R = answer(yes, just(is_living(rose, yes, via([rose, flower, plant, living_thing]))))
 
@@ -147,13 +153,21 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for commonsense reasoning about 'what_is(canary)'.
             mentova_query(commonsense, what_is(canary), R1), write(R1), nl, \
+            % Query Mentova for commonsense reasoning about 'what_can(eagle)'.
             mentova_query(commonsense, what_can(eagle), R2), write(R2), nl, \
+            % Query Mentova for commonsense reasoning about 'where_is(penguin)'.
             mentova_query(commonsense, where_is(penguin), R3), write(R3), nl, \
+            % Query Mentova for commonsense reasoning about 'what_causes(rain)'.
             mentova_query(commonsense, what_causes(rain), R4), write(R4), nl, \
+            % Query Mentova for commonsense reasoning about 'is_living(rose)'.
             mentova_query(commonsense, is_living(rose), R5), write(R5), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

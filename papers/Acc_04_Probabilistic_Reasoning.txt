@@ -65,7 +65,9 @@ Five query forms are supported:
 
 The top-level mentova_query/3 predicate is extended with a new clause:
 
+    % Query Mentova for probabilistic reasoning about 'ProbQuery'.
     mentova_query(probabilistic, ProbQuery, answer(P, Just)) :-
+        % State the fact: mentova prob(...).
         mentova_prob(ProbQuery, P, Just).
 
 The module is loaded by the mentova.pl bootstrap via use_module(probabilistic).
@@ -75,6 +77,7 @@ DEMONSTRATION
 
 Query 1 — direct lookup:
 
+    % Query Mentova for probabilistic reasoning about 'prob(rain)'.
     ?- mentova_query(probabilistic, prob(rain), R).
     R = answer(0.3, just(weighted_fact(rain)))
 
@@ -82,6 +85,7 @@ Query 1 — direct lookup:
 
 Query 2 — conjunction (rain ∧ exercise):
 
+    % Query Mentova for probabilistic reasoning about 'and(rain'.
     ?- mentova_query(probabilistic, and(rain, exercise), R).
     R = answer(0.21, just(conjunction(just(direct(rain,0.3)),
                                       just(direct(exercise,0.7)))))
@@ -90,6 +94,7 @@ Query 2 — conjunction (rain ∧ exercise):
 
 Query 3 — disjunction (rain ∨ sprinkler):
 
+    % Query Mentova for probabilistic reasoning about 'or(rain'.
     ?- mentova_query(probabilistic, or(rain, sprinkler), R).
     R = answer(0.72, just(disjunction(just(direct(rain,0.3)),
                                       just(direct(sprinkler,0.6)))))
@@ -98,6 +103,7 @@ Query 3 — disjunction (rain ∨ sprinkler):
 
 Query 4 — complement (¬illness):
 
+    % Query Mentova for probabilistic reasoning about 'not(illness)'.
     ?- mentova_query(probabilistic, not(illness), R).
     R = answer(0.8, just(complement(just(direct(illness,0.2)))))
 
@@ -151,12 +157,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for probabilistic reasoning about 'prob(rain)'.
             mentova_query(probabilistic, prob(rain), R1), write(R1), nl, \
+            % Query Mentova for probabilistic reasoning about 'and(rain'.
             mentova_query(probabilistic, and(rain,exercise), R2), write(R2), nl, \
+            % Query Mentova for probabilistic reasoning about 'or(rain'.
             mentova_query(probabilistic, or(rain,sprinkler), R3), write(R3), nl, \
+            % Query Mentova for probabilistic reasoning about 'not(illness)'.
             mentova_query(probabilistic, not(illness), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

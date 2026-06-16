@@ -67,7 +67,9 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for hypothetical reasoning about 'HypQuery'.
     mentova_query(hypothetical, HypQuery, answer(Result, Just)) :-
+        % State the fact: mentova hypothetical(...).
         mentova_hypothetical(HypQuery, Result, Just).
 
 
@@ -75,6 +77,7 @@ DEMONSTRATION
 
 Query 1 — suppose(fire):
 
+    % Query Mentova for hypothetical reasoning about 'suppose(fire)'.
     ?- mentova_query(hypothetical, suppose(fire), R).
     R = answer(consequents(fire, [smoke]),
                just(hypothetical(suppose(fire),
@@ -129,9 +132,13 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for hypothetical reasoning about 'suppose(fire)'.
             mentova_query(hypothetical, suppose(fire), R1), write(R1), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 
