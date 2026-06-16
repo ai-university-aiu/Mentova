@@ -1,0 +1,42 @@
+Mentova now updates its beliefs. Rung 5 of 48 is accomplished.
+
+A mind that holds a static probability is like a doctor who assigns a diagnosis on day one and never revises it regardless of what the tests show. That is not reasoning — that is storage. Reasoning is what happens when the evidence changes the belief.
+
+Rung 5 gives Mentova Bayesian belief update. Bayes' theorem is the mathematically correct rule for revising a prior in the light of new evidence:
+
+    P(H|E) = P(E|H) × P(H) / P(E)
+
+Ask Mentova: given that the ground is wet, what is the probability it rained?
+
+Prior probability of rain: 0.3.
+
+  answer(0.8028, just(bayes(rain, wet_ground,
+                             prior(rain, 0.3),
+                             likelihood(wet_ground, rain, 0.95),
+                             likelihood(wet_ground, neg_H, 0.10),
+                             posterior(0.8028))))
+
+The prior was 0.3. The posterior is 0.80. The ground is wet — rain is now the most likely explanation. Every quantity used in the computation is named in the justification. You can read it, audit it, and correct it if any value is wrong.
+
+Ask Mentova: given fatigue, what is the probability of illness?
+
+Prior: 0.2. Posterior: 0.40.
+
+The probability of illness doubles when fatigue is observed. The shift is in the right direction — fatigue supports illness. The magnitude is correct by the analytic calculation.
+
+This is the pass criterion for Rung 5: the posterior shifts in the right direction and by the right amount. Both test queries pass.
+
+Combined with Rung 4's probability algebra, Mentova now has:
+  — Prior probabilities from the knowledge base
+  — Stored likelihoods P(E|H) for known hypotheses and evidence pairs
+  — Full Bayesian update producing a posterior
+  — A justification term naming every quantity
+
+Next is Rung 6: causal reasoning — predicting what happens when you intervene in the world rather than merely observe it. Causation and correlation are different. Mentova will learn to tell them apart.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

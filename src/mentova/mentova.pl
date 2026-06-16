@@ -19,6 +19,7 @@
 :- use_module(induction).
 :- use_module(abduction).
 :- use_module(probabilistic).
+:- use_module(bayesian).
 
 :- use_module(library(lists), [member/2]).
 
@@ -70,6 +71,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 5 — bayesian: update belief on new evidence
+mentova_query(bayesian, update(H, E), answer(Posterior, Just)) :-
+    mentova_bayes(H, E, Posterior, Just).
 
 % Rung 4 — probabilistic: compute query likelihood
 mentova_query(probabilistic, ProbQuery, answer(P, Just)) :-

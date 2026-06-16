@@ -1,0 +1,170 @@
+MENTOVA'S BAYESIAN REASONING
+
+Accomplishment Record Acc_5
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 5 of Mentova's 48-rung reasoning ladder: Bayesian belief update.
+Mentova applies Bayes' theorem to shift a prior probability in the correct
+direction and amount when new evidence arrives. Given wet_ground as evidence,
+the prior probability of rain (0.3) updates to a posterior of approximately 0.80.
+Given fatigue as evidence, the prior probability of illness (0.2) updates to 0.40.
+Both shifts are in the correct direction and of the correct magnitude. Every
+result is returned with a justification naming the prior, the likelihoods, and
+the posterior.
+
+
+INTRODUCTION
+
+Probabilistic reasoning (Rung 4) gives Mentova the ability to express uncertainty
+as a number. But a static probability is not enough: a mind that learns must be
+able to revise its beliefs when new evidence arrives. Bayes' theorem is the
+mathematically correct rule for such revision, and Rung 5 implements it
+transparently.
+
+The pass criterion for Rung 5 is that the posterior probability shifts in the
+right direction and by the right amount relative to the prior. This is verified
+analytically for each test case.
+
+
+BACKGROUND
+
+Bayes' theorem, published posthumously by Thomas Bayes in 1763 and formalised
+by Pierre-Simon Laplace, states:
+
+    P(H|E) = P(E|H) * P(H) / P(E)
+
+where P(E) = P(E|H)*P(H) + P(E|¬H)*P(¬H) by the law of total probability.
+
+In classical probabilistic AI, Bayesian networks extend this to networks of
+conditionally dependent variables. Rung 5 implements the single-variable form,
+sufficient to demonstrate belief update with a glass-box justification.
+
+
+METHOD
+
+A new module, src/mentova/bayesian.pl, implements:
+
+    mentova_bayes(+Hypothesis, +Evidence, -Posterior, -Justification)
+
+The module stores:
+    prior(H, P)          prior probability of hypothesis H
+    likelihood(E, H, P)  P(E | H)
+
+And uses a small set of built-in P(E|¬H) values for the test cases.
+
+The computation:
+
+    P(¬H) = 1 − P(H)
+    P(E)  = P(E|H)×P(H) + P(E|¬H)×P(¬H)
+    P(H|E)= P(E|H)×P(H) / P(E)
+
+The justification term names every quantity used.
+
+The top-level clause added to mentova_query/3:
+
+    mentova_query(bayesian, update(H, E), answer(Posterior, Just)) :-
+        mentova_bayes(H, E, Posterior, Just).
+
+
+DEMONSTRATION
+
+Query 1 — P(rain | wet_ground):
+
+    Prior:         P(rain) = 0.3
+    Likelihood:    P(wet_ground | rain)   = 0.95
+    Complement:    P(wet_ground | ¬rain)  = 0.10
+    P(¬rain):      0.7
+    P(wet_ground): 0.95×0.3 + 0.10×0.7  = 0.285 + 0.07 = 0.355
+    Posterior:     0.285 / 0.355         ≈ 0.8028
+
+    Mentova returns: answer(0.8028, just(bayes(rain, wet_ground, ...)))
+
+    The posterior (0.80) is substantially higher than the prior (0.30).
+    Direction: correct (wet ground strongly supports rain).
+
+Query 2 — P(illness | fatigue):
+
+    Prior:         P(illness) = 0.2
+    Likelihood:    P(fatigue | illness)   = 0.80
+    Complement:    P(fatigue | ¬illness)  = 0.30
+    P(¬illness):   0.8
+    P(fatigue):    0.80×0.2 + 0.30×0.8  = 0.16 + 0.24 = 0.40
+    Posterior:     0.16 / 0.40           = 0.40
+
+    Mentova returns: answer(0.40, just(bayes(illness, fatigue, ...)))
+
+    The posterior (0.40) is higher than the prior (0.20).
+    Direction: correct (fatigue supports illness, though not strongly).
+
+
+RESULTS
+
+Both test queries produce posteriors that shift in the correct direction by the
+correct amount relative to the prior. The analytic values match the computed
+values exactly under SWI-Prolog 9.0.4 floating-point arithmetic.
+
+Pass criterion met: posterior shifts in right direction and amount.
+
+
+SIGNIFICANCE
+
+Rung 5 completes the core of probabilistic epistemology for Mentova. Together
+with Rung 4's probability algebra, Mentova can now:
+
+  — Assign a prior probability to any proposition in the knowledge base
+  — Receive an observation as evidence
+  — Compute the posterior belief via Bayes' theorem
+  — Return the posterior together with a justification naming every quantity
+
+This is the glass-box equivalent of what a Bayesian network node does, but
+with a readable trace rather than a numerical table.
+
+
+HONEST LIMITATIONS
+
+The module assumes that P(E|¬H) is stored or can be approximated. In the
+demonstration, P(E|¬H) values are hand-coded for the test hypotheses. A full
+implementation would derive these from a joint probability table or a
+Bayesian network structure.
+
+The single-variable Bayes rule handles only one hypothesis and one piece of
+evidence per update. Multi-evidence updating requires either successive
+conditioning or a joint likelihood model.
+
+The module does not yet perform sequential belief update (iterating Bayes'
+theorem across a stream of evidence), which would be needed for a tracking
+scenario.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(bayesian, update(rain, wet_ground), R1), write(R1), nl, \
+            mentova_query(bayesian, update(illness, fatigue), R2), write(R2), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Bayes, T. (1763). An Essay towards Solving a Problem in the Doctrine of Chances.
+Philosophical Transactions of the Royal Society.
+
+Pearl, J. (1988). Probabilistic Reasoning in Intelligent Systems.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
