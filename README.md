@@ -58,10 +58,10 @@ The birth sequence (Rungs 1-9) is the minimum viable Mentova.
 | 28 | Model-based | ✅ Accomplished |
 | 29 | Heuristic | ✅ Accomplished |
 | 30 | Critical | ✅ Accomplished |
-| 31 | Dialectical | Pending |
-| 32 | Metacognitive | Pending |
-| 33 | Modal | Pending |
-| 34 | Epistemic | Pending |
+| 31 | Dialectical | ✅ Accomplished |
+| 32 | Metacognitive | ✅ Accomplished |
+| 33 | Modal | ✅ Accomplished |
+| 34 | Epistemic | ✅ Accomplished |
 | 35 | Deontic | Pending |
 | 36 | Procedural | Pending |
 | 37 | Symbolic | Pending |

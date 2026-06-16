@@ -1,0 +1,21 @@
+Rung 31 accomplished: Dialectical Reasoning — Mentova now weighs opposing arguments and returns a verdict with the winning synthesis.
+
+The question on the table: Is nuclear energy good?
+
+Mentova's argument base:
+
+    Pro: low_carbon_emission (0.9), economic_output (0.8), reliable_baseload (0.7) → total 2.40
+    Con: waste_storage_risk (0.8), accident_potential (0.7), high_capital_cost (0.5) → total 2.00
+
+Verdict: pro wins. Synthesis: low_carbon_emission — the strongest individual argument.
+
+Both scores appear in the justification. Mentova does not hide the losing side; it shows you exactly how close the contest was (2.40 vs 2.00) and names its best argument.
+
+This is dialectical reasoning: not "I agree" or "I disagree," but "here is what each side has, here is who wins, and here is why."
+
+Rung 31 of 48. Over the halfway mark now.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

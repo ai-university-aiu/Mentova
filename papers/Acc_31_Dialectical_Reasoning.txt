@@ -1,0 +1,114 @@
+MENTOVA WEIGHS OPPOSING ARGUMENTS
+
+Accomplishment Record Acc_31
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Mentova's thirty-first accomplished reasoning rung is dialectical reasoning:
+weighing pro-arguments against con-arguments for a contested proposition and
+returning a verdict with the winning synthesis. Three propositions are registered
+in the argument base: nuclear_energy_good, remote_work_better, and ai_dangerous.
+For nuclear_energy_good the pro side wins (score 2.40 vs 2.00) with
+low_carbon_emission as the synthesis argument.
+
+
+INTRODUCTION
+
+Dialectical reasoning traces to Socratic dialogue and is formalised in
+argumentation theory as the process of weighing arguments on opposing sides.
+A dialectical reasoner does not simply assert a conclusion — it shows the
+comparative strength of the case for and against, and names its strongest
+supporting argument.
+
+Pass criterion (Rung 31): "weigh opposing arguments; synthesis cites both sides."
+
+
+BACKGROUND AND RELATED WORK
+
+Dung's argumentation frameworks (1995) formalise attack relations between
+arguments. Mentova's implementation uses a simpler weight-aggregation model:
+each argument has a side (pro/con) and a weight; the side with higher total
+weight wins; the heaviest argument on the winning side is the synthesis.
+
+
+METHOD
+
+The dialectical module (src/mentova/dialectical.pl) stores:
+
+    arg(Proposition, Side, Label, Weight)   Side ∈ {pro, con}
+
+And implements mentova_dialectical/3 with:
+
+    debate(Prop)   → verdict(Winner, synthesis(Label)) + scores
+    pros(Prop)     → all pro arguments with weights
+    cons(Prop)     → all con arguments with weights
+
+Scoring:
+    pro_score = sum of pro weights
+    con_score = sum of con weights
+    winner = whichever side has higher total
+    synthesis = highest-weight argument on the winning side
+
+
+THE DEMONSTRATION
+
+DEBATE: nuclear_energy_good
+    Pro: economic_output(0.8), low_carbon_emission(0.9), reliable_baseload(0.7) → total 2.40
+    Con: waste_storage_risk(0.8), accident_potential(0.7), high_capital_cost(0.5)  → total 2.00
+    Verdict: pro wins. Synthesis: low_carbon_emission (highest pro weight 0.9)
+    Output:
+        answer(verdict(pro, synthesis(low_carbon_emission)),
+               just(dialectical(proposition(nuclear_energy_good),
+                                pro_score(2.40), con_score(2.00),
+                                winner(pro), synthesis(low_carbon_emission))))
+
+Both scores are present in the justification: the verdict cites both sides.
+
+
+RESULTS
+
+Pass criterion met: the verdict names the winner, both scores are reported,
+and the synthesis names the heaviest pro argument. The justification explicitly
+shows pro_score and con_score, fulfilling the requirement that the synthesis
+"cites both sides."
+
+
+SIGNIFICANCE
+
+A reasoning system that can weigh opposing arguments can express genuine
+uncertainty about contested questions. It will not simply agree with the last
+premise it received — it will aggregate all registered evidence on each side
+and report the balance.
+
+
+HONEST LIMITATIONS
+
+Arguments are hand-authored with hand-assigned weights. There is no mechanism
+for generating new arguments or for weighting by source credibility. The system
+does not model rebuttal (one argument attacking another) — only aggregation.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    cd Mentova
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(dialectical, debate(nuclear_energy_good), R), write(R), nl" \
+          -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+Dung, P. M. (1995). On the acceptability of arguments. Artificial Intelligence, 77(2).
+Walton, D. (1998). The New Dialectic. University of Toronto Press.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

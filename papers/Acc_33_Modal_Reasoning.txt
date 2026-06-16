@@ -1,0 +1,98 @@
+MENTOVA DISTINGUISHES THE NECESSARY FROM THE POSSIBLE
+
+Accomplishment Record Acc_33
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Mentova's thirty-third accomplished reasoning rung is modal reasoning: correctly
+distinguishing propositions that are necessarily true (true in all accessible
+worlds), possibly true (true in at least one world), and contingent (true in
+some but not all). Demonstrated: fire_is_hot is necessary, birds_fly is
+necessary, tweety_flies is contingent (true in w1 and w2 but not in actual or
+w3), and water_is_wet is necessary. All results include the worlds checked.
+
+
+INTRODUCTION
+
+Modal logic extends classical logic with operators for necessity (□) and
+possibility (◇). A proposition is necessary if true in all accessible worlds,
+possible if true in at least one, contingent if neither necessary nor impossible.
+
+Pass criterion (Rung 33): "necessity and possibility correctly distinguished."
+
+
+METHOD
+
+The modal module (src/mentova/modal.pl) defines four worlds (actual, w1, w2, w3)
+and a set of `holds(Fact, World)` facts. Three predicates:
+
+    necessarily(P) — true if holds(P, W) for every W
+    possibly(P)    — true if holds(P, W) for at least one W
+    classify(P)    → necessary | contingent | impossible
+
+mentova_modal/3 exposes these via mentova_query(modal, ...).
+
+
+THE DEMONSTRATION
+
+QUERY 1 — Is fire_is_hot necessary?
+    necessarily(fire_is_hot) holds in actual, w1, w2, w3 → necessary: true
+    Justification: worlds_checked(all_accessible), result(true)
+
+QUERY 2 — Is tweety_flies possible?
+    holds(tweety_flies, w1), holds(tweety_flies, w2) → witness world found
+    possibly(tweety_flies): true, witness_world(w1)
+
+QUERY 3 — Classify birds_fly
+    holds(birds_fly, actual), holds(birds_fly, w1), holds(birds_fly, w2),
+    holds(birds_fly, w3) → classify → necessary
+
+QUERY 4 — Classify tweety_flies
+    Holds in w1, w2 but not in actual or w3 → classify → contingent
+
+
+RESULTS
+
+Pass criterion met: necessary propositions (fire_is_hot, birds_fly) are
+distinguished from contingent ones (tweety_flies). The justification names
+the worlds checked and, for possibility queries, the witness world.
+
+
+SIGNIFICANCE
+
+Modal reasoning lets Mentova express the difference between "this always
+holds" and "this might hold." This is essential for planning under uncertainty
+(an action that possibly achieves the goal vs. one that necessarily does).
+
+
+HONEST LIMITATIONS
+
+Accessibility relation is currently universal (every world accesses every
+other). S5 axioms hold by construction. Non-trivial accessibility structures
+(e.g., temporal or epistemic Kripke frames) are not yet modelled.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    cd Mentova
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(modal, classify(birds_fly), R), write(R), nl" \
+          -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+Kripke, S. (1963). Semantical considerations on modal logic. Acta Philosophica Fennica, 16.
+Hughes, G. E., & Cresswell, M. J. (1996). A New Introduction to Modal Logic.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

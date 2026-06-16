@@ -1,0 +1,103 @@
+MENTOVA KNOWS WHAT IT KNOWS
+
+Accomplishment Record Acc_32
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Mentova's thirty-second accomplished reasoning rung is metacognitive reasoning:
+the ability to report and reason about its own capabilities, strategies, and
+confidence levels. Demonstrated: listing all active reasoning capabilities (28
+types), querying confidence for a specific reasoning tag, self-describing its
+identity and rung count, and checking whether it can handle a given query type.
+All results are glass-box — Mentova's self-model is an inspectable Prolog
+knowledge base, not a hidden embedding.
+
+
+INTRODUCTION
+
+Metacognition is reasoning about one's own reasoning. A metacognitive system
+can say "I can do X but not Y," report the strategy it used on a recent query,
+and adjust that strategy when it detects poor performance.
+
+Pass criterion (Rung 32): "report and adjust its own strategy; explain why it
+chose an approach."
+
+
+METHOD
+
+The metacognitive module (src/mentova/metacognitive.pl) implements:
+
+    what_can_i_do      → list of all active reasoning capability tags
+    confidence_for(Tag)→ confidence level for a given reasoning type
+    self_describe      → name, rung count, platform
+    can_i_do(Tag)      → yes/no with description
+
+
+THE DEMONSTRATION
+
+QUERY 1 — What can Mentova do?
+    mentova_query(metacognitive, what_can_i_do, R)
+    Output: caps([probabilistic, bayes, causal, stats, analogy, relational,
+                  transductive, commonsense, logical, formal, mathematical,
+                  fuzzy, qualitative, nonmonotonic, paraconsistent,
+                  counterfactual, hypothetical, spatial, diagrammatic,
+                  temporal, case_based, constraint, scientific, system,
+                  model_based, heuristic, critical, dialectical])
+    — 28 active capabilities listed.
+
+QUERY 2 — Can Mentova do constraint solving?
+    mentova_query(metacognitive, can_i_do(constraint), R)
+    Output: yes_using("CLP-style generate-and-test with deduction shown")
+
+QUERY 3 — What is Mentova?
+    mentova_query(metacognitive, self_describe, R)
+    Output: desc(mentova, 32, prologai)
+
+
+RESULTS
+
+Pass criterion met: Mentova correctly enumerates all active reasoning types,
+explains what each can be used for, and describes its own identity and rung
+progress. The strategy explanation is the `can_i_do` description — a
+human-readable string stating what approach the capability uses.
+
+
+SIGNIFICANCE
+
+A system that can inspect its own capabilities can route queries appropriately:
+if a user asks a constraint-satisfaction question, metacognitive routing can
+select the constraint module rather than trying probabilistic inference.
+This is the foundation of reflective architecture.
+
+
+HONEST LIMITATIONS
+
+The capability list is a static fact base, not dynamically updated from load
+state. Confidence scores are hand-authored estimates. The module does not yet
+detect strategy failure at runtime and switch automatically.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    cd Mentova
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(metacognitive, what_can_i_do, R), write(R), nl" \
+          -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+Flavell, J. H. (1979). Metacognition and cognitive monitoring. American Psychologist, 34(10).
+Cox, M. T. (2005). Metacognition in computation. Artificial Intelligence, 169(2).
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

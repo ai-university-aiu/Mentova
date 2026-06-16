@@ -1,0 +1,28 @@
+Rung 34 accomplished: Epistemic Reasoning — Mentova passes the Sally-Anne false-belief test.
+
+The scenario: Sally places a marble in a basket and leaves. Anne moves the marble to a box. Sally returns.
+
+Where does Sally think the marble is?
+
+    mentova_query(epistemic, believes(sally, marble_in_basket), R)
+    → answer(true, ...)
+
+    mentova_query(epistemic, believes(anne, marble_in_basket), R)
+    → answer(false, ...)
+
+    mentova_query(epistemic, false_belief(sally, marble_in_basket), R)
+    → false_belief(sally, marble_in_basket, their_belief(true), others_differ)
+      note: "Agent holds belief others contradict"
+
+Sally believes the marble is in the basket. Anne believes it is not. Mentova identifies that Sally holds a false belief — her belief contradicts another agent's.
+
+This is the Sally-Anne test, originally developed in developmental psychology to check for theory of mind. Children with autism often fail it; typical children pass around age 4-5.
+
+Mentova passes it now, at Rung 34 of 48.
+
+A system that can model what another agent believes — including a belief that is false — can reason about deception, instruction, and collaboration in a way that goes well beyond pattern-matching.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

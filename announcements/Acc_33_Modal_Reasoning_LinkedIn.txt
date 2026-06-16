@@ -1,0 +1,21 @@
+Rung 33 accomplished: Modal Reasoning — Mentova now distinguishes what must be true from what merely might be.
+
+Three propositions, three verdicts:
+
+    birds_fly   → necessary (true in all four accessible worlds)
+    fire_is_hot → necessary (true in all four worlds)
+    tweety_flies → contingent (true in w1, w2; false in actual and w3)
+
+The world model: actual, w1, w2, w3. Tweety is a penguin — in the actual world and w3, tweety does not fly. In w1 and w2 (hypothetical worlds where tweety has no flightless property), tweety does fly. So tweety_flies is possible (witness: w1) but not necessary.
+
+    mentova_query(modal, classify(tweety_flies), R)
+    → answer(contingent, just(modal(classify(tweety_flies), classification(contingent))))
+
+This is why modal logic matters: it lets you say "this is necessarily so" vs "this happens to be so" — a distinction that matters enormously for planning, law, and science.
+
+Rung 33 of 48.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

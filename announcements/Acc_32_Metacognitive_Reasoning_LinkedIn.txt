@@ -1,0 +1,26 @@
+Rung 32 accomplished: Metacognitive Reasoning — Mentova now knows what it knows.
+
+Ask Mentova what it can do:
+
+    mentova_query(metacognitive, what_can_i_do, R)
+
+It returns 28 active reasoning capabilities by name: probabilistic, bayesian, causal, statistical, analogical, relational, transductive, commonsense, logical, formal, mathematical, fuzzy, qualitative, non-monotonic, paraconsistent, counterfactual, hypothetical, spatial, diagrammatic, temporal, case-based, constraint, scientific, system, model-based, heuristic, critical, dialectical.
+
+Ask whether it can solve constraints:
+
+    mentova_query(metacognitive, can_i_do(constraint), R)
+    → yes_using("CLP-style generate-and-test with deduction shown")
+
+Ask what it is:
+
+    mentova_query(metacognitive, self_describe, R)
+    → desc(mentova, 32, prologai)
+
+A system that can explain its own strategy is a system you can audit. No hidden routing. No black-box dispatch. Mentova's self-model is an inspectable Prolog knowledge base.
+
+Rung 32 of 48.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
