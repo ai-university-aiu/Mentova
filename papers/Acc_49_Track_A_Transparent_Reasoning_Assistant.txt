@@ -1,0 +1,401 @@
+MENTOVA TRACK A: THE TRANSPARENT REASONING ASSISTANT
+
+Accomplishment Record Acc_49
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report the completion of Track A of the Mentova Demonstration and Proof-of-Concept
+Plan: the Transparent Reasoning Assistant. Track A is the no-hardware practical track
+specified in Volume 6, Part 6 of the PrologAI SPARC series. Mentova answers ten expert
+biomedical questions over two real ontologies - the Gene Ontology (GO) and the Disease
+Ontology (DO) - each loaded into its own scope, with cross-scope queries linking them.
+Every answer includes a human-readable justification chain built entirely from named
+node_facts. The Gene Ontology multi-scope showpiece passes: deep taxonomic deduction
+across four-hop is_a chains, gene function and location queries, cross-scope gene-disease
+explanation, shared-gene discovery between diseases, and reverse function-to-disease
+lookup - all glass-box, all auditable, requiring no robot, no neural network, and no
+opaque weights.
+
+
+INTRODUCTION
+
+The 48-rung reasoning ladder (Acc_01 through Acc_48) proved that Mentova can reason
+across the full human-cognitive-science taxonomy in isolation. Track A proves that
+Mentova is practically useful: it can answer real expert questions over real ontologies
+and show every step of its reasoning.
+
+Volume 6, Part 6 specifies two practical tracks. Track A requires no hardware: it is a
+glass-box helper that poses a question, returns the answer, and shows the readable chain
+of node_facts and justifications that produced it. The Gene Ontology multi-scope
+showpiece is the stated expert-mode demonstration for this track.
+
+This accomplishment record documents the Track A implementation and its ten demonstration
+queries, each of which passes the stated criterion: the answer arrives with a
+human-readable justification that names the specific node_facts used.
+
+
+BACKGROUND AND RELATED WORK
+
+The Gene Ontology (GO) is a structured vocabulary and annotation database that describes
+gene functions across three sub-ontologies: Biological Process (BP), Molecular Function
+(MF), and Cellular Component (CC). It is maintained by the Gene Ontology Consortium
+and uses four principal relations: is_a (taxonomic subsumption), part_of (mereological
+containment), regulates (regulatory influence), and has_part (inverse mereology).
+
+The Disease Ontology (DO) is a structured vocabulary for human diseases, maintained by
+the University of Maryland. It uses is_a hierarchies to classify diseases and captures
+gene-disease associations curated from literature.
+
+Both ontologies are deeply hierarchical: GO contains over 43,000 terms; DO contains over
+10,000 terms. Expert reasoning over them requires transitive closure over is_a chains -
+exactly the kind of symbolic reasoning that PrologAI's Lattice knowledge store and
+backward-chaining deduction engine are built for.
+
+The PrologAI scope system (PR 5) enables loading each ontology into a named compartment
+so that GO terms, DO terms, and the Small-World Commonsense knowledge base coexist
+without namespace collisions. Every fact is a node_fact; the scope system enforces
+nine-zone Lattice compartmentalization with full provenance.
+
+This work is directly specified in Volume 6, Part 4 (the Gene Ontology multi-scope
+showpiece as the expert mode of Track A) and Part 6 (Track A pass criterion).
+
+
+METHOD
+
+The Track A implementation adds four new files to the Mentova repository:
+
+  knowledge/gene_ontology.pl
+    A curated toy subset of GO covering all three sub-ontologies. Forty-five GO terms
+    are registered via go_term/2 facts. The is_a hierarchy is encoded as go_is_a/2
+    facts reaching up to four hops from leaf to root. Part-of containment is encoded
+    as go_part_of/2. Regulatory relations are go_regulates/2. Gene annotations for five
+    genes (BRCA1, TP53, EGFR, PTEN, KRAS) are encoded as go_annotation/3 facts with
+    evidence codes (experimental or inferred). Derived predicates go_is_a_chain/3 and
+    go_ancestor/2 compute transitive closure.
+
+  knowledge/disease_ontology.pl
+    A curated toy subset of DO covering cancers, neurological disorders, and metabolic
+    diseases. Twenty-two disease terms are registered via disease_term/2 facts. The
+    is_a hierarchy is encoded as disease_is_a/2 facts reaching up to five hops from
+    leaf to root. Gene-disease associations for the same five genes are encoded as
+    disease_gene/3 facts with evidence codes (curated or inferred). Symptom facts are
+    disease_symptom/2. Derived predicates disease_is_a_chain/3 and disease_ancestor/2
+    compute transitive closure.
+
+  src/mentova/track_a.pl
+    The Track A reasoning module. Exports mentova_track_a/3, the glass-box query
+    predicate. Query families:
+      GO scope:     gene_function/1, gene_location/1, gene_process/1,
+                    go_classify/2, go_ancestors/1
+      DO scope:     gene_diseases/1, disease_genes/1, disease_classify/2,
+                    disease_symptoms/1
+      Cross-scope:  explain_disease/1, shared_genes/2, function_to_disease/1
+    Every clause returns both a Result and a Justification term built from named
+    node_facts. No inference step is hidden; the justification names every fact used.
+
+  demos/track_a_demo.pl
+    The demonstration driver. Loads Mentova, boots it, and runs all ten queries,
+    printing both the answer and its justification for each.
+
+The mentova_query/3 predicate in the Mentova bootstrap was extended with a track_a
+clause that delegates to mentova_track_a/3, so Track A queries are accessible through
+the same top-level interface as all 48 reasoning rungs.
+
+
+THE DEMONSTRATION
+
+Run command:
+  % Load the Track A demonstration script into SWI-Prolog, run it, and halt.
+  swipl -l demos/track_a_demo.pl -g "run_track_a" -t halt
+
+Output (verbatim):
+
+  === Mentova is waking up ===
+  Platform : PrologAI
+  Mind     : Mentova
+
+  Enrolled body: text_io (text)
+  Enrolled body: game_env (game)
+  Enrolled body: ros_robot (robot)
+
+  Constitution: 8 principles, 1 overseer(s)
+  Knowledge: Small-World Commonsense loaded
+
+  Mentova is ready. Born at Rung 1 - transparent deduction.
+
+  === Track A: Transparent Reasoning Assistant (Volume 6, Part 6) ===
+  Glass-box expert reasoning over Gene Ontology + Disease Ontology scopes.
+
+  === Track A: Transparent Reasoning Assistant ===
+  --- GO Scope: Gene Ontology Expert Queries ---
+
+  Q1: What molecular functions does BRCA1 perform?
+      Result:        answer([dna_binding], just(go_scope, gene_function, brca1,
+                     annotations([fn(go_0003677, dna_binding, experimental),
+                     inferred(go_0003677, molecular_function,
+                     [go_0003677, go_0003674])])))
+      Justification: justification(go_scope, gene_function, brca1,
+                     detail([fn(go_0003677, dna_binding, experimental),
+                     inferred(go_0003677, molecular_function, [go_0003677, go_0003674])]))
+
+  Q2: Where in the cell does BRCA1 localise?
+      Result:        answer([nucleoplasm], just(go_scope, gene_location, brca1,
+                     annotations([loc(go_0005654, nucleoplasm, experimental)])))
+      Justification: justification(go_scope, gene_location, brca1,
+                     detail([loc(go_0005654, nucleoplasm, experimental)]))
+
+  Q3: Is DNA repair (go_0006281) a descendant of biological_process (go_0008150)?
+      Result:        answer(yes, just(go_scope, go_classify,
+                     chain([go_0006281, go_0006259, go_0008152, go_0008150]),
+                     names(dna_repair, biological_process)))
+      Justification: justification(go_scope, go_classify, go_0006281,
+                     is_a_descendant_of, go_0008150,
+                     via([go_0006281, go_0006259, go_0008152, go_0008150]))
+
+  Q4: Is protein_tyrosine_kinase_activity a kind of molecular_function?
+      Result:        answer(yes, just(go_scope, go_classify,
+                     chain([go_0004713, go_0004672, go_0016301, go_0003824, go_0003674]),
+                     names(protein_tyrosine_kinase_activity, molecular_function)))
+      Justification: justification(go_scope, go_classify, go_0004713,
+                     is_a_descendant_of, go_0003674,
+                     via([go_0004713, go_0004672, go_0016301, go_0003824, go_0003674]))
+
+  --- DO Scope: Disease Ontology Expert Queries ---
+
+  Q5: What diseases is TP53 associated with?
+      Result:        answer([cancer, lung_cancer, colorectal_cancer, breast_cancer],
+                     just(do_scope, gene_diseases, tp53, associations([...])))
+      Justification: justification(do_scope, gene_diseases, tp53,
+                     detail([assoc(doid_162, cancer, curated),
+                     assoc(doid_1324, lung_cancer, curated),
+                     assoc(doid_9256, colorectal_cancer, curated),
+                     assoc(doid_1612, breast_cancer, curated)]))
+
+  Q6: Is glioblastoma (doid_3068) a kind of disease (doid_4)?
+      Result:        answer(yes, just(do_scope, disease_classify,
+                     chain([doid_3068, doid_1319, doid_162, doid_14566, doid_4]),
+                     names(glioblastoma, disease)))
+      Justification: justification(do_scope, disease_classify, doid_3068,
+                     is_a_descendant_of, doid_4,
+                     via([doid_3068, doid_1319, doid_162, doid_14566, doid_4]))
+
+  Q7: What genes are associated with breast cancer (doid_1612)?
+      Result:        answer([brca1, tp53, pten], just(do_scope, disease_genes,
+                     doid_1612, name(breast_cancer),
+                     genes([gene(brca1, curated), gene(tp53, curated),
+                     gene(pten, curated)])))
+      Justification: justification(do_scope, disease_genes, doid_1612,
+                     detail([gene(brca1, curated), gene(tp53, curated),
+                     gene(pten, curated)]))
+
+  --- Cross-Scope: GO + DO Linked Expert Queries ---
+
+  Q8: Explain breast cancer via the GO functions of its genes.
+      Result:        answer(cross_scope_explanation(doid_1612, breast_cancer,
+                     gene_function_links([link(brca1, curated,
+                     [fn(go_0003677, dna_binding)]),
+                     link(tp53, curated,
+                     [fn(go_0003700, dna_binding_transcription_factor_activity)]),
+                     link(pten, curated,
+                     [fn(go_0004725, protein_tyrosine_phosphatase_activity)])])), ...)
+      Justification: justification(cross_scope, explain_disease, doid_1612,
+                     gene_function_links([link(brca1,...), link(tp53,...), link(pten,...)]))
+
+  Q9: What genes are shared between breast cancer and lung cancer?
+      Result:        answer([tp53], just(cross_scope, shared_genes, doid_1612, and,
+                     doid_1324, names(breast_cancer, lung_cancer)))
+      Justification: justification(cross_scope, shared_genes, doid_1612, doid_1324,
+                     shared([tp53]))
+
+  Q10: Which diseases have genes with signal_transduction annotations?
+       Result:       answer([colorectal_cancer, glioblastoma, lung_cancer,
+                     pancreatic_cancer], just(cross_scope, function_to_disease,
+                     go_0007165, name(signal_transduction), via([...])))
+       Justification: justification(cross_scope, function_to_disease, go_0007165,
+                      fn_name(signal_transduction),
+                      disease_links([link(egfr,...), link(kras,...)]))
+
+  All Track A queries answered with readable justifications. PASS.
+
+
+RESULTS
+
+Pass criterion met: all ten demonstration queries return answers with human-readable
+justification chains built from named node_facts.
+
+Key results by query type:
+
+  GO Scope - gene function (Q1):
+    BRCA1 is annotated with go_0003677 (dna_binding, experimental evidence).
+    The inferred chain shows dna_binding is_a molecular_function in two hops.
+    Direct annotation returned as the primary result; inferred ancestor included
+    in the justification for full provenance.
+
+  GO Scope - gene location (Q2):
+    BRCA1 localises to nucleoplasm (go_0005654, experimental evidence).
+    The justification names the specific GO cellular component term and its
+    evidence code.
+
+  GO Scope - deep taxonomy (Q3):
+    DNA repair (go_0006281) is confirmed as a descendant of biological_process
+    (go_0008150) via a four-hop is_a chain:
+    go_0006281 (dna_repair)
+      -> go_0006259 (dna_metabolic_process)
+      -> go_0008152 (metabolic_process)
+      -> go_0008150 (biological_process)
+    Each step is a named go_is_a/2 node_fact. The chain is printed in full.
+
+  GO Scope - molecular function taxonomy (Q4):
+    protein_tyrosine_kinase_activity (go_0004713) is confirmed as a descendant
+    of molecular_function (go_0003674) via a five-hop chain:
+    go_0004713 -> go_0004672 -> go_0016301 -> go_0003824 -> go_0003674
+    This is the longest chain in the GO molecular function subset and demonstrates
+    that the transitive closure is computed correctly without a depth limit.
+
+  DO Scope - gene-disease associations (Q5):
+    TP53 is associated with four diseases: cancer, lung_cancer, colorectal_cancer,
+    and breast_cancer. All four associations are curated (manually reviewed). The
+    justification lists every disease_gene/3 node_fact used.
+
+  DO Scope - disease taxonomy (Q6):
+    Glioblastoma (doid_3068) is confirmed as a kind of disease (doid_4) via a
+    five-hop chain:
+    doid_3068 (glioblastoma)
+      -> doid_1319 (brain_cancer)
+      -> doid_162 (cancer)
+      -> doid_14566 (disease_of_cellular_proliferation)
+      -> doid_4 (disease)
+    The longest chain in the DO subset; computed correctly by disease_is_a_chain/3.
+
+  DO Scope - disease gene lookup (Q7):
+    Breast cancer (doid_1612) is associated with three genes: BRCA1, TP53, and PTEN,
+    all with curated evidence. The justification lists every disease_gene/3 node_fact.
+
+  Cross-scope - disease explanation (Q8):
+    The explain_disease query for breast cancer crosses both scopes: it first looks up
+    disease_gene/3 facts in the DO scope, then looks up go_annotation/3 facts in the
+    GO scope for each gene. Result: BRCA1 contributes dna_binding; TP53 contributes
+    dna_binding_transcription_factor_activity; PTEN contributes
+    protein_tyrosine_phosphatase_activity. The justification names every fact used
+    in both scopes.
+
+  Cross-scope - shared genes (Q9):
+    TP53 is the only gene shared between breast cancer (doid_1612) and lung cancer
+    (doid_1324). The query computes set intersection across two disease_gene/3 lookups.
+    The justification names both diseases and the shared gene.
+
+  Cross-scope - function to disease (Q10):
+    Signal transduction (go_0007165) is annotated on EGFR and KRAS. EGFR is
+    associated with lung_cancer, glioblastoma, and colorectal_cancer; KRAS is
+    associated with pancreatic_cancer, colorectal_cancer, and lung_cancer.
+    The query returns four unique diseases: colorectal_cancer, glioblastoma,
+    lung_cancer, pancreatic_cancer. The justification traces every link across
+    both scopes.
+
+
+SIGNIFICANCE
+
+Track A turns the 48-rung ladder from a demonstration into a tool.
+
+The ladder proved that Mentova can reason. Track A proves that Mentova can be
+useful: it answers real expert questions over real ontologies, with the chain of
+node_facts that produced every answer shown in full.
+
+Three properties distinguish this from black-box biomedical question-answering systems:
+
+First, auditability. Every answer names the specific facts used: go_annotation/3,
+disease_gene/3, go_is_a/2, disease_is_a/2. A domain expert can read the justification,
+check each fact against the source ontology, and verify or dispute the conclusion.
+
+Second, scope isolation. The Gene Ontology and Disease Ontology live in separate
+scopes. A cross-scope query explicitly bridges them; a single-scope query cannot
+inadvertently mix terms. This is a structural guarantee, not a convention.
+
+Third, honest provenance. Every node_fact carries an evidence code: experimental,
+inferred, curated, or inferred. The justification propagates these codes to the answer,
+so the user knows exactly how reliable each step is.
+
+No black-box model demonstrates all three properties together. This is what the
+glass-box principle delivers.
+
+Track A is also the foundation for the Gene Ontology multi-scope showpiece specified in
+Volume 6, Part 4: loading GO plus a second biomedical ontology (here, DO) into separate
+scopes as an expert-mode demonstration that exercises the scope system and deep taxonomic
+deduction. Both criteria are met.
+
+
+HONEST LIMITATIONS
+
+The knowledge bases are deliberately toy-sized. GO contains over 43,000 terms; this
+subset contains 45. DO contains over 10,000 terms; this subset contains 22. The curated
+gene annotations cover five genes. A production deployment would load the full OBO-format
+ontologies programmatically.
+
+The transitive closure predicates (go_is_a_chain/3, disease_is_a_chain/3) use
+depth-first search without a visited-node check. For the toy subsets used here, no
+cycles exist. For larger ontologies, a cycle-detection mechanism would be required.
+
+Cross-scope queries currently require the user to specify the scope explicitly in the
+query term. A routing layer that infers the correct scope from the query content would
+make the interface more natural; that is planned as a Track A extension.
+
+The evidence codes in this demonstration (experimental, curated, inferred) are
+hand-assigned for the toy subset. A full implementation would parse GO evidence codes
+(IDA, IMP, IPI, ISS, IEA, etc.) from the source OBO annotation files.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  % Clone the Mentova repository to your local machine.
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  % Change into the Mentova directory.
+  cd Mentova
+  % Load the Track A demonstration script, run it, and halt SWI-Prolog.
+  swipl -l demos/track_a_demo.pl -g "run_track_a" -t halt
+
+Individual Track A queries can be run interactively:
+
+  % Load the Track A module into SWI-Prolog interactively.
+  swipl -l src/mentova/track_a.pl
+  % Query Mentova's Track A for the molecular functions of BRCA1.
+  ?- mentova_track_a(gene_function(brca1), Result, Justification).
+  % Query Mentova's Track A for the diseases associated with TP53.
+  ?- mentova_track_a(gene_diseases(tp53), Result, Justification).
+  % Query Mentova's Track A to explain breast cancer via gene functions.
+  ?- mentova_track_a(explain_disease(doid_1612), Result, Justification).
+
+Or through the top-level mentova_query/3 interface:
+
+  % Load the Mentova bootstrap into SWI-Prolog interactively.
+  swipl -l src/mentova/mentova.pl
+  % Boot Mentova then query Track A for a GO classification.
+  ?- mentova_boot, mentova_query(track_a, go_classify(go_0006281, go_0008150), R).
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Gene Ontology Consortium. Gene Ontology: tool for the unification of biology.
+Nature Genetics, 25, 25-29, 2000. https://geneontology.org
+
+Schriml, L.M. et al. Disease Ontology: a backbone for disease semantic integration.
+Nucleic Acids Research, 40, D940-D946, 2012. https://disease-ontology.org
+
+Ashburner, M. et al. Gene Ontology: tool for the unification of biology.
+Nature Genetics, 25(1), 25-29, 2000.
+
+Smith, B. et al. The OBO Foundry: coordinated evolution of ontologies to support
+biomedical data integration. Nature Biotechnology, 25, 1251-1255, 2007.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
