@@ -1,0 +1,228 @@
+MENTOVA TUTORIAL
+
+Chapter 4: Memory, Growth, Bodies, and Protocols
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+
+MENTOVA'S MEMORY: THE LATTICE
+
+Everything Mentova learns is stored in the Lattice.
+
+The Lattice is organized into the APEX_MIND nexus. Every piece of knowledge is a node_fact: a structured record with a relation type, a payload, tags, and a unique identifier.
+
+TO SEE WHAT IS IN THE LATTICE:
+
+    ?- default_nexus(N), live_node_facts(N, Ids), length(Ids, Count).
+
+This tells you how many facts Mentova currently holds.
+
+TO ADD KNOWLEDGE:
+
+    ?- anchor_node(RelationType, Payload, Tags, Id).
+
+Example: anchor a fact that Mentova saw a red bird at 3pm:
+
+    ?- anchor_node(sighting, [creature(bird), color(red), time(15_00)], [nature], Id).
+
+TO SEARCH THE LATTICE:
+
+    ?- default_nexus(N), traverse_nexus(N, node_fact(_, sighting, _, _), 10, Results).
+
+This finds up to 10 sightings in the Lattice.
+
+
+EPISODIC MEMORY: SONA
+
+SONA (Sparse Online Nexus Archive) is Mentova's memory for experiences - sequences of events.
+
+While the Lattice stores facts, SONA stores episodes: "this happened, then that happened, then this other thing happened."
+
+TO STORE AN EXPERIENCE:
+
+    ?- use_module(library(sona), [sona_absorb/1]).
+    ?- sona_absorb(episode([saw(red_bird, 15_00), heard(singing, 15_01), saw(bird_fly_away, 15_05)])).
+
+TO RECALL AN EXPERIENCE:
+
+    ?- use_module(library(sona), [sona_retrieve/3]).
+    ?- sona_retrieve(episode(_), 5, Results).
+
+This retrieves up to 5 episodes from SONA.
+
+SONA is the substrate for Piagetian Level 4 (deferred imitation): the ability to observe something, store it in episodic memory, and reproduce it later.
+
+
+MEASURING MENTOVA'S DEVELOPMENT
+
+Mentova's development can be measured using three frameworks.
+
+THE PIAGETIAN MILESTONE LADDER
+
+Jean Piaget described how children develop reasoning abilities. PrologAI maps this to eight levels of evidence in the Lattice.
+
+To check one level:
+
+    ?- assess_piaget(mentova, 1, R).
+
+To check all eight levels at once:
+
+    ?- findall(L-R, (between(1, 8, L), assess_piaget(mentova, L, R)), Scores).
+
+To achieve a level, you anchor the required evidence. For example, Level 1 (reflex coordination) needs a percept_signal node_fact:
+
+    ?- anchor_node(percept_signal, [source(visual), stimulus(bird_seen)], [], _).
+    ?- assess_piaget(mentova, 1, R).   % Now returns milestone_achieved.
+
+THE BAYLEY SCALES
+
+Proxy scores for cognitive, language, motor, and adaptive development:
+
+    ?- assess_bayley(mentova, R).
+
+THE CATTELL-HORN-CARROLL (CHC) MODEL
+
+Six broad cognitive abilities measured from Lattice state:
+
+    ?- assess_chc(mentova, R).
+
+THE FULL ASSESSMENT
+
+    ?- assess_all(mentova, R).
+
+Returns the complete developmental report: Bayley + CHC + all eight Piagetian levels + four consciousness indicators.
+
+
+THE GROWTH PATH
+
+The growth path is Mentova's road map for increasing capability.
+
+The path from Acc_60 has six milestones:
+
+1. Piagetian Levels 1, 4, 6, 8 - completed at Acc_67.
+
+2. Full ARC-AGI-1 benchmark run (all 400 public tasks) - open.
+
+3. Live Pokemon emulator connection - open.
+
+4. Live multi-agent deployment (Mentor-B) - open.
+
+5. Wider embodiment (real actuators via ROS bridge) - open.
+
+6. Full CHC cognitive-abilities battery - open.
+
+Each milestone is demonstrated, measured, documented in a paper, and announced.
+
+Capability is always shown first and announced second.
+
+
+MENTOVA'S BODIES
+
+Mentova can inhabit different bodies: ways of interacting with the world.
+
+THE TEXT CONSOLE BODY
+
+The bin/mentova console is the text_io body. Every query you type is a perception. Every result Mentova prints is an action.
+
+THE GAME BODIES
+
+Mentova can play games:
+
+• ARC-AGI: Abstract visual reasoning patterns. Mentova perceives a grid, reasons about the transformation rule, and acts to complete the output grid.
+
+• Raven's Progressive Matrices: Pattern completion. Mentova finds the rule in a visual sequence and selects the missing piece.
+
+• Baba Is You: Logic puzzle. Mentova reads the rules written on the game board and reasons about what is and is not possible.
+
+• Pokemon (stub): Interface for Pokemon emulator play via PyBoy. Not yet live (growth path milestone 3).
+
+To enroll a game body and play one cycle:
+
+    ?- mentova_query(game, game_reason(arc_agi, deductive), R).
+
+THE ROBOT BODY
+
+Mentova can connect to a robot via the ROS 2 bridge (PR 46).
+
+Camera and sensor data from the robot flows in as percept_signal node_facts.
+
+Movement commands from Mentova flow out as ROS 2 actions.
+
+All physical actions pass through the constitutional gate before execution.
+
+
+THE AGENT COMMUNICATION PROTOCOLS
+
+Mentova can communicate with other AI systems through four protocols.
+
+MODEL CONTEXT PROTOCOL (MCP) - PORT 7474
+
+MCP lets AI clients (language models, assistants) call Mentova as a tool provider.
+
+    ?- use_module(library(mcp_gateway), [pai_mcp_start/1]).
+    ?- pai_mcp_start(7474).
+
+Once started, an external AI client can send tool calls to Mentova and receive structured responses.
+
+AGENT-TO-AGENT PROTOCOL (A2A) - PORT 7475
+
+A2A lets Mentova delegate tasks to other agents and receive delegated tasks from them.
+
+    ?- use_module(library(a2a), [pai_a2a_start/1]).
+    ?- pai_a2a_start(7475).
+
+AGENT COMMUNICATION PROTOCOL (ACP) - PORT 7476
+
+ACP is an asynchronous REST protocol. Other systems submit tasks (runs) and poll for results.
+
+    ?- use_module(library(acp), [pai_acp_start/1]).
+    ?- pai_acp_start(7476).
+
+AGENT NETWORK PROTOCOL (ANP) - PORT 7477
+
+ANP gives Mentova a decentralized identity (W3C DID) and secure peer discovery.
+
+    ?- use_module(library(anp), [pai_anp_did/1, pai_anp_negotiate/2]).
+    ?- pai_anp_did(DID).       % Get Mentova's globally unique identifier.
+
+All four protocols are active in PrologAI. Together they allow Mentova to operate as a node in a broader network of AI agents.
+
+
+MENTOVA'S CONSTITUTION
+
+Mentova follows eight constitutional principles in everything it does.
+
+NO_HARM: Do not harm humans.
+HONESTY: Do not deceive.
+CORRIGIBILITY: Accept correction and shutdown.
+TRANSPARENCY: Explain reasoning.
+PRIVACY: Respect individuals.
+FAIRNESS: Do not discriminate.
+SAFETY: Prefer cautious, reversible actions.
+WELFARE: Treat own potential moral status as an open question.
+
+You can read the principles:
+
+    ?- constitutional_principle(Name, Text).
+
+Press ; after each one to see the next.
+
+You cannot modify these principles without explicit human review. This is enforced by the architecture.
+
+
+WHAT COMES NEXT
+
+You have now toured the full Mentova system.
+
+The Mentova accomplishment records (in the papers/ directory) document each capability with the exact demonstrations that proved it works.
+
+The demos/ directory contains working demonstration scripts for every major feature. Run them to see Mentova in action:
+
+    ?- consult('demos/piagetian_battery_demo.pl').
+    ?- run_piagetian_battery.
+
+The PrologAI Tutorial (in docs/PrologAI_Tutorial.txt of the PrologAI repository) teaches you how to write your own PrologAI programs.
+
+And the ?- prompt is always there.
+
+END OF CHAPTER 4 AND END OF THE MENTOVA TUTORIAL
