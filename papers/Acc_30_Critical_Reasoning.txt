@@ -1,0 +1,138 @@
+MENTOVA EVALUATES THE SUPPORT FOR A CLAIM
+
+Accomplishment Record Acc_30
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Mentova's thirtieth accomplished reasoning rung: critical reasoning —
+evaluating a claim's evidential support and flagging weakly-supported assertions.
+Three claims are demonstrated: canary_yellow (well_supported, net support 0.87,
+two supporting evidence items), canary_swims (not_supported, net support -0.40,
+one opposing item outweighs one weak supporting item), and all_eagles_large
+(weakly_supported, net support 0.45, mixed evidence flagged for review). In each
+case the grade, alert, and per-evidence weights are returned in the justification.
+
+
+INTRODUCTION
+
+Critical reasoning is the ability to evaluate the quality of evidence behind a
+claim, distinguish well-supported assertions from weakly-supported ones, and flag
+claims that deserve scrutiny. It is what separates a reasoner that merely accepts
+any statement from one that can audit its own beliefs.
+
+The pass criterion from Volume 6 (Rung 30): "weakly-supported claim flagged with
+reasons."
+
+
+BACKGROUND AND RELATED WORK
+
+Argumentation theory (Dung, 1995) and evidence-based reasoning formalise how
+supporting and attacking arguments combine. Mentova's implementation uses a
+weighted net-support model: each piece of evidence has a strength and a polarity
+(supporting or opposing); net_support = sum(supporting weights) - sum(opposing
+weights). Grades are: well_supported (≥0.6), weakly_supported (0.0-0.6),
+not_supported (<0.0).
+
+
+METHOD
+
+The critical module (src/mentova/critical.pl) stores:
+
+    evidence_for(ClaimId, EvidenceId, Type, Weight)
+        Type ∈ {supporting, opposing}
+
+And implements mentova_critical/3 with:
+
+    evaluate(ClaimId)   → grade and alert based on net support
+    all_evidence(ClaimId) → full evidence list for transparency
+
+Grading logic:
+    net_support = Σ(supporting_weights) - Σ(opposing_weights)
+    grade = well_supported  if net_support ≥ 0.6
+          = weakly_supported if 0.0 ≤ net_support < 0.6
+          = not_supported    if net_support < 0.0
+
+Weak or negative grades trigger an alert with reasons.
+
+
+THE DEMONSTRATION
+
+CLAIM 1 — canary_yellow
+    Evidence: e1 (supporting, 0.94 — 94% of observations), e2 (supporting, 0.80)
+    Net support: (0.94 + 0.80) / 2 = 0.87
+    Grade: well_supported. Alert: none.
+
+CLAIM 2 — canary_swims
+    Evidence: e1 (supporting, 0.05), e2 (opposing, 0.90)
+    Net support: 0.05 - 0.90 = -0.40 (approximately)
+    Grade: not_supported. Alert: flag(weak_claim, [low_support(-0.40), opposition(1)])
+
+CLAIM 3 — all_eagles_large
+    Evidence: e1 (supporting, 0.60), e2 (opposing, 0.30)
+    Net support: 0.60 - 0.30 = 0.45 (approximately)
+    Grade: weakly_supported. Alert: flag(weak_claim, [low_support(0.45), opposition(1)])
+
+
+RESULTS
+
+Pass criterion met: weakly-supported claim all_eagles_large is flagged with both
+the net support score and the count of opposing evidence items. not_supported
+claim canary_swims is flagged with negative net support. well_supported claim
+canary_yellow passes without alert.
+
+The graded output — not just pass/fail — is what makes critical reasoning
+practically useful: a reasoner can act confidently on canary_yellow while
+requiring further evidence before acting on all_eagles_large.
+
+
+SIGNIFICANCE
+
+Critical reasoning closes a fundamental gap: without it, a reasoning system
+accepts all inputs equally. With it, Mentova can audit its own knowledge base,
+flag beliefs that rest on thin evidence, and return a confidence grade alongside
+every claim evaluation.
+
+Combined with scientific reasoning (Rung 26), which proposes and tests
+hypotheses, critical reasoning gives Mentova a self-auditing loop:
+propose → test → evaluate support → flag if weak.
+
+
+HONEST LIMITATIONS
+
+Evidence weights are hand-authored facts, not derived automatically from the
+observation table. The grading thresholds (0.6, 0.0) are fixed constants;
+domain-specific calibration is not yet supported. Claims must be pre-registered
+as evidence_for/4 facts; claims with no registered evidence return not_supported
+rather than unknown.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    cd Mentova
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(critical, evaluate(canary_yellow), R), write(R), nl" \
+          -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Dung, P. M. (1995). On the acceptability of arguments and its fundamental role
+in nonmonotonic reasoning, logic programming and n-person games.
+Artificial Intelligence, 77(2), 321-357.
+
+Walton, D. (2008). Argumentation Theory: A Very Short Introduction.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

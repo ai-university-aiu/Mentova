@@ -1,0 +1,40 @@
+Mentova now searches with heuristics. Rung 29 of 48 is accomplished.
+
+Finding a path through a graph with five nodes and eight edges is a search problem. Trying every possible path is brute force. Using a heuristic — an estimate of how far you are from the goal — is intelligence.
+
+Rung 29 gives Mentova heuristic-guided search.
+
+A five-node graph: a, b, c, d, e. Edges with costs. Heuristic estimates of distance remaining to e.
+
+Greedy best-first search:
+
+  Query: greedy(a, e, 10)
+  Answer: path([a, c, e], cost(10))
+  Justification: greedy_search(a, e, path([a,c,e]), cost(10))
+
+At node a: two neighbors — b (h=6) and c (h=4). Pick c. From c: two neighbors — d (h=2) and e (h=0). Pick e. Done.
+
+Path: [a, c, e]. Cost: 10.
+
+The heuristic guided the search. No wasted exploration. No backtracking needed.
+
+Dijkstra's shortest-path algorithm confirms: optimal cost from a to e is also 10. The greedy heuristic was good enough to find the optimal path here.
+
+  Query: shortest(a, e)
+  Answer: path([a,c,e], cost(10))
+  Justification: dijkstra(a, e, path([a,c,e]), cost(10))
+
+Greedy is fast. Dijkstra is optimal. Both are available. Both give justified answers.
+
+Heuristic reasoning is what GPS uses to route you around traffic. What logistics software uses to allocate trucks. What game AI uses to navigate a character through a dungeon.
+
+The difference between brute-force search and heuristic search is the difference between trying every possible route and knowing which direction feels closer to the destination.
+
+Mentova now has that sense of direction.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

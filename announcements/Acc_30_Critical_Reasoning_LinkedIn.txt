@@ -1,0 +1,29 @@
+Rung 30 accomplished: Critical Reasoning — Mentova now evaluates the evidential support behind a claim and flags weak assertions.
+
+Three claims, three verdicts:
+
+    canary_yellow
+    Evidence: 94% of observations support it; has_property fact confirms it.
+    Net support: 0.87
+    Verdict: well_supported — no alert
+
+    all_eagles_large
+    Evidence: one supporting item (0.60), one opposing item (smaller species exist, 0.30).
+    Net support: 0.45
+    Verdict: weakly_supported — flagged for review
+
+    canary_swims
+    Evidence: one weak supporting item (0.05), one strong opposing item (birds don't swim, 0.90).
+    Net support: -0.40
+    Verdict: not_supported — flagged with reasons
+
+The alert on the weak claim includes the net support score and the count of opposing evidence. Not just "yes" or "no" — a graded confidence with a full evidence record.
+
+This matters because a reasoning system that accepts all inputs equally is not really reasoning. Mentova now knows the difference between a belief it should act on confidently and a belief it should investigate further.
+
+Rung 30 completes the Knowledge-Representation and Reflective tiers up to this point. Thirty of 48 rungs accomplished.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

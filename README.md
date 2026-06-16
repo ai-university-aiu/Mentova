@@ -55,9 +55,9 @@ The birth sequence (Rungs 1-9) is the minimum viable Mentova.
 | 25 | Constraint-based | ✅ Accomplished |
 | 26 | Scientific | ✅ Accomplished |
 | 27 | System | ✅ Accomplished |
-| 28 | Model-based | Pending |
-| 29 | Heuristic | Pending |
-| 30 | Critical | Pending |
+| 28 | Model-based | ✅ Accomplished |
+| 29 | Heuristic | ✅ Accomplished |
+| 30 | Critical | ✅ Accomplished |
 | 31 | Dialectical | Pending |
 | 32 | Metacognitive | Pending |
 | 33 | Modal | Pending |

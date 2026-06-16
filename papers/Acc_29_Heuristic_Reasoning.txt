@@ -1,0 +1,101 @@
+MENTOVA'S HEURISTIC REASONING
+
+Accomplishment Record Acc_29
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 29 of Mentova's 48-rung reasoning ladder: heuristic reasoning.
+Mentova uses heuristic-guided search (greedy best-first) to find paths in a
+five-node weighted graph. Given start=a, goal=e, heuristic estimates, greedy
+search finds path [a, c, e] with total cost 10. The full shortest-path algorithm
+(Dijkstra) confirms the optimal path cost. Pass criterion met: path found with
+heuristic-guided search.
+
+
+INTRODUCTION
+
+Heuristic reasoning uses approximation and domain-specific knowledge to guide
+search toward a goal efficiently. Rung 29 equips Mentova with a weighted graph,
+heuristic estimates, greedy best-first search, and Dijkstra's shortest-path algorithm.
+
+
+BACKGROUND
+
+Heuristic search (Pearl, 1984) is one of the core methods in AI problem solving.
+Greedy best-first search expands the node with the lowest heuristic estimate.
+A* combines heuristic estimate with path cost so far for optimal search.
+
+
+METHOD
+
+A new module, src/mentova/heuristic.pl, implements:
+
+    mentova_heuristic(+Query, -Result, -Justification)
+
+Graph: nodes {a, b, c, d, e}, edges with costs. Heuristic: h_estimate/3 table.
+Algorithms: greedy_search/5 (best-first expansion) and shortest_path/4 (Dijkstra).
+Supported queries: greedy(Start,Goal,Cost), shortest(Start,Goal).
+
+
+DEMONSTRATION
+
+    ?- mentova_query(heuristic, greedy(a, e, Cost), R).
+    R = answer(path([a, c, e], cost(10)),
+               just(greedy_search(a, e, path([a,c,e]), cost(10))))
+
+    Greedy search finds [a, c, e] with cost 10.
+
+    ?- mentova_query(heuristic, shortest(a, e), R).
+    R = answer(path([a,c,e], cost(10)), just(dijkstra(a, e, path([a,c,e]), cost(10))))
+
+
+RESULTS
+
+Greedy path: [a, c, e], cost 10. Dijkstra confirms optimal cost 10.
+Pass criterion met: path found with heuristic-guided search.
+
+
+SIGNIFICANCE
+
+Heuristic reasoning is the foundation of planning, routing, and resource allocation
+under time or computation constraints. Greedy search is practical for large spaces.
+
+
+HONEST LIMITATIONS
+
+Greedy best-first search is not guaranteed to find the optimal path (though it does
+so here). A* would guarantee optimality with an admissible heuristic. The graph is
+small and fixed; a larger dynamic graph would require more sophisticated data structures.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(heuristic, greedy(a,e,10), R), write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Pearl, J. (1984). Heuristics: Intelligent Search Strategies for Computer Problem
+Solving. Addison-Wesley.
+
+Hart, P. E., Nilsson, N. J., & Raphael, B. (1968). A formal basis for the heuristic
+determination of minimum cost paths. IEEE Transactions on Systems Science and
+Cybernetics, 4(2), 100-107.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

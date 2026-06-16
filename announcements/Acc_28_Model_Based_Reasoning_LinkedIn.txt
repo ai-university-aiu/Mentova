@@ -1,0 +1,40 @@
+Mentova now reasons from internal models. Rung 28 of 48 is accomplished.
+
+Not every question can be answered from past cases. Sometimes you need a model — a compact representation of how a system behaves — and you need to run that model forward to get a prediction.
+
+Rung 28 gives Mentova model-based reasoning.
+
+Three model types, all with transparent justification:
+
+1. Linear model — temperature sensor, slope 2, intercept 5.
+
+  Query: predict_linear(temp_sensor, 10)
+  Answer: 25
+  Justification: linear_model(temp_sensor, slope(2), intercept(5), input(10), output(25))
+
+  y = 2×10 + 5 = 25. Shown step by step.
+
+2. Threshold model — risk classifier. If income ≥ 5, class = high, else low.
+
+  Query: predict_threshold(risk_classifier, 6)
+  Answer: high
+  Justification: threshold_model(risk_classifier, threshold(5), above → high, input(6), output(high))
+
+3. State-transition machine — weather system with states dry, wet, humid.
+
+  Query: predict_transition(dry, rain)
+  Answer: wet
+  Justification: fsm_transition(weather_fsm, dry, rain, wet)
+
+The state machine knows: dry + rain → wet. wet + sun → dry. wet + more_rain → humid. And the traffic model: free + congestion → slow. slow + accident → stopped.
+
+Model-based reasoning is how engineers debug machines, how doctors reason about disease progression, how pilots manage aircraft states. The model is consulted; the prediction is justified; the reasoning is shown.
+
+This is different from case-based reasoning (Rung 24), which finds the most similar past case. Model-based reasoning generalizes — it predicts for any input from the model's parameters, not just inputs seen before.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
