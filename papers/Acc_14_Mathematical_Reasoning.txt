@@ -1,0 +1,155 @@
+MENTOVA'S MATHEMATICAL REASONING
+
+Accomplishment Record Acc_14
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 14 of Mentova's 48-rung reasoning ladder: mathematical reasoning.
+Mentova computes quantitative answers to structured numeric questions and returns
+each answer with a justification naming the computation. Test results: 7! = 5040,
+Fibonacci(10) = 55, GCD(48, 18) = 6, 17 is prime, mean([4,7,13,2]) = 6.5.
+All numbers are correct. Pass criterion met.
+
+
+INTRODUCTION
+
+Mathematical reasoning requires computing exact numerical answers from structured
+queries. Unlike statistical reasoning (which finds patterns), mathematical
+reasoning applies defined algorithms — factorial, Euclidean GCD, primality —
+to inputs and returns exact results.
+
+Rung 14 equips Mentova with a mathematical computation engine. Every result
+is returned with a justification naming the computation applied, ensuring
+transparency of numerical answers.
+
+
+BACKGROUND
+
+Numeric computation has been part of AI since the earliest LISP programs.
+Prolog's arithmetic evaluation (the is/2 operator) provides an expression
+evaluator; Rung 14 wraps this in named computation predicates that expose
+the algorithm used in the justification.
+
+The mathematical predicates implemented cover the key algorithmic primitives
+used throughout the higher rungs of the reasoning ladder: factorial (combinatorics),
+Fibonacci (sequence reasoning), GCD (number theory), primality (filter reasoning),
+mean and max (statistics), area (geometry), and power (scaling).
+
+
+METHOD
+
+A new module, src/mentova/mathematical.pl, implements:
+
+    mentova_math(+Query, -Result, -Justification)
+
+Supported computations:
+
+    eval(Expr)          arithmetic expression evaluation
+    factorial(N)        N! by recursion
+    fibonacci(N)        Nth Fibonacci number by recursion
+    gcd(A, B)           GCD by Euclidean algorithm
+    is_prime(N)         primality test by trial division
+    mean(List)          arithmetic mean
+    max_of(List)        maximum element
+    circle_area(R)      π × R²
+    power(A, B)         A^B
+
+The module uses :- discontiguous mentova_math/3 to allow helper predicates
+between clauses without warning.
+
+Top-level clause:
+
+    mentova_query(mathematical, MathQuery, answer(Result, Just)) :-
+        mentova_math(MathQuery, Result, Just).
+
+
+DEMONSTRATION
+
+    ?- mentova_query(mathematical, factorial(7), R).
+    R = answer(5040, just(factorial(7, 5040)))
+    Correct: 7! = 5040.
+
+    ?- mentova_query(mathematical, fibonacci(10), R).
+    R = answer(55, just(fibonacci(10, 55)))
+    Correct: F(10) = 55.
+
+    ?- mentova_query(mathematical, gcd(48, 18), R).
+    R = answer(6, just(gcd(48, 18, 6)))
+    Correct: GCD(48, 18) = 6.
+
+    ?- mentova_query(mathematical, is_prime(17), R).
+    R = answer(yes, just(prime_check(17, yes)))
+    Correct: 17 is prime.
+
+    ?- mentova_query(mathematical, mean([4,7,13,2]), R).
+    R = answer(6.5, just(mean([4,7,13,2], 6.5)))
+    Correct: (4+7+13+2)/4 = 26/4 = 6.5.
+
+
+RESULTS
+
+All five test queries return correct numerical answers. Each justification names
+the algorithm used and the input. No warnings or errors under SWI-Prolog 9.0.4.
+
+Pass criterion met: number is correct.
+
+
+SIGNIFICANCE
+
+Rung 14 gives Mentova the ability to compute exact numbers and report them with
+algorithmic provenance. Combined with Rungs 4 and 7 (probabilistic and statistical
+reasoning), Mentova now covers the full numeric range: approximate probabilities,
+observed frequencies, and exact integer and floating-point computations.
+
+This is a prerequisite for Rung 26 (scientific reasoning), which requires
+hypothesis scoring, and Rung 29 (heuristic reasoning), which requires numeric
+bounds.
+
+
+HONEST LIMITATIONS
+
+The Fibonacci implementation is recursive without memoisation; it is exponential
+for large N. For demonstration purposes this is acceptable; a production
+implementation would use dynamic programming or the closed-form formula.
+
+The primality test uses trial division, which is inefficient for large primes.
+
+Symbolic algebraic reasoning (simplification, differentiation, integration) is
+not implemented.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(mathematical, factorial(7), R1), write(R1), nl, \
+            mentova_query(mathematical, fibonacci(10), R2), write(R2), nl, \
+            mentova_query(mathematical, gcd(48,18), R3), write(R3), nl, \
+            mentova_query(mathematical, is_prime(17), R4), write(R4), nl, \
+            mentova_query(mathematical, mean([4,7,13,2]), R5), write(R5), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Aho, A. V., Hopcroft, J. E., & Ullman, J. D. (1974). The Design and Analysis of
+Computer Algorithms. Addison-Wesley.
+
+Knuth, D. E. (1981). The Art of Computer Programming, Vol. 2: Seminumerical Algorithms.
+Addison-Wesley.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

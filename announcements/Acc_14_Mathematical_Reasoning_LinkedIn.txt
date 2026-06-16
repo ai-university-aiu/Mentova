@@ -1,0 +1,35 @@
+Mentova now computes exact numbers. Rung 14 of 48 is accomplished.
+
+A mind that can only estimate is not a complete reasoner. Some questions have exact answers, and a glass-box mind must be able to compute them, name the algorithm it used, and show the result unambiguously.
+
+Rung 14 gives Mentova mathematical computation.
+
+  answer(5040, just(factorial(7, 5040)))
+  answer(55,   just(fibonacci(10, 55)))
+  answer(6,    just(gcd(48, 18, 6)))
+  answer(yes,  just(prime_check(17, yes)))
+  answer(6.5,  just(mean([4, 7, 13, 2], 6.5)))
+
+7! = 5040. Fibonacci(10) = 55. GCD(48, 18) = 6. 17 is prime. Mean of [4, 7, 13, 2] = 6.5.
+
+Every answer names the algorithm: factorial, fibonacci, gcd, prime_check, mean. Every answer names the inputs. The result is not approximated; it is computed exactly.
+
+Seven computation types are available:
+  — Arithmetic expression evaluation
+  — Factorial (n!)
+  — Fibonacci sequence
+  — GCD by Euclidean algorithm
+  — Primality by trial division
+  — Mean and max of a list
+  — Circle area and power
+
+With mathematical reasoning in place alongside probabilistic (Rung 4), statistical (Rung 7), and Bayesian (Rung 5) reasoning, Mentova now spans the full numeric range — from approximate likelihoods to exact integers. The justification for every number names the algorithm that produced it.
+
+Next: Rung 15, Fuzzy Reasoning — where "yes" and "no" give way to degrees of truth.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
