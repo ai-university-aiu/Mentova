@@ -1,0 +1,210 @@
+MENTOVA INFERS THE BEST EXPLANATION
+
+Accomplishment Record Acc_3
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Mentova's third accomplished reasoning rung: abductive reasoning,
+or inference to the best explanation. Given an observed fact, Mentova retrieves
+all causal hypotheses from the Small-World Commonsense knowledge base, scores
+each by its prior probability, and returns the best-supported explanation
+together with its full evidence record. Three observations are demonstrated:
+wet_ground (two competing causes — rain and sprinkler — with sprinkler winning
+at score 0.60 versus rain at 0.30), fatigue (exercise wins over illness, 0.70
+versus 0.20), and smoke (fire is the sole cause, score 0.50). In every case the
+best-supported cause is returned with its causal link, prior, likelihood, and
+evidence note — all glass-box and human-readable.
+
+
+INTRODUCTION
+
+Abduction, or inference to the best explanation, answers the question: given
+that I observe O, what is the most plausible cause? It is the form of reasoning
+used when a doctor diagnoses from symptoms, a scientist proposes a hypothesis,
+or an engineer traces a fault.
+
+The pass criterion from Volume 6 (Rung 3): the best-supported cause returns
+with its evidence.
+
+Abduction is the third direction of logical reasoning alongside deduction (Rung
+1, apply a known rule) and induction (Rung 2, discover a rule from examples).
+With Rung 3 complete, Mentova can reason in all three classical directions.
+
+
+BACKGROUND AND RELATED WORK
+
+Abductive reasoning in logic was formalised by Peirce and later formalised
+computationally in Abductive Logic Programming (Kakas, Kowalski & Toni, 1992).
+In the symbolic setting, abduction searches for a set of hypotheses that, together
+with background knowledge, entail the observation. Mentova's implementation uses
+a probabilistic ranking step to select among competing hypotheses, combining the
+causal structure of the knowledge base with prior probabilities.
+
+The Small-World Commonsense knowledge base provides causes/2 facts (causal
+relations) and prob_fact/2 entries (prior probabilities) that together define
+the abductive search space for this rung.
+
+
+METHOD
+
+The abduction module (src/mentova/abduction.pl) implements mentova_abduce/4:
+
+    mentova_abduce(+Observation, -Best, -Score, -AllExplanations)
+
+Three steps:
+
+    1. Candidate retrieval: findall(H, causes(H, Observation), Candidates)
+       collects every hypothesis H that the knowledge base says causes the
+       observation.
+
+    2. Scoring: each candidate H receives a score = Prior x Likelihood.
+       Prior is prob_fact(H, P) if available, else 0.5 (neutral default).
+       Likelihood is derived from observation/3 counts if available, else 1.0.
+
+    3. Ranking: msort/2 sorts by score ascending; last/2 returns the winner.
+       All explanations are returned for transparency.
+
+Each explanation is returned as:
+    explanation(Hypothesis, Score,
+                evidence(cause(H, Obs), prior(P), likelihood(L), note(N)))
+
+The mentova_query/3 interface exposes this as:
+    mentova_query(abductive, explain(Observation), answer(Best, Justification))
+
+
+THE DEMONSTRATION
+
+Three observations, each returning the best explanation with its evidence:
+
+QUERY 1 — wet_ground
+
+Two competing causes in the knowledge base:
+    causes(rain,      wet_ground)   prior(rain)      = 0.30
+    causes(sprinkler, wet_ground)   prior(sprinkler)  = 0.60
+
+Output:
+    Observation : wet_ground
+    All explanations (scored):
+      rain       (score 0.3000)
+      sprinkler  (score 0.6000)
+    Best explanation:
+      explanation(sprinkler, 0.6,
+                  evidence(cause(sprinkler, wet_ground),
+                           prior(0.6), likelihood(1.0),
+                           note(no_direct_observation)))
+
+QUERY 2 — fatigue
+
+Two competing causes:
+    causes(exercise, fatigue)   prior(exercise) = 0.70
+    causes(illness,  fatigue)   prior(illness)  = 0.20
+
+Output:
+    Observation : fatigue
+    All explanations (scored):
+      illness   (score 0.2000)
+      exercise  (score 0.7000)
+    Best explanation:
+      explanation(exercise, 0.7,
+                  evidence(cause(exercise, fatigue),
+                           prior(0.7), likelihood(1.0),
+                           note(no_direct_observation)))
+
+QUERY 3 — smoke
+
+Single cause:
+    causes(fire, smoke)   prior(fire) = 0.5 (default)
+
+Output:
+    Observation : smoke
+    All explanations (scored):
+      fire  (score 0.5000)
+    Best explanation:
+      explanation(fire, 0.5,
+                  evidence(cause(fire, smoke),
+                           prior(0.5), likelihood(1.0),
+                           note(no_direct_observation)))
+
+
+RESULTS
+
+Pass criterion met: in all three cases the best-supported cause is returned with
+its full evidence record — causal link, prior probability, likelihood, and note.
+
+wet_ground: sprinkler wins over rain (0.60 > 0.30). The ground is more likely
+wet because the sprinkler is running than because it rained, given the priors.
+This is the counter-intuitive result that a good abductive reasoner must produce:
+the more probable cause wins even when the less probable cause (rain) is the
+first one that comes to mind.
+
+fatigue: exercise wins over illness (0.70 > 0.20). Exercise is the more common
+cause of fatigue in the Small-World domain.
+
+smoke: fire is the only registered cause; it is returned with the neutral prior
+of 0.50 and a note that no direct observation counts are available.
+
+
+SIGNIFICANCE
+
+Mentova has now demonstrated all three classical directions of logical reasoning:
+deduction (Rung 1), induction (Rung 2), and abduction (Rung 3). Each direction
+is glass-box: the answer is accompanied by the chain of facts, rules, or evidence
+that produced it.
+
+The abduction result for wet_ground illustrates a strength of probabilistic
+abduction over pure logical abduction: when multiple hypotheses are logically
+consistent with an observation, probability resolves the tie in a principled,
+auditable way.
+
+Every evidence record is a Prolog term a person can inspect, challenge, or
+correct. If the prior for rain is updated, the ranking changes — no retraining,
+no hidden weights, just a fact change.
+
+
+HONEST LIMITATIONS
+
+Priors are hand-authored in the knowledge base rather than learned from data.
+The likelihood model is minimal: observation counts from a small table, not a
+full conditional probability model.
+
+The system does not yet combine multiple observations (e.g., "wet ground AND
+thunder") to jointly score hypotheses — each observation is abduced independently.
+Multi-observation joint abduction is a natural extension.
+
+The scoring function (Prior x Likelihood) is a simple heuristic, not a full
+Bayesian posterior. Proper Bayesian abduction would normalise over all hypotheses.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    cd Mentova
+    swipl -l src/mentova/mentova.pl \
+          -g "mentova_query(abductive, explain(wet_ground), R), write(R), nl" \
+          -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Kakas, A., Kowalski, R., & Toni, F. (1992). Abductive Logic Programming.
+Journal of Logic and Computation, 2(6).
+
+Peirce, C. S. (1883). A Theory of Probable Inference. Studies in Logic.
+
+WordNet. Princeton University. https://wordnet.princeton.edu
+
+ConceptNet. MIT Media Lab. https://conceptnet.io
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

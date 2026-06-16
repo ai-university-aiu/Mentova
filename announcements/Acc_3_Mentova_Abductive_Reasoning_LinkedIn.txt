@@ -1,0 +1,35 @@
+Mentova now reasons in all three classical directions. Rung 3: abduction — inference to the best explanation.
+
+The ground is wet. Why?
+
+Two possibilities in Mentova's knowledge base: it rained (prior probability 0.30) or the sprinkler was running (prior probability 0.60).
+
+Mentova's answer:
+
+    Best explanation: sprinkler (score 0.60)
+    Evidence: cause(sprinkler, wet_ground), prior(0.60)
+    Runner-up: rain (score 0.30)
+
+The sprinkler wins. Not because rain is impossible — it's entirely possible — but because the sprinkler is more probable given what Mentova knows. And it shows you the full evidence record: which cause, which prior, which likelihood, which note. Every step readable.
+
+This is what a good abductive reasoner does: it produces the counter-intuitive result when the evidence demands it. Rain feels like the obvious answer. The numbers say otherwise.
+
+Two more demonstrations:
+
+    fatigue => exercise (0.70) over illness (0.20)
+    smoke   => fire (0.50, only registered cause)
+
+With Rung 3 complete, Mentova has demonstrated all three directions of classical logical reasoning:
+
+    Rung 1 — Deduction:  apply a known rule, show the proof chain
+    Rung 2 — Induction:  discover a rule from examples, print it
+    Rung 3 — Abduction:  find the best explanation, show the evidence
+
+Three rungs of the birth sequence down. Six to go before the minimum viable Mentova is complete.
+
+And every answer is still glass-box. No weights. No embeddings. A causal graph, a probability table, and a scoring function — all inspectable, all correctable.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

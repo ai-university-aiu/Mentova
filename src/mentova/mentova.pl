@@ -17,6 +17,7 @@
 :- use_module('../../constitution/constitution').
 :- use_module('../../bodies/bodies').
 :- use_module(induction).
+:- use_module(abduction).
 
 :- use_module(library(lists), [member/2]).
 
@@ -68,6 +69,11 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 3 — abductive: best explanation for an observation
+mentova_query(abductive, explain(Obs),
+              answer(Best, just(abduction(Obs), all_explanations(All)))) :-
+    mentova_abduce(Obs, Best, _Score, All).
 
 % Rung 2 — inductive: induce a rule from examples, verify on held-out cases
 mentova_query(inductive, induce(Pos, Neg, BG, HeldOut),

@@ -111,9 +111,11 @@ at_location(oak,      forest).
 at_location(cat,      house).
 
 causes(rain,        wet_ground).
+causes(sprinkler,   wet_ground).
 causes(fire,        smoke).
 causes(hunger,      eating).
 causes(exercise,    fatigue).
+causes(illness,     fatigue).
 causes(sunlight,    plant_growth).
 
 used_for(knife,     cutting).
@@ -168,10 +170,14 @@ is_a(tweety, bird).
 % ---------------------------------------------------------------------------
 
 % prob_fact(Proposition, Probability)
-prob_fact(rains_today,          0.3).
-prob_fact(cat_in_garden,        0.6).
-prob_fact(eagle_hunts_today,    0.7).
-prob_fact(rose_blooms_in_june,  0.9).
+prob_fact(rains_today,           0.3).
+prob_fact(rain,                  0.3).
+prob_fact(sprinkler,             0.6).
+prob_fact(exercise,              0.7).
+prob_fact(illness,               0.2).
+prob_fact(cat_in_garden,         0.6).
+prob_fact(eagle_hunts_today,     0.7).
+prob_fact(rose_blooms_in_june,   0.9).
 prob_fact(salmon_jumps_upstream, 0.5).
 
 % observation(Subject, Property, Count) — small observation table
