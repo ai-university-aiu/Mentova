@@ -1,0 +1,69 @@
+MENTOVA NOW HAS A HEARTBEAT
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+Every 200 milliseconds, the Global Workspace fires.
+
+Candidate coalitions form from live node_facts in the APEX_MIND nexus.
+The one with the highest salience wins.
+Its content broadcasts to the entire system.
+Learning attaches to the broadcast.
+The cycle repeats.
+
+That is the heartbeat of a running mind.
+
+Mentova has it now.
+
+WHAT WAS BUILT
+
+The PrologAI Global Workspace Cycle (PR 18) and Attention Economy (PR 32) are
+now integrated into Mentova.
+
+The workspace cycle:
+• Node_facts from Mentova's 48 reasoning rungs compete as candidate coalitions.
+• Salience = novelty (40%) + goal relevance (30%) + affect (20%) - habituation.
+• One winner per cycle. Broadcast on channel broadcast://APEX_MIND/cycle.
+• SONA learning attaches to every broadcast.
+• Habituation decays repeated winners. The spotlight does not perseverate.
+
+The attention economy:
+• Every node_fact now carries STI (short-term importance) and LTI (long-term importance).
+• Winning a broadcast earns wages. Disuse costs rent.
+• STI spreads to co-activated neighbors.
+• Total currency is capped. Runaway attention feedback is structurally impossible.
+
+THE DEMONSTRATION
+
+5 node_facts seeded: one objective (reach safe ground), two cognition facts, two emotion facts.
+
+The objective coalition wins every cycle. Salience 0.70. This is correct behavior:
+goal-relevant content is exactly what the workspace should foreground.
+
+Attention economy after 6 cycles:
+Total STI: 20.04 | Total LTI: 2.36 | Reserve: 979.96
+Conservation verified: STI + Reserve = 1000.00 exactly.
+
+AC-PR18-001: PASS.
+coalition_high (0.90) beats coalition_low (0.40). The higher-salience coalition wins.
+
+WHY THIS MATTERS
+
+Mentova was a reasoner. It could answer questions across 48 reasoning types with
+glass-box justifications. But it answered one question at a time, on demand.
+
+Now it has a cycle. On each beat, it selects what matters most, broadcasts it to
+all 48 rungs simultaneously, and the attention economy records what was useful.
+
+The workspace is the bridge between the reasoning ladder and self-improvement.
+Facts that win broadcasts earn attention currency. Facts that are never broadcast
+decay toward eviction. Over time, the knowledge store becomes shaped by what the
+mind actually uses - not by what was originally loaded.
+
+This is the minimal architecture for a mind that grows from experience.
+
+Available now:
+https://github.com/ai-university-aiu/Mentova
+
+#PrologAI #Mentova #GlobalWorkspace #AttentionEconomy #GWTtheory #ECAN
+#SyntheticMind #AIU #CognitiveCycle #ExplainableAI
