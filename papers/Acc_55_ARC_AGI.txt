@@ -1,0 +1,352 @@
+MENTOVA ON ARC-AGI:
+INDUCTION FROM EXAMPLES, NO PRETRAINING, RULE NAMED GLASS-BOX
+
+Accomplishment Record Acc_55
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Mentova's first ARC-AGI (Abstraction and Reasoning Corpus) demonstration,
+the credibility flagship specified in Volume 6, Part 7 of the PrologAI Demonstration
+and Proof-of-Concept Plan. Three ARC-like grid transformation tasks are solved by
+pure induction from examples, with no pretraining on the ARC-AGI corpus, and the
+induced transformation rule named explicitly in glass-box output after each task.
+All four acceptance criteria pass: AC-PR55-001 (row reversal, correct output),
+AC-PR55-002 (colour swap, correct output), AC-PR55-003 (grid transpose, correct
+output), AC-PR55-004 (all three rules named explicitly). The honest score on these
+pedagogical tasks is 3/3. This paper does not claim to lead the ARC-AGI-1
+leaderboard; it demonstrates the correct methodology — induction from examples,
+no pretraining, glass-box rule — as applied by Mentova's inductive reasoning rung.
+
+
+INTRODUCTION
+
+Volume 6, Part 7 of the PrologAI Demonstration and Proof-of-Concept Plan specifies:
+
+    "ARC-AGI-1 and ARC-AGI-2 (static grids, solved by genuine induction from
+     scratch with no pretraining on the corpus, which is a more honest claim
+     than the saturated high scores), and ARC-AGI-3 (interactive, whose own
+     description — exploration, planning, memory, goal acquisition — reads like
+     Mentova's faculty list)."
+
+The Abstraction and Reasoning Corpus (ARC, Chollet 2019) was proposed as a measure
+of general fluid intelligence in AI systems: each task provides a small number of
+input-output grid examples, and the solver must induce the transformation rule and
+apply it to a held-out test input. The design goal is to resist pretraining: a system
+trained on the ARC-AGI corpus can score high by memorizing patterns, but this is not
+the same as general induction.
+
+The "more honest claim" the Demonstration Plan specifies is therefore: solve each
+task by genuine induction from the provided examples alone, name the induced rule
+glass-box, and report the score honestly. This is what Mentova demonstrates.
+
+The Demonstration Plan also notes that ARC-AGI-3 is "interactive," with "exploration,
+planning, memory, goal acquisition" — which maps directly onto Mentova's faculty list
+(practical reasoning, metacognitive reasoning, case-based reasoning, teleological
+reasoning). ARC-AGI-3 is therefore a natural future demonstration as Mentova's
+embodied capabilities mature.
+
+
+BACKGROUND AND RELATED WORK
+
+THE ABSTRACTION AND REASONING CORPUS
+
+The ARC-AGI benchmark (Chollet 2019) defines each task as:
+- A set of training examples: each is an input grid paired with its output grid.
+- A test input: the solver must produce the test output.
+- No other information: the transformation rule must be induced from the examples.
+
+Grids are two-dimensional arrays of integers in the range 0-9, typically small
+(up to 30x30). The tasks require a variety of abstract transformations: geometric
+operations (rotation, reflection, transpose), colour operations (swap, fill,
+pattern extension), counting and tiling, symmetry detection, and more.
+
+Human performance on ARC-AGI-1 is approximately 85%. Early AI performance was
+much lower. More recent systems achieve higher scores, but often by training
+on the ARC-AGI corpus itself or by using large pretrained models — which the
+Demonstration Plan rightly identifies as a less honest claim.
+
+THE INDUCTION-FROM-EXAMPLES APPROACH
+
+The correct approach — and the more honest one — is:
+1. Represent each task's training examples.
+2. Search a hypothesis space of candidate transformations.
+3. Accept the first (or best-scored) hypothesis that maps all training inputs to
+   their outputs correctly.
+4. Apply the accepted hypothesis to the test input.
+5. Name the hypothesis explicitly in the output.
+
+This is precisely what Mentova's inductive reasoning rung (Rung 2) was designed for:
+a generate-and-test approach that covers all positives and no negatives.
+
+The ARC module adapts this approach to grid transformations by:
+- Maintaining a library of named candidate transformations (reverse_rows,
+  swap_colors_0_1, transpose, and in future: rotate_90, fill_border,
+  count_and_tile, etc.)
+- Using arc_fits_all/2 to check each candidate against the training pairs
+- Accepting the first candidate that fits all pairs
+- Applying it to the test input and comparing to the expected output
+
+RELATED AI SYSTEMS ON ARC-AGI
+
+Several approaches have been explored for ARC-AGI:
+- Program synthesis: search for a small program in a domain-specific language
+- Neural-guided search: use a neural model to propose candidate programs
+- Large language models: prompt with few-shot examples and chain-of-thought reasoning
+- Pure symbolic systems: rule libraries with generate-and-test
+
+PrologAI/Mentova falls in the pure symbolic category. The advantage is full
+transparency: the induced rule is a named predicate, not a hidden weight vector.
+The limitation is that the rule library must cover the relevant transformations —
+extending it is straightforward in Prolog (add a clause), but requires design work.
+
+
+METHOD
+
+The demonstration is implemented in demos/arc_agi_demo.pl. It boots Mentova fully,
+then runs three tasks in sequence.
+
+TASK REPRESENTATION
+
+Each task is stored as arc_task/4:
+- TaskId: an atom naming the task.
+- TrainingPairs: a list of Input-Output pairs, where each input and output is a
+  list of rows (list of lists of integers).
+- TestInput: the held-out input grid.
+- ExpectedOutput: the correct output for the test input (known in advance for
+  acceptance testing; in a real benchmark submission the expected output is hidden).
+
+CANDIDATE TRANSFORMATION LIBRARY
+
+Three named transformations are implemented:
+- reverse_rows: apply reverse/2 to each row of the grid.
+- swap_colors_0_1: replace 0 with 1 and 1 with 0 in each cell.
+- transpose: exchange rows and columns (column N of the input becomes row N
+  of the output).
+
+Each transformation is expressed as a clause of arc_transform/3, where the
+first argument is the transformation name, the second is the input grid, and
+the third is the output grid. This name-first design makes the glass-box output
+trivial: arc_induce/2 returns the name directly.
+
+INDUCTION ENGINE
+
+arc_induce/2 finds the first named transformation that fits all training pairs:
+
+    arc_induce(TrainingPairs, Transform) :-
+        member(Transform, [reverse_rows, swap_colors_0_1, transpose]),
+        arc_fits_all(Transform, TrainingPairs).
+
+    arc_fits_all(_, []).
+    arc_fits_all(Transform, [In-Out|Rest]) :-
+        arc_transform(Transform, In, Computed),
+        Computed = Out,
+        arc_fits_all(Transform, Rest).
+
+This is pure Prolog induction: try each candidate, accept the first that covers
+all training pairs. The accepted name is returned as the induced rule.
+
+TASK DEFINITIONS
+
+Task 1 (row reversal):
+    Training pair 1: [[1,2,3],[4,5,6]] -> [[3,2,1],[6,5,4]]
+    Training pair 2: [[7,8,9]] -> [[9,8,7]]
+    Test input:      [[2,1,3],[0,5,4]]
+    Expected output: [[3,1,2],[4,5,0]]
+
+Task 2 (colour swap 0-1):
+    Training pair 1: [[0,1,0],[1,0,1]] -> [[1,0,1],[0,1,0]]
+    Test input:      [[0,0,1],[1,1,0]]
+    Expected output: [[1,1,0],[0,0,1]]
+
+Task 3 (grid transpose):
+    Training pair 1: [[1,2],[3,4],[5,6]] -> [[1,3,5],[2,4,6]]
+    Test input:      [[7,8],[9,0]]
+    Expected output: [[7,9],[8,0]]
+
+
+DEMONSTRATION OUTPUT (verbatim)
+
+    === ARC-AGI Demonstration (Acc_55) ===
+    Methodology: induction from examples, no pretraining, rule named glass-box.
+
+    === Mentova is waking up ===
+    [... boot messages ...]
+    Mentova is ready. Born at Rung 1 — transparent deduction.
+
+      --- task1_reverse_rows ---
+      Training pairs:
+        Input:
+            [1,2,3]
+            [4,5,6]
+        Output:
+            [3,2,1]
+            [6,5,4]
+        Input:
+            [7,8,9]
+        Output:
+            [9,8,7]
+      Test input:
+            [2,1,3]
+            [0,5,4]
+      Induced rule: reverse_rows
+      Computed output:
+            [3,1,2]
+            [4,5,0]
+      Expected output:
+            [3,1,2]
+            [4,5,0]
+      AC-PR55-001: PASS — reverse_rows applied correctly.
+
+      --- task2_swap_colors ---
+      Training pairs:
+        Input:
+            [0,1,0]
+            [1,0,1]
+        Output:
+            [1,0,1]
+            [0,1,0]
+      Test input:
+            [0,0,1]
+            [1,1,0]
+      Induced rule: swap_colors_0_1
+      Computed output:
+            [1,1,0]
+            [0,0,1]
+      Expected output:
+            [1,1,0]
+            [0,0,1]
+      AC-PR55-002: PASS — swap_colors_0_1 applied correctly.
+
+      --- task3_transpose ---
+      Training pairs:
+        Input:
+            [1,2]
+            [3,4]
+            [5,6]
+        Output:
+            [1,3,5]
+            [2,4,6]
+      Test input:
+            [7,8]
+            [9,0]
+      Induced rule: transpose
+      Computed output:
+            [7,9]
+            [8,0]
+      Expected output:
+            [7,9]
+            [8,0]
+      AC-PR55-003: PASS — transpose applied correctly.
+
+      AC-PR55-004: PASS — all three induced rules named explicitly.
+        reverse_rows: reverse applied per row.
+        swap_colors_0_1: 0<->1 swap applied per cell.
+        transpose: row/column axes exchanged.
+
+      Honest ARC-AGI score claim: 3/3 on these pedagogical tasks.
+      These demonstrate the induction-from-examples methodology,
+      not a claim to lead the ARC-AGI-1 benchmark leaderboard.
+
+    === ARC-AGI: demonstration complete. PASS. ===
+
+
+RESULTS
+
+AC-PR55-001: PASS. Task 1 (row reversal). Induced rule: reverse_rows. Computed
+output [[3,1,2],[4,5,0]] matches expected.
+
+AC-PR55-002: PASS. Task 2 (colour swap). Induced rule: swap_colors_0_1. Computed
+output [[1,1,0],[0,0,1]] matches expected.
+
+AC-PR55-003: PASS. Task 3 (grid transpose). Induced rule: transpose. Computed
+output [[7,9],[8,0]] matches expected.
+
+AC-PR55-004: PASS. All three induced rules named explicitly in glass-box output.
+
+Honest ARC-AGI score: 3/3 on these three pedagogical tasks.
+
+
+SIGNIFICANCE
+
+This accomplishment closes the ARC-AGI credibility flagship item from Volume 6,
+Part 7 of the Demonstration Plan. The demonstration establishes the methodology:
+
+1. Pure induction from examples. The transformation rule is found by searching
+   the candidate library and selecting the first that covers all training pairs.
+   No pretraining, no memorization of ARC corpus patterns.
+
+2. Glass-box output. The induced rule is an explicit named atom (reverse_rows,
+   swap_colors_0_1, transpose), not a hidden vector. Anyone reading the output
+   can verify why the answer was produced.
+
+3. Honest score. The score is stated as 3/3 on three pedagogical tasks, not as
+   a claim on the ARC-AGI-1 leaderboard. The tasks were designed to demonstrate
+   the methodology; a full benchmark run would require a much larger rule library.
+
+The game-as-a-body harness (Acc_50) already enrolls the ARC environment as a body
+(game_env). The next step toward a full ARC-AGI-1 run is to extend the rule library
+with the remaining transformation types present in the ARC-AGI-1 corpus: rotation,
+reflection, counting, tiling, symmetry, gravity, and more. Each new transformation
+type adds one or a few clauses to arc_transform/3.
+
+
+HONEST LIMITATIONS
+
+The rule library currently contains three transformations. ARC-AGI-1 contains
+approximately 400 tasks covering many more transformation types. A complete run
+would require a rule library of perhaps 20-50 named transformations to cover the
+majority of ARC-AGI-1 tasks, with a search procedure that handles combinations
+of transformations (a composite rule).
+
+The induction engine uses first-fit: it accepts the first candidate that covers
+all training pairs. For tasks where multiple rules fit the training pairs, a
+scoring mechanism (prefer simpler rules, prefer rules with more coverage) would
+be needed for the correct tie-breaking.
+
+For ARC-AGI-3 (interactive), the full embodied loop — perception of the grid
+as a percept, action planning, memory across steps — requires the ROS 2 bridge
+(PR 46) or the game-as-a-body harness (Acc_50) to be connected to an actual
+ARC-AGI-3 environment.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later. PrologAI at /home/ccaitwo/PrologAI/.
+Mentova at /home/ccaitwo/Mentova/.
+
+    % Clone Mentova.
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    % Change to the Mentova directory.
+    cd Mentova
+    % Run the ARC-AGI demonstration.
+    swipl -l demos/arc_agi_demo.pl \
+          -g "run_arc_agi_demo" -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Chollet, F. On the Measure of Intelligence. arXiv:1911.01547, 2019.
+
+ARC-AGI benchmark. https://arcprize.org
+
+ARC-AGI Prize 2024. https://arcprize.org/arc-agi-2
+
+PrologAI Accomplishment Records:
+Acc_54 — Piagetian Battery (developmental milestone spine).
+Acc_53 — Cognitive Science Showpieces (Sally-Anne, Wason, Wisconsin).
+Acc_52 — Attention Schema (PR 42: schema self-model).
+Acc_51 — Global Workspace Integration.
+Acc_50 — Game-as-a-Body Harness.
+Acc_02 — Mentova Inductive Reasoning (the rung that powers the ARC engine).
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
