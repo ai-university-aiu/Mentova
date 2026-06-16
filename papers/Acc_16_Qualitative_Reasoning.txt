@@ -1,0 +1,145 @@
+MENTOVA'S QUALITATIVE REASONING
+
+Accomplishment Record Acc_16
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 16 of Mentova's 48-rung reasoning ladder: qualitative reasoning.
+Mentova predicts the direction of change without using numbers, employing a
+qualitative sign calculus (positive/negative/zero) over named causal relations.
+Sunlight increases plant_growth; exercise decreases weight; sunlight via temperature
+increases evaporation (positive × positive = positive). If rainfall goes up, flood
+risk increases and drought risk decreases. All direction predictions are correct.
+Pass criterion met: rising/falling/more/less is correct.
+
+
+INTRODUCTION
+
+Many useful predictions do not require exact numbers. If more sunlight falls on a
+garden, plant growth increases — we can state this without knowing the exact rate
+of growth increase. Qualitative reasoning operates on signs (more/less/same) rather
+than magnitudes, making it applicable when numeric models are unavailable or
+unnecessary.
+
+Rung 16 equips Mentova with a qualitative sign calculus over named causal relations.
+Every prediction is justified by naming the relation that produced it.
+
+
+BACKGROUND
+
+Qualitative reasoning was formalised by de Kleer and Brown (1984) and Kuipers (1986)
+as a framework for reasoning about physical systems without exact numeric models.
+The qualitative multiplication table (+ × + = +, + × − = −, etc.) propagates signs
+through causal chains. Mentova's implementation applies this algebra to its named
+causal relation set.
+
+
+METHOD
+
+A new module, src/mentova/qualitative.pl, implements:
+
+    mentova_qualitative(+Query, -Result, -Justification)
+
+Two relation types are stored:
+    increases(Cause, Effect)   more Cause → more Effect
+    decreases(Cause, Effect)   more Cause → less Effect
+
+Supported query forms:
+
+    direction(X, Y)              direct directional relation X → Y
+    chain(X, Y, Z)               two-hop: sign(X→Y) × sign(Y→Z)
+    compare_effect(X, A, B)      which of A, B benefits from more X
+    predict(X, Direction)        all effects of X going up or down
+
+Top-level clause:
+
+    mentova_query(qualitative, QualQuery, answer(Result, Just)) :-
+        once(mentova_qualitative(QualQuery, Result, Just)).
+
+
+DEMONSTRATION
+
+Query 1 — sunlight → plant_growth:
+    answer(increases, just(increases(sunlight, plant_growth)))
+    Correct: more sunlight → more plant growth.
+
+Query 2 — exercise → weight:
+    answer(decreases, just(decreases(exercise, weight)))
+    Correct: more exercise → less weight.
+
+Query 3 — chain sunlight → temperature → evaporation:
+    answer(increases, just(chain(sunlight, via(temperature), evaporation, inferred(increases))))
+    Sign(sunlight→temperature) = pos. Sign(temperature→evaporation) = pos.
+    pos × pos = pos → increases. Correct.
+
+Query 4 — predict(rainfall, up):
+    answer([flood_risk-increases, soil_moisture-increases, drought_risk-decreases], ...)
+    More rainfall: flood risk up, soil moisture up, drought risk down. All correct.
+
+
+RESULTS
+
+All four queries return correct directional predictions. The chain query correctly
+propagates the sign through two hops using qualitative multiplication.
+
+Pass criterion met: rising/falling/more/less is correct.
+
+
+SIGNIFICANCE
+
+Qualitative reasoning gives Mentova the ability to reason about systems without
+building numerical models. This is valuable when data is sparse, when only
+directional claims are needed, or when an explanation in human-readable terms
+(more sunlight → more growth) is preferred over a numerical equation.
+
+Combined with Rung 15 (fuzzy) and Rung 14 (mathematical), Mentova now covers
+the complete spectrum of quantitative reasoning: exact numbers, graded degrees,
+and qualitative directions.
+
+
+HONEST LIMITATIONS
+
+The qualitative multiplication table is ambiguous for certain combinations:
+the product of unknown-sign quantities is undefined. Mentova does not yet
+handle ambiguous qualitative conclusions.
+
+Multi-hop chains beyond two steps are not implemented in a single query.
+An iterative version would propagate signs along arbitrarily long chains.
+
+The relations are stored as ground facts. A real qualitative simulator would
+also model feedback loops and equilibria.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(qualitative, direction(sunlight,plant_growth), R1), write(R1), nl, \
+            mentova_query(qualitative, direction(exercise,weight), R2), write(R2), nl, \
+            mentova_query(qualitative, chain(sunlight,temperature,evaporation), R3), write(R3), nl, \
+            mentova_query(qualitative, predict(rainfall,up), R4), write(R4), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+de Kleer, J., & Brown, J. S. (1984). A qualitative physics based on confluences.
+Artificial Intelligence, 24(1-3), 7-83.
+
+Kuipers, B. (1986). Qualitative simulation. Artificial Intelligence, 29(3), 289-338.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

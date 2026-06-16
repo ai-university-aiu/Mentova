@@ -43,7 +43,7 @@ The birth sequence (Rungs 1-9) is the minimum viable Mentova.
 | 13 | Formal | ✅ Accomplished |
 | 14 | Mathematical | ✅ Accomplished |
 | 15 | Fuzzy | ✅ Accomplished |
-| 16 | Qualitative | Pending |
+| 16 | Qualitative | ✅ Accomplished |
 | 17 | Non-monotonic (defeasible) | Pending |
 | 18 | Paraconsistent | Pending |
 | 19 | Counterfactual | Pending |

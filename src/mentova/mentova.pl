@@ -30,6 +30,7 @@
 :- use_module(formal).
 :- use_module(mathematical).
 :- use_module(fuzzy).
+:- use_module(qualitative).
 
 :- use_module(library(lists), [member/2]).
 
@@ -81,6 +82,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 16 — qualitative: predict direction of change
+mentova_query(qualitative, QualQuery, answer(Result, Just)) :-
+    once(mentova_qualitative(QualQuery, Result, Just)).
 
 % Rung 15 — fuzzy: graded membership / degree of truth
 mentova_query(fuzzy, FuzzyQuery, answer(Result, Just)) :-

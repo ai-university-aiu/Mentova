@@ -1,0 +1,45 @@
+Mentova now predicts directions without numbers. Rung 16 of 48 is accomplished.
+
+You do not always need to know how much. Sometimes knowing which way is enough.
+
+If more sunlight falls on a garden, does plant growth increase or decrease? Increase. You do not need to know the exact photosynthesis rate to reason correctly about the direction.
+
+Rung 16 gives Mentova qualitative reasoning: prediction of direction without numbers.
+
+Ask whether sunlight increases plant growth:
+
+  answer(increases, just(increases(sunlight, plant_growth)))
+
+Correct. And named: the increases relation between sunlight and plant_growth is explicit in the knowledge base.
+
+Ask whether exercise increases or decreases weight:
+
+  answer(decreases, just(decreases(exercise, weight)))
+
+Decreases. Justified: the decreases relation is named.
+
+Now chain two hops together. If sunlight increases temperature, and temperature increases evaporation, what does sunlight do to evaporation?
+
+  answer(increases, just(chain(sunlight, via(temperature), evaporation, inferred(increases))))
+
+Positive times positive equals positive. More sunlight → more temperature → more evaporation. The sign propagates through the chain. The intermediate node (temperature) is named.
+
+Ask what happens when rainfall goes up:
+
+  answer([flood_risk-increases, soil_moisture-increases, drought_risk-decreases],
+         just(predict(rainfall, up, changes([...]))))
+
+All effects in one query. Flood risk up. Soil moisture up. Drought risk down. Every directional change named.
+
+The qualitative multiplication table: pos × pos = pos, pos × neg = neg, neg × neg = pos. This is the algebra of directions — the same sign rules that govern causal chain reasoning in qualitative physics.
+
+With qualitative reasoning in place, Mentova can answer directional questions about systems it has never numerically modelled. A doctor saying "if you exercise more, your weight will decrease" does not need to know the exact caloric deficit. A farmer saying "if it rains more, the drought risk falls" does not need a hydrology simulation.
+
+Direction is often enough. Mentova now knows direction.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
