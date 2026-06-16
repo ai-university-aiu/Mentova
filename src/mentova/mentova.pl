@@ -24,6 +24,7 @@
 :- use_module(statistical).
 :- use_module(analogical).
 :- use_module(relational).
+:- use_module(transductive).
 
 :- use_module(library(lists), [member/2]).
 
@@ -75,6 +76,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 10 — transductive: classify by nearest known cases (kNN)
+mentova_query(transductive, TransQuery, answer(Label, Just)) :-
+    mentova_transduce(TransQuery, Label, Just).
 
 % Rung 9 — relational: multi-hop relational query
 mentova_query(relational, RelQuery, answer(Result, Just)) :-

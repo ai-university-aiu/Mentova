@@ -1,0 +1,165 @@
+MENTOVA'S TRANSDUCTIVE REASONING
+
+Accomplishment Record Acc_10
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 10 of Mentova's 48-rung reasoning ladder: transductive reasoning.
+Mentova classifies a new point by its nearest known cases using k-Nearest
+Neighbours (kNN) over a feature-described case library — without forming a
+general rule. A new entity described as [wings=yes, feathers=yes, beak=yes,
+flies=yes, size=medium] is correctly classified as bird by three nearest
+neighbours (all birds at Hamming distance 1). A new entity described as
+[wings=no, feathers=no, beak=no, flies=no, size=large] is correctly classified
+as mammal by three nearest neighbours. Both labels are correct without any
+inductive generalisation. Pass criterion met.
+
+
+INTRODUCTION
+
+Transductive reasoning classifies a specific new case by direct comparison to
+known cases, without first forming a general rule. It is contrasted with
+inductive reasoning (Rung 2), which generalises from cases to a rule applicable
+to all future cases. Transduction reasons from the particular to the particular.
+
+The canonical transductive algorithm is k-Nearest Neighbours (kNN): measure the
+distance from the new case to all known cases, select the k closest, and vote
+on the label. No rule is extracted; the classification lives only in the
+comparison.
+
+
+BACKGROUND
+
+Transductive inference was distinguished from inductive inference by Vapnik
+(1998) in the context of statistical learning theory. kNN was introduced by
+Fix and Hodges (1951) and remains one of the most widely used classification
+algorithms.
+
+The glass-box property of Mentova's kNN implementation is that the justification
+names the k nearest neighbours, their distances, and the voted label — making
+every classification decision auditable.
+
+
+METHOD
+
+A new module, src/mentova/transductive.pl, implements:
+
+    mentova_transduce(+Query, -Label, -Justification)
+
+The module stores seven labelled cases covering birds, mammals, and insects,
+described by five binary features: wings, feathers, beak, flies, size.
+
+Distance is Hamming distance: the count of features that differ between the
+new point and a known case.
+
+The classify(Features, K) query:
+  1. Computes Hamming distance from the new features to all known cases.
+  2. Sorts by distance, takes the K nearest.
+  3. Votes on the label: majority wins.
+  4. Returns the label with a justification listing all K neighbours and distances.
+
+Top-level clause:
+
+    mentova_query(transductive, TransQuery, answer(Label, Just)) :-
+        mentova_transduce(TransQuery, Label, Just).
+
+
+DEMONSTRATION
+
+Query 1 — new point: [wings=yes, feathers=yes, beak=yes, flies=yes, size=medium], K=3:
+
+    ?- mentova_query(transductive,
+                     classify([wings=yes,feathers=yes,beak=yes,flies=yes,size=medium], 3), R).
+    R = answer(bird, just(knn(k(3),
+                              neighbours([1-bird-c1, 1-bird-c2, 1-bird-c7]),
+                              voted(bird))))
+
+    Three nearest neighbours: c1 (bird, dist=1), c2 (bird, dist=1), c7 (bird, dist=1).
+    Vote: bird (3-0). Label: bird. Correct.
+
+Query 2 — new point: [wings=no, feathers=no, beak=no, flies=no, size=large], K=3:
+
+    ?- mentova_query(transductive,
+                     classify([wings=no,feathers=no,beak=no,flies=no,size=large], 3), R).
+    R = answer(mammal, just(knn(k(3),
+                               neighbours([0-mammal-c4, 1-mammal-c3, 1-mammal-c6]),
+                               voted(mammal))))
+
+    Nearest neighbour: c4 (mammal, dist=0 — exact match).
+    Three nearest: all mammals. Vote: mammal (3-0). Label: mammal. Correct.
+
+In both cases, no rule was formed. The classification derives entirely from
+the similarity of the new point to known labelled cases.
+
+
+RESULTS
+
+Both test queries return correct labels (bird and mammal respectively) using
+k=3 nearest neighbours. The justification names each neighbour, its case ID,
+its distance, and the voted outcome. No general rule is extracted.
+
+Pass criterion met: label is correct without forming a general rule.
+
+
+SIGNIFICANCE
+
+Rung 10 gives Mentova a non-generalising classification mode. Some problems
+are better solved by case comparison than by rule induction: when the rule
+is complex, when the training set is small, or when the goal is to classify
+only a specific new point (not all future points).
+
+The glass-box justification of kNN makes it possible for a human to inspect
+which known cases drove the classification and to override the result by
+providing additional known cases or adjusting K.
+
+
+HONEST LIMITATIONS
+
+The Hamming distance treats all features equally. A weighted version (e.g.
+giving beak=yes more weight than size=medium for bird classification) would
+require feature weights that must be learned or supplied externally.
+
+The known case library is small (seven cases) and hand-authored. With a
+larger case library, kNN tends to improve; with a tiny one, ties and
+edge effects are common.
+
+Ties in voting are broken arbitrarily by the order of case enumeration.
+A principled tie-breaking rule (e.g., nearest single neighbour) would be
+more reliable.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(transductive, \
+              classify([wings=yes,feathers=yes,beak=yes,flies=yes,size=medium],3), R1), \
+            write(R1), nl, \
+            mentova_query(transductive, \
+              classify([wings=no,feathers=no,beak=no,flies=no,size=large],3), R2), \
+            write(R2), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Vapnik, V. N. (1998). Statistical Learning Theory. Wiley.
+
+Fix, E., & Hodges, J. L. (1951). Discriminatory Analysis, Nonparametric Discrimination:
+Consistency Properties. USAF School of Aviation Medicine Technical Report 4.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

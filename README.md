@@ -37,7 +37,45 @@ The birth sequence (Rungs 1-9) is the minimum viable Mentova.
 | 7 | Statistical | ✅ Accomplished |
 | 8 | Analogical | ✅ Accomplished |
 | 9 | Relational | ✅ Accomplished |
-| 10–48 | Knowledge-representation, Agentic, Social/Normative | Pending |
+| 10 | Transductive | ✅ Accomplished |
+| 11 | Commonsense | Pending |
+| 12 | Logical | Pending |
+| 13 | Formal | Pending |
+| 14 | Mathematical | Pending |
+| 15 | Fuzzy | Pending |
+| 16 | Qualitative | Pending |
+| 17 | Non-monotonic (defeasible) | Pending |
+| 18 | Paraconsistent | Pending |
+| 19 | Counterfactual | Pending |
+| 20 | Hypothetical | Pending |
+| 21 | Spatial | Pending |
+| 22 | Diagrammatic | Pending |
+| 23 | Temporal | Pending |
+| 24 | Case-based | Pending |
+| 25 | Constraint-based | Pending |
+| 26 | Scientific | Pending |
+| 27 | System | Pending |
+| 28 | Model-based | Pending |
+| 29 | Heuristic | Pending |
+| 30 | Critical | Pending |
+| 31 | Dialectical | Pending |
+| 32 | Metacognitive | Pending |
+| 33 | Modal | Pending |
+| 34 | Epistemic | Pending |
+| 35 | Deontic | Pending |
+| 36 | Procedural | Pending |
+| 37 | Symbolic | Pending |
+| 38 | Practical | Pending |
+| 39 | Teleological | Pending |
+| 40 | Strategic | Pending |
+| 41 | Narrative | Pending |
+| 42 | Social | Pending |
+| 43 | Intuitive | Pending |
+| 44 | Emotional | Pending |
+| 45 | Motivational | Pending |
+| 46 | Informal | Pending |
+| 47 | Legal | Pending |
+| 48 | Moral | Pending |
 
 ## Platform dependency
 

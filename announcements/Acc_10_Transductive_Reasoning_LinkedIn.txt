@@ -1,0 +1,51 @@
+Mentova now classifies without generalising. Rung 10 of 48 is accomplished.
+
+There are two ways to classify something you have not seen before.
+
+The first way is to induce a rule from past cases and apply it: "all animals with feathers and wings are birds — this new thing has feathers and wings — therefore it is a bird." That is inductive reasoning. Mentova accomplished that at Rung 2.
+
+The second way is to skip the rule entirely. Find the most similar things you already know about. Let them vote. That is transductive reasoning — from the particular to the particular, with no generalisation in between.
+
+Rung 10 gives Mentova k-Nearest Neighbours.
+
+Describe a new entity: wings=yes, feathers=yes, beak=yes, flies=yes, size=medium. Ask Mentova what it is.
+
+  answer(bird, just(knn(k(3),
+                        neighbours([1-bird-c1, 1-bird-c2, 1-bird-c7]),
+                        voted(bird))))
+
+Three nearest known cases: c1, c2, c7. All birds. Distance from the new point: 1 feature difference each. Vote: 3 to 0 for bird. Classification: bird.
+
+No rule was formed. The label comes entirely from similarity to known cases.
+
+Now try: wings=no, feathers=no, beak=no, flies=no, size=large.
+
+  answer(mammal, just(knn(k(3),
+                          neighbours([0-mammal-c4, 1-mammal-c3, 1-mammal-c6]),
+                          voted(mammal))))
+
+c4 is an exact match (distance 0). The next two nearest are also mammals. Vote: 3 to 0. Label: mammal.
+
+Every classification shows:
+  — k (the neighbourhood size chosen)
+  — Each neighbour with its case ID and Hamming distance
+  — The voted label
+
+A human can read the justification, spot a neighbour that seems wrong, add a corrective case to the library, and re-query. No retraining. No weights to adjust. Just add a case.
+
+This is the difference between a glass-box classifier and a black-box one.
+
+Transductive reasoning is useful when:
+  — The rule is too complex to induce reliably
+  — You only need to classify this specific new point
+  — The case library is more reliable than any rule you could extract
+  — You want to show the classification evidence to a human reviewer
+
+Rung 2 induced a rule from cases. Rung 10 classifies without forming one. Both modes are available in Mentova. The right tool depends on the task.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
