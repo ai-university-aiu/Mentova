@@ -48,13 +48,13 @@ The birth sequence (Rungs 1-9) is the minimum viable Mentova.
 | 18 | Paraconsistent | ✅ Accomplished |
 | 19 | Counterfactual | ✅ Accomplished |
 | 20 | Hypothetical | ✅ Accomplished |
-| 21 | Spatial | Pending |
-| 22 | Diagrammatic | Pending |
-| 23 | Temporal | Pending |
-| 24 | Case-based | Pending |
-| 25 | Constraint-based | Pending |
-| 26 | Scientific | Pending |
-| 27 | System | Pending |
+| 21 | Spatial | ✅ Accomplished |
+| 22 | Diagrammatic | ✅ Accomplished |
+| 23 | Temporal | ✅ Accomplished |
+| 24 | Case-based | ✅ Accomplished |
+| 25 | Constraint-based | ✅ Accomplished |
+| 26 | Scientific | ✅ Accomplished |
+| 27 | System | ✅ Accomplished |
 | 28 | Model-based | Pending |
 | 29 | Heuristic | Pending |
 | 30 | Critical | Pending |

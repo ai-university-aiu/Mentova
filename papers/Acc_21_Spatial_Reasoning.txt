@@ -1,0 +1,106 @@
+MENTOVA'S SPATIAL REASONING
+
+Accomplishment Record Acc_21
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 21 of Mentova's 48-rung reasoning ladder: spatial reasoning.
+Mentova resolves containment and position using reference frames. The cat is on
+the mat; the mat is in the kitchen; the kitchen is in the house. Mentova returns
+the full containment chain [cat, mat, kitchen, house] and confirms that the cat
+is in the house transitively. Pass criterion met: transitive location correct.
+
+
+INTRODUCTION
+
+Spatial reasoning requires resolving where entities are located relative to
+reference frames. The classic challenge is transitive containment: if the cat
+is on the mat and the mat is in the kitchen, where is the cat? Rung 21 equips
+Mentova with a spatial containment engine that traverses nested reference frames.
+
+
+BACKGROUND
+
+Spatial reasoning has been studied in AI since early work on scene understanding.
+The Region Connection Calculus (Randell et al., 1992) and other qualitative spatial
+formalisms provide algebras over spatial relations. Mentova's implementation uses
+a simpler but transparent in/on containment hierarchy with transitive closure.
+
+
+METHOD
+
+A new module, src/mentova/spatial.pl, implements:
+
+    mentova_spatial(+Query, -Result, -Justification)
+
+Facts: in(X,Y), on(X,Y), near(X,Y) — direct spatial relations.
+
+Supported queries:
+    chain(X)           full containment chain from X to root
+    in_trans(X, Y)     is X in Y transitively? (with chain)
+    where_is(X)        ultimate container of X
+    on_top_of(Y)       what is on Y?
+    near(X, Y)         proximity check
+
+
+DEMONSTRATION
+
+    ?- mentova_query(spatial, chain(cat), R).
+    R = answer(chain(cat, [cat, mat, kitchen, house]), ...)
+
+    cat on mat in kitchen in house. Full chain returned.
+
+    ?- mentova_query(spatial, in_trans(cat, house), R).
+    R = answer(yes, just(transitive_in(cat, house, yes, chain([cat, mat, kitchen, house]))))
+
+    Cat is in house (transitively). Chain shown.
+
+
+RESULTS
+
+Both test queries return correct spatial answers with full chain justification.
+Pass criterion met: transitive location correct (cat on mat in kitchen).
+
+
+SIGNIFICANCE
+
+Spatial reasoning is essential for robot navigation, scene understanding, and
+natural language queries about location. The glass-box chain justification shows
+every containment step.
+
+
+HONEST LIMITATIONS
+
+The containment model is strictly hierarchical (tree structure). It does not handle
+partial overlap, regions, or metric distances. The reference frames are static.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(spatial, chain(cat), R1), write(R1), nl, \
+            mentova_query(spatial, in_trans(cat,house), R2), write(R2), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Randell, D. A., Cui, Z., & Cohn, A. G. (1992). A spatial logic based on regions and connection.
+KR 1992.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

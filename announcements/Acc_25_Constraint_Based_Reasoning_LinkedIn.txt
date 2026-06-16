@@ -1,0 +1,42 @@
+Mentova now solves constraint puzzles. Rung 25 of 48 is accomplished.
+
+Three owners. Three pets. Three rules.
+  — alice does not own the cat.
+  — bob owns the dog.
+  — carol does not own the dog.
+
+Who owns the fish?
+
+This is a Zebra-style puzzle — a constraint satisfaction problem. The solution must satisfy all three rules simultaneously. There is exactly one assignment that does.
+
+Rung 25 gives Mentova constraint-based reasoning.
+
+  answer([alice-fish, bob-dog, carol-cat],
+         just(constraint_solve(puzzle(zebra_lite),
+                               steps([
+                                 step(1, 'bob owns dog', constraint(bob,owns,dog)),
+                                 step(2, 'alice not owns cat', constraint(alice,not_owns,cat)),
+                                 step(3, 'carol not owns dog', constraint(carol,not_owns,dog)),
+                                 step(4, 'alice gets fish', deduction(alice,fish,'not cat, not dog (taken by bob)')),
+                                 step(5, 'carol gets cat', deduction(carol,cat,'not dog, fish taken by alice'))
+                               ]),
+                               solution([alice-fish, bob-dog, carol-cat]))))
+
+The unique solution: alice-fish, bob-dog, carol-cat. Five deduction steps show exactly how each assignment was forced by the constraints.
+
+Step 1: bob gets dog — that is given directly.
+Step 2: alice cannot have cat — that is given directly.
+Step 3: carol cannot have dog — that is given directly.
+Step 4: alice must get fish — dog is taken (bob), cat is forbidden (alice). Only fish remains.
+Step 5: carol gets cat — dog is taken (bob), fish is taken (alice). Only cat remains.
+
+Deduction, not enumeration. The justification shows the reasoning, not just the answer.
+
+Constraint-based reasoning is used in scheduling, configuration, planning, and all domains where multiple requirements must be simultaneously satisfied. The Zebra puzzle is the classic demonstration, and Mentova now solves it with deduction shown.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

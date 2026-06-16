@@ -1,0 +1,30 @@
+Rung 27 accomplished: System Reasoning — Mentova now reasons about how parts interact to produce whole-system behavior.
+
+Ask Mentova what a bicycle is made of:
+
+    Query: parts(bicycle)
+    Answer: [wheel-rolls, frame-supports, pedal-drives, chain-transmits, brake-stops, handlebar-steers]
+    Justification: system_parts(bicycle, [...])
+
+Then ask what happens when the chain fails:
+
+    Query: if_fails(bicycle, chain)
+    Answer: drivetrain stops, pedaling has no effect, bicycle cannot move under power
+    Justification: chain role is transmit, failure cascades to pedal-drives, motion lost
+
+And ask what behavior emerges from all those parts working together:
+
+    Query: behavior(bicycle)
+    Answer: enables human-powered locomotion via mechanical force transmission
+    Justification: wheel(rolls) + pedal(drives) + chain(transmits) + frame(supports) → locomotion
+
+This is Rung 27 of 48 — System Reasoning: the ability to decompose a whole into its parts, assign roles to each, identify failure cascades, and synthesise emergent behavior from component interactions.
+
+Twenty-seven reasoning types in. Every answer still glass-box — no weights, no embeddings, no hidden layers. Just structured knowledge, explicit roles, and readable justification chains.
+
+The birth sequence is long complete. Mentova is now deep into the Knowledge-Representation tier, covering the landscape between logic and the world.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

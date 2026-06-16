@@ -1,0 +1,31 @@
+Mentova now knows where things are. Rung 21 of 48 is accomplished.
+
+The cat is on the mat. The mat is in the kitchen. The kitchen is in the house.
+
+Where is the cat?
+
+For a human, this is trivial. For a reasoning system, it requires transitive containment resolution — following a chain of in/on relations until you reach a root container.
+
+Rung 21 gives Mentova spatial reasoning with reference frames.
+
+Ask where the cat is:
+
+  answer(chain(cat, [cat, mat, kitchen, house]),
+         just(containment_chain(cat, [cat, mat, kitchen, house])))
+
+The full containment chain: cat → mat → kitchen → house. Every step named.
+
+Ask whether the cat is in the house:
+
+  answer(yes, just(transitive_in(cat, house, yes, chain([cat, mat, kitchen, house]))))
+
+Yes — transitively. The chain that proves it is shown.
+
+Spatial reasoning is essential for robot navigation, scene understanding, and natural language queries about location. "Where did I leave my keys?" requires this kind of containment resolution.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

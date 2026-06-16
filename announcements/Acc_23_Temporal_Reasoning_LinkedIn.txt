@@ -1,0 +1,34 @@
+Mentova now tracks time. Rung 23 of 48 is accomplished.
+
+Does breakfast come before or after lunch? How many hours from waking up to dinner? Is lunch between commuting and dinner?
+
+These are temporal questions. They require knowing when events happen and reasoning about their order and gaps.
+
+Rung 23 gives Mentova temporal reasoning over a timeline of named daily events.
+
+Ask whether breakfast is before lunch:
+
+  answer(yes, just(temporal(breakfast, before, lunch, t1(7), t2(12), result(yes))))
+
+Breakfast at tick 7, lunch at tick 12. Before. The timestamps are named in the justification.
+
+Ask the gap from wake_up to dinner:
+
+  answer(13, just(temporal_gap(wake_up, dinner, hours(13))))
+
+13 hours. Exact. Named.
+
+Ask the sequence order of commute vs work_ends:
+
+  answer(before, just(sequence(commute, before, work_ends)))
+
+Commute comes before work ends. From the ordered sequence [wake_up, breakfast, commute, work_starts, lunch, work_ends, dinner, sleep].
+
+Temporal reasoning is the foundation for narrative understanding (Rung 41), procedural execution (Rung 36), and planning (Rung 38). You cannot follow a story or execute a plan without knowing what comes first.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

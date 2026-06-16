@@ -1,0 +1,98 @@
+MENTOVA'S SCIENTIFIC REASONING
+
+Accomplishment Record Acc_26
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 26 of Mentova's 48-rung reasoning ladder: scientific reasoning.
+Mentova implements a hypothesis discovery loop: propose a hypothesis, test it against
+the observation table, and score it. The hypothesis "most canary observations show
+yellow colour" is proposed, tested against 50 observations (47 yellow, 3 green),
+and scored 0.94 — graded confirmed. Pass criterion met: hypothesis proposed, tested,
+and scored.
+
+
+INTRODUCTION
+
+Scientific reasoning involves forming a hypothesis, collecting or consulting evidence,
+and evaluating the hypothesis against that evidence. Rung 26 implements this discovery
+loop in Mentova using the Small-World observation table.
+
+
+BACKGROUND
+
+The hypothetico-deductive method (Popper, 1934) is the canonical scientific method:
+propose a hypothesis, deduce predictions, test predictions against observation.
+Mentova's implementation uses inductive scoring (evidence coverage) rather than
+Popperian falsification, which is appropriate for the small-observation-table setting.
+
+
+METHOD
+
+A new module, src/mentova/scientific.pl, implements:
+
+    mentova_scientific(+Query, -Result, -Justification)
+
+Hypothesis templates: dominant_colour, rarely_flies, mostly_red, always_swims.
+Test: aggregate observation counts and compute coverage score.
+Grade: confirmed (≥0.8), supported (≥0.6), weakly_supported (≥0.4), not_supported (<0.4).
+
+
+DEMONSTRATION
+
+    ?- mentova_query(scientific, test_hypothesis(dominant_colour(canary,yellow)), R).
+    R = answer(result(0.94, confirmed, evidence(canary,yellow,47,of(50))),
+               just(scientific_test(..., score(0.94), grade(confirmed))))
+
+    47/50 = 0.94. Grade: confirmed.
+
+
+RESULTS
+
+Hypothesis scored 0.94 (confirmed). Evidence: 47 yellow observations out of 50.
+Pass criterion met: hypothesis proposed, tested, and scored.
+
+
+SIGNIFICANCE
+
+Scientific reasoning closes the loop between knowledge acquisition (induction) and
+knowledge evaluation (testing). It is the mechanism by which Mentova's knowledge
+base can be expanded and validated empirically.
+
+
+HONEST LIMITATIONS
+
+The scoring function is a simple coverage ratio, not a likelihood ratio or Bayesian
+posterior. A statistically rigorous test would use chi-squared or Fisher's exact test.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(scientific, test_hypothesis(dominant_colour(canary,yellow)), R), write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Popper, K. R. (1934/1959). The Logic of Scientific Discovery. Hutchinson.
+
+Langley, P., et al. (1987). Scientific Discovery: Computational Explorations of the
+Creative Process. MIT Press.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

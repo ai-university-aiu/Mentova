@@ -1,0 +1,37 @@
+Mentova now learns from past cases. Rung 24 of 48 is accomplished.
+
+You have a flat tyre. You have the tools. What do you do?
+
+If you have fixed flat tyres before, the answer is obvious: change it. You are not deriving the solution from first principles — you are remembering a similar past situation and adapting the solution.
+
+That is case-based reasoning. Rung 24 gives Mentova this mode.
+
+A past case library stores eight vehicle and survival problems with their solutions and feature descriptions. When a new problem arrives, Mentova finds the most similar past case by feature matching and returns its solution.
+
+Ask Mentova what to do with [problem=flat, vehicle=car, tools=yes]:
+
+  answer(change_tyre, just(cbr(problem([problem=flat,vehicle=car,tools=yes]),
+                               retrieved(c1, 3),
+                               solution(change_tyre),
+                               cycle(retrieve_reuse))))
+
+Case c1 matched. Similarity score: 3 out of 3 features match. Solution: change_tyre. Retrieved and reused.
+
+What if you have no tools?
+
+  answer(call_service, just(cbr(..., retrieved(c2, 2), solution(call_service), ...)))
+
+Different case, different solution. Tools=no means call the service, not change it yourself.
+
+The same problem type, different context, different solution. CBR handles this automatically by matching all features, not just one.
+
+Case-based reasoning is how human experts work in domains where rules are hard to specify but experience is rich. A doctor recognises a symptom pattern from a previous patient. A mechanic recognises a failure mode from a previous repair. Experience as a reasoning resource.
+
+Mentova now has that resource.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

@@ -1,0 +1,98 @@
+MENTOVA'S TEMPORAL REASONING
+
+Accomplishment Record Acc_23
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 23 of Mentova's 48-rung reasoning ladder: temporal reasoning.
+Mentova answers ordering and duration questions over a timeline of daily events.
+Breakfast (tick 7) is before lunch (tick 12); the gap from wake_up (tick 6) to
+dinner (tick 19) is 13 hours; lunch is between commute and dinner in the sequence.
+All before-and-after answers are correct. Pass criterion met.
+
+
+INTRODUCTION
+
+Temporal reasoning requires representing when events happen and answering questions
+about their order, duration, and relative timing. Rung 23 equips Mentova with a
+timeline of named daily events and a set of temporal predicates.
+
+
+BACKGROUND
+
+Allen's interval algebra (1983) provides a formal framework for temporal reasoning
+over intervals. Mentova uses a simpler point-based timeline (events at timestamps)
+sufficient for the ordered-sequence pass criterion.
+
+
+METHOD
+
+A new module, src/mentova/temporal.pl, implements:
+
+    mentova_temporal(+Query, -Result, -Justification)
+
+Eight daily events with timestamps (6-22) and five with durations.
+
+Supported queries: before, after, between, gap, duration, when, sequence_order, window.
+
+
+DEMONSTRATION
+
+    ?- mentova_query(temporal, before(breakfast, lunch), R).
+    R = answer(yes, just(temporal(breakfast, before, lunch, t1(7), t2(12), result(yes))))
+
+    Breakfast at tick 7 is before lunch at tick 12.
+
+    ?- mentova_query(temporal, gap(wake_up, dinner), R).
+    R = answer(13, just(temporal_gap(wake_up, dinner, hours(13))))
+
+    13 hours from wake_up to dinner.
+
+
+RESULTS
+
+All temporal queries return correct answers with timestamps named in justifications.
+Pass criterion met: before-and-after is correct.
+
+
+SIGNIFICANCE
+
+Temporal reasoning is prerequisite for narrative reasoning (Rung 41), procedural
+reasoning (Rung 36), and planning (Rung 38). Events must be ordered before
+narratives can be followed or plans evaluated.
+
+
+HONEST LIMITATIONS
+
+Point-based timeline does not handle intervals, overlapping events, or temporal
+uncertainty. Allen's full interval algebra would be needed for richer temporal queries.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(temporal, before(breakfast,lunch), R1), write(R1), nl, \
+            mentova_query(temporal, gap(wake_up,dinner), R2), write(R2), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Allen, J. F. (1983). Maintaining knowledge about temporal intervals. CACM, 26(11), 832-843.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

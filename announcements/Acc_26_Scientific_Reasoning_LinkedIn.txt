@@ -1,0 +1,38 @@
+Mentova now does science. Rung 26 of 48 is accomplished.
+
+Science is not just collecting data. It is forming a hypothesis, testing it against data, and scoring the result. The hypothesis either survives the test or it does not.
+
+Rung 26 gives Mentova a scientific discovery loop.
+
+Hypothesis: most observations of canaries show yellow colour.
+
+Test: look at the observation table. 47 yellow observations. 3 green. Total: 50.
+
+Score: 47/50 = 0.94. Grade: confirmed.
+
+  answer(result(0.94, confirmed, evidence(canary,yellow,47,of(50))),
+         just(scientific_test(pattern(dominant_colour(canary,yellow)),
+                               score(0.94), grade(confirmed))))
+
+The hypothesis is confirmed with a score of 0.94. Evidence is named: 47 yellow observations out of 50.
+
+Now test: canaries swim.
+
+Score: near zero. Grade: not_supported.
+
+The discovery loop:
+  1. Propose a hypothesis from a template
+  2. Test against the observation table
+  3. Score by coverage (how well the data supports the hypothesis)
+  4. Grade: confirmed (≥0.80), supported (≥0.60), weakly_supported (≥0.40), not_supported (<0.40)
+
+This is the scientific method in a glass box. Every step named. Every score justified by raw observation counts.
+
+Scientific reasoning is built on what came before: the observation table (Rung 7), statistical analysis (Rung 7), and hypothetical reasoning (Rung 20). Now those capabilities come together in a complete discovery loop.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

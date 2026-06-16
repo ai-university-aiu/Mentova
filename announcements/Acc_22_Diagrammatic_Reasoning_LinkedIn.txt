@@ -1,0 +1,33 @@
+Mentova now reads grids and interprets spatial patterns. Rung 22 of 48 is accomplished.
+
+Not all knowledge is propositional. Sometimes knowledge is laid out in space — in a grid, a map, a matrix. Diagrammatic reasoning is the ability to read that spatial layout and answer questions about it.
+
+Rung 22 gives Mentova a grid reader.
+
+Given the cross-shaped grid:
+  o x o
+  x x x
+  o x o
+
+Ask what is at the centre:
+
+  answer(x, just(diagrammatic(cross, centre_cell(x))))
+
+The centre cell is x. Correct.
+
+Ask how many x symbols appear:
+
+  answer(5, just(diagrammatic(cross, symbol(x), count(5))))
+
+Five. One at centre, four arms. Correct.
+
+The grid is named, stored, and readable. The pattern is interpreted. The answer is justified.
+
+This is the foundation for reasoning about matrices, maps, and visual puzzles — any domain where knowledge has spatial structure.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

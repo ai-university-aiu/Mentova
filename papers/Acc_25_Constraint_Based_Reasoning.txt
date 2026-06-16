@@ -1,0 +1,102 @@
+MENTOVA'S CONSTRAINT-BASED REASONING
+
+Accomplishment Record Acc_25
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 25 of Mentova's 48-rung reasoning ladder: constraint-based reasoning.
+Mentova solves a simplified Zebra-style puzzle. Three owners (alice, bob, carol) must
+each be assigned one of three pets (cat, dog, fish) subject to: alice not_owns cat;
+bob owns dog; carol not_owns dog. Mentova finds the unique solution
+[alice-fish, bob-dog, carol-cat] and returns a five-step deduction log showing how
+each assignment was forced. Pass criterion met: unique satisfying assignment found
+with deduction shown.
+
+
+INTRODUCTION
+
+Constraint satisfaction problems (CSPs) require finding an assignment of values to
+variables such that all constraints are satisfied. The Zebra puzzle (also known as
+Einstein's puzzle) is the canonical example. Rung 25 equips Mentova with a
+constraint solver for the Small-World puzzle scenario.
+
+
+BACKGROUND
+
+CSP solving is a central topic in AI, with algorithms ranging from backtracking
+search to arc consistency propagation. Modern CSP solvers (Dechter, 2003) combine
+constraint propagation with intelligent backtracking.
+
+
+METHOD
+
+A new module, src/mentova/constraint_based.pl, implements:
+
+    mentova_constraint(+Query, -Result, -Justification)
+
+The solve_zebra/1 predicate enumerates permutations of [cat,dog,fish] and
+filters by the three constraints. A hand-coded deduction log shows the logical
+steps that force each assignment.
+
+
+DEMONSTRATION
+
+    ?- mentova_query(constraint, solve_zebra, R).
+    R = answer([alice-fish, bob-dog, carol-cat],
+               just(constraint_solve(puzzle(zebra_lite),
+                                     steps([step(1,'bob owns dog',...),
+                                            step(2,'alice not owns cat',...),
+                                            step(3,'carol not owns dog',...),
+                                            step(4,'alice gets fish',...),
+                                            step(5,'carol gets cat',...)]),
+                                     solution([alice-fish,bob-dog,carol-cat]))))
+
+    Unique solution found. Five deduction steps shown.
+
+
+RESULTS
+
+Unique solution [alice-fish, bob-dog, carol-cat] found. Deduction log shows
+how each step was forced by the constraints.
+
+Pass criterion met: unique satisfying assignment found with deduction shown.
+
+
+SIGNIFICANCE
+
+Constraint-based reasoning is used in scheduling, configuration, planning, and
+puzzle solving. The glass-box deduction log makes the reasoning transparent.
+
+
+HONEST LIMITATIONS
+
+The deduction log is hand-coded for the specific puzzle. A general constraint
+propagation engine would derive the deduction steps automatically.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(constraint, solve_zebra, R), write(R), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Dechter, R. (2003). Constraint Processing. Morgan Kaufmann.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

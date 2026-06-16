@@ -1,0 +1,99 @@
+MENTOVA'S DIAGRAMMATIC REASONING
+
+Accomplishment Record Acc_22
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 22 of Mentova's 48-rung reasoning ladder: diagrammatic reasoning.
+Mentova reads a small grid layout and correctly interprets spatial patterns. For a
+3×3 cross-shaped grid, Mentova correctly counts 5 occurrences of the symbol x,
+identifies x as the centre cell, and characterises the grid as a cross pattern.
+Pass criterion met: spatial pattern correctly interpreted.
+
+
+INTRODUCTION
+
+Diagrammatic reasoning is the ability to read, interpret, and reason about spatial
+layouts, grids, and diagrams without reducing them to purely symbolic representations.
+Rung 22 gives Mentova a grid reader that counts symbols, identifies positions, finds
+patterns, and locates centre cells.
+
+
+BACKGROUND
+
+Diagrammatic reasoning has been studied in AI since the work of Larkin and Simon
+(1987) on why a diagram is worth 10,000 words. Grid-based reasoning is used in
+visual puzzles, matrix problems, and robot map reading.
+
+
+METHOD
+
+A new module, src/mentova/diagrammatic.pl, implements:
+
+    mentova_diagrammatic(+Query, -Result, -Justification)
+
+Supported queries: read_cell, count, find, dimensions, diagonal, centre, pattern.
+
+Named grids stored: example (4×4), simple3x3, cross (3×3).
+
+
+DEMONSTRATION
+
+    ?- mentova_query(diagrammatic, centre(cross), R).
+    R = answer(x, just(diagrammatic(cross, centre_cell(x))))
+
+    The centre cell of the 3×3 cross grid is x.
+
+    ?- mentova_query(diagrammatic, count(cross, x), R).
+    R = answer(5, just(diagrammatic(cross, symbol(x), count(5))))
+
+    Five x symbols in the cross grid.
+
+
+RESULTS
+
+Centre cell correctly identified as x. Symbol count correctly computed as 5.
+Pass criterion met: spatial pattern correctly interpreted.
+
+
+SIGNIFICANCE
+
+Diagrammatic reasoning enables Mentova to work with grid-based puzzles, maps,
+and visual representations, extending beyond purely symbolic knowledge.
+
+
+HONEST LIMITATIONS
+
+Only named grids stored in the knowledge base can be read. Dynamic grid input
+and complex visual parsing are not yet implemented.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(diagrammatic, centre(cross), R1), write(R1), nl, \
+            mentova_query(diagrammatic, count(cross,x), R2), write(R2), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Larkin, J. H., & Simon, H. A. (1987). Why a diagram is (sometimes) worth ten thousand words.
+Cognitive Science, 11(1), 65-100.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
