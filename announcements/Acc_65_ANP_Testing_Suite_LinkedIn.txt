@@ -1,0 +1,61 @@
+Mentova Has a Decentralized W3C DID and Participates in the Agent Network Protocol — All Five ACs Pass (Acc_65)
+
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+ANP (Agent Network Protocol) — the peer-to-peer decentralized agent discovery standard using W3C DIDs — has been promoted from the research track to a production work package in PrologAI v13 (PR 48). Mentova now verifies its ANP participation with five passing acceptance criteria.
+
+WHAT WAS VERIFIED (run live in Prolog at runtime):
+
+DID stability: pai_anp_did(DID1), pai_anp_did(DID2).
+Result: DID1 = DID2 = 'did:web:ccai2'. Stable; begins with 'did:web:'. PASS.
+
+Agent description: pai_anp_agent_description(Desc).
+Result: description listing DID, four protocol endpoints, key fingerprint — no Lattice contents. PASS.
+
+Sign and verify: pai_anp_send('did:web:peer-mind', message(...), Envelope), pai_anp_verify(Envelope, R).
+Result: R = verified. PASS.
+
+Tampered envelope: pai_anp_verify(TamperedEnvelope, R).
+Result: R = failed(signature_mismatch). PASS.
+
+Meta-protocol negotiation: pai_anp_negotiate('did:web:peer-mind', ProtocolSet).
+Result: [protocol(mcp,...), protocol(a2a,...), protocol(acp,...), protocol(anp,...)]. PASS.
+
+AC-PR65-001: PASS. DID = did:web:ccai2; stable and correctly formatted.
+AC-PR65-002: PASS. Agent description complete; DID and four protocols present; no Lattice contents.
+AC-PR65-003: PASS. Signed envelope verifies correctly with the mind's key.
+AC-PR65-004: PASS. Tampered signature rejected — failed(signature_mismatch).
+AC-PR65-005: PASS. All four protocols returned in meta-protocol negotiation.
+
+WHAT ANP MEANS:
+
+Unlike MCP, A2A, and ACP — which all assume the client already knows the agent's endpoint — ANP enables decentralized discovery without a central registry.
+
+Any agent that knows Mentova's hostname can:
+1. Resolve did:web:ccai2 to discover Mentova's capabilities and key.
+2. Query /.well-known/agent-descriptions to find supported protocols.
+3. Choose which protocol to use (MCP, A2A, ACP, or ANP) via meta-protocol negotiation.
+4. Exchange signed messages with verified sender identity.
+
+REJECTION OF TAMPERED MESSAGES IS STRUCTURAL:
+
+The security guarantee is architectural: tampered messages are rejected at the signature verification step, before any content enters any scope. This is not a policy check. It is a structural boundary.
+
+THE FOUR-PROTOCOL INTEGRATION IS COMPLETE:
+
+FR-PR43-004 of the PrologAI Specification predicted: "the gateway's protocol layer SHALL be structured so adding a protocol is registration, not redesign."
+
+ACP and ANP were added by registering two new packs — pack acp and pack anp — without modifying any existing pack. The prediction was correct.
+
+MCP (Acc_63): tool-calling. VERIFIED.
+A2A (Acc_59): task delegation. VERIFIED.
+ACP (Acc_64): REST-based async runs. VERIFIED.
+ANP (Acc_65): decentralized peer discovery with DID identity. VERIFIED.
+
+The cognitive architecture that was born as one transparent deduction (Acc_01) is now a full participant in all four major agent communication standards.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
