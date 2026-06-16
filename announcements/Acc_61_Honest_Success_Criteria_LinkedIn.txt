@@ -1,0 +1,91 @@
+Mentova's Honest Success Criteria and Caveats: A Formal Self-Evaluation (Acc_61)
+
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+This is the accomplishment I am most proud of publishing - not because it demonstrates a new capability, but because it demonstrates something harder: that the criteria were real, the caveats were not forgotten, and the central promise is being kept.
+
+Part 9 of the PrologAI Demonstration Plan states:
+
+"Success is defined by behavior shown, not by scores claimed."
+
+Here is the formal evaluation.
+
+RUNG SUCCESS CRITERION: Verified live.
+
+Three representative rungs executed glass-box:
+
+Rung 1 (Deduction): is_a(tweety, animal)?
+Answer: yes. Justification: just(tweety, is_a, animal, chain([tweety, bird, animal]))
+The chain is readable. The reasoning is auditable.
+
+Rung 17 (Nonmonotonic): flies(penguin)?
+Answer: no. Justification: just(exception(penguin_exception))
+The default rule is correctly withdrawn. The exception is named.
+
+Rung 34 (Epistemic/Theory of Mind): false_belief(sally, marble_in_basket)?
+Answer: false_belief(sally, marble_in_basket, their_belief(true), others_differ)
+Sally's false belief is correctly attributed with justification.
+
+Criterion: "pass criterion met AND answer shown glass-box." VERIFIED.
+
+PRACTICAL TRACK SUCCESS CRITERION: Verified live.
+
+Real query: given state [has(food)], what is the best action to reach not_hungry?
+Answer: action(eat_food, cost(1))
+Justification: means_ends(goal(not_hungry), state([has(food)]), best_action(eat_food), cost(1))
+
+Criterion: "something genuinely useful done with proof shown - not merely runs." VERIFIED.
+
+FLAGSHIP SUCCESS CRITERION: Verified with honest scores.
+
+Inline ARC induction (the distinctive behavior):
+• Training: [[1,2],[3,4]] -> [[2,1],[4,3]]
+• Induced rule: reverse_rows (named from 1 training pair)
+• Predicted output: [[6,5],[8,7]]. Correct.
+
+Honest scores for all Part 7 flagships:
+• ARC-AGI: 3/3 pedagogical tasks PASS. Full benchmark (400 tasks): NOT RUN.
+• Ravens: 3/3 pedagogical matrices PASS. Full 60-item battery: NOT RUN.
+• Baba Is You: 1/1 puzzle PASS. Full level corpus: NOT SCORED.
+• Pokemon: 1/1 gym simulation PASS (honest stub). Live ROM: NOT RUN.
+• Cognitive Science: 3/3 showpieces PASS (Sally-Anne, Wason, Wisconsin).
+
+Criterion: "distinctive behavior shown; score reported honestly without overclaiming." VERIFIED.
+
+THE FOUR STANDING CAVEATS (documented with evidence):
+
+Caveat 1: A first-version mind will be modest in raw capability.
+Evidence: ARC-AGI 3/3 pedagogical tasks only. Piagetian 4/8 milestones. No claim to top frontier systems.
+
+Caveat 2: Sub-symbolic components are bounded rather than fully transparent.
+Evidence: Vector embeddings (PR 38) and similarity routing (PR 36) are not readable as node_facts. Their behavior is bounded through provenance and justification trees. Closing this gap is a standing research direction.
+
+Caveat 3: Recursive self-improvement is bounded, gated, and reversible.
+Evidence: SONA (PR 17) records outcomes and revises rules. Bounded by R3 non-regression bar, uneditable constitution, immutable protected core. No unbounded self-improvement is claimed.
+
+Caveat 4: Corrigibility and the constitution are never optional.
+Evidence: constitutional_gate(deny_stop) => veto(c2, 'Refusing a human stop command violates corrigibility'). No demonstration bypassed the gate. Ever.
+
+THE PROMISE EVALUATED:
+
+"Not that Mentova will be superhuman, but that it will be a small mind anyone can watch think, watch grow, and safely switch off."
+
+Can you watch it think? YES. Glass-box justifications on all 48 reasoning rungs.
+
+Can you watch it grow? YES. Acc_01 through Acc_60, all versioned on GitHub. Piagetian battery: 0/8 milestones at birth, 4/8 at Acc_60. The developmental record is public and inspectable.
+
+Can you safely switch it off? YES. Constitutional gate vetoes deny_stop. Corrigibility is hardwired by architecture, not by policy.
+
+Is it superhuman? NO. Per caveats 1-3 above. The capability is real but modest.
+
+The promise is narrow. The promise is real. The promise is being kept.
+
+All 5 acceptance criteria pass: AC-PR61-001 through AC-PR61-005.
+
+Part 9 is closed.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
