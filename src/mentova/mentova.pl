@@ -119,6 +119,16 @@
 :- use_module(moral).
 % Load the Track A Transparent Reasoning Assistant module so its predicates are available here.
 :- use_module(track_a).
+% Load the game-as-a-body harness so game enrollment and the perceive-reason-act cycle are available.
+:- use_module(game_body).
+% Load the ARC-AGI driver so ARC tasks can be played as game bodies.
+:- use_module(games/arc).
+% Load the Raven's Progressive Matrices driver so RPM tasks can be played as game bodies.
+:- use_module(games/ravens).
+% Load the Baba Is You driver so Baba levels can be played as game bodies.
+:- use_module(games/baba).
+% Load the Pokemon stub driver so the Pokemon emulator interface is registered.
+:- use_module(games/pokemon).
 
 % Import [member/2] from the built-in 'lists' library.
 :- use_module(library(lists), [member/2]).
@@ -212,6 +222,14 @@ mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent,
 mentova_query(track_a, TAQuery, answer(Result, Just)) :-
     % Delegate to the Track A module which handles GO, DO, and cross-scope queries.
     once(mentova_track_a(TAQuery, answer(Result, Just), _)).
+
+% Game harness — perceive-reason-act over enrolled game bodies
+% Define a clause for 'mentova_query' handling game reasoning queries.
+mentova_query(game, game_reason(GameId, QueryType), answer(Action, Just)) :-
+    % Observe the current game state.
+    game_observe(GameId, _Step, Percept),
+    % Apply Mentova's reasoning to the percept and produce an action with justification.
+    game_reason(GameId, Percept, QueryType, Action, Just).
 
 % Rung 48 — moral: multi-framework ethical reasoning
 % Define a clause for 'mentova query': succeed when the following conditions hold.
