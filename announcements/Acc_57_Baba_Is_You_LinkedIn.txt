@@ -1,0 +1,85 @@
+MENTOVA SOLVES BABA IS YOU — THE JEWEL
+
+Baba Is You is a puzzle game with one rule: the rules of the game are objects
+in the game world. They are written as word-blocks. You can push them.
+When they move, the rules change.
+
+Push STOP away from WALL IS [STOP], and walls are no longer stop.
+Walk through what was a wall to reach the flag. Win.
+
+The PrologAI Demonstration Plan calls this "the jewel" - and here is why:
+
+In Baba Is You, rules are word-block positions in a grid.
+They are named. They are readable. They can be changed by moving a block.
+
+In PrologAI, rules are node_facts in the lattice nexus.
+They are named. They are readable. They can be changed with assert/retract.
+
+The mechanics are structurally identical.
+
+Today Mentova solves a Baba Is You puzzle glass-box (Accomplishment Record Acc_57).
+
+The puzzle (6x5 grid):
+
+    Col: 0    1    2    3    4
+    Row 0: .    .   WAL   .    .
+    Row 1: BAB  .   WAL   .   FLA
+    Row 2: .    .   WAL   .    .
+    Row 3: wBA  wIS  wYO   .    .
+    Row 4: wFL  wIS  wWI   .    .
+    Row 5: wWA  wIS  wST   .    .
+
+Active rules (parsed from word-block positions):
+- BABA IS YOU: Baba at (1,0) is the player.
+- FLAG IS WIN: touching flag at (1,4) wins.
+- WALL IS STOP: walls at column 2 block movement.
+
+Problem: Baba cannot cross the column-2 wall barrier to reach the flag.
+
+Mentova's five steps, glass-box:
+
+Step 1 - Parse rules. Scan word-block positions. Three NOUN IS PROP chains found.
+AC-PR57-001: PASS — BABA IS YOU, FLAG IS WIN, WALL IS STOP all parsed.
+
+Step 2 - Identify blocker. WALL IS STOP is active. Column-2 walls have STOP.
+Baba at (1,0) cannot reach flag at (1,4).
+AC-PR57-002: PASS — blocking rule: WALL IS STOP.
+
+Step 3 - Reason about the rule-breaking push. WALL IS STOP chain:
+word(wall)(5,0) - word(is)(5,1) - word(stop)(5,2).
+Push word(stop) from (5,2) to (5,3). IS and STOP become non-adjacent. Chain breaks.
+AC-PR57-003: PASS — push: move word(stop) one column right.
+
+Step 4 - Apply push. Re-parse rules.
+After push: only BABA IS YOU and FLAG IS WIN remain. WALL IS STOP: absent.
+AC-PR57-004: PASS — WALL IS STOP removed.
+
+Step 5 - Find winning path.
+(1,1) -> (1,2) [through wall - no STOP] -> (1,3) -> (1,4) [FLAG - WIN!]
+AC-PR57-005: PASS — winning path found and printed glass-box.
+
+The PrologAI parallel, printed at the end:
+- Baba Is You: push word(stop) block -> WALL IS STOP retracted.
+- PrologAI:    retract(lattice_node_fact(_, _, wall_is_stop, _, _)).
+- Baba Is You: BABA IS YOU governs which tile the player controls.
+- PrologAI:    node_fact(baba, is, you) -> agent identity node_fact.
+- The mechanic is identical: rules are named, readable, writable facts.
+
+This is why the Demonstration Plan calls Baba Is You "the jewel."
+Not because it is the hardest. Because it is the most fitting.
+A puzzle whose mechanic IS the mechanic of the platform solving it.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University)
+Creator of PrologAI and Mentova
+ORCID: 0009-0001-9246-5758
+https://www.linkedin.com/in/d-r-dison/
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+Paper: papers/Acc_57_Baba_Is_You.txt
+Demo: demos/baba_is_you_demo.pl
+
+#PrologAI #Mentova #BabaIsYou #SymbolicAI #RuleRewriting #AIU
+#GlassBoxAI #ExplainableAI #MetaReasoning #PuzzleGames #AIBenchmarks
+#ArtificialIntelligence #NodeFacts #DynamicRules
