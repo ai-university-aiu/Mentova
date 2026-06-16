@@ -1,0 +1,47 @@
+Mentova now chains if-then rules to reach conclusions. Rung 12 of 48 is accomplished.
+
+Ask Mentova whether a canary can fly, given only two starting facts: is_bird(canary) and not_flightless(canary).
+
+  answer(proved, just(prove(can_fly(canary), ...,
+    fired([
+      fired(is_animal(canary),    from([is_bird(canary)])),
+      fired(can_fly(canary),      from([is_bird(canary), not_flightless(canary)])),
+      fired(is_warm_blooded(canary), from([is_bird(canary)])),
+      fired(is_living(canary),    from([is_animal(canary)])),
+      fired(is_predator(canary),  from([can_fly(canary), is_animal(canary)])),
+      fired(needs_water(canary),  from([is_living(canary)]))
+    ]))))
+
+Six rules fired. The goal can_fly(canary) is proved. Every rule that fired is named, and every condition that triggered it is named.
+
+This is forward chaining — the data-driven direction of logical inference. Start from what you know. Fire every rule whose conditions are satisfied. Add the conclusions to what you know. Repeat until nothing new can be derived.
+
+Canary is a bird → canary is an animal.
+Canary is a bird and not flightless → canary can fly.
+Canary can fly and is an animal → canary is a predator.
+Canary is an animal → canary is a living thing.
+Canary is a living thing → canary needs water.
+
+Two starter facts. Six derived conclusions. Every step named.
+
+Now ask whether canary needs water:
+
+  answer(proved, just(prove(needs_water(canary), ...,
+    fired([... same six rules ...])))
+
+Also proved — because the same saturation run that proves can_fly also proves needs_water, through a three-rule chain: is_bird → is_animal → is_living → needs_water.
+
+This is complementary to Rung 1 (backward chaining, goal-directed). Where Rung 1 asks "is this true?" and works back to the facts, Rung 12 asks "what is true?" and works forward from the facts to all consequences.
+
+Together, forward and backward chaining give Mentova the two directions of classical logical inference:
+  — Backward: given a question, trace back to what would make it true
+  — Forward: given what is known, derive everything that follows
+
+The glass-box property holds: every step is named, every condition is named, and every conclusion is attributed to the rules that produced it.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

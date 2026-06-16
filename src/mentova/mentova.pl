@@ -26,6 +26,7 @@
 :- use_module(relational).
 :- use_module(transductive).
 :- use_module(commonsense).
+:- use_module(logical).
 
 :- use_module(library(lists), [member/2]).
 
@@ -77,6 +78,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 12 — logical: forward-chaining rule engine
+mentova_query(logical, LogQuery, answer(Result, Just)) :-
+    mentova_logical(LogQuery, Result, Just).
 
 % Rung 11 — commonsense: answer everyday-knowledge question with provenance
 mentova_query(commonsense, CSQuery, answer(Ans, Just)) :-

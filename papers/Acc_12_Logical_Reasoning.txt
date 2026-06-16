@@ -1,0 +1,175 @@
+MENTOVA'S LOGICAL REASONING
+
+Accomplishment Record Acc_12
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 12 of Mentova's 48-rung reasoning ladder: logical reasoning via
+forward chaining. Mentova saturates a fact set using a set of if-then rules
+until no new conclusions can be derived. Starting from [is_bird(canary),
+not_flightless(canary)], Mentova derives can_fly(canary), is_animal(canary),
+is_living(canary), needs_water(canary), and is_predator(canary) through a chain
+of six rule firings — all reported in the justification. The conclusion follows
+with the rule chain shown. Pass criterion met.
+
+
+INTRODUCTION
+
+Logical reasoning — deriving conclusions from premises by applying rules of
+inference — is the oldest formalised mode of thought. Forward chaining is the
+data-driven variant: start from known facts, fire any rule whose conditions are
+satisfied, add the conclusion to the fact set, and repeat until saturation.
+
+Rung 12 implements a transparent forward-chaining engine in Mentova. Every rule
+firing is recorded, and the justification returned with each answer names every
+rule that fired and the conditions that triggered it.
+
+
+BACKGROUND
+
+Forward chaining was central to early expert systems such as MYCIN (Shortliffe,
+1976) and CLIPS (Giarratano & Riley, 1993). It is also the basis of Datalog
+reasoning and production rule systems.
+
+The key property of Mentova's implementation is glass-box transparency: the
+fired-rule log names every intermediate conclusion and the conditions that
+produced it. A human reviewer can inspect exactly which chain of rules led to
+any conclusion.
+
+
+METHOD
+
+A new module, src/mentova/logical.pl, implements:
+
+    mentova_logical(+Query, -Result, -Justification)
+
+The module stores ten if-then rules in fc_rule/2 form:
+
+    fc_rule(is_animal(X),    [is_bird(X)]).
+    fc_rule(is_living(X),    [is_animal(X)]).
+    fc_rule(can_fly(X),      [is_bird(X), not_flightless(X)]).
+    fc_rule(needs_water(X),  [is_living(X)]).
+    fc_rule(is_predator(X),  [can_fly(X), is_animal(X)]).
+    ... (plus five more)
+
+Forward chaining (fc_iterate/5) repeatedly applies all rules whose conditions
+are satisfied in the current fact set, collecting new conclusions into the set
+until no new conclusions appear.
+
+Query forms:
+
+    chain(InitFacts)         — saturate and return all derived facts + log
+    check(Fact, InitFacts)   — is Fact derivable? yes/no + log
+    prove(Goal, InitFacts)   — proved/not_provable + fired rule log
+
+Top-level clause:
+
+    mentova_query(logical, LogQuery, answer(Result, Just)) :-
+        mentova_logical(LogQuery, Result, Just).
+
+
+DEMONSTRATION
+
+Query: prove can_fly(canary) from [is_bird(canary), not_flightless(canary)]:
+
+    ?- mentova_query(logical,
+                     prove(can_fly(canary), [is_bird(canary), not_flightless(canary)]),
+                     R).
+
+    R = answer(proved, just(prove(can_fly(canary),
+                                  from([is_bird(canary), not_flightless(canary)]),
+                                  result(proved),
+                                  fired([
+                                    fired(is_animal(canary), from([is_bird(canary)])),
+                                    fired(can_fly(canary), from([is_bird(canary), not_flightless(canary)])),
+                                    fired(is_warm_blooded(canary), from([is_bird(canary)])),
+                                    fired(is_living(canary), from([is_animal(canary)])),
+                                    fired(is_predator(canary), from([can_fly(canary), is_animal(canary)])),
+                                    fired(needs_water(canary), from([is_living(canary)]))
+                                  ]))))
+
+    Six rules fired. The rule chain is explicit:
+      1. is_bird(canary) → is_animal(canary)
+      2. is_bird(canary) ∧ not_flightless(canary) → can_fly(canary)
+      3. is_bird(canary) → is_warm_blooded(canary)
+      4. is_animal(canary) → is_living(canary)
+      5. can_fly(canary) ∧ is_animal(canary) → is_predator(canary)
+      6. is_living(canary) → needs_water(canary)
+
+    Goal can_fly(canary) appears in the derived set. Answer: proved.
+
+Query: prove needs_water(canary) from same initial facts:
+
+    Result: proved. The chain passes through is_animal and is_living before
+    reaching needs_water — a three-rule chain through intermediate conclusions.
+
+
+RESULTS
+
+Both test queries return "proved" with the full fired-rule log. The chain from
+initial facts to each conclusion is shown step by step.
+
+Pass criterion met: conclusion follows with rule chain shown.
+
+
+SIGNIFICANCE
+
+Rung 12 gives Mentova data-driven logical inference. Where Rung 1 used backward-
+chaining Prolog unification, Rung 12 uses forward-chaining saturation — the
+complementary direction of logical reasoning.
+
+Together, backward and forward chaining give Mentova:
+  — Backward: answer a specific query by working from goal to facts
+  — Forward: derive all consequences of a fact set by working from facts to conclusions
+
+The forward chain is useful when the consequence space is bounded and you want
+all derivable conclusions, not just an answer to one question.
+
+
+HONEST LIMITATIONS
+
+The forward-chaining engine does not handle negation-as-failure or non-monotonic
+rules in this implementation. Rules with negated conditions require the Rung 17
+(non-monotonic) engine.
+
+The rule base is hand-authored and small. A production forward-chaining system
+would allow dynamic rule assertion and retraction.
+
+Skolemisation of variables is implicit in Prolog — each fc_rule clause creates
+fresh variables for each firing. This is correct but may produce surprising
+results if the same variable appears in multiple rule conclusions.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(logical, prove(can_fly(canary), \
+              [is_bird(canary),not_flightless(canary)]), R1), write(R1), nl, \
+            mentova_query(logical, prove(needs_water(canary), \
+              [is_bird(canary),not_flightless(canary)]), R2), write(R2), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Shortliffe, E. H. (1976). Computer-Based Medical Consultations: MYCIN. Elsevier.
+
+Giarratano, J., & Riley, G. (1993). Expert Systems: Principles and Programming.
+PWS Publishing.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
