@@ -35,6 +35,13 @@
 :- use_module(paraconsistent).
 :- use_module(counterfactual).
 :- use_module(hypothetical).
+:- use_module(spatial).
+:- use_module(diagrammatic).
+:- use_module(temporal).
+:- use_module(case_based).
+:- use_module(constraint_based).
+:- use_module(scientific).
+:- use_module(system_reasoning).
 
 :- use_module(library(lists), [member/2]).
 
@@ -87,6 +94,34 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
 
+% Rung 27 — system: reason about parts and interactions
+mentova_query(system, SysQuery, answer(Result, Just)) :-
+    once(mentova_system(SysQuery, Result, Just)).
+
+% Rung 26 — scientific: form, test, and score a hypothesis
+mentova_query(scientific, SciQuery, answer(Result, Just)) :-
+    once(mentova_scientific(SciQuery, Result, Just)).
+
+% Rung 25 — constraint-based: solve a constraint puzzle
+mentova_query(constraint, ConstraintQuery, answer(Result, Just)) :-
+    mentova_constraint(ConstraintQuery, Result, Just).
+
+% Rung 24 — case-based: solve by adapting similar past case
+mentova_query(case_based, CBRQuery, answer(Result, Just)) :-
+    once(mentova_cbr(CBRQuery, Result, Just)).
+
+% Rung 23 — temporal: ordering and duration questions
+mentova_query(temporal, TempQuery, answer(Result, Just)) :-
+    once(mentova_temporal(TempQuery, Result, Just)).
+
+% Rung 22 — diagrammatic: read a small grid or layout
+mentova_query(diagrammatic, DiagQuery, answer(Result, Just)) :-
+    once(mentova_diagrammatic(DiagQuery, Result, Just)).
+
+% Rung 21 — spatial: containment and position with reference frames
+mentova_query(spatial, SpatialQuery, answer(Result, Just)) :-
+    once(mentova_spatial(SpatialQuery, Result, Just)).
+
 % Rung 20 — hypothetical: explore supposition without asserting it
 mentova_query(hypothetical, HypQuery, answer(Result, Just)) :-
     mentova_hypothetical(HypQuery, Result, Just).
@@ -101,7 +136,7 @@ mentova_query(paraconsistent, ParaQuery, answer(Result, Just)) :-
 
 % Rung 17 — non-monotonic: defeasible default retraction
 mentova_query(nonmonotonic, NMQuery, answer(Result, Just)) :-
-    mentova_defeasible(NMQuery, Result, Just).
+    mentova_defeasible(query(NMQuery), Result, Just).
 
 % Rung 16 — qualitative: predict direction of change
 mentova_query(qualitative, QualQuery, answer(Result, Just)) :-
