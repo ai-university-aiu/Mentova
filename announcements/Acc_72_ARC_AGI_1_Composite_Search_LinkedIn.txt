@@ -1,0 +1,38 @@
+ACCOMPLISHMENT: Acc_72 - What the 383 Failing ARC-AGI-1 Tasks Actually Need
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+The score is still 17 out of 400. That is the honest result, and it is the point.
+
+Acc_71 gave Mentova its first complete run on all 400 ARC-AGI-1 tasks using pure induction and named glass-box rules. 17 tasks solved. 383 remaining.
+
+Acc_72 asks: what do those 383 tasks actually need?
+
+Two things were built and run.
+
+First: a composite rule search. Does chaining two geometric transforms in sequence - rotate then flip, transpose then reverse - solve any of the 383 that a single transform could not? The answer is no. Zero new tasks. That is a real finding. It means the failing tasks are not failures of two-step pixel composition. They need something fundamentally different.
+
+Second: a systematic analysis of every one of those 383 tasks, measuring what kind of transformation each one actually requires.
+
+The results:
+
+- 37.6 percent (144 tasks) require detecting and moving or merging discrete objects. Connected-component analysis. Flood-fill in Prolog.
+
+- 37.3 percent (143 tasks) require conditional recoloring - not "change all reds to blue" but "change this cell based on which object it belongs to or what neighbors it has."
+
+- 26.4 percent (101 tasks) require cropping to the bounding box of the relevant content.
+
+- 27.2 percent (104 tasks) have the same input and output size, no color change, no object count change - and still are not solved. Those need new named rules we have not written yet.
+
+Before Acc_72 the reason for the 383 failures was qualitative: "object-level reasoning required." After Acc_72 it is quantitative. Connected-component analysis is the single capability that would unlock the most tasks. That is what gets built next.
+
+4.25 percent by genuine induction, with an honest evidence-based roadmap for improvement, is a different kind of result than 90 percent by memorizing the corpus.
+
+Mentova repository: https://github.com/ai-university-aiu/Mentova
+
+This is Acc_72.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+ORCID: 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
