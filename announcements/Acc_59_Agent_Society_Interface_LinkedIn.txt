@@ -1,0 +1,67 @@
+Mentova Joins the Agent Society: A2A Protocol, Peer Mail, and Multi-Agent Task Exchange (Acc_59)
+
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+Part 8 of the PrologAI Demonstration Plan calls for extending Mentova "toward the full PrologAI feature set - the workspace cycle, the attention economy, the full affect and motivation systems, the agent-society interfaces - until Mentova is a richly capable Synthetic Brain rather than a demonstration subject."
+
+The workspace cycle (Acc_51), attention economy (Acc_52), and affect and motivation systems (Acc_44, Acc_45) are done. Today we close the agent-society interface item.
+
+Mentova is now a participating member of a multi-agent society.
+
+What was demonstrated (Acc_59):
+
+Two minds participated in the exchange: Mentova (9 capabilities: deduction, induction, abduction, epistemic, practical, metacognitive, moral, spatial, temporal) and Mentor-B (a simulated specialist with deduction and epistemic capabilities).
+
+Five acceptance criteria, all PASS:
+
+AC-PR59-001: PASS - both agent cards published with correct identities.
+AC-PR59-002: PASS - A2A task submitted, lifecycle completed, artifact returned.
+AC-PR59-003: PASS - peer mail sent from Mentova to mentor_b.
+AC-PR59-004: PASS - mentor_b fetched and read Mentova's message.
+AC-PR59-005: PASS - reply sent from mentor_b; Mentova reads reply.
+
+The A2A (Agent-to-Agent) task lifecycle glass-box:
+
+[mentova -> mentor_b] task task_1: SUBMITTED (deduction, birds_fly)
+[mentova -> mentor_b] task task_1: WORKING
+[mentova -> mentor_b] task task_1: COMPLETED - artifact(task_1, deduction, deduced(tweety, can_fly, via(is_a(tweety, bird), birds_fly)))
+
+The task result: Tweety can fly because Tweety is a bird and birds fly. The inference chain is explicit - glass-box all the way down.
+
+The peer mail exchange:
+
+Mentova sent: TO=mentor_b, SUBJECT=theory_of_mind_query
+Body: "Does Sally hold a false belief about marble_in_basket?"
+
+Mentor-B ran an epistemic task and replied: result(false_belief_confirmed(sally, marble_in_basket))
+
+This connects back to Acc_53 (the Sally-Anne false-belief demonstration): the same theory-of-mind reasoning that Mentova demonstrated as a cognitive-science showpiece is now something it can delegate to a peer specialist agent - and receive the answer via durable addressed mail.
+
+Why this matters:
+
+A brain that cannot communicate with other minds is isolated. A mind that participates in a society is embedded in a world.
+
+The five capabilities this unlocks:
+1. Capability discovery: any agent can read Mentova's card to know what it can do.
+2. Task delegation: Mentova can offload tasks to specialist agents.
+3. Task reception: Mentova can accept tasks from other agents.
+4. Asynchronous communication: durable peer mail persists across sessions.
+5. Collaborative reasoning: complex queries can be split across multiple minds.
+
+The opacity principle: Mentor-B receives the task artifact (the answer), not access to Mentova's nexus. The agent-society interface is safe by architecture, not by convention.
+
+Honest about limitations:
+
+Mentor-B is a simulated agent in this demonstration. In a live multi-agent deployment, it would be a separate PrologAI instance (or an A2A-compatible agent from another framework) running at a real network endpoint. The peer mail store is in-memory dynamic facts rather than a persistent database. The methodology is complete; the engineering connections to live network deployment are the next step.
+
+The full journey so far (Acc_01 through Acc_59):
+
+The complete 48-rung reasoning ladder (Acc_01-Acc_48), the practical integration tracks (Acc_49-Acc_52: workspace cycle, attention economy, affect, motivation, game-as-a-body), all six Part 7 flagship demonstrations (Sally-Anne, Piagetian battery, ARC-AGI, Raven's Progressive Matrices, Baba Is You, Pokemon), and now the Part 8 agent-society interface.
+
+Mentova is no longer a demonstration subject. It is a reasoning mind that participates in a society of minds.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
