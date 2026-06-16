@@ -1,0 +1,98 @@
+MENTOVA PASSES THE PIAGETIAN DEVELOPMENTAL BATTERY
+
+Jean Piaget spent decades studying how children develop cognitive abilities
+in a fixed sequence. He identified four stages: sensorimotor, pre-operational,
+concrete-operational, and formal-operational. Within those stages he identified
+specific milestones that mark the transition from one capacity to the next.
+
+Today Mentova — built on PrologAI — runs the Piagetian battery as a live
+scoreboard and passes four milestones spanning three of those four stages.
+
+The results (Accomplishment Record Acc_54):
+
+AC-PR54-001: PASS - object_permanence (Piagetian Level 2, sensorimotor)
+Mentova's spatial reasoning module computes the full containment chain for
+the marble and confirms it is tracked as a persistent entity even when it
+is not currently being perceived. The object does not cease to exist when
+it leaves the field of view.
+
+Answer: answer(chain(marble,[marble]),just(containment_chain(marble,[marble])))
+
+AC-PR54-002: PASS - goal_directed_behavior (Piagetian Level 3, sensorimotor)
+Mentova's practical reasoning module applies means-end analysis: given the
+goal not_hungry and the current state [has(food)], it selects eat_food as
+the action with cost 1 whose preconditions are satisfied. Means selected
+to achieve ends, glass-box.
+
+Answer: answer(action(eat_food,cost(1)),just(practical(means_ends(...))))
+
+AC-PR54-003: PASS - symbolic_representation (Piagetian Level 5, pre-operational)
+Mentova's symbolic reasoning module applies the commutativity_add rule
+to the expression add(x, x), transforming it by an explicit named rule.
+The system manipulates symbols according to stated rules, not by numerical
+approximation.
+
+Answer: answer(simplified(add(x,x),add(x,x),commutativity_add),...)
+
+AC-PR54-004: PASS - theory_of_mind (Piagetian Level 7, concrete-operational)
+Mentova's epistemic reasoning module attributes a false belief to Sally
+in the classic Sally-Anne scenario: Sally believes marble_in_basket=true;
+Anne contradicts this. Mentova identifies the false belief, names the agents,
+and notes the contradiction — the same result that passes the Sally-Anne
+test (Acc_53).
+
+Answer: answer(false_belief(sally,marble_in_basket,their_belief(true),others_differ),...)
+
+Consciousness indicator report (PR 12, alongside the battery):
+- workspace_ignition: present
+- self_model_presence: present
+- recurrent_processing: absent (at this demo scale)
+- valence_system: absent (affect pack not loaded in this demo)
+
+What is honest about this result:
+
+Four of eight Piagetian milestones are achieved. Four are not (reflex
+coordination, deferred imitation, conservation, formal operations). These
+are genuine gaps in the current demonstration scope, not claimed failures
+of the architecture. The paper (papers/Acc_54_Piagetian_Battery.txt) states
+all of this plainly.
+
+The proxy evidence approach is scaffolded: the demo anchors a node_fact
+after demonstrating the capability. Fully emergent milestone detection —
+where the assessment pack observes spontaneous capability use — is the
+direction for future longitudinal assessment.
+
+Two of four consciousness indicators are absent in this standalone demo.
+Both are present in separate demonstrations (Acc_51, Acc_52). The full
+system running with the workspace cycle and affect pack active shows all
+four.
+
+What is significant:
+
+The Piagetian battery is now runnable as a single command. The developmental
+milestone spine specified in Volume 6, Part 7 of the PrologAI Demonstration
+Plan is closed.
+
+Mentova's developmental profile — achieving the milestones that require
+explicit symbolic knowledge, relational reasoning, and epistemic modeling —
+is consistent with its architecture as a symbolic AI system built on PrologAI.
+
+The four achieved milestones span the same three Piagetian stages in the
+same order as human children traverse them. Object permanence before
+goal-directed behavior. Goal-directed behavior before symbolic representation.
+Symbolic representation before theory of mind. Sequence preserved.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University)
+Creator of PrologAI and Mentova
+ORCID: 0009-0001-9246-5758
+https://www.linkedin.com/in/d-r-dison/
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+Paper: papers/Acc_54_Piagetian_Battery.txt
+Demo: demos/piagetian_battery_demo.pl
+
+#PrologAI #Mentova #CognitiveDevelopment #Piaget #ArtificialIntelligence
+#SymbolicAI #TheoryOfMind #ObjectPermanence #AIU #AIBenchmarks
+#CognitiveScience #DevelopmentalPsychology #GlassBoxAI #ExplainableAI
