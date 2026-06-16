@@ -36,7 +36,7 @@ The birth sequence (Rungs 1-9) is the minimum viable Mentova.
 | 6 | Causal | ✅ Accomplished |
 | 7 | Statistical | ✅ Accomplished |
 | 8 | Analogical | ✅ Accomplished |
-| 9 | Relational | Pending |
+| 9 | Relational | ✅ Accomplished |
 | 10–48 | Knowledge-representation, Agentic, Social/Normative | Pending |
 
 ## Platform dependency

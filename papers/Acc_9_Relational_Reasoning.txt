@@ -1,0 +1,177 @@
+MENTOVA'S RELATIONAL REASONING
+
+Accomplishment Record Acc_9
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 9 of Mentova's 48-rung reasoning ladder: relational reasoning.
+Mentova answers queries that depend on relationship structure, resolving multi-hop
+chains across the knowledge graph. A two-hop is_a query from canary resolves to
+animal (canary→bird→animal). A three-hop is_a query resolves to living_thing
+(canary→bird→animal→living_thing). A chain-ancestor query returns the full path
+from canary to living_thing. A common-ancestor query finds that canary and penguin
+share bird as their immediate common is_a target. All multi-hop queries resolve
+correctly. Pass criterion met.
+
+
+INTRODUCTION
+
+Single-hop queries ask about direct relations: is a canary a bird? Multi-hop
+relational queries ask questions that require traversing a chain of named
+relations: is a canary a living thing? What does canary share with penguin?
+These queries cannot be answered by direct fact lookup — they require relational
+inference across the knowledge graph.
+
+Rung 9 equips Mentova with a relational traversal engine that chains named
+binary relations across the Small-World knowledge graph and returns both the
+answer and the full relational path as a justification.
+
+
+BACKGROUND
+
+Relational reasoning over knowledge graphs is the basis of much of classical
+AI: semantic networks (Quillian, 1968), description logics (Baader et al., 2003),
+and RDF/OWL knowledge graphs (Berners-Lee et al., 2001) all represent knowledge
+as typed, directed graphs and answer queries by graph traversal.
+
+Mentova's Small-World knowledge base is a small but structurally rich knowledge
+graph: each fact is a named typed edge between two nodes. The relational reasoning
+module traverses these edges to answer multi-hop queries.
+
+
+METHOD
+
+A new module, src/mentova/relational.pl, implements:
+
+    mentova_relational(+Query, -Result, -Justification)
+
+The step/3 predicate unifies over all typed relations in the knowledge base,
+providing a uniform graph-traversal interface.
+
+Supported query forms:
+
+    two_hop(X, R1, R2)          X -R1-> Mid -R2-> End
+    three_hop(X, R1, R2, R3)    X -R1-> M1 -R2-> M2 -R3-> End
+    path2(X, R1, R2)            as two_hop, returning path term
+    common(X, Y, Rel)           find Z such that Rel(X,Z) and Rel(Y,Z)
+    ancestor(X, Y)              transitive is_a chain from X to Y
+
+Each result includes the intermediate nodes in the justification term, naming
+every step in the chain.
+
+The top-level clause:
+
+    mentova_query(relational, RelQuery, answer(Result, Just)) :-
+        once(mentova_relational(RelQuery, Result, Just)).
+
+
+DEMONSTRATION
+
+Query 1 — two-hop is_a: canary→?→?
+
+    ?- mentova_query(relational, two_hop(canary, is_a, is_a), R).
+    R = answer(animal, just(two_hop(canary, is_a, bird, is_a, animal)))
+
+    canary is_a bird is_a animal. Two hops. Intermediate: bird. Result: animal.
+
+Query 2 — three-hop is_a: canary→?→?→?
+
+    ?- mentova_query(relational, three_hop(canary, is_a, is_a, is_a), R).
+    R = answer(living_thing,
+               just(three_hop(canary, is_a, bird, is_a, animal, is_a, living_thing)))
+
+    canary is_a bird is_a animal is_a living_thing. Three hops. Result: living_thing.
+
+Query 3 — ancestor chain: canary ... living_thing
+
+    ?- mentova_query(relational, ancestor(canary, living_thing), R).
+    R = answer(yes, just(ancestor(canary, living_thing,
+                                  chain([canary, bird, animal, living_thing]))))
+
+    Full path returned: [canary, bird, animal, living_thing].
+    This is a three-hop transitive is_a derivation, with the complete chain
+    as justification.
+
+Query 4 — common is_a target: canary and penguin
+
+    ?- mentova_query(relational, common(canary, penguin, is_a), R).
+    R = answer([bird], just(common(canary, penguin, is_a, [bird])))
+
+    Both canary and penguin are_a bird. Common target: [bird].
+
+
+RESULTS
+
+All four queries resolve correctly. The two-hop query traverses two is_a edges
+to reach animal. The three-hop query reaches living_thing. The ancestor query
+returns the full path. The common-target query correctly identifies bird as the
+shared immediate is_a target for canary and penguin.
+
+Pass criterion met: multi-hop relational query resolves correctly.
+
+
+SIGNIFICANCE
+
+Rung 9 completes the foundational birth sequence of Mentova (Rungs 1-9). Together
+these nine rungs give Mentova:
+
+  Rung 1: Transparent deduction (direct fact + chain)
+  Rung 2: Inductive reasoning (rule learning)
+  Rung 3: Abductive reasoning (best explanation)
+  Rung 4: Probabilistic reasoning (weighted facts)
+  Rung 5: Bayesian reasoning (belief update)
+  Rung 6: Causal reasoning (do-operator)
+  Rung 7: Statistical reasoning (observation patterns)
+  Rung 8: Analogical reasoning (structure mapping)
+  Rung 9: Relational reasoning (multi-hop graph traversal)
+
+With these nine rungs, Mentova is a minimum viable Synthetic Mind. Every query
+is glass-box: the full chain of named relations is returned with the answer.
+
+
+HONEST LIMITATIONS
+
+The relational traversal is depth-limited and does not implement BFS/DFS with
+general cycle detection. The is_a_path predicate follows a single chain and
+would loop on a cyclic is_a graph.
+
+The step/3 predicate does not handle inverse relations (e.g., Y has_member X
+when X part_of Y). Inverse traversal would require either mirrored facts or
+an explicit inverse relation map.
+
+The common-target query returns a list of all shared targets but does not rank
+them by proximity or specificity.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(relational, two_hop(canary,is_a,is_a), R1), write(R1), nl, \
+            mentova_query(relational, three_hop(canary,is_a,is_a,is_a), R2), write(R2), nl, \
+            mentova_query(relational, ancestor(canary,living_thing), R3), write(R3), nl, \
+            mentova_query(relational, common(canary,penguin,is_a), R4), write(R4), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Quillian, M. R. (1968). Semantic memory. In M. Minsky (Ed.), Semantic Information Processing.
+
+Baader, F., et al. (2003). The Description Logic Handbook. Cambridge University Press.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

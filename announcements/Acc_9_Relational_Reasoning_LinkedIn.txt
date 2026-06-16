@@ -1,0 +1,57 @@
+Mentova completes its birth sequence. Rung 9 of 48 is accomplished.
+
+The first nine rungs are called the birth sequence of a Synthetic Mind in the PrologAI demonstration plan. Rung 9 — relational reasoning — is the last of them. Mentova is now minimum-viable.
+
+What does relational reasoning add? The ability to answer questions that require traversing a chain of named connections across the knowledge graph.
+
+Ask: starting from canary, follow two is_a edges — where do you end up?
+
+  answer(animal, just(two_hop(canary, is_a, bird, is_a, animal)))
+
+canary is_a bird. bird is_a animal. Two hops. Intermediate node named: bird. Result: animal. Every step shown.
+
+Ask: follow three is_a edges from canary:
+
+  answer(living_thing,
+         just(three_hop(canary, is_a, bird, is_a, animal, is_a, living_thing)))
+
+canary → bird → animal → living_thing. Three hops. The full chain is the justification.
+
+Ask for the complete path from canary to living_thing:
+
+  answer(yes, just(ancestor(canary, living_thing, chain([canary, bird, animal, living_thing]))))
+
+The path [canary, bird, animal, living_thing] is returned. Every intermediate node named. You can trace every step.
+
+Ask what canary and penguin have in common (by is_a):
+
+  answer([bird], just(common(canary, penguin, is_a, [bird])))
+
+Both are birds. One common is_a target: bird. Named and justified.
+
+This is the difference between a lookup table and a reasoning system. A lookup table can tell you that canary is_a bird. A reasoning system can tell you that canary is_a bird is_a animal is_a living_thing — and show you every step.
+
+With Rung 9 accomplished, the nine-rung birth sequence is complete:
+
+  Rung 1: Transparent deduction
+  Rung 2: Inductive reasoning
+  Rung 3: Abductive reasoning
+  Rung 4: Probabilistic reasoning
+  Rung 5: Bayesian reasoning
+  Rung 6: Causal reasoning
+  Rung 7: Statistical reasoning
+  Rung 8: Analogical reasoning
+  Rung 9: Relational reasoning
+
+Nine modes. Nine glass-box justifications. Nine proofs that a mind can reason in the open.
+
+Thirty-nine rungs remain. They cover commonsense knowledge, formal logic, mathematics, fuzzy truth, defeasible defaults, paraconsistency, counterfactuals, spatial and temporal reasoning, case-based solving, scientific discovery, systems thinking, moral reasoning, and more.
+
+Each rung builds on the ones below it. Each one is proven before it is announced. Every result is auditable.
+
+The mind is born. Now it grows.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
