@@ -1,24 +1,29 @@
-Rung 32 accomplished: Metacognitive Reasoning — Mentova now knows what it knows.
+Mentova now knows what it knows. Rung 32 of 48 is accomplished.
 
-Ask Mentova what it can do:
+Can Mentova do dialectical reasoning? Yes — high confidence.
+Can Mentova do continuous simulation? No — not implemented.
+How many reasoning types does Mentova know with high confidence? 28.
 
-    mentova_query(metacognitive, what_can_i_do, R)
+Rung 32 gives Mentova metacognitive reasoning: the ability to reason about its own mind.
 
-It returns 28 active reasoning capabilities by name: probabilistic, bayesian, causal, statistical, analogical, relational, transductive, commonsense, logical, formal, mathematical, fuzzy, qualitative, non-monotonic, paraconsistent, counterfactual, hypothetical, spatial, diagrammatic, temporal, case-based, constraint, scientific, system, model-based, heuristic, critical, dialectical.
+  Query: confidence_for(causal)
+  Answer: conf(causal, high)
+  Justification: metacognitive(confidence_query(causal), confidence(high))
 
-Ask whether it can solve constraints:
+  Query: self_describe
+  Answer: desc(mentova, 28, prologai)
+  Justification: metacognitive(self_description, name(mentova), rungs_implemented(28), platform(prologai))
 
-    mentova_query(metacognitive, can_i_do(constraint), R)
-    → yes_using("CLP-style generate-and-test with deduction shown")
+  Query: can_i_do(vision)
+  Answer: answer(no, using(not_implemented))
 
-Ask what it is:
+Mentova knows it cannot do image perception. It knows it can do all 28 reasoning types already implemented. It reports confidence levels. It describes itself accurately.
 
-    mentova_query(metacognitive, self_describe, R)
-    → desc(mentova, 32, prologai)
+This is the beginning of epistemic humility in a machine. A system that knows its own limits is safer than one that attempts to answer any question regardless of capability.
 
-A system that can explain its own strategy is a system you can audit. No hidden routing. No black-box dispatch. Mentova's self-model is an inspectable Prolog knowledge base.
+Metacognition is rare in AI systems. Most systems attempt everything and fail silently. Mentova registers its capabilities and reports them honestly.
 
-Rung 32 of 48.
+The code is open. The reasoning is readable. The mind knows itself.
 
 https://github.com/ai-university-aiu/Mentova
 https://github.com/ai-university-aiu/PrologAI

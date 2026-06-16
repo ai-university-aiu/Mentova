@@ -1,26 +1,32 @@
-Rung 34 accomplished: Epistemic Reasoning — Mentova passes the Sally-Anne false-belief test.
+Mentova now reasons about who knows what. Rung 34 of 48 is accomplished.
 
-The scenario: Sally places a marble in a basket and leaves. Anne moves the marble to a box. Sally returns.
+There is a difference between what is true and what an agent knows. There is a difference between what an agent knows and what an agent merely believes. There is a difference between what one agent knows and what is common knowledge among all agents.
 
-Where does Sally think the marble is?
+Rung 34 gives Mentova epistemic reasoning.
 
-    mentova_query(epistemic, believes(sally, marble_in_basket), R)
-    → answer(true, ...)
+  Query: knows(alice, canary_is_yellow)
+  Answer: knows(alice, canary_is_yellow, 0.9)
+  Justification: epistemic(knowledge(alice, canary_is_yellow), confidence(0.9))
 
-    mentova_query(epistemic, believes(anne, marble_in_basket), R)
-    → answer(false, ...)
+Alice knows canary_is_yellow with confidence 0.9.
 
-    mentova_query(epistemic, false_belief(sally, marble_in_basket), R)
-    → false_belief(sally, marble_in_basket, their_belief(true), others_differ)
-      note: "Agent holds belief others contradict"
+  Query: ignorant(bob, tweety_is_canary)
+  Answer: ignorant(bob, tweety_is_canary)
+  Justification: reason(no_knowledge_or_belief)
 
-Sally believes the marble is in the basket. Anne believes it is not. Mentova identifies that Sally holds a false belief — her belief contradicts another agent's.
+Bob has no knowledge or belief about tweety being a canary. He is ignorant of it.
 
-This is the Sally-Anne test, originally developed in developmental psychology to check for theory of mind. Children with autism often fail it; typical children pass around age 4-5.
+  Query: common_knowledge(fire_is_hot)
+  Answer: not_common(fire_is_hot)
+  Justification: result(not_universally_known)
 
-Mentova passes it now, at Rung 34 of 48.
+Fire being hot is not common knowledge — not all agents have it registered.
 
-A system that can model what another agent believes — including a belief that is false — can reason about deception, instruction, and collaboration in a way that goes well beyond pattern-matching.
+Three agents: mentor, alice, bob. Each with their own knowledge inventory. Each with beliefs from the Small-World KB. Epistemic queries work across all of them.
+
+This is the foundation of theory-of-mind reasoning: understanding what other agents know, what they believe, and where their ignorance lies.
+
+The code is open. The reasoning is readable. The mind is growing.
 
 https://github.com/ai-university-aiu/Mentova
 https://github.com/ai-university-aiu/PrologAI

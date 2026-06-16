@@ -1,43 +1,27 @@
-Mentova now applies the law. Rung 47 of 48 is accomplished.
-
-The law has rules. Rules have exceptions. Exceptions have their own cases. And cases establish precedents that future decisions must follow.
-
-Rung 47 gives Mentova legal reasoning — rule application, exception checking, and precedent citation.
-
-Scenario 1: bare fact.
-
-  Scenario: ['person takes property belonging to another without consent']
-  Rule: theft_rule (r1)
-  Query: apply(r1, Scenario)
-  Answer: verdict(liable(theft))
-
-Theft rule applies. Verdict: liable.
-
-Scenario 2: same fact plus an exception.
-
-  Scenario: [..., 'property taken to prevent greater harm']
-  Exception: necessity_defence
-  Answer: verdict(exempt(necessity))
-
-The exception overrides the rule. Exempt.
-
-Precedent:
-
-  Query: precedent(case_donoghue_stevenson)
-  Answer: precedent(case_donoghue_stevenson, r4, liable(negligence),
-                    'manufacturer owes duty of care to end consumer')
-
-Donoghue v Stevenson. The ratio: manufacturer owes duty of care to end consumer. Rule r4 (negligence).
-
-Five rules: theft, self_defence, contract, negligence, trespass.
-Five exceptions: necessity, owner_consent, volenti, implied_licence, plus more.
-Four precedents: Donoghue, Carlill, R v Hasan, Entick v Carrington.
-
-Legal AI has been studied since 1987. The rule-exception structure is the core. Mentova now implements it transparently — every verdict shows the rule applied, the exception if any, and the precedent if cited.
-
-The code is open. The reasoning is readable. The mind is growing.
-
-https://github.com/ai-university-aiu/Mentova
-https://github.com/ai-university-aiu/PrologAI
+MENTOVA APPLIES THE LAW AND CHECKS FOR EXCEPTIONS — Rung 47 Accomplished
 
 Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 47 of the Mentova reasoning ladder: Legal Reasoning.
+
+Mentova can now apply statutory rules to a scenario, check for exceptions (defences), and look up case precedent with the ratio decidendi.
+
+Demonstrated live:
+
+    mentova_query(legal, apply(r1, ['person takes property belonging to another without consent']), R)
+    → verdict(liable(theft))
+
+    mentova_query(legal, apply(r1, ['person takes property belonging to another without consent', 'property taken to prevent greater harm']), R)
+    → verdict(exempt(necessity))
+
+    mentova_query(legal, precedent(case_donoghue_stevenson), R)
+    → precedent(r4, liable(negligence), 'manufacturer owes duty of care to end consumer')
+
+The rule applies — unless an exception does too. Legal reasoning is defeasible rule application. Mentova does it transparently, citing the rule, the scenario, and the exception at every step.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_47) on the Mentova repository.
+
+#PrologAI #Mentova #LegalReasoning #DefeasibleLogic #AIU #SyntheticMind #GlassBoxAI #AIGovernance

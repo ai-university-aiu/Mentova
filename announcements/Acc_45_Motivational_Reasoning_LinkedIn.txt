@@ -1,33 +1,27 @@
-Mentova now knows what drives people. Rung 45 of 48 is accomplished.
-
-Not all needs are equal. Hungry people do not think about esteem. People in danger do not think about self-actualisation. Lower-level needs must be satisfied first.
-
-Rung 45 gives Mentova motivational reasoning — a need hierarchy and drive registry for understanding what motivates an agent right now.
-
-  Query: urgent_need(alice)
-  Answer: need(4, esteem, 'respect, achievement, recognition, status')
-
-Alice's physiological (1), safety (2), and belonging (3) needs are satisfied. Her most urgent unsatisfied need is esteem — level 4.
-
-  Query: urgent_need(mentor)
-  Answer: all_satisfied(mentor)
-
-The mentor has all five levels satisfied. No urgent unsatisfied need.
-
-  Query: all_drives(bob)
-  Answer: drives(bob, [find_safety-high, make_friends-high, earn_income-high])
-
-Bob's three drives are all high urgency: find_safety, make_friends, earn_income. That makes sense — his safety (level 2) is unsatisfied.
-
-Five need levels: physiological (1), safety (2), belonging (3), esteem (4), self_actualise (5).
-
-Three agents: alice (levels 1-3 satisfied), bob (only level 1 satisfied), mentor (all satisfied).
-
-Motivational reasoning is what personalisation engines, coaching tools, and empathetic AI need. Understand what someone needs most right now — and you understand what they will act on.
-
-The code is open. The reasoning is readable. The mind is growing.
-
-https://github.com/ai-university-aiu/Mentova
-https://github.com/ai-university-aiu/PrologAI
+MENTOVA IDENTIFIES THE DRIVE BEHIND AN ACTION — Rung 45 Accomplished
 
 Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 45 of the Mentova reasoning ladder: Motivational Reasoning.
+
+Mentova can now identify the highest-priority drive motivating any agent, recommend the action it implies, and verify that lower-level needs are first satisfied.
+
+Demonstrated live:
+
+    mentova_query(motivational, top_drive(alice), R)
+    → drive(alice, achieve_recognition, high)
+
+    mentova_query(motivational, drive_to_action(achieve_recognition), R)
+    → action(compete_and_excel)
+
+    mentova_query(motivational, hierarchy(esteem), R)
+    → must_first_satisfy([physiological, safety, belonging])
+
+Every motivational answer traces to a drive strength and a Maslow-level precondition — so Mentova can explain not just what an agent will do, but why.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_45) on the Mentova repository.
+
+#PrologAI #Mentova #MotivationalReasoning #Maslow #AIU #SyntheticMind #GlassBoxAI #GoalDirected

@@ -1,34 +1,27 @@
-Mentova now reasons about emotions. Rung 44 of 48 is accomplished.
-
-Emotions are not arbitrary. They arise from how situations relate to what you care about. Win something you wanted? Joy. Face an uncertain threat? Fear. Receive an unexpected insult? Anger.
-
-This is cognitive appraisal theory: emotions are derived from two dimensions — goal congruence (does this situation serve your goals or oppose them?) and certainty (do you know the outcome?).
-
-Rung 44 gives Mentova emotional reasoning.
-
-  Agent: alice. Situation: win_competition. Appraisal: goal_congruent, certain.
-  Query: appraise(alice, win_competition)
-  Answer: emotion(joy, high, approach)
-  Justification: goal_congruent + certain → joy, intensity(high), tendency(approach)
-
-  Agent: bob. Situation: threat_detected. Appraisal: goal_incongruent, uncertain.
-  Query: how_might_feel(bob, threat_detected)
-  Answer: emotion_profile(fear, high, negative)
-
-Seven emotion types from two dimensions:
-  goal_congruent + certain → joy (high, approach)
-  goal_congruent + uncertain → hope (medium, approach)
-  goal_incongruent + certain → sadness (high, withdrawal)
-  goal_incongruent + uncertain → fear (high, avoidance)
-  goal_congruent + certain, prosocial → gratitude (medium, prosocial)
-
-Also: response tendencies. Joy → approach. Fear → avoidance. Anger → aggression.
-
-Emotional reasoning is what empathetic AI needs. Understanding how a situation feels to someone — what emotion it would produce, what tendency it would drive — is the foundation of emotionally intelligent interaction.
-
-The code is open. The reasoning is readable. The mind is growing.
-
-https://github.com/ai-university-aiu/Mentova
-https://github.com/ai-university-aiu/PrologAI
+MENTOVA APPRAISES EMOTIONAL SIGNIFICANCE — Rung 44 Accomplished
 
 Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 44 of the Mentova reasoning ladder: Emotional Reasoning.
+
+Mentova can now perform cognitive appraisal: primary appraisal (is this event desirable or threatening?) and secondary appraisal (can I handle it?) — predicting the resulting emotion, its intensity, and the action tendency it generates.
+
+Demonstrated live:
+
+    mentova_query(emotional, appraise(alice, win_competition), R)
+    → emotion(joy, high, approach)
+
+    mentova_query(emotional, how_might_feel(bob, exam_tomorrow), R)
+    → likely_emotion(anxiety, moderate, prepare)
+
+    mentova_query(emotional, appraise(alice, lose_contest), R)
+    → emotion(sadness, moderate, withdraw)
+
+Mentova does not simulate feelings. It reasons about them — and shows the appraisal chain that leads to each emotional prediction.
+
+This is the PrologAI platform, built from the ground up.
+
+Read the full paper (Acc_44) on the Mentova repository.
+
+#PrologAI #Mentova #EmotionalReasoning #AffectiveAI #Lazarus #AIU #SyntheticMind #GlassBoxAI

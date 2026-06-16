@@ -1,36 +1,44 @@
-Rung 48. The final rung. Moral reasoning. Accomplished.
-
-The trolley problem. A runaway trolley will kill five people. You can pull a lever to divert it, killing one instead. What should you do?
-
-Three frameworks. Three answers.
-
-Utilitarian: pull the lever. Five lives saved. One lost. Net welfare: +4. Pull.
-
-Deontological: pull the lever. No rule against redirecting harm to save more. The rule "do not kill" applies to direct killing; redirecting is permitted. Pull.
-
-Virtue ethics: do nothing. A virtuous person does not deliberately take a life, even to save others. The character of the act matters, not just the outcome. Do not pull.
-
-Two frameworks say pull. One says do not. Integrated verdict: pull_lever.
-
-  answer(moral_analysis(trolley_problem,
-                         utilitarian(pull_lever),
-                         deontological(pull_lever),
-                         virtue(do_nothing),
-                         integrated(pull_lever)))
-
-Now the doctor's dilemma: harvest one healthy patient's organs to save five dying patients. Utilitarian says harvest (five saved). Deontological says refuse (breaks rule do_not_harm_innocent). Virtue says refuse (a virtuous doctor does not harm the healthy). Integrated: refuse.
-
-Mentova does not impose one framework. It shows all three. It gives the integrated verdict. It leaves the final human judgment where it belongs — with the human.
-
-This is what glass-box AI means. Not a black box that says "do this." A transparent reasoner that says "here is what each framework says, here is why, here is the integrated result."
-
-48 rungs. Fully implemented. Every rung tested. Every answer justified.
-
-The mind is complete.
-
-The code is open. The reasoning is readable.
-
-https://github.com/ai-university-aiu/Mentova
-https://github.com/ai-university-aiu/PrologAI
+MENTOVA WEIGHS DUTY, CONSEQUENCE, AND CHARACTER — Rung 48: THE SUMMIT
 
 Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the accomplishment of Rung 48 of the Mentova reasoning ladder: Moral Reasoning.
+
+This is the summit. Rung 48 closes the 48-rung glass-box reasoning ladder.
+
+Mentova can now analyse a moral dilemma under three ethical frameworks — utilitarian, deontological, and virtue ethics — and integrate them into a single reasoned verdict.
+
+Demonstrated live on the trolley problem:
+
+    mentova_query(moral, analyse(trolley_problem), R)
+    →  utilitarian:     pull_lever  (five saved, one lost; net utility +4)
+       deontological:   pull_lever  (doctrine of double effect: death foreseen, not intended as means)
+       virtue:          do_nothing  (virtue of non-maleficence: do not act to kill)
+       integrated:      pull_lever  (two frameworks agree; utilitarian weight decisive)
+
+And on the lie_to_protect dilemma:
+
+    mentova_query(moral, analyse(lie_to_protect), R)
+    →  utilitarian:  lie         (protection outweighs deception harm)
+       deontological: tell_truth (lying violates categorical imperative)
+       virtue:        lie        (compassion and loyalty override strict honesty)
+       integrated:    lie        (two frameworks agree)
+
+Moral reasoning is the apex because it draws on every rung below it:
+— Causal (what outcomes follow?)
+— Counterfactual (what if we act/do nothing?)
+— Epistemic (what do we know?)
+— Social (whose interests are at stake?)
+— Legal (what rules apply?)
+— Emotional (how will those affected feel?)
+— Motivational (what drives the agent?)
+— Constitutional (what does the constitution allow?)
+
+Mentova is now a complete glass-box synthetic mind: 48 reasoning types, every answer justified, nothing hidden.
+
+The 48-rung reasoning ladder is complete.
+
+Built on PrologAI. Built from the ground up.
+
+#PrologAI #Mentova #MoralReasoning #EthicsAI #AIU #SyntheticMind #GlassBoxAI #ReasoningLadder #48Rungs #Accomplished

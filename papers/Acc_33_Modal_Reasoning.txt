@@ -1,4 +1,4 @@
-MENTOVA DISTINGUISHES THE NECESSARY FROM THE POSSIBLE
+MENTOVA'S MODAL REASONING
 
 Accomplishment Record Acc_33
 
@@ -10,88 +10,84 @@ Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 ABSTRACT
 
-Mentova's thirty-third accomplished reasoning rung is modal reasoning: correctly
-distinguishing propositions that are necessarily true (true in all accessible
-worlds), possibly true (true in at least one world), and contingent (true in
-some but not all). Demonstrated: fire_is_hot is necessary, birds_fly is
-necessary, tweety_flies is contingent (true in w1 and w2 but not in actual or
-w3), and water_is_wet is necessary. All results include the worlds checked.
+We report Rung 33 of Mentova's 48-rung reasoning ladder: modal reasoning.
+Mentova evaluates whether propositions are necessarily true (true in all accessible
+worlds), possibly true (true in some accessible world), or contingent (possible
+but not necessary). Fire being hot is necessary; rain is contingent.
+Pass criterion met: necessarily-true proposition correctly distinguished from
+merely-possible and contingent propositions.
 
 
 INTRODUCTION
 
-Modal logic extends classical logic with operators for necessity (□) and
-possibility (◇). A proposition is necessary if true in all accessible worlds,
-possible if true in at least one, contingent if neither necessary nor impossible.
+Modal logic (Kripke, 1963) formalises necessity and possibility using possible
+worlds and accessibility relations. Rung 33 equips Mentova with a four-world
+Kripke model and the standard modal operators.
 
-Pass criterion (Rung 33): "necessity and possibility correctly distinguished."
+
+BACKGROUND
+
+Modal logic underpins temporal reasoning, belief revision, and deontic logic.
+The system implemented here is S5-like: actual world has access to all worlds.
 
 
 METHOD
 
-The modal module (src/mentova/modal.pl) defines four worlds (actual, w1, w2, w3)
-and a set of `holds(Fact, World)` facts. Three predicates:
+A new module, src/mentova/modal.pl, implements:
 
-    necessarily(P) — true if holds(P, W) for every W
-    possibly(P)    — true if holds(P, W) for at least one W
-    classify(P)    → necessary | contingent | impossible
+    mentova_modal(+Query, -Result, -Justification)
 
-mentova_modal/3 exposes these via mentova_query(modal, ...).
+Worlds: actual, w1, w2, w3. Facts assigned to worlds. Operators: necessarily/1,
+possibly/1, contingent/1, classify/1.
 
 
-THE DEMONSTRATION
+DEMONSTRATION
 
-QUERY 1 — Is fire_is_hot necessary?
-    necessarily(fire_is_hot) holds in actual, w1, w2, w3 → necessary: true
-    Justification: worlds_checked(all_accessible), result(true)
+    ?- mentova_query(modal, necessarily(fire_is_hot), R).
+    R = answer(true, just(modal(necessarily(fire_is_hot), worlds_checked(all_accessible), result(true))))
 
-QUERY 2 — Is tweety_flies possible?
-    holds(tweety_flies, w1), holds(tweety_flies, w2) → witness world found
-    possibly(tweety_flies): true, witness_world(w1)
-
-QUERY 3 — Classify birds_fly
-    holds(birds_fly, actual), holds(birds_fly, w1), holds(birds_fly, w2),
-    holds(birds_fly, w3) → classify → necessary
-
-QUERY 4 — Classify tweety_flies
-    Holds in w1, w2 but not in actual or w3 → classify → contingent
+    ?- mentova_query(modal, classify(it_rains), R).
+    R = answer(contingent, just(modal(classify(it_rains), classification(contingent))))
 
 
 RESULTS
 
-Pass criterion met: necessary propositions (fire_is_hot, birds_fly) are
-distinguished from contingent ones (tweety_flies). The justification names
-the worlds checked and, for possibility queries, the witness world.
+fire_is_hot: necessary (true in all 4 worlds). it_rains: contingent (true in 2 of 4).
+Pass criterion met.
 
 
 SIGNIFICANCE
 
-Modal reasoning lets Mentova express the difference between "this always
-holds" and "this might hold." This is essential for planning under uncertainty
-(an action that possibly achieves the goal vs. one that necessarily does).
+Modal reasoning is essential for natural language understanding, temporal planning,
+and belief reasoning. Necessity and possibility are fundamental epistemic categories.
 
 
 HONEST LIMITATIONS
 
-Accessibility relation is currently universal (every world accesses every
-other). S5 axioms hold by construction. Non-trivial accessibility structures
-(e.g., temporal or epistemic Kripke frames) are not yet modelled.
+The possible-worlds model is static and small. Full modal reasoning requires
+dynamic world generation and modal axiom systems.
 
 
 REPRODUCIBILITY
 
-    git clone https://github.com/ai-university-aiu/Mentova.git
-    cd Mentova
-    swipl -l src/mentova/mentova.pl \
-          -g "mentova_query(modal, classify(birds_fly), R), write(R), nl" \
-          -t halt
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(modal, classify(it_rains), R), write(R), nl" \
+        -t halt
 
 
 REFERENCES
 
 PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
-Kripke, S. (1963). Semantical considerations on modal logic. Acta Philosophica Fennica, 16.
+
+Kripke, S. A. (1963). Semantical considerations on modal logic. Acta Philosophica
+Fennica, 16, 83-94.
+
 Hughes, G. E., & Cresswell, M. J. (1996). A New Introduction to Modal Logic.
+Routledge.
 
 
 ---

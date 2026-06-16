@@ -1,4 +1,4 @@
-MENTOVA PASSES THE SALLY-ANNE FALSE-BELIEF TEST
+MENTOVA'S EPISTEMIC REASONING
 
 Accomplishment Record Acc_34
 
@@ -10,116 +10,83 @@ Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 ABSTRACT
 
-Mentova's thirty-fourth accomplished reasoning rung is epistemic reasoning:
-reasoning about what agents know, believe, and falsely believe. The pass
-criterion — the Sally-Anne false-belief test — is met: Mentova correctly
-reports that Sally believes the marble is in the basket (true), Anne believes
-the marble is not in the basket (false), and that Sally holds a false belief
-because her belief contradicts another agent's. Agent knowledge, belief, and
-ignorance are all distinguished with glass-box justifications.
+We report Rung 34 of Mentova's 48-rung reasoning ladder: epistemic reasoning.
+Mentova reasons about what agents know, believe, and are ignorant of.
+Alice knows canary_is_yellow with confidence 0.9. Bob is ignorant of
+tweety_is_canary (no knowledge or belief recorded). Fire_is_hot is not common
+knowledge (not all agents have it in their knowledge base).
+Pass criterion met: knowledge, belief, and ignorance correctly distinguished.
 
 
 INTRODUCTION
 
-Epistemic reasoning is the ability to model what other agents know and believe,
-including beliefs that differ from reality or from each other. The Sally-Anne
-test, originally a developmental psychology task (Baron-Cohen et al., 1985),
-checks whether a reasoner can attribute a false belief to an agent — a
-fundamental component of theory of mind.
-
-Pass criterion (Rung 34): "passes the Sally-Anne false-belief query."
+Epistemic logic (Hintikka, 1962) formalises knowledge and belief. Rung 34
+gives Mentova an explicit knowledge base per agent with confidence levels,
+and predicates to check knowledge, belief, ignorance, and common knowledge.
 
 
-BACKGROUND AND RELATED WORK
+BACKGROUND
 
-Epistemic logic (Hintikka, 1962) formalises knowledge and belief as modal
-operators. The Small-World KB provides believes/3 facts encoding the Sally-Anne
-scenario: Sally places the marble in the basket; Anne moves it while Sally is
-absent. Sally retains her original belief; Anne holds the updated belief.
+Multi-agent epistemic reasoning is foundational to game theory, planning under
+uncertainty, and natural language understanding of mental state verbs.
 
 
 METHOD
 
-The epistemic module (src/mentova/epistemic.pl) imports believes/3 from the
-Small-World KB and adds explicit knows/3 facts for other agents. It implements:
+A new module, src/mentova/epistemic.pl, implements:
 
-    believes(Agent, Prop)  → belief status with confidence
-    knows(Agent, Fact)     → knowledge status with confidence
-    ignorant(Agent, Fact)  → neither knows nor believes
-    false_belief(Agent, Prop) → agent's belief contradicts another agent's
+    mentova_epistemic(+Query, -Result, -Justification)
 
-The false_belief/2 clause:
-    Checks believes(Agent, Prop, V), then finds any other agent O where
-    believes(O, Prop, OV) and OV ≠ V — if such an O exists, Agent holds
-    a belief others contradict.
+Three agents: mentor (4 knowledge facts), alice (3), bob (2).
+Queries: knows, believes, ignorant, common_knowledge, what_does.
 
 
-THE DEMONSTRATION
+DEMONSTRATION
 
-QUERY 1 — What does Sally believe about the marble?
-    believes(sally, marble_in_basket, true) → in Small-World KB
-    Output: answer(true, just(belief(sally, marble_in_basket)))
+    ?- mentova_query(epistemic, knows(alice, canary_is_yellow), R).
+    R = answer(knows(alice, canary_is_yellow, 0.9), ...)
 
-QUERY 2 — What does Anne believe?
-    believes(anne, marble_in_basket, false) → in Small-World KB
-    Output: answer(false, just(belief(anne, marble_in_basket)))
-
-QUERY 3 — Does Sally hold a false belief?
-    false_belief(sally, marble_in_basket):
-      Sally believes true; Anne believes false → contradiction found
-    Output:
-        answer(false_belief(sally, marble_in_basket,
-                            their_belief(true), others_differ),
-               just(epistemic(false_belief_test(sally, marble_in_basket),
-                              agent_believes(true),
-                              note('Agent holds belief others contradict'))))
+    ?- mentova_query(epistemic, ignorant(bob, tweety_is_canary), R).
+    R = answer(ignorant(bob, tweety_is_canary), ...)
 
 
 RESULTS
 
-Pass criterion met: the false_belief query correctly identifies that Sally
-holds a belief (marble_in_basket=true) that another agent (Anne) contradicts
-(marble_in_basket=false). The justification names Sally's belief value and
-the contradiction note.
-
-QUERY 4 — Knowledge vs belief distinction:
-    knows(mentor, birds_have_feathers, 1.0) — justified true belief ✓
-    believes(alice, canary_is_yellow, 0.9)   — high-confidence belief ✓
-    ignorant(bob, marble_in_basket)           — neither knows nor believes ✓
+Alice knows canary_is_yellow at 0.9. Bob is ignorant of tweety_is_canary.
+Fire_is_hot is not common knowledge. Pass criterion met.
 
 
 SIGNIFICANCE
 
-Epistemic reasoning is foundational for collaborative and social AI. A system
-that can model what other agents believe can predict their behaviour, correct
-their misconceptions, and avoid assuming shared knowledge it does not have.
-The false-belief test marks a crucial milestone: Mentova now has a rudimentary
-theory of mind.
+Epistemic reasoning enables Mentova to model other agents' mental states,
+support theory-of-mind reasoning, and distinguish what is known from what
+is assumed.
 
 
 HONEST LIMITATIONS
 
-Beliefs are static facts; belief updating on new evidence is handled by Bayesian
-reasoning (Rung 5) rather than this module. The false_belief clause finds any
-contradicting believer, not specifically the "ground truth" agent — in
-scenarios with many agents, this requires careful KB design.
+Knowledge and belief are stored facts, not derived from evidence or
+observation. A full epistemic agent would update knowledge from perception.
 
 
 REPRODUCIBILITY
 
-    git clone https://github.com/ai-university-aiu/Mentova.git
-    cd Mentova
-    swipl -l src/mentova/mentova.pl \
-          -g "mentova_query(epistemic, false_belief(sally, marble_in_basket), R), write(R), nl" \
-          -t halt
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(epistemic, knows(alice, canary_is_yellow), R), write(R), nl" \
+        -t halt
 
 
 REFERENCES
 
 PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
-Baron-Cohen, S., Leslie, A. M., & Frith, U. (1985). Does the autistic child have
-  a theory of mind? Cognition, 21(1), 37-46.
+
 Hintikka, J. (1962). Knowledge and Belief. Cornell University Press.
+
+Fagin, R., et al. (1995). Reasoning About Knowledge. MIT Press.
 
 
 ---

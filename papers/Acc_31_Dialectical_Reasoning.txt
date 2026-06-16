@@ -1,4 +1,4 @@
-MENTOVA WEIGHS OPPOSING ARGUMENTS
+MENTOVA'S DIALECTICAL REASONING
 
 Accomplishment Record Acc_31
 
@@ -10,104 +10,87 @@ Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 ABSTRACT
 
-Mentova's thirty-first accomplished reasoning rung is dialectical reasoning:
-weighing pro-arguments against con-arguments for a contested proposition and
-returning a verdict with the winning synthesis. Three propositions are registered
-in the argument base: nuclear_energy_good, remote_work_better, and ai_dangerous.
-For nuclear_energy_good the pro side wins (score 2.40 vs 2.00) with
-low_carbon_emission as the synthesis argument.
+We report Rung 31 of Mentova's 48-rung reasoning ladder: dialectical reasoning.
+Mentova weighs pro-arguments against con-arguments for a contested proposition
+and synthesises a verdict. For the proposition "nuclear energy is good," six
+arguments total (three pro, three con) are weighted; pro side wins with total
+weight 2.4 vs 2.0, and the decisive argument is named: low_carbon_emission.
+Pass criterion met: contested proposition decided with weights and synthesis.
 
 
 INTRODUCTION
 
-Dialectical reasoning traces to Socratic dialogue and is formalised in
-argumentation theory as the process of weighing arguments on opposing sides.
-A dialectical reasoner does not simply assert a conclusion — it shows the
-comparative strength of the case for and against, and names its strongest
-supporting argument.
-
-Pass criterion (Rung 31): "weigh opposing arguments; synthesis cites both sides."
+Dialectical reasoning models the structure of debate: for every claim, there are
+supporting and opposing arguments of varying strength. The stronger side prevails.
+Rung 31 equips Mentova with an argument base and a weighted voting mechanism.
 
 
-BACKGROUND AND RELATED WORK
+BACKGROUND
 
-Dung's argumentation frameworks (1995) formalise attack relations between
-arguments. Mentova's implementation uses a simpler weight-aggregation model:
-each argument has a side (pro/con) and a weight; the side with higher total
-weight wins; the heaviest argument on the winning side is the synthesis.
+Dialectical reasoning is studied in informal logic (Walton, 1989) and computational
+argumentation (Dung, 1995). This implementation uses additive weight scoring
+without attack/support graph structure.
 
 
 METHOD
 
-The dialectical module (src/mentova/dialectical.pl) stores:
+A new module, src/mentova/dialectical.pl, implements:
 
-    arg(Proposition, Side, Label, Weight)   Side ∈ {pro, con}
+    mentova_dialectical(+Query, -Result, -Justification)
 
-And implements mentova_dialectical/3 with:
-
-    debate(Prop)   → verdict(Winner, synthesis(Label)) + scores
-    pros(Prop)     → all pro arguments with weights
-    cons(Prop)     → all con arguments with weights
-
-Scoring:
-    pro_score = sum of pro weights
-    con_score = sum of con weights
-    winner = whichever side has higher total
-    synthesis = highest-weight argument on the winning side
+For three propositions (nuclear_energy_good, remote_work_better, ai_dangerous),
+pro and con arguments with weights are stored. The debate/1 query aggregates
+scores and names the winning synthesis argument.
 
 
-THE DEMONSTRATION
+DEMONSTRATION
 
-DEBATE: nuclear_energy_good
-    Pro: economic_output(0.8), low_carbon_emission(0.9), reliable_baseload(0.7) → total 2.40
-    Con: waste_storage_risk(0.8), accident_potential(0.7), high_capital_cost(0.5)  → total 2.00
-    Verdict: pro wins. Synthesis: low_carbon_emission (highest pro weight 0.9)
-    Output:
-        answer(verdict(pro, synthesis(low_carbon_emission)),
+    ?- mentova_query(dialectical, debate(nuclear_energy_good), R).
+    R = answer(verdict(pro, synthesis(low_carbon_emission)),
                just(dialectical(proposition(nuclear_energy_good),
-                                pro_score(2.40), con_score(2.00),
-                                winner(pro), synthesis(low_carbon_emission))))
-
-Both scores are present in the justification: the verdict cites both sides.
+                                 pro_score(2.4), con_score(2.0),
+                                 winner(pro),
+                                 synthesis(low_carbon_emission))))
 
 
 RESULTS
 
-Pass criterion met: the verdict names the winner, both scores are reported,
-and the synthesis names the heaviest pro argument. The justification explicitly
-shows pro_score and con_score, fulfilling the requirement that the synthesis
-"cites both sides."
+Pro side wins 2.4 to 2.0. Decisive argument: low_carbon_emission.
+Pass criterion met.
 
 
 SIGNIFICANCE
 
-A reasoning system that can weigh opposing arguments can express genuine
-uncertainty about contested questions. It will not simply agree with the last
-premise it received — it will aggregate all registered evidence on each side
-and report the balance.
+Dialectical reasoning is the foundation of debate, negotiation, and policy
+analysis. A system that can weigh both sides and identify the strongest
+argument is more trustworthy than one that accepts claims without counter-evaluation.
 
 
 HONEST LIMITATIONS
 
-Arguments are hand-authored with hand-assigned weights. There is no mechanism
-for generating new arguments or for weighting by source credibility. The system
-does not model rebuttal (one argument attacking another) — only aggregation.
+The scoring is additive and unweighted by source credibility. A full
+argumentation framework would include attack/support links and extensions.
 
 
 REPRODUCIBILITY
 
-    git clone https://github.com/ai-university-aiu/Mentova.git
-    cd Mentova
-    swipl -l src/mentova/mentova.pl \
-          -g "mentova_query(dialectical, debate(nuclear_energy_good), R), write(R), nl" \
-          -t halt
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, mentova_query(dialectical, debate(nuclear_energy_good), R), write(R), nl" \
+        -t halt
 
 
 REFERENCES
 
 PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
-Dung, P. M. (1995). On the acceptability of arguments. Artificial Intelligence, 77(2).
-Walton, D. (1998). The New Dialectic. University of Toronto Press.
+
+Dung, P. M. (1995). On the acceptability of arguments. Artificial Intelligence,
+77(2), 321-357.
+
+Walton, D. N. (1989). Informal Logic. Cambridge University Press.
 
 
 ---

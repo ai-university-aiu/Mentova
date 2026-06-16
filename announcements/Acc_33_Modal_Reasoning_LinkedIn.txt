@@ -1,19 +1,34 @@
-Rung 33 accomplished: Modal Reasoning — Mentova now distinguishes what must be true from what merely might be.
+Mentova now reasons about possibility and necessity. Rung 33 of 48 is accomplished.
 
-Three propositions, three verdicts:
+Some things are necessarily true. Some things are only possibly true. Some things are contingent — true in some worlds but not all.
 
-    birds_fly   → necessary (true in all four accessible worlds)
-    fire_is_hot → necessary (true in all four worlds)
-    tweety_flies → contingent (true in w1, w2; false in actual and w3)
+Rung 33 gives Mentova modal reasoning using Kripke possible-world semantics.
 
-The world model: actual, w1, w2, w3. Tweety is a penguin — in the actual world and w3, tweety does not fly. In w1 and w2 (hypothetical worlds where tweety has no flightless property), tweety does fly. So tweety_flies is possible (witness: w1) but not necessary.
+Four worlds: actual, w1, w2, w3. Each world contains different facts.
 
-    mentova_query(modal, classify(tweety_flies), R)
-    → answer(contingent, just(modal(classify(tweety_flies), classification(contingent))))
+  Query: necessarily(fire_is_hot)
+  Answer: true
+  Justification: fire_is_hot holds in all accessible worlds
 
-This is why modal logic matters: it lets you say "this is necessarily so" vs "this happens to be so" — a distinction that matters enormously for planning, law, and science.
+Fire is hot in every world. It is necessarily true.
 
-Rung 33 of 48.
+  Query: classify(it_rains)
+  Answer: contingent
+  Justification: it_rains holds in w1 and w3 but not actual or w2
+
+Rain is contingent — possible (it rains in some worlds) but not necessary (it does not rain in all worlds).
+
+  Query: necessarily(water_is_wet)
+  Answer: true
+
+  Query: possibly(tweety_flies)
+  Answer: true (tweety flies in w1 and w2)
+
+Modal reasoning is the foundation of temporal logic, belief revision, deontic logic, and knowledge representation. When we say "it is possible that..." or "it must be the case that...", we are using modal reasoning.
+
+Mentova now handles these categories explicitly: necessary, contingent, possible, impossible. Each answer comes with the set of accessible worlds checked.
+
+The code is open. The reasoning is readable. The mind is growing.
 
 https://github.com/ai-university-aiu/Mentova
 https://github.com/ai-university-aiu/PrologAI

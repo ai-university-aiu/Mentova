@@ -1,19 +1,33 @@
-Rung 31 accomplished: Dialectical Reasoning — Mentova now weighs opposing arguments and returns a verdict with the winning synthesis.
+Mentova now debates. Rung 31 of 48 is accomplished.
 
-The question on the table: Is nuclear energy good?
+Every important question has two sides. Nuclear energy: good or bad? Remote work: better or worse? AI: dangerous or beneficial?
 
-Mentova's argument base:
+Rung 31 gives Mentova dialectical reasoning — the ability to weigh both sides and name the winner.
 
-    Pro: low_carbon_emission (0.9), economic_output (0.8), reliable_baseload (0.7) → total 2.40
-    Con: waste_storage_risk (0.8), accident_potential (0.7), high_capital_cost (0.5) → total 2.00
+Three arguments for nuclear energy:
+  economic_output (0.8), low_carbon_emission (0.9), reliable_baseload (0.7)
+  Pro total: 2.4
 
-Verdict: pro wins. Synthesis: low_carbon_emission — the strongest individual argument.
+Three arguments against:
+  waste_storage_risk (0.8), accident_potential (0.7), high_capital_cost (0.5)
+  Con total: 2.0
 
-Both scores appear in the justification. Mentova does not hide the losing side; it shows you exactly how close the contest was (2.40 vs 2.00) and names its best argument.
+Verdict: pro wins. Synthesis: the decisive argument is low_carbon_emission.
 
-This is dialectical reasoning: not "I agree" or "I disagree," but "here is what each side has, here is who wins, and here is why."
+  answer(verdict(pro, synthesis(low_carbon_emission)),
+         just(dialectical(proposition(nuclear_energy_good),
+                           pro_score(2.4), con_score(2.0),
+                           winner(pro), synthesis(low_carbon_emission))))
 
-Rung 31 of 48. Over the halfway mark now.
+Both sides named. Both scores shown. Winner identified. Decisive argument named.
+
+This is dialectical reasoning: not "I believe X" but "here are the arguments on both sides, weighed, and here is what the evidence supports."
+
+Three propositions in the argument base: nuclear energy, remote work, AI risk. More can be added. The mechanism generalises.
+
+Mentova does not just answer questions. It weighs arguments.
+
+The code is open. The reasoning is readable. The mind is growing.
 
 https://github.com/ai-university-aiu/Mentova
 https://github.com/ai-university-aiu/PrologAI
