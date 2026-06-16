@@ -44,11 +44,13 @@ preconditions, effects, and cost. Queries: best_action, achieves_what, how_to.
 
 DEMONSTRATION
 
+    % Query Mentova for practical reasoning about 'best_action(not_hungry'.
     ?- mentova_query(practical, best_action(not_hungry, [has(food)]), R).
     R = answer(action(eat_food, cost(1)),
                just(practical(means_ends(goal(not_hungry), state([has(food)]),
                                           best_action(eat_food), cost(1)))))
 
+    % Query Mentova for practical reasoning about 'best_action(has(food)'.
     ?- mentova_query(practical, best_action(has(food), [has(money)]), R).
     R = answer(action(buy_food, cost(2)), ...)
 
@@ -77,8 +79,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(practical, best_action(not_hungry, [has(food)]), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

@@ -45,6 +45,7 @@ scores and names the winning synthesis argument.
 
 DEMONSTRATION
 
+    % Query Mentova for dialectical reasoning about 'debate(nuclear_energy_good)'.
     ?- mentova_query(dialectical, debate(nuclear_energy_good), R).
     R = answer(verdict(pro, synthesis(low_carbon_emission)),
                just(dialectical(proposition(nuclear_energy_good),
@@ -78,8 +79,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(dialectical, debate(nuclear_energy_good), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

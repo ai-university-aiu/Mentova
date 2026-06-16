@@ -62,7 +62,9 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for nonmonotonic reasoning about 'NMQuery'.
     mentova_query(nonmonotonic, NMQuery, answer(Result, Just)) :-
+        % State the fact: mentova defeasible(...).
         mentova_defeasible(NMQuery, Result, Just).
 
 
@@ -70,6 +72,7 @@ DEMONSTRATION
 
 Query 1 — flies(canary):
 
+    % Query Mentova for nonmonotonic reasoning about 'query(flies(canary))'.
     ?- mentova_query(nonmonotonic, query(flies(canary)), R).
     R = answer(holds(default),
                just(defeasible(flies(canary), default(bird_flies),
@@ -79,6 +82,7 @@ Query 1 — flies(canary):
 
 Query 2 — flies(penguin):
 
+    % Query Mentova for nonmonotonic reasoning about 'query(flies(penguin))'.
     ?- mentova_query(nonmonotonic, query(flies(penguin)), R).
     R = answer(withdrawn(exception(penguin_exception)),
                just(defeasible(flies(penguin), default(bird_flies),
@@ -129,10 +133,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for nonmonotonic reasoning about 'query(flies(canary))'.
             mentova_query(nonmonotonic, query(flies(canary)), R1), write(R1), nl, \
+            % Query Mentova for nonmonotonic reasoning about 'query(flies(penguin))'.
             mentova_query(nonmonotonic, query(flies(penguin)), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

@@ -64,7 +64,9 @@ in natural-language text requires additional parsing not implemented here.
 
 REPRODUCIBILITY
 
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a informal query 'detect_fallacy(arg1)' via Mentova and write the result.
           -g "mentova_query(informal, detect_fallacy(arg1), R), write(R), nl" -t halt
 
 

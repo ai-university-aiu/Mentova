@@ -70,7 +70,9 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for logical reasoning about 'LogQuery'.
     mentova_query(logical, LogQuery, answer(Result, Just)) :-
+        % State the fact: mentova logical(...).
         mentova_logical(LogQuery, Result, Just).
 
 
@@ -78,6 +80,7 @@ DEMONSTRATION
 
 Query: prove can_fly(canary) from [is_bird(canary), not_flightless(canary)]:
 
+    % Call the top-level Mentova query interface (mentova_query/3).
     ?- mentova_query(logical,
                      prove(can_fly(canary), [is_bird(canary), not_flightless(canary)]),
                      R).
@@ -152,12 +155,17 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for logical reasoning about 'prove(can_fly(canary)'.
             mentova_query(logical, prove(can_fly(canary), \
               [is_bird(canary),not_flightless(canary)]), R1), write(R1), nl, \
+            % Query Mentova for logical reasoning about 'prove(needs_water(canary)'.
             mentova_query(logical, prove(needs_water(canary), \
               [is_bird(canary),not_flightless(canary)]), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

@@ -45,9 +45,11 @@ Queries: classify, gut, prototypes, match_detail.
 
 DEMONSTRATION
 
+    % Query Mentova for intuitive reasoning about 'classify([has_wings'.
     ?- mentova_query(intuitive, classify([has_wings, has_feathers, can_fly, lays_eggs]), R).
     R = answer(match(bird, robin, confidence(1.0)), ...)
 
+    % Query Mentova for intuitive reasoning about 'gut([cold_blooded'.
     ?- mentova_query(intuitive, gut([cold_blooded, has_scales]), R).
     R = answer(gut(fish, triggered_by(cold_blooded)), ...)
 
@@ -76,10 +78,14 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for intuitive reasoning about 'classify([has_wings'.
             mentova_query(intuitive, classify([has_wings,has_feathers,can_fly,lays_eggs]), R), \
             write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

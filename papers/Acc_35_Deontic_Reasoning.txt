@@ -61,7 +61,9 @@ is not yet implemented. Contexts are flat atoms, not structured hierarchies.
 
 REPRODUCIBILITY
 
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a deontic query 'status(driver' via Mentova and write the result.
           -g "mentova_query(deontic, status(driver, wear_seatbelt, road), R), write(R), nl" -t halt
 
 

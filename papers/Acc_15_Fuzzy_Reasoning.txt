@@ -65,6 +65,7 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for fuzzy reasoning about 'FuzzyQuery'.
     mentova_query(fuzzy, FuzzyQuery, answer(Result, Just)) :-
         once(mentova_fuzzy(FuzzyQuery, Result, Just)).
 
@@ -73,6 +74,7 @@ DEMONSTRATION
 
 Query 1 — classify temperature 22°C:
 
+    % Query Mentova for fuzzy reasoning about 'classify(temperature'.
     ?- mentova_query(fuzzy, classify(temperature, 22), R).
     R = answer(best(warm, 0.7, high),
                just(fuzzy_classify(temperature, 22, best(warm, 0.7), modifier(high))))
@@ -82,6 +84,7 @@ Query 1 — classify temperature 22°C:
 
 Query 2 — membership(temperature, 22, warm):
 
+    % Query Mentova for fuzzy reasoning about 'membership(temperature'.
     ?- mentova_query(fuzzy, membership(temperature, 22, warm), R).
     R = answer(degree(warm, 0.7), just(fuzzy_membership(temperature, 22, warm, 0.7)))
 
@@ -89,6 +92,7 @@ Query 2 — membership(temperature, 22, warm):
 
 Query 3 — classify speed 75 km/h:
 
+    % Query Mentova for fuzzy reasoning about 'classify(speed'.
     ?- mentova_query(fuzzy, classify(speed, 75), R).
     R = answer(best(medium, 0.875, very_high),
                just(fuzzy_classify(speed, 75, best(medium, 0.875), modifier(very_high))))
@@ -97,6 +101,7 @@ Query 3 — classify speed 75 km/h:
 
 Query 4 — fuzzy NOT of 0.7:
 
+    % Query Mentova for fuzzy reasoning about 'fuzzy_not(0.7)'.
     ?- mentova_query(fuzzy, fuzzy_not(0.7), R).
     R = answer(0.3, just(fuzzy_not(0.7, complement(0.3))))
 
@@ -141,12 +146,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for fuzzy reasoning about 'classify(temperature'.
             mentova_query(fuzzy, classify(temperature,22), R1), write(R1), nl, \
+            % Query Mentova for fuzzy reasoning about 'membership(temperature'.
             mentova_query(fuzzy, membership(temperature,22,warm), R2), write(R2), nl, \
+            % Query Mentova for fuzzy reasoning about 'classify(speed'.
             mentova_query(fuzzy, classify(speed,75), R3), write(R3), nl, \
+            % Query Mentova for fuzzy reasoning about 'fuzzy_not(0.7)'.
             mentova_query(fuzzy, fuzzy_not(0.7), R4), write(R4), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

@@ -45,6 +45,7 @@ plurality vote. Queries: analyse, utilitarian, deontological, virtue, describe, 
 
 DEMONSTRATION
 
+    % Query Mentova for moral reasoning about 'analyse(trolley_problem)'.
     ?- mentova_query(moral, analyse(trolley_problem), R).
     R = answer(moral_analysis(trolley_problem,
                                utilitarian(pull_lever),
@@ -52,6 +53,7 @@ DEMONSTRATION
                                virtue(do_nothing),
                                integrated(pull_lever)), ...)
 
+    % Query Mentova for moral reasoning about 'virtue(doctors_dilemma)'.
     ?- mentova_query(moral, virtue(doctors_dilemma), R).
     R = answer(verdict(refuse), ...)
 
@@ -83,8 +85,11 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, mentova_query(moral, analyse(trolley_problem), R), write(R), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

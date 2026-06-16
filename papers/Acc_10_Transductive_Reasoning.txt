@@ -66,7 +66,9 @@ The classify(Features, K) query:
 
 Top-level clause:
 
+    % Query Mentova for transductive reasoning about 'TransQuery'.
     mentova_query(transductive, TransQuery, answer(Label, Just)) :-
+        % State the fact: mentova transduce(...).
         mentova_transduce(TransQuery, Label, Just).
 
 
@@ -74,6 +76,7 @@ DEMONSTRATION
 
 Query 1 — new point: [wings=yes, feathers=yes, beak=yes, flies=yes, size=medium], K=3:
 
+    % Call the top-level Mentova query interface (mentova_query/3).
     ?- mentova_query(transductive,
                      classify([wings=yes,feathers=yes,beak=yes,flies=yes,size=medium], 3), R).
     R = answer(bird, just(knn(k(3),
@@ -85,6 +88,7 @@ Query 1 — new point: [wings=yes, feathers=yes, beak=yes, flies=yes, size=mediu
 
 Query 2 — new point: [wings=no, feathers=no, beak=no, flies=no, size=large], K=3:
 
+    % Call the top-level Mentova query interface (mentova_query/3).
     ?- mentova_query(transductive,
                      classify([wings=no,feathers=no,beak=no,flies=no,size=large], 3), R).
     R = answer(mammal, just(knn(k(3),
@@ -140,14 +144,19 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Call the top-level Mentova query interface (mentova_query/3).
             mentova_query(transductive, \
               classify([wings=yes,feathers=yes,beak=yes,flies=yes,size=medium],3), R1), \
             write(R1), nl, \
+            % Call the top-level Mentova query interface (mentova_query/3).
             mentova_query(transductive, \
               classify([wings=no,feathers=no,beak=no,flies=no,size=large],3), R2), \
             write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

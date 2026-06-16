@@ -64,6 +64,7 @@ Query forms:
 
 Top-level clause:
 
+    % Query Mentova for paraconsistent reasoning about 'ParaQuery'.
     mentova_query(paraconsistent, ParaQuery, answer(Result, Just)) :-
         once(mentova_paraconsistent(ParaQuery, Result, Just)).
 
@@ -72,6 +73,7 @@ DEMONSTRATION
 
 Query 1 — check(flies(tweety)):
 
+    % Query Mentova for paraconsistent reasoning about 'check(flies(tweety))'.
     ?- mentova_query(paraconsistent, check(flies(tweety)), R).
     R = answer(both, just(paraconsistent(flies(tweety), tag(both), isolated(yes))))
 
@@ -79,6 +81,7 @@ Query 1 — check(flies(tweety)):
 
 Query 2 — unaffected(flies(canary)):
 
+    % Query Mentova for paraconsistent reasoning about 'unaffected(flies(canary))'.
     ?- mentova_query(paraconsistent, unaffected(flies(canary)), R).
     R = answer(true, just(paraconsistent_isolation(
                            contradiction(flies(tweety), both),
@@ -125,10 +128,15 @@ Requirements: SWI-Prolog 9.0.4 or later.
 
   git clone https://github.com/ai-university-aiu/Mentova.git
   cd Mentova
+  % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
   swipl -l src/mentova/mentova.pl \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -g "mentova_boot, \
+            % Query Mentova for paraconsistent reasoning about 'check(flies(tweety))'.
             mentova_query(paraconsistent, check(flies(tweety)), R1), write(R1), nl, \
+            % Query Mentova for paraconsistent reasoning about 'unaffected(flies(canary))'.
             mentova_query(paraconsistent, unaffected(flies(canary)), R2), write(R2), nl" \
+        % Supply a goal or termination instruction to the SWI-Prolog command.
         -t halt
 
 

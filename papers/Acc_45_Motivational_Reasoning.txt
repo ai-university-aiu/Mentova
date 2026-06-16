@@ -41,6 +41,7 @@ THE DEMONSTRATION
     drive_to_action(achieve_recognition): → compete_and_excel
     drive_to_action(ensure_safety):       → avoid_threat
 
+    % Demonstrate the 'hierarchy' query (result shown on next line).
     hierarchy(esteem):
       → must_first_satisfy([physiological, safety, belonging])
 
@@ -65,7 +66,9 @@ hunger drive) is not modelled.
 
 REPRODUCIBILITY
 
+    % Load the Mentova bootstrap into SWI-Prolog, execute the query, and halt.
     swipl -l src/mentova/mentova.pl \
+          % Execute a motivational query 'top_drive(alice)' via Mentova and write the result.
           -g "mentova_query(motivational, top_drive(alice), R), write(R), nl" -t halt
 
 
