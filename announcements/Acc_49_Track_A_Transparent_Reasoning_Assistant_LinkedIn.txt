@@ -1,0 +1,61 @@
+MENTOVA TRACK A: THE TRANSPARENT REASONING ASSISTANT IS LIVE
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+Mentova has passed Track A of its Demonstration Plan.
+
+Track A is the Transparent Reasoning Assistant - no hardware, no neural network, no
+opaque weights. Just a mind that answers expert questions and shows every step.
+
+THE DEMONSTRATION
+
+Mentova was asked ten expert biomedical questions over two real ontologies:
+
+• the Gene Ontology (GO) - 43,000+ terms classifying what genes do and where
+• the Disease Ontology (DO) - 10,000+ terms classifying human diseases
+
+Each ontology was loaded into its own scope. Every answer came back with the full
+chain of named facts that produced it.
+
+SAMPLE RESULTS (all glass-box)
+
+Is DNA repair a kind of biological process? Yes - via a four-hop is_a chain:
+dna_repair -> dna_metabolic_process -> metabolic_process -> biological_process.
+Every step is a named fact. Every fact is auditable.
+
+Is protein_tyrosine_kinase_activity a kind of molecular_function? Yes - via a
+five-hop chain through the GO molecular function hierarchy. Computed correctly
+without a depth limit.
+
+What diseases is TP53 associated with? Cancer, lung cancer, colorectal cancer,
+and breast cancer - all curated associations, all named in the justification.
+
+Is glioblastoma a kind of disease? Yes - via a five-hop chain:
+glioblastoma -> brain_cancer -> cancer -> disease_of_cellular_proliferation -> disease.
+
+CROSS-SCOPE RESULT
+
+Explain breast cancer via the GO functions of its genes:
+BRCA1 contributes dna_binding. TP53 contributes
+dna_binding_transcription_factor_activity. PTEN contributes
+protein_tyrosine_phosphatase_activity. One query. Two ontologies. Every link named.
+
+WHY THIS MATTERS
+
+Any black-box model can return "dna_binding" as an answer to "what does BRCA1 do."
+
+What no black-box model can do is show you the specific node_facts that produced
+the answer, the evidence code on each fact, and the exact chain of is_a links used
+to classify it in the ontology.
+
+Mentova does all three. Always. That is what glass-box reasoning means.
+
+Track A is the practical proof that the 48-rung reasoning ladder is not just a
+demonstration - it is a foundation for tools that domain experts can actually audit.
+
+Available now in the Mentova repository:
+https://github.com/ai-university-aiu/Mentova
+
+#PrologAI #Mentova #GlassBoxAI #SyntheticMind #AIU #ExplainableAI #Bioinformatics
+#GeneOntology #DiseaseOntology #TransparentAI

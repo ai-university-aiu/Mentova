@@ -117,6 +117,8 @@
 :- use_module(legal).
 % Execute the compile-time directive: use_module(moral).
 :- use_module(moral).
+% Load the Track A Transparent Reasoning Assistant module so its predicates are available here.
+:- use_module(track_a).
 
 % Import [member/2] from the built-in 'lists' library.
 :- use_module(library(lists), [member/2]).
@@ -204,6 +206,12 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     % State the fact: believes(Agent, Prop, Value).
     believes(Agent, Prop, Value).
+
+% Track A — transparent reasoning assistant over GO and DO expert ontologies
+% Define a clause for 'mentova_query' handling Track A queries.
+mentova_query(track_a, TAQuery, answer(Result, Just)) :-
+    % Delegate to the Track A module which handles GO, DO, and cross-scope queries.
+    once(mentova_track_a(TAQuery, answer(Result, Just), _)).
 
 % Rung 48 — moral: multi-framework ethical reasoning
 % Define a clause for 'mentova query': succeed when the following conditions hold.
