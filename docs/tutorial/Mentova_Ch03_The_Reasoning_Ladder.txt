@@ -1,0 +1,611 @@
+MENTOVA TUTORIAL
+
+Chapter 3: The Reasoning Ladder - A Complete Tour
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+
+THE REASONING LADDER
+
+Mentova's 48+ reasoning types are organized as a ladder.
+
+The ladder starts at the simplest, most basic forms of reasoning and climbs to the most complex.
+
+Each rung of the ladder is a distinct kind of reasoning. They are not in competition: Mentova uses whichever type of reasoning is appropriate for the question at hand.
+
+You access every rung through the same predicate:
+
+    mentova_query(+QueryType, +Query, -Result)
+
+Where QueryType is the name of the rung.
+
+This chapter tours the rungs from bottom to top.
+
+
+RUNG 1: TRANSPARENT DEDUCTION
+
+QueryType: deductive
+
+Deduction is the most basic form of logic: if premises are true and the rules are valid, the conclusion must be true.
+
+    ?- mentova_query(deductive, is_a(tweety, bird), R).
+    R = answer(yes, just(tweety, is_a, bird, chain([tweety, bird]))).
+
+    ?- mentova_query(deductive, capable_of(tweety, fly), R).
+    R = answer(yes, just(tweety, capable_of, fly, via_isa)).
+
+The justification always shows the chain of reasoning.
+
+Common queries: is_a(X, Y), capable_of(X, Y), has_part(X, Y).
+
+
+RUNG 2: INDUCTIVE REASONING
+
+QueryType: inductive
+
+Induction learns a rule from examples.
+
+Given positive examples (things that are true), negative examples (things that are false), and background knowledge, Mentova induces a general rule.
+
+    ?- mentova_query(inductive,
+           induce([bird(tweety), bird(robin)],
+                  [not_bird(whale), not_bird(dog)],
+                  [has_feathers(tweety), has_feathers(robin),
+                   no_feathers(whale), no_feathers(dog)],
+                  [has_feathers(eagle)]),
+           R).
+
+Mentova attempts to induce: "X is a bird if X has feathers" and verifies it on the held-out case (eagle).
+
+
+RUNG 3: ABDUCTIVE REASONING
+
+QueryType: abductive
+
+Abduction finds the best explanation for an observation.
+
+    ?- mentova_query(abductive, explain(wet_grass), R).
+
+Mentova proposes hypotheses that could explain the wet grass (it rained, the sprinkler was on) and ranks them by plausibility.
+
+Result: answer(best_hypothesis, just(abduction(wet_grass), all_explanations([...]))).
+
+
+RUNG 4: PROBABILISTIC REASONING
+
+QueryType: probabilistic
+
+Probabilistic reasoning works with degrees of belief rather than true/false.
+
+    ?- mentova_query(probabilistic, prob(raining), R).
+
+Returns the probability of rain based on probability facts in the knowledge base.
+
+
+RUNG 5: BAYESIAN REASONING
+
+QueryType: bayesian
+
+Bayesian reasoning updates a belief when new evidence arrives.
+
+The formula: Posterior = (Prior * Likelihood) / Evidence.
+
+    ?- mentova_query(bayesian, update(rain, wet_grass), R).
+
+Given that we observe wet grass, how does our belief in rain change?
+
+
+RUNG 6: CAUSAL REASONING
+
+QueryType: causal
+
+Causal reasoning distinguishes "A causes B" from "A correlates with B."
+
+    ?- mentova_query(causal, effect_of(exercise, fitness), R).
+
+Mentova applies Pearl's do-calculus framework to reason about interventions vs. observations.
+
+
+RUNG 7: STATISTICAL REASONING
+
+QueryType: statistical
+
+Statistical reasoning finds patterns in observation tables.
+
+    ?- mentova_query(statistical,
+           pattern([obs(height, 170, weight, 65),
+                    obs(height, 180, weight, 80),
+                    obs(height, 160, weight, 55)]), R).
+
+Mentova identifies the statistical relationship between the variables.
+
+
+RUNG 8: ANALOGICAL REASONING
+
+QueryType: analogical
+
+Analogical reasoning solves A:B :: C:? by finding a structural mapping between cases.
+
+    ?- mentova_query(analogical, analogy(dog:puppy, cat:?), R).
+    R = answer(kitten, just(...)).
+
+    ?- mentova_query(analogical, analogy(hot:cold, fast:?), R).
+    R = answer(slow, just(...)).
+
+
+RUNG 9: RELATIONAL REASONING
+
+QueryType: relational
+
+Multi-hop relational reasoning follows chains of relationships across the knowledge base.
+
+    ?- mentova_query(relational, path(tweety, animal, _Hops), R).
+
+Mentova finds the multi-hop path: tweety -> bird -> vertebrate -> animal.
+
+
+RUNG 10: TRANSDUCTIVE REASONING
+
+QueryType: transductive
+
+Transductive reasoning classifies a new case by finding the most similar known cases (k-Nearest Neighbors).
+
+    ?- mentova_query(transductive, classify(unknown_creature, [has_feathers(true), can_fly(true)]), R).
+
+Mentova finds the nearest known cases and classifies the unknown creature based on what those cases belong to.
+
+
+RUNG 11: COMMONSENSE REASONING
+
+QueryType: commonsense
+
+Commonsense reasoning answers everyday-knowledge questions.
+
+    ?- mentova_query(commonsense, typical_location(bird), R).
+    R = answer(trees_or_sky, just(...)).
+
+    ?- mentova_query(commonsense, what_is(refrigerator, for), R).
+    R = answer(keeping_food_cold, just(...)).
+
+
+RUNG 12: LOGICAL REASONING
+
+QueryType: logical
+
+Forward-chaining rule engine. Given a set of rules and initial facts, Mentova fires all applicable rules until no more can fire.
+
+    ?- mentova_query(logical, forward_chain([hot, dry_grass]), R).
+
+
+RUNG 13: FORMAL REASONING
+
+QueryType: formal
+
+Checks derivations against the Minimal PrologAI Kernel.
+
+    ?- mentova_query(formal, prove(modus_ponens(p_implies_q, p, q)), R).
+    R = answer(valid, just(modus_ponens, premises([p_implies_q, p]), conclusion(q))).
+
+    ?- mentova_query(formal, prove(hypothetical_syllogism(p_implies_q, q_implies_r, p_implies_r)), R).
+
+
+RUNG 14: MATHEMATICAL REASONING
+
+QueryType: mathematical
+
+Computes quantitative answers.
+
+    ?- mentova_query(mathematical, compute(factorial(5)), R).
+    R = answer(120, just(factorial, 5, steps(...))).
+
+    ?- mentova_query(mathematical, compute(fibonacci(10)), R).
+
+    ?- mentova_query(mathematical, solve(linear_equation(2x + 3, 11)), R).
+
+
+RUNG 15: FUZZY REASONING
+
+QueryType: fuzzy
+
+Fuzzy reasoning handles graded membership (degrees of truth between 0 and 1).
+
+    ?- mentova_query(fuzzy, degree_of(tweety, tall_bird), R).
+
+Returns a fuzzy truth value (e.g., 0.6) rather than true or false.
+
+
+RUNG 16: QUALITATIVE REASONING
+
+QueryType: qualitative
+
+Predicts the direction of change when a parameter changes.
+
+    ?- mentova_query(qualitative, what_happens_when(increase(temperature), state(ice)), R).
+    R = answer(melts, just(...)).
+
+
+RUNG 17: NON-MONOTONIC REASONING
+
+QueryType: nonmonotonic
+
+Non-monotonic reasoning allows conclusions to be retracted when new information arrives.
+
+    ?- mentova_query(nonmonotonic, defeasible_conclusion(flies(tweety)), R).
+
+Initially: tweety is a bird, birds fly, so tweety flies.
+After adding: penguin_exception(tweety), the conclusion is retracted.
+
+
+RUNG 18: PARACONSISTENT REASONING
+
+QueryType: paraconsistent
+
+Paraconsistent reasoning continues despite contradictions in the knowledge base, without everything becoming trivially true.
+
+    ?- mentova_query(paraconsistent, reason_with_contradiction(source_a_says(raining), source_b_says(not_raining)), R).
+
+Mentova reports both claims and reasons about which is more credible.
+
+
+RUNG 19: COUNTERFACTUAL REASONING
+
+QueryType: counterfactual
+
+Counterfactual reasoning explores "what if" scenarios.
+
+    ?- mentova_query(counterfactual, if_then(birds_cant_fly, tweety_still_bird), R).
+
+    ?- mentova_query(counterfactual, what_if(napoleon_won_waterloo), R).
+
+
+RUNG 20: HYPOTHETICAL REASONING
+
+QueryType: hypothetical
+
+Hypothetical reasoning explores a supposition without asserting it as true.
+
+    ?- mentova_query(hypothetical, suppose(all_metals_liquid_at_room_temperature), R).
+
+Mentova reasons within the hypothesis.
+
+
+RUNG 21: SPATIAL REASONING
+
+QueryType: spatial
+
+Spatial reasoning handles containment, position, and reference frames.
+
+    ?- mentova_query(spatial, chain(marble), R).
+    R = answer(chain([marble, basket, room, house]), just(...)).
+
+    ?- mentova_query(spatial, left_of(cup, plate), R).
+
+
+RUNG 22: DIAGRAMMATIC REASONING
+
+QueryType: diagrammatic
+
+Reads and reasons about small grids or layouts.
+
+    ?- mentova_query(diagrammatic, read_grid([[a,b],[c,d]]), R).
+
+
+RUNG 23: TEMPORAL REASONING
+
+QueryType: temporal
+
+Ordering and duration questions.
+
+    ?- mentova_query(temporal, before(breakfast, lunch), R).
+    R = answer(yes, just(temporal_order, [...] )).
+
+    ?- mentova_query(temporal, duration_of(flight_london_to_nyc), R).
+
+
+RUNG 24: CASE-BASED REASONING
+
+QueryType: case_based
+
+Solves a new problem by adapting the most similar past case.
+
+    ?- mentova_query(case_based, solve_like_past(new_problem(circuit_fault)), R).
+
+Mentova finds the most similar past fault case and adapts its solution.
+
+
+RUNG 25: CONSTRAINT-BASED REASONING
+
+QueryType: constraint
+
+Solves constraint satisfaction problems.
+
+    ?- mentova_query(constraint, solve(map_coloring(4_color, [wa,nt,sa,q,nsw,v,t], [...edges...])), R).
+
+Mentova finds an assignment of colors such that no adjacent regions share a color.
+
+
+RUNG 26: SCIENTIFIC REASONING
+
+QueryType: scientific
+
+Forms, tests, and scores a hypothesis against observations.
+
+    ?- mentova_query(scientific,
+           hypothesize(all_mammals_warm_blooded, observations([whale_warm, dog_warm, cat_warm])), R).
+
+Mentova evaluates whether the hypothesis is supported.
+
+
+RUNG 27: SYSTEM REASONING
+
+QueryType: system
+
+Reasons about parts, interactions, and emergent properties of systems.
+
+    ?- mentova_query(system, analyze(parts_of(computer)), R).
+
+
+RUNG 28: MODEL-BASED REASONING
+
+QueryType: model_based
+
+Predicts outcomes from an explicit model.
+
+    ?- mentova_query(model_based, predict(pendulum_model, initial_state(angle(45), speed(0))), R).
+
+
+RUNG 29: HEURISTIC REASONING
+
+QueryType: heuristic
+
+Finds a good-enough answer within a resource budget, rather than an optimal answer.
+
+    ?- mentova_query(heuristic, good_enough(path_from_a_to_z, budget(100)), R).
+
+
+RUNG 30: CRITICAL REASONING
+
+QueryType: critical
+
+Evaluates the support for a claim.
+
+    ?- mentova_query(critical, evaluate_claim(vaccines_cause_autism), R).
+
+Mentova evaluates the evidence for and against the claim and reports its assessment.
+
+
+RUNG 31: DIALECTICAL REASONING
+
+QueryType: dialectical
+
+Weighs pro and con arguments.
+
+    ?- mentova_query(dialectical, weigh(pros_cons, topic(nuclear_energy)), R).
+
+Returns a structured list of arguments for and against, with an overall assessment.
+
+
+RUNG 32: METACOGNITIVE REASONING
+
+QueryType: metacognitive
+
+Reasons about the mind's own capabilities and limitations.
+
+    ?- mentova_query(metacognitive, can_i_do(task(prove_godel_incompleteness)), R).
+
+    ?- mentova_query(metacognitive, how_confident(deductive, is_a(tweety, bird)), R).
+
+
+RUNG 33: MODAL REASONING
+
+QueryType: modal
+
+Reasons about necessity and possibility.
+
+    ?- mentova_query(modal, necessarily(all_bachelors_unmarried), R).
+    R = answer(yes, just(analytic_truth, definition_of_bachelor)).
+
+    ?- mentova_query(modal, possibly(life_on_other_planets), R).
+
+
+RUNG 34: EPISTEMIC REASONING
+
+QueryType: epistemic
+
+Reasons about knowledge and belief.
+
+    ?- mentova_query(epistemic, knows(agent(alice), location(marble)), R).
+
+    ?- mentova_query(epistemic, believes(agent(bob), raining), R).
+
+
+RUNG 35: DEONTIC REASONING
+
+QueryType: deontic
+
+Reasons about obligations, permissions, and prohibitions.
+
+    ?- mentova_query(deontic, obligated_to(agent(driver), stop_at_red_light), R).
+
+    ?- mentova_query(deontic, permitted_to(agent(patient), refuse_treatment), R).
+
+
+RUNG 36: PROCEDURAL REASONING
+
+QueryType: procedural
+
+Step-by-step plan reasoning.
+
+    ?- mentova_query(procedural, how_to(make_coffee), R).
+
+Returns a structured step-by-step plan.
+
+
+RUNG 37: SYMBOLIC REASONING
+
+QueryType: symbolic
+
+Symbol manipulation and algebraic identities.
+
+    ?- mentova_query(symbolic, simplify(algebra, (x + 0) * 1), R).
+    R = answer(x, just(algebra_identities([additive_identity, multiplicative_identity]))).
+
+
+RUNG 38: PRACTICAL REASONING
+
+QueryType: practical
+
+Means-ends action selection: how to get from current state to goal state.
+
+    ?- mentova_query(practical, how_to_achieve(goal(clean_house), from(current_state(messy))), R).
+
+
+RUNG 39: TELEOLOGICAL REASONING
+
+QueryType: teleological
+
+Reasons about purpose and final causes.
+
+    ?- mentova_query(teleological, purpose_of(heart), R).
+    R = answer(pump_blood, just(biological_function(...) )).
+
+
+RUNG 40: STRATEGIC REASONING
+
+QueryType: strategic
+
+Game-theoretic optimal move selection.
+
+    ?- mentova_query(strategic, best_move(chess, board_state(initial)), R).
+
+
+RUNG 41: NARRATIVE REASONING
+
+QueryType: narrative
+
+Reasons about story structure, plot, and causal chains in narratives.
+
+    ?- mentova_query(narrative, what_happens_next(story_so_far([...])), R).
+
+
+RUNG 42: SOCIAL REASONING
+
+QueryType: social
+
+Roles, relationships, trust, and group dynamics.
+
+    ?- mentova_query(social, trust_level(agent(alice), agent(bob)), R).
+
+
+RUNG 43: INTUITIVE REASONING
+
+QueryType: intuitive
+
+Fast, prototype-based pattern matching (the intuition of "this looks like X").
+
+    ?- mentova_query(intuitive, classify_quickly(new_entity([large, aquatic, mammal])), R).
+    R = answer(probably_whale, just(prototype_match(...))).
+
+
+RUNG 44: EMOTIONAL REASONING
+
+QueryType: emotional
+
+Appraisal-based emotion reasoning.
+
+    ?- mentova_query(emotional, appraise(event(unexpected_gift)), R).
+
+Returns the emotional appraisal of the event.
+
+
+RUNG 45: MOTIVATIONAL REASONING
+
+QueryType: motivational
+
+Drive and need hierarchy reasoning.
+
+    ?- mentova_query(motivational, current_priority, R).
+
+Returns the current highest-priority motivational drive.
+
+
+RUNG 46: INFORMAL REASONING
+
+QueryType: informal
+
+Fallacy detection and rhetoric analysis.
+
+    ?- mentova_query(informal, detect_fallacy(argument([all_politicians_lie, politician_said_x, therefore_x_is_lie])), R).
+
+
+RUNG 47: LEGAL REASONING
+
+QueryType: legal
+
+Rule-exception-precedent reasoning in a legal framework.
+
+    ?- mentova_query(legal, applies(rule(no_parking_fire_hydrant), situation(parked_at_hydrant)), R).
+
+
+RUNG 48: MORAL REASONING
+
+QueryType: moral
+
+Multi-framework ethical reasoning: utilitarian, deontological, virtue ethics.
+
+    ?- mentova_query(moral, evaluate(action(lie_to_save_life)), R).
+
+Returns the verdict from each ethical framework and an overall assessment.
+
+
+SPECIAL QUERY TYPES
+
+TRACK A TRANSPARENT REASONING
+
+QueryType: track_a
+
+Mentova's expert ontology interface for General Ontology (GO) and Domain Ontology (DO).
+
+    ?- mentova_query(track_a, query(is_a, X, Y), R).
+
+
+WORKSPACE CYCLE
+
+QueryType: workspace
+
+Runs the Global Workspace cycle.
+
+    ?- mentova_query(workspace, run_cycle(3), R).
+
+Runs 3 broadcast cycles and returns a workspace report.
+
+
+ATTENTION SCHEMA
+
+QueryType: attention_schema
+
+Reports the current attention schema state.
+
+    ?- mentova_query(attention_schema, report, R).
+
+
+GAME REASONING
+
+QueryType: game
+
+Plays one perceive-reason-act cycle on a game body.
+
+    ?- mentova_query(game, game_reason(arc_agi, deductive), R).
+
+
+EXERCISE
+
+Try at least five different reasoning types from this chapter.
+
+For each one:
+• Note the QueryType you used.
+• Note the query you asked.
+• Read the Result carefully: what is the conclusion and what is the justification?
+• Try pressing ; after the result to see if there are alternative answers.
+
+END OF CHAPTER 3

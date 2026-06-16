@@ -1,0 +1,71 @@
+THE MENTOVA TUTORIAL:
+A COMPLETE INTRODUCTION TO THE MENTOVA SYNTHETIC MIND FOR NOVICE LEARNERS
+
+Accomplishment Record Acc_70
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We describe the Mentova Tutorial: a complete, four-chapter introduction to the Mentova Synthetic Mind written for learners with no prior programming or artificial intelligence experience. The tutorial covers all 48+ reasoning types accessible via mentova_query/3, the Lattice knowledge store, the developmental assessment framework, the four agent communication protocols, and the constitutional safety layer. It is delivered in two formats: four individual chapter files in docs/tutorial/ and a single monolithic file docs/Mentova_Tutorial.txt for PDF conversion. The tutorial is Part 11 of the Demonstration and Proof-of-Concept Plan (Acc_70).
+
+
+INTRODUCTION
+
+Mentova is the first Synthetic Mind built on the PrologAI platform. It can reason in more than 48 ways, store knowledge in a structured Lattice, assess its own development using Piagetian and CHC frameworks, inhabit game and robot bodies, and communicate with other AI systems through four protocols. Before this accomplishment, a new user had no entry point: the SPARC volumes are written for platform architects, and the accomplishment papers assume knowledge of the system.
+
+The Mentova Tutorial fills this gap. It is addressed to a learner who has never written a line of code and has never heard of Prolog, logic, or Piaget. By the end of four chapters, a reader can start a Mentova session, ask any of the 48+ reasoning types, store and retrieve knowledge in the Lattice, measure Mentova's development, understand its bodies and protocols, and understand the constitutional principles that govern its behavior.
+
+The tutorial is Part 11 of the Demonstration and Proof-of-Concept Plan (Vol. 6, v4). The Tutorial Track discipline is in effect: this tutorial was written only after all the capabilities it describes were demonstrated and documented in prior accomplishment records (Acc_01 through Acc_68).
+
+
+STRUCTURE
+
+The tutorial is organized into four chapters.
+
+Chapter 1: What Is Mentova? - Plain-language introduction to Mentova as a Synthetic Mind. What it can do, what it cannot do, and how the tutorial is organized. The distinction between "mind" as a design choice vs. a philosophical claim is addressed directly.
+
+Chapter 2: Starting a Session - How to install the prerequisites, run bin/mentova, and read the first query result. Error messages explained. The Small-World Commonsense dataset described.
+
+Chapter 3: The Reasoning Ladder - A complete tour of all 48+ reasoning types accessible via mentova_query/3. Each rung is covered with a working example and plain-language explanation of what the reasoning type does. Includes deductive, inductive, abductive, probabilistic, Bayesian, causal, statistical, analogical, relational, transductive, commonsense, logical, formal, mathematical, fuzzy, qualitative, non-monotonic, paraconsistent, counterfactual, hypothetical, spatial, diagrammatic, temporal, case-based, constraint, scientific, system, model-based, heuristic, critical, dialectical, metacognitive, modal, epistemic, deontic, procedural, symbolic, practical, teleological, strategic, narrative, social, intuitive, emotional, motivational, informal, legal, moral, and special query types (track_a, workspace, attention_schema, game).
+
+Chapter 4: Memory, Growth, Bodies, and Protocols - The Lattice, SONA (Sparse Online Nexus Archive), the three developmental assessment frameworks (Piagetian, Bayley, CHC/Cattell-Horn-Carroll), the growth path, the bodies (text console, game environments, robot body), the four agent communication protocols (Model Context Protocol/MCP, Agent-to-Agent/A2A, Agent Communication Protocol/ACP, Agent Network Protocol/ANP), and the constitutional eight principles.
+
+
+SIGNIFICANCE
+
+The Tutorial Track (Part 11) adds a new discipline to the PrologAI project: every capability that has been demonstrated must also be made accessible to a novice learner. This is distinct from but parallel to the Part 10 documentation discipline: capability shown, documented, then taught.
+
+The monolithic file (docs/Mentova_Tutorial.txt) is formatted for PDF conversion. The four chapter files allow a reader to focus on one topic at a time.
+
+The Mentova Tutorial depends on the console REPL launcher (Acc_68, bin/mentova) as its interactive substrate. All examples in Chapter 2 through 4 run at the ?- prompt that bin/mentova provides.
+
+The PrologAI Tutorial (Acc_69) and the Mentova Tutorial (Acc_70) together complete the Tutorial Track: one teaches you how to build on PrologAI; the other teaches you how to use what has already been built.
+
+
+ACCEPTANCE CRITERIA
+
+AC-MentovaTut-001: Chapter 1 exists in docs/tutorial/Mentova_Ch01_Introduction.txt and covers what Mentova is, what it can do, and what it cannot do. PASS.
+
+AC-MentovaTut-002: Chapter 2 exists in docs/tutorial/Mentova_Ch02_Starting_A_Session.txt and covers installation, starting bin/mentova, reading a query result, and error handling. PASS.
+
+AC-MentovaTut-003: Chapter 3 exists in docs/tutorial/Mentova_Ch03_The_Reasoning_Ladder.txt and covers all 48+ reasoning types with working examples. PASS.
+
+AC-MentovaTut-004: Chapter 4 exists in docs/tutorial/Mentova_Ch04_Memory_Growth_Protocols.txt and covers the Lattice, SONA, all three assessment frameworks, growth path, bodies, all four protocols, and the constitution. PASS.
+
+AC-MentovaTut-005: A monolithic file docs/Mentova_Tutorial.txt exists containing all four chapters concatenated. PASS.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/Mentova.git
+    ls docs/tutorial/        % Four chapter files.
+    less docs/Mentova_Tutorial.txt    % Monolithic file.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

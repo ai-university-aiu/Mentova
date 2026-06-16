@@ -1,0 +1,30 @@
+ACCOMPLISHMENT: Acc_69 - PrologAI Tutorial Now Available for Novice Learners
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+A platform that cannot be taught cannot be adopted.
+
+Today we publish the PrologAI Tutorial - a complete, twelve-chapter introduction to the PrologAI platform written for learners with zero prior programming experience.
+
+If you have never written a line of code in your life, this tutorial is for you.
+
+The twelve chapters progress from the absolute beginning - what a fact is, what a rule is, what a query is - all the way to the most advanced capabilities on the platform: the actor framework, episodic memory (SONA), the Piagetian and CHC assessment frameworks, and all four agent communication protocols (Model Context Protocol/MCP, Agent-to-Agent/A2A, Agent Communication Protocol/ACP, Agent Network Protocol/ANP).
+
+All 48 work packages (PR 1 through PR 48) are covered. Every example in the tutorial corresponds to a demonstrated, documented accomplishment. The Tutorial Track discipline (Part 11 of the Demonstration Plan) requires that tutorials be written only after capabilities are proven. Every example you can run at the prompt is backed by evidence.
+
+The tutorial is available in two formats:
+
+• Multi-file: docs/tutorial/ in the PrologAI repository. Twelve chapter files. Read one chapter at a time.
+
+• Monolithic: docs/PrologAI_Tutorial.txt. All twelve chapters in one file. Download and convert to PDF.
+
+The console REPL launcher (Acc_68, bin/mentova) is the interactive substrate for all tutorial examples. Every example in the tutorial runs at the ?- prompt.
+
+PrologAI repository: https://github.com/ai-university-aiu/PrologAI
+
+This is Acc_69 - the sixty-ninth documented accomplishment on Mentova.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+ORCID: 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

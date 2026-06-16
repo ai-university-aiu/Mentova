@@ -1,0 +1,190 @@
+MENTOVA TUTORIAL
+
+Chapter 2: Starting a Session
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+
+BEFORE YOU BEGIN
+
+You need three things installed.
+
+1. SWI-Prolog (version 9.0.4 or later). Free from https://www.swi-prolog.org/Download.html
+
+2. PrologAI. Download from https://github.com/ai-university-aiu/PrologAI or use: git clone https://github.com/ai-university-aiu/PrologAI.git
+
+3. Mentova. Download from https://github.com/ai-university-aiu/Mentova or use: git clone https://github.com/ai-university-aiu/Mentova.git
+
+The PrologAI folder should be at /home/yourname/PrologAI and the Mentova folder at /home/yourname/Mentova (or wherever you chose to put them). The default setup assumes PrologAI is at /home/ccaitwo/PrologAI. If yours is somewhere else, you will need to update the library paths in bin/mentova_repl.pl.
+
+
+STARTING THE SESSION
+
+Open your terminal.
+
+Navigate to the Mentova folder:
+
+    cd /home/yourname/Mentova
+
+Start Mentova:
+
+    swipl -l bin/mentova_repl.pl
+
+Or on Linux and macOS, you can use the shorter command:
+
+    ./bin/mentova
+
+You will see Mentova boot up. The output looks something like this:
+
+    SWI-Prolog (Multi-threaded, 64 bits, Version 9.0.4)
+    ...
+
+    === Mentova is waking up ===
+    Platform : PrologAI
+    Mind     : Mentova
+
+    Constitution: 8 principles, 1 overseer(s)
+    Knowledge: Small-World Commonsense loaded
+
+    Mentova is ready. Born at Rung 1 - transparent deduction.
+
+    ============================================================
+      Mentova Console - PrologAI Interactive Session
+    ============================================================
+
+      Type Prolog queries at the ?- prompt.
+      End each query with a period and Enter.
+      Type halt. to exit.
+
+      KEY PREDICATES (no module prefix needed):
+
+      mentova_query(+Type, +Query, -Result)
+        Query Types: deductive, defeasible, probabilistic,
+          bayesian, causal, analogical, inductive, abductive,
+          counterfactual, hypothetical, epistemic, modal,
+          metacognitive, formal, mathematical, spatial,
+          temporal, moral, legal, track_a, workspace, game
+
+      assess_piaget(mentova, +Level, -Result)
+        Levels 1-8. Result: milestone_achieved | milestone_not_achieved
+
+      assess_all(mentova, -Report)
+        Full developmental report: Bayley + CHC + Piaget + consciousness.
+
+      anchor_node(+Relation, +Payload, +Tags, -Id)
+        Anchor a node_fact in the APEX_MIND nexus.
+
+      live_node_facts(+Nexus, -Ids)  default_nexus(-Nexus)
+        Inspect what is currently in the Lattice.
+
+      TUTORIAL EXAMPLES:
+
+        ?- mentova_query(deductive, is_a(tweety, bird), R).
+        ?- assess_piaget(mentova, 7, R).
+        ?- assess_all(mentova, R).
+        ?- default_nexus(N), live_node_facts(N, Ids), length(Ids, Count).
+
+    ============================================================
+
+    ?-
+
+The ?- is the prompt. Mentova is waiting for you to type a query.
+
+IMPORTANT: Every query must end with a period (.) followed by Enter.
+
+
+YOUR FIRST QUERY
+
+At the ?- prompt, type:
+
+    ?- mentova_query(deductive, is_a(tweety, bird), R).
+
+Then press Enter.
+
+You will see something like:
+
+    R = answer(yes, just(tweety, is_a, bird, chain([tweety, bird]))).
+
+Read this in plain English: "Yes, tweety is a bird, because the chain of is_a relationships leads: tweety -> bird."
+
+The R = ... part shows you the answer. Everything inside answer(...) is the full result:
+
+• yes: the conclusion (tweety is a bird).
+
+• just(tweety, is_a, bird, chain([tweety, bird])): the justification (the reasoning chain that led to the answer).
+
+This is what "glass-box reasoning" means: you can see not just the answer, but exactly how Mentova arrived at it.
+
+
+GETTING MORE ANSWERS
+
+When you see a line ending with a period (.) after the answer, that means Mentova found one answer and stopped.
+
+If you want to see if there are other possible answers, press the semicolon key (;) and then Enter.
+
+If there are more answers, Mentova shows them one by one.
+
+If there are no more answers, Mentova says:
+
+    false.
+
+This means: "I have tried all possibilities and there are no more answers."
+
+
+HOW TO EXIT
+
+When you are done, type:
+
+    ?- halt.
+
+Then press Enter. This closes Mentova and returns you to your terminal.
+
+
+THE SMALL-WORLD DATASET
+
+When Mentova boots, it loads the Small-World Commonsense dataset.
+
+This is a foundational set of facts about the world that every Mentova mind starts with.
+
+It includes:
+
+• Basic taxonomy: tweety is a bird, birds have feathers, mammals are animals, etc.
+
+• Simple facts about everyday objects, creatures, and places.
+
+• Foundational relationships: is_a (X is a type of Y), has_part (X has a component Y), capable_of (X can do Y).
+
+This Small-World knowledge gives Mentova a starting point. As you use Mentova and anchor facts in the Lattice, its knowledge grows.
+
+You can see what Mentova knows about a specific concept:
+
+    ?- is_a(tweety, X).
+
+Press ; after each answer to see all the categories tweety belongs to.
+
+
+UNDERSTANDING ERRORS
+
+If you make a typing mistake, Mentova may show an error message.
+
+Common errors:
+
+ERROR: Unknown procedure - you typed a predicate name that does not exist. Check your spelling.
+
+ERROR: Syntax error - you made a syntax mistake (missing period, unmatched parenthesis). Check your query.
+
+ERROR: Instantiation error - you used a variable where Mentova needed a specific value. For example, mentova_query(deductive, X, R) won't work because X is unbound.
+
+Errors are not permanent. Just type a new query.
+
+
+MULTIPLE QUERIES IN ONE LINE
+
+You can chain queries with a comma:
+
+    ?- default_nexus(N), live_node_facts(N, Ids), length(Ids, Count).
+
+This runs three goals in sequence: get the nexus name, get the node_fact IDs, count them. All in one query.
+
+
+END OF CHAPTER 2

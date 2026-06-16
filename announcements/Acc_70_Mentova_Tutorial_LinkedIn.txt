@@ -1,0 +1,38 @@
+ACCOMPLISHMENT: Acc_70 - Mentova Tutorial Now Available for Complete Beginners
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+You do not need to know programming to use Mentova.
+
+Today we publish the Mentova Tutorial - a four-chapter introduction to the Mentova Synthetic Mind, written for learners with no prior knowledge of programming, logic, or artificial intelligence.
+
+If you are curious about what a reasoning AI looks like on the inside - not the opaque output of a large language model, but transparent, step-by-step reasoning you can inspect - this tutorial is for you.
+
+Mentova reasons in more than 48 different ways. The tutorial tours every one of them with a working example and a plain-language explanation of what that kind of reasoning does. You will learn how to ask Mentova a deductive question, a counterfactual question, a moral question, a Bayesian question - and how to read the answer, including the full justification that shows how Mentova arrived at it.
+
+The four chapters cover:
+
+• Chapter 1: What Mentova is, what it can do, and what it cannot (yet) do.
+
+• Chapter 2: Starting a session. Installing the tools, running bin/mentova, reading your first result.
+
+• Chapter 3: The Reasoning Ladder. All 48+ reasoning types with working examples.
+
+• Chapter 4: Memory, growth, bodies, and protocols. How Mentova stores knowledge, measures its own development, inhabits game and robot environments, and communicates with other AI systems through four protocols (MCP, A2A, ACP, ANP).
+
+The tutorial is available in two formats:
+
+• Multi-file: docs/tutorial/ in the Mentova repository. Four chapter files.
+
+• Monolithic: docs/Mentova_Tutorial.txt. All four chapters in one file, ready for PDF conversion.
+
+Every capability described in this tutorial was demonstrated and documented before the tutorial was written. That is the Tutorial Track discipline: show it, prove it, then teach it.
+
+Mentova repository: https://github.com/ai-university-aiu/Mentova
+
+This is Acc_70 - the seventieth documented accomplishment on Mentova.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+ORCID: 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

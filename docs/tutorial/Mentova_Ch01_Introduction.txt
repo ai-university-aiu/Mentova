@@ -1,0 +1,102 @@
+MENTOVA TUTORIAL
+
+Chapter 1: What Is Mentova?
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+
+WELCOME
+
+Mentova is a Synthetic Mind.
+
+It is a reasoning system built on the PrologAI platform.
+
+It can answer questions, reason through problems, learn from experience, assess its own development, and communicate with other AI systems.
+
+This tutorial teaches you how to use Mentova.
+
+You do not need to know programming.
+
+You do not need to know logic or mathematics.
+
+You do not need to know what artificial intelligence is.
+
+You need a computer, SWI-Prolog installed, the Mentova repository downloaded, and a willingness to try things and see what happens.
+
+
+WHAT MENTOVA CAN DO
+
+Mentova can reason in more than 48 different ways.
+
+Here are some examples of what that means in plain language.
+
+Deductive reasoning: "Tweety is a bird. Birds can fly. Therefore, Tweety can fly." Mentova can follow this kind of logical chain and show you every step.
+
+Defeasible reasoning: "Birds normally fly - but penguins are birds that cannot fly." Mentova handles exceptions and defaults.
+
+Bayesian reasoning: "Given that the grass is wet, what is the probability it rained?" Mentova updates its beliefs when new evidence arrives.
+
+Moral reasoning: "Is it wrong to lie to save someone's life?" Mentova evaluates actions using multiple ethical frameworks and reports what each says.
+
+Legal reasoning: "Does this rule apply to this situation, given these exceptions?" Mentova applies rules, exceptions, and precedents.
+
+Counterfactual reasoning: "If birds could not fly, would an eagle be useful as a hunting partner?" Mentova reasons within hypothetical scenarios.
+
+Theory of mind: "Sally put her marble in the basket, then left. Ann moved the marble to the box. Where does Sally think the marble is?" Mentova reasons about what other agents believe.
+
+Formal logic: "Given that P implies Q and Q implies R, does P imply R?" Mentova proves logical propositions.
+
+And much more.
+
+Mentova also has a memory: the Lattice, where everything it learns is stored. It has a developmental history: its growth can be measured using the Piagetian milestone ladder. It has a constitution: eight principles it follows in everything it does. And it has bodies: ways of interacting with the world, from the text console to game environments to a robot body.
+
+
+WHAT MENTOVA CANNOT DO (YET)
+
+Mentova is honest about its limitations.
+
+It cannot generate natural language the way a large language model can. It does not produce fluent paragraphs of prose. It reasons in structured Prolog terms and reports its reasoning in structured output.
+
+It does not learn from unstructured text in the way a language model does. It learns from experiences stored in SONA (its episodic memory) and from facts anchored in its Lattice.
+
+Its visual processing is limited. It can play visual grid games (ARC-AGI, Baba Is You) but does not have general image understanding.
+
+It does not have general-purpose internet access or the ability to search the web.
+
+These are not permanent limitations. The growth path from Acc_60 is the road map for extending Mentova's capabilities.
+
+
+HOW THIS TUTORIAL IS ORGANIZED
+
+Chapter 1 (this chapter): What Mentova is and what it can do.
+
+Chapter 2: Starting a session - how to run bin/mentova and use the console.
+
+Chapter 3: Asking Mentova questions - the basics of mentova_query/3.
+
+Chapter 4: The Reasoning Ladder - a tour of all 48+ reasoning types.
+
+Chapter 5: Memory and the Lattice - how Mentova stores and retrieves knowledge.
+
+Chapter 6: Assessing Mentova's development - the Piagetian and CHC frameworks.
+
+Chapter 7: Bodies - how Mentova interacts with games and robots.
+
+Chapter 8: Protocols - how Mentova communicates with other AI systems.
+
+Chapter 9: Growing Mentova - understanding the development path.
+
+Chapter 10: The Constitution - Mentova's values and safety principles.
+
+
+A NOTE ON THE WORD "MIND"
+
+This tutorial uses the word "mind" to describe Mentova.
+
+This is a design choice, not a philosophical claim.
+
+We do not assert that Mentova is conscious, that it has feelings, or that it is equivalent to a human mind.
+
+We acknowledge honestly that these questions are uncertain, and that the appropriate response to genuine uncertainty is to take them seriously rather than to dismiss them.
+
+END OF CHAPTER 1

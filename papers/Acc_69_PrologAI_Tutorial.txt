@@ -1,0 +1,72 @@
+THE PROLOGAI TUTORIAL:
+A COMPLETE INTRODUCTION TO THE PROLOGAI PLATFORM FOR NOVICE LEARNERS
+
+Accomplishment Record Acc_69
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-16
+Repository: https://github.com/ai-university-aiu/PrologAI
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We describe the PrologAI Tutorial: a complete, multi-chapter introduction to the PrologAI platform written for learners with no prior programming experience. The tutorial covers all 48 work packages (PR 1 through PR 48) in a progression from the simplest concepts (facts, rules, queries) to the most advanced (actor framework, episodic memory, agent communication protocols). It is delivered in two formats: twelve individual chapter files in docs/tutorial/ and a single monolithic file docs/PrologAI_Tutorial.txt for PDF conversion. The tutorial is Part 11 of the Demonstration and Proof-of-Concept Plan (Acc_69).
+
+
+INTRODUCTION
+
+A platform that cannot be taught cannot be adopted. The PrologAI platform has 48 work packages, more than 48 reasoning types, a structured knowledge store (the Lattice), a constitutional safety layer, and four agent communication protocols. Prior to this accomplishment, the only documentation available to a new user was the five SPARC volumes (Specification, Pseudocode, Architecture, Refinement, Completion) - documents written for platform architects and contributors, not for learners.
+
+The PrologAI Tutorial fills this gap. It is addressed to a learner who has never written a line of code and has no prior knowledge of Prolog, logic, or artificial intelligence. By the end of the twelve chapters, a reader has the knowledge to write PrologAI programs, use all 48+ reasoning types, store and retrieve knowledge in the Lattice, assess a mind's development, and understand the constitutional safety layer.
+
+The tutorial is Part 11 of the Demonstration and Proof-of-Concept Plan (Vol. 6, v4). Part 11 defines the Tutorial Track: the discipline that tutorials are written only after the capabilities they describe have been demonstrated. Every example in this tutorial corresponds to a demonstrated, documented accomplishment on Mentova main.
+
+
+STRUCTURE
+
+The tutorial is organized into twelve chapters.
+
+Chapter 1: What Is PrologAI? - Plain-language introduction to PrologAI, Prolog, Mentova, and the declarative paradigm. No prior knowledge assumed.
+
+Chapter 2: Getting Started - Installation of SWI-Prolog, PrologAI, and Mentova. Starting the interactive session with bin/mentova.
+
+Chapter 3: Facts, Rules, and Queries - The three building blocks of Prolog. assertz/1, the knowledge base, the ?- prompt.
+
+Chapter 4: Variables, Unification, and Backtracking - The core of Prolog reasoning. findall/3, backtracking, the underscore variable.
+
+Chapter 5: Lists and Arithmetic - List syntax, head/tail, length/2, member/2, append/3, arithmetic with is/2.
+
+Chapter 6: Modules and Loading Files - Writing .pl files, the module system, directives, the ERC comment convention, all 48 PrologAI packs summarized.
+
+Chapter 7: The Lattice - anchor_node/4, live_node_facts/2, traverse_nexus/4, the nine scope zones, the relationship between the Lattice and assessment.
+
+Chapter 8: Talking to Mentova - mentova_query/3 with all query types demonstrated by example.
+
+Chapter 9: Assessing the Mind - assess_piaget/3, assess_bayley/2, assess_chc/2, assess_all/2, consciousness indicators.
+
+Chapter 10: The Constitutional Layer and Safety - The eight principles, the constitutional gate, staged autonomy, quarantine scope, PAST_ZONE sealing.
+
+Chapter 11: Advanced Topics - Actors, SONA, the global workspace, the attention schema, all four agent communication protocols, the robot body, and a full summary table of all 48 PRs.
+
+Chapter 12: Writing Your Own PrologAI Programs - A complete worked example with ERC comments, the feature branch workflow.
+
+
+SIGNIFICANCE
+
+The Tutorial Track (Part 11) establishes a new standing requirement: tutorials are written only after capabilities are demonstrated. This follows the same Part 10 discipline that governs papers and announcements: capability is shown first, taught second, never ahead of the evidence.
+
+The monolithic file (docs/PrologAI_Tutorial.txt) is formatted for PDF conversion. A learner can download a single file and have the complete tutorial without navigating a directory.
+
+The console REPL launcher (Acc_68, bin/mentova) is the infrastructure on which the tutorial depends. Every example in the tutorial runs at the ?- prompt that bin/mentova provides.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/PrologAI.git
+    ls docs/tutorial/        % Twelve chapter files.
+    less docs/PrologAI_Tutorial.txt    % Monolithic file.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
