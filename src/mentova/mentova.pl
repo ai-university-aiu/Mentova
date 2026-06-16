@@ -131,6 +131,8 @@
 :- use_module(games/pokemon).
 % Load the global workspace integration — PR 18 cycle and PR 32 attention economy.
 :- use_module(global_workspace).
+% Load the attention schema integration — PR 42 schema and Conscious Turing Machine correspondence.
+:- use_module(attention_schema).
 
 % Import [member/2] from the built-in 'lists' library.
 :- use_module(library(lists), [member/2]).
@@ -163,6 +165,8 @@ mentova_boot :-
     format("Knowledge: Small-World Commonsense loaded~n"),
     % Activate the Global Workspace cycle — open the APEX_MIND nexus and subscribe the broadcast logger.
     catch(workspace_boot, _, true),
+    % Activate the attention schema subscriber on the workspace broadcast channel.
+    catch(schema_boot, _, true),
     % Write formatted output to the current output stream.
     format("~nMentova is ready. Born at Rung 1 — transparent deduction.~n~n").
 
@@ -226,6 +230,18 @@ mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent,
 mentova_query(track_a, TAQuery, answer(Result, Just)) :-
     % Delegate to the Track A module which handles GO, DO, and cross-scope queries.
     once(mentova_track_a(TAQuery, answer(Result, Just), _)).
+
+% Attention schema — query the schema's state and prediction for a given cycle
+% Define a clause for 'mentova_query' handling attention schema queries.
+mentova_query(attention_schema, report, answer(Report, Just)) :-
+    % Retrieve the glass-box schema report.
+    schema_report(Report),
+    % Justify: schema is a simplified model of workspace dynamics per PR 42.
+    Just = just(attention_schema_pr42,
+                model_of(workspace_dynamics),
+                contents([recent_winners, suppressed_coalitions, habituation, predictions]),
+                ctm_correspondence(blum_and_blum_2022),
+                dissociation_invariant(disabling_degrades_prediction_not_cycle)).
 
 % Global workspace — broadcast the highest-salience coalition and return the report
 % Define a clause for 'mentova_query' handling workspace queries.
