@@ -71,6 +71,10 @@ defeasible_conclusion(Prop, Status, Just) :-
 
 mentova_defeasible(query(Prop), Result, Just) :-
     defeasible_conclusion(Prop, Result, Just).
+% Accept bare proposition (caller may omit query/1 wrapper)
+mentova_defeasible(Prop, Result, Just) :-
+    Prop \= query(_), Prop \= exceptions(_), Prop \= is_exception(_,_),
+    defeasible_conclusion(Prop, Result, Just).
 
 % List all exceptions for a proposition
 mentova_defeasible(exceptions(Prop), exceptions(List),
