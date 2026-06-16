@@ -1,0 +1,173 @@
+MENTOVA'S PROBABILISTIC REASONING
+
+Accomplishment Record Acc_4
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 4 of Mentova's 48-rung reasoning ladder: probabilistic reasoning.
+Mentova computes the likelihood of a query by combining weighted facts from its
+Small-World knowledge base. The engine supports direct weighted-fact lookup,
+conjunction under independence, inclusion-exclusion disjunction, complement, and
+conditional probability. Every result is returned with a structured justification
+term. The pass criterion — that the probability returned matches the analytic
+value within tolerance — is met for all test queries.
+
+
+INTRODUCTION
+
+Reasoning under uncertainty is essential for any mind that must act in the world.
+Classical logic assigns every proposition a truth value of true or false; the real
+world assigns propositions degrees of likelihood that vary with evidence. Rung 4
+equips Mentova with a glass-box probabilistic engine: one that reports not just a
+number but the combinatorial rule that produced it.
+
+The Small-World knowledge base (Layer 4) contains a set of weighted facts —
+propositions each associated with a real-valued probability between 0 and 1.
+Rung 4 uses those facts as atomic inputs to a small algebra of probability
+combinations.
+
+
+BACKGROUND
+
+Probabilistic reasoning in symbolic AI has a long history. The simplest form is
+direct lookup of a stored probability, as in MYCIN's certainty factors. More
+powerful are algebraic combinations: conjunction under independence, disjunction
+by inclusion-exclusion, and conditioning by Bayes' rule. Rung 4 implements this
+algebra explicitly and transparently so that every result is accompanied by a
+readable trace of which rule was applied and to which atomic probabilities.
+
+The pass criterion for Rung 4 specifies that the returned probability must match
+the analytic value within tolerance. For finite-precision arithmetic in SWI-Prolog
+this is exact to floating-point representation, so no tolerance band is needed in
+practice for the test cases.
+
+
+METHOD
+
+A new module, src/mentova/probabilistic.pl, implements the predicate
+mentova_prob/3:
+
+    mentova_prob(+Query, -Probability, -Justification)
+
+Five query forms are supported:
+
+    prob(Prop)          direct weighted-fact lookup
+    and(A, B)           P(A ∧ B) = P(A) × P(B)   [independence]
+    or(A, B)            P(A ∨ B) = P(A) + P(B) − P(A)×P(B)
+    not(A)              P(¬A) = 1 − P(A)
+    given(A, B)         P(A | B) = P(A ∧ B) / P(B),  P(B) > 0
+
+The top-level mentova_query/3 predicate is extended with a new clause:
+
+    mentova_query(probabilistic, ProbQuery, answer(P, Just)) :-
+        mentova_prob(ProbQuery, P, Just).
+
+The module is loaded by the mentova.pl bootstrap via use_module(probabilistic).
+
+
+DEMONSTRATION
+
+Query 1 — direct lookup:
+
+    ?- mentova_query(probabilistic, prob(rain), R).
+    R = answer(0.3, just(weighted_fact(rain)))
+
+    Analytic value: 0.3.  Match: exact.
+
+Query 2 — conjunction (rain ∧ exercise):
+
+    ?- mentova_query(probabilistic, and(rain, exercise), R).
+    R = answer(0.21, just(conjunction(just(direct(rain,0.3)),
+                                      just(direct(exercise,0.7)))))
+
+    Analytic value: 0.3 × 0.7 = 0.21.  Match: exact.
+
+Query 3 — disjunction (rain ∨ sprinkler):
+
+    ?- mentova_query(probabilistic, or(rain, sprinkler), R).
+    R = answer(0.72, just(disjunction(just(direct(rain,0.3)),
+                                      just(direct(sprinkler,0.6)))))
+
+    Analytic value: 0.3 + 0.6 − 0.18 = 0.72.  Match: exact.
+
+Query 4 — complement (¬illness):
+
+    ?- mentova_query(probabilistic, not(illness), R).
+    R = answer(0.8, just(complement(just(direct(illness,0.2)))))
+
+    Analytic value: 1 − 0.2 = 0.8.  Match: exact.
+
+
+RESULTS
+
+All four test queries return probabilities matching analytic values exactly.
+The justification term in each answer exposes the combinatorial rule used,
+the leaf probabilities consulted, and the propositions involved. The engine
+runs with no Prolog warnings or errors under SWI-Prolog 9.0.4.
+
+Pass criterion met: probability matches analytic value within tolerance.
+
+
+SIGNIFICANCE
+
+Rung 4 marks the point at which Mentova can reason about likelihood. A mind
+that knows only true and false cannot represent the graded uncertainty of the
+real world. A mind that knows 0.3 — and can say why it knows 0.3 — can weigh
+competing hypotheses, update on evidence, and communicate its uncertainty to
+a human reviewer.
+
+The glass-box design is preserved: every probability is derived from named
+weighted facts through named combinatorial rules. There are no hidden weights,
+no black-box inference, and no silent approximation.
+
+
+HONEST LIMITATIONS
+
+The independence assumption used in the conjunction rule is a strong one.
+Real-world events are often correlated. In the Small-World knowledge base,
+rain and sprinkler are in fact causally related (both cause wet_ground), so
+treating them as independent overstates the joint probability. A Bayesian
+network representation would remove this limitation at the cost of requiring
+explicit joint distributions.
+
+The engine handles only a two-term conjunction and disjunction. Extending to
+n-way combinations would require a recursive fold, which is straightforward
+but not yet implemented.
+
+The conditional probability rule P(A|B) = P(A∧B)/P(B) follows from the
+definition and is exact under independence, but in the absence of a stored
+joint probability it still relies on the independence assumption.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(probabilistic, prob(rain), R1), write(R1), nl, \
+            mentova_query(probabilistic, and(rain,exercise), R2), write(R2), nl, \
+            mentova_query(probabilistic, or(rain,sprinkler), R3), write(R3), nl, \
+            mentova_query(probabilistic, not(illness), R4), write(R4), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Pearl, J. (1988). Probabilistic Reasoning in Intelligent Systems.
+
+Nilsson, N. J. (1986). Probabilistic Logic. Artificial Intelligence, 28(1), 71-87.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

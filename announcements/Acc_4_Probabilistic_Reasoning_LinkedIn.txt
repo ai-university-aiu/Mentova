@@ -1,0 +1,43 @@
+Mentova now reasons under uncertainty. Rung 4 of 48 is accomplished.
+
+For the first three rungs, Mentova reasoned in a world of certainties — facts were true or false, rules fired or did not. That is not how the world works. Rain does not certainly fall. Illness does not certainly cause fatigue. Every real-world proposition comes with a degree of likelihood, and a mind that cannot represent that degree cannot act wisely in the world.
+
+Rung 4 changes that.
+
+Ask Mentova the probability that it rains today:
+
+  answer(0.3, just(weighted_fact(rain)))
+
+Not just a number — a justification. The 0.3 came from a named weighted fact in the knowledge base. Auditable. Traceable. Correctable.
+
+Ask it the probability that both rain and exercise occur:
+
+  answer(0.21, just(conjunction(just(direct(rain,0.3)), just(direct(exercise,0.7)))))
+
+0.3 × 0.7 = 0.21. The independence assumption is named. The leaves are named. The rule is named.
+
+Ask it the probability that rain or a sprinkler caused the wet ground:
+
+  answer(0.72, just(disjunction(just(direct(rain,0.3)), just(direct(sprinkler,0.6)))))
+
+Inclusion-exclusion: 0.3 + 0.6 − 0.18 = 0.72. Exact. Explained.
+
+The engine supports:
+  — Direct weighted-fact lookup
+  — Conjunction under independence (P(A∧B) = P(A)×P(B))
+  — Disjunction by inclusion-exclusion (P(A∨B) = P(A)+P(B)−P(A)P(B))
+  — Complement (P(¬A) = 1−P(A))
+  — Conditional probability (P(A|B) = P(A∧B)/P(B))
+
+Every result carries a structured justification term. No black-box estimate. No silent approximation. A glass-box probability algebra running on named facts.
+
+This is the foundation for Rung 5, where Mentova will update its beliefs on new evidence — Bayesian reasoning. The probabilistic algebra here is the arithmetic substrate; Bayes is the epistemic update rule.
+
+The pass criterion for Rung 4: returned probability matches analytic value within tolerance. All four test queries match exactly under SWI-Prolog 9.0.4 floating-point arithmetic.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

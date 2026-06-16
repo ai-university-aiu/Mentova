@@ -31,7 +31,7 @@ The birth sequence (Rungs 1-9) is the minimum viable Mentova.
 | 1 | Deductive | ✅ Accomplished |
 | 2 | Inductive | ✅ Accomplished |
 | 3 | Abductive | ✅ Accomplished |
-| 4 | Probabilistic | Pending |
+| 4 | Probabilistic | ✅ Accomplished |
 | 5 | Bayesian | Pending |
 | 6 | Causal | Pending |
 | 7 | Statistical | Pending |

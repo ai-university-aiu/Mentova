@@ -18,6 +18,7 @@
 :- use_module('../../bodies/bodies').
 :- use_module(induction).
 :- use_module(abduction).
+:- use_module(probabilistic).
 
 :- use_module(library(lists), [member/2]).
 
@@ -69,6 +70,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 4 — probabilistic: compute query likelihood
+mentova_query(probabilistic, ProbQuery, answer(P, Just)) :-
+    mentova_prob(ProbQuery, P, Just).
 
 % Rung 3 — abductive: best explanation for an observation
 mentova_query(abductive, explain(Obs),
