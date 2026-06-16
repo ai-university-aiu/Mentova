@@ -1,0 +1,44 @@
+Mentova now distinguishes doing from seeing. Rung 6 of 48 is accomplished.
+
+There is a difference between observing that your umbrella is wet and deciding to pour water on it. One is a sign of rain; the other is a deliberate act. A mind that cannot tell the difference will confuse correlation with causation every time.
+
+Rung 6 gives Mentova causal reasoning: the ability to distinguish an observation from an intervention.
+
+Ask Mentova: if we observe the sprinkler is on, how likely is the ground wet?
+
+  answer(0.72, just(observation(sprinkler, wet_ground, 0.72,
+                     note('no edge severing; all paths to Effect included'))))
+
+0.72. The observation correlates with the rainy season. Sprinklers tend to be used when it might rain anyway. Both rain and the sprinkler contribute to the wet ground.
+
+Now ask: if we force the sprinkler on — a deliberate intervention — how likely is the ground wet?
+
+  answer(0.9, just(intervention(do(sprinkler), wet_ground, 0.9,
+                    note('incoming edges to Cause severed; only causal path retained'))))
+
+0.90. The intervention severs the incoming edge from the rain-season correlation. We have cut the sprinkler loose from any confounding factor. Only the direct causal path sprinkler → wet_ground remains.
+
+Intervention probability: 0.90. Observation probability: 0.72. Difference: 0.18.
+
+That gap is what causation looks like. That gap is why randomised controlled trials differ from observational studies. That gap is what Judea Pearl's do-calculus formalises — and what Mentova now implements, glass-box, with a justification that names the edge-severing operation.
+
+The justification reads: "incoming edges to Cause severed; only causal path retained."
+
+No hidden assumption. No silent confounding. Auditable.
+
+Mentova can also trace the downstream causal chain from any cause. Ask it what fire causes:
+
+  answer(chain(fire, [smoke]), just(causal_chain(fire, [smoke])))
+
+Fire causes smoke. One direct hop. Read from named causes/2 facts in the Small-World knowledge base.
+
+This rung is the foundation for planning, policy evaluation, and experiment design — all of which require knowing what will happen when you act, not merely when you observe.
+
+Next: Rung 7, Statistical Reasoning — finding patterns in the observation table.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

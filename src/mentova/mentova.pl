@@ -20,6 +20,7 @@
 :- use_module(abduction).
 :- use_module(probabilistic).
 :- use_module(bayesian).
+:- use_module(causal).
 
 :- use_module(library(lists), [member/2]).
 
@@ -71,6 +72,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 6 — causal: predict effect of intervention vs observation
+mentova_query(causal, CausalQuery, answer(Result, Just)) :-
+    mentova_causal(CausalQuery, Result, Just).
 
 % Rung 5 — bayesian: update belief on new evidence
 mentova_query(bayesian, update(H, E), answer(Posterior, Just)) :-
