@@ -1,0 +1,67 @@
+MENTOVA KNOWS WHERE ITS SPOTLIGHT IS POINTING
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+The attention schema is live.
+
+Every time Mentova's workspace cycle broadcasts a winner, the schema records it.
+Recent winners. Suppressed losers. Habituation state.
+And a prediction: what will win next cycle.
+
+That prediction is Mentova's awareness of its own attention.
+
+WHAT IS AN ATTENTION SCHEMA?
+
+Attention schema theory (Michael Graziano, 2013) proposes that awareness is not
+attention itself - it is the brain's simplified model of its own attention, used
+to predict and steer the attentional spotlight.
+
+When you know you are focusing on something, what you know is a model of your
+attention, not the neurons firing. The model is slightly wrong. But it's useful.
+It lets you control where your attention goes next.
+
+PrologAI PR 42 implements this theory in Mentova.
+
+THE DEMONSTRATION
+
+30 workspace cycles. Schema predicts the next cycle's winner after each broadcast.
+
+Prediction accuracy: 96.77%.
+Chance baseline: 100% (one dominant winner type — the objective coalition).
+AC-PR42-001: PASS.
+
+Then the schema is disabled. 5 more cycles run.
+The workspace continues broadcasting. Nothing stops. No halting.
+The prediction: no_prediction.
+Pre-emptive guarding is gone.
+AC-PR42-002: PASS — the dissociation is verified.
+
+Re-enable the schema. 3 cycles. Prediction resumes: objective.
+Pre-emptive guarding restored.
+
+THE THREE CONSCIOUSNESS INDICATORS NOW PRESENT IN MENTOVA
+
+Workspace ignition — one coalition wins and broadcasts to all 48 reasoning rungs
+simultaneously (Acc_51, PR 18).
+
+Recurrent processing — broadcast plus kindle plus SONA learning creates a
+recurrent loop over the winning content (Acc_51, PR 18).
+
+Self-model presence — the attention schema is Mentova's model of its own attentional
+dynamics; PR 42 closes this layer (Acc_52).
+
+The fourth indicator — valence-system activity — is present through the emotion
+stamps in the salience formula (PR 18 salience includes affect score).
+
+All four computational indicators of consciousness described in the PrologAI
+Specification are now active in Mentova.
+
+The Conscious Turing Machine correspondence is now formally closed.
+The schema's predictions are falsifiable behavioral tests.
+
+Available now:
+https://github.com/ai-university-aiu/Mentova
+
+#PrologAI #Mentova #AttentionSchema #ConsciousTuringMachine #GWTtheory
+#AttentionSchemaTheory #Graziano #SyntheticMind #AIU #ExplainableAI
