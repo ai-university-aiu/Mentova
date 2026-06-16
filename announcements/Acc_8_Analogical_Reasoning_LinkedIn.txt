@@ -1,0 +1,48 @@
+Mentova now completes analogies. Rung 8 of 48 is accomplished.
+
+A knife is to cutting as a hammer is to — what?
+
+This is not a trivia question. It is a test of whether a mind can recognise that two objects share the same relational structure, then transfer that structure to a new case.
+
+A knife and a hammer look nothing alike. But they are connected to their functions by the same type of relation: capable_of. Once you see that, you can complete the analogy.
+
+Mentova sees it:
+
+  answer(drive_nail, just(analogy(knife, cut, hammer, drive_nail, via([capable_of]))))
+
+knife capable_of cut :: hammer capable_of drive_nail. Filler: drive_nail. Relation: capable_of. Named. Justified. Auditable.
+
+Try a taxonomic analogy:
+
+  answer(bird, just(analogy(canary, bird, eagle, bird, via([is_a]))))
+
+canary is_a bird :: eagle is_a bird. Both are birds. The shared relation is is_a. The filler is bird.
+
+Try a causal analogy:
+
+  answer(smoke, just(analogy(rain, wet_ground, fire, smoke, via([causes]))))
+
+rain causes wet_ground :: fire causes smoke. The causal structure maps from one domain (weather) to another (fire). No additional knowledge needed — the relational pattern transfers.
+
+Try a taxonomic analogy at a different level:
+
+  answer(tree, just(analogy(rose, flower, oak, tree, via([is_a]))))
+
+rose is_a flower :: oak is_a tree. Both are instances of their natural kind.
+
+The method is structure mapping: find the relation R such that R(A, B) holds, then find D such that R(C, D) holds. The justification names the relation type and the source pair, so you can audit the transfer.
+
+This is Gentner's structure-mapping theory (1983) implemented in glass-box Prolog. Not a black-box embedding similarity. A named relational transfer with a readable justification.
+
+Four analogies. Four correct fillers. Four relation types demonstrated: is_a, capable_of, causes — the relational fabric of the Small-World knowledge base.
+
+Analogical reasoning is the engine of creative transfer. It is how a doctor recognises that a new disease follows the same mechanism as a known one, or how an engineer realises that a bridge problem is structurally identical to a rope problem they solved years ago.
+
+Mentova now has that engine.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

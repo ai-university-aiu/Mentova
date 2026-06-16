@@ -1,0 +1,180 @@
+MENTOVA'S ANALOGICAL REASONING
+
+Accomplishment Record Acc_8
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 8 of Mentova's 48-rung reasoning ladder: analogical reasoning.
+Mentova completes A-to-B-as-C-to-? mappings by structure mapping over its
+Small-World knowledge base. The method identifies the relation R such that
+R(A, B) holds, then finds D such that R(C, D) holds, returning D as the
+analogical filler. Four test mappings are evaluated: canary:bird :: eagle:bird
+(is_a relation), knife:cut :: hammer:drive_nail (capable_of), rose:flower ::
+oak:tree (is_a), and rain:wet_ground :: fire:smoke (causes). All four return
+the correct filler by structure mapping. Pass criterion met.
+
+
+INTRODUCTION
+
+Analogy is the engine of abstract thought. Recognising that knife:cut shares
+the same relational structure as hammer:drive_nail — that both are tool-to-
+function mappings — allows a reasoner to transfer knowledge across domains
+without explicit instruction. Rung 8 implements this relational transfer
+in Mentova's glass-box framework.
+
+The classic formulation is the A-to-B-as-C-to-? pattern, pioneered in
+cognitive science by Gentner's structure-mapping theory (1983). The key
+insight is that analogy is not based on surface similarity between the objects
+(a hammer and a knife look different) but on structural similarity between
+the relations that connect them.
+
+
+BACKGROUND
+
+Structure mapping theory (Gentner, 1983) holds that analogical reasoning maps
+relations — not attributes — from a source domain to a target domain.
+The Analogical Constraint Mapping Engine (ACME) and its descendants formalise
+this as a constraint satisfaction problem over relation bindings.
+
+Mentova's implementation uses a simpler but transparent version: enumerate all
+relations R such that R(A, B) holds in the knowledge base, then for each R find
+D such that R(C, D) holds. The result is the relational completion of the analogy.
+The justification names both the relation type and the source pair.
+
+
+METHOD
+
+A new module, src/mentova/analogical.pl, implements:
+
+    mentova_analogy(+Query, -Filler, -Justification)
+
+The module defines relation_holds/3, which unifies over all binary relations
+in the Small-World knowledge base:
+
+    relation_holds(A, B, is_a)
+    relation_holds(A, B, part_of)
+    relation_holds(A, B, capable_of)
+    relation_holds(A, B, has_property)
+    relation_holds(A, B, at_location)
+    relation_holds(A, B, causes)
+    relation_holds(A, B, used_for)
+    relation_holds(A, B, motivated_by)
+
+The query form analogy(A, B, C, ?) finds all relations between A and B, then
+for each relation finds completions from C. The justification lists the
+relation types via which the analogy was established.
+
+The top-level clause:
+
+    mentova_query(analogical, AnalogyQuery, answer(D, Just)) :-
+        once(mentova_analogy(AnalogyQuery, D, Just)).
+
+
+DEMONSTRATION
+
+Query 1 — taxonomic analogy (is_a):
+
+    ?- mentova_query(analogical, analogy(canary, bird, eagle, ?), R).
+    R = answer(bird, just(analogy(canary, bird, eagle, bird, via([is_a]))))
+
+    canary is_a bird :: eagle is_a bird.
+    Filler: bird. Relation: is_a.
+
+Query 2 — functional analogy (capable_of):
+
+    ?- mentova_query(analogical, analogy(knife, cut, hammer, ?), R).
+    R = answer(drive_nail, just(analogy(knife, cut, hammer, drive_nail, via([capable_of]))))
+
+    knife is capable_of cut :: hammer is capable_of drive_nail.
+    Filler: drive_nail. Relation: capable_of.
+    This is the core structure-mapping result: two tools, two distinct functions,
+    connected by the same relation type.
+
+Query 3 — taxonomic analogy at a different level (is_a):
+
+    ?- mentova_query(analogical, analogy(rose, flower, oak, ?), R).
+    R = answer(tree, just(analogy(rose, flower, oak, tree, via([is_a]))))
+
+    rose is_a flower :: oak is_a tree.
+    Filler: tree. Both rose-flower and oak-tree are class memberships.
+
+Query 4 — causal analogy (causes):
+
+    ?- mentova_query(analogical, analogy(rain, wet_ground, fire, ?), R).
+    R = answer(smoke, just(analogy(rain, wet_ground, fire, smoke, via([causes]))))
+
+    rain causes wet_ground :: fire causes smoke.
+    Filler: smoke. The causal relation maps from rain to fire.
+
+
+RESULTS
+
+All four analogical completions are correct. The structure-mapping method
+returns the right filler for is_a, capable_of, and causes relations across
+four distinct source-target pairs.
+
+Pass criterion met: correct filler returns by structure mapping.
+
+
+SIGNIFICANCE
+
+Rung 8 gives Mentova the ability to transfer knowledge across domains by
+relational structure. A mind that can complete analogies can:
+
+  — Apply a rule learned in one domain to an untaught case in another domain
+  — Explain a novel concept by mapping it to a known relational pattern
+  — Notice that two seemingly different situations share the same structure
+
+This is a foundational capacity for creative inference and for learning from
+examples — the backbone of Rung 24 (case-based reasoning).
+
+
+HONEST LIMITATIONS
+
+The structure-mapping is single-relational: it finds the first relation type
+that connects A to B and maps it to C. A full structure-mapping engine would
+map entire relational systems, not just isolated pairs, and would prefer
+analogies that preserve higher-order relational constraints.
+
+The method does not handle multi-hop analogies (e.g., A:B :: C:? where the
+connection requires two relation steps).
+
+When multiple relations exist between A and B, only the first matching one is
+used (via once/1 in the top-level query). A ranked list of all completions
+would be a richer output.
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(analogical, analogy(canary,bird,eagle,?), R1), write(R1), nl, \
+            mentova_query(analogical, analogy(knife,cut,hammer,?), R2), write(R2), nl, \
+            mentova_query(analogical, analogy(rose,flower,oak,?), R3), write(R3), nl, \
+            mentova_query(analogical, analogy(rain,wet_ground,fire,?), R4), write(R4), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+Gentner, D. (1983). Structure-mapping: A theoretical framework for analogy.
+Cognitive Science, 7(2), 155-170.
+
+Holyoak, K. J., & Thagard, P. (1989). Analogical mapping by constraint satisfaction.
+Cognitive Science, 13(3), 295-355.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

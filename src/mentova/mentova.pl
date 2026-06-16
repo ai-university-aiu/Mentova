@@ -22,6 +22,7 @@
 :- use_module(bayesian).
 :- use_module(causal).
 :- use_module(statistical).
+:- use_module(analogical).
 
 :- use_module(library(lists), [member/2]).
 
@@ -73,6 +74,10 @@ mentova_query(probabilistic, prob(Prop), answer(Prob, just(weighted_fact(Prop)))
     prob_fact(Prop, Prob).
 mentova_query(epistemic, believes(Agent, Prop), answer(Value, just(belief(Agent, Prop)))) :-
     believes(Agent, Prop, Value).
+
+% Rung 8 — analogical: complete A:B :: C:? by structure mapping
+mentova_query(analogical, AnalogyQuery, answer(D, Just)) :-
+    once(mentova_analogy(AnalogyQuery, D, Just)).
 
 % Rung 7 — statistical: find pattern in observation table
 mentova_query(statistical, StatQuery, answer(Result, Just)) :-
