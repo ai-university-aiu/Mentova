@@ -1,0 +1,54 @@
+Mentova now answers everyday questions. Rung 11 of 48 is accomplished.
+
+Where do penguins live? What can an eagle do? Is a rose alive? What does rain cause?
+
+These questions do not require formal deduction. They do not require statistics or Bayesian updating. They require commonsense knowledge — the everyday background understanding that any competent adult brings to a conversation.
+
+Rung 11 gives Mentova commonsense reasoning over its Small-World knowledge base.
+
+Ask what a canary is:
+
+  answer(bird, just(is_a(canary, bird)))
+
+The answer is bird. Provenance: the direct is_a fact in the knowledge base.
+
+Ask where penguins live:
+
+  answer(antarctica, just(at_location(penguin, antarctica, via(direct))))
+
+Antarctica. The at_location fact is named. You can find it in the knowledge base and verify it.
+
+Ask whether a rose is a living thing:
+
+  answer(yes, just(is_living(rose, yes, via([rose, flower, plant, living_thing]))))
+
+Yes. And here is why: rose is_a flower is_a plant is_a living_thing. The full chain is the provenance. Three hops, all named.
+
+Ask what rain causes:
+
+  answer(wet_ground, just(causes(rain, wet_ground)))
+
+Wet ground. Direct causal fact. Named.
+
+The query types available:
+  — what_is(X): what category does X belong to?
+  — what_can(X): what can X do?
+  — where_is(X): where is X typically found?
+  — used_for(X): what is X used for?
+  — what_causes(X): what does X cause?
+  — prerequisite(X): what must be true for X?
+  — property_of(X): what properties does X have?
+  — is_living(X): is X a living thing (with chain)?
+
+Every answer names the fact or chain that produced it. This is the provenance requirement for Rung 11 — and every test query passes it.
+
+Commonsense reasoning is the mode that makes a system usable. Without it, you can do formal logic on axioms that nobody gave you. With it, you can answer the questions that matter to the people who built the knowledge base.
+
+This is also the foundation for Rung 46 — informal reasoning — where Mentova will handle loosely stated everyday problems without formal specification. You cannot handle loose specifications if you cannot handle well-specified commonsense queries first.
+
+The code is open. The reasoning is readable. The mind is growing.
+
+https://github.com/ai-university-aiu/Mentova
+https://github.com/ai-university-aiu/PrologAI
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)

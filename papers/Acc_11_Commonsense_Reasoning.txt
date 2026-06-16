@@ -1,0 +1,171 @@
+MENTOVA'S COMMONSENSE REASONING
+
+Accomplishment Record Acc_11
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-15
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+We report Rung 11 of Mentova's 48-rung reasoning ladder: commonsense reasoning.
+Mentova answers everyday-knowledge questions using the Small-World knowledge base
+with a provenance trace for every answer. Test queries demonstrate: canary is_a
+bird, eagle is capable_of hunting (direct), penguin is at_location antarctica,
+rain causes wet_ground, and rose is a living thing via the chain
+[rose, flower, plant, living_thing]. All answers match common sense and carry
+readable provenance. Pass criterion met.
+
+
+INTRODUCTION
+
+Commonsense reasoning is the ability to answer the everyday questions that any
+competent adult can answer without specialised training: where do penguins live?
+what can a knife do? is a rose alive? These questions are not answered by formal
+deduction from axioms — they are answered by lookup and short inference chains
+over a commonsense knowledge base.
+
+Rung 11 formalises this mode for Mentova, providing a suite of commonsense query
+types that retrieve answers with provenance from the Small-World knowledge base.
+
+
+BACKGROUND
+
+The commonsense knowledge problem has been a central challenge in AI since the
+work of McCarthy (1959) on programs with common sense. Projects such as CYC
+(Lenat, 1995) and ConceptNet (Speer et al., 2017) have attempted to codify
+commonsense knowledge at scale.
+
+Mentova's Small-World knowledge base is a curated, toy-sized commonsense store
+sufficient to demonstrate the full range of everyday query types. Every answer
+is backed by a named fact or inference chain.
+
+
+METHOD
+
+A new module, src/mentova/commonsense.pl, implements:
+
+    mentova_commonsense(+Query, -Answer, -Justification)
+
+Supported query types:
+
+    what_is(X)          X is_a what?
+    what_can(X)         X is capable_of what?
+    where_is(X)         X is at_location where?
+    used_for(X)         X is used_for what?
+    what_causes(X)      X causes what?
+    prerequisite(X)     X has_prerequisite what?
+    property_of(X)      X has_property what?
+    is_living(X)        is X a living thing? (transitive is_a chain)
+
+Each query first checks for a direct fact, then falls back to inference via
+is_a chains (e.g. canary → bird → at_location sky).
+
+Top-level clause:
+
+    mentova_query(commonsense, CSQuery, answer(Ans, Just)) :-
+        once(mentova_commonsense(CSQuery, Ans, Just)).
+
+
+DEMONSTRATION
+
+Query 1 — what is a canary?
+
+    ?- mentova_query(commonsense, what_is(canary), R).
+    R = answer(bird, just(is_a(canary, bird)))
+
+    Canary is a bird. Provenance: direct is_a fact.
+
+Query 2 — what can an eagle do?
+
+    ?- mentova_query(commonsense, what_can(eagle), R).
+    R = answer(hunt, just(capable_of(eagle, hunt, via(direct))))
+
+    Eagle can hunt. Provenance: direct capable_of fact.
+
+Query 3 — where is a penguin?
+
+    ?- mentova_query(commonsense, where_is(penguin), R).
+    R = answer(antarctica, just(at_location(penguin, antarctica, via(direct))))
+
+    Penguin is in Antarctica. Provenance: direct at_location fact.
+
+Query 4 — what does rain cause?
+
+    ?- mentova_query(commonsense, what_causes(rain), R).
+    R = answer(wet_ground, just(causes(rain, wet_ground)))
+
+    Rain causes wet_ground. Provenance: direct causes fact.
+
+Query 5 — is a rose a living thing?
+
+    ?- mentova_query(commonsense, is_living(rose), R).
+    R = answer(yes, just(is_living(rose, yes, via([rose, flower, plant, living_thing]))))
+
+    Rose is a living thing. Provenance: three-hop is_a chain
+    [rose → flower → plant → living_thing].
+
+
+RESULTS
+
+All five test queries return answers that match common sense. Every answer is
+accompanied by a provenance trace naming the fact or chain used.
+
+Pass criterion met: answer matches common sense with provenance.
+
+
+SIGNIFICANCE
+
+Rung 11 makes Mentova accessible to everyday questioning. Any user familiar
+with natural language can recognise the commonsense question types and verify
+that the answers are correct. The provenance trace means that a user who
+disputes an answer can identify exactly which fact in the knowledge base
+produced it.
+
+This is the foundation for Rung 46 (informal reasoning), where Mentova will
+handle loosely stated everyday problems without formal specification.
+
+
+HONEST LIMITATIONS
+
+The Small-World knowledge base covers only a narrow slice of commonsense
+knowledge. A real commonsense reasoner needs millions of facts and relations.
+
+The query types are fixed and named; natural-language question parsing is not
+implemented.
+
+The once/1 wrapper in the top-level clause means only the first answer is
+returned for queries with multiple valid answers (e.g. what_is(canary) could
+return bird, animal, living_thing via different hops).
+
+
+REPRODUCIBILITY
+
+Requirements: SWI-Prolog 9.0.4 or later.
+
+  git clone https://github.com/ai-university-aiu/Mentova.git
+  cd Mentova
+  swipl -l src/mentova/mentova.pl \
+        -g "mentova_boot, \
+            mentova_query(commonsense, what_is(canary), R1), write(R1), nl, \
+            mentova_query(commonsense, what_can(eagle), R2), write(R2), nl, \
+            mentova_query(commonsense, where_is(penguin), R3), write(R3), nl, \
+            mentova_query(commonsense, what_causes(rain), R4), write(R4), nl, \
+            mentova_query(commonsense, is_living(rose), R5), write(R5), nl" \
+        -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+McCarthy, J. (1959). Programs with common sense. Proceedings of the Teddington Conference.
+
+Speer, R., Chin, J., & Havasi, C. (2017). ConceptNet 5.5: An Open Multilingual Graph
+of General Knowledge. AAAI.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
