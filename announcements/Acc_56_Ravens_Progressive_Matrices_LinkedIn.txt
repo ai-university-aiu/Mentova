@@ -1,0 +1,81 @@
+MENTOVA SOLVES RAVEN'S PROGRESSIVE MATRICES GLASS-BOX
+
+Raven's Progressive Matrices - the nonverbal fluid-intelligence classic - have
+been used in psychology for nearly 90 years to measure abstract reasoning ability.
+Each matrix is a 3x3 grid with the bottom-right cell missing. Find the pattern.
+Fill in the blank.
+
+Today Mentova solves three Raven's matrices and names the rule glass-box.
+
+The method (Accomplishment Record Acc_56):
+
+Mentova represents each matrix cell as cell(Shape, Size, Count, Color).
+
+It examines the first complete row, induces an ABSTRACT rule type for each
+attribute dimension (shape, size, count, colour), then applies those rule types
+to the incomplete last row to predict the missing cell.
+
+Abstract means: the rule type does not include the specific values from the
+training row. "The shape is constant" - not "the shape is circle." So when the
+last row has triangles instead of circles, the constant rule still applies.
+
+Three matrices, three rule types induced and applied:
+
+Matrix 1 - Size progression
+First complete row: circle(small), circle(medium), circle(large)
+Induced: shape=constant, size=increment(size_sequence), count=constant, color=constant
+Last row so far: triangle(small), triangle(medium), ?
+Predicted: triangle(large) - correct.
+AC-PR56-001: PASS
+
+Matrix 2 - Colour progression
+First complete row: circle(white), circle(gray), circle(black)
+Induced: shape=constant, size=constant, count=constant, color=increment(color_sequence)
+Last row so far: triangle(white), triangle(gray), ?
+Predicted: triangle(black) - correct.
+AC-PR56-002: PASS
+
+Matrix 3 - Count increment
+First complete row: circle(count:1), circle(count:2), circle(count:3)
+Induced: shape=constant, size=constant, count=increment(count_sequence), color=constant
+Last row so far: circle(count:3), circle(count:4), ?
+Predicted: circle(count:5) - correct.
+AC-PR56-003: PASS
+
+AC-PR56-004: PASS - all three rule types printed glass-box:
+increment(size_sequence), increment(color_sequence), increment(count_sequence).
+
+What is significant here:
+
+The rule types transfer. The same rule type induced from a row of circles
+is applied correctly to a row of triangles. This is abstract reasoning -
+the pattern is at a higher level than the specific values.
+
+The reasoning is glass-box. The rule is a named Prolog atom, not a neural
+weight vector. "size: increment(size_sequence)" - you can read it and verify it.
+
+Multi-attribute composition. Four attributes are reasoned about independently
+and simultaneously. The missing cell is the composition of all four predictions.
+
+What is next:
+
+Harder Raven's items have multiple simultaneously varying attributes and more
+complex rule types (distribute three values, pairwise identical, mirror symmetry).
+Adding each new rule type requires one or a few additional Prolog clauses.
+A perceptual front-end from PR 30 would connect this to visual pixel grids
+for fully visual Raven's items.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University)
+Creator of PrologAI and Mentova
+ORCID: 0009-0001-9246-5758
+https://www.linkedin.com/in/d-r-dison/
+
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: https://github.com/ai-university-aiu/PrologAI
+Paper: papers/Acc_56_Ravens_Progressive_Matrices.txt
+Demo: demos/ravens_demo.pl
+
+#PrologAI #Mentova #RavensMatrices #FluidIntelligence #AbstractReasoning
+#SymbolicAI #AIU #InductiveReasoning #GlassBoxAI #ExplainableAI
+#CognitiveScience #AIBenchmarks #ArtificialIntelligence
