@@ -1,0 +1,59 @@
+MENTOVA: THE COMPLETE 48-RUNG GLASS-BOX REASONING LADDER — FULL PAPER PUBLISHED
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+I am pleased to announce the publication of the complete scientific paper:
+
+    MENTOVA: A GLASS-BOX SYNTHETIC MIND
+    The Complete 48-Rung Reasoning Ladder
+
+This paper unifies all 48 Accomplishment Records into one document and presents
+Mentova as the first Synthetic Mind covering the full breadth of the human-
+cognitive-science taxonomy of reasoning types in a single, auditable system.
+
+THE CORE CLAIM
+
+Every answer Mentova produces includes a human-readable justification. Not
+sometimes. Always. This is enforced architecturally: mentova_query/3 requires
+both a Result and a Justification for every query type, across all 48 modules.
+
+WHAT THE PAPER COVERS
+
+Six Parts, 48 Sections:
+
+  Part I   (Rungs  1– 9): Foundational Inference
+    Deductive, Inductive, Abductive, Probabilistic, Bayesian, Causal,
+    Statistical, Analogical, Relational
+
+  Part II  (Rungs 10–16): Knowledge Representation and Formal Systems
+    Transductive, Commonsense, Logical, Formal, Mathematical, Fuzzy, Qualitative
+
+  Part III (Rungs 17–20): Belief Revision under Uncertainty
+    Non-Monotonic, Paraconsistent, Counterfactual, Hypothetical
+
+  Part IV  (Rungs 21–30): World Modelling and Structured Search
+    Spatial, Diagrammatic, Temporal, Case-Based, Constraint-Based, Scientific,
+    System, Model-Based, Heuristic, Critical
+
+  Part V   (Rungs 31–40): Higher-Order and Normative Reasoning
+    Dialectical, Metacognitive, Modal, Epistemic, Deontic, Procedural,
+    Symbolic, Practical, Teleological, Strategic
+
+  Part VI  (Rungs 41–48): Human-Scale Reasoning
+    Narrative, Social, Intuitive, Emotional, Motivational, Informal, Legal, Moral
+
+HIGHLIGHTS
+
+— Sally-Anne false-belief test passed (Rung 34)
+— Nash equilibrium for Prisoner's Dilemma computed (Rung 40)
+— Prototype classification: bird at 0.75 confidence (Rung 43)
+— Trolley problem analysed under three ethical frameworks (Rung 48)
+— Zero errors across all 48 modules on SWI-Prolog 9.0.4
+
+Available in the Mentova repository:
+https://github.com/ai-university-aiu/Mentova
+
+Built on PrologAI. Built from the ground up. Every answer shown.
+
+#PrologAI #Mentova #GlassBoxAI #SyntheticMind #AIU #ReasoningLadder #ExplainableAI
