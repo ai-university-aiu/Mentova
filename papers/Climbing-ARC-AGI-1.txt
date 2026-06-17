@@ -19,7 +19,7 @@ Every benchmark run, every new rule, every bug fix, every performance improvemen
 
 The human contributor (D. R. Dison) authored the scientific vision, the research direction, and the authorship of this work.
 
-The human contributor never wrote a single line of Prolog code in any of the 98 passing rules.
+The human contributor never wrote a single line of Prolog code in any of the 161 passing rules.
 
 The human contributor never manually debugged a single failing rule.
 
