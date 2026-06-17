@@ -861,6 +861,35 @@ Note on attribution: none of the five new wave-18 rules solved any task in this 
 Real-world generalization: the blocking behavior of one non-deterministic function mirrors a common failure mode in production systems. A slow or non-terminating handler in a request queue blocks all subsequent requests in the same worker thread, causing a queue backup that appears as a systemic failure unrelated to the original bottleneck. The root cause is always the same: one badly behaved component consuming a shared resource (time, a thread, a file handle, a lock) while other components wait. Determinism guards in a rule library are the analogue of timeouts and circuit breakers in a microservice system: they prevent one rule's worst-case behavior from cascading into total system failure.
 
 
+ATTEMPT 19: WAVE 19 - FOUR NEW STRUCTURAL RULES - 165 / 400 = 41.25%
+
+Date: 2026-06-17.
+
+Score: 165 / 400 = 41.25%.
+
+New tasks: +4 (from 161 to 165).
+
+What changed: Wave 19 added four new named rules to the library. Three of the four solved at least one task on the first benchmark run. fill_periodic_holes_2d solved two tasks (0dfd9992 and 29ec7d0e). concentric_swap_expand solved one task (3befdf3e). stamp_key_at_8_clones solved one task (321b1fc6). complete_4fold_symmetry was added to the library but did not solve any task in this run.
+
+The four new rules added in wave 19:
+
+complete_4fold_symmetry - detects a grid whose non-zero cells form a partially 4-fold symmetric pattern around the bounding-box center, and fills in the missing reflected cells to complete the symmetry. The rule finds the bounding box of all non-zero cells, verifies the bounding-box dimensions are both even (so the center falls on a half-cell boundary and the four quadrants are equal sized), checks that no existing pair of symmetric cells conflicts in color, then generates all missing reflections and adds them to the grid.
+
+concentric_swap_expand (task 3befdf3e) - detects bordered rectangles: connected components that form a 1-cell-wide rectangular ring of color B surrounding a solid interior of color I. The rule swaps the border and interior colors (B becomes the new interior, I becomes the new border) and extends the figure by painting cross arms outward from each side of the rectangle. The arm depth equals the interior height in the vertical direction and the interior width in the horizontal direction. The result is a figure that expands in a cross shape while inverting its color arrangement.
+
+stamp_key_at_8_clones (task 321b1fc6) - identifies a "key" shape: all non-zero, non-8 cells in the grid. Treats each 8-connected component of 8-valued cells as a "clone" position. Verifies that every clone component has the same normalized shape as the key (matching bounding-box-relative positions). Stamps the key at each clone position (aligned to the clone's minimum-row, minimum-column corner), then erases the original 8 cells and the original key cells, leaving only the stamped copies.
+
+fill_periodic_holes_2d (tasks 0dfd9992 and 29ec7d0e) - detects grids with a 2-dimensional periodic tiling pattern that has zero cells acting as holes. Tries all period combinations PR x PC for PR and PC each ranging from 2 to 10. A valid period pair requires: (a) every non-zero cell at (r, c) assigns a value to position ((r-1) mod PR, (c-1) mod PC), (b) no two non-zero cells at positions with the same period coordinates disagree on value, and (c) the period table is fully covered (all PR*PC positions are occupied by at least one non-zero cell). When a valid period is found, fills all zero cells using the period table lookup.
+
+What was learned: fill_periodic_holes_2d solving two tasks with a single rule confirms that 2D periodicity is a meaningful pattern class in ARC-AGI-1. The wave 18 rule fill_hole_in_repeating_pattern (1D row-period detection) and the new fill_periodic_holes_2d (2D grid-period detection) form a natural pair. The lesson is that periodic tiling exists at multiple dimensionalities and each dimensionality deserves its own rule.
+
+complete_4fold_symmetry adding zero tasks is expected: 4-fold symmetry tasks in ARC-AGI-1 typically have additional constraints (specific colors, specific reflection axes, presence of a marker cell) that make the generic rule fail to match all training pairs. The rule is in the library as a foundation; more specific variants may be needed.
+
+The determinism principle from wave 18 was applied throughout wave 19: every new arc_transform clause ends with a cut (!), uses once() around non-deterministic sub-goals, parenthesizes all compound conditions, and carries NR =< 30, NC =< 30 size guards. No benchmark hangs were observed.
+
+New tasks solved by wave 19 (4 new tasks): 0dfd9992 (fill_periodic_holes_2d), 29ec7d0e (fill_periodic_holes_2d), 321b1fc6 (stamp_key_at_8_clones), 3befdf3e (concentric_swap_expand).
+
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -927,10 +956,12 @@ Run 30: 97 / 400 = 24.25% - diagonal_neighbors_from_single_2, scale_up_by_color_
 
 Run 31: 98 / 400 = 24.50% - expand_cross_pattern variable bug fixed. Plus 1 task.
 
-Run 32: 161 / 400 = 40.25% - scale_shape_into_frame operator precedence bug fixed; six performance guards added; five new rules (intersect_halves_at_5, recolor_1_to_2_extend_row_period, mark_l_shape_missing_corner, fill_hole_in_repeating_pattern, fill_span_row_col_with_2). Plus 63 tasks. (CURRENT BEST)
+Run 32: 161 / 400 = 40.25% - scale_shape_into_frame operator precedence bug fixed; six performance guards added; five new rules (intersect_halves_at_5, recolor_1_to_2_extend_row_period, mark_l_shape_missing_corner, fill_hole_in_repeating_pattern, fill_span_row_col_with_2). Plus 63 tasks.
+
+Run 33: 165 / 400 = 41.25% - Wave 19: four new rules (complete_4fold_symmetry, concentric_swap_expand, stamp_key_at_8_clones, fill_periodic_holes_2d). Plus 4 tasks. (CURRENT BEST)
 
 
-ALL 161 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 165 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -955,6 +986,8 @@ ALL 161 SOLVED TASKS AND THEIR GLASS-BOX RULES
 0ca9ddb6 - surround_1_ortho_7_and_2_diag_4.
 
 0d3d703e - recolor_auto.
+
+0dfd9992 - fill_periodic_holes_2d.
 
 178fcbfb - fill_row_or_col_by_2.
 
@@ -1000,6 +1033,8 @@ ALL 161 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 29c11459 - fill_row_halves_midpoint_5.
 
+29ec7d0e - fill_periodic_holes_2d.
+
 2bcee788 - mirror_shape_across_2_indicator.
 
 2dc579da - extract_unique_quadrant_at_cross.
@@ -1007,6 +1042,8 @@ ALL 161 SOLVED TASKS AND THEIR GLASS-BOX RULES
 2dee498d - extract_column_period.
 
 31aa019c - unique_val_surround_2.
+
+321b1fc6 - stamp_key_at_8_clones.
 
 3428a4f5 - two_halves_at_4sep_xor_to_3.
 
@@ -1025,6 +1062,8 @@ ALL 161 SOLVED TASKS AND THEIR GLASS-BOX RULES
 3bd67248 - left_col_with_antidiag_2_and_bottom_4.
 
 3bdb4ada - hollow_block_middle_row.
+
+3befdf3e - concentric_swap_expand.
 
 3c9b0459 - rotate_180.
 
