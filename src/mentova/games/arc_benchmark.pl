@@ -14541,6 +14541,988 @@ arc_transform(center_shape_at_3_anchor, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 29 HELPERS
+% ---------------------------------------------------------------------------
+
+% arc_w29_max_count_col/2: color with most occurrences; on tie, lowest value wins.
+% ERC
+arc_w29_max_count_col(AllVs, MainCol) :-
+% ERC
+    msort(AllVs, Sorted29),
+% ERC
+    sort(Sorted29, UniqueVs29),
+% ERC
+    maplist([V29, N29-V29]>>(include(=(V29), Sorted29, VL29), length(VL29, N29)), UniqueVs29, NVPairs29),
+% ERC
+    msort(NVPairs29, MSorted29),
+% ERC
+    last(MSorted29, MaxN29-_),
+% ERC
+    findall(MV29, member(MaxN29-MV29, MSorted29), MaxVs29),
+% ERC
+    min_list(MaxVs29, MainCol).
+
+% arc_w29_cc_is_square/4: find an NxN square CC in Comps; returns TL and N.
+% ERC
+arc_w29_cc_is_square(Comps29, TL_R29, TL_C29, N29) :-
+% ERC
+    member(component(_, Cells29), Comps29),
+% ERC
+    length(Cells29, Sz29),
+% ERC
+    N29 is round(sqrt(float(Sz29))),
+% ERC
+    N29 >= 1, N29 * N29 =:= Sz29,
+% ERC
+    findall(R29, member(R29-_, Cells29), Rs29),
+% ERC
+    findall(C29, member(_-C29, Cells29), Cs29),
+% ERC
+    min_list(Rs29, TL_R29), max_list(Rs29, MaxR29),
+% ERC
+    min_list(Cs29, TL_C29), max_list(Cs29, MaxC29),
+% ERC
+    H29 is MaxR29 - TL_R29 + 1, H29 =:= N29,
+% ERC
+    W29 is MaxC29 - TL_C29 + 1, W29 =:= N29.
+
+% arc_w29_iso_sq_cc/5: isolated (non-template) NxN square CC of color 2.
+% ERC
+arc_w29_iso_sq_cc(AllComps29, Template2s29, TL_R29, TL_C29, N29) :-
+% ERC
+    member(component(2, Cells29), AllComps29),
+% ERC
+    \+ (member(RC29, Cells29), member(RC29, Template2s29)),
+% ERC
+    length(Cells29, Sz29),
+% ERC
+    N29 is round(sqrt(float(Sz29))),
+% ERC
+    N29 >= 1, N29 * N29 =:= Sz29,
+% ERC
+    findall(R29, member(R29-_, Cells29), Rs29),
+% ERC
+    findall(C29, member(_-C29, Cells29), Cs29),
+% ERC
+    min_list(Rs29, TL_R29), max_list(Rs29, MaxR29),
+% ERC
+    min_list(Cs29, TL_C29), max_list(Cs29, MaxC29),
+% ERC
+    H29 is MaxR29 - TL_R29 + 1, H29 =:= N29,
+% ERC
+    W29 is MaxC29 - TL_C29 + 1, W29 =:= N29.
+
+% arc_w29_col_color/2: maps 1-indexed column number to row fill color.
+% ERC
+arc_w29_col_color(1, 2).
+% ERC
+arc_w29_col_color(2, 4).
+% ERC
+arc_w29_col_color(3, 3).
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 1: draw_x_diagonals (623ea044)
+% Single nonzero source cell (SR,SC,SV); output SV at all (R,C) where |R-SR|=|C-SC|.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(draw_x_diagonals).
+% ERC
+arc_transform(draw_x_diagonals, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    once((member(SR, AllRows), member(SC, AllCols), arc_grid_at(Grid, SR, SC, SV), SV \= 0)),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            AbsDR is abs(R - SR), AbsDC is abs(C - SC),
+% ERC
+            ( AbsDR =:= AbsDC -> Cel = SV ; Cel = 0 )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 2: fill_frame_gaps (4612dd53)
+% Rows/cols with >=4 nonzero cells fill from global min_c to max_c / min_r to max_r.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(fill_frame_gaps).
+% ERC
+arc_transform(fill_frame_gaps, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(Rnz, (member(Rnz, AllRows), member(Cnz, AllCols), arc_grid_at(Grid, Rnz, Cnz, Vnz), Vnz \= 0), NZRs),
+% ERC
+    findall(Cnz2, (member(Rnz2, AllRows), member(Cnz2, AllCols), arc_grid_at(Grid, Rnz2, Cnz2, Vnz2), Vnz2 \= 0), NZCs),
+% ERC
+    NZRs \= [],
+% ERC
+    min_list(NZRs, MinR), max_list(NZRs, MaxR),
+% ERC
+    min_list(NZCs, MinC), max_list(NZCs, MaxC),
+% ERC
+    findall(FrR, (
+% ERC
+        member(FrR, AllRows),
+% ERC
+        findall(CC2, (member(CC2, AllCols), arc_grid_at(Grid, FrR, CC2, VV2), VV2 \= 0), RowNZ2),
+% ERC
+        length(RowNZ2, RCnt2), RCnt2 >= 4
+% ERC
+    ), FrameRows),
+% ERC
+    findall(FrC, (
+% ERC
+        member(FrC, AllCols),
+% ERC
+        findall(RR2, (member(RR2, AllRows), arc_grid_at(Grid, RR2, FrC, VV3), VV3 \= 0), ColNZ2),
+% ERC
+        length(ColNZ2, CCnt2), CCnt2 >= 4
+% ERC
+    ), FrameCols),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( Orig =:= 0,
+% ERC
+              ( ( member(R, FrameRows), C >= MinC, C =< MaxC )
+% ERC
+              ; ( member(C, FrameCols), R >= MinR, R =< MaxR ) ) ->
+% ERC
+                Cel = 2
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 3: scale_stamp_at_2_markers (447fd412)
+% Template 1+2 pattern; stamp 1-shape scaled to isolated 2-cell block size.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(scale_stamp_at_2_markers).
+% ERC
+arc_transform(scale_stamp_at_2_markers, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, 1)), OneCells),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, 2)), TwoCells),
+% ERC
+    OneCells \= [], TwoCells \= [],
+% ERC
+    findall(R-C, (
+% ERC
+        member(R-C, TwoCells),
+% ERC
+        member(R1-C1, OneCells), abs(R-R1) =< 2, abs(C-C1) =< 2
+% ERC
+    ), T2sRaw),
+% ERC
+    sort(T2sRaw, Template2s),
+% ERC
+    Template2s \= [],
+% ERC
+    findall(R-C, (
+% ERC
+        member(R-C, TwoCells),
+% ERC
+        \+ (member(R1-C1, OneCells), abs(R-R1) =< 2, abs(C-C1) =< 2)
+% ERC
+    ), Iso2s),
+% ERC
+    Iso2s \= [],
+% ERC
+    msort(Template2s, [T2A_R-T2A_C | _]),
+% ERC
+    findall(DR-DC, (member(R-C, OneCells), DR is R - T2A_R, DC is C - T2A_C), RelOnes),
+% ERC
+    findall(DR-DC, (member(R-C, Template2s), DR is R - T2A_R, DC is C - T2A_C), RelTwosRaw),
+% ERC
+    msort(RelTwosRaw, RelTwos),
+% ERC
+    arc_connected_components(Grid, AllComps),
+% ERC
+    length(RelTwos, K),
+% ERC
+    ( K =:= 1 ->
+% ERC
+        findall(SR-SC, (
+% ERC
+            arc_w29_iso_sq_cc(AllComps, Template2s, TL_R, TL_C, N2),
+% ERC
+            member(DR-DC, RelOnes),
+% ERC
+            StartR is TL_R + DR * N2, StartC is TL_C + DC * N2,
+% ERC
+            N2_1 is N2 - 1,
+% ERC
+            between(0, N2_1, DI), between(0, N2_1, DJ),
+% ERC
+            SR is StartR + DI, SC is StartC + DJ,
+% ERC
+            SR >= 1, SR =< NR, SC >= 1, SC =< NC
+% ERC
+        ), StampCells0)
+% ERC
+    ; K =:= 2,
+% ERC
+      RelTwos = [_-_, DR2-DC2],
+% ERC
+      findall(SR-SC, (
+% ERC
+          arc_w29_iso_sq_cc(AllComps, Template2s, A_R, A_C, N2),
+% ERC
+          PairR is A_R + DR2 * N2, PairC is A_C + DC2 * N2,
+% ERC
+          arc_w29_iso_sq_cc(AllComps, Template2s, PairR, PairC, N2),
+% ERC
+          member(DR-DC, RelOnes),
+% ERC
+          StartR is A_R + DR * N2, StartC is A_C + DC * N2,
+% ERC
+          N2_1 is N2 - 1,
+% ERC
+          between(0, N2_1, DI), between(0, N2_1, DJ),
+% ERC
+          SR is StartR + DI, SC is StartC + DJ,
+% ERC
+          SR >= 1, SR =< NR, SC >= 1, SC =< NC
+% ERC
+      ), StampCells0)
+% ERC
+    ),
+% ERC
+    sort(StampCells0, StampCells),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            ( member(R-C, StampCells) -> Cel = 1
+% ERC
+            ; arc_grid_at(Grid, R, C, Cel) )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 4: four_way_reflect (4938f0c2, 4c5c2cf0)
+% Main color (most cells; tie->lowest value) reflected 3 ways across marker center.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(four_way_reflect).
+% ERC
+arc_transform(four_way_reflect, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, V), V \= 0), AllVs),
+% ERC
+    AllVs \= [],
+% ERC
+    arc_w29_max_count_col(AllVs, MainCol),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, MainCol)), MainCells),
+% ERC
+    findall(R-C, (
+% ERC
+        member(R, AllRows), member(C, AllCols),
+% ERC
+        arc_grid_at(Grid, R, C, MV), MV \= 0, MV \= MainCol
+% ERC
+    ), MarkerCells),
+% ERC
+    MarkerCells \= [],
+% ERC
+    findall(MR, member(MR-_, MarkerCells), MRs),
+% ERC
+    findall(MC, member(_-MC, MarkerCells), MCs),
+% ERC
+    min_list(MRs, MMinR), max_list(MRs, MMaxR),
+% ERC
+    min_list(MCs, MMinC), max_list(MCs, MMaxC),
+% ERC
+    SumR2 is MMinR + MMaxR,
+% ERC
+    SumC2 is MMinC + MMaxC,
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ReflC is SumC2 - C, ReflR is SumR2 - R,
+% ERC
+            ( member(R-C, MainCells) -> Cel = MainCol
+% ERC
+            ; member(R-ReflC, MainCells) -> Cel = MainCol
+% ERC
+            ; member(ReflR-C, MainCells) -> Cel = MainCol
+% ERC
+            ; member(ReflR-ReflC, MainCells) -> Cel = MainCol
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 5: replace_minority_with_5 (9565186b)
+% Most-frequent nonzero color = background; all other nonzero -> 5; 0 stays 0.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(replace_minority_with_5).
+% ERC
+arc_transform(replace_minority_with_5, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, V), V \= 0), NZVs),
+% ERC
+    NZVs \= [],
+% ERC
+    arc_w29_max_count_col(NZVs, BgCol),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V),
+% ERC
+            ( V =:= 0 -> Cel = 0
+% ERC
+            ; V =:= BgCol -> Cel = BgCol
+% ERC
+            ; Cel = 5 )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 6: diagonal_pair_8corners (22233c11)
+% Pairs of same-size NxN blocks diagonal by N; stamp 8s at virtual corners.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(diagonal_pair_8corners).
+% ERC
+arc_transform(diagonal_pair_8corners, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    arc_connected_components(Grid, AllComps),
+% ERC
+    include([component(CV, _)]>>(CV \= 0), AllComps, NonBgComps),
+% ERC
+    findall(R1-C1-Ndp-R2-C2, (
+% ERC
+        arc_w29_cc_is_square(NonBgComps, R1, C1, Ndp),
+% ERC
+        arc_w29_cc_is_square(NonBgComps, R2, C2, Ndp),
+% ERC
+        R1-C1 @< R2-C2,
+% ERC
+        AbsDR is abs(R2 - R1), AbsDC is abs(C2 - C1),
+% ERC
+        AbsDR =:= Ndp, AbsDC =:= Ndp
+% ERC
+    ), Pairs),
+% ERC
+    Pairs \= [],
+% ERC
+    findall(SR-SC, (
+% ERC
+        member(R1-C1-Ndp-R2-C2, Pairs),
+% ERC
+        Ndp1 is Ndp - 1,
+% ERC
+        ( Pos1R is 2*R1-R2, Pos1C is 2*C2-C1,
+% ERC
+          between(0, Ndp1, DI), between(0, Ndp1, DJ),
+% ERC
+          SR is Pos1R+DI, SC is Pos1C+DJ,
+% ERC
+          SR >= 1, SR =< NR, SC >= 1, SC =< NC
+% ERC
+        ; Pos2R is 2*R2-R1, Pos2C is 2*C1-C2,
+% ERC
+          between(0, Ndp1, DI), between(0, Ndp1, DJ),
+% ERC
+          SR is Pos2R+DI, SC is Pos2C+DJ,
+% ERC
+          SR >= 1, SR =< NR, SC >= 1, SC =< NC )
+% ERC
+    ), StampCells0),
+% ERC
+    sort(StampCells0, StampCells),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( member(R-C, StampCells) -> Cel = 8 ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 7: extend_rect_to_8 (b548a754)
+% Rectangular frame; 8-cell outside -> extend frame to include 8's row/col.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(extend_rect_to_8).
+% ERC
+arc_transform(extend_rect_to_8, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    once((member(ER, AllRows), member(EC, AllCols), arc_grid_at(Grid, ER, EC, 8))),
+% ERC
+    findall(R-C-V, (
+% ERC
+        member(R, AllRows), member(C, AllCols),
+% ERC
+        arc_grid_at(Grid, R, C, V), V \= 0, V \= 8
+% ERC
+    ), FrCells),
+% ERC
+    FrCells \= [],
+% ERC
+    findall(R, member(R-_-_, FrCells), FrRs),
+% ERC
+    findall(C, member(_-C-_, FrCells), FrCs),
+% ERC
+    min_list(FrRs, FRMin), max_list(FrRs, FRMax),
+% ERC
+    min_list(FrCs, FCMin), max_list(FrCs, FCMax),
+% ERC
+    once((
+% ERC
+        member(R-C-V, FrCells),
+% ERC
+        ( R=:=FRMin ; R=:=FRMax ; C=:=FCMin ; C=:=FCMax ),
+% ERC
+        OuterCol = V
+% ERC
+    )),
+% ERC
+    ( member(_-_-IV, FrCells),
+% ERC
+      member(IR-IC-IV, FrCells), IR > FRMin, IR < FRMax, IC > FCMin, IC < FCMax,
+% ERC
+      IV \= OuterCol
+% ERC
+      -> InnerCol = IV
+% ERC
+    ; InnerCol = OuterCol ),
+% ERC
+    ( ER < FRMin -> NRMin=ER, NRMax=FRMax, NCMin=FCMin, NCMax=FCMax
+% ERC
+    ; ER > FRMax -> NRMin=FRMin, NRMax=ER, NCMin=FCMin, NCMax=FCMax
+% ERC
+    ; EC < FCMin -> NRMin=FRMin, NRMax=FRMax, NCMin=EC, NCMax=FCMax
+% ERC
+    ; NRMin=FRMin, NRMax=FRMax, NCMin=FCMin, NCMax=EC ),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            ( R >= NRMin, R =< NRMax, C >= NCMin, C =< NCMax ->
+% ERC
+                ( ( R =:= NRMin ; R =:= NRMax ; C =:= NCMin ; C =:= NCMax ) ->
+% ERC
+                    Cel = OuterCol
+% ERC
+                ; Cel = InnerCol )
+% ERC
+            ; arc_grid_at(Grid, R, C, Cel) )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 8: gravity_down (25ff71a9)
+% Each nonzero cell shifts down 1 row; cells in last row vanish; top row zeros.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(gravity_down).
+% ERC
+arc_transform(gravity_down, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            PrevR is R - 1,
+% ERC
+            ( PrevR >= 1, arc_grid_at(Grid, PrevR, C, PV), PV \= 0 ->
+% ERC
+                Cel = PV
+% ERC
+            ; Cel = 0 )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 9: connected_groups_to_8 (67385a82)
+% Connected components of size>1 become color 8; isolated cells unchanged.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(connected_groups_to_8).
+% ERC
+arc_transform(connected_groups_to_8, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    arc_connected_components(Grid, Comps),
+% ERC
+    include([component(CV, _)]>>(CV \= 0), Comps, NonBgComps),
+% ERC
+    findall(R-C, (
+% ERC
+        member(component(_, Cells), NonBgComps),
+% ERC
+        length(Cells, L), L > 1,
+% ERC
+        member(R-C, Cells)
+% ERC
+    ), GroupCells0),
+% ERC
+    sort(GroupCells0, GroupCells),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( Orig \= 0, member(R-C, GroupCells) -> Cel = 8 ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 10: rotate_90ccw (ed36ccf7)
+% 90-degree counter-clockwise rotation: new[R][C] = old[C][NR-R+1].
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(rotate_90ccw).
+% ERC
+arc_transform(rotate_90ccw, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NC, AllNewRows),
+% ERC
+    numlist(1, NR, AllNewCols),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            OldR is C, OldC is NR - R + 1,
+% ERC
+            arc_grid_at(Grid, OldR, OldC, Cel)
+% ERC
+        ), AllNewCols, Row)
+% ERC
+    ), AllNewRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 11: mark_5_with_other (f76d97a5)
+% Find non-5 non-0 color OC; output = OC where 5 was; 0 everywhere else.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(mark_5_with_other).
+% ERC
+arc_transform(mark_5_with_other, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    once((member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, OC), OC \= 0, OC \= 5)),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V),
+% ERC
+            ( V =:= 5 -> Cel = OC ; Cel = 0 )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 12: erase_diagonals_from_hole (ea786f4a)
+% Single 0-cell (hole) at (HR,HC); set all |R-HR|=|C-HC| cells to 0.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(erase_diagonals_from_hole).
+% ERC
+arc_transform(erase_diagonals_from_hole, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, 0)), ZeroCells),
+% ERC
+    ZeroCells = [HR-HC],
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            AbsHR is abs(R - HR), AbsHC is abs(C - HC),
+% ERC
+            ( AbsHR =:= AbsHC -> Cel = 0
+% ERC
+            ; arc_grid_at(Grid, R, C, Cel) )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 13: isolated_cells_to_1 (aedd82e4)
+% Connected components of size 1 -> recolor to 1; others unchanged.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(isolated_cells_to_1).
+% ERC
+arc_transform(isolated_cells_to_1, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    arc_connected_components(Grid, Comps),
+% ERC
+    include([component(CV, _)]>>(CV \= 0), Comps, NonBgComps),
+% ERC
+    findall(R-C, member(component(_, [R-C]), NonBgComps), IsoRaw),
+% ERC
+    sort(IsoRaw, IsoCells),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            ( member(R-C, IsoCells) -> Cel = 1
+% ERC
+            ; arc_grid_at(Grid, R, C, Cel) )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 14: five_col_to_row_color (a85d4709)
+% Each row containing a 5: col1->2, col2->4, col3->3; fill entire row.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(five_col_to_row_color).
+% ERC
+arc_transform(five_col_to_row_color, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        ( once((member(C5, AllCols), arc_grid_at(Grid, R, C5, 5), arc_w29_col_color(C5, FillCol))) ->
+% ERC
+            maplist([_C, FillCol]>>true, AllCols, Row)
+% ERC
+        ; maplist([C, Cel]>>(arc_grid_at(Grid, R, C, Cel)), AllCols, Row) )
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 15: count_ones_fill (794b24be)
+% Count 1-cells; fill that many 2s: row1 left-right, rows 2+ center-outward.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(count_ones_fill).
+% ERC
+arc_transform(count_ones_fill, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, 1)), Ones),
+% ERC
+    length(Ones, Count),
+% ERC
+    Count > 0,
+% ERC
+    Center1 is NC // 2 + 1,
+% ERC
+    MaxOff is max(Center1 - 1, NC - Center1),
+% ERC
+    findall(CO, (
+% ERC
+        between(0, MaxOff, Off),
+% ERC
+        ( CO is Center1 + Off, CO >= 1, CO =< NC
+% ERC
+        ; Off > 0, CO is Center1 - Off, CO >= 1, CO =< NC )
+% ERC
+    ), CenterOutCols),
+% ERC
+    numlist(2, NR, OtherRowNums),
+% ERC
+    findall(1-C, member(C, AllCols), Row1Fills),
+% ERC
+    findall(R-C, (member(R, OtherRowNums), member(C, CenterOutCols)), OtherFills),
+% ERC
+    append(Row1Fills, OtherFills, FillOrder),
+% ERC
+    length(TakeFills, Count),
+% ERC
+    append(TakeFills, _, FillOrder),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            ( member(R-C, TakeFills) -> Cel = 2 ; Cel = 0 )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 16: color_count_to_diagonal (6e02f1e3)
+% 1 distinct color -> top row 5s; 2 -> main diagonal 5s; 3+ -> anti-diagonal 5s.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(color_count_to_diagonal).
+% ERC
+arc_transform(color_count_to_diagonal, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    NR =:= NC,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, V)), AllVals),
+% ERC
+    sort(AllVals, UniqueVals),
+% ERC
+    length(UniqueVals, NDistinct),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            ( NDistinct =:= 1, R =:= 1 -> Cel = 5
+% ERC
+            ; NDistinct =:= 2, R =:= C -> Cel = 5
+% ERC
+            ; NDistinct >= 3, R + C =:= NR + 1 -> Cel = 5
+% ERC
+            ; Cel = 0 )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 17: shift_8_down_1 (a79310a0)
+% Each 8-cell shifts down 1 row as color 2; all other cells become 0.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(shift_8_down_1).
+% ERC
+arc_transform(shift_8_down_1, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            PrevR is R - 1,
+% ERC
+            ( PrevR >= 1, arc_grid_at(Grid, PrevR, C, 8) ->
+% ERC
+                Cel = 2
+% ERC
+            ; Cel = 0 )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 29 RULE 18: fill_row_gap_ones (a699fb00)
+% Pattern [1,0,1] in a row: fill the middle 0 with 2.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(fill_row_gap_ones).
+% ERC
+arc_transform(fill_row_gap_ones, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-Cgap, (
+% ERC
+        member(R, AllRows),
+% ERC
+        member(C, AllCols), C2 is C + 1, C3 is C + 2, C3 =< NC,
+% ERC
+        arc_grid_at(Grid, R, C, 1),
+% ERC
+        arc_grid_at(Grid, R, C2, 0),
+% ERC
+        arc_grid_at(Grid, R, C3, 1),
+% ERC
+        Cgap = C2
+% ERC
+    ), GapCells0),
+% ERC
+    sort(GapCells0, GapCells),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( member(R-C, GapCells) -> Cel = 2 ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
