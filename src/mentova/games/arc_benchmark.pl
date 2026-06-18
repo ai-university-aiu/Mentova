@@ -9693,6 +9693,712 @@ arc_sfsg_bands([Sep|Rest], Start, End, Bands) :-
     append(This, RestBands, Bands).
 
 % ---------------------------------------------------------------------------
+% WAVE 21 SHARED HELPERS
+% arc_w21_bfs(+Queue, +Visited, +Cells, -FinalVisited)
+% BFS flood fill: expand from Queue within Cells, tracking all Visited cells.
+% ERC
+arc_w21_bfs([], Visited, _Cells, Visited).
+% ERC
+arc_w21_bfs([R-C|Queue], Visited, Cells, Final) :-
+% ERC
+    findall(R2-C2, (
+% ERC
+        member(DR-DC, [-1-0,1-0,0-1,0-(-1)]),
+% ERC
+        R2 is R+DR, C2 is C+DC,
+% ERC
+        memberchk(R2-C2, Cells),
+% ERC
+        \+ memberchk(R2-C2, Visited)
+% ERC
+    ), NewN),
+% ERC
+    append(Queue, NewN, Q2),
+% ERC
+    append(Visited, NewN, V2),
+% ERC
+    arc_w21_bfs(Q2, V2, Cells, Final).
+
+% arc_w21_comps(+Cells, -Comps): partition Cells into 4-connected components.
+% ERC
+arc_w21_comps([], []).
+% ERC
+arc_w21_comps([S|Tail], [Comp|Rest]) :-
+% ERC
+    arc_w21_bfs([S], [S], [S|Tail], Comp),
+% ERC
+    findall(X, (member(X,[S|Tail]), \+ memberchk(X,Comp)), Remaining),
+% ERC
+    arc_w21_comps(Remaining, Rest).
+
+% ---------------------------------------------------------------------------
+% rectangular_spiral — NxN all-zero input; output NxN spiral of 3s.
+% For each level L (starting at 1): top=2L-1, bot=N-2(L-1), left=2L-1,
+% right=N-2(L-1). Draw outer walls; when top>bot add degenerate top wall if
+% max(1,left-1)<=right, then stop.
+% Verified on task 28e73c20 (all 5 training pairs: N=6,8,10,13,15).
+% ERC
+arc_named_rule(rectangular_spiral).
+% ERC
+arc_transform(rectangular_spiral, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    NR =:= NC,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(V0, (member(R0,Rs), member(C0,Cs),
+% ERC
+                 arc_grid_at(Grid,R0,C0,V0), V0 =\= 0), NonZeros),
+% ERC
+    NonZeros = [],
+% ERC
+    arc_rs_build(1, NR, [], SpCells),
+% ERC
+    !,
+% ERC
+    maplist([R,OutRow]>>(
+% ERC
+        maplist([C,OutV]>>(
+% ERC
+            ( memberchk(R-C, SpCells) -> OutV = 3 ; OutV = 0 )
+% ERC
+        ), Cs, OutRow)
+% ERC
+    ), Rs, Result).
+
+% arc_rs_build(+Level, +N, +Acc, -Cells): accumulate spiral cells level by level.
+% ERC
+arc_rs_build(Level, N, Acc, Cells) :-
+% ERC
+    Top  is 2*Level - 1,
+% ERC
+    Bot  is N - 2*(Level-1),
+% ERC
+    Left is 2*Level - 1,
+% ERC
+    Right is N - 2*(Level-1),
+% ERC
+    ( Top > Bot ->
+% ERC
+        ColStart is max(1, Left-1),
+% ERC
+        ( ColStart =< Right ->
+% ERC
+            numlist(ColStart, Right, DegCols),
+% ERC
+            findall(Top-Dc, member(Dc,DegCols), DegWall)
+% ERC
+        ; DegWall = [] ),
+% ERC
+        append([DegWall, Acc], All0),
+% ERC
+        sort(All0, Cells)
+% ERC
+    ;
+% ERC
+        TopStart is max(1, Left-1),
+% ERC
+        numlist(TopStart, Right, TopCols),
+% ERC
+        findall(Top-Tc, member(Tc,TopCols), TopWall),
+% ERC
+        numlist(Top, Bot, RightRows),
+% ERC
+        findall(Rr-Right, member(Rr,RightRows), RightWall),
+% ERC
+        ( Bot > Top ->
+% ERC
+            numlist(Left, Right, BotCols),
+% ERC
+            findall(Bot-Bc, member(Bc,BotCols), BotWall)
+% ERC
+        ; BotWall = [] ),
+% ERC
+        ( Left =\= Right ->
+% ERC
+            LeftStart is Top + 2,
+% ERC
+            ( LeftStart =< Bot ->
+% ERC
+                numlist(LeftStart, Bot, LeftRows),
+% ERC
+                findall(Lr-Left, member(Lr,LeftRows), LeftWall)
+% ERC
+            ; LeftWall = [] )
+% ERC
+        ; LeftWall = [] ),
+% ERC
+        append([TopWall, RightWall, BotWall, LeftWall, Acc], All0),
+% ERC
+        sort(All0, All),
+% ERC
+        NextLevel is Level + 1,
+% ERC
+        arc_rs_build(NextLevel, N, All, Cells)
+% ERC
+    ).
+
+% ---------------------------------------------------------------------------
+% most_minority_3x3_block — grid with 4+ non-zero 4-connected blobs each
+% having a 3x3 bounding box; output the blob with the most non-8 non-0 cells.
+% Verified on task ae4f1146 (all 4 training pairs).
+% ERC
+arc_named_rule(most_minority_3x3_block).
+% ERC
+arc_transform(most_minority_3x3_block, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-C, (member(R,Rs), member(C,Cs),
+% ERC
+                  arc_grid_at(Grid,R,C,V), V =\= 0), AllNZ),
+% ERC
+    AllNZ \= [],
+% ERC
+    arc_w21_comps(AllNZ, Blobs),
+% ERC
+    findall(Count-MinR-MinC, (
+% ERC
+        member(Blob, Blobs),
+% ERC
+        findall(Br, member(Br-_,Blob), BlobRs),
+% ERC
+        findall(Bc, member(_-Bc,Blob), BlobCs),
+% ERC
+        min_list(BlobRs, MinR), max_list(BlobRs, MaxR),
+% ERC
+        min_list(BlobCs, MinC), max_list(BlobCs, MaxC),
+% ERC
+        MaxR - MinR =:= 2, MaxC - MinC =:= 2,
+% ERC
+        findall(Mv, (member(Br2-Bc2,Blob),
+% ERC
+                     arc_grid_at(Grid,Br2,Bc2,Mv),
+% ERC
+                     Mv =\= 0, Mv =\= 8), MinVs),
+% ERC
+        length(MinVs, Count)
+% ERC
+    ), Scored),
+% ERC
+    Scored \= [],
+% ERC
+    msort(Scored, ScSorted),
+% ERC
+    last(ScSorted, _Best-BestR-BestC),
+% ERC
+    numlist(1, 3, Idx3),
+% ERC
+    !,
+% ERC
+    maplist([RI, OutRow]>>(
+% ERC
+        R3 is BestR + RI - 1,
+% ERC
+        maplist([CI, OutV]>>(
+% ERC
+            C3 is BestC + CI - 1,
+% ERC
+            arc_grid_at(Grid, R3, C3, OutV)
+% ERC
+        ), Idx3, OutRow)
+% ERC
+    ), Idx3, Result).
+
+% ---------------------------------------------------------------------------
+% components_to_identity — count 4-connected components of non-zero cells;
+% output NxN identity matrix (8 on diagonal, 0 elsewhere).
+% Verified on task d0f5fe59 (all 3 training pairs).
+% ERC
+arc_named_rule(components_to_identity).
+% ERC
+arc_transform(components_to_identity, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-C, (member(R,Rs), member(C,Cs),
+% ERC
+                  arc_grid_at(Grid,R,C,V0), V0 =\= 0), Cells),
+% ERC
+    Cells \= [],
+% ERC
+    arc_w21_comps(Cells, Comps),
+% ERC
+    length(Comps, N),
+% ERC
+    N >= 2,
+% ERC
+    numlist(1, N, NList),
+% ERC
+    !,
+% ERC
+    maplist([RI, OutRow]>>(
+% ERC
+        maplist([CI, OutV]>>(
+% ERC
+            ( RI =:= CI -> OutV = 8 ; OutV = 0 )
+% ERC
+        ), NList, OutRow)
+% ERC
+    ), NList, Result).
+
+% ---------------------------------------------------------------------------
+% pick_nonsymmetric_block — input of stacked 3x3 blocks (Nx3 grid, N mod 3=0);
+% output the one block not symmetric along the main diagonal
+% (grid[r][c] != grid[c][r] for some r,c in the block).
+% Verified on task 662c240a (all 4 training pairs).
+% ERC
+arc_named_rule(pick_nonsymmetric_block).
+% ERC
+arc_transform(pick_nonsymmetric_block, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    NC =:= 3, NR mod 3 =:= 0,
+% ERC
+    NBlocks is NR // 3,
+% ERC
+    NBlocks >= 2,
+% ERC
+    numlist(1, NBlocks, BlockIs),
+% ERC
+    numlist(1, 3, Idx3),
+% ERC
+    once((
+% ERC
+        member(BI, BlockIs),
+% ERC
+        RS is (BI-1)*3 + 1,
+% ERC
+        findall(Ri-Ci, (
+% ERC
+            member(Ri2,Idx3), member(Ci2,Idx3),
+% ERC
+            Ri is RS+Ri2-1, Ci is Ci2,
+% ERC
+            RC2 is RS+Ci2-1,
+% ERC
+            arc_grid_at(Grid,Ri,Ci,V1),
+% ERC
+            arc_grid_at(Grid,RC2,Ri2,V2),
+% ERC
+            V1 =\= V2
+% ERC
+        ), AsymPairs),
+% ERC
+        AsymPairs \= []
+% ERC
+    )),
+% ERC
+    !,
+% ERC
+    maplist([RI, OutRow]>>(
+% ERC
+        R3 is RS + RI - 1,
+% ERC
+        maplist([CI, OutV]>>(
+% ERC
+            arc_grid_at(Grid, R3, CI, OutV)
+% ERC
+        ), Idx3, OutRow)
+% ERC
+    ), Idx3, Result).
+
+% ---------------------------------------------------------------------------
+% color_8s_by_quadrant — grid with exactly 2 all-1 rows and 2 all-1 cols
+% forming a frame; corner cells supply 4 anchor colors; each 8 in the inner
+% region is replaced by the anchor color of its quadrant.
+% Verified on task 77fdfe62 (all 3 training pairs).
+% ERC
+arc_named_rule(color_8s_by_quadrant).
+% ERC
+arc_transform(color_8s_by_quadrant, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R, (member(R,Rs),
+% ERC
+               findall(Rv,(member(Cv,Cs),arc_grid_at(Grid,R,Cv,Rv)),RowVs),
+% ERC
+               sort(RowVs,[1])), RowDivs),
+% ERC
+    RowDivs = [RD1, RD2],
+% ERC
+    findall(C, (member(C,Cs),
+% ERC
+               findall(Rv2,(member(Rv3,Rs),arc_grid_at(Grid,Rv3,C,Rv2)),ColVs),
+% ERC
+               sort(ColVs,[1])), ColDivs),
+% ERC
+    ColDivs = [CD1, CD2],
+% ERC
+    arc_grid_at(Grid, 1, 1, ATL), arc_grid_at(Grid, 1, NC, ATR),
+% ERC
+    arc_grid_at(Grid, NR, 1, ABL), arc_grid_at(Grid, NR, NC, ABR),
+% ERC
+    ATL =\= 0, ATL =\= 1, ATR =\= 0, ATR =\= 1,
+% ERC
+    ABL =\= 0, ABL =\= 1, ABR =\= 0, ABR =\= 1,
+% ERC
+    IR1 is RD1+1, IR2 is RD2-1,
+% ERC
+    IC1 is CD1+1, IC2 is CD2-1,
+% ERC
+    InnerNR is IR2 - IR1 + 1, InnerNC is IC2 - IC1 + 1,
+% ERC
+    InnerNR >= 2, InnerNC >= 2,
+% ERC
+    MidR is InnerNR // 2, MidC is InnerNC // 2,
+% ERC
+    numlist(IR1, IR2, InnerRs),
+% ERC
+    numlist(IC1, IC2, InnerCs),
+% ERC
+    !,
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, OutV]>>(
+% ERC
+            arc_grid_at(Grid, R, C, InV),
+% ERC
+            ( InV =\= 8 -> OutV = 0
+% ERC
+            ;
+% ERC
+                LocalR is R - IR1 + 1,
+% ERC
+                LocalC is C - IC1 + 1,
+% ERC
+                ( LocalR =< MidR, LocalC =< MidC -> OutV = ATL
+% ERC
+                ; LocalR =< MidR -> OutV = ATR
+% ERC
+                ; LocalC =< MidC -> OutV = ABL
+% ERC
+                ; OutV = ABR
+% ERC
+                )
+% ERC
+            )
+% ERC
+        ), InnerCs, OutRow)
+% ERC
+    ), InnerRs, Result).
+
+% ---------------------------------------------------------------------------
+% container_fill_gauge — U-shaped container of 5s with 8-fill from bottom;
+% output 3x3 with N cells on perimeter (clockwise from top-left) where
+% N = container_height - rows_containing_8.
+% Verified on task b0c4d837 (all 6 training pairs).
+% ERC
+arc_named_rule(container_fill_gauge).
+% ERC
+arc_transform(container_fill_gauge, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-C, (member(R,Rs), member(C,Cs),
+% ERC
+                  arc_grid_at(Grid,R,C,5)), FiveCells),
+% ERC
+    FiveCells \= [],
+% ERC
+    findall(Fr, member(Fr-_,FiveCells), FiveRs),
+% ERC
+    findall(Fc, member(_-Fc,FiveCells), FiveCs),
+% ERC
+    min_list(FiveRs, MinR5), max_list(FiveRs, MaxR5),
+% ERC
+    min_list(FiveCs, MinC5), max_list(FiveCs, MaxC5),
+% ERC
+    InteriorH is MaxR5 - MinR5,
+% ERC
+    InteriorH > 0,
+% ERC
+    IntR1 is MinR5, IntR2 is MaxR5 - 1,
+% ERC
+    IntC1 is MinC5 + 1, IntC2 is MaxC5 - 1,
+% ERC
+    IntC1 =< IntC2,
+% ERC
+    numlist(IntR1, IntR2, IntRs),
+% ERC
+    numlist(IntC1, IntC2, IntCs),
+% ERC
+    findall(Er, (member(Er,IntRs),
+% ERC
+                 findall(Ev,(member(Ec,IntCs),
+% ERC
+                             arc_grid_at(Grid,Er,Ec,Ev),Ev=:=8),E8s),
+% ERC
+                 E8s \= []), EightRows),
+% ERC
+    length(EightRows, EightCount),
+% ERC
+    EmptyH is InteriorH - EightCount,
+% ERC
+    EmptyH >= 1, EmptyH =< 8,
+% ERC
+    arc_cfg_perimeter(EmptyH, Result),
+% ERC
+    !.
+
+% arc_cfg_perimeter(+N, -Grid3x3): fill N cells on 3x3 perimeter clockwise.
+% ERC
+arc_cfg_perimeter(N, Result) :-
+% ERC
+    Perim = [1-1,1-2,1-3,2-3,3-3,3-2,3-1,2-1],
+% ERC
+    length(Perim, PLen),
+% ERC
+    N2 is min(N, PLen),
+% ERC
+    numlist(1, N2, PIdx),
+% ERC
+    findall(Pr-Pc, (member(Pi,PIdx), nth1(Pi,Perim,Pr-Pc)), Filled),
+% ERC
+    numlist(1, 3, Idx3),
+% ERC
+    maplist([RI, Row]>>(
+% ERC
+        maplist([CI, V]>>(
+% ERC
+            ( memberchk(RI-CI, Filled) -> V = 8 ; V = 0 )
+% ERC
+        ), Idx3, Row)
+% ERC
+    ), Idx3, Result).
+
+% ---------------------------------------------------------------------------
+% scale_shape_2x — single-color shape on zero background; output is the
+% non-zero bounding box scaled 2x in both dimensions (each cell -> 2x2 block).
+% Verified on task f25fbde4 (all 3 training pairs).
+% ERC
+arc_named_rule(scale_shape_2x).
+% ERC
+arc_transform(scale_shape_2x, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-C, (member(R,Rs), member(C,Cs),
+% ERC
+                  arc_grid_at(Grid,R,C,V0), V0 =\= 0), NZCells),
+% ERC
+    NZCells \= [],
+% ERC
+    findall(Nv, (member(R0,Rs), member(C0,Cs),
+% ERC
+                 arc_grid_at(Grid,R0,C0,Nv), Nv =\= 0), NZVals),
+% ERC
+    sort(NZVals, [_]),
+% ERC
+    findall(Nr, member(Nr-_,NZCells), NZRs),
+% ERC
+    findall(Nc, member(_-Nc,NZCells), NZCs),
+% ERC
+    min_list(NZRs, MinR), max_list(NZRs, MaxR),
+% ERC
+    min_list(NZCs, MinC), max_list(NZCs, MaxC),
+% ERC
+    BboxH is MaxR - MinR + 1, BboxW is MaxC - MinC + 1,
+% ERC
+    BboxH > 1, BboxW > 1,
+% ERC
+    OutNR is BboxH * 2, OutNC is BboxW * 2,
+% ERC
+    numlist(1, OutNR, OutRs),
+% ERC
+    numlist(1, OutNC, OutCs),
+% ERC
+    !,
+% ERC
+    maplist([OR, OutRow]>>(
+% ERC
+        SrcR is MinR + (OR-1) // 2,
+% ERC
+        maplist([OC, OutV]>>(
+% ERC
+            SrcC is MinC + (OC-1) // 2,
+% ERC
+            arc_grid_at(Grid, SrcR, SrcC, OutV)
+% ERC
+        ), OutCs, OutRow)
+% ERC
+    ), OutRs, Result).
+
+% ---------------------------------------------------------------------------
+% template_stamp_by_half — split input into left half (cols 1..NC/2) and right
+% half (cols NC/2+1..NC); one half has only 0s and 8s (template), the other has
+% non-8 non-zero values (color map); for each non-zero color position stamp the
+% 8-template with that color; output is NR^2 x (NC/2)^2.
+% Verified on task b190f7f5 (all 3 training pairs).
+% ERC
+arc_named_rule(template_stamp_by_half).
+% ERC
+arc_transform(template_stamp_by_half, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 15, NC =< 15,
+% ERC
+    NC mod 2 =:= 0,
+% ERC
+    NCL is NC // 2,
+% ERC
+    numlist(1, NR, Rs),
+% ERC
+    numlist(1, NCL, LCs),
+% ERC
+    NCR1 is NCL + 1, numlist(NCR1, NC, RCs),
+% ERC
+    findall(Rv, (member(R0,Rs), member(C0,RCs),
+% ERC
+               arc_grid_at(Grid,R0,C0,Rv), Rv=\=0, Rv=\=8), RNon8),
+% ERC
+    findall(Lv, (member(R0,Rs), member(C0,LCs),
+% ERC
+               arc_grid_at(Grid,R0,C0,Lv), Lv=\=0, Lv=\=8), LNon8),
+% ERC
+    ( RNon8 = [], LNon8 \= [] -> TplOff = NCL, CmOff = 0
+% ERC
+    ; LNon8 = [], RNon8 \= [] -> TplOff = 0, CmOff = NCL
+% ERC
+    ),
+% ERC
+    NROut is NR * NR,
+% ERC
+    NCOut is NCL * NCL,
+% ERC
+    numlist(1, NROut, OutRs),
+% ERC
+    numlist(1, NCOut, OutCs),
+% ERC
+    !,
+% ERC
+    maplist([OR, OutRow]>>(
+% ERC
+        SR is (OR-1) // NR,
+% ERC
+        TR is ((OR-1) mod NR) + 1,
+% ERC
+        maplist([OC, OutV]>>(
+% ERC
+            SC is (OC-1) // NCL,
+% ERC
+            TC is ((OC-1) mod NCL) + 1,
+% ERC
+            CmR is SR + 1, CmC is CmOff + SC + 1,
+% ERC
+            arc_grid_at(Grid, CmR, CmC, Color),
+% ERC
+            TplC is TplOff + TC,
+% ERC
+            arc_grid_at(Grid, TR, TplC, TV),
+% ERC
+            ( Color =\= 0, TV =:= 8 -> OutV = Color ; OutV = 0 )
+% ERC
+        ), OutCs, OutRow)
+% ERC
+    ), OutRs, Result).
+
+% Horizontal split clause — input is NR-even; one row-half has only 0s and 8s
+% (template), the other has non-8 non-zero values (color map).
+% Output is (NR/2)^2 x NC^2.
+% ERC
+arc_transform(template_stamp_by_half, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 15, NC =< 15,
+% ERC
+    NR mod 2 =:= 0,
+% ERC
+    NRH is NR // 2,
+% ERC
+    numlist(1, NC, Cs),
+% ERC
+    NRH1 is NRH + 1, numlist(NRH1, NR, BRs0),
+% ERC
+    numlist(1, NRH, TRs0),
+% ERC
+    findall(Bv, (member(R0,BRs0), member(C0,Cs),
+% ERC
+               arc_grid_at(Grid,R0,C0,Bv), Bv=\=0, Bv=\=8), BNon8),
+% ERC
+    findall(Tv, (member(R0,TRs0), member(C0,Cs),
+% ERC
+               arc_grid_at(Grid,R0,C0,Tv), Tv=\=0, Tv=\=8), TNon8),
+% ERC
+    ( BNon8 = [], TNon8 \= [] -> TplRowOff = NRH, CmRowOff = 0
+% ERC
+    ; TNon8 = [], BNon8 \= [] -> TplRowOff = 0, CmRowOff = NRH
+% ERC
+    ),
+% ERC
+    NROut is NRH * NRH,
+% ERC
+    NCOut is NC * NC,
+% ERC
+    numlist(1, NROut, OutRs),
+% ERC
+    numlist(1, NCOut, OutCs),
+% ERC
+    !,
+% ERC
+    maplist([OR, OutRow]>>(
+% ERC
+        SR is (OR-1) // NRH,
+% ERC
+        TR is ((OR-1) mod NRH) + 1,
+% ERC
+        maplist([OC, OutV]>>(
+% ERC
+            SC is (OC-1) // NC,
+% ERC
+            TC is ((OC-1) mod NC) + 1,
+% ERC
+            CmR is CmRowOff + SR + 1, CmC is SC + 1,
+% ERC
+            arc_grid_at(Grid, CmR, CmC, Color),
+% ERC
+            TplR is TplRowOff + TR,
+% ERC
+            arc_grid_at(Grid, TplR, TC, TV),
+% ERC
+            ( Color =\= 0, TV =:= 8 -> OutV = Color ; OutV = 0 )
+% ERC
+        ), OutCs, OutRow)
+% ERC
+    ), OutRs, Result).
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.

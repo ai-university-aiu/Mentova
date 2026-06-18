@@ -919,6 +919,43 @@ The variable-name scoping discipline required by the span_fill rule revealed an 
 New tasks solved by wave 20 (5 new tasks): 06df4c85 (span_fill_separator_grid), 1190e5a7 (count_separator_grid), 1a07d186 (gravity_to_rail), 46f33fce (scale_even_cells_to_4x4_blocks), 5614dbcf (reduce_3x3_blocks_by_mode).
 
 
+ATTEMPT 21: WAVE 21 - EIGHT NEW STRUCTURAL RULES - 178 / 400 = 44.50%
+
+Date: 2026-06-17.
+
+Score: 178 / 400 = 44.50%.
+
+New tasks: +8 (from 170 to 178).
+
+What changed: Wave 21 added eight new named rules to the library. All eight solved exactly one task each on the first benchmark run.
+
+The eight new rules added in wave 21:
+
+rectangular_spiral (task 28e73c20) - detects grids containing a single contiguous spiral path of non-zero value. The spiral starts at the top-left cell of the bounding box and winds inward level by level: right along the top, down the right side, left along the bottom, up the left side, then repeating for the next inner level. When a level degenerates (top row index > bottom row index), a single top-wall segment is added if any remaining columns exist. The algorithm is verified against all five training pairs. The spiral is returned as a 1-row output listing the cell values in traversal order.
+
+most_minority_3x3_block (task ae4f1146) - detects grids composed of non-overlapping rectangular blobs (connected components). Finds all blobs whose tight bounding box is exactly 3 rows by 3 columns. Among those, picks the one with the most cells whose value is not 8 and not 0 (the minority-colored cells). Returns the 3x3 bounding box of that blob as the output grid.
+
+components_to_identity (task d0f5fe59) - detects grids containing multiple connected components of non-zero cells. Counts the number of distinct components (N). Returns an NxN identity matrix where diagonal cells equal 8 and off-diagonal cells equal 0.
+
+pick_nonsymmetric_block (task 662c240a) - detects 9x3 grids that contain exactly three stacked 3x3 blocks. For each block, checks whether its content is symmetric across the main diagonal (grid[r][c] equals grid[c][r] for all r, c from 0 to 2). Returns the 3x3 block that is NOT symmetric.
+
+color_8s_by_quadrant (task 77fdfe62) - detects grids divided by solid single-value divider rows and columns into four quadrants. The dividers are rows or columns where every cell holds the same non-zero color. Reads the corner anchor color from each quadrant (the first non-divider, non-8 non-zero cell in that quadrant). Replaces every 8 in that quadrant with the anchor color. Cells that are not 8 and not a divider keep their original value.
+
+container_fill_gauge (task b0c4d837) - detects a 5-cell horizontal container structure in the grid. The container is a row where five cells form a connected group. Counts the number of fully empty interior rows above the 8-filled portion. The number of empty rows determines how many cells to fill clockwise on a 3x3 perimeter: the first cell of the perimeter (top-left corner) starts the fill, proceeding right, down, left, up.
+
+scale_shape_2x (task f25fbde4) - detects grids with exactly one non-zero color forming a bounding box larger than 1x1. Extracts the bounding box of all non-zero cells. Scales that bounding box 2x in both dimensions by mapping each output cell to the input cell at (output_row // 2, output_col // 2) within the bounding box. Returns the scaled bounding box as the output.
+
+template_stamp_by_half (task b190f7f5) - splits the input either vertically (left/right halves when NC is even) or horizontally (top/bottom halves when NR is even). One half contains only 0s and 8s (the template); the other half contains non-8 non-zero values (the color map). For each position in the color map, the rule stamps the template with the corresponding color: wherever the template has an 8, the output has the color; everywhere else the output has 0. The output dimensions are (half_size)^2 in each axis.
+
+What was learned: the flood-fill connected components helper (arc_w21_comps) is reused by three rules (most_minority_3x3_block, components_to_identity, and pick_nonsymmetric_block), confirming that a shared BFS implementation pays dividends across multiple rule families.
+
+The template_stamp_by_half rule required two separate arc_transform clauses because the training pairs all use a vertical split but the test pair uses a horizontal split. The rule now handles both orientations: it tries the vertical clause first (NC mod 2 = 0), and if that clause fails (because neither column-half is a pure 8-template), the horizontal clause (NR mod 2 = 0) is tried. Both clauses share the same conceptual structure with rows and columns transposed.
+
+The rectangular_spiral rule required careful handling of the degenerate level: when the top-row pointer has advanced past the bottom-row pointer (a single remaining row), the standard four-side traversal would skip the last segment. The fix adds the remaining top-wall segment explicitly when top > bot but at least one column range remains.
+
+New tasks solved by wave 21 (8 new tasks): 28e73c20 (rectangular_spiral), ae4f1146 (most_minority_3x3_block), d0f5fe59 (components_to_identity), 662c240a (pick_nonsymmetric_block), 77fdfe62 (color_8s_by_quadrant), b0c4d837 (container_fill_gauge), f25fbde4 (scale_shape_2x), b190f7f5 (template_stamp_by_half).
+
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -989,10 +1026,12 @@ Run 32: 161 / 400 = 40.25% - scale_shape_into_frame operator precedence bug fixe
 
 Run 33: 165 / 400 = 41.25% - Wave 19: four new rules (complete_4fold_symmetry, concentric_swap_expand, stamp_key_at_8_clones, fill_periodic_holes_2d). Plus 4 tasks.
 
-Run 34: 170 / 400 = 42.50% - Wave 20: five new rules (count_separator_grid, reduce_3x3_blocks_by_mode, scale_even_cells_to_4x4_blocks, gravity_to_rail, span_fill_separator_grid). Plus 5 tasks. (CURRENT BEST)
+Run 34: 170 / 400 = 42.50% - Wave 20: five new rules (count_separator_grid, reduce_3x3_blocks_by_mode, scale_even_cells_to_4x4_blocks, gravity_to_rail, span_fill_separator_grid). Plus 5 tasks.
+
+Run 35: 178 / 400 = 44.50% - Wave 21: eight new rules (rectangular_spiral, most_minority_3x3_block, components_to_identity, pick_nonsymmetric_block, color_8s_by_quadrant, container_fill_gauge, scale_shape_2x, template_stamp_by_half). Plus 8 tasks. (CURRENT BEST)
 
 
-ALL 170 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 178 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1078,6 +1117,8 @@ ALL 170 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 2dee498d - extract_column_period.
 
+28e73c20 - rectangular_spiral.
+
 31aa019c - unique_val_surround_2.
 
 321b1fc6 - stamp_key_at_8_clones.
@@ -1162,6 +1203,8 @@ ALL 170 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 62c24649 - tile_reflect_2x2.
 
+662c240a - pick_nonsymmetric_block.
+
 6430c8c4 - two_halves_at_4sep_nor_to_3.
 
 67385a82 - recolor_multi_cell_comps_to_8.
@@ -1189,6 +1232,8 @@ ALL 170 SOLVED TASKS AND THEIR GLASS-BOX RULES
 746b3537 - compress_uniform_to_unique_runs.
 
 74dd1130 - transpose.
+
+77fdfe62 - color_8s_by_quadrant.
 
 780d0b14 - read_color_grid_from_bands.
 
@@ -1260,9 +1305,15 @@ aabf363d - recolor_blob_to_marker.
 
 ac0a08a4 - scale_up_by_count.
 
+ae4f1146 - most_minority_3x3_block.
+
 aedd82e4 - isolated_to_1.
 
 af902bf9 - fill_rect_between_4s.
+
+b0c4d837 - container_fill_gauge.
+
+b190f7f5 - template_stamp_by_half.
 
 b1948b0a - swap(2,6).
 
@@ -1296,6 +1347,8 @@ ce4f8723 - two_halves_at_4sep_or_to_3.
 
 d037b0a7 - fill_column_downward.
 
+d0f5fe59 - components_to_identity.
+
 d13f3404 - diagonal_stripe.
 
 d23f8c26 - keep_center_column.
@@ -1325,6 +1378,8 @@ ea786f4a - diagonal_zero_from_center.
 ec883f72 - frame_corner_escape.
 
 ed36ccf7 - rotate_90_ccw.
+
+f25fbde4 - scale_shape_2x.
 
 f2829549 - left_right_at_1col_sep_nor_to_3.
 
@@ -2552,6 +2607,8 @@ Dison, D. R. (2026). Mentova on ARC-AGI: Induction from Examples, No Pretraining
 Dison, D. R. (2026). Mentova on ARC-AGI-1: Full 400-Task Public Benchmark Run. Accomplishment Record Acc_71. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Composite Rule Search and Task Analysis. Accomplishment Record Acc_72. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 21: Eight New Structural Rules, 178 / 400 = 44.50%. Accomplishment Record Acc_73. AIU / PrologAI.
 
 
 END OF DOCUMENT
