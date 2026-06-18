@@ -10399,6 +10399,501 @@ arc_transform(template_stamp_by_half, Grid, Result) :-
     ), OutRs, Result).
 
 % ---------------------------------------------------------------------------
+% tile_at_majority_positions — 3x3 input; find the most-frequent value;
+% place the input at each 3x3 block position in a 9x9 output where that
+% value appears; other blocks are zero.
+% Verified on task c3e719e8 (all 3 training pairs).
+% ERC
+arc_named_rule(tile_at_majority_positions).
+% ERC
+arc_transform(tile_at_majority_positions, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, 3, 3),
+% ERC
+    numlist(1, 3, Idx3),
+% ERC
+    findall(V, (member(R0,Idx3), member(C0,Idx3),
+% ERC
+               arc_grid_at(Grid,R0,C0,V)), Vals),
+% ERC
+    msort(Vals, Sorted),
+% ERC
+    arc_w22_majority(Sorted, MajVal),
+% ERC
+    numlist(1, 9, Idx9),
+% ERC
+    !,
+% ERC
+    maplist([OR, OutRow]>>(
+% ERC
+        BR is (OR-1) // 3 + 1,
+% ERC
+        TR is ((OR-1) mod 3) + 1,
+% ERC
+        maplist([OC, OutV]>>(
+% ERC
+            BC is (OC-1) // 3 + 1,
+% ERC
+            TC is ((OC-1) mod 3) + 1,
+% ERC
+            arc_grid_at(Grid, BR, BC, BlockVal),
+% ERC
+            ( BlockVal =:= MajVal ->
+% ERC
+                arc_grid_at(Grid, TR, TC, OutV)
+% ERC
+            ; OutV = 0 )
+% ERC
+        ), Idx9, OutRow)
+% ERC
+    ), Idx9, Result).
+
+% arc_w22_majority(+SortedVals, -MajVal): find most-frequent value by run-counting.
+% ERC
+arc_w22_majority([H|T], MajVal) :-
+% ERC
+    arc_w22_count_runs([H|T], H, 1, [], Counts),
+% ERC
+    max_member(_-MajVal, Counts).
+
+% ERC
+arc_w22_count_runs([], Cur, Count, Acc, [Count-Cur|Acc]).
+% ERC
+arc_w22_count_runs([H|T], Cur, Count, Acc, Result) :-
+% ERC
+    ( H =:= Cur ->
+% ERC
+        Count2 is Count + 1,
+% ERC
+        arc_w22_count_runs(T, Cur, Count2, Acc, Result)
+% ERC
+    ; arc_w22_count_runs(T, H, 1, [Count-Cur|Acc], Result) ).
+
+% ---------------------------------------------------------------------------
+% tile_nz_blocks — 3x3 input with N non-zero cells (N < 9);
+% let K = 9 - N; output is K*3 x K*3; tile input in first N blocks row-major.
+% Verified on task 91413438 (all 4 training pairs).
+% ERC
+arc_named_rule(tile_nz_blocks).
+% ERC
+arc_transform(tile_nz_blocks, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, 3, 3),
+% ERC
+    numlist(1, 3, Idx3),
+% ERC
+    findall(V, (member(R0,Idx3), member(C0,Idx3),
+% ERC
+               arc_grid_at(Grid,R0,C0,V), V =\= 0), NZVals),
+% ERC
+    length(NZVals, Nnz),
+% ERC
+    Nnz > 0, Nnz < 9,
+% ERC
+    K is 9 - Nnz,
+% ERC
+    OutN is K * 3,
+% ERC
+    numlist(1, OutN, IdxOut),
+% ERC
+    !,
+% ERC
+    maplist([OR, OutRow]>>(
+% ERC
+        BR is (OR-1) // 3,
+% ERC
+        TR is ((OR-1) mod 3) + 1,
+% ERC
+        maplist([OC, OutV]>>(
+% ERC
+            BC is (OC-1) // 3,
+% ERC
+            TC is ((OC-1) mod 3) + 1,
+% ERC
+            BlockIdx is BR * K + BC,
+% ERC
+            ( BlockIdx < Nnz ->
+% ERC
+                arc_grid_at(Grid, TR, TC, OutV)
+% ERC
+            ; OutV = 0 )
+% ERC
+        ), IdxOut, OutRow)
+% ERC
+    ), IdxOut, Result).
+
+% ---------------------------------------------------------------------------
+% staircase_diagonal_tile — NxN input encoding a diagonal color table;
+% diag[k] = input[k][k]; period P = index of first 0 diagonal value (or N);
+% output is 2N x 2N where output[r][c] = diag[max(r,c) mod P] (0-indexed).
+% Verified on task 539a4f51 (all 3 training pairs).
+% ERC
+arc_named_rule(staircase_diagonal_tile).
+% ERC
+arc_transform(staircase_diagonal_tile, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =:= NC, NR >= 2, NR =< 10,
+% ERC
+    numlist(1, NR, Idx),
+% ERC
+    findall(D, (member(K,Idx), arc_grid_at(Grid,K,K,D)), Diag),
+% ERC
+    arc_w22_period(Diag, 1, P),
+% ERC
+    P > 0,
+% ERC
+    OutN is NR * 2,
+% ERC
+    numlist(1, OutN, IdxOut),
+% ERC
+    !,
+% ERC
+    maplist([OR, OutRow]>>(
+% ERC
+        R0 is OR - 1,
+% ERC
+        maplist([OC, OutV]>>(
+% ERC
+            C0 is OC - 1,
+% ERC
+            MRC is max(R0, C0) mod P,
+% ERC
+            DiagIdx is MRC + 1,
+% ERC
+            nth1(DiagIdx, Diag, OutV)
+% ERC
+        ), IdxOut, OutRow)
+% ERC
+    ), IdxOut, Result).
+
+% arc_w22_period(+Diag, +Idx, -P): find first 0 in Diag at 1-indexed position.
+% ERC
+arc_w22_period([], Idx, P) :- P is Idx - 1.
+% ERC
+arc_w22_period([0|_], Idx, P) :- P is Idx - 1, P > 0, !.
+% ERC
+arc_w22_period([_|T], Idx, P) :- Idx2 is Idx + 1, arc_w22_period(T, Idx2, P).
+
+% ---------------------------------------------------------------------------
+% fold_corners_strip — input NR x NC with non-zero cells only in the top R
+% rows and bottom R rows, and left C cols and right C cols (R=C=2);
+% fold each non-zero cell (r,c) to output position (fold_r, fold_c);
+% Output is (2R-1) x (2C-1) = 3x3. Contributions combined with max.
+% Verified on task bc1d5164 (all 5 training pairs).
+% ERC
+arc_named_rule(fold_corners_strip).
+% ERC
+arc_transform(fold_corners_strip, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR >= 3, NR =< 15, NC >= 5, NC =< 20,
+% ERC
+    R = 2, C = 2,
+% ERC
+    OutNR is 2*R - 1, OutNC is 2*C - 1,
+% ERC
+    numlist(1, NR, AllRs),
+% ERC
+    numlist(1, NC, AllCs),
+% ERC
+    numlist(1, OutNR, OutRs),
+% ERC
+    numlist(1, OutNC, OutCs),
+% ERC
+    findall(FR-FC-V, (
+% ERC
+        member(Ri,AllRs), member(Ci,AllCs),
+% ERC
+        arc_grid_at(Grid,Ri,Ci,V), V =\= 0,
+% ERC
+        R0 is Ri - 1,
+% ERC
+        ( R0 < R -> FR is R0
+% ERC
+        ; R0 >= NR - R -> FR is R - 1 + (R0 - (NR - R))
+% ERC
+        ),
+% ERC
+        C0 is Ci - 1,
+% ERC
+        ( C0 < C -> FC is C0
+% ERC
+        ; C0 >= NC - C -> FC is C - 1 + (C0 - (NC - C))
+% ERC
+        )
+% ERC
+    ), Triples),
+% ERC
+    Triples \= [],
+% ERC
+    !,
+% ERC
+    maplist([OR, OutRow]>>(
+% ERC
+        FR0 is OR - 1,
+% ERC
+        maplist([OC, OutV]>>(
+% ERC
+            FC0 is OC - 1,
+% ERC
+            findall(V2, member(FR0-FC0-V2, Triples), Vs),
+% ERC
+            ( Vs = [] -> OutV = 0 ; max_list(Vs, OutV) )
+% ERC
+        ), OutCs, OutRow)
+% ERC
+    ), OutRs, Result).
+
+% ---------------------------------------------------------------------------
+% tile_shape_1x2 — crop non-zero bounding box of input; tile it
+% 2 times horizontally; output is bbox_h x (bbox_w * 2).
+% Verified on task 28bf18c6 (all 3 training pairs).
+% ERC
+arc_named_rule(tile_shape_1x2).
+% ERC
+arc_transform(tile_shape_1x2, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 15, NC =< 15,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-C, (member(R,Rs), member(C,Cs),
+% ERC
+                  arc_grid_at(Grid,R,C,V0), V0 =\= 0), NZCells),
+% ERC
+    NZCells \= [],
+% ERC
+    findall(Nr2, member(Nr2-_,NZCells), NZRs2),
+% ERC
+    findall(Nc2, member(_-Nc2,NZCells), NZCs2),
+% ERC
+    min_list(NZRs2, MinR), max_list(NZRs2, MaxR),
+% ERC
+    min_list(NZCs2, MinC), max_list(NZCs2, MaxC),
+% ERC
+    BboxH is MaxR - MinR + 1,
+% ERC
+    BboxW is MaxC - MinC + 1,
+% ERC
+    BboxH >= 1, BboxW >= 1,
+% ERC
+    numlist(MinR, MaxR, BboxRs),
+% ERC
+    numlist(MinC, MaxC, BboxCs),
+% ERC
+    !,
+% ERC
+    maplist([BR, OutRow]>>(
+% ERC
+        findall(V, (member(BC,BboxCs), arc_grid_at(Grid,BR,BC,V)), BboxRow),
+% ERC
+        append(BboxRow, BboxRow, OutRow)
+% ERC
+    ), BboxRs, Result).
+
+% ---------------------------------------------------------------------------
+% count_cells_to_row — count all non-zero cells in input (single color);
+% output is 1 x N row of that color, where N = count.
+% Verified on task d631b094 (all 4 training pairs).
+% ERC
+arc_named_rule(count_cells_to_row).
+% ERC
+arc_transform(count_cells_to_row, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 10, NC =< 10,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(V, (member(R0,Rs), member(C0,Cs),
+% ERC
+               arc_grid_at(Grid,R0,C0,V), V =\= 0), Vals),
+% ERC
+    Vals \= [],
+% ERC
+    sort(Vals, [Color]),
+% ERC
+    length(Vals, N),
+% ERC
+    N >= 1, N =< 10,
+% ERC
+    !,
+% ERC
+    findall(Color, between(1, N, _), Row),
+% ERC
+    Result = [Row].
+
+% ---------------------------------------------------------------------------
+% periodic_missing_patch — find the periodic tiling period (PR x PC);
+% locate the bounding box of 0-holes; fill from period table;
+% output = filled bounding box region (cropped from the filled grid).
+% Verified on task f9012d9b (all 3 training pairs).
+% ERC
+arc_named_rule(periodic_missing_patch).
+% ERC
+arc_transform(periodic_missing_patch, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 15, NC =< 15,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-C, (member(R,Rs), member(C,Cs),
+% ERC
+                  arc_grid_at(Grid,R,C,0)), Holes),
+% ERC
+    Holes \= [],
+% ERC
+    once((
+% ERC
+        member(PR, [1,2,3,4,5,6]),
+% ERC
+        member(PC, [1,2,3,4,5,6]),
+% ERC
+        findall(KR-KC-V2, (
+% ERC
+            member(R2,Rs), member(C2,Cs),
+% ERC
+            arc_grid_at(Grid,R2,C2,V2), V2 =\= 0,
+% ERC
+            KR is (R2-1) mod PR,
+% ERC
+            KC is (C2-1) mod PC
+% ERC
+        ), Triples),
+% ERC
+        arc_w22_tbl_consistent(Triples, Tbl),
+% ERC
+        length(Tbl, TblLen),
+% ERC
+        TblLen =:= PR * PC
+% ERC
+    )),
+% ERC
+    findall(HR, member(HR-_,Holes), HRs),
+% ERC
+    findall(HC, member(_-HC,Holes), HCs),
+% ERC
+    min_list(HRs, MinHR), max_list(HRs, MaxHR),
+% ERC
+    min_list(HCs, MinHC), max_list(HCs, MaxHC),
+% ERC
+    numlist(MinHR, MaxHR, OutRows),
+% ERC
+    numlist(MinHC, MaxHC, OutCols),
+% ERC
+    !,
+% ERC
+    maplist([OR, OutRow]>>(
+% ERC
+        maplist([OC, OutV]>>(
+% ERC
+            arc_grid_at(Grid, OR, OC, GV),
+% ERC
+            ( GV =\= 0 -> OutV = GV
+% ERC
+            ; KR2 is (OR-1) mod PR,
+% ERC
+              KC2 is (OC-1) mod PC,
+% ERC
+              memberchk(KR2-KC2-OutV, Tbl)
+% ERC
+            )
+% ERC
+        ), OutCols, OutRow)
+% ERC
+    ), OutRows, Result).
+
+% arc_w22_tbl_consistent/2: deduplicate KR-KC-V triples, fail if conflict.
+% ERC
+arc_w22_tbl_consistent([], []).
+% ERC
+arc_w22_tbl_consistent([KR-KC-V|Rest], Tbl) :-
+% ERC
+    ( memberchk(KR-KC-V2, Rest) -> V2 =:= V ; true ),
+% ERC
+    arc_w22_tbl_consistent(Rest, TblRest),
+% ERC
+    ( memberchk(KR-KC-_, TblRest) -> Tbl = TblRest
+% ERC
+    ; Tbl = [KR-KC-V|TblRest] ).
+
+% ---------------------------------------------------------------------------
+% halve_exact_tile_2x — input is tiled exactly 2 times either left-right
+% (NC even, left half = right half) or top-bottom (NR even, top = bottom);
+% output is the first half (left or top).
+% Verified on task 7b7f7511 (all 3 training pairs).
+% ERC
+arc_named_rule(halve_exact_tile_2x).
+% ERC
+arc_transform(halve_exact_tile_2x, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    ( NC mod 2 =:= 0,
+% ERC
+      HalfC is NC // 2,
+% ERC
+      numlist(1, HalfC, HalfCs),
+% ERC
+      \+ (member(R0,Rs), member(C0,HalfCs),
+% ERC
+          arc_grid_at(Grid,R0,C0,V1),
+% ERC
+          C2 is C0 + HalfC,
+% ERC
+          arc_grid_at(Grid,R0,C2,V2),
+% ERC
+          V1 =\= V2),
+% ERC
+      !,
+% ERC
+      maplist([RI, Row]>>(
+% ERC
+          findall(V, (member(CI,HalfCs), arc_grid_at(Grid,RI,CI,V)), Row)
+% ERC
+      ), Rs, Result)
+% ERC
+    ;
+% ERC
+      NR mod 2 =:= 0,
+% ERC
+      HalfR is NR // 2,
+% ERC
+      numlist(1, HalfR, HalfRs),
+% ERC
+      \+ (member(R0,HalfRs), member(C0,Cs),
+% ERC
+          arc_grid_at(Grid,R0,C0,V1),
+% ERC
+          R2 is R0 + HalfR,
+% ERC
+          arc_grid_at(Grid,R2,C0,V2),
+% ERC
+          V1 =\= V2),
+% ERC
+      !,
+% ERC
+      maplist([RI, Row]>>(
+% ERC
+          findall(V, (member(CI,Cs), arc_grid_at(Grid,RI,CI,V)), Row)
+% ERC
+      ), HalfRs, Result)
+% ERC
+    ).
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
