@@ -12448,6 +12448,893 @@ arc_transform(block_grid_freq, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 26 RULES (tasks: 272f95fa 41e4d17e 444801d8 2c608aff 3eda0437
+%                        5117e062 5521c0d9 53b68214 508bd3b6)
+% ---------------------------------------------------------------------------
+
+% eight_cross_fixed_fill (272f95fa): two all-8 separator rows + two all-8
+%   separator cols divide grid into 3x3 regions; fill mid-row-left=4,
+%   mid-row-center=6, mid-row-right=3, top-center=2, bot-center=1, corners=0.
+arc_named_rule(eight_cross_fixed_fill).
+% ERC
+arc_transform(eight_cross_fixed_fill, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(SR, (
+% ERC
+        member(SR, AllRows),
+% ERC
+        findall(VR, (member(CR, AllCols), arc_grid_at(Grid, SR, CR, VR)), RVals),
+% ERC
+        min_list(RVals, 8), max_list(RVals, 8)
+% ERC
+    ), SepRows),
+% ERC
+    SepRows = [SR1, SR2],
+% ERC
+    findall(SC, (
+% ERC
+        member(SC, AllCols),
+% ERC
+        findall(VC, (member(RC, AllRows), arc_grid_at(Grid, RC, SC, VC)), CVals),
+% ERC
+        min_list(CVals, 8), max_list(CVals, 8)
+% ERC
+    ), SepCols),
+% ERC
+    SepCols = [SC1, SC2],
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V0),
+% ERC
+            (   V0 =:= 8
+% ERC
+            ->  Val = 8
+% ERC
+            ;   R > SR1, R < SR2, C < SC1
+% ERC
+            ->  Val = 4
+% ERC
+            ;   R > SR1, R < SR2, C > SC1, C < SC2
+% ERC
+            ->  Val = 6
+% ERC
+            ;   R > SR1, R < SR2, C > SC2
+% ERC
+            ->  Val = 3
+% ERC
+            ;   R < SR1, C > SC1, C < SC2
+% ERC
+            ->  Val = 2
+% ERC
+            ;   R > SR2, C > SC1, C < SC2
+% ERC
+            ->  Val = 1
+% ERC
+            ;   Val = 0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% hollow_1rect_to_6cross (41e4d17e): rectangles bordered by 1s with 8-filled
+%   interior; draw 6 along full height of center column and full width of
+%   center row, preserving existing 1s unchanged.
+arc_named_rule(hollow_1rect_to_6cross).
+% ERC
+arc_transform(hollow_1rect_to_6cross, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 20, NC > 0, NC =< 20,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R1r, (member(R1r,AllRows),
+% ERC
+        once((member(C1r,AllCols),arc_grid_at(Grid,R1r,C1r,1)))), OneRows),
+% ERC
+    OneRows \= [],
+% ERC
+    findall(C1c, (member(C1c,AllCols),
+% ERC
+        once((member(R1c,AllRows),arc_grid_at(Grid,R1c,C1c,1)))), OneCols),
+% ERC
+    OneCols \= [],
+% ERC
+    findall(Top-Bot-Left-Right, (
+% ERC
+        member(Top, OneRows), member(Bot, OneRows),
+% ERC
+        Bot > Top + 1,
+% ERC
+        member(Left, OneCols), member(Right, OneCols),
+% ERC
+        Right > Left + 1,
+% ERC
+        findall(V1, (member(CC1, AllCols), CC1 >= Left, CC1 =< Right, arc_grid_at(Grid, Top, CC1, V1)), TVals),
+% ERC
+        min_list(TVals, 1), max_list(TVals, 1),
+% ERC
+        findall(V2, (member(CC2, AllCols), CC2 >= Left, CC2 =< Right, arc_grid_at(Grid, Bot, CC2, V2)), BVals),
+% ERC
+        min_list(BVals, 1), max_list(BVals, 1),
+% ERC
+        findall(V3, (member(RL, AllRows), RL >= Top, RL =< Bot, arc_grid_at(Grid, RL, Left, V3)), LVals),
+% ERC
+        min_list(LVals, 1), max_list(LVals, 1),
+% ERC
+        findall(V4, (member(RR, AllRows), RR >= Top, RR =< Bot, arc_grid_at(Grid, RR, Right, V4)), RgVals),
+% ERC
+        min_list(RgVals, 1), max_list(RgVals, 1),
+% ERC
+        findall(IV, (member(RI, AllRows), RI > Top, RI < Bot, member(CI, AllCols), CI > Left, CI < Right, arc_grid_at(Grid, RI, CI, IV)), IVals),
+% ERC
+        IVals \= [],
+% ERC
+        min_list(IVals, 8), max_list(IVals, 8)
+% ERC
+    ), Rects),
+% ERC
+    Rects \= [],
+% ERC
+    findall(CR-CC, (
+% ERC
+        member(Top-Bot-Left-Right, Rects),
+% ERC
+        CR is (Top + Bot) // 2,
+% ERC
+        CC is (Left + Right) // 2
+% ERC
+    ), Centers),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V0),
+% ERC
+            (   V0 =:= 1
+% ERC
+            ->  Val = 1
+% ERC
+            ;   once((member(CR2-CC2, Centers), (R =:= CR2 ; C =:= CC2)))
+% ERC
+            ->  Val = 6
+% ERC
+            ;   Val = V0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% arc_w26_find_left_1: rightmost column < SC with value 1 in row SR
+arc_w26_find_left_1(Grid, SR, SC, LeftCol) :-
+% ERC
+    findall(LC, (member(LC, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+% ERC
+        16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]),
+% ERC
+        LC < SC, arc_grid_at(Grid, SR, LC, 1)), LCols),
+% ERC
+    LCols \= [],
+% ERC
+    last(LCols, LeftCol).
+
+% arc_w26_find_right_1: leftmost column > SC with value 1 in row SR
+arc_w26_find_right_1(Grid, SR, SC, RightCol) :-
+% ERC
+    findall(RC, (member(RC, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+% ERC
+        16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]),
+% ERC
+        RC > SC, arc_grid_at(Grid, SR, RC, 1)), RCols),
+% ERC
+    RCols = [RightCol|_].
+
+% arc_w26_top_of_wall: topmost row of contiguous 1-run in Col going up from SR
+arc_w26_top_of_wall(Grid, SR, Col, TopRow) :-
+% ERC
+    SR1 is SR - 1,
+% ERC
+    SR1 >= 1,
+% ERC
+    arc_grid_at(Grid, SR1, Col, 1),
+% ERC
+    arc_w26_top_of_wall_(Grid, SR1, Col, TopRow).
+% ERC
+arc_w26_top_of_wall_(Grid, R, Col, TopRow) :-
+% ERC
+    R1 is R - 1,
+% ERC
+    R1 >= 1,
+% ERC
+    arc_grid_at(Grid, R1, Col, 1),
+% ERC
+    !,
+% ERC
+    arc_w26_top_of_wall_(Grid, R1, Col, TopRow).
+% ERC
+arc_w26_top_of_wall_(_, R, _, R).
+
+% arc_w26_bot_of_wall: bottommost row of contiguous 1-run in Col going down from SR
+arc_w26_bot_of_wall(Grid, NR, SR, Col, BotRow) :-
+% ERC
+    SR1 is SR + 1,
+% ERC
+    SR1 =< NR,
+% ERC
+    arc_grid_at(Grid, SR1, Col, 1),
+% ERC
+    arc_w26_bot_of_wall_(Grid, NR, SR1, Col, BotRow).
+% ERC
+arc_w26_bot_of_wall_(Grid, NR, R, Col, BotRow) :-
+% ERC
+    R1 is R + 1,
+% ERC
+    R1 =< NR,
+% ERC
+    arc_grid_at(Grid, R1, Col, 1),
+% ERC
+    !,
+% ERC
+    arc_w26_bot_of_wall_(Grid, NR, R1, Col, BotRow).
+% ERC
+arc_w26_bot_of_wall_(_, _, R, _, R).
+
+% container_fill_overflow (444801d8): each non-0,non-1 special cell sits
+%   inside a 1-bordered container; fill interior and overflow row with sv.
+arc_named_rule(container_fill_overflow).
+% ERC
+arc_transform(container_fill_overflow, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(SR-SC-SV, (
+% ERC
+        member(SR, AllRows), member(SC, AllCols),
+% ERC
+        arc_grid_at(Grid, SR, SC, SV),
+% ERC
+        SV \= 0, SV \= 1
+% ERC
+    ), Specials),
+% ERC
+    Specials \= [],
+% ERC
+    findall(FR-FC-FV, (
+% ERC
+        member(SR2-SC2-SV2, Specials),
+% ERC
+        once((arc_w26_find_left_1(Grid, SR2, SC2, LeftCol))),
+% ERC
+        once((arc_w26_find_right_1(Grid, SR2, SC2, RightCol))),
+% ERC
+        once((arc_w26_top_of_wall(Grid, SR2, LeftCol, TopRow))),
+% ERC
+        once((arc_w26_bot_of_wall(Grid, NR, SR2, LeftCol, BotRow))),
+% ERC
+        BotRow > SR2,
+% ERC
+        findall(BV, (member(BC, AllCols), BC >= LeftCol, BC =< RightCol,
+% ERC
+            arc_grid_at(Grid, BotRow, BC, BV)), BotVals),
+% ERC
+        min_list(BotVals, 1), max_list(BotVals, 1),
+% ERC
+        member(FR, AllRows), member(FC, AllCols),
+% ERC
+        (   FR >= TopRow, FR < BotRow, FC > LeftCol, FC < RightCol,
+% ERC
+            arc_grid_at(Grid, FR, FC, FV0i), FV0i \= 1
+% ERC
+        ->  FV = SV2
+% ERC
+        ;   FR =:= TopRow, FC >= LeftCol, FC =< RightCol,
+% ERC
+            arc_grid_at(Grid, FR, FC, FV0t), FV0t =:= 0
+% ERC
+        ->  FV = SV2
+% ERC
+        ;   OvR is TopRow - 1, FR =:= OvR, FR >= 1,
+% ERC
+            FC >= LeftCol, FC =< RightCol
+% ERC
+        ->  FV = SV2
+% ERC
+        )
+% ERC
+    ), FillCells),
+% ERC
+    FillCells \= [],
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V0),
+% ERC
+            (   findall(FV2, member(R-C-FV2, FillCells), FVs2),
+% ERC
+                FVs2 = [FV2|_]
+% ERC
+            ->  Val = FV2
+% ERC
+            ;   Val = V0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% pointer_to_anchor (2c608aff): most-frequent non-bg value = anchor;
+%   second-most = pointer; extend pointer cells toward anchor bounding box.
+arc_named_rule(pointer_to_anchor).
+% ERC
+arc_transform(pointer_to_anchor, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V, (member(R, AllRows), member(C, AllCols), arc_grid_at(Grid, R, C, V)), AllVals),
+% ERC
+    msort(AllVals, SortedVals),
+% ERC
+    arc_w25_count_runs(SortedVals, ValCounts),
+% ERC
+    msort(ValCounts, VCSorted),
+% ERC
+    last(VCSorted, _-BgVal),
+% ERC
+    findall(Cnt-VV, (member(Cnt-VV, ValCounts), VV \= BgVal), NonBgCnts),
+% ERC
+    msort(NonBgCnts, NBCSorted),
+% ERC
+    reverse(NBCSorted, [_-AnchorVal, _-PointerVal | _]),
+% ERC
+    findall(RAn, (member(RAn, AllRows),
+% ERC
+        once((member(CAn, AllCols), arc_grid_at(Grid, RAn, CAn, AnchorVal)))), AnchorRows),
+% ERC
+    findall(CAn2, (member(RAn2, AllRows), member(CAn2, AllCols),
+% ERC
+        arc_grid_at(Grid, RAn2, CAn2, AnchorVal)), AnchorCols),
+% ERC
+    min_list(AnchorRows, AR1), max_list(AnchorRows, AR2),
+% ERC
+    min_list(AnchorCols, AC1), max_list(AnchorCols, AC2),
+% ERC
+    findall(PR-PC, (member(PR, AllRows), member(PC, AllCols),
+% ERC
+        arc_grid_at(Grid, PR, PC, PointerVal)), PtrCells),
+% ERC
+    PtrCells \= [],
+% ERC
+    findall(FR-FC, (
+% ERC
+        member(PR2-PC2, PtrCells),
+% ERC
+        (   AC1 =< PC2, PC2 =< AC2, PR2 > AR2
+% ERC
+        ->  numlist(AR2, PR2, ExtR),
+% ERC
+            member(FR, ExtR), FR > AR2, FC = PC2
+% ERC
+        ;   AC1 =< PC2, PC2 =< AC2, PR2 < AR1
+% ERC
+        ->  numlist(PR2, AR1, ExtR2),
+% ERC
+            member(FR, ExtR2), FR < AR1, FC = PC2
+% ERC
+        ;   AR1 =< PR2, PR2 =< AR2, PC2 > AC2
+% ERC
+        ->  numlist(AC2, PC2, ExtC),
+% ERC
+            member(FC, ExtC), FC > AC2, FR = PR2
+% ERC
+        ;   AR1 =< PR2, PR2 =< AR2, PC2 < AC1
+% ERC
+        ->  numlist(PC2, AC1, ExtC2),
+% ERC
+            member(FC, ExtC2), FC < AC1, FR = PR2
+% ERC
+        )
+% ERC
+    ), FillCells2),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V0),
+% ERC
+            (   memberchk(R-C, FillCells2)
+% ERC
+            ->  Val = PointerVal
+% ERC
+            ;   Val = V0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% arc_w26_max_consec: longest contiguous run in sorted list; returns C1 and C2
+arc_w26_max_consec(Cols, C1, C2) :-
+% ERC
+    arc_w26_consec_runs(Cols, Runs),
+% ERC
+    maplist([Run, Len-Run]>>(length(Run, Len)), Runs, LenRuns),
+% ERC
+    msort(LenRuns, LRSorted),
+% ERC
+    last(LRSorted, _-BestRun),
+% ERC
+    BestRun = [C1|_],
+% ERC
+    last(BestRun, C2).
+% ERC
+arc_w26_consec_runs([], []) :- !.
+% ERC
+arc_w26_consec_runs([C|Cs], [[C|Tail]|Rest]) :-
+% ERC
+    arc_w26_consec_run_tail(C, Cs, Tail, Remaining),
+% ERC
+    arc_w26_consec_runs(Remaining, Rest).
+% ERC
+arc_w26_consec_run_tail(Prev, [Next|Cs], [Next|Tail], Rest) :-
+% ERC
+    Next =:= Prev + 1, !,
+% ERC
+    arc_w26_consec_run_tail(Next, Cs, Tail, Rest).
+% ERC
+arc_w26_consec_run_tail(_, Remaining, [], Remaining).
+
+% fill_largest_zero_rect_6 (3eda0437): find the largest multi-row rectangle
+%   of all-zero cells; fill it with 6.
+arc_named_rule(fill_largest_zero_rect_6).
+% ERC
+arc_transform(fill_largest_zero_rect_6, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 8, NC > 0, NC =< 32,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(Area-R1-R2-C1-C2, (
+% ERC
+        member(R1, AllRows), member(R2, AllRows),
+% ERC
+        R2 > R1,
+% ERC
+        findall(CI, (
+% ERC
+            member(CI, AllCols),
+% ERC
+            findall(VI, (member(RI, AllRows), RI >= R1, RI =< R2,
+% ERC
+                arc_grid_at(Grid, RI, CI, VI)), ColVals),
+% ERC
+            max_list(ColVals, 0)
+% ERC
+        ), ZeroCols),
+% ERC
+        ZeroCols \= [],
+% ERC
+        arc_w26_max_consec(ZeroCols, C1, C2),
+% ERC
+        Width is C2 - C1 + 1,
+% ERC
+        Height is R2 - R1 + 1,
+% ERC
+        Area is Width * Height
+% ERC
+    ), AreaRects),
+% ERC
+    AreaRects \= [],
+% ERC
+    sort(0, @>=, AreaRects, [_-R1B-R2B-C1B-C2B | _]),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V0),
+% ERC
+            (   R >= R1B, R =< R2B, C >= C1B, C =< C2B
+% ERC
+            ->  Val = 6
+% ERC
+            ;   Val = V0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% extract_3x3_around_8 (5117e062): find the single 8 cell; extract the 3x3
+%   neighbourhood around it; replace 8 with the surrounding ring value.
+arc_named_rule(extract_3x3_around_8).
+% ERC
+arc_transform(extract_3x3_around_8, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    once((
+% ERC
+        member(R8, AllRows), member(C8, AllCols),
+% ERC
+        arc_grid_at(Grid, R8, C8, 8)
+% ERC
+    )),
+% ERC
+    findall(RV, (
+% ERC
+        member(DR8, [-1,0,1]), member(DC8, [-1,0,1]),
+% ERC
+        \+ (DR8 =:= 0, DC8 =:= 0),
+% ERC
+        NR8 is R8+DR8, NC8 is C8+DC8,
+% ERC
+        NR8 >= 1, NR8 =< NR, NC8 >= 1, NC8 =< NC,
+% ERC
+        arc_grid_at(Grid, NR8, NC8, RV), RV \= 0
+% ERC
+    ), RingVals),
+% ERC
+    RingVals = [RingV|_],
+% ERC
+    findall(OutRow, (
+% ERC
+        member(DR9, [-1,0,1]),
+% ERC
+        findall(Val, (
+% ERC
+            member(DC9, [-1,0,1]),
+% ERC
+            NR9 is R8+DR9, NC9 is C8+DC9,
+% ERC
+            (   DR9 =:= 0, DC9 =:= 0
+% ERC
+            ->  Val = RingV
+% ERC
+            ;   NR9 >= 1, NR9 =< NR, NC9 >= 1, NC9 =< NC
+% ERC
+            ->  arc_grid_at(Grid, NR9, NC9, Val)
+% ERC
+            ;   Val = 0
+% ERC
+            )
+% ERC
+        ), OutRow)
+% ERC
+    ), Out),
+% ERC
+    !.
+
+% move_blocks_up_by_height (5521c0d9): each distinct non-zero value has a
+%   row span [R1..R2]; move all its cells up by height = R2-R1+1.
+arc_named_rule(move_blocks_up_by_height).
+% ERC
+arc_transform(move_blocks_up_by_height, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(Vq, (member(Rq, AllRows), member(Cq, AllCols),
+% ERC
+        arc_grid_at(Grid, Rq, Cq, Vq), Vq \= 0), AllVals),
+% ERC
+    sort(AllVals, UniqueVals),
+% ERC
+    UniqueVals \= [],
+% ERC
+    findall(NewR-C4-V4, (
+% ERC
+        member(V4, UniqueVals),
+% ERC
+        findall(RV4, (member(RV4, AllRows),
+% ERC
+            once((member(CV4, AllCols), arc_grid_at(Grid, RV4, CV4, V4)))), VRows4),
+% ERC
+        VRows4 \= [],
+% ERC
+        min_list(VRows4, R1V4), max_list(VRows4, R2V4),
+% ERC
+        Height4 is R2V4 - R1V4 + 1,
+% ERC
+        member(R4, AllRows), member(C4, AllCols),
+% ERC
+        arc_grid_at(Grid, R4, C4, V4),
+% ERC
+        NewR is R4 - Height4,
+% ERC
+        NewR >= 1, NewR =< NR
+% ERC
+    ), MovedCells),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            (   findall(MV, member(R-C-MV, MovedCells), MVs),
+% ERC
+                MVs = [MV|_]
+% ERC
+            ->  Val = MV
+% ERC
+            ;   Val = 0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% arc_w26_extend_grid: append rows to Grid using period P and shift S
+%   until length reaches 10.
+arc_w26_extend_grid(G, NR, NC, P, S, AllCols, Out) :-
+% ERC
+    (   NR >= 10
+% ERC
+    ->  length(Out10, 10), append(Out10, _, G), Out = Out10
+% ERC
+    ;   BaseR is NR - P + 1,
+% ERC
+        findall(DVal, (
+% ERC
+            member(DC, AllCols),
+% ERC
+            SrcC is DC - S,
+% ERC
+            (   SrcC >= 1, SrcC =< NC
+% ERC
+            ->  arc_grid_at(G, BaseR, SrcC, DVal)
+% ERC
+            ;   DVal = 0
+% ERC
+            )
+% ERC
+        ), NewRow),
+% ERC
+        append(G, [NewRow], G1),
+% ERC
+        NR1 is NR + 1,
+% ERC
+        arc_w26_extend_grid(G1, NR1, NC, P, S, AllCols, Out)
+% ERC
+    ).
+
+% extend_periodic_to_10 (53b68214): detect row period P and column shift S;
+%   extend pattern to exactly 10 rows.
+arc_named_rule(extend_periodic_to_10).
+% ERC
+arc_transform(extend_periodic_to_10, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR < 10, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    once((
+% ERC
+        Pmax is NR - 1,
+% ERC
+        Pmax >= 1,
+% ERC
+        numlist(1, Pmax, PCands),
+% ERC
+        Sneg is -(NC - 1), Spos is NC - 1,
+% ERC
+        numlist(Sneg, Spos, SCands),
+% ERC
+        member(P, PCands),
+% ERC
+        member(S, SCands),
+% ERC
+        \+ (
+% ERC
+            member(Rck, AllRows), Rp is Rck + P, Rp =< NR,
+% ERC
+            member(Cck, AllCols),
+% ERC
+            Csrc is Cck - S,
+% ERC
+            (   Csrc >= 1, Csrc =< NC
+% ERC
+            ->  arc_grid_at(Grid, Rck, Csrc, Vsrc)
+% ERC
+            ;   Vsrc = 0
+% ERC
+            ),
+% ERC
+            arc_grid_at(Grid, Rp, Cck, Vtgt),
+% ERC
+            Vsrc \= Vtgt
+% ERC
+        )
+% ERC
+    )),
+% ERC
+    arc_w26_extend_grid(Grid, NR, NC, P, S, AllCols, Out),
+% ERC
+    !.
+
+% arc_w26_bounce_path: trace billiard path; accumulate visited cells in Acc.
+arc_w26_bounce_path(_, _, _, _, _, _, _, 0, Acc, Path) :-
+% ERC
+    reverse(Acc, Path), !.
+% ERC
+arc_w26_bounce_path(Grid, NR, NC, R, C, DR, DC, Lim, Acc, Path) :-
+% ERC
+    Lim > 0,
+% ERC
+    Acc1 = [R-C|Acc],
+% ERC
+    NR2 is R+DR, NC2 is C+DC,
+% ERC
+    (   (NR2 < 1 ; NR2 > NR ; NC2 < 1 ; NC2 > NC)
+% ERC
+    ->  reverse(Acc1, Path)
+% ERC
+    ;   arc_grid_at(Grid, NR2, NC2, VN),
+% ERC
+        (   VN =:= 8
+% ERC
+        ->  reverse(Acc1, Path)
+% ERC
+        ;   VN =\= 2
+% ERC
+        ->  Lim1 is Lim-1,
+% ERC
+            arc_w26_bounce_path(Grid, NR, NC, NR2, NC2, DR, DC, Lim1, Acc1, Path)
+% ERC
+        ;   (   arc_grid_at(Grid, NR2, C, 2)
+% ERC
+            ->  DR2 is -DR
+% ERC
+            ;   DR2 = DR
+% ERC
+            ),
+% ERC
+            (   arc_grid_at(Grid, R, NC2, 2)
+% ERC
+            ->  DC2 is -DC
+% ERC
+            ;   DC2 = DC
+% ERC
+            ),
+% ERC
+            NR3 is R+DR2, NC3 is C+DC2,
+% ERC
+            (   NR3 >= 1, NR3 =< NR, NC3 >= 1, NC3 =< NC,
+% ERC
+                arc_grid_at(Grid, NR3, NC3, V3), V3 \= 2, V3 \= 8
+% ERC
+            ->  Lim1 is Lim-1,
+% ERC
+                arc_w26_bounce_path(Grid, NR, NC, NR3, NC3, DR2, DC2, Lim1, Acc1, Path)
+% ERC
+            ;   reverse(Acc1, Path)
+% ERC
+            )
+% ERC
+        )
+% ERC
+    ).
+
+% billiard_bounce (508bd3b6): 8-cells form directional arrow; ball launches
+%   from head forward or tail backward; bounces off 2-cells; stops at OOB/8.
+arc_named_rule(billiard_bounce).
+% ERC
+arc_transform(billiard_bounce, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols),
+% ERC
+        arc_grid_at(Grid, R, C, 8)), Eights),
+% ERC
+    Eights = [E0R-E0C, E1R-E1C | _],
+% ERC
+    DR is E1R - E0R, DC is E1C - E0C,
+% ERC
+    last(Eights, HeadR-HeadC),
+% ERC
+    Eights = [TailR-TailC | _],
+% ERC
+    FwdR is HeadR + DR, FwdC is HeadC + DC,
+% ERC
+    (   FwdR >= 1, FwdR =< NR, FwdC >= 1, FwdC =< NC,
+% ERC
+        arc_grid_at(Grid, FwdR, FwdC, FwdV), FwdV \= 2, FwdV \= 8
+% ERC
+    ->  StartR = FwdR, StartC = FwdC, DirR = DR, DirC = DC
+% ERC
+    ;   BwdR is TailR - DR, BwdC is TailC - DC,
+% ERC
+        BwdR >= 1, BwdR =< NR, BwdC >= 1, BwdC =< NC,
+% ERC
+        arc_grid_at(Grid, BwdR, BwdC, BwdV), BwdV \= 2, BwdV \= 8,
+% ERC
+        StartR = BwdR, StartC = BwdC, DirR is -DR, DirC is -DC
+% ERC
+    ),
+% ERC
+    Limit is NR * NC + 10,
+% ERC
+    arc_w26_bounce_path(Grid, NR, NC, StartR, StartC, DirR, DirC, Limit, [], Path),
+% ERC
+    Path \= [],
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V0),
+% ERC
+            (   memberchk(R-C, Path)
+% ERC
+            ->  Val = 3
+% ERC
+            ;   Val = V0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
