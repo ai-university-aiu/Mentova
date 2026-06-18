@@ -1174,10 +1174,12 @@ Run 39: 210 / 400 = 52.50% - Wave 25: eight new rules (fill_cells_plus5, pick_ho
 Run 40: 219 / 400 = 54.75% - Wave 26: nine new rules (eight_cross_fixed_fill, hollow_1rect_to_6cross, container_fill_overflow, pointer_to_anchor, fill_largest_zero_rect_6, extract_3x3_around_8, move_blocks_up_by_height, extend_periodic_to_10, billiard_bounce). Plus 9 tasks.
 Run 41: 227 / 400 = 56.75% - Wave 27: eight new rules (crop_nonbg_bbox, tile_2x_diag_mark, sep_grid_propagate, extend_periodic_rows, half_bottom_to_8, snake_cols_to_3col, zigzag_extend_rows, pick_hsym_shape). Plus 8 tasks.
 
-Run 42: 236 / 400 = 59.00% - Wave 28: eight new rules (fill_rect_frame_124, fill_two_rects_12, extract_largest_blob, stamp_plus_cardinal, hollow_sq_to_plus, reflect_8_by_4_arrow, complete_4fold_rot_sym, center_shape_at_3_anchor). Plus 9 tasks (extract_largest_blob solves two). (CURRENT BEST)
+Run 42: 236 / 400 = 59.00% - Wave 28: eight new rules (fill_rect_frame_124, fill_two_rects_12, extract_largest_blob, stamp_plus_cardinal, hollow_sq_to_plus, reflect_8_by_4_arrow, complete_4fold_rot_sym, center_shape_at_3_anchor). Plus 9 tasks (extract_largest_blob solves two).
+
+Run 43: 242 / 400 = 60.50% - Wave 29: eighteen new rules (draw_x_diagonals, fill_frame_gaps, scale_stamp_at_2_markers, four_way_reflect, replace_minority_with_5, diagonal_pair_8corners, extend_rect_to_8, gravity_down shift-variant, connected_groups_to_8, rotate_90ccw, mark_5_with_other, erase_diagonals_from_hole, isolated_cells_to_1, five_col_to_row_color, count_ones_fill, color_count_to_diagonal, shift_8_down_1, fill_row_gap_ones). Plus 6 tasks (four_way_reflect solves two). (CURRENT BEST)
 
 
-ALL 236 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 242 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1230,6 +1232,8 @@ ALL 236 SOLVED TASKS AND THEIR GLASS-BOX RULES
 1fad071e - count_2x2_ones_in_9x9.
 
 2013d3e2 - crop_bbox_top_left_quadrant.
+
+22233c11 - diagonal_pair_8corners.
 
 2204b7a8 - replace_3_with_nearest_rail.
 
@@ -1309,6 +1313,8 @@ ALL 236 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 4347f46a - outline_nonblack.
 
+447fd412 - scale_stamp_at_2_markers.
+
 445eab21 - two_rect_borders_output_smaller_area_min_dim.
 
 44d8ac46 - fill_5rect_hollow_or_single_hole_with_2.
@@ -1316,6 +1322,8 @@ ALL 236 SOLVED TASKS AND THEIR GLASS-BOX RULES
 44f52bb0 - grid3x3_symmetry_1or7.
 
 4522001f - place_4x4_blocks_at_3cell_min.
+
+4612dd53 - fill_frame_gaps.
 
 46442a0e - tile_rotate_2x2.
 
@@ -1325,9 +1333,13 @@ ALL 236 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 48d8fb45 - beacon5_select_cluster_3x3.
 
+4938f0c2 - four_way_reflect.
+
 496994bd - reflect_top_rows_to_bottom.
 
 49d1d64f - pad_edge.
+
+4c5c2cf0 - four_way_reflect.
 
 4be741c5 - extract_color_bands.
 
@@ -1358,6 +1370,8 @@ ALL 236 SOLVED TASKS AND THEIR GLASS-BOX RULES
 60b61512 - fill_component_bbox_with_7.
 
 6150a2bd - rotate_180.
+
+623ea044 - draw_x_diagonals.
 
 62c24649 - tile_reflect_2x2.
 
