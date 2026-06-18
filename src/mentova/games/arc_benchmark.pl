@@ -11354,6 +11354,464 @@ arc_transform(expand_7line_fan_8, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% Wave 24 -- eight new named rules
+% ---------------------------------------------------------------------------
+
+% mark_u_shape_bases_4: 3-wide U-shape [V,V,V]/[V,0,V]; mark 4 at last-row center col
+arc_named_rule(mark_u_shape_bases_4).
+% ERC
+arc_transform(mark_u_shape_bases_4, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 1, NR =< 30, NC >= 3, NC =< 30,
+% ERC
+    NR1 is NR - 1,
+% ERC
+    numlist(1, NR1, TopRows), numlist(1, NC, Cols), numlist(1, NR, AllRows),
+% ERC
+    findall(C2, (
+% ERC
+        member(R, TopRows),
+% ERC
+        member(C1, Cols), C2 is C1+1, C3 is C1+2, C3 =< NC,
+% ERC
+        arc_grid_at(Grid, R, C1, V), V > 0,
+% ERC
+        arc_grid_at(Grid, R, C2, V), arc_grid_at(Grid, R, C3, V),
+% ERC
+        R1 is R+1,
+% ERC
+        arc_grid_at(Grid, R1, C1, V),
+% ERC
+        arc_grid_at(Grid, R1, C2, 0),
+% ERC
+        arc_grid_at(Grid, R1, C3, V)
+% ERC
+    ), MC0),
+% ERC
+    MC0 \= [],
+% ERC
+    list_to_set(MC0, MC),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            ( R =:= NR, memberchk(C, MC)
+% ERC
+            -> Val = 4
+% ERC
+            ;  once(arc_grid_at(Grid, R, C, Val))
+% ERC
+            )
+% ERC
+        ), Cols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% connected_8_path_between_2x2_blocks: two 2x2 blocks of 2s; output [[8]] if 8s connect them
+arc_named_rule(connected_8_path_between_2x2_blocks).
+% ERC
+arc_transform(connected_8_path_between_2x2_blocks, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR >= 2, NR =< 30, NC >= 2, NC =< 30,
+% ERC
+    NR1 is NR-1, NC1 is NC-1,
+% ERC
+    numlist(1, NR1, Rs0), numlist(1, NC1, Cs0),
+% ERC
+    findall(R-C, (
+% ERC
+        member(R, Rs0), member(C, Cs0),
+% ERC
+        R1 is R+1, C1 is C+1,
+% ERC
+        arc_grid_at(Grid, R, C, 2),
+% ERC
+        arc_grid_at(Grid, R, C1, 2),
+% ERC
+        arc_grid_at(Grid, R1, C, 2),
+% ERC
+        arc_grid_at(Grid, R1, C1, 2)
+% ERC
+    ), Corners),
+% ERC
+    length(Corners, 2),
+% ERC
+    Corners = [R0-C0, R2-C2],
+% ERC
+    R01 is R0+1, C01 is C0+1,
+% ERC
+    R21 is R2+1, C21 is C2+1,
+% ERC
+    Block1 = [R0-C0, R0-C01, R01-C0, R01-C01],
+% ERC
+    Block2 = [R2-C2, R2-C21, R21-C2, R21-C21],
+% ERC
+    Dirs = [-1-0, 1-0, 0-(-1), 0-1],
+% ERC
+    findall(AR-AC, (
+% ERC
+        member(BR-BC, Block1), member(DR-DC, Dirs),
+% ERC
+        AR is BR+DR, AC is BC+DC,
+% ERC
+        AR >= 1, AR =< NR, AC >= 1, AC =< NC,
+% ERC
+        arc_grid_at(Grid, AR, AC, 8)
+% ERC
+    ), Adj1_0), list_to_set(Adj1_0, Adj1),
+% ERC
+    findall(AR-AC, (
+% ERC
+        member(BR-BC, Block2), member(DR-DC, Dirs),
+% ERC
+        AR is BR+DR, AC is BC+DC,
+% ERC
+        AR >= 1, AR =< NR, AC >= 1, AC =< NC,
+% ERC
+        arc_grid_at(Grid, AR, AC, 8)
+% ERC
+    ), Adj2_0), list_to_set(Adj2_0, Adj2),
+% ERC
+    Adj1 \= [], Adj2 \= [],
+% ERC
+    arc_w24_bfs8_(Adj1, Adj1, Adj2, Grid, NR, NC, Reached),
+% ERC
+    ( Reached = true -> Out = [[8]] ; Out = [[0]] ),
+% ERC
+    !.
+
+% arc_w24_bfs8_/7: BFS through 8-cells; Reached=true if Target reachable from Queue
+% ERC
+arc_w24_bfs8_([], _, _, _, _, _, false) :- !.
+% ERC
+arc_w24_bfs8_([H|T], Visited, Target, Grid, NR, NC, Reached) :-
+% ERC
+    ( memberchk(H, Target) -> Reached = true
+% ERC
+    ;   H = HR-HC,
+% ERC
+        findall(NR2-NC2, (
+% ERC
+            member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+% ERC
+            NR2 is HR+DR, NC2 is HC+DC,
+% ERC
+            NR2 >= 1, NR2 =< NR, NC2 >= 1, NC2 =< NC,
+% ERC
+            arc_grid_at(Grid, NR2, NC2, 8),
+% ERC
+            \+ memberchk(NR2-NC2, Visited)
+% ERC
+        ), Nbrs),
+% ERC
+        append(Visited, Nbrs, V2),
+% ERC
+        append(T, Nbrs, Q2),
+% ERC
+        arc_w24_bfs8_(Q2, V2, Target, Grid, NR, NC, Reached)
+% ERC
+    ).
+
+% find_3x3_frame_interior_value: 3x3 hollow frame (border=V, center not V); output [[center]]
+arc_named_rule(find_3x3_frame_interior_value).
+% ERC
+arc_transform(find_3x3_frame_interior_value, Grid, [[Interior]]) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR >= 3, NR =< 30, NC >= 3, NC =< 30,
+% ERC
+    NR2 is NR-2, NC2 is NC-2,
+% ERC
+    numlist(1, NR2, FRs), numlist(1, NC2, FCs),
+% ERC
+    once((
+% ERC
+        member(R, FRs), member(C, FCs),
+% ERC
+        R1 is R+1, R2 is R+2, C1 is C+1, C2 is C+2,
+% ERC
+        arc_grid_at(Grid, R, C, V), V > 0,
+% ERC
+        arc_grid_at(Grid, R, C1, V), arc_grid_at(Grid, R, C2, V),
+% ERC
+        arc_grid_at(Grid, R1, C, V), arc_grid_at(Grid, R1, C2, V),
+% ERC
+        arc_grid_at(Grid, R2, C, V), arc_grid_at(Grid, R2, C1, V), arc_grid_at(Grid, R2, C2, V),
+% ERC
+        arc_grid_at(Grid, R1, C1, Interior), Interior \= V
+% ERC
+    )),
+% ERC
+    !.
+
+% sort_rows_by_nz_right_align: sort rows by non-zero cell count ascending; right-align values
+arc_named_rule(sort_rows_by_nz_right_align).
+% ERC
+arc_transform(sort_rows_by_nz_right_align, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, Rows), numlist(1, NC, Cols),
+% ERC
+    maplist([R, Cnt-Vals]>>(
+% ERC
+        findall(V, (member(C, Cols), arc_grid_at(Grid, R, C, V), V \= 0), Vals),
+% ERC
+        length(Vals, Cnt)
+% ERC
+    ), Rows, RowInfos),
+% ERC
+    msort(RowInfos, Sorted),
+% ERC
+    maplist([Cnt-Vals, Row]>>(
+% ERC
+        Pad is NC - Cnt,
+% ERC
+        length(Zeros, Pad), maplist(=(0), Zeros),
+% ERC
+        append(Zeros, Vals, Row)
+% ERC
+    ), Sorted, Out),
+% ERC
+    !.
+
+% count_2x2_blocks_to_checkerboard: N 2x2 blocks of 2s -> first N checkerboard positions in 3x3
+arc_named_rule(count_2x2_blocks_to_checkerboard).
+% ERC
+arc_transform(count_2x2_blocks_to_checkerboard, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR >= 2, NR =< 30, NC >= 2, NC =< 30,
+% ERC
+    NR1 is NR-1, NC1 is NC-1,
+% ERC
+    numlist(1, NR1, Rs), numlist(1, NC1, Cs),
+% ERC
+    findall(R-C, (
+% ERC
+        member(R, Rs), member(C, Cs),
+% ERC
+        R1 is R+1, C1 is C+1,
+% ERC
+        arc_grid_at(Grid, R, C, 2),
+% ERC
+        arc_grid_at(Grid, R, C1, 2),
+% ERC
+        arc_grid_at(Grid, R1, C, 2),
+% ERC
+        arc_grid_at(Grid, R1, C1, 2)
+% ERC
+    ), Corners0),
+% ERC
+    arc_w24_dedup_corners(Corners0, Corners),
+% ERC
+    length(Corners, N), N > 0,
+% ERC
+    CkAll = [1-1, 1-3, 2-2, 3-1, 3-3],
+% ERC
+    length(CkFill, N), append(CkFill, _, CkAll),
+% ERC
+    numlist(1, 3, Rows3), numlist(1, 3, Cols3),
+% ERC
+    maplist([R3, Row3]>>(
+% ERC
+        maplist([C3, Val]>>(
+% ERC
+            ( memberchk(R3-C3, CkFill) -> Val = 1 ; Val = 0 )
+% ERC
+        ), Cols3, Row3)
+% ERC
+    ), Rows3, Out),
+% ERC
+    !.
+
+% arc_w24_dedup_corners/2: greedily remove overlapping 2x2 block corners (|dR|<=1 and |dC|<=1)
+% ERC
+arc_w24_dedup_corners([], []).
+% ERC
+arc_w24_dedup_corners([R-C|Rest], [R-C|Acc]) :-
+% ERC
+    include([R2-C2]>>(
+% ERC
+        DR is abs(R2-R), DC is abs(C2-C),
+% ERC
+        \+ (DR =< 1, DC =< 1)
+% ERC
+    ), Rest, Rest2),
+% ERC
+    arc_w24_dedup_corners(Rest2, Acc).
+
+% tile_2x_zero_to_8_by_column: 2x tiling; zeros become 8 if original column had any non-zero
+arc_named_rule(tile_2x_zero_to_8_by_column).
+% ERC
+arc_transform(tile_2x_zero_to_8_by_column, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 15, NC > 0, NC =< 15,
+% ERC
+    numlist(1, NC, Cols), numlist(1, NR, Rows),
+% ERC
+    findall(OC, (
+% ERC
+        member(OC, Cols),
+% ERC
+        \+ (member(OR, Rows), arc_grid_at(Grid, OR, OC, ZV), ZV \= 0)
+% ERC
+    ), ZeroCols),
+% ERC
+    NR2 is NR*2, NC2 is NC*2,
+% ERC
+    numlist(1, NR2, Rows2), numlist(1, NC2, Cols2),
+% ERC
+    maplist([R2, Row]>>(
+% ERC
+        OR is ((R2-1) mod NR) + 1,
+% ERC
+        maplist([C2, Val]>>(
+% ERC
+            OC is ((C2-1) mod NC) + 1,
+% ERC
+            once(arc_grid_at(Grid, OR, OC, OV)),
+% ERC
+            ( OV \= 0 -> Val = OV
+% ERC
+            ; memberchk(OC, ZeroCols) -> Val = 0
+% ERC
+            ; Val = 8
+% ERC
+            )
+% ERC
+        ), Cols2, Row)
+% ERC
+    ), Rows2, Out),
+% ERC
+    !.
+
+% find_most_impure_region: colored rectangular regions; return dominant color with most impurity cells
+arc_named_rule(find_most_impure_region).
+% ERC
+arc_transform(find_most_impure_region, Grid, [[BestColor]]) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, Rows), numlist(1, NC, Cols),
+% ERC
+    findall(V, (member(R, Rows), member(C, Cols), arc_grid_at(Grid, R, C, V), V > 0), AllVals),
+% ERC
+    list_to_set(AllVals, UniqueVals),
+% ERC
+    length(UniqueVals, NV), NV >= 2,
+% ERC
+    maplist([V, Cnt-V]>>(
+% ERC
+        findall(one, (member(R, Rows), member(C, Cols), arc_grid_at(Grid, R, C, V)), Ones),
+% ERC
+        length(Ones, Cnt)
+% ERC
+    ), UniqueVals, CntVals),
+% ERC
+    msort(CntVals, CntSorted),
+% ERC
+    CntSorted = [_-ImpColor|DomPairs],
+% ERC
+    findall(DC, member(_-DC, DomPairs), DomColors),
+% ERC
+    maplist([DC, ImpCnt-DC]>>(
+% ERC
+        findall(R, (member(R, Rows), member(C, Cols), arc_grid_at(Grid, R, C, DC)), DcRows),
+% ERC
+        findall(CC, (member(RR, Rows), member(CC, Cols), arc_grid_at(Grid, RR, CC, DC)), DcCols),
+% ERC
+        min_list(DcRows, MinR), max_list(DcRows, MaxR),
+% ERC
+        min_list(DcCols, MinC), max_list(DcCols, MaxC),
+% ERC
+        numlist(MinR, MaxR, BoxRows), numlist(MinC, MaxC, BoxCols),
+% ERC
+        findall(one, (member(BR, BoxRows), member(BC, BoxCols), arc_grid_at(Grid, BR, BC, ImpColor)), Imps),
+% ERC
+        length(Imps, ImpCnt)
+% ERC
+    ), DomColors, ImpCntDom),
+% ERC
+    msort(ImpCntDom, ImpSorted),
+% ERC
+    last(ImpSorted, _-BestColor),
+% ERC
+    !.
+
+% fan_inner_value_upward: bottom 2 rows preserved; inner value fans outward by k at free row k steps up
+arc_named_rule(fan_inner_value_upward).
+% ERC
+arc_transform(fan_inner_value_upward, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR >= 2, NR =< 30, NC >= 3, NC =< 30,
+% ERC
+    numlist(1, NC, Cols), numlist(1, NR, AllRows),
+% ERC
+    arc_grid_at(Grid, NR, 1, Vout), Vout > 0,
+% ERC
+    findall(C, (
+% ERC
+        member(C, Cols),
+% ERC
+        arc_grid_at(Grid, NR, C, FV), FV > 0, FV \= Vout
+% ERC
+    ), InnerCols),
+% ERC
+    InnerCols \= [],
+% ERC
+    InnerCols = [InL|_], last(InnerCols, InR),
+% ERC
+    arc_grid_at(Grid, NR, InL, Vin),
+% ERC
+    NR1 is NR - 1,
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        ( R >= NR1
+% ERC
+        -> findall(V, (member(C, Cols), once(arc_grid_at(Grid, R, C, V))), Row)
+% ERC
+        ;  K is NR1 - R,
+% ERC
+           CL is InL - K, CR is InR + K,
+% ERC
+           maplist([C, Val]>>(
+% ERC
+               ( C =:= CL, CL >= 1, CL =< NC -> Val = Vin
+% ERC
+               ; C =:= CR, CR >= 1, CR =< NC -> Val = Vin
+% ERC
+               ; Val = 0
+% ERC
+               )
+% ERC
+           ), Cols, Row)
+% ERC
+        )
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
