@@ -9235,6 +9235,464 @@ arc_ph2d_build_map(Grid, Rs, Cs, PR, PC, PeriodMap) :-
     sort(Entries, PeriodMap).
 
 % ---------------------------------------------------------------------------
+% count_separator_grid — grid has exactly 2 distinct values; one color
+% forms complete rows AND complete columns (the separator); output is a
+% solid block of the background color sized (sep_rows+1) x (sep_cols+1).
+% Verified on task 1190e5a7 (all 3 training pairs).
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(count_separator_grid).
+% ERC
+arc_transform(count_separator_grid, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(V, (member(R,Rs), member(C,Cs), arc_grid_at(Grid,R,C,V)), AllVals),
+% ERC
+    sort(AllVals, [C_a, C_b]),
+% ERC
+    ( arc_csg_sep(Grid, Rs, Cs, C_a) -> C_sep = C_a, C_bg = C_b
+% ERC
+    ; C_sep = C_b, C_bg = C_a, arc_csg_sep(Grid, Rs, Cs, C_b)
+% ERC
+    ),
+% ERC
+    findall(R, (member(R,Rs),
+% ERC
+               findall(V2,(member(C,Cs),arc_grid_at(Grid,R,C,V2)),Row),
+% ERC
+               sort(Row,[C_sep])), SepRowList),
+% ERC
+    findall(C, (member(C,Cs),
+% ERC
+               findall(V2,(member(R,Rs),arc_grid_at(Grid,R,C,V2)),Col),
+% ERC
+               sort(Col,[C_sep])), SepColList),
+% ERC
+    length(SepRowList, NSR), length(SepColList, NSC),
+% ERC
+    NSR >= 1, NSC >= 1,
+% ERC
+    NR_out is NSR + 1, NC_out is NSC + 1,
+% ERC
+    numlist(1, NR_out, Rs_out), numlist(1, NC_out, Cs_out),
+% ERC
+    !,
+% ERC
+    maplist([_R,OutRow]>>(maplist([_C,OutV]>>(OutV = C_bg), Cs_out, OutRow)),
+% ERC
+            Rs_out, Result).
+
+% arc_csg_sep: C_sep forms at least one full row AND one full col.
+% ERC
+arc_csg_sep(Grid, Rs, Cs, C_sep) :-
+% ERC
+    once((member(R,Rs),
+% ERC
+          findall(V,(member(C,Cs),arc_grid_at(Grid,R,C,V)),Row),
+% ERC
+          sort(Row,[C_sep]))),
+% ERC
+    once((member(C,Cs),
+% ERC
+          findall(V,(member(R,Rs),arc_grid_at(Grid,R,C,V)),Col),
+% ERC
+          sort(Col,[C_sep]))).
+
+% ---------------------------------------------------------------------------
+% reduce_3x3_blocks_by_mode — input is 9x9; divide into nine 3x3 blocks;
+% output is 3x3 where each cell = the dominant non-5 non-0 value in its
+% block (0 if no such value).  Requires at least one 5 in the grid.
+% Verified on task 5614dbcf (both training pairs).
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(reduce_3x3_blocks_by_mode).
+% ERC
+arc_transform(reduce_3x3_blocks_by_mode, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, 9, 9),
+% ERC
+    numlist(1, 9, NineList),
+% ERC
+    once((member(R9,NineList), member(C9,NineList), arc_grid_at(Grid,R9,C9,5))),
+% ERC
+    numlist(1, 3, Bs),
+% ERC
+    !,
+% ERC
+    maplist([BI,OutRow]>>(
+% ERC
+        maplist([BJ,OutV]>>(
+% ERC
+            R_start is (BI-1)*3+1, R_end is BI*3,
+% ERC
+            C_start is (BJ-1)*3+1, C_end is BJ*3,
+% ERC
+            numlist(R_start, R_end, BRs),
+% ERC
+            numlist(C_start, C_end, BCs),
+% ERC
+            findall(V, (member(R,BRs), member(C,BCs),
+% ERC
+                        arc_grid_at(Grid,R,C,V), V =\= 5, V =\= 0), NonFive),
+% ERC
+            ( NonFive = [] -> OutV = 0 ; NonFive = [OutV|_] )
+% ERC
+        ), Bs, OutRow)
+% ERC
+    ), Bs, Result).
+
+% ---------------------------------------------------------------------------
+% scale_even_cells_to_4x4_blocks — input is NxN (N even); all non-zero
+% cells are at even row AND even col (1-indexed); all odd rows are zero.
+% Output is (2N)x(2N): each output cell at (RO,CO) maps to input cell
+% at (((RO-1)//4+1)*2, ((CO-1)//4+1)*2) giving a 4x4 block per input cell.
+% Verified on task 46f33fce (both training pairs).
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(scale_even_cells_to_4x4_blocks).
+% ERC
+arc_transform(scale_even_cells_to_4x4_blocks, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 20, NC =< 20,
+% ERC
+    NR mod 2 =:= 0, NC mod 2 =:= 0,
+% ERC
+    NR >= 4, NC >= 4,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    forall((member(R,Rs), R mod 2 =:= 1),
+% ERC
+           forall(member(C,Cs), arc_grid_at(Grid,R,C,0))),
+% ERC
+    forall((member(R,Rs), member(C,Cs),
+% ERC
+            arc_grid_at(Grid,R,C,V), V =\= 0),
+% ERC
+           (R mod 2 =:= 0, C mod 2 =:= 0)),
+% ERC
+    once((member(R0,Rs), member(C0,Cs), arc_grid_at(Grid,R0,C0,V0), V0 =\= 0)),
+% ERC
+    NR_out is NR * 2, NC_out is NC * 2,
+% ERC
+    numlist(1, NR_out, Rs_out), numlist(1, NC_out, Cs_out),
+% ERC
+    !,
+% ERC
+    maplist([RO,OutRow]>>(
+% ERC
+        maplist([CO,OutV]>>(
+% ERC
+            R_cell is ((RO-1) // 4 + 1) * 2,
+% ERC
+            C_cell is ((CO-1) // 4 + 1) * 2,
+% ERC
+            arc_grid_at(Grid, R_cell, C_cell, OutV)
+% ERC
+        ), Cs_out, OutRow)
+% ERC
+    ), Rs_out, Result).
+
+% ---------------------------------------------------------------------------
+% gravity_to_rail — find horizontal and vertical rails (rows/cols that are
+% entirely one non-zero color); slide each isolated non-zero cell toward
+% the nearest same-color rail, stopping 1 step adjacent; cells with no
+% same-color rail disappear.
+% Verified on task 1a07d186 (all 3 training pairs).
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(gravity_to_rail).
+% ERC
+arc_transform(gravity_to_rail, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-V, (member(R,Rs),
+% ERC
+                  findall(V2,(member(C,Cs),arc_grid_at(Grid,R,C,V2)),Row),
+% ERC
+                  sort(Row,[V]), V =\= 0), HRails),
+% ERC
+    findall(C-V, (member(C,Cs),
+% ERC
+                  findall(V2,(member(R,Rs),arc_grid_at(Grid,R,C,V2)),Col),
+% ERC
+                  sort(Col,[V]), V =\= 0), VRails),
+% ERC
+    ( HRails \= [] ; VRails \= [] ),
+% ERC
+    findall(R, member(R-_,HRails), HRRaw), sort(HRRaw, HRailRows),
+% ERC
+    findall(C, member(C-_,VRails), VCRaw), sort(VCRaw, VRailCols),
+% ERC
+    findall(R-C-V, (member(R,Rs), member(C,Cs),
+% ERC
+                    arc_grid_at(Grid,R,C,V), V =\= 0,
+% ERC
+                    \+memberchk(R,HRailRows),
+% ERC
+                    \+memberchk(C,VRailCols)), Isolated),
+% ERC
+    Isolated \= [],
+% ERC
+    findall(TR-TC-V, (
+% ERC
+        member(R-C-V, Isolated),
+% ERC
+        arc_gtr_target(R, C, V, HRails, VRails, TR, TC)
+% ERC
+    ), MovePairs),
+% ERC
+    !,
+% ERC
+    maplist([Row,OutRow]>>(
+% ERC
+        maplist([Col,OutV]>>(
+% ERC
+            ( memberchk(Row-HV, HRails) -> OutV = HV
+% ERC
+            ; memberchk(Col-VV, VRails) -> OutV = VV
+% ERC
+            ; ( memberchk(Row-Col-MV, MovePairs) -> OutV = MV ; OutV = 0 )
+% ERC
+            )
+% ERC
+        ), Cs, OutRow)
+% ERC
+    ), Rs, Result).
+
+% arc_gtr_target: find target (TR,TC) for isolated cell, or fail (disappear).
+% ERC
+arc_gtr_target(R, C, V, HRails, VRails, TR, TC) :-
+% ERC
+    findall(Dist-TR0-TC0, (
+% ERC
+        ( member(RailR-V, HRails),
+% ERC
+          Dist is abs(R - RailR), Dist > 0,
+% ERC
+          ( R > RailR -> TR0 is RailR + 1 ; TR0 is RailR - 1 ),
+% ERC
+          TC0 = C
+% ERC
+        ; member(RailC-V, VRails),
+% ERC
+          Dist is abs(C - RailC), Dist > 0,
+% ERC
+          TR0 = R,
+% ERC
+          ( C > RailC -> TC0 is RailC + 1 ; TC0 is RailC - 1 )
+% ERC
+        )
+% ERC
+    ), Options),
+% ERC
+    Options \= [],
+% ERC
+    msort(Options, [_-TR-TC|_]).
+
+% ---------------------------------------------------------------------------
+% span_fill_separator_grid — grid divided by a separator color into a
+% cell grid; for each row-band or col-band where all occupied cells share
+% one color, fill the cells between the leftmost and rightmost (or
+% topmost/bottommost) occupied cell bands with that color.
+% Verified on task 06df4c85 (all 3 training pairs).
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(span_fill_separator_grid).
+% ERC
+arc_transform(span_fill_separator_grid, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(V0,(member(R0,Rs),member(C0,Cs),
+% ERC
+               arc_grid_at(Grid,R0,C0,V0),V0 =\= 0),AllNZ),
+% ERC
+    sort(AllNZ, Colors), Colors \= [],
+% ERC
+    once((member(C_sep, Colors),
+% ERC
+          once((member(ChkR,Rs),
+% ERC
+                findall(ChkV,(member(ChkC,Cs),arc_grid_at(Grid,ChkR,ChkC,ChkV)),ChkRow),
+% ERC
+                sort(ChkRow,[C_sep]))),
+% ERC
+          once((member(ChkC2,Cs),
+% ERC
+                findall(ChkV2,(member(ChkR2,Rs),arc_grid_at(Grid,ChkR2,ChkC2,ChkV2)),ChkCol),
+% ERC
+                sort(ChkCol,[C_sep])))
+% ERC
+    )),
+% ERC
+    findall(SR, (member(SR,Rs),
+% ERC
+                 findall(SV,(member(SC2,Cs),arc_grid_at(Grid,SR,SC2,SV)),SRow),
+% ERC
+                 sort(SRow,[C_sep])), SepRows),
+% ERC
+    findall(SC, (member(SC,Cs),
+% ERC
+                 findall(SV2,(member(SR2,Rs),arc_grid_at(Grid,SR2,SC,SV2)),SCol),
+% ERC
+                 sort(SCol,[C_sep])), SepCols),
+% ERC
+    SepRows \= [], SepCols \= [],
+% ERC
+    arc_sfsg_bands(SepRows, 1, NR, RowBands),
+% ERC
+    arc_sfsg_bands(SepCols, 1, NC, ColBands),
+% ERC
+    length(RowBands, NRB), length(ColBands, NCB),
+% ERC
+    numlist(1, NRB, RBIs), numlist(1, NCB, CBIs),
+% ERC
+    findall(RBI-CBI-V, (
+% ERC
+        member(RBI, RBIs), nth1(RBI, RowBands, RS-RE),
+% ERC
+        member(CBI, CBIs), nth1(CBI, ColBands, CS-CE),
+% ERC
+        numlist(RS, RE, BRs), numlist(CS, CE, BCs),
+% ERC
+        findall(V0,(member(R0,BRs),member(C0,BCs),
+% ERC
+                    arc_grid_at(Grid,R0,C0,V0),V0=\=0,V0=\=C_sep),CellVals),
+% ERC
+        sort(CellVals,[V])
+% ERC
+    ), CellGrid),
+% ERC
+    findall(RBI-CB1-CB2-V, (
+% ERC
+        member(RBI, RBIs),
+% ERC
+        findall(CBI0-V0, member(RBI-CBI0-V0, CellGrid), RCells),
+% ERC
+        RCells \= [],
+% ERC
+        findall(V0, member(_-V0, RCells), RVals),
+% ERC
+        sort(RVals, [V]),
+% ERC
+        findall(CBI0, member(CBI0-_, RCells), RCBIs),
+% ERC
+        min_list(RCBIs, CB1), max_list(RCBIs, CB2)
+% ERC
+    ), RowSpans),
+% ERC
+    findall(CBI-RB1-RB2-V, (
+% ERC
+        member(CBI, CBIs),
+% ERC
+        findall(RBI0-V0, member(RBI0-CBI-V0, CellGrid), CCells),
+% ERC
+        CCells \= [],
+% ERC
+        findall(V0, member(_-V0, CCells), CVals),
+% ERC
+        sort(CVals, [V]),
+% ERC
+        findall(RBI0, member(RBI0-_, CCells), CRBIs),
+% ERC
+        min_list(CRBIs, RB1), max_list(CRBIs, RB2)
+% ERC
+    ), ColSpans),
+% ERC
+    ( RowSpans \= [] ; ColSpans \= [] ),
+% ERC
+    findall(Row-Col-V, (
+% ERC
+        ( member(RBI-CB1-CB2-V, RowSpans),
+% ERC
+          nth1(RBI, RowBands, RS2-RE2), numlist(RS2, RE2, BRs2),
+% ERC
+          member(Row, BRs2),
+% ERC
+          numlist(CB1, CB2, SpanCBIs),
+% ERC
+          member(SCBI, SpanCBIs),
+% ERC
+          nth1(SCBI, ColBands, CS2-CE2), numlist(CS2, CE2, BCs2),
+% ERC
+          member(Col, BCs2)
+% ERC
+        ; member(CBI-RB1-RB2-V, ColSpans),
+% ERC
+          nth1(CBI, ColBands, CS3-CE3), numlist(CS3, CE3, BCs3),
+% ERC
+          member(Col, BCs3),
+% ERC
+          numlist(RB1, RB2, SpanRBIs),
+% ERC
+          member(SRBI, SpanRBIs),
+% ERC
+          nth1(SRBI, RowBands, RS3-RE3), numlist(RS3, RE3, BRs3),
+% ERC
+          member(Row, BRs3)
+% ERC
+        )
+% ERC
+    ), FillCells0),
+% ERC
+    sort(FillCells0, FillCells),
+% ERC
+    !,
+% ERC
+    maplist([Row,OutRow]>>(
+% ERC
+        maplist([Col,OutV]>>(
+% ERC
+            arc_grid_at(Grid, Row, Col, InV),
+% ERC
+            ( InV =\= 0 -> OutV = InV
+% ERC
+            ; memberchk(Row-Col-FV, FillCells) -> OutV = FV
+% ERC
+            ; OutV = 0
+% ERC
+            )
+% ERC
+        ), Cs, OutRow)
+% ERC
+    ), Rs, Result).
+
+% arc_sfsg_bands/4: compute RS-RE band list from sorted separator positions.
+% ERC
+arc_sfsg_bands([], Start, End, Bands) :-
+% ERC
+    ( Start =< End -> Bands = [Start-End] ; Bands = [] ).
+% ERC
+arc_sfsg_bands([Sep|Rest], Start, End, Bands) :-
+% ERC
+    BandEnd is Sep - 1,
+% ERC
+    ( Start =< BandEnd -> This = [Start-BandEnd] ; This = [] ),
+% ERC
+    NextStart is Sep + 1,
+% ERC
+    arc_sfsg_bands(Rest, NextStart, End, RestBands),
+% ERC
+    append(This, RestBands, Bands).
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.

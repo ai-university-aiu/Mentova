@@ -890,6 +890,35 @@ The determinism principle from wave 18 was applied throughout wave 19: every new
 New tasks solved by wave 19 (4 new tasks): 0dfd9992 (fill_periodic_holes_2d), 29ec7d0e (fill_periodic_holes_2d), 321b1fc6 (stamp_key_at_8_clones), 3befdf3e (concentric_swap_expand).
 
 
+ATTEMPT 20: WAVE 20 - FIVE NEW STRUCTURAL RULES - 170 / 400 = 42.50%
+
+Date: 2026-06-17.
+
+Score: 170 / 400 = 42.50%.
+
+New tasks: +5 (from 165 to 170).
+
+What changed: Wave 20 added five new named rules to the library. All five solved at least one task on the first benchmark run.
+
+The five new rules added in wave 20:
+
+count_separator_grid (task 1190e5a7) - detects grids with exactly two distinct values where one color forms all separator rows and all separator columns. Counts the number of separator rows (R_sep) and separator columns (C_sep). Produces an output grid of size (R_sep+1) x (C_sep+1) filled entirely with the background color. The separator color is the one that appears as the single value in at least one complete row and at least one complete column.
+
+reduce_3x3_blocks_by_mode (task 5614dbcf) - detects 9x9 grids that contain at least one cell with value 5. Divides the input into nine non-overlapping 3x3 blocks. For each block, collects all cell values that are not 5 and not 0, and outputs the first (dominant) such value, or 0 if the block contains only 5s and 0s. Produces a 3x3 output grid where each cell encodes the background color of its corresponding block, treating 5 as a noise contaminant.
+
+scale_even_cells_to_4x4_blocks (task 46f33fce) - detects NxN grids (N even, N >= 4) where every odd-numbered row (1-indexed) is all zeros and every non-zero cell is at an even row AND even column. Produces a (2N)x(2N) output where each output cell at (RO, CO) reads the value from input cell at (((RO-1) div 4 + 1)*2, ((CO-1) div 4 + 1)*2), expanding each input cell into a 4x4 block of the same color. The sparse diagonal arrangement in 46f33fce is exactly reproduced as six non-overlapping 4x4 colored blocks in the doubled output.
+
+gravity_to_rail (task 1a07d186) - detects grids with horizontal or vertical rails: rows or columns where every cell holds the same non-zero color. Isolated non-zero cells (cells not on any rail row or rail column) slide toward the nearest same-color rail and stop 1 cell adjacent. A cell with no same-color rail disappears. The target is computed by finding all rails of matching color, measuring Manhattan distance to each, selecting the nearest, and placing the cell one step from that rail on the near side.
+
+span_fill_separator_grid (task 06df4c85) - detects grids divided by a separator color into a rectangular cell grid. The separator color forms at least one complete row and at least one complete column. Within each row band (region between two separator rows), if all occupied cells share the same non-separator color, fills all cell bands between the leftmost and rightmost occupied band with that color. Similarly for column bands. The two operations are applied independently and their fills are merged with the original values.
+
+What was learned: all five wave-20 rules share a theme of structural analysis of grid partitions. count_separator_grid and span_fill_separator_grid both rely on detecting a separator color that divides the grid into a cell array. reduce_3x3_blocks_by_mode exploits the fixed 3x3 sub-block structure of 9x9 grids. scale_even_cells_to_4x4_blocks uses an arithmetic encoding where position encodes scale. gravity_to_rail uses distance-based cell migration. Together these rules cover five distinct pattern families, confirming that ARC-AGI-1 contains many structurally distinct task types.
+
+The variable-name scoping discipline required by the span_fill rule revealed an important Prolog implementation concern: free variables in outer clause scope that become bound early can shadow intended fresh variables inside later findall calls. The fix is to use distinct variable names for all iteration variables inside each findall scope.
+
+New tasks solved by wave 20 (5 new tasks): 06df4c85 (span_fill_separator_grid), 1190e5a7 (count_separator_grid), 1a07d186 (gravity_to_rail), 46f33fce (scale_even_cells_to_4x4_blocks), 5614dbcf (reduce_3x3_blocks_by_mode).
+
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -958,10 +987,12 @@ Run 31: 98 / 400 = 24.50% - expand_cross_pattern variable bug fixed. Plus 1 task
 
 Run 32: 161 / 400 = 40.25% - scale_shape_into_frame operator precedence bug fixed; six performance guards added; five new rules (intersect_halves_at_5, recolor_1_to_2_extend_row_period, mark_l_shape_missing_corner, fill_hole_in_repeating_pattern, fill_span_row_col_with_2). Plus 63 tasks.
 
-Run 33: 165 / 400 = 41.25% - Wave 19: four new rules (complete_4fold_symmetry, concentric_swap_expand, stamp_key_at_8_clones, fill_periodic_holes_2d). Plus 4 tasks. (CURRENT BEST)
+Run 33: 165 / 400 = 41.25% - Wave 19: four new rules (complete_4fold_symmetry, concentric_swap_expand, stamp_key_at_8_clones, fill_periodic_holes_2d). Plus 4 tasks.
+
+Run 34: 170 / 400 = 42.50% - Wave 20: five new rules (count_separator_grid, reduce_3x3_blocks_by_mode, scale_even_cells_to_4x4_blocks, gravity_to_rail, span_fill_separator_grid). Plus 5 tasks. (CURRENT BEST)
 
 
-ALL 165 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 170 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -989,7 +1020,13 @@ ALL 165 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 0dfd9992 - fill_periodic_holes_2d.
 
+06df4c85 - span_fill_separator_grid.
+
+1190e5a7 - count_separator_grid.
+
 178fcbfb - fill_row_or_col_by_2.
+
+1a07d186 - gravity_to_rail.
 
 1b2d62fb - left_right_at_1col_sep_nor_to_8.
 
@@ -1089,6 +1126,8 @@ ALL 165 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 46442a0e - tile_rotate_2x2.
 
+46f33fce - scale_even_cells_to_4x4_blocks.
+
 47c1f68c - reflect_shape_in_4_quadrants.
 
 48d8fb45 - beacon5_select_cluster_3x3.
@@ -1106,6 +1145,8 @@ ALL 165 SOLVED TASKS AND THEIR GLASS-BOX RULES
 5168d44c - slide_box_to_next_3.
 
 5582e5ca - fill_with_mode.
+
+5614dbcf - reduce_3x3_blocks_by_mode.
 
 56dc2b01 - slide_shape_to_wall_mark8.
 
