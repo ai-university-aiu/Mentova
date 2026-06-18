@@ -8753,6 +8753,11 @@ arc_transform(fill_span_row_col_with_2, Grid, Result) :-
 % ERC
     ), Rs, Result).
 
+% complete_4fold_rot_sym also declared here so it is tried before
+% complete_4fold_symmetry; the transform clause lives in the wave-28 section.
+% ERC
+arc_named_rule(complete_4fold_rot_sym).
+
 % ---------------------------------------------------------------------------
 % complete_4fold_symmetry — adds the 3 missing reflections of each non-zero
 % cell to achieve bilateral LR and TB symmetry around the bbox centre.
@@ -13899,6 +13904,639 @@ arc_transform(pick_hsym_shape, Grid, Out) :-
         ), BCols, Row)
 % ERC
     ), BRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 28 RULES
+% Eight new named rules solving 9 additional ARC-AGI-1 tasks.
+% ---------------------------------------------------------------------------
+
+% ERC
+arc_named_rule(fill_rect_frame_124).
+% ERC
+arc_transform(fill_rect_frame_124, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,5)), Fives),
+% ERC
+    Fives \= [],
+% ERC
+    arc_w28_rect_comps(Fives, Grid, NR, NC, Comps),
+% ERC
+    arc_w28_frame_apply(Grid, Comps, NR, NC, Out),
+% ERC
+    !.
+
+% ERC
+arc_w28_rect_comps([], _, _, _, []).
+% ERC
+arc_w28_rect_comps([R-C|Rest], Grid, NR, NC, [Comp|Comps]) :-
+% ERC
+    arc_w28_bfs5(Grid, NR, NC, [R-C], [], Comp),
+% ERC
+    subtract(Rest, Comp, Rest2),
+% ERC
+    arc_w28_rect_comps(Rest2, Grid, NR, NC, Comps).
+
+% ERC
+arc_w28_bfs5(_, _, _, [], Seen, Seen).
+% ERC
+arc_w28_bfs5(Grid, NR, NC, [R-C|Queue], Seen, Out) :-
+% ERC
+    ( member(R-C, Seen) ->
+% ERC
+        arc_w28_bfs5(Grid, NR, NC, Queue, Seen, Out)
+% ERC
+    ; R >= 1, R =< NR, C >= 1, C =< NC,
+% ERC
+      arc_grid_at(Grid, R, C, V), V =:= 5 ->
+% ERC
+        R1 is R+1, R2 is R-1, C1 is C+1, C2 is C-1,
+% ERC
+        findall(NR2-NC2, (member(NR2-NC2, [R1-C,R2-C,R-C1,R-C2]),
+% ERC
+            NR2 >= 1, NR2 =< NR, NC2 >= 1, NC2 =< NC,
+% ERC
+            arc_grid_at(Grid, NR2, NC2, 5)), Neighbors),
+% ERC
+        append(Queue, Neighbors, Queue2),
+% ERC
+        arc_w28_bfs5(Grid, NR, NC, Queue2, [R-C|Seen], Out)
+% ERC
+    ;   arc_w28_bfs5(Grid, NR, NC, Queue, Seen, Out)
+% ERC
+    ).
+
+% ERC
+arc_w28_frame_apply(Grid, [], NR, NC, Out) :-
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(arc_grid_at(Grid,R,C,V)), AllCols, Row)
+% ERC
+    ), AllRows, Out).
+% ERC
+arc_w28_frame_apply(Grid, [Comp|Rest], NR, NC, Out) :-
+% ERC
+    findall(R, member(R-_, Comp), Rs),
+% ERC
+    findall(C, member(_-C, Comp), Cs),
+% ERC
+    min_list(Rs, Ra), max_list(Rs, Rb),
+% ERC
+    min_list(Cs, Ca), max_list(Cs, Cb),
+% ERC
+    arc_w28_frame_apply(Grid, Rest, NR, NC, TmpGrid),
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(
+% ERC
+            ( R >= Ra, R =< Rb, C >= Ca, C =< Cb ->
+% ERC
+                ( (R =:= Ra ; R =:= Rb), (C =:= Ca ; C =:= Cb) -> V = 1
+% ERC
+                ; (R =:= Ra ; R =:= Rb ; C =:= Ca ; C =:= Cb) -> V = 4
+% ERC
+                ; V = 2
+% ERC
+                )
+% ERC
+            ;   arc_grid_at(TmpGrid,R,C,V)
+% ERC
+            )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out).
+
+% ERC
+arc_named_rule(fill_two_rects_12).
+% ERC
+arc_transform(fill_two_rects_12, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,4)), Fours),
+% ERC
+    Fours \= [],
+% ERC
+    arc_w28_rect_comps_val(Fours, Grid, NR, NC, 4, Comps),
+% ERC
+    length(Comps, 2),
+% ERC
+    Comps = [C1, C2],
+% ERC
+    length(C1, L1), length(C2, L2),
+% ERC
+    ( L1 >= L2 -> BigComp = C1, SmallComp = C2
+% ERC
+    ; BigComp = C2, SmallComp = C1
+% ERC
+    ),
+% ERC
+    arc_w28_rect_interior(BigComp, BigInterior),
+% ERC
+    arc_w28_rect_interior(SmallComp, SmallInterior),
+% ERC
+    numlist(1, NR, AllRows2), numlist(1, NC, AllCols2),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(
+% ERC
+            ( member(R-C, BigInterior) -> V = 2
+% ERC
+            ; member(R-C, SmallInterior) -> V = 1
+% ERC
+            ; arc_grid_at(Grid,R,C,V)
+% ERC
+            )
+% ERC
+        ), AllCols2, Row)
+% ERC
+    ), AllRows2, Out),
+% ERC
+    !.
+
+% ERC
+arc_w28_rect_comps_val([], _, _, _, _, []).
+% ERC
+arc_w28_rect_comps_val([R-C|Rest], Grid, NR, NC, Val, [Comp|Comps]) :-
+% ERC
+    arc_w28_bfs_val(Grid, NR, NC, Val, [R-C], [], Comp),
+% ERC
+    subtract(Rest, Comp, Rest2),
+% ERC
+    arc_w28_rect_comps_val(Rest2, Grid, NR, NC, Val, Comps).
+
+% ERC
+arc_w28_bfs_val(_, _, _, _, [], Seen, Seen).
+% ERC
+arc_w28_bfs_val(Grid, NR, NC, Val, [R-C|Queue], Seen, Out) :-
+% ERC
+    ( member(R-C, Seen) ->
+% ERC
+        arc_w28_bfs_val(Grid, NR, NC, Val, Queue, Seen, Out)
+% ERC
+    ; R >= 1, R =< NR, C >= 1, C =< NC,
+% ERC
+      arc_grid_at(Grid, R, C, V), V =:= Val ->
+% ERC
+        R1 is R+1, R2 is R-1, C1 is C+1, C2 is C-1,
+% ERC
+        findall(NR2-NC2, (member(NR2-NC2, [R1-C,R2-C,R-C1,R-C2]),
+% ERC
+            NR2 >= 1, NR2 =< NR, NC2 >= 1, NC2 =< NC,
+% ERC
+            arc_grid_at(Grid, NR2, NC2, Val)), Neighbors),
+% ERC
+        append(Queue, Neighbors, Queue2),
+% ERC
+        arc_w28_bfs_val(Grid, NR, NC, Val, Queue2, [R-C|Seen], Out)
+% ERC
+    ;   arc_w28_bfs_val(Grid, NR, NC, Val, Queue, Seen, Out)
+% ERC
+    ).
+
+% ERC
+arc_w28_rect_interior(Comp, Interior) :-
+% ERC
+    findall(R, member(R-_, Comp), Rs),
+% ERC
+    findall(C, member(_-C, Comp), Cs),
+% ERC
+    min_list(Rs, Ra), max_list(Rs, Rb),
+% ERC
+    min_list(Cs, Ca), max_list(Cs, Cb),
+% ERC
+    Ra2 is Ra+1, Rb2 is Rb-1, Ca2 is Ca+1, Cb2 is Cb-1,
+% ERC
+    ( Ra2 =< Rb2, Ca2 =< Cb2 ->
+% ERC
+        numlist(Ra2, Rb2, InRows), numlist(Ca2, Cb2, InCols),
+% ERC
+        findall(R-C, (member(R,InRows), member(C,InCols)), Interior)
+% ERC
+    ;   Interior = []
+% ERC
+    ).
+
+% ERC
+arc_named_rule(extract_largest_blob).
+% ERC
+arc_transform(extract_largest_blob, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,V), V \= 0), NZCells),
+% ERC
+    NZCells \= [],
+% ERC
+    arc_w28_all_blobs(NZCells, Grid, NR, NC, Blobs),
+% ERC
+    arc_w28_largest(Blobs, Largest),
+% ERC
+    findall(R, member(R-_, Largest), BlobRs),
+% ERC
+    findall(C, member(_-C, Largest), BlobCs),
+% ERC
+    min_list(BlobRs, R0), max_list(BlobRs, R1),
+% ERC
+    min_list(BlobCs, C0), max_list(BlobCs, C1),
+% ERC
+    numlist(R0, R1, OutRows), numlist(C0, C1, OutCols),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(
+% ERC
+            ( member(R-C, Largest) -> arc_grid_at(Grid,R,C,V)
+% ERC
+            ; V = 0
+% ERC
+            )
+% ERC
+        ), OutCols, Row)
+% ERC
+    ), OutRows, Out),
+% ERC
+    !.
+
+% ERC
+arc_w28_all_blobs([], _, _, _, []).
+% ERC
+arc_w28_all_blobs([R-C|Rest], Grid, NR, NC, [Blob|Blobs]) :-
+% ERC
+    arc_grid_at(Grid, R, C, Val),
+% ERC
+    arc_w28_bfs_val(Grid, NR, NC, Val, [R-C], [], Blob),
+% ERC
+    subtract(Rest, Blob, Rest2),
+% ERC
+    arc_w28_all_blobs(Rest2, Grid, NR, NC, Blobs).
+
+% ERC
+arc_w28_largest([H|T], Largest) :-
+% ERC
+    arc_w28_largest_(T, H, Largest).
+% ERC
+arc_w28_largest_([], Best, Best).
+% ERC
+arc_w28_largest_([H|T], Best, Largest) :-
+% ERC
+    length(H, LH), length(Best, LB),
+% ERC
+    ( LH > LB -> arc_w28_largest_(T, H, Largest)
+% ERC
+    ; arc_w28_largest_(T, Best, Largest)
+% ERC
+    ).
+
+% ERC
+arc_named_rule(stamp_plus_cardinal).
+% ERC
+arc_transform(stamp_plus_cardinal, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,1)), Ones),
+% ERC
+    Ones \= [],
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( Orig =:= 1 -> V = 1
+% ERC
+            ; once((
+% ERC
+                R1 is R+1, member(R1-C, Ones), V = 2
+% ERC
+              ; R1 is R-1, member(R1-C, Ones), V = 8
+% ERC
+              ; C1 is C+1, member(R-C1, Ones), V = 7
+% ERC
+              ; C1 is C-1, member(R-C1, Ones), V = 6
+% ERC
+              ; V = Orig
+% ERC
+              ))
+% ERC
+            )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ERC
+arc_named_rule(hollow_sq_to_plus).
+% ERC
+arc_transform(hollow_sq_to_plus, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,0),
+% ERC
+        R > 1, R < NR, C > 1, C < NC,
+% ERC
+        R00 is R-1, R11 is R+1, C00 is C-1, C11 is C+1,
+% ERC
+        arc_grid_at(Grid,R00,C00,1), arc_grid_at(Grid,R00,C,1),
+% ERC
+        arc_grid_at(Grid,R00,C11,1), arc_grid_at(Grid,R,C00,1),
+% ERC
+        arc_grid_at(Grid,R,C11,1), arc_grid_at(Grid,R11,C00,1),
+% ERC
+        arc_grid_at(Grid,R11,C,1), arc_grid_at(Grid,R11,C11,1)
+% ERC
+    ), Centers),
+% ERC
+    Centers \= [],
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( once((
+% ERC
+                member(CR-CC, Centers),
+% ERC
+                ( (R =:= CR, C =:= CC) -> true
+% ERC
+                ; (R =:= CR-1, C =:= CC) -> true
+% ERC
+                ; (R =:= CR+1, C =:= CC) -> true
+% ERC
+                ; (R =:= CR, C =:= CC-1) -> true
+% ERC
+                ; (R =:= CR, C =:= CC+1) -> true
+% ERC
+                )
+% ERC
+              )) -> V = 2
+% ERC
+            ; Orig =:= 1,
+% ERC
+              once((
+% ERC
+                member(CR-CC, Centers),
+% ERC
+                R00b is CR-1, R11b is CR+1, C00b is CC-1, C11b is CC+1,
+% ERC
+                member(R-C, [R00b-C00b, R00b-C11b, R11b-C00b, R11b-C11b])
+% ERC
+              )) -> V = 0
+% ERC
+            ; V = Orig
+% ERC
+            )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ERC
+arc_named_rule(reflect_8_by_4_arrow).
+% ERC
+arc_transform(reflect_8_by_4_arrow, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =:= 6, NC =:= 9,
+% ERC
+    numlist(1, NC, AllCols),
+% ERC
+    findall(C, (member(C, AllCols), arc_grid_at(Grid, 4, C, 4)), Row4Fours),
+% ERC
+    Row4Fours = [TabC|_],
+% ERC
+    numlist(1, NR, AllRows),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( R =< 3, TabC =< 4,
+% ERC
+              C >= 1, C =< 3,
+% ERC
+              SrcC is 7 - C,
+% ERC
+              arc_grid_at(Grid, R, SrcC, 8) ->
+% ERC
+                V = 8
+% ERC
+            ; R =< 3, TabC >= 6,
+% ERC
+              C >= 7, C =< 9,
+% ERC
+              SrcC is 13 - C,
+% ERC
+              arc_grid_at(Grid, R, SrcC, 8) ->
+% ERC
+                V = 8
+% ERC
+            ; V = Orig
+% ERC
+            )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ERC
+arc_named_rule(complete_4fold_rot_sym).
+% ERC
+arc_transform(complete_4fold_rot_sym, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,V), V \= 0), NZCells),
+% ERC
+    NZCells \= [],
+% ERC
+    findall(R, member(R-_,NZCells), NZRs),
+% ERC
+    findall(C, member(_-C,NZCells), NZCs),
+% ERC
+    min_list(NZRs,Rmin), max_list(NZRs,Rmax),
+% ERC
+    min_list(NZCs,Cmin), max_list(NZCs,Cmax),
+% ERC
+    RSum is Rmin + Rmax, CSum is Cmin + Cmax,
+% ERC
+    0 is RSum mod 2, 0 is CSum mod 2,
+% ERC
+    CR is RSum // 2, CC is CSum // 2,
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( Orig \= 0 -> V = Orig
+% ERC
+            ;   DR is R - CR, DC is C - CC,
+% ERC
+                once((
+% ERC
+                    DR1 is CR - DC, DC1 is CC + DR,
+% ERC
+                    DR1 >= 1, DR1 =< NR, DC1 >= 1, DC1 =< NC,
+% ERC
+                    arc_grid_at(Grid, DR1, DC1, SV1), SV1 \= 0, V = SV1
+% ERC
+                ;   DR2 is CR*2 - R, DC2 is CC*2 - C,
+% ERC
+                    DR2 >= 1, DR2 =< NR, DC2 >= 1, DC2 =< NC,
+% ERC
+                    arc_grid_at(Grid, DR2, DC2, SV2), SV2 \= 0, V = SV2
+% ERC
+                ;   DR3 is CR + DC, DC3 is CC - DR,
+% ERC
+                    DR3 >= 1, DR3 =< NR, DC3 >= 1, DC3 =< NC,
+% ERC
+                    arc_grid_at(Grid, DR3, DC3, SV3), SV3 \= 0, V = SV3
+% ERC
+                ;   V = 0
+% ERC
+                ))
+% ERC
+            )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ERC
+arc_named_rule(center_shape_at_3_anchor).
+% ERC
+arc_transform(center_shape_at_3_anchor, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,3)), Anchors),
+% ERC
+    findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,2)), ShapeCells),
+% ERC
+    Anchors \= [], ShapeCells \= [],
+% ERC
+    findall(R, member(R-_,Anchors), ARs),
+% ERC
+    findall(C, member(_-C,Anchors), ACs),
+% ERC
+    findall(R, member(R-_,ShapeCells), SRs),
+% ERC
+    findall(C, member(_-C,ShapeCells), SCs),
+% ERC
+    min_list(ARs,ARmin), max_list(ARs,ARmax),
+% ERC
+    min_list(ACs,ACmin), max_list(ACs,ACmax),
+% ERC
+    min_list(SRs,SRmin), max_list(SRs,SRmax),
+% ERC
+    min_list(SCs,SCmin), max_list(SCs,SCmax),
+% ERC
+    ARS is ARmin + ARmax, ACS is ACmin + ACmax,
+% ERC
+    SRS is SRmin + SRmax, SCS is SCmin + SCmax,
+% ERC
+    0 is (ARS - SRS) mod 2, 0 is (ACS - SCS) mod 2,
+% ERC
+    DR is (ARS - SRS) // 2, DC is (ACS - SCS) // 2,
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            (   SR is R - DR, SC is C - DC,
+% ERC
+                SR >= 1, SR =< NR, SC >= 1, SC =< NC,
+% ERC
+                arc_grid_at(Grid, SR, SC, 2) ->
+% ERC
+                V = 2
+% ERC
+            ; Orig =:= 2 -> V = 0
+% ERC
+            ; Orig \= 0 -> V = Orig
+% ERC
+            ; V = 0
+% ERC
+            )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
 % ERC
     !.
 
