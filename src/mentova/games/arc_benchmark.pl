@@ -16296,6 +16296,338 @@ arc_transform(remove_stray_cells, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 31 HELPERS
+% ---------------------------------------------------------------------------
+
+% arc_w31_greedy_3x3(+Cands, +Taken, -Sel): greedily select non-overlapping 3x3 block top-lefts
+% ERC base case: empty candidate list, nothing to select
+arc_w31_greedy_3x3([], _, []).
+% ERC take candidate if it does not overlap any already-taken block
+arc_w31_greedy_3x3([R-C|Rest], Taken, [R-C|Sel]) :-
+% ERC overlap means the absolute row or col difference is less than 3
+    \+ (member(TR-TC, Taken),
+% ERC check row separation
+        AbsR is abs(R-TR), AbsR < 3,
+% ERC check col separation
+        AbsC is abs(C-TC), AbsC < 3),
+% ERC candidate accepted; add to taken list and recurse
+    !,
+    arc_w31_greedy_3x3(Rest, [R-C|Taken], Sel).
+% ERC skip overlapping candidate and continue
+arc_w31_greedy_3x3([_|Rest], Taken, Sel) :-
+% ERC tail recurse with unchanged taken list
+    arc_w31_greedy_3x3(Rest, Taken, Sel).
+
+% arc_w31_bfs2cc(+Grid, +NR, +NC, +Queue, +Visited, -Component): BFS over 4-connected 2-cells
+% ERC base case: queue exhausted, component equals visited set
+arc_w31_bfs2cc(_, _, _, [], Vis, Vis).
+% ERC expand the front cell of the BFS queue to its unvisited 2-cell neighbours
+arc_w31_bfs2cc(Grid, NR, NC, [R-C|Q], Vis, Comp) :-
+% ERC collect all 4-directional neighbours that are value=2 and not yet visited
+    findall(R2-C2,
+        (   member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+            R2 is R+DR, C2 is C+DC,
+            R2 >= 1, R2 =< NR, C2 >= 1, C2 =< NC,
+            arc_grid_at(Grid, R2, C2, 2),
+            \+ memberchk(R2-C2, Vis)
+        ),
+        Nbrs),
+% ERC merge neighbours into queue and visited, then recurse
+    append(Q, Nbrs, Q1), sort(Q1, Q2),
+% ERC update visited set
+    append(Vis, Nbrs, Vis1), sort(Vis1, Vis2),
+% ERC continue BFS with updated queue and visited
+    arc_w31_bfs2cc(Grid, NR, NC, Q2, Vis2, Comp).
+
+% arc_w31_expand_right(+Grid, +R, +C, +NC, -MaxC): rightward scan while value=2
+% ERC extend column index right as long as the cell is still value=2
+arc_w31_expand_right(Grid, R, C, NC, MaxC) :-
+% ERC try one step right
+    C1 is C+1,
+% ERC if in bounds and still 2, recurse; otherwise MaxC = current C
+    (   C1 =< NC, arc_grid_at(Grid, R, C1, 2)
+    ->  arc_w31_expand_right(Grid, R, C1, NC, MaxC)
+    ;   MaxC = C ).
+
+% arc_w31_expand_down(+Grid, +R, +MaxC, +MinC, +NR, -MaxR): downward scan while full row span is 2
+% ERC extend row index down as long as all cells in MinC..MaxC remain value=2
+arc_w31_expand_down(Grid, R, MaxC, MinC, NR, MaxR) :-
+% ERC try one row down
+    R1 is R+1,
+% ERC the entire column span must be 2 in the candidate next row
+    (   R1 =< NR, \+ (between(MinC, MaxC, C), \+ arc_grid_at(Grid, R1, C, 2))
+    ->  arc_w31_expand_down(Grid, R1, MaxC, MinC, NR, MaxR)
+    ;   MaxR = R ).
+
+% ---------------------------------------------------------------------------
+% RULE: stamp_1234_around_5_blocks   task 95990924
+% ---------------------------------------------------------------------------
+
+% ERC declare the named rule for task 95990924
+arc_named_rule(stamp_1234_around_5_blocks).
+% ERC main transform: for each 2x2 block of 5s, stamp corner markers 1/2/3/4 one diagonal step out
+arc_transform(stamp_1234_around_5_blocks, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC get column count from first row
+    Grid = [Row0|_], length(Row0, NC), NC =< 30,
+% ERC find all top-left corners of 2x2 blocks of 5s
+    findall(BR-BC,
+        (   between(1, NR, BR), BR1 is BR+1, BR1 =< NR,
+            between(1, NC, BC), BC1 is BC+1, BC1 =< NC,
+            arc_grid_at(Grid, BR,  BC,  5), arc_grid_at(Grid, BR,  BC1, 5),
+            arc_grid_at(Grid, BR1, BC,  5), arc_grid_at(Grid, BR1, BC1, 5)
+        ),
+        Blocks),
+% ERC rule requires at least one 2x2 block
+    Blocks \= [],
+% ERC collect the four corner marks for each block: 1=UL, 2=UR, 3=DL, 4=DR
+    findall(MR-MC-MV,
+        (   member(BR-BC, Blocks),
+            RUp is BR-1, RDn is BR+2, CLft is BC-1, CRgt is BC+2,
+            (   MV=1, MR=RUp, MC=CLft, RUp >= 1,  CLft >= 1
+            ;   MV=2, MR=RUp, MC=CRgt, RUp >= 1,  CRgt =< NC
+            ;   MV=3, MR=RDn, MC=CLft, RDn =< NR, CLft >= 1
+            ;   MV=4, MR=RDn, MC=CRgt, RDn =< NR, CRgt =< NC
+            )
+        ),
+        Marks0),
+% ERC deduplicate mark list
+    sort(Marks0, Marks),
+% ERC precompute row and col index lists (1-indexed)
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC build output: for each cell, use mark value if present, else keep original
+    maplist([Row, RowOut]>>(
+        maplist([Col, Cel]>>(
+% ERC use the mark for this cell if one exists, else keep grid value
+            (   once(member(Row-Col-MV0, Marks)) -> Cel = MV0
+            ;   arc_grid_at(Grid, Row, Col, Cel) )
+        ), AllCols, RowOut)
+    ), AllRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: fill_3x3_zero_blocks_with_1   task 6cf79266
+% ---------------------------------------------------------------------------
+
+% ERC declare the named rule for task 6cf79266
+arc_named_rule(fill_3x3_zero_blocks_with_1).
+% ERC main transform: greedily fill each 3x3 all-zero block with 1s, top-left to bottom-right
+arc_transform(fill_3x3_zero_blocks_with_1, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC get column count
+    Grid = [Row1|_], length(Row1, NC), NC =< 30,
+% ERC top-left corners range 1..NR-2 so the 3x3 block (R..R+2) stays in bounds
+    NR3 is NR-2, NC3 is NC-2,
+% ERC find all top-left corners of 3x3 all-zero blocks in the original grid
+    findall(R-C,
+        (   between(1, NR3, R), between(1, NC3, C),
+            \+ (member(DR, [0,1,2]), member(DC, [0,1,2]),
+                R2 is R+DR, C2 is C+DC,
+                arc_grid_at(Grid, R2, C2, V2), V2 \= 0)
+        ),
+        Cands),
+% ERC rule requires at least one all-zero 3x3 block
+    Cands \= [],
+% ERC greedy selection: non-overlapping subset in scan order
+    arc_w31_greedy_3x3(Cands, [], Sel),
+% ERC expand selected top-left corners to full 3x3 cell lists
+    findall(R-C,
+        (   member(BR-BC, Sel),
+            member(DR, [0,1,2]), member(DC, [0,1,2]),
+            R is BR+DR, C is BC+DC
+        ),
+        Fills0),
+% ERC deduplicate fill list
+    sort(Fills0, Fills),
+% ERC build output grid (1-indexed)
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([Row, RowOut]>>(
+        maplist([Col, Cel]>>(
+% ERC fill cell with 1 if selected, else keep original value
+            (   memberchk(Row-Col, Fills) -> Cel = 1
+            ;   arc_grid_at(Grid, Row, Col, Cel) )
+        ), AllCols, RowOut)
+    ), AllRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: fill_below_shape_by_color_count   task fcc82909
+% ---------------------------------------------------------------------------
+
+% ERC declare the named rule for task fcc82909
+arc_named_rule(fill_below_shape_by_color_count).
+% ERC main transform: below each canonical 2x2 non-zero shape, fill N rows with 3s (N = unique color count)
+arc_transform(fill_below_shape_by_color_count, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC get column count
+    Grid = [Row2|_], length(Row2, NC), NC =< 30,
+% ERC find canonical top-left corners of 2x2 non-zero shapes (top and left neighbors must be zero)
+    findall(SR-SC-SN,
+        (   between(1, NR, SR), SR1 is SR+1, SR1 =< NR,
+            between(1, NC, SC), SC1 is SC+1, SC1 =< NC,
+            arc_grid_at(Grid, SR,  SC,  V00), V00 \= 0,
+            arc_grid_at(Grid, SR,  SC1, V01), V01 \= 0,
+            arc_grid_at(Grid, SR1, SC,  V10), V10 \= 0,
+            arc_grid_at(Grid, SR1, SC1, V11), V11 \= 0,
+            SRm1 is SR-1,
+            (SRm1 < 1 ; (arc_grid_at(Grid, SRm1, SC, 0), arc_grid_at(Grid, SRm1, SC1, 0))),
+            SCm1 is SC-1,
+            (SCm1 < 1 ; (arc_grid_at(Grid, SR,  SCm1, 0), arc_grid_at(Grid, SR1, SCm1, 0))),
+            sort([V00,V01,V10,V11], Uniq), length(Uniq, SN)
+        ),
+        Shapes),
+% ERC rule requires at least one 2x2 shape
+    Shapes \= [],
+% ERC collect fill positions: SN rows below the shape bottom (rows SR+2 through SR+SN+1), cols SC and SC+1
+    findall(FR-FC,
+        (   member(SR-SC-SN, Shapes),
+            SC1 is SC+1, BotS is SR+2, BotE is SR+SN+1,
+            between(BotS, BotE, FR), FR =< NR,
+            (FC = SC ; FC = SC1),
+            arc_grid_at(Grid, FR, FC, 0)
+        ),
+        Fills0),
+% ERC deduplicate fill list
+    sort(Fills0, Fills),
+% ERC rule requires cells to fill
+    Fills \= [],
+% ERC build output grid (1-indexed)
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([Row, RowOut]>>(
+        maplist([Col, Cel]>>(
+% ERC fill selected cells with 3, else keep original
+            (   memberchk(Row-Col, Fills) -> Cel = 3
+            ;   arc_grid_at(Grid, Row, Col, Cel) )
+        ), AllCols, RowOut)
+    ), AllRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: fill_horiz_gap_with_9   task ef135b50
+% ---------------------------------------------------------------------------
+
+% ERC declare the named rule for task ef135b50
+arc_named_rule(fill_horiz_gap_with_9).
+% ERC main transform: for each horizontally adjacent pair of solid 2-rectangles with row overlap, fill gap with 9s
+arc_transform(fill_horiz_gap_with_9, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC get column count
+    Grid = [Row3|_], length(Row3, NC), NC =< 30,
+% ERC find all canonical solid 2-rectangles identified by top-left corner expansion
+    findall(MnR-MxR-MnC-MxC,
+        (   between(1, NR, MnR), between(1, NC, MnC),
+            arc_grid_at(Grid, MnR, MnC, 2),
+            MnRm1 is MnR-1,
+            (MnRm1 < 1 ; \+ arc_grid_at(Grid, MnRm1, MnC, 2)),
+            MnCm1 is MnC-1,
+            (MnCm1 < 1 ; \+ arc_grid_at(Grid, MnR, MnCm1, 2)),
+            arc_w31_expand_right(Grid, MnR, MnC, NC, MxC),
+            arc_w31_expand_down(Grid, MnR, MxC, MnC, NR, MxR)
+        ),
+        Rects0),
+% ERC deduplicate rectangle list
+    sort(Rects0, Rects),
+% ERC rule requires at least two rectangles
+    length(Rects, RLen), RLen >= 2,
+% ERC collect 9-fill positions: for each left-right pair, fill row-overlap × column-gap (if unblocked)
+    findall(R-C,
+        (   member(AR-AR2-_-AC2, Rects),
+            member(BR-BR2-BC-_, Rects),
+% ERC A must be strictly to the left of B
+            AC2 < BC,
+% ERC column gap must be non-empty
+            CgS is AC2+1, CgE is BC-1, CgS =< CgE,
+% ERC row overlap must be non-empty
+            RovMin is max(AR, BR), RovMax is min(AR2, BR2), RovMin =< RovMax,
+% ERC no other rectangle C column-between A and B that overlaps the row range
+            \+ (member(CR-CR2-CC-CC2, Rects),
+                CC > AC2, CC2 < BC,
+                BkMin is max(CR, RovMin), BkMax is min(CR2, RovMax),
+                BkMin =< BkMax),
+% ERC enumerate fill cells in the row-overlap x col-gap region
+            between(RovMin, RovMax, R), between(CgS, CgE, C)
+        ),
+        Fills0),
+% ERC deduplicate fill list
+    sort(Fills0, Fills),
+% ERC rule requires cells to fill
+    Fills \= [],
+% ERC build output grid (1-indexed)
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([Row, RowOut]>>(
+        maplist([Col, Cel]>>(
+% ERC fill selected cells with 9, else keep original value
+            (   memberchk(Row-Col, Fills) -> Cel = 9
+            ;   arc_grid_at(Grid, Row, Col, Cel) )
+        ), AllCols, RowOut)
+    ), AllRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: draw_3_frame_around_2_clusters   task b27ca6d3
+% ---------------------------------------------------------------------------
+
+% ERC declare the named rule for task b27ca6d3
+arc_named_rule(draw_3_frame_around_2_clusters).
+% ERC main transform: for each connected cluster of 2-cells (size>=2), draw a 3-border one step outside the bbox
+arc_transform(draw_3_frame_around_2_clusters, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC get column count
+    Grid = [Row4|_], length(Row4, NC), NC =< 30,
+% ERC find connected components of 2-cells with at least 2 cells (canonical: BFS from lex-min cell)
+    findall(MnR-MxR-MnC-MxC,
+        (   between(1, NR, SR), between(1, NC, SC),
+            arc_grid_at(Grid, SR, SC, 2),
+            arc_w31_bfs2cc(Grid, NR, NC, [SR-SC], [SR-SC], Comp),
+            sort(Comp, SComp), SComp = [SR-SC|_],
+            length(SComp, Sz), Sz >= 2,
+            findall(R3, member(R3-_, SComp), Rs3),
+            findall(C3, member(_-C3, SComp), Cs3),
+            min_list(Rs3, MnR), max_list(Rs3, MxR),
+            min_list(Cs3, MnC), max_list(Cs3, MxC)
+        ),
+        Clusters),
+% ERC rule requires at least one cluster
+    Clusters \= [],
+% ERC collect frame cells: one step outside each cluster's bbox, only in zero cells
+    findall(FR-FC,
+        (   member(MnR-MxR-MnC-MxC, Clusters),
+            FMnR is MnR-1, FMxR is MxR+1,
+            FMnC is MnC-1, FMxC is MxC+1,
+            between(FMnR, FMxR, FR), FR >= 1, FR =< NR,
+            between(FMnC, FMxC, FC), FC >= 1, FC =< NC,
+            (FR =:= FMnR ; FR =:= FMxR ; FC =:= FMnC ; FC =:= FMxC),
+            arc_grid_at(Grid, FR, FC, 0)
+        ),
+        Frames0),
+% ERC deduplicate frame list
+    sort(Frames0, Frames),
+% ERC rule requires frame cells to exist
+    Frames \= [],
+% ERC build output: original values retained; zero frame cells become 3
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([Row, RowOut]>>(
+        maplist([Col, Cel]>>(
+% ERC check if cell is a frame cell to fill with 3
+            arc_grid_at(Grid, Row, Col, Orig),
+            (   Orig \= 0 -> Cel = Orig
+            ;   memberchk(Row-Col, Frames) -> Cel = 3
+            ;   Cel = 0 )
+        ), AllCols, RowOut)
+    ), AllRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
