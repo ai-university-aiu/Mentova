@@ -8754,6 +8754,487 @@ arc_transform(fill_span_row_col_with_2, Grid, Result) :-
     ), Rs, Result).
 
 % ---------------------------------------------------------------------------
+% complete_4fold_symmetry — adds the 3 missing reflections of each non-zero
+% cell to achieve bilateral LR and TB symmetry around the bbox centre.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(complete_4fold_symmetry).
+% ERC
+arc_transform(complete_4fold_symmetry, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-C-V, (
+% ERC
+        member(R, Rs), member(C, Cs),
+% ERC
+        arc_grid_at(Grid, R, C, V), V =\= 0
+% ERC
+    ), NZCells),
+% ERC
+    NZCells \= [],
+% ERC
+    findall(Rx, member(Rx-_-_, NZCells), NZRs),
+% ERC
+    findall(Cx, member(_-Cx-_, NZCells), NZCs),
+% ERC
+    min_list(NZRs, BBR1), max_list(NZRs, BBR2),
+% ERC
+    min_list(NZCs, BBC1), max_list(NZCs, BBC2),
+% ERC
+    DimR is BBR2 - BBR1, DimC is BBC2 - BBC1,
+% ERC
+    DimR >= 2, DimC >= 2,
+% ERC
+    0 is DimR mod 2, 0 is DimC mod 2,
+% ERC
+    CenR is (BBR1 + BBR2) // 2,
+% ERC
+    CenC is (BBC1 + BBC2) // 2,
+% ERC
+    \+ (
+% ERC
+        member(R0-C0-V0, NZCells),
+% ERC
+        ( RefR0 = R0, RefC0 is 2*CenC - C0
+% ERC
+        ; RefR0 is 2*CenR - R0, RefC0 = C0
+% ERC
+        ; RefR0 is 2*CenR - R0, RefC0 is 2*CenC - C0
+% ERC
+        ),
+% ERC
+        RefR0 >= 1, RefR0 =< NR, RefC0 >= 1, RefC0 =< NC,
+% ERC
+        arc_grid_at(Grid, RefR0, RefC0, VRef0),
+% ERC
+        VRef0 =\= 0, VRef0 =\= V0
+% ERC
+    ),
+% ERC
+    findall(RR-RC-V, (
+% ERC
+        member(R-C-V, NZCells),
+% ERC
+        ( RR = R,             RC is 2*CenC - C
+% ERC
+        ; RR is 2*CenR - R,  RC = C
+% ERC
+        ; RR is 2*CenR - R,  RC is 2*CenC - C
+% ERC
+        ),
+% ERC
+        RR >= 1, RR =< NR, RC >= 1, RC =< NC,
+% ERC
+        arc_grid_at(Grid, RR, RC, 0)
+% ERC
+    ), ToAdd),
+% ERC
+    ToAdd \= [],
+% ERC
+    \+ (member(RA-CA-VA, ToAdd), member(RA-CA-VB, ToAdd), VA =\= VB),
+% ERC
+    !,
+% ERC
+    maplist([Row, OutRow]>>(
+% ERC
+        maplist([Col, OutV]>>(
+% ERC
+            ( once(member(Row-Col-AddV, ToAdd)) -> OutV = AddV
+% ERC
+            ; arc_grid_at(Grid, Row, Col, OutV)
+% ERC
+            )
+% ERC
+        ), Cs, OutRow)
+% ERC
+    ), Rs, Result).
+
+% ---------------------------------------------------------------------------
+% concentric_swap_expand — finds each bordered rectangle (outer ring colour B,
+% solid interior colour I), swaps B<->I inside it, and extends cross arms of
+% width IH (top/bottom) and IW (left/right) using colour B.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(concentric_swap_expand).
+% ERC
+arc_transform(concentric_swap_expand, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    arc_connected_components(Grid, Comps),
+% ERC
+    include([component(CB,_)]>>(CB =\= 0), Comps, NZComps),
+% ERC
+    findall(BR1-BR2-BC1-BC2-BB-BI, (
+% ERC
+        member(component(BB, BCells), NZComps),
+% ERC
+        arc_cse_bordered_rect(Grid, BB, BCells, BR1, BR2, BC1, BC2, BI)
+% ERC
+    ), Rects),
+% ERC
+    Rects \= [],
+% ERC
+    findall(PRow-PCol-PV, (
+% ERC
+        member(BR1-BR2-BC1-BC2-BB-BI, Rects),
+% ERC
+        arc_cse_paint_rect(BR1, BR2, BC1, BC2, BB, BI, NR, NC, PRow, PCol, PV)
+% ERC
+    ), Painted),
+% ERC
+    !,
+% ERC
+    maplist([Row, OutRow]>>(
+% ERC
+        maplist([Col, OutV]>>(
+% ERC
+            ( once(member(Row-Col-PV2, Painted)) -> OutV = PV2
+% ERC
+            ; arc_grid_at(Grid, Row, Col, OutV)
+% ERC
+            )
+% ERC
+        ), Cs, OutRow)
+% ERC
+    ), Rs, Result).
+
+% arc_cse_bordered_rect/8 — succeeds when component(B,Cells) is the outer
+% ring of a bounding rectangle whose interior is solidly colour I.
+% ERC
+arc_cse_bordered_rect(Grid, B, Cells, R1, R2, C1, C2, I) :-
+% ERC
+    findall(Rb, member(Rb-_, Cells), BRs),
+% ERC
+    findall(Cb, member(_-Cb, Cells), BCs),
+% ERC
+    min_list(BRs, R1), max_list(BRs, R2),
+% ERC
+    min_list(BCs, C1), max_list(BCs, C2),
+% ERC
+    R2 - R1 >= 2, C2 - C1 >= 2,
+% ERC
+    DimRb is R2 - R1, DimCb is C2 - C1,
+% ERC
+    ExpBorder is 2 * (DimRb + DimCb),
+% ERC
+    length(Cells, ExpBorder),
+% ERC
+    \+ (member(Ri-Ci, Cells), Ri > R1, Ri < R2, Ci > C1, Ci < C2),
+% ERC
+    numlist(R1, R2, AllRs2), numlist(C1, C2, AllCs2),
+% ERC
+    findall(Iv, (
+% ERC
+        member(Ri2, AllRs2), member(Ci2, AllCs2),
+% ERC
+        Ri2 > R1, Ri2 < R2, Ci2 > C1, Ci2 < C2,
+% ERC
+        arc_grid_at(Grid, Ri2, Ci2, Iv)
+% ERC
+    ), IVals),
+% ERC
+    sort(IVals, [I]),
+% ERC
+    I =\= 0, I =\= B.
+
+% arc_cse_paint_rect/11 — non-deterministically yields all (Row,Col,PV)
+% cells produced by swapping B<->I in the rectangle and painting the arms.
+% ERC
+arc_cse_paint_rect(R1, R2, C1, C2, B, I, NR, NC, Row, Col, PV) :-
+% ERC
+    IH is R2 - R1 - 1, IW is C2 - C1 - 1,
+% ERC
+    TAR is max(1, R1 - IH), R1m1 is R1 - 1,
+% ERC
+    BAR is min(NR, R2 + IH), R2p1 is R2 + 1,
+% ERC
+    LAC is max(1, C1 - IW), C1m1 is C1 - 1,
+% ERC
+    RAC is min(NC, C2 + IW), C2p1 is C2 + 1,
+% ERC
+    ( between(R1, R2, Row), between(C1, C2, Col),
+% ERC
+      ( (Row =:= R1 ; Row =:= R2 ; Col =:= C1 ; Col =:= C2) -> PV = I ; PV = B )
+% ERC
+    ; TAR =< R1m1, between(TAR, R1m1, Row), between(C1, C2, Col), PV = B
+% ERC
+    ; R2p1 =< BAR, between(R2p1, BAR, Row), between(C1, C2, Col), PV = B
+% ERC
+    ; LAC =< C1m1, between(R1, R2, Row), between(LAC, C1m1, Col), PV = B
+% ERC
+    ; C2p1 =< RAC, between(R1, R2, Row), between(C2p1, RAC, Col), PV = B
+% ERC
+    ).
+
+% ---------------------------------------------------------------------------
+% stamp_key_at_8_clones — the non-8 non-zero cells form a key shape; each
+% connected component of 8-cells has the same normalised shape as the key;
+% the key is stamped at every clone position and the original key is cleared.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(stamp_key_at_8_clones).
+% ERC
+arc_transform(stamp_key_at_8_clones, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    findall(R-C-V, (
+% ERC
+        member(R, Rs), member(C, Cs),
+% ERC
+        arc_grid_at(Grid, R, C, V), V =\= 0, V =\= 8
+% ERC
+    ), KeyCells),
+% ERC
+    KeyCells \= [],
+% ERC
+    findall(R-C, (
+% ERC
+        member(R, Rs), member(C, Cs),
+% ERC
+        arc_grid_at(Grid, R, C, 8)
+% ERC
+    ), EightCells),
+% ERC
+    EightCells \= [],
+% ERC
+    findall(KRx, member(KRx-_-_, KeyCells), KRs),
+% ERC
+    findall(KCx, member(_-KCx-_, KeyCells), KCs),
+% ERC
+    min_list(KRs, KMinR), min_list(KCs, KMinC),
+% ERC
+    findall(DR-DC-V, (
+% ERC
+        member(R-C-V, KeyCells),
+% ERC
+        DR is R - KMinR, DC is C - KMinC
+% ERC
+    ), KeyNorm0),
+% ERC
+    msort(KeyNorm0, KeyNorm),
+% ERC
+    findall(DR-DC, member(DR-DC-_, KeyNorm), KeyPosOnly0),
+% ERC
+    sort(KeyPosOnly0, KeyPosSorted),
+% ERC
+    arc_ska_ccs(EightCells, EightCCs),
+% ERC
+    findall(MinR-MinC, (
+% ERC
+        member(CC, EightCCs),
+% ERC
+        findall(Rc, member(Rc-_, CC), CCRs),
+% ERC
+        findall(Cc, member(_-Cc, CC), CCCs),
+% ERC
+        min_list(CCRs, MinR), min_list(CCCs, MinC),
+% ERC
+        findall(DR2-DC2, (
+% ERC
+            member(R2-C2, CC),
+% ERC
+            DR2 is R2 - MinR, DC2 is C2 - MinC
+% ERC
+        ), CCNorm0),
+% ERC
+        sort(CCNorm0, CCNorm),
+% ERC
+        CCNorm = KeyPosSorted
+% ERC
+    ), StampPositions),
+% ERC
+    length(EightCCs, NCC), length(StampPositions, NCC),
+% ERC
+    findall(SRow-SCol-SV, (
+% ERC
+        member(MinR-MinC, StampPositions),
+% ERC
+        member(DR-DC-SV, KeyNorm),
+% ERC
+        SRow is MinR + DR, SCol is MinC + DC
+% ERC
+    ), Stamped),
+% ERC
+    !,
+% ERC
+    maplist([Row, OutRow]>>(
+% ERC
+        maplist([Col, OutV]>>(
+% ERC
+            ( once(member(Row-Col-SV2, Stamped)) -> OutV = SV2
+% ERC
+            ; memberchk(Row-Col, EightCells)    -> OutV = 0
+% ERC
+            ; member(Row-Col-_, KeyCells)       -> OutV = 0
+% ERC
+            ; arc_grid_at(Grid, Row, Col, OutV)
+% ERC
+            )
+% ERC
+        ), Cs, OutRow)
+% ERC
+    ), Rs, Result).
+
+% arc_ska_ccs/2 — partition a list of R-C positions into 4-connected
+% components using BFS.
+% ERC
+arc_ska_ccs([], []).
+% ERC
+arc_ska_ccs([H|T], [Comp|Rest]) :-
+% ERC
+    arc_ska_bfs([H], T, Comp, Remaining),
+% ERC
+    arc_ska_ccs(Remaining, Rest).
+
+% ERC
+arc_ska_bfs([], Rem, [], Rem).
+% ERC
+arc_ska_bfs([R-C|Queue], Unvis, [R-C|RestComp], FinalRem) :-
+% ERC
+    include([NR-NC]>>(
+% ERC
+        ( NR is R-1, NC is C ; NR is R+1, NC is C
+% ERC
+        ; NR is R,   NC is C-1 ; NR is R, NC is C+1 )
+% ERC
+    ), Unvis, Nbrs),
+% ERC
+    subtract(Unvis, Nbrs, NewUnvis),
+% ERC
+    append(Queue, Nbrs, NewQueue),
+% ERC
+    arc_ska_bfs(NewQueue, NewUnvis, RestComp, FinalRem).
+
+% ---------------------------------------------------------------------------
+% fill_periodic_holes_2d — grid has 0-holes in a 2-D periodic tiling;
+% find the minimum period (PR x PC) consistent with all non-zero cells and
+% covering all period slots, then fill 0s from the period map.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(fill_periodic_holes_2d).
+% ERC
+arc_transform(fill_periodic_holes_2d, Grid, Result) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs), numlist(1, NC, Cs),
+% ERC
+    once((member(R0, Rs), member(C0, Cs), arc_grid_at(Grid, R0, C0, 0))),
+% ERC
+    once((
+% ERC
+        member(PR, [2,3,4,5,6,7,8,9,10]),
+% ERC
+        member(PC, [2,3,4,5,6,7,8,9,10]),
+% ERC
+        arc_ph2d_valid(Grid, Rs, Cs, PR, PC)
+% ERC
+    )),
+% ERC
+    arc_ph2d_build_map(Grid, Rs, Cs, PR, PC, PeriodMap),
+% ERC
+    !,
+% ERC
+    maplist([Row, OutRow]>>(
+% ERC
+        maplist([Col, OutV]>>(
+% ERC
+            arc_grid_at(Grid, Row, Col, CV),
+% ERC
+            ( CV =\= 0 -> OutV = CV
+% ERC
+            ; PRi is (Row-1) mod PR, PCi is (Col-1) mod PC,
+% ERC
+              once(member(PRi-PCi-MV, PeriodMap)),
+% ERC
+              OutV = MV
+% ERC
+            )
+% ERC
+        ), Cs, OutRow)
+% ERC
+    ), Rs, Result).
+
+% arc_ph2d_valid/5 — true when period (PR,PC) is consistent with all
+% non-zero cells and covers every slot in the PR x PC period tile.
+% ERC
+arc_ph2d_valid(Grid, Rs, Cs, PR, PC) :-
+% ERC
+    findall(PRi-PCi-V, (
+% ERC
+        member(R, Rs), member(C, Cs),
+% ERC
+        arc_grid_at(Grid, R, C, V), V =\= 0,
+% ERC
+        PRi is (R-1) mod PR, PCi is (C-1) mod PC
+% ERC
+    ), Entries),
+% ERC
+    sort(Entries, Sorted),
+% ERC
+    arc_ph2d_no_conflicts(Sorted),
+% ERC
+    findall(PRi2-PCi2, member(PRi2-PCi2-_, Sorted), PosPairs),
+% ERC
+    sort(PosPairs, UniqPos),
+% ERC
+    length(UniqPos, PeriodSize),
+% ERC
+    PeriodSize is PR * PC.
+
+% arc_ph2d_no_conflicts/1 — fails if any two adjacent sorted entries have
+% the same period position but different values.
+% ERC
+arc_ph2d_no_conflicts([]).
+% ERC
+arc_ph2d_no_conflicts([_]).
+% ERC
+arc_ph2d_no_conflicts([P1-P2-V1, P1-P2-V2 | Rest]) :-
+% ERC
+    V1 =:= V2,
+% ERC
+    arc_ph2d_no_conflicts([P1-P2-V2 | Rest]).
+% ERC
+arc_ph2d_no_conflicts([P1-P2-_ | [Q1-Q2-V2 | Rest]]) :-
+% ERC
+    ( P1 \= Q1 ; P2 \= Q2 ),
+% ERC
+    arc_ph2d_no_conflicts([Q1-Q2-V2 | Rest]).
+
+% arc_ph2d_build_map/6 — build deduplicated period map from non-zero cells.
+% ERC
+arc_ph2d_build_map(Grid, Rs, Cs, PR, PC, PeriodMap) :-
+% ERC
+    findall(PRi-PCi-V, (
+% ERC
+        member(R, Rs), member(C, Cs),
+% ERC
+        arc_grid_at(Grid, R, C, V), V =\= 0,
+% ERC
+        PRi is (R-1) mod PR, PCi is (C-1) mod PC
+% ERC
+    ), Entries),
+% ERC
+    sort(Entries, PeriodMap).
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
