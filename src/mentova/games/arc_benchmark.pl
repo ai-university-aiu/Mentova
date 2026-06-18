@@ -15523,6 +15523,779 @@ arc_transform(fill_row_gap_ones, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 30 HELPERS: Chebyshev-2 connected components
+% arc_cheby2_cc/2  — partition a cell list into Cheby-2 components.
+% arc_cheby2_expand/4 — BFS worker for arc_cheby2_cc.
+% ---------------------------------------------------------------------------
+
+% ERC
+arc_cheby2_cc([], []).
+% ERC
+arc_cheby2_cc([Seed|Rest], [Comp|More]) :-
+% ERC
+    arc_cheby2_expand([Seed], Rest, Comp, Remaining),
+% ERC
+    arc_cheby2_cc(Remaining, More).
+
+% ERC
+arc_cheby2_expand([], Unvis, [], Unvis).
+% ERC
+arc_cheby2_expand([H|T], Unvis, [H|Rest], Rem) :-
+% ERC
+    H = R-C,
+% ERC
+    include([R2-C2]>>(DR is abs(R2-R), DC is abs(C2-C),
+                      max(DR, DC) =< 2),
+            Unvis, Nbrs),
+% ERC
+    exclude([X]>>(memberchk(X, Nbrs)), Unvis, NotNbrs),
+% ERC
+    append(T, Nbrs, Q0),
+% ERC
+    sort(Q0, Q),
+% ERC
+    arc_cheby2_expand(Q, NotNbrs, Rest, Rem).
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 1: fill_2cluster_bbox_with_4 (36fdfd69)
+% Chebyshev-2 clusters of 2-cells: fill non-zero, non-2 cells within
+% each cluster's bounding box with color 4.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(fill_2cluster_bbox_with_4).
+% ERC
+arc_transform(fill_2cluster_bbox_with_4, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols),
+                  arc_grid_at(Grid, R, C, 2)), Twos),
+% ERC
+    Twos \= [],
+% ERC
+    arc_cheby2_cc(Twos, Comps),
+% ERC
+    findall(R-C, (
+% ERC
+        member(Comp, Comps),
+% ERC
+        findall(Rr, member(Rr-_, Comp), Rs),
+% ERC
+        findall(Cc, member(_-Cc, Comp), Cs),
+% ERC
+        arc_min_list(Rs, MinR), arc_max_list(Rs, MaxR),
+% ERC
+        arc_min_list(Cs, MinC), arc_max_list(Cs, MaxC),
+% ERC
+        between(MinR, MaxR, R),
+% ERC
+        between(MinC, MaxC, C),
+% ERC
+        arc_grid_at(Grid, R, C, V), V \= 0, V \= 2
+% ERC
+    ), Fill0),
+% ERC
+    sort(Fill0, Fill),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( memberchk(R-C, Fill) -> Cel = 4 ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 2: reflect_fives_through_2frame (6855a6e4)
+% 5-cell clusters outside a rectangular 2-frame reflect through nearest wall.
+% Reflection formula: reflected_coord = 2 * wall_coord - original_coord.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(reflect_fives_through_2frame).
+% ERC
+arc_transform(reflect_fives_through_2frame, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols),
+                  arc_grid_at(Grid, R, C, 2)), Twos),
+% ERC
+    Twos \= [],
+% ERC
+    findall(R, member(R-_, Twos), TRs),
+% ERC
+    findall(C, member(_-C, Twos), TCs),
+% ERC
+    arc_min_list(TRs, FrMinR), arc_max_list(TRs, FrMaxR),
+% ERC
+    arc_min_list(TCs, FrMinC), arc_max_list(TCs, FrMaxC),
+% ERC
+    arc_connected_components(Grid, AllComps),
+% ERC
+    findall(component(5, Cells), member(component(5, Cells), AllComps), FiveComps),
+% ERC
+    FiveComps \= [],
+% ERC
+    findall(NewR-NewC, (
+% ERC
+        member(component(5, Cells), FiveComps),
+% ERC
+        findall(Rr, member(Rr-_, Cells), CRs),
+% ERC
+        findall(Cc, member(_-Cc, Cells), CCs_),
+% ERC
+        arc_min_list(CRs, MinR5), arc_max_list(CRs, MaxR5),
+% ERC
+        arc_max_list(CCs_, MaxC5),
+% ERC
+        member(R0-C0, Cells),
+% ERC
+        ( MaxR5 < FrMinR ->
+% ERC
+            NewR is 2*FrMinR - R0, NewC = C0,
+% ERC
+            NewR >= 1, NewR =< NR
+% ERC
+        ; MinR5 > FrMaxR ->
+% ERC
+            NewR is 2*FrMaxR - R0, NewC = C0,
+% ERC
+            NewR >= 1, NewR =< NR
+% ERC
+        ; MaxC5 < FrMinC ->
+% ERC
+            NewC is 2*FrMinC - C0, NewR = R0,
+% ERC
+            NewC >= 1, NewC =< NC
+% ERC
+        ;
+% ERC
+            NewC is 2*FrMaxC - C0, NewR = R0,
+% ERC
+            NewC >= 1, NewC =< NC
+% ERC
+        )
+% ERC
+    ), NewPos0),
+% ERC
+    sort(NewPos0, NewPos),
+% ERC
+    findall(R-C,
+            (member(component(5, Cells), FiveComps), member(R-C, Cells)),
+            Erase0),
+% ERC
+    sort(Erase0, Erase),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( memberchk(R-C, NewPos) -> Cel = 5
+% ERC
+            ; memberchk(R-C, Erase) -> Cel = 0
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 3: replace_1s_in_8bbox_with_3 (32597951)
+% Find the bounding box of all 8-cells; replace every 1-cell inside with 3.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(replace_1s_in_8bbox_with_3).
+% ERC
+arc_transform(replace_1s_in_8bbox_with_3, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols),
+                  arc_grid_at(Grid, R, C, 8)), Eights),
+% ERC
+    Eights \= [],
+% ERC
+    findall(R, member(R-_, Eights), ERs8),
+% ERC
+    findall(C, member(_-C, Eights), ECs8),
+% ERC
+    arc_min_list(ERs8, MinR8), arc_max_list(ERs8, MaxR8),
+% ERC
+    arc_min_list(ECs8, MinC8), arc_max_list(ECs8, MaxC8),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( Orig =:= 1, R >= MinR8, R =< MaxR8,
+% ERC
+              C >= MinC8, C =< MaxC8 ->
+% ERC
+                Cel = 3
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 4: add_3border_4fill_to_6shapes (543a7ed5)
+% For each 4-connected 6-region: draw a 3-border 1 cell outside its bbox,
+% and fill any 8-cells inside the bbox with 4.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(add_3border_4fill_to_6shapes).
+% ERC
+arc_transform(add_3border_4fill_to_6shapes, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    arc_connected_components(Grid, AllComps6),
+% ERC
+    findall(component(6, Cells), member(component(6, Cells), AllComps6), SixComps),
+% ERC
+    SixComps \= [],
+% ERC
+    findall(R-C, (
+% ERC
+        member(component(6, Cells), SixComps),
+% ERC
+        findall(Rr, member(Rr-_, Cells), Rs6),
+% ERC
+        findall(Cc, member(_-Cc, Cells), Cs6),
+% ERC
+        arc_min_list(Rs6, MinR6), arc_max_list(Rs6, MaxR6),
+% ERC
+        arc_min_list(Cs6, MinC6), arc_max_list(Cs6, MaxC6),
+% ERC
+        B1R is MinR6 - 1, B2R is MaxR6 + 1,
+% ERC
+        B1C is MinC6 - 1, B2C is MaxC6 + 1,
+% ERC
+        between(B1R, B2R, R), R >= 1, R =< NR,
+% ERC
+        between(B1C, B2C, C), C >= 1, C =< NC,
+% ERC
+        ( R =:= B1R ; R =:= B2R ; C =:= B1C ; C =:= B2C ),
+% ERC
+        arc_grid_at(Grid, R, C, Bv), Bv \= 6
+% ERC
+    ), Border0),
+% ERC
+    sort(Border0, Border),
+% ERC
+    findall(R-C, (
+% ERC
+        member(component(6, Cells), SixComps),
+% ERC
+        findall(Rr, member(Rr-_, Cells), Rs6b),
+% ERC
+        findall(Cc, member(_-Cc, Cells), Cs6b),
+% ERC
+        arc_min_list(Rs6b, MinR6b), arc_max_list(Rs6b, MaxR6b),
+% ERC
+        arc_min_list(Cs6b, MinC6b), arc_max_list(Cs6b, MaxC6b),
+% ERC
+        between(MinR6b, MaxR6b, R),
+% ERC
+        between(MinC6b, MaxC6b, C),
+% ERC
+        arc_grid_at(Grid, R, C, 8)
+% ERC
+    ), Interior0),
+% ERC
+    sort(Interior0, Interior),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( memberchk(R-C, Interior) -> Cel = 4
+% ERC
+            ; memberchk(R-C, Border) -> Cel = 3
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 5: complete_band_through_crossing (ba97ae07)
+% Row or column containing exactly 2 non-zero colors: the majority color
+% fills all cells holding the minority color.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(complete_band_through_crossing).
+% ERC
+arc_transform(complete_band_through_crossing, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C-Dom, (
+% ERC
+        member(R, AllRows),
+% ERC
+        findall(V, (member(Cc, AllCols),
+                    arc_grid_at(Grid, R, Cc, V), V \= 0), RowVals),
+% ERC
+        RowVals \= [],
+% ERC
+        sort(RowVals, UniqRV), UniqRV = [V1, V2],
+% ERC
+        aggregate_all(count, member(V1, RowVals), N1),
+% ERC
+        aggregate_all(count, member(V2, RowVals), N2),
+% ERC
+        N1 \= N2,
+% ERC
+        ( N1 > N2 -> Dom = V1, Min = V2 ; Dom = V2, Min = V1 ),
+% ERC
+        member(C, AllCols),
+% ERC
+        arc_grid_at(Grid, R, C, Min)
+% ERC
+    ), RowFixes0),
+% ERC
+    findall(R-C-Dom, (
+% ERC
+        member(C, AllCols),
+% ERC
+        findall(V, (member(Rr, AllRows),
+                    arc_grid_at(Grid, Rr, C, V), V \= 0), ColVals),
+% ERC
+        ColVals \= [],
+% ERC
+        sort(ColVals, UniqCV), UniqCV = [W1, W2],
+% ERC
+        aggregate_all(count, member(W1, ColVals), M1),
+% ERC
+        aggregate_all(count, member(W2, ColVals), M2),
+% ERC
+        M1 \= M2,
+% ERC
+        ( M1 > M2 -> Dom = W1, MinW = W2 ; Dom = W2, MinW = W1 ),
+% ERC
+        member(R, AllRows),
+% ERC
+        arc_grid_at(Grid, R, C, MinW)
+% ERC
+    ), ColFixes0),
+% ERC
+    sort(RowFixes0, RowFixes),
+% ERC
+    sort(ColFixes0, ColFixes),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( once(member(R-C-Dom, ColFixes)) -> Cel = Dom
+% ERC
+            ; once(member(R-C-Dom, RowFixes)) -> Cel = Dom
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 6: shoot_isolated_into_8block (1f642eb9)
+% Isolated non-8 cells shoot a ray toward the rectangular 8-block and
+% color the first 8-cell they hit with their own color.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(shoot_isolated_into_8block).
+% ERC
+arc_transform(shoot_isolated_into_8block, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols),
+                  arc_grid_at(Grid, R, C, 8)), Eights),
+% ERC
+    Eights \= [],
+% ERC
+    findall(R, member(R-_, Eights), EightRs),
+% ERC
+    findall(C, member(_-C, Eights), EightCs),
+% ERC
+    arc_min_list(EightRs, MinR8), arc_max_list(EightRs, MaxR8),
+% ERC
+    arc_min_list(EightCs, MinC8), arc_max_list(EightCs, MaxC8),
+% ERC
+    findall(IR-IC-V, (member(IR, AllRows), member(IC, AllCols),
+                      arc_grid_at(Grid, IR, IC, V), V \= 0, V \= 8), Isolated),
+% ERC
+    findall(TR-TC-V, (
+% ERC
+        member(IR-IC-V, Isolated),
+% ERC
+        IR >= MinR8, IR =< MaxR8, IC < MinC8,
+% ERC
+        once((between(MinC8, MaxC8, TC),
+              arc_grid_at(Grid, IR, TC, 8))),
+% ERC
+        TR = IR
+% ERC
+    ), Shots1),
+% ERC
+    findall(TR-TC-V, (
+% ERC
+        member(IR-IC-V, Isolated),
+% ERC
+        IR >= MinR8, IR =< MaxR8, IC > MaxC8,
+% ERC
+        once((between(MinC8, MaxC8, T0),
+              TC is MaxC8 - T0 + MinC8,
+              arc_grid_at(Grid, IR, TC, 8))),
+% ERC
+        TR = IR
+% ERC
+    ), Shots2),
+% ERC
+    findall(TR-TC-V, (
+% ERC
+        member(IR-IC-V, Isolated),
+% ERC
+        IC >= MinC8, IC =< MaxC8, IR < MinR8,
+% ERC
+        once((between(MinR8, MaxR8, TR),
+              arc_grid_at(Grid, TR, IC, 8))),
+% ERC
+        TC = IC
+% ERC
+    ), Shots3),
+% ERC
+    findall(TR-TC-V, (
+% ERC
+        member(IR-IC-V, Isolated),
+% ERC
+        IC >= MinC8, IC =< MaxC8, IR > MaxR8,
+% ERC
+        once((between(MinR8, MaxR8, T0r),
+              TR is MaxR8 - T0r + MinR8,
+              arc_grid_at(Grid, TR, IC, 8))),
+% ERC
+        TC = IC
+% ERC
+    ), Shots4),
+% ERC
+    append(Shots1, Shots2, Shots12),
+% ERC
+    append(Shots12, Shots3, Shots123),
+% ERC
+    append(Shots123, Shots4, AllShots0),
+% ERC
+    sort(AllShots0, AllShots),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( once(member(R-C-Sv, AllShots)) -> Cel = Sv
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 7: extend_marker_from_arrow (25d487eb)
+% Marker = unique color with exactly 1 cell.  Arrow = color with most cells.
+% Extend the marker in the direction AWAY from the arrow, filling 0-cells.
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(extend_marker_from_arrow).
+% ERC
+arc_transform(extend_marker_from_arrow, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V, (member(R, AllRows), member(C, AllCols),
+                arc_grid_at(Grid, R, C, V), V \= 0), NzVals),
+% ERC
+    msort(NzVals, NzSorted),
+% ERC
+    sort(NzSorted, [MV1, MV2]),
+% ERC
+    aggregate_all(count, member(MV1, NzSorted), CNT1),
+% ERC
+    aggregate_all(count, member(MV2, NzSorted), CNT2),
+% ERC
+    ( CNT1 =:= 1 -> MarkerVal = MV1, ArrowVal = MV2
+% ERC
+    ; CNT2 =:= 1 -> MarkerVal = MV2, ArrowVal = MV1
+% ERC
+    ; fail ),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols),
+                  arc_grid_at(Grid, R, C, MarkerVal)), [MR-MC]),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols),
+                  arc_grid_at(Grid, R, C, ArrowVal)), ArrowCells),
+% ERC
+    findall(R, member(R-_, ArrowCells), ARs),
+% ERC
+    findall(C, member(_-C, ArrowCells), ACs),
+% ERC
+    arc_min_list(ARs, MinAR), arc_max_list(ARs, MaxAR),
+% ERC
+    arc_min_list(ACs, MinAC), arc_max_list(ACs, MaxAC),
+% ERC
+    sumlist(ARs, SumAR), sumlist(ACs, SumAC),
+% ERC
+    length(ArrowCells, NA),
+% ERC
+    DR is SumAR - MR * NA,
+% ERC
+    DC is SumAC - MC * NA,
+% ERC
+    AbsDR is abs(DR), AbsDC is abs(DC),
+% ERC
+    findall(NR2-NC2, (
+% ERC
+        ( AbsDC >= AbsDR ->
+% ERC
+            ( DC > 0 ->
+% ERC
+                Ext1 is MaxAC + 1,
+% ERC
+                between(Ext1, NC, NC2), NR2 = MR,
+% ERC
+                arc_grid_at(Grid, NR2, NC2, 0)
+% ERC
+            ;
+% ERC
+                Ext2 is MinAC - 1,
+% ERC
+                between(1, Ext2, T0ac), NC2 is Ext2 - T0ac + 1, NR2 = MR,
+% ERC
+                arc_grid_at(Grid, NR2, NC2, 0)
+% ERC
+            )
+% ERC
+        ;
+% ERC
+            ( DR > 0 ->
+% ERC
+                Ext3 is MaxAR + 1,
+% ERC
+                between(Ext3, NR, NR2), NC2 = MC,
+% ERC
+                arc_grid_at(Grid, NR2, NC2, 0)
+% ERC
+            ;
+% ERC
+                Ext4 is MinAR - 1,
+% ERC
+                between(1, Ext4, T0ar), NR2 is Ext4 - T0ar + 1, NC2 = MC,
+% ERC
+                arc_grid_at(Grid, NR2, NC2, 0)
+% ERC
+            )
+% ERC
+        )
+% ERC
+    ), NewCells0),
+% ERC
+    sort(NewCells0, NewCells),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( memberchk(R-C, NewCells) -> Cel = MarkerVal
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 8: fill_8block_by_quadrant (d89b689b)
+% Isolated non-8 cells are erased; each places its color at the 8-block
+% corner nearest to its quadrant (top-left, top-right, bottom-left, etc.).
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(fill_8block_by_quadrant).
+% ERC
+arc_transform(fill_8block_by_quadrant, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (member(R, AllRows), member(C, AllCols),
+                  arc_grid_at(Grid, R, C, 8)), Eights8),
+% ERC
+    Eights8 \= [],
+% ERC
+    findall(R, member(R-_, Eights8), ERs8b),
+% ERC
+    findall(C, member(_-C, Eights8), ECs8b),
+% ERC
+    arc_min_list(ERs8b, MinR8b), arc_max_list(ERs8b, MaxR8b),
+% ERC
+    arc_min_list(ECs8b, MinC8b), arc_max_list(ECs8b, MaxC8b),
+% ERC
+    CenRx2 is MinR8b + MaxR8b,
+% ERC
+    CenCx2 is MinC8b + MaxC8b,
+% ERC
+    findall(IR-IC-V, (member(IR, AllRows), member(IC, AllCols),
+                      arc_grid_at(Grid, IR, IC, V), V \= 0, V \= 8), Isolated8),
+% ERC
+    findall(TR-TC-V, (
+% ERC
+        member(IR-IC-V, Isolated8),
+% ERC
+        ( 2*IR < CenRx2 -> TR = MinR8b ; TR = MaxR8b ),
+% ERC
+        ( 2*IC < CenCx2 -> TC = MinC8b ; TC = MaxC8b )
+% ERC
+    ), Corners0),
+% ERC
+    sort(Corners0, Corners),
+% ERC
+    findall(IR-IC, member(IR-IC-_, Isolated8), EraseIso),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( once(member(R-C-Cv, Corners)) -> Cel = Cv
+% ERC
+            ; memberchk(R-C, EraseIso) -> Cel = 0
+% ERC
+            ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 30 RULE 9: remove_stray_cells (7f4411dc)
+% Remove any non-zero cell that has fewer than 2 same-color orthogonal
+% neighbors (single pass using the original grid).
+% ---------------------------------------------------------------------------
+% ERC
+arc_named_rule(remove_stray_cells).
+% ERC
+arc_transform(remove_stray_cells, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R-C, (
+% ERC
+        member(R, AllRows), member(C, AllCols),
+% ERC
+        arc_grid_at(Grid, R, C, V), V \= 0,
+% ERC
+        findall(_, (
+% ERC
+            member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+% ERC
+            NR2 is R + DR, NC2 is C + DC,
+% ERC
+            NR2 >= 1, NR2 =< NR, NC2 >= 1, NC2 =< NC,
+% ERC
+            arc_grid_at(Grid, NR2, NC2, V)
+% ERC
+        ), Nbrs),
+% ERC
+        length(Nbrs, NNbrs), NNbrs < 2
+% ERC
+    ), Erase9),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cel]>>(
+% ERC
+            arc_grid_at(Grid, R, C, Orig),
+% ERC
+            ( memberchk(R-C, Erase9) -> Cel = 0 ; Cel = Orig )
+% ERC
+        ), AllCols, Row)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
