@@ -1022,6 +1022,39 @@ What was learned: the zero-cross quadrant rule confirms that structural dividers
 New tasks solved by wave 23 (8 new tasks): f25ffba3 (mirror_bottom_to_top), a87f7484 (pick_densest_3x3_block), e3497940 (fold_at_5_col_mirror), 88a62173 (unique_quadrant_at_zero_cross), d10ecb37 (extract_2x2_rotation_seed), cf98881b (overlay_sep2_three_sections), ba26e723 (mark_weave_junctions_6), db3e9e38 (expand_7line_fan_8).
 
 
+ATTEMPT 24: WAVE 24 - EIGHT NEW STRUCTURAL RULES - 202 / 400 = 50.50%
+
+Date: 2026-06-17.
+
+Score: 202 / 400 = 50.50%.
+
+New tasks: +8 (from 194 to 202).
+
+What changed: Wave 24 added eight new named rules to the library. All eight were Python-verified on training and test pairs before Prolog implementation.
+
+The eight new rules added in wave 24:
+
+mark_u_shape_bases_4 (task 54d82841) - scans all pairs of adjacent rows for a 3-wide U-shape: the top row has three consecutive cells of the same non-zero value V, and the row below has the flanking cells equal to V with the center cell equal to 0. For each such U-shape found, the rule places value 4 at the last row of the grid at the U-shape's center column. Multiple U-shapes can be found and all their center columns are marked.
+
+connected_8_path_between_2x2_blocks (task 239be575) - locates exactly two non-overlapping 2x2 blocks of 2-valued cells in the grid. Finds all 8-valued cells orthogonally adjacent to each block. Runs a BFS through 8-valued cells starting from the cells adjacent to block 1. If any cell adjacent to block 2 is reached, the output is [[8]]; otherwise the output is [[0]].
+
+find_3x3_frame_interior_value (task d9fac9be) - scans for a 3x3 subgrid where all 8 border cells share one value V (V greater than 0) and the center cell has a different value Interior. Returns [[Interior]]. This detects a hollow square frame with a single enclosed value.
+
+sort_rows_by_nz_right_align (task beb8660c) - for each row collects its non-zero values in left-to-right order. Sorts all rows by their non-zero cell count in ascending order. Rebuilds the output grid with the sorted rows, each right-aligned: zero-padded on the left, non-zero values at the right end.
+
+count_2x2_blocks_to_checkerboard (task ff28f65a) - counts N non-overlapping 2x2 blocks of 2-valued cells using a greedy left-to-right, top-to-bottom scan with overlap deduplication. Returns a 3x3 grid with 1s placed at the first N positions of the diagonal checkerboard sequence: (1,1), (1,3), (2,2), (3,1), (3,3). This encodes the block count visually.
+
+tile_2x_zero_to_8_by_column (task f5b8619d) - tiles the input 2 times in both the horizontal and vertical directions to produce a grid of double the dimensions. For each zero cell in the tiled result, examines the corresponding original column: if that column had any non-zero value in the original grid, the zero is replaced with 8. Columns that were entirely zero in the original remain zero throughout the output.
+
+find_most_impure_region (task de1cd16c) - identifies the least-frequent non-zero value as the impurity color. For each remaining dominant color, finds its bounding rectangle (the tightest axis-aligned rectangle containing all cells of that color) and counts how many impurity cells fall inside that rectangle. Returns [[dominant_color]] for the dominant color whose bounding rectangle contains the most impurity cells.
+
+fan_inner_value_upward (task b8cdaf2b) - preserves the bottom two rows of the grid unchanged. The outer value Vout is the value at column 1 of the bottom row. The inner value Vin occupies a contiguous block spanning columns InL through InR in the bottom row. For each free row R above the preserved structure, at step distance k = (NR minus 1) minus R, places Vin at columns InL minus k and InR plus k (when those columns are within grid bounds). All other free-row cells are zero.
+
+What was learned: wave 24 demonstrates that connectivity checks (BFS through a single color) and structural counting (2x2 block enumeration encoding as a checkerboard) are both tractable as named glass-box rules. The right-alignment sort rule confirms that spatial arrangement (not just value identity) carries task-relevant information in ARC grids. The impurity-region detector shows that bounding-box reasoning over colored regions, combined with frequency-based outlier detection, generalizes across multi-region layouts.
+
+New tasks solved by wave 24 (8 new tasks): 54d82841 (mark_u_shape_bases_4), 239be575 (connected_8_path_between_2x2_blocks), d9fac9be (find_3x3_frame_interior_value), beb8660c (sort_rows_by_nz_right_align), ff28f65a (count_2x2_blocks_to_checkerboard), f5b8619d (tile_2x_zero_to_8_by_column), de1cd16c (find_most_impure_region), b8cdaf2b (fan_inner_value_upward).
+
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -1098,10 +1131,12 @@ Run 35: 178 / 400 = 44.50% - Wave 21: eight new rules (rectangular_spiral, most_
 
 Run 36: 186 / 400 = 46.50% - Wave 22: eight new rules (tile_at_majority_positions, tile_nz_blocks, staircase_diagonal_tile, fold_corners_strip, tile_shape_1x2, count_cells_to_row, periodic_missing_patch, halve_exact_tile_2x). Plus 8 tasks.
 
-Run 37: 194 / 400 = 48.50% - Wave 23: eight new rules (mirror_bottom_to_top, pick_densest_3x3_block, fold_at_5_col_mirror, unique_quadrant_at_zero_cross, extract_2x2_rotation_seed, overlay_sep2_three_sections, mark_weave_junctions_6, expand_7line_fan_8). Plus 8 tasks. (CURRENT BEST)
+Run 37: 194 / 400 = 48.50% - Wave 23: eight new rules (mirror_bottom_to_top, pick_densest_3x3_block, fold_at_5_col_mirror, unique_quadrant_at_zero_cross, extract_2x2_rotation_seed, overlay_sep2_three_sections, mark_weave_junctions_6, expand_7line_fan_8). Plus 8 tasks.
+
+Run 38: 202 / 400 = 50.50% - Wave 24: eight new rules (mark_u_shape_bases_4, connected_8_path_between_2x2_blocks, find_3x3_frame_interior_value, sort_rows_by_nz_right_align, count_2x2_blocks_to_checkerboard, tile_2x_zero_to_8_by_column, find_most_impure_region, fan_inner_value_upward). Plus 8 tasks. (CURRENT BEST)
 
 
-ALL 194 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 202 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1166,6 +1201,8 @@ ALL 194 SOLVED TASKS AND THEIR GLASS-BOX RULES
 23581191 - draw_cross_with_intersection.
 
 23b5c85d - smallest_solid_rect.
+
+239be575 - connected_8_path_between_2x2_blocks.
 
 253bf280 - fill_between_8_row_col_pairs_with_3.
 
@@ -1260,6 +1297,8 @@ ALL 194 SOLVED TASKS AND THEIR GLASS-BOX RULES
 539a4f51 - staircase_diagonal_tile.
 
 5582e5ca - fill_with_mode.
+
+54d82841 - mark_u_shape_bases_4.
 
 5614dbcf - reduce_3x3_blocks_by_mode.
 
@@ -1403,6 +1442,8 @@ b548a754 - extend_rect_toward_8.
 
 b60334d2 - surround_5_with_cross_and_diag5.
 
+b8cdaf2b - fan_inner_value_upward.
+
 b91ae062 - scale_up_by_color_count.
 
 ba26e723 - mark_weave_junctions_6.
@@ -1416,6 +1457,8 @@ bd4472b8 - spread_row1_colors_below_5.
 bda2d7a6 - concentric_ring_cycle.
 
 bdad9b1f - extend_lines_4_intersection.
+
+beb8660c - sort_rows_by_nz_right_align.
 
 c3e719e8 - tile_at_majority_positions.
 
@@ -1451,6 +1494,8 @@ d631b094 - count_cells_to_row.
 
 d90796e8 - replace_3_2_pair_with_8.
 
+d9fac9be - find_3x3_frame_interior_value.
+
 dae9d2b5 - side_by_side_halves_or_to_6.
 
 db3e9e38 - expand_7line_fan_8.
@@ -1460,6 +1505,8 @@ dbc1a6ce - fill_between_1_row_col_pairs_with_8.
 dc1df850 - surround_2_with_1.
 
 dc433765 - slide_3_toward_4.
+
+de1cd16c - find_most_impure_region.
 
 ded97339 - connect_pairs_in_shared_row_or_col.
 
@@ -1483,6 +1530,8 @@ f25ffba3 - mirror_bottom_to_top.
 
 f2829549 - left_right_at_1col_sep_nor_to_3.
 
+f5b8619d - tile_2x_zero_to_8_by_column.
+
 f76d97a5 - swap_5_with_other.
 
 f9012d9b - periodic_missing_patch.
@@ -1491,10 +1540,12 @@ fafffa47 - top_bot_equal_halves_nor_to_2.
 
 feca6190 - diagonal_slide_row_up_right.
 
+ff28f65a - count_2x2_blocks_to_checkerboard.
+
 
 WHAT COMES NEXT
 
-The 239 remaining unsolved tasks cluster into recognizable categories.
+The 198 remaining unsolved tasks cluster into recognizable categories.
 
 The largest category (approximately 37% of failing tasks) requires identifying discrete connected-component objects and reasoning about their position, size, relationship, and movement relative to other objects.
 
