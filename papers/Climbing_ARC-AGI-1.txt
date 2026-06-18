@@ -1172,10 +1172,12 @@ Run 38: 202 / 400 = 50.50% - Wave 24: eight new rules (mark_u_shape_bases_4, con
 Run 39: 210 / 400 = 52.50% - Wave 25: eight new rules (fill_cells_plus5, pick_hollow_shape, most_frequent_3x3, fill_zigzag_4, value_to_pattern, five_column_rank, classify_4x4_blocks, block_grid_freq). Plus 8 tasks.
 
 Run 40: 219 / 400 = 54.75% - Wave 26: nine new rules (eight_cross_fixed_fill, hollow_1rect_to_6cross, container_fill_overflow, pointer_to_anchor, fill_largest_zero_rect_6, extract_3x3_around_8, move_blocks_up_by_height, extend_periodic_to_10, billiard_bounce). Plus 9 tasks.
-Run 41: 227 / 400 = 56.75% - Wave 27: eight new rules (crop_nonbg_bbox, tile_2x_diag_mark, sep_grid_propagate, extend_periodic_rows, half_bottom_to_8, snake_cols_to_3col, zigzag_extend_rows, pick_hsym_shape). Plus 8 tasks. (CURRENT BEST)
+Run 41: 227 / 400 = 56.75% - Wave 27: eight new rules (crop_nonbg_bbox, tile_2x_diag_mark, sep_grid_propagate, extend_periodic_rows, half_bottom_to_8, snake_cols_to_3col, zigzag_extend_rows, pick_hsym_shape). Plus 8 tasks.
+
+Run 42: 236 / 400 = 59.00% - Wave 28: eight new rules (fill_rect_frame_124, fill_two_rects_12, extract_largest_blob, stamp_plus_cardinal, hollow_sq_to_plus, reflect_8_by_4_arrow, complete_4fold_rot_sym, center_shape_at_3_anchor). Plus 9 tasks (extract_largest_blob solves two). (CURRENT BEST)
 
 
-ALL 210 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 236 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1631,10 +1633,28 @@ d8c310e9 - extend_periodic_rows.
 
 eb281b96 - zigzag_extend_rows.
 
+11852cab - complete_4fold_rot_sym.
+
+1f85a75f - extract_largest_blob.
+
+694f12f3 - fill_two_rects_12.
+
+760b3cac - reflect_8_by_4_arrow.
+
+a1570a43 - center_shape_at_3_anchor.
+
+b6afb2da - fill_rect_frame_124.
+
+be94b721 - extract_largest_blob.
+
+d364b489 - stamp_plus_cardinal.
+
+6c434453 - hollow_sq_to_plus.
+
 
 WHAT COMES NEXT
 
-The 181 remaining unsolved tasks cluster into recognizable categories.
+The 164 remaining unsolved tasks cluster into recognizable categories.
 
 The largest category (approximately 37% of failing tasks) requires identifying discrete connected-component objects and reasoning about their position, size, relationship, and movement relative to other objects.
 
