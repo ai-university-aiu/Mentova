@@ -13335,6 +13335,574 @@ arc_transform(billiard_bounce, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 27: Eight new rules targeting small unsolved tasks.
+% Solves: a740d043, 10fcaaa3, cbded52d, d8c310e9, ce9e57f2,
+%         cdecee7f, eb281b96, 72ca375d
+% ---------------------------------------------------------------------------
+
+% crop_nonbg_bbox (a740d043): find the most-frequent value as background,
+% crop the bounding box of all non-background cells, replace background with 0.
+% ERC
+arc_named_rule(crop_nonbg_bbox).
+% ERC
+arc_transform(crop_nonbg_bbox, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,V)), AllVals),
+% ERC
+    msort(AllVals, Sorted),
+% ERC
+    arc_w27_mode(Sorted, Bg),
+% ERC
+    findall(R, (member(R,AllRows),
+% ERC
+        once((member(C,AllCols), arc_grid_at(Grid,R,C,V0), V0 \= Bg))), NZRows),
+% ERC
+    NZRows \= [],
+% ERC
+    findall(C, (member(C,AllCols),
+% ERC
+        once((member(R,AllRows), arc_grid_at(Grid,R,C,V0), V0 \= Bg))), NZCols),
+% ERC
+    NZCols \= [],
+% ERC
+    min_list(NZRows, R0), max_list(NZRows, R1),
+% ERC
+    min_list(NZCols, C0), max_list(NZCols, C1),
+% ERC
+    numlist(R0, R1, OutRows), numlist(C0, C1, OutCols),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Cell]>>(
+% ERC
+            arc_grid_at(Grid,R,C,Vc),
+% ERC
+            (Vc =:= Bg -> Cell = 0 ; Cell = Vc)
+% ERC
+        ), OutCols, OutRow)
+% ERC
+    ), OutRows, Out),
+% ERC
+    !.
+
+% arc_w27_mode(+SortedList, -Mode): returns most frequent element in sorted list.
+% ERC
+arc_w27_mode([H|T], Mode) :-
+% ERC
+    arc_w27_mode_(T, H, 1, H, 1, Mode).
+% ERC
+arc_w27_mode_([], _Cur, _CurCnt, BestVal, _BestCnt, BestVal).
+% ERC
+arc_w27_mode_([H|T], Cur, CurCnt, BestVal, BestCnt, Mode) :-
+% ERC
+    (   H =:= Cur
+% ERC
+    ->  CurCnt1 is CurCnt + 1,
+% ERC
+        (   CurCnt1 > BestCnt
+% ERC
+        ->  arc_w27_mode_(T, H, CurCnt1, H, CurCnt1, Mode)
+% ERC
+        ;   arc_w27_mode_(T, H, CurCnt1, BestVal, BestCnt, Mode)
+% ERC
+        )
+% ERC
+    ;   arc_w27_mode_(T, H, 1, BestVal, BestCnt, Mode)
+% ERC
+    ).
+
+% tile_2x_diag_mark (10fcaaa3): tile grid 2x in both dimensions; replace each
+% zero cell with 8 if any diagonal neighbor in the tiled grid is non-zero.
+% ERC
+arc_named_rule(tile_2x_diag_mark).
+% ERC
+arc_transform(tile_2x_diag_mark, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 15, NC > 0, NC =< 15,
+% ERC
+    NR2 is 2*NR, NC2 is 2*NC,
+% ERC
+    numlist(1, NR2, AllRows2), numlist(1, NC2, AllCols2),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Cell]>>(
+% ERC
+            Ro is ((R-1) mod NR) + 1, Co is ((C-1) mod NC) + 1,
+% ERC
+            arc_grid_at(Grid, Ro, Co, V),
+% ERC
+            (   V =\= 0
+% ERC
+            ->  Cell = V
+% ERC
+            ;   (   once((
+% ERC
+                    member(DR, [-1,1]), member(DC, [-1,1]),
+% ERC
+                    R2 is R+DR, C2 is C+DC,
+% ERC
+                    R2 >= 1, R2 =< NR2, C2 >= 1, C2 =< NC2,
+% ERC
+                    Ro2 is ((R2-1) mod NR) + 1, Co2 is ((C2-1) mod NC) + 1,
+% ERC
+                    arc_grid_at(Grid, Ro2, Co2, V2), V2 \= 0
+% ERC
+                ))
+% ERC
+                ->  Cell = 8
+% ERC
+                ;   Cell = 0
+% ERC
+                )
+% ERC
+            )
+% ERC
+        ), AllCols2, OutRow)
+% ERC
+    ), AllRows2, Out),
+% ERC
+    !.
+
+% sep_grid_propagate (cbded52d): grid divided by all-zero separator rows and cols
+% into rectangular blocks. Markers (non-bg, non-0 values) at within-cell position
+% (Wr,Wc) propagate to all blocks in the same row-band when 2+ col-bands share them,
+% and to all blocks in the same col-band when 2+ row-bands share them.
+% ERC
+arc_named_rule(sep_grid_propagate).
+% ERC
+arc_transform(sep_grid_propagate, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(Sr, (member(Sr,AllRows),
+% ERC
+        \+((member(Sc,AllCols), arc_grid_at(Grid,Sr,Sc,SV), SV \= 0))), SepRows),
+% ERC
+    findall(Sc, (member(Sc,AllCols),
+% ERC
+        \+((member(Sr,AllRows), arc_grid_at(Grid,Sr,Sc,SV), SV \= 0))), SepCols),
+% ERC
+    arc_w27_bands(SepRows, NR, RowBands),
+% ERC
+    arc_w27_bands(SepCols, NC, ColBands),
+% ERC
+    RowBands \= [], ColBands \= [],
+% ERC
+    findall(NSV, (member(NSR,AllRows), \+member(NSR,SepRows),
+% ERC
+        member(NSC,AllCols), \+member(NSC,SepCols),
+% ERC
+        arc_grid_at(Grid,NSR,NSC,NSV), NSV \= 0), NonSepVals),
+% ERC
+    msort(NonSepVals, NonSepSorted),
+% ERC
+    arc_w27_mode(NonSepSorted, Bg),
+% ERC
+    findall(Rbi-Cbi-Wr-Wc-MV, (
+% ERC
+        nth0(Rbi, RowBands, RBand), nth0(Cbi, ColBands, CBand),
+% ERC
+        nth0(Wr, RBand, MR), nth0(Wc, CBand, MC),
+% ERC
+        arc_grid_at(Grid,MR,MC,MV), MV \= 0, MV \= Bg
+% ERC
+    ), Markers),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Cell]>>(
+% ERC
+            (   (member(R,SepRows) ; member(C,SepCols))
+% ERC
+            ->  Cell = 0
+% ERC
+            ;   arc_grid_at(Grid,R,C,V0),
+% ERC
+                (   V0 \= 0, V0 \= Bg
+% ERC
+                ->  Cell = V0
+% ERC
+                ;   once((nth0(Rbi,RowBands,RBand), member(R,RBand),
+% ERC
+                          nth0(Wr,RBand,R))),
+% ERC
+                    once((nth0(Cbi,ColBands,CBand), member(C,CBand),
+% ERC
+                          nth0(Wc,CBand,C))),
+% ERC
+                    (   once((member(Rbi-Cbi1-Wr-Wc-PV, Markers),
+% ERC
+                              member(Rbi-Cbi2-Wr-Wc-PV, Markers),
+% ERC
+                              Cbi1 \= Cbi2))
+% ERC
+                    ->  Cell = PV
+% ERC
+                    ;   once((member(Rbi1-Cbi-Wr-Wc-PV, Markers),
+% ERC
+                              member(Rbi2-Cbi-Wr-Wc-PV, Markers),
+% ERC
+                              Rbi1 \= Rbi2))
+% ERC
+                    ->  Cell = PV
+% ERC
+                    ;   Cell = V0
+% ERC
+                    )
+% ERC
+                )
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% arc_w27_bands(+SepList, +Total, -Bands): split 1..Total by separator positions.
+% ERC
+arc_w27_bands(Seps, Total, Bands) :-
+% ERC
+    numlist(1, Total, All),
+% ERC
+    arc_w27_bands_(All, Seps, [], Bands).
+% ERC
+arc_w27_bands_([], _, Acc, Bands) :-
+% ERC
+    (Acc \= [] -> reverse(Acc, Band), Bands = [Band] ; Bands = []).
+% ERC
+arc_w27_bands_([H|T], Seps, Acc, Bands) :-
+% ERC
+    (   member(H, Seps)
+% ERC
+    ->  (   Acc \= []
+% ERC
+        ->  reverse(Acc, Band),
+% ERC
+            arc_w27_bands_(T, Seps, [], RestBands),
+% ERC
+            Bands = [Band|RestBands]
+% ERC
+        ;   arc_w27_bands_(T, Seps, [], Bands)
+% ERC
+        )
+% ERC
+    ;   arc_w27_bands_(T, Seps, [H|Acc], Bands)
+% ERC
+    ).
+
+% extend_periodic_rows (d8c310e9): for each row, detect the period P of the
+% non-zero prefix and tile that prefix to fill all NC columns.
+% ERC
+arc_named_rule(extend_periodic_rows).
+% ERC
+arc_transform(extend_periodic_rows, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NC, AllCols),
+% ERC
+    maplist([Row, OutRow]>>(
+% ERC
+        (   \+((member(Cv,Row), Cv \= 0))
+% ERC
+        ->  OutRow = Row
+% ERC
+        ;   arc_w27_row_period(Row, P),
+% ERC
+            maplist([C, Cell]>>(
+% ERC
+                Ci is ((C-1) mod P) + 1,
+% ERC
+                nth1(Ci, Row, Cell)
+% ERC
+            ), AllCols, OutRow)
+% ERC
+        )
+% ERC
+    ), Grid, Out),
+% ERC
+    !.
+
+% arc_w27_row_period(+Row, -P): find smallest P such that Row[i] = Row[i-P]
+% for all i >= P+1 (1-indexed) where Row[i-P] is within the non-zero prefix.
+% ERC
+arc_w27_row_period(Row, P) :-
+% ERC
+    length(Row, N),
+% ERC
+    findall(Li, (nth1(Li,Row,LV), LV \= 0), NZIdxs),
+% ERC
+    max_list(NZIdxs, LastNZ),
+% ERC
+    P1 is LastNZ - 1,
+% ERC
+    (P1 >= 1 -> numlist(1, P1, PCands) ; PCands = []),
+% ERC
+    once((
+% ERC
+        member(P, PCands),
+% ERC
+        \+((
+% ERC
+            numlist(1, LastNZ, Idxs),
+% ERC
+            member(I, Idxs), I > P,
+% ERC
+            Iprev is I - P,
+% ERC
+            nth1(I, Row, VI), nth1(Iprev, Row, VIprev),
+% ERC
+            VI \= VIprev
+% ERC
+        ))
+% ERC
+    )),
+% ERC
+    !.
+% ERC
+arc_w27_row_period(Row, P) :- length(Row, P).
+
+% half_bottom_to_8 (ce9e57f2): for each active column (has some non-zero cells),
+% replace the bottom floor(H/2) cells with 8, where H = span height of that column.
+% ERC
+arc_named_rule(half_bottom_to_8).
+% ERC
+arc_transform(half_bottom_to_8, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    maplist([C, CEight]>>(
+% ERC
+        findall(R, (member(R,AllRows), arc_grid_at(Grid,R,C,V), V \= 0), ActiveRs),
+% ERC
+        (   ActiveRs = []
+% ERC
+        ->  CEight = C-0-0
+% ERC
+        ;   min_list(ActiveRs, RMin), max_list(ActiveRs, RMax),
+% ERC
+            H is RMax - RMin + 1,
+% ERC
+            NEight is H // 2,
+% ERC
+            EightStart is RMax - NEight + 1,
+% ERC
+            CEight = C-EightStart-RMax
+% ERC
+        )
+% ERC
+    ), AllCols, EightInfos),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Cell]>>(
+% ERC
+            member(C-ES-EM, EightInfos),
+% ERC
+            arc_grid_at(Grid,R,C,V0),
+% ERC
+            (   ES > 0, R >= ES, R =< EM, V0 \= 0
+% ERC
+            ->  Cell = 8
+% ERC
+            ;   Cell = V0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% snake_cols_to_3col (cdecee7f): collect non-zero single-pixel cells, sort by
+% column ascending, snake-fill into a fixed 3-row x 3-col output.
+% ERC
+arc_named_rule(snake_cols_to_3col).
+% ERC
+arc_transform(snake_cols_to_3col, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(C-V, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,V), V \= 0), RawCells),
+% ERC
+    msort(RawCells, Cells),
+% ERC
+    Cells \= [],
+% ERC
+    numlist(1, 3, ThreeCols), numlist(1, 3, ThreeRows),
+% ERC
+    maplist([RowIdx, OutRow]>>(
+% ERC
+        maplist([ColIdx, Cell]>>(
+% ERC
+            Pos is (RowIdx-1)*3 + ColIdx - 1,
+% ERC
+            (   RowIdx mod 2 =:= 1
+% ERC
+            ->  ActualPos = Pos
+% ERC
+            ;   RowStart is (RowIdx-1)*3,
+% ERC
+                PosInRow is Pos - RowStart,
+% ERC
+                ActualPos is RowStart + (2 - PosInRow)
+% ERC
+            ),
+% ERC
+            (   ActualPos < 9,
+% ERC
+                nth0(ActualPos, Cells, _-V)
+% ERC
+            ->  Cell = V
+% ERC
+            ;   Cell = 0
+% ERC
+            )
+% ERC
+        ), ThreeCols, OutRow)
+% ERC
+    ), ThreeRows, Out),
+% ERC
+    !.
+
+% zigzag_extend_rows (eb281b96): extend grid vertically as a zigzag; output has
+% 4*(NR-1)+1 rows; row i maps to input row |((i-1) mod 2*(NR-1)) - (NR-1)| + ...
+% (standard bounce formula).
+% ERC
+arc_named_rule(zigzag_extend_rows).
+% ERC
+arc_transform(zigzag_extend_rows, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 1, NR =< 10, NC > 0, NC =< 30,
+% ERC
+    OutNR is 4*(NR-1)+1,
+% ERC
+    Period is 2*(NR-1),
+% ERC
+    numlist(1, OutNR, OutRowIdxs),
+% ERC
+    maplist([I, Row]>>(
+% ERC
+        Pos is (I-1) mod Period,
+% ERC
+        (   Pos < NR
+% ERC
+        ->  SrcR is Pos + 1
+% ERC
+        ;   SrcR is Period - Pos + 1
+% ERC
+        ),
+% ERC
+        nth1(SrcR, Grid, Row)
+% ERC
+    ), OutRowIdxs, Out),
+% ERC
+    !.
+
+% pick_hsym_shape (72ca375d): among distinct colored shapes in the grid, pick the
+% one whose bounding box rows are all palindromes (horizontally symmetric).
+% ERC
+arc_named_rule(pick_hsym_shape).
+% ERC
+arc_transform(pick_hsym_shape, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V, (member(R,AllRows), member(C,AllCols),
+% ERC
+        arc_grid_at(Grid,R,C,V), V \= 0), Vals),
+% ERC
+    sort(Vals, Colors),
+% ERC
+    Colors \= [],
+% ERC
+    once((
+% ERC
+        member(Col, Colors),
+% ERC
+        findall(R-C, (member(R,AllRows), member(C,AllCols),
+% ERC
+            arc_grid_at(Grid,R,C,Col)), ColCells),
+% ERC
+        ColCells \= [],
+% ERC
+        findall(R, member(R-_,ColCells), Rs),
+% ERC
+        findall(C, member(_-C,ColCells), Cs),
+% ERC
+        min_list(Rs,R0), max_list(Rs,R1),
+% ERC
+        min_list(Cs,C0), max_list(Cs,C1),
+% ERC
+        numlist(R0,R1,BRows), numlist(C0,C1,BCols),
+% ERC
+        maplist([R, Row]>>(
+% ERC
+            maplist([C, Cell]>>(
+% ERC
+                arc_grid_at(Grid,R,C,V),
+% ERC
+                (V =:= Col -> Cell = Col ; Cell = 0)
+% ERC
+            ), BCols, Row)
+% ERC
+        ), BRows, Shape),
+% ERC
+        maplist([SRow]>>(SRow = SR, reverse(SR,SR)), Shape)
+% ERC
+    )),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, Cell]>>(
+% ERC
+            arc_grid_at(Grid,R,C,V),
+% ERC
+            (V =:= Col -> Cell = Col ; Cell = 0)
+% ERC
+        ), BCols, Row)
+% ERC
+    ), BRows, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.

@@ -11,7 +11,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 Living document. Extended after every benchmark run.
-Last updated: 2026-06-17. Current best score: 210 / 400 = 52.50%.
+Last updated: 2026-06-18. Current best score: 227 / 400 = 56.75%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -1171,7 +1171,8 @@ Run 38: 202 / 400 = 50.50% - Wave 24: eight new rules (mark_u_shape_bases_4, con
 
 Run 39: 210 / 400 = 52.50% - Wave 25: eight new rules (fill_cells_plus5, pick_hollow_shape, most_frequent_3x3, fill_zigzag_4, value_to_pattern, five_column_rank, classify_4x4_blocks, block_grid_freq). Plus 8 tasks.
 
-Run 40: 219 / 400 = 54.75% - Wave 26: nine new rules (eight_cross_fixed_fill, hollow_1rect_to_6cross, container_fill_overflow, pointer_to_anchor, fill_largest_zero_rect_6, extract_3x3_around_8, move_blocks_up_by_height, extend_periodic_to_10, billiard_bounce). Plus 9 tasks. (CURRENT BEST)
+Run 40: 219 / 400 = 54.75% - Wave 26: nine new rules (eight_cross_fixed_fill, hollow_1rect_to_6cross, container_fill_overflow, pointer_to_anchor, fill_largest_zero_rect_6, extract_3x3_around_8, move_blocks_up_by_height, extend_periodic_to_10, billiard_bounce). Plus 9 tasks.
+Run 41: 227 / 400 = 56.75% - Wave 27: eight new rules (crop_nonbg_bbox, tile_2x_diag_mark, sep_grid_propagate, extend_periodic_rows, half_bottom_to_8, snake_cols_to_3col, zigzag_extend_rows, pick_hsym_shape). Plus 8 tasks. (CURRENT BEST)
 
 
 ALL 210 SOLVED TASKS AND THEIR GLASS-BOX RULES
@@ -1614,10 +1615,26 @@ ff28f65a - count_2x2_blocks_to_checkerboard.
 
 5521c0d9 - move_blocks_up_by_height.
 
+10fcaaa3 - tile_2x_diag_mark.
+
+72ca375d - pick_hsym_shape.
+
+a740d043 - crop_nonbg_bbox.
+
+cbded52d - sep_grid_propagate.
+
+cdecee7f - snake_cols_to_3col.
+
+ce9e57f2 - half_bottom_to_8.
+
+d8c310e9 - extend_periodic_rows.
+
+eb281b96 - zigzag_extend_rows.
+
 
 WHAT COMES NEXT
 
-The 190 remaining unsolved tasks cluster into recognizable categories.
+The 181 remaining unsolved tasks cluster into recognizable categories.
 
 The largest category (approximately 37% of failing tasks) requires identifying discrete connected-component objects and reasoning about their position, size, relationship, and movement relative to other objects.
 
