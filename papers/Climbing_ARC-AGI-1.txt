@@ -956,6 +956,39 @@ The rectangular_spiral rule required careful handling of the degenerate level: w
 New tasks solved by wave 21 (8 new tasks): 28e73c20 (rectangular_spiral), ae4f1146 (most_minority_3x3_block), d0f5fe59 (components_to_identity), 662c240a (pick_nonsymmetric_block), 77fdfe62 (color_8s_by_quadrant), b0c4d837 (container_fill_gauge), f25fbde4 (scale_shape_2x), b190f7f5 (template_stamp_by_half).
 
 
+ATTEMPT 22: WAVE 22 - EIGHT NEW STRUCTURAL RULES - 186 / 400 = 46.50%
+
+Date: 2026-06-17.
+
+Score: 186 / 400 = 46.50%.
+
+New tasks: +8 (from 178 to 186).
+
+What changed: Wave 22 added eight new named rules to the library. All eight solved exactly one task each on the first benchmark run.
+
+The eight new rules added in wave 22:
+
+tile_at_majority_positions (task c3e719e8) - takes a 3x3 input grid and finds the most-frequent cell value using run-length counting on a sorted value list. Produces a 9x9 output composed of nine 3x3 blocks. Each 3x3 block corresponds to one cell of the input. If that input cell's value equals the majority value, the block is filled with the input grid itself (tiling); otherwise the block is filled with zeros.
+
+tile_nz_blocks (task 91413438) - takes a 3x3 input grid containing N non-zero cells (N between 1 and 8). Computes K = 9 - N. Produces a (K times 3) x (K times 3) output composed of K-by-K blocks. The first N blocks (row-major order) are filled with the input grid; the remaining blocks are zero.
+
+staircase_diagonal_tile (task 539a4f51) - takes an NxN input (N from 2 to 10) where the main diagonal encodes a color table: diagonal[k] = input[k][k]. Finds the period P as the index of the first zero on the diagonal (or N if no zero exists). Produces a 2N x 2N output where each cell (r, c) takes its value from diagonal[max(r, c) mod P] using 0-indexed coordinates.
+
+fold_corners_strip (task bc1d5164) - takes an NR x NC input where non-zero cells appear only within the top 2 rows, bottom 2 rows, left 2 columns, and right 2 columns. Folds these corner and edge cells into a 3x3 output: top-strip rows map to output rows 0-1, bottom-strip rows map to output rows 1-2 (with row 1 receiving contributions from both top bottom-edge and bottom top-edge). Column folding follows the same pattern. When multiple non-zero values map to the same output cell, the maximum is taken.
+
+tile_shape_1x2 (task 28bf18c6) - crops the non-zero bounding box of the input grid and tiles it exactly twice horizontally. The output dimensions are bbox_height x (2 times bbox_width).
+
+count_cells_to_row (task d631b094) - counts all non-zero cells in the input when all non-zero cells share exactly one color. Returns a 1-row output containing N copies of that color value, where N is the count of non-zero cells.
+
+periodic_missing_patch (task f9012d9b) - finds the smallest period (PR, PC) such that a complete PR x PC color table exists from the non-zero cells of the input. Identifies the bounding box of all zero-valued holes. Returns the filled contents of that bounding box: non-zero cells keep their value; zero cells are filled from the periodic table using (row mod PR, col mod PC) as the lookup key.
+
+halve_exact_tile_2x (task 7b7f7511) - detects whether the input is exactly tiled twice horizontally (left half equals right half) or twice vertically (top half equals bottom half). Returns the first half (left half for horizontal tiling, top half for vertical tiling). If both conditions hold, the horizontal check takes priority.
+
+What was learned: the majority-value count can be implemented in pure Prolog without library(aggregate) by sorting values and counting runs; arc_w22_count_runs/5 implements this with a simple accumulator. The fold_corners_strip rule demonstrates that a general folding transform with configurable strip width is more powerful than hardcoded corner patterns. The staircase_diagonal_tile rule shows that a diagonal-indexed periodic function covers a whole family of visual staircase outputs from a compact N-cell encoding.
+
+New tasks solved by wave 22 (8 new tasks): c3e719e8 (tile_at_majority_positions), 91413438 (tile_nz_blocks), 539a4f51 (staircase_diagonal_tile), bc1d5164 (fold_corners_strip), 28bf18c6 (tile_shape_1x2), d631b094 (count_cells_to_row), f9012d9b (periodic_missing_patch), 7b7f7511 (halve_exact_tile_2x).
+
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -1028,10 +1061,12 @@ Run 33: 165 / 400 = 41.25% - Wave 19: four new rules (complete_4fold_symmetry, c
 
 Run 34: 170 / 400 = 42.50% - Wave 20: five new rules (count_separator_grid, reduce_3x3_blocks_by_mode, scale_even_cells_to_4x4_blocks, gravity_to_rail, span_fill_separator_grid). Plus 5 tasks.
 
-Run 35: 178 / 400 = 44.50% - Wave 21: eight new rules (rectangular_spiral, most_minority_3x3_block, components_to_identity, pick_nonsymmetric_block, color_8s_by_quadrant, container_fill_gauge, scale_shape_2x, template_stamp_by_half). Plus 8 tasks. (CURRENT BEST)
+Run 35: 178 / 400 = 44.50% - Wave 21: eight new rules (rectangular_spiral, most_minority_3x3_block, components_to_identity, pick_nonsymmetric_block, color_8s_by_quadrant, container_fill_gauge, scale_shape_2x, template_stamp_by_half). Plus 8 tasks.
+
+Run 36: 186 / 400 = 46.50% - Wave 22: eight new rules (tile_at_majority_positions, tile_nz_blocks, staircase_diagonal_tile, fold_corners_strip, tile_shape_1x2, count_cells_to_row, periodic_missing_patch, halve_exact_tile_2x). Plus 8 tasks. (CURRENT BEST)
 
 
-ALL 178 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 186 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1117,6 +1152,8 @@ ALL 178 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 2dee498d - extract_column_period.
 
+28bf18c6 - tile_shape_1x2.
+
 28e73c20 - rectangular_spiral.
 
 31aa019c - unique_val_surround_2.
@@ -1185,6 +1222,8 @@ ALL 178 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 5168d44c - slide_box_to_next_3.
 
+539a4f51 - staircase_diagonal_tile.
+
 5582e5ca - fill_with_mode.
 
 5614dbcf - reduce_3x3_blocks_by_mode.
@@ -1239,6 +1278,8 @@ ALL 178 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 794b24be - count_cells_to_canonical_3x3.
 
+7b7f7511 - halve_exact_tile_2x.
+
 7c008303 - template_palette_at_8_cross.
 
 7ddcd7ec - extend_diagonals_from_2x2.
@@ -1260,6 +1301,8 @@ ALL 178 SOLVED TASKS AND THEIR GLASS-BOX RULES
 8d510a79 - extend_toward_and_away_from_5row.
 
 8e5a5113 - fill_two_sections_with_rotations.
+
+91413438 - tile_nz_blocks.
 
 9172f3a0 - scale_up(3).
 
@@ -1325,11 +1368,15 @@ b91ae062 - scale_up_by_color_count.
 
 bbc9ae5d - expand_single_row_staircase.
 
+bc1d5164 - fold_corners_strip.
+
 bd4472b8 - spread_row1_colors_below_5.
 
 bda2d7a6 - concentric_ring_cycle.
 
 bdad9b1f - extend_lines_4_intersection.
+
+c3e719e8 - tile_at_majority_positions.
 
 c3f564a4 - diagonal_fill.
 
@@ -1354,6 +1401,8 @@ d13f3404 - diagonal_stripe.
 d23f8c26 - keep_center_column.
 
 d511f180 - swap(5,8).
+
+d631b094 - count_cells_to_row.
 
 d90796e8 - replace_3_2_pair_with_8.
 
@@ -1384,6 +1433,8 @@ f25fbde4 - scale_shape_2x.
 f2829549 - left_right_at_1col_sep_nor_to_3.
 
 f76d97a5 - swap_5_with_other.
+
+f9012d9b - periodic_missing_patch.
 
 fafffa47 - top_bot_equal_halves_nor_to_2.
 
