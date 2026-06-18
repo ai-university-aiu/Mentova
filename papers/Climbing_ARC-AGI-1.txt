@@ -989,6 +989,39 @@ What was learned: the majority-value count can be implemented in pure Prolog wit
 New tasks solved by wave 22 (8 new tasks): c3e719e8 (tile_at_majority_positions), 91413438 (tile_nz_blocks), 539a4f51 (staircase_diagonal_tile), bc1d5164 (fold_corners_strip), 28bf18c6 (tile_shape_1x2), d631b094 (count_cells_to_row), f9012d9b (periodic_missing_patch), 7b7f7511 (halve_exact_tile_2x).
 
 
+ATTEMPT 23: WAVE 23 - EIGHT NEW STRUCTURAL RULES - 194 / 400 = 48.50%
+
+Date: 2026-06-17.
+
+Score: 194 / 400 = 48.50%.
+
+New tasks: +8 (from 186 to 194).
+
+What changed: Wave 23 added eight new named rules to the library. All eight solved exactly one task each on the first benchmark run.
+
+The eight new rules added in wave 23:
+
+mirror_bottom_to_top (task f25ffba3) - the top half of the input grid (NR / 2 rows) must be entirely zero. The bottom half contains the pattern data. The output is the reversed bottom half placed above the original bottom half, producing a vertically symmetric result. The rule detects valid inputs by verifying that NR is even and that every cell in the top half is zero before constructing the output.
+
+pick_densest_3x3_block (task a87f7484) - the input is a vertical array of 3x3 blocks (grid dimensions 3N x 3) or a horizontal array (3 x 3N). Each 3x3 block is extracted and its non-zero cell count is computed. The rule returns the unique block with the highest non-zero count. If two or more blocks tie for the maximum, the rule declines to fire (no unique maximum).
+
+fold_at_5_col_mirror (task e3497940) - the input contains exactly one column where every cell has value 5. This divider column splits the grid into a left half and a right half of equal width. The output is the left half width, where each cell takes the maximum of its original value and the value of its mirror partner in the right half (the right half is reversed before comparison).
+
+unique_quadrant_at_zero_cross (task 88a62173) - the input contains exactly one all-zero row and exactly one all-zero column, dividing the grid into four rectangular quadrants. Three of the four quadrants are identical in content. The rule returns the unique fourth quadrant that differs from the other three.
+
+extract_2x2_rotation_seed (task d10ecb37) - the input grid has even dimensions (both NR and NC are even). Every 2x2 block in the grid is one of the four 90-degree rotations of a single seed block (the top-left 2x2 block). The rule verifies this tiling property across all blocks and returns the seed.
+
+overlay_sep2_three_sections (task cf98881b) - the input contains exactly two columns where every cell has value 2 (the separator columns). These dividers split the grid into three sections of equal width. The output overlays the three sections using left-priority: if the left section cell is non-zero it wins; otherwise the middle section cell wins; otherwise the right section cell is used.
+
+mark_weave_junctions_6 (task ba26e723) - the input is exactly 3 rows. The middle row (row 2) consists entirely of 4s. Rows 1 and 3 have complementary patterns: at each column, exactly one of the two outer rows has value 4 and the other has value 0. The rule applies a junction marker: any cell with value 4 that is located at a column where (column index minus 1) mod 3 equals 0 (columns 1, 4, 7, ...) has its value changed to 6. All other cells keep their original values.
+
+expand_7line_fan_8 (task db3e9e38) - the input contains a vertical line of 7s occupying a single column C from row 1 through row L. The output replaces this line with a fan shape. Row R (for R from 1 to L) has depth D = L - R. The fan at row R fills columns from C - D to C + D (clipped to grid bounds). Within the fan at row R, cells at even distance from C receive value 7 and cells at odd distance receive value 8. All other cells in the output are zero.
+
+What was learned: the zero-cross quadrant rule confirms that structural dividers (all-zero rows and columns) reliably partition grids into independent quadrants, and that the outlier-detection pattern (three identical, one unique) recurs across ARC-AGI-1. The 2x2 rotation seed rule shows that a small tiling seed combined with four-fold rotational symmetry is enough to identify and reconstruct the generating element of a large grid. The fan-expansion rule demonstrates that a simple linear input (a single column) can encode a 2D fan output through a depth-distance formula, and that alternating color assignment (even distance 7, odd distance 8) is a compact way to encode stripe patterns in expanding regions.
+
+New tasks solved by wave 23 (8 new tasks): f25ffba3 (mirror_bottom_to_top), a87f7484 (pick_densest_3x3_block), e3497940 (fold_at_5_col_mirror), 88a62173 (unique_quadrant_at_zero_cross), d10ecb37 (extract_2x2_rotation_seed), cf98881b (overlay_sep2_three_sections), ba26e723 (mark_weave_junctions_6), db3e9e38 (expand_7line_fan_8).
+
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -1063,10 +1096,12 @@ Run 34: 170 / 400 = 42.50% - Wave 20: five new rules (count_separator_grid, redu
 
 Run 35: 178 / 400 = 44.50% - Wave 21: eight new rules (rectangular_spiral, most_minority_3x3_block, components_to_identity, pick_nonsymmetric_block, color_8s_by_quadrant, container_fill_gauge, scale_shape_2x, template_stamp_by_half). Plus 8 tasks.
 
-Run 36: 186 / 400 = 46.50% - Wave 22: eight new rules (tile_at_majority_positions, tile_nz_blocks, staircase_diagonal_tile, fold_corners_strip, tile_shape_1x2, count_cells_to_row, periodic_missing_patch, halve_exact_tile_2x). Plus 8 tasks. (CURRENT BEST)
+Run 36: 186 / 400 = 46.50% - Wave 22: eight new rules (tile_at_majority_positions, tile_nz_blocks, staircase_diagonal_tile, fold_corners_strip, tile_shape_1x2, count_cells_to_row, periodic_missing_patch, halve_exact_tile_2x). Plus 8 tasks.
+
+Run 37: 194 / 400 = 48.50% - Wave 23: eight new rules (mirror_bottom_to_top, pick_densest_3x3_block, fold_at_5_col_mirror, unique_quadrant_at_zero_cross, extract_2x2_rotation_seed, overlay_sep2_three_sections, mark_weave_junctions_6, expand_7line_fan_8). Plus 8 tasks. (CURRENT BEST)
 
 
-ALL 186 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 194 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1294,6 +1329,8 @@ ALL 186 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 88a10436 - stamp_pattern_at_5.
 
+88a62173 - unique_quadrant_at_zero_cross.
+
 8be77c9e - tile_reflect_v.
 
 8d5021e8 - tile_3v_reflect_h.
@@ -1342,6 +1379,8 @@ a79310a0 - shift_down_8_to_2.
 
 a85d4709 - col5_to_row_color.
 
+a87f7484 - pick_densest_3x3_block.
+
 a9f96cdd - diagonal_neighbors_from_single_2.
 
 aabf363d - recolor_blob_to_marker.
@@ -1366,6 +1405,8 @@ b60334d2 - surround_5_with_cross_and_diag5.
 
 b91ae062 - scale_up_by_color_count.
 
+ba26e723 - mark_weave_junctions_6.
+
 bbc9ae5d - expand_single_row_staircase.
 
 bc1d5164 - fold_corners_strip.
@@ -1388,6 +1429,8 @@ c9e6f938 - tile_reflect_h.
 
 cce03e0d - place_3x3_at_2_cell_positions.
 
+cf98881b - overlay_sep2_three_sections.
+
 ce22a75a - expand_5_to_3x3_ones.
 
 ce4f8723 - two_halves_at_4sep_or_to_3.
@@ -1395,6 +1438,8 @@ ce4f8723 - two_halves_at_4sep_or_to_3.
 d037b0a7 - fill_column_downward.
 
 d0f5fe59 - components_to_identity.
+
+d10ecb37 - extract_2x2_rotation_seed.
 
 d13f3404 - diagonal_stripe.
 
@@ -1408,6 +1453,8 @@ d90796e8 - replace_3_2_pair_with_8.
 
 dae9d2b5 - side_by_side_halves_or_to_6.
 
+db3e9e38 - expand_7line_fan_8.
+
 dbc1a6ce - fill_between_1_row_col_pairs_with_8.
 
 dc1df850 - surround_2_with_1.
@@ -1417,6 +1464,8 @@ dc433765 - slide_3_toward_4.
 ded97339 - connect_pairs_in_shared_row_or_col.
 
 e179c5f4 - bounce_single_cell_upward.
+
+e3497940 - fold_at_5_col_mirror.
 
 e9614598 - cross_at_midpoint_of_pair.
 
@@ -1429,6 +1478,8 @@ ec883f72 - frame_corner_escape.
 ed36ccf7 - rotate_90_ccw.
 
 f25fbde4 - scale_shape_2x.
+
+f25ffba3 - mirror_bottom_to_top.
 
 f2829549 - left_right_at_1col_sep_nor_to_3.
 

@@ -10894,6 +10894,466 @@ arc_transform(halve_exact_tile_2x, Grid, Result) :-
     ).
 
 % ---------------------------------------------------------------------------
+% WAVE 23 RULES (Attempt 23, Run 37)
+% Eight new named rules verified on ARC-AGI-1 training tasks.
+% Rules: mirror_bottom_to_top, pick_densest_3x3_block, fold_at_5_col_mirror,
+%        unique_quadrant_at_zero_cross, extract_2x2_rotation_seed,
+%        overlay_sep2_three_sections, mark_weave_junctions_6, expand_7line_fan_8.
+% ---------------------------------------------------------------------------
+
+% mirror_bottom_to_top — top NR//2 rows are all-zero; output is [reversed(bottom); bottom].
+% Verified on task f25ffba3 (3 training pairs + test).
+% ERC
+arc_named_rule(mirror_bottom_to_top).
+% ERC
+arc_transform(mirror_bottom_to_top, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC =< 30,
+% ERC
+    0 is NR mod 2,
+% ERC
+    Half is NR // 2,
+% ERC
+    numlist(1, Half, TopRs),
+% ERC
+    numlist(1, NC, Cs),
+% ERC
+    \+ (member(TR, TopRs), member(TC, Cs), arc_grid_at(Grid, TR, TC, TV), TV \= 0),
+% ERC
+    HalfP1 is Half + 1,
+% ERC
+    numlist(HalfP1, NR, BotRs),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        findall(V, (member(C, Cs), arc_grid_at(Grid, R, C, V)), Row)
+% ERC
+    ), BotRs, Bot),
+% ERC
+    reverse(Bot, RevBot),
+% ERC
+    append(RevBot, Bot, Out),
+% ERC
+    !.
+
+% pick_densest_3x3_block — vertical (3N x 3) or horizontal (3 x 3N) array of 3x3 blocks;
+% return the unique block with the most non-zero cells.
+% Verified on task a87f7484.
+% ERC
+arc_named_rule(pick_densest_3x3_block).
+% ERC
+arc_transform(pick_densest_3x3_block, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    ( NR mod 3 =:= 0, NC =:= 3
+% ERC
+    ->  N is NR // 3,
+% ERC
+        numlist(1, N, BlkIdxs),
+% ERC
+        maplist([I, Blk]>>(
+% ERC
+            R0 is (I-1)*3 + 1, R1 is I*3,
+% ERC
+            numlist(R0, R1, BRs),
+% ERC
+            numlist(1, 3, BCols),
+% ERC
+            maplist([R, Row]>>(
+% ERC
+                findall(V, (member(C, BCols), arc_grid_at(Grid, R, C, V)), Row)
+% ERC
+            ), BRs, Blk)
+% ERC
+        ), BlkIdxs, Blocks)
+% ERC
+    ;   NR =:= 3, NC mod 3 =:= 0
+% ERC
+    ->  N is NC // 3,
+% ERC
+        numlist(1, N, BlkIdxs),
+% ERC
+        numlist(1, 3, BRs),
+% ERC
+        maplist([I, Blk]>>(
+% ERC
+            C0 is (I-1)*3 + 1, C1 is I*3,
+% ERC
+            numlist(C0, C1, BCols),
+% ERC
+            maplist([R, Row]>>(
+% ERC
+                findall(V, (member(C, BCols), arc_grid_at(Grid, R, C, V)), Row)
+% ERC
+            ), BRs, Blk)
+% ERC
+        ), BlkIdxs, Blocks)
+% ERC
+    ),
+% ERC
+    maplist([Blk, Count]>>(
+% ERC
+        findall(1, (member(BRow, Blk), member(BV, BRow), BV \= 0), Ones),
+% ERC
+        length(Ones, Count)
+% ERC
+    ), Blocks, Counts),
+% ERC
+    max_list(Counts, MaxC),
+% ERC
+    findall(B, (nth1(BI, Counts, MaxC), nth1(BI, Blocks, B)), Candidates),
+% ERC
+    Candidates = [Out],
+% ERC
+    !.
+
+% fold_at_5_col_mirror — one all-5s column divides NR x NC into equal left/right halves;
+% output is the left half with max(left[r][c], mirrored_right[r][c]) per cell.
+% Verified on task e3497940.
+% ERC
+arc_named_rule(fold_at_5_col_mirror).
+% ERC
+arc_transform(fold_at_5_col_mirror, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs),
+% ERC
+    numlist(1, NC, Cs),
+% ERC
+    once((member(DC, Cs), forall(member(R, Rs), arc_grid_at(Grid, R, DC, 5)))),
+% ERC
+    W is DC - 1,
+% ERC
+    W > 0,
+% ERC
+    NC - DC =:= W,
+% ERC
+    numlist(1, W, LeftCs),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, M]>>(
+% ERC
+            arc_grid_at(Grid, R, C, LV),
+% ERC
+            RC is NC - C + 1,
+% ERC
+            arc_grid_at(Grid, R, RC, RV),
+% ERC
+            M is max(LV, RV)
+% ERC
+        ), LeftCs, Row)
+% ERC
+    ), Rs, Out),
+% ERC
+    !.
+
+% unique_quadrant_at_zero_cross — grid divided by one all-zero row and one all-zero column
+% into 4 quadrants; return the unique quadrant that differs from the other three.
+% Verified on task 88a62173.
+% ERC
+arc_named_rule(unique_quadrant_at_zero_cross).
+% ERC
+arc_transform(unique_quadrant_at_zero_cross, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs),
+% ERC
+    numlist(1, NC, Cs),
+% ERC
+    once((member(ZR, Rs), forall(member(C, Cs), arc_grid_at(Grid, ZR, C, 0)))),
+% ERC
+    once((member(ZC, Cs), forall(member(R, Rs), arc_grid_at(Grid, R, ZC, 0)))),
+% ERC
+    ZR > 1, ZR < NR, ZC > 1, ZC < NC,
+% ERC
+    ZRM1 is ZR - 1,
+% ERC
+    ZRP1 is ZR + 1,
+% ERC
+    ZCM1 is ZC - 1,
+% ERC
+    ZCP1 is ZC + 1,
+% ERC
+    numlist(1, ZRM1, TopRs),
+% ERC
+    numlist(ZRP1, NR, BotRs),
+% ERC
+    numlist(1, ZCM1, LeftCs),
+% ERC
+    numlist(ZCP1, NC, RightCs),
+% ERC
+    arc_w23_extract_rows_cols(Grid, TopRs, LeftCs, TL),
+% ERC
+    arc_w23_extract_rows_cols(Grid, TopRs, RightCs, TR),
+% ERC
+    arc_w23_extract_rows_cols(Grid, BotRs, LeftCs, BL),
+% ERC
+    arc_w23_extract_rows_cols(Grid, BotRs, RightCs, BR),
+% ERC
+    Quads = [TL, TR, BL, BR],
+% ERC
+    member(Out, Quads),
+% ERC
+    select(Out, Quads, Others),
+% ERC
+    forall(member(O, Others), O \= Out),
+% ERC
+    !.
+
+% arc_w23_extract_rows_cols/4: extract subgrid at the given row and column index sets.
+% ERC
+arc_w23_extract_rows_cols(Grid, Rows, Cols, Sub) :-
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([C, V]>>(arc_grid_at(Grid, R, C, V)), Cols, Row)
+% ERC
+    ), Rows, Sub).
+
+% extract_2x2_rotation_seed — grid is tiled from a 2x2 seed by 90-degree rotations;
+% output is the top-left 2x2 block (the seed).
+% Verified on task d10ecb37.
+% ERC
+arc_named_rule(extract_2x2_rotation_seed).
+% ERC
+arc_transform(extract_2x2_rotation_seed, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NC > 0, NR =< 30, NC =< 30,
+% ERC
+    0 is NR mod 2,
+% ERC
+    0 is NC mod 2,
+% ERC
+    arc_grid_at(Grid, 1, 1, A), arc_grid_at(Grid, 1, 2, B),
+% ERC
+    arc_grid_at(Grid, 2, 1, C), arc_grid_at(Grid, 2, 2, D),
+% ERC
+    Out = [[A,B],[C,D]],
+% ERC
+    arc_w23_rot90cw(Out, Rot1),
+% ERC
+    arc_w23_rot90cw(Rot1, Rot2),
+% ERC
+    arc_w23_rot90cw(Rot2, Rot3),
+% ERC
+    Rots = [Out, Rot1, Rot2, Rot3],
+% ERC
+    BNR is NR // 2,
+% ERC
+    BNC is NC // 2,
+% ERC
+    numlist(1, BNR, BRs),
+% ERC
+    numlist(1, BNC, BCs),
+% ERC
+    forall((member(BR, BRs), member(BC, BCs)), (
+% ERC
+        R0 is (BR-1)*2 + 1,
+% ERC
+        C0 is (BC-1)*2 + 1,
+% ERC
+        R1 is R0 + 1,
+% ERC
+        C1 is C0 + 1,
+% ERC
+        arc_grid_at(Grid, R0, C0, V00), arc_grid_at(Grid, R0, C1, V01),
+% ERC
+        arc_grid_at(Grid, R1, C0, V10), arc_grid_at(Grid, R1, C1, V11),
+% ERC
+        Blk = [[V00,V01],[V10,V11]],
+% ERC
+        member(Blk, Rots)
+% ERC
+    )),
+% ERC
+    !.
+
+% arc_w23_rot90cw/2: 90-degree clockwise rotation of a 2x2 grid.
+% ERC
+arc_w23_rot90cw([[A,B],[C,D]], [[C,A],[D,B]]).
+
+% overlay_sep2_three_sections — grid divided by two all-2 columns into three equal sections;
+% output overlays left > mid > right (left wins if non-zero, else mid, else right).
+% Verified on task cf98881b.
+% ERC
+arc_named_rule(overlay_sep2_three_sections).
+% ERC
+arc_transform(overlay_sep2_three_sections, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    numlist(1, NR, Rs),
+% ERC
+    numlist(1, NC, Cs),
+% ERC
+    findall(SC, (member(SC, Cs), forall(member(R, Rs), arc_grid_at(Grid, R, SC, 2))), SepCols),
+% ERC
+    SepCols = [S1, S2],
+% ERC
+    W is S1 - 1,
+% ERC
+    W > 0,
+% ERC
+    S2 - S1 - 1 =:= W,
+% ERC
+    NC - S2 =:= W,
+% ERC
+    S1P1 is S1 + 1,
+% ERC
+    S1PW is S1 + W,
+% ERC
+    S2P1 is S2 + 1,
+% ERC
+    numlist(1, W, LeftCs),
+% ERC
+    numlist(S1P1, S1PW, MidCs),
+% ERC
+    numlist(S2P1, NC, RightCs),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([LC, MC, RC, OV]>>(
+% ERC
+            arc_grid_at(Grid, R, LC, LV),
+% ERC
+            arc_grid_at(Grid, R, MC, MV),
+% ERC
+            arc_grid_at(Grid, R, RC, RV2),
+% ERC
+            ( LV \= 0 -> OV = LV ; MV \= 0 -> OV = MV ; OV = RV2 )
+% ERC
+        ), LeftCs, MidCs, RightCs, Row)
+% ERC
+    ), Rs, Out),
+% ERC
+    !.
+
+% mark_weave_junctions_6 — 3-row weave: middle row all 4s, outer rows complementary 4s/0s;
+% any 4 at a column where (C-1) mod 3 = 0 (1-based, i.e. columns 1,4,7,...) becomes 6.
+% Verified on task ba26e723 (6/6 pairs).
+% ERC
+arc_named_rule(mark_weave_junctions_6).
+% ERC
+arc_transform(mark_weave_junctions_6, Grid, Out) :-
+% ERC
+    length(Grid, 3),
+% ERC
+    arc_grid_dims(Grid, 3, NC),
+% ERC
+    NC =< 30,
+% ERC
+    numlist(1, NC, Cs),
+% ERC
+    forall(member(C, Cs), arc_grid_at(Grid, 2, C, 4)),
+% ERC
+    forall(member(C, Cs), (arc_grid_at(Grid, 1, C, V1), (V1 =:= 0 ; V1 =:= 4))),
+% ERC
+    forall(member(C, Cs), (arc_grid_at(Grid, 3, C, V3), (V3 =:= 0 ; V3 =:= 4))),
+% ERC
+    forall(member(C, Cs), \+((arc_grid_at(Grid, 1, C, 4), arc_grid_at(Grid, 3, C, 4)))),
+% ERC
+    maplist(arc_w23_weave_mark_row, Grid, Out),
+% ERC
+    !.
+
+% arc_w23_weave_mark_row/2: mark cells with value 4 at columns where (C-1) mod 3 = 0 as 6.
+% ERC
+arc_w23_weave_mark_row(RowIn, RowOut) :-
+% ERC
+    arc_w23_weave_mark_(RowIn, 1, RowOut).
+
+% Base case: empty row.
+% ERC
+arc_w23_weave_mark_([], _, []).
+% Recursive case: check current cell.
+% ERC
+arc_w23_weave_mark_([V|Vs], C, [Out|Outs]) :-
+% ERC
+    ( V =:= 4, 0 is (C-1) mod 3 -> Out = 6 ; Out = V ),
+% ERC
+    C1 is C + 1,
+% ERC
+    arc_w23_weave_mark_(Vs, C1, Outs).
+
+% expand_7line_fan_8 — vertical 7-line at column CV, length L starting from row 1;
+% row R (depth D = L - R) fills cols CV-D..CV+D: 7 if |col-CV| even, 8 if odd.
+% Verified on task db3e9e38 (3/3 pairs).
+% ERC
+arc_named_rule(expand_7line_fan_8).
+% ERC
+arc_transform(expand_7line_fan_8, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =< 30, NC =< 30,
+% ERC
+    findall(R-Co, (between(1, NR, R), between(1, NC, Co), arc_grid_at(Grid, R, Co, 7)), Sevens),
+% ERC
+    Sevens \= [],
+% ERC
+    pairs_values(Sevens, ColList),
+% ERC
+    sort(ColList, [CV]),
+% ERC
+    pairs_keys(Sevens, Rows7),
+% ERC
+    sort(Rows7, SortedRows),
+% ERC
+    length(SortedRows, L),
+% ERC
+    numlist(1, L, ExpRows),
+% ERC
+    SortedRows = ExpRows,
+% ERC
+    numlist(1, NR, AllRs),
+% ERC
+    numlist(1, NC, AllCs),
+% ERC
+    maplist([R, Row]>>(
+% ERC
+        maplist([Co, V]>>(
+% ERC
+            ( R =< L
+% ERC
+            ->  D is L - R,
+% ERC
+                Dist is abs(Co - CV),
+% ERC
+                ( Dist =< D
+% ERC
+                ->  ( 0 is Dist mod 2 -> V = 7 ; V = 8 )
+% ERC
+                ;   V = 0
+% ERC
+                )
+% ERC
+            ;   V = 0
+% ERC
+            )
+% ERC
+        ), AllCs, Row)
+% ERC
+    ), AllRs, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
