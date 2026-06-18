@@ -1176,10 +1176,12 @@ Run 41: 227 / 400 = 56.75% - Wave 27: eight new rules (crop_nonbg_bbox, tile_2x_
 
 Run 42: 236 / 400 = 59.00% - Wave 28: eight new rules (fill_rect_frame_124, fill_two_rects_12, extract_largest_blob, stamp_plus_cardinal, hollow_sq_to_plus, reflect_8_by_4_arrow, complete_4fold_rot_sym, center_shape_at_3_anchor). Plus 9 tasks (extract_largest_blob solves two).
 
-Run 43: 242 / 400 = 60.50% - Wave 29: eighteen new rules (draw_x_diagonals, fill_frame_gaps, scale_stamp_at_2_markers, four_way_reflect, replace_minority_with_5, diagonal_pair_8corners, extend_rect_to_8, gravity_down shift-variant, connected_groups_to_8, rotate_90ccw, mark_5_with_other, erase_diagonals_from_hole, isolated_cells_to_1, five_col_to_row_color, count_ones_fill, color_count_to_diagonal, shift_8_down_1, fill_row_gap_ones). Plus 6 tasks (four_way_reflect solves two). (CURRENT BEST)
+Run 43: 242 / 400 = 60.50% - Wave 29: eighteen new rules (draw_x_diagonals, fill_frame_gaps, scale_stamp_at_2_markers, four_way_reflect, replace_minority_with_5, diagonal_pair_8corners, extend_rect_to_8, gravity_down shift-variant, connected_groups_to_8, rotate_90ccw, mark_5_with_other, erase_diagonals_from_hole, isolated_cells_to_1, five_col_to_row_color, count_ones_fill, color_count_to_diagonal, shift_8_down_1, fill_row_gap_ones). Plus 6 tasks (four_way_reflect solves two).
+
+Run 44: 251 / 400 = 62.75% - Wave 30: nine new rules (fill_2cluster_bbox_with_4, reflect_fives_through_2frame, replace_1s_in_8bbox_with_3, add_3border_4fill_to_6shapes, complete_band_through_crossing, shoot_isolated_into_8block, extend_marker_from_arrow, fill_8block_by_quadrant, remove_stray_cells). Plus 9 tasks. (CURRENT BEST)
 
 
-ALL 242 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 251 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1229,6 +1231,8 @@ ALL 242 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 1f876c06 - connect_pairs_linear.
 
+1f642eb9 - shoot_isolated_into_8block.
+
 1fad071e - count_2x2_ones_in_9x9.
 
 2013d3e2 - crop_bbox_top_left_quadrant.
@@ -1250,6 +1254,8 @@ ALL 242 SOLVED TASKS AND THEIR GLASS-BOX RULES
 239be575 - connected_8_path_between_2x2_blocks.
 
 253bf280 - fill_between_8_row_col_pairs_with_3.
+
+25d487eb - extend_marker_from_arrow.
 
 25d8a9c8 - uniform_rows_to_5.
 
@@ -1277,11 +1283,15 @@ ALL 242 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 321b1fc6 - stamp_key_at_8_clones.
 
+32597951 - replace_1s_in_8bbox_with_3.
+
 3428a4f5 - two_halves_at_4sep_xor_to_3.
 
 3618c87e - gravity_1_to_bottom.
 
 363442ee - stamp_template_at_1_marker.
+
+36fdfd69 - fill_2cluster_bbox_with_4.
 
 3906de3d - gravity_up.
 
@@ -1351,6 +1361,8 @@ ALL 242 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 539a4f51 - staircase_diagonal_tile.
 
+543a7ed5 - add_3border_4fill_to_6shapes.
+
 5582e5ca - fill_with_mode.
 
 54d82841 - mark_u_shape_bases_4.
@@ -1389,6 +1401,8 @@ ALL 242 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 67e8384a - tile_reflect_2x2.
 
+6855a6e4 - reflect_fives_through_2frame.
+
 68b16354 - vertical_flip.
 
 6d0aefbc - tile_reflect_h.
@@ -1418,6 +1432,8 @@ ALL 242 SOLVED TASKS AND THEIR GLASS-BOX RULES
 7c008303 - template_palette_at_8_cross.
 
 7ddcd7ec - extend_diagonals_from_2x2.
+
+7f4411dc - remove_stray_cells.
 
 7fe24cdd - tile_rotate_2x2.
 
@@ -1515,6 +1531,8 @@ b9b7f026 - pick_hollow_shape.
 
 ba26e723 - mark_weave_junctions_6.
 
+ba97ae07 - complete_band_through_crossing.
+
 bbc9ae5d - expand_single_row_staircase.
 
 bc1d5164 - fold_corners_strip.
@@ -1560,6 +1578,8 @@ d4469b4b - value_to_pattern.
 d511f180 - swap(5,8).
 
 d631b094 - count_cells_to_row.
+
+d89b689b - fill_8block_by_quadrant.
 
 d90796e8 - replace_3_2_pair_with_8.
 
