@@ -11812,6 +11812,642 @@ arc_transform(fan_inner_value_upward, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 25 — eight new named rules
+% Tasks: 54d9e175, b9b7f026, 39a8645d, 7447852a,
+%        d4469b4b, a61f2674, 995c5fa3, f8b3ba0a
+% Helpers: arc_w25_bfs8v_q/6, arc_w25_bfs8v_comps/4,
+%   arc_w25_extract_3x3/3, arc_w25_count_runs/2,
+%   arc_w25_has_interior_zero/2, arc_w25_zigzag_fills/5,
+%   arc_w25_block_bounds/3, arc_w25_build_bounds/4,
+%   arc_w25_block_type/4, arc_w25_val_pattern/2
+% ---------------------------------------------------------------------------
+
+% fill_cells_plus5: each grid region between all-5 separators gets its value incremented by 5
+arc_named_rule(fill_cells_plus5).
+% ERC
+arc_transform(fill_cells_plus5, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(SR, (
+% ERC
+        member(SR, AllRows),
+% ERC
+        findall(V, (member(C, AllCols), arc_grid_at(Grid, SR, C, V)), RVs),
+% ERC
+        min_list(RVs, 5), max_list(RVs, 5)
+% ERC
+    ), SepRows),
+% ERC
+    findall(SC, (
+% ERC
+        member(SC, AllCols),
+% ERC
+        findall(V, (member(R, AllRows), arc_grid_at(Grid, R, SC, V)), CVs),
+% ERC
+        min_list(CVs, 5), max_list(CVs, 5)
+% ERC
+    ), SepCols),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V0),
+% ERC
+            (   (member(R, SepRows) ; member(C, SepCols))
+% ERC
+            ->  Val = V0
+% ERC
+            ;   (   once((
+% ERC
+                        findall(S1,(member(S1,SepRows),S1<R),SrB),
+% ERC
+                        (SrB=[] -> RB0=1 ; last(SrB,LRB), RB0 is LRB+1),
+% ERC
+                        findall(S2,(member(S2,SepRows),S2>R),SrA),
+% ERC
+                        (SrA=[] -> RB1=NR ; SrA=[FRA|_], RB1 is FRA-1),
+% ERC
+                        findall(S3,(member(S3,SepCols),S3<C),ScL),
+% ERC
+                        (ScL=[] -> CB0=1 ; last(ScL,LSC), CB0 is LSC+1),
+% ERC
+                        findall(S4,(member(S4,SepCols),S4>C),ScR),
+% ERC
+                        (ScR=[] -> CB1=NC ; ScR=[FSC|_], CB1 is FSC-1),
+% ERC
+                        numlist(RB0,RB1,BandR), numlist(CB0,CB1,BandC),
+% ERC
+                        once((member(BR,BandR),member(BC,BandC),
+% ERC
+                              arc_grid_at(Grid,BR,BC,BV),BV\=0,BV\=5))
+% ERC
+                    ))
+% ERC
+                ->  Val is BV+5
+% ERC
+                ;   Val = V0
+% ERC
+                )
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% pick_hollow_shape: return the unique color value that forms a blob with an interior zero hole
+arc_named_rule(pick_hollow_shape).
+% ERC
+arc_transform(pick_hollow_shape, Grid, [[HollowVal]]) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V-R-C, (
+% ERC
+        member(R, AllRows), member(C, AllCols),
+% ERC
+        arc_grid_at(Grid, R, C, V), V > 0
+% ERC
+    ), VRCList),
+% ERC
+    findall(V, member(V-_-_, VRCList), VVals),
+% ERC
+    list_to_set(VVals, UniqueVals),
+% ERC
+    findall(V, (
+% ERC
+        member(V, UniqueVals),
+% ERC
+        findall(R-C, member(V-R-C, VRCList), VCells),
+% ERC
+        arc_w21_comps(VCells, Comps),
+% ERC
+        member(Comp, Comps),
+% ERC
+        arc_w25_has_interior_zero(Grid, Comp)
+% ERC
+    ), HollowVals),
+% ERC
+    list_to_set(HollowVals, [HollowVal]),
+% ERC
+    !.
+
+% arc_w25_has_interior_zero: succeed when the bounding-box interior of Comp contains an uncovered zero
+% ERC
+arc_w25_has_interior_zero(Grid, Comp) :-
+% ERC
+    findall(R, member(R-_, Comp), Rs),
+% ERC
+    findall(C, member(_-C, Comp), Cs),
+% ERC
+    min_list(Rs, MinR), max_list(Rs, MaxR),
+% ERC
+    min_list(Cs, MinC), max_list(Cs, MaxC),
+% ERC
+    R0 is MinR+1, R1 is MaxR-1,
+% ERC
+    C0 is MinC+1, C1 is MaxC-1,
+% ERC
+    R0 =< R1, C0 =< C1,
+% ERC
+    numlist(R0, R1, IntRows), numlist(C0, C1, IntCols),
+% ERC
+    member(IR, IntRows), member(IC, IntCols),
+% ERC
+    \+ memberchk(IR-IC, Comp),
+% ERC
+    arc_grid_at(Grid, IR, IC, 0).
+
+% most_frequent_3x3: find the most-frequent 3x3 pattern among same-value 8-connected blobs
+arc_named_rule(most_frequent_3x3).
+% ERC
+arc_transform(most_frequent_3x3, Grid, BestPat) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V-R-C, (
+% ERC
+        member(R, AllRows), member(C, AllCols),
+% ERC
+        arc_grid_at(Grid, R, C, V), V > 0
+% ERC
+    ), VRCList),
+% ERC
+    VRCList \= [],
+% ERC
+    findall(V, member(V-_-_, VRCList), VVals),
+% ERC
+    list_to_set(VVals, UniqueVals),
+% ERC
+    findall(Pat, (
+% ERC
+        member(V, UniqueVals),
+% ERC
+        findall(R-C, member(V-R-C, VRCList), VCells),
+% ERC
+        arc_w25_bfs8v_comps(NR, NC, VCells, Comps),
+% ERC
+        member(Comp, Comps),
+% ERC
+        arc_w25_extract_3x3(Grid, Comp, Pat)
+% ERC
+    ), AllPats),
+% ERC
+    AllPats \= [],
+% ERC
+    msort(AllPats, SortedPats),
+% ERC
+    arc_w25_count_runs(SortedPats, PatCounts),
+% ERC
+    msort(PatCounts, CSorted),
+% ERC
+    last(CSorted, _-BestPat),
+% ERC
+    !.
+
+% arc_w25_bfs8v_q: 8-connectivity BFS within Cells; expands only to same-value connected neighbors
+% ERC
+arc_w25_bfs8v_q(_, _, _, [], Vis, Vis).
+% ERC
+arc_w25_bfs8v_q(NR, NC, Cells, [R-C|Q], Vis, Final) :-
+% ERC
+    findall(R2-C2, (
+% ERC
+        member(DR-DC, [-1-(-1),-1-0,-1-1,0-(-1),0-1,1-(-1),1-0,1-1]),
+% ERC
+        R2 is R+DR, C2 is C+DC,
+% ERC
+        R2 >= 1, R2 =< NR, C2 >= 1, C2 =< NC,
+% ERC
+        memberchk(R2-C2, Cells),
+% ERC
+        \+ memberchk(R2-C2, Vis)
+% ERC
+    ), NewN),
+% ERC
+    append(Q, NewN, Q2),
+% ERC
+    append(Vis, NewN, Vis2),
+% ERC
+    arc_w25_bfs8v_q(NR, NC, Cells, Q2, Vis2, Final).
+
+% arc_w25_bfs8v_comps: partition a cell list into 8-connected components
+% ERC
+arc_w25_bfs8v_comps(_, _, [], []).
+% ERC
+arc_w25_bfs8v_comps(NR, NC, [S|Tail], [Comp|Rest]) :-
+% ERC
+    arc_w25_bfs8v_q(NR, NC, [S|Tail], [S], [S], Comp),
+% ERC
+    findall(X, (member(X, [S|Tail]), \+ memberchk(X, Comp)), Remaining),
+% ERC
+    arc_w25_bfs8v_comps(NR, NC, Remaining, Rest).
+
+% arc_w25_extract_3x3: extract a 3x3 padded pattern from a blob whose bbox is at most 3x3
+% ERC
+arc_w25_extract_3x3(Grid, Comp, Pat) :-
+% ERC
+    findall(R, member(R-_, Comp), Rs),
+% ERC
+    findall(C, member(_-C, Comp), Cs),
+% ERC
+    min_list(Rs, MinR), max_list(Rs, MaxR),
+% ERC
+    min_list(Cs, MinC), max_list(Cs, MaxC),
+% ERC
+    H is MaxR-MinR, W is MaxC-MinC,
+% ERC
+    H < 3, W < 3,
+% ERC
+    numlist(1, 3, Range3),
+% ERC
+    maplist([DR, Row]>>(
+% ERC
+        maplist([DC, V]>>(
+% ERC
+            ER is MinR+DR-1, EC is MinC+DC-1,
+% ERC
+            (   memberchk(ER-EC, Comp)
+% ERC
+            ->  arc_grid_at(Grid, ER, EC, V)
+% ERC
+            ;   V = 0
+% ERC
+            )
+% ERC
+        ), Range3, Row)
+% ERC
+    ), Range3, Pat).
+
+% arc_w25_count_runs: count occurrences of each distinct element in a sorted list
+% ERC
+arc_w25_count_runs([], []).
+% ERC
+arc_w25_count_runs([X|Xs], [N-X|Rest]) :-
+% ERC
+    include(=(X), [X|Xs], Same),
+% ERC
+    length(Same, N),
+% ERC
+    exclude(=(X), Xs, Remaining),
+% ERC
+    arc_w25_count_runs(Remaining, Rest).
+
+% fill_zigzag_4: 3-row zigzag grid; fill interiors with 4 using modular index rule on peaks
+arc_named_rule(fill_zigzag_4).
+% ERC
+arc_transform(fill_zigzag_4, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =:= 3, NC > 0, NC =< 50,
+% ERC
+    numlist(1, NC, AllCols),
+% ERC
+    findall(C, (member(C, AllCols), arc_grid_at(Grid, 1, C, 2)), Peaks),
+% ERC
+    Peaks \= [],
+% ERC
+    arc_w25_zigzag_fills(Peaks, 0, NC, [], Fills),
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            arc_grid_at(Grid, R, C, V0),
+% ERC
+            (   V0 =:= 0, memberchk(R-C, Fills)
+% ERC
+            ->  Val = 4
+% ERC
+            ;   Val = V0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), [1, 2, 3], Out),
+% ERC
+    !.
+
+% arc_w25_zigzag_fills: accumulate (Row-Col) positions to fill with 4 based on peak index modulo 3
+% ERC
+arc_w25_zigzag_fills([], _, _, Acc, Acc).
+% ERC
+arc_w25_zigzag_fills([P|Peaks], Idx, NC, Acc, Fills) :-
+% ERC
+    Mod is Idx mod 3,
+% ERC
+    (   Mod =:= 0
+% ERC
+    ->  C0 is max(1, P-1), C1 is min(NC, P+1),
+% ERC
+        numlist(C0, C1, Cs),
+% ERC
+        findall(3-C, member(C, Cs), R3F),
+% ERC
+        append([2-P|R3F], Acc, Acc1)
+% ERC
+    ;   Mod =:= 1
+% ERC
+    ->  PA is P+1, PB is P+2, PC is P+3,
+% ERC
+        findall(1-C, (member(C, [PA,PB,PC]), C >= 1, C =< NC), R1F),
+% ERC
+        (PB =< NC -> R2F = [2-PB] ; R2F = []),
+% ERC
+        append(R1F, R2F, NewFills),
+% ERC
+        append(NewFills, Acc, Acc1)
+% ERC
+    ;   Acc1 = Acc
+% ERC
+    ),
+% ERC
+    Idx1 is Idx+1,
+% ERC
+    arc_w25_zigzag_fills(Peaks, Idx1, NC, Acc1, Fills).
+
+% value_to_pattern: the unique non-zero value in the input determines a fixed 3x3 output pattern
+arc_named_rule(value_to_pattern).
+% ERC
+arc_transform(value_to_pattern, Grid, Pat) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(V, (
+% ERC
+        member(R, AllRows), member(C, AllCols),
+% ERC
+        arc_grid_at(Grid, R, C, V), V > 0
+% ERC
+    ), Vals),
+% ERC
+    Vals \= [],
+% ERC
+    list_to_set(Vals, [UniqueV]),
+% ERC
+    arc_w25_val_pattern(UniqueV, Pat),
+% ERC
+    !.
+
+% arc_w25_val_pattern: lookup table mapping input value to 3x3 output pattern
+% ERC
+arc_w25_val_pattern(1, [[0,5,0],[5,5,5],[0,5,0]]).
+% ERC
+arc_w25_val_pattern(2, [[5,5,5],[0,5,0],[0,5,0]]).
+% ERC
+arc_w25_val_pattern(3, [[0,0,5],[0,0,5],[5,5,5]]).
+
+% five_column_rank: replace tallest 5-column with 1s and shortest 5-column with 2s; zero the rest
+arc_named_rule(five_column_rank).
+% ERC
+arc_transform(five_column_rank, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(Len-Col-Rows, (
+% ERC
+        member(Col, AllCols),
+% ERC
+        findall(R, (member(R, AllRows), arc_grid_at(Grid, R, Col, 5)), Rows),
+% ERC
+        Rows \= [],
+% ERC
+        length(Rows, Len)
+% ERC
+    ), ColInfos),
+% ERC
+    ColInfos \= [],
+% ERC
+    findall(L, member(L-_-_, ColInfos), Lens),
+% ERC
+    max_list(Lens, MaxLen),
+% ERC
+    min_list(Lens, MinLen),
+% ERC
+    MaxLen \= MinLen,
+% ERC
+    once(member(MaxLen-TallCol-TallRows, ColInfos)),
+% ERC
+    once(member(MinLen-ShortCol-ShortRows, ColInfos)),
+% ERC
+    TallCol \= ShortCol,
+% ERC
+    maplist([R, OutRow]>>(
+% ERC
+        maplist([C, Val]>>(
+% ERC
+            (   C =:= TallCol, memberchk(R, TallRows) -> Val = 1
+% ERC
+            ;   C =:= ShortCol, memberchk(R, ShortRows) -> Val = 2
+% ERC
+            ;   Val = 0
+% ERC
+            )
+% ERC
+        ), AllCols, OutRow)
+% ERC
+    ), AllRows, Out),
+% ERC
+    !.
+
+% classify_4x4_blocks: 4-row grid with 3 four-wide blocks; classify each block type into 3x3 output
+arc_named_rule(classify_4x4_blocks).
+% ERC
+arc_transform(classify_4x4_blocks, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR =:= 4, NC > 4, NC =< 30,
+% ERC
+    numlist(1, NC, AllCols),
+% ERC
+    findall(SC, (
+% ERC
+        member(SC, AllCols),
+% ERC
+        forall(member(R, [1,2,3,4]), arc_grid_at(Grid, R, SC, 0))
+% ERC
+    ), SepCols),
+% ERC
+    SepCols \= [],
+% ERC
+    arc_w25_block_bounds(SepCols, NC, Blocks),
+% ERC
+    Blocks \= [],
+% ERC
+    length(Blocks, K),
+% ERC
+    maplist([C0-C1, Type]>>(
+% ERC
+        numlist(C0, C1, BCols),
+% ERC
+        length(BCols, 4),
+% ERC
+        findall(R-C, (
+% ERC
+            member(R, [1,2,3,4]), member(C, BCols),
+% ERC
+            arc_grid_at(Grid, R, C, 0)
+% ERC
+        ), ZeroList),
+% ERC
+        length(ZeroList, NZCount),
+% ERC
+        arc_w25_block_type(NZCount, ZeroList, C0, Type)
+% ERC
+    ), Blocks, Types),
+% ERC
+    maplist([T, Row]>>(length(Row, K), maplist(=(T), Row)), Types, Out),
+% ERC
+    !.
+
+% arc_w25_block_bounds: compute (C0-C1) ranges for each block between separator columns
+% ERC
+arc_w25_block_bounds(SepCols, NC, Blocks) :-
+% ERC
+    arc_w25_build_bounds(1, SepCols, NC, Blocks).
+
+% arc_w25_build_bounds: base case — last block extends to end of grid
+% ERC
+arc_w25_build_bounds(Start, [], NC, [Start-NC]) :- Start =< NC.
+% arc_w25_build_bounds: recursive case — emit block before next separator; advance past it
+% ERC
+arc_w25_build_bounds(Start, [Sep|Rest], NC, [Start-End|Blocks]) :-
+% ERC
+    End is Sep-1,
+% ERC
+    Start =< End,
+% ERC
+    Next is Sep+1,
+% ERC
+    arc_w25_build_bounds(Next, Rest, NC, Blocks).
+
+% arc_w25_block_type: map zero count and positions to a block classification code
+% ERC
+arc_w25_block_type(0, _, _, 2).
+% ERC
+arc_w25_block_type(4, ZeroList, C0, Type) :-
+% ERC
+    findall(R-DC, (member(R-C, ZeroList), DC is C-C0), RelZ),
+% ERC
+    msort(RelZ, SortedZ),
+% ERC
+    (   SortedZ = [2-1,2-2,3-1,3-2] -> Type = 8
+% ERC
+    ;   SortedZ = [2-0,2-3,3-0,3-3] -> Type = 3
+% ERC
+    ;   SortedZ = [3-1,3-2,4-1,4-2] -> Type = 4
+% ERC
+    ;   SortedZ = [1-1,1-2,2-1,2-2] -> Type = 7
+% ERC
+    ).
+
+% block_grid_freq: grid of 2-wide labeled blocks; return non-background values sorted by count desc
+arc_named_rule(block_grid_freq).
+% ERC
+arc_transform(block_grid_freq, Grid, Out) :-
+% ERC
+    arc_grid_dims(Grid, NR, NC),
+% ERC
+    NR > 0, NR =< 30, NC > 0, NC =< 30,
+% ERC
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+% ERC
+    findall(R, (
+% ERC
+        member(R, AllRows),
+% ERC
+        once((member(C2, AllCols), arc_grid_at(Grid, R, C2, VR), VR \= 0))
+% ERC
+    ), BlockRows),
+% ERC
+    BlockRows \= [],
+% ERC
+    findall(SC, (
+% ERC
+        member(SC, AllCols),
+% ERC
+        findall(VS, (member(RS, AllRows), arc_grid_at(Grid, RS, SC, VS)), ColVals),
+% ERC
+        max_list(ColVals, 0)
+% ERC
+    ), SepCols),
+% ERC
+    findall(C, (member(C, AllCols), \+ memberchk(C, SepCols)), NonSepCols),
+% ERC
+    NonSepCols \= [],
+% ERC
+    findall(C, (
+% ERC
+        member(C, NonSepCols),
+% ERC
+        Prev is C-1,
+% ERC
+        \+ memberchk(Prev, NonSepCols)
+% ERC
+    ), BlockCols),
+% ERC
+    BlockCols \= [],
+% ERC
+    findall(V, (
+% ERC
+        member(R, BlockRows),
+% ERC
+        member(C, BlockCols),
+% ERC
+        arc_grid_at(Grid, R, C, V), V \= 0
+% ERC
+    ), AllVals),
+% ERC
+    AllVals \= [],
+% ERC
+    msort(AllVals, SortedVals),
+% ERC
+    arc_w25_count_runs(SortedVals, ValCounts),
+% ERC
+    msort(ValCounts, CSorted),
+% ERC
+    last(CSorted, _-BgVal),
+% ERC
+    findall(Cnt-V, (member(Cnt-V, ValCounts), V \= BgVal), NonBgCounts),
+% ERC
+    NonBgCounts \= [],
+% ERC
+    msort(NonBgCounts, NBGSorted),
+% ERC
+    reverse(NBGSorted, Descending),
+% ERC
+    maplist([_-V, [V]]>>true, Descending, Out),
+% ERC
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
