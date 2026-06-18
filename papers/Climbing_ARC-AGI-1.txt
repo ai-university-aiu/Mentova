@@ -1169,7 +1169,9 @@ Run 37: 194 / 400 = 48.50% - Wave 23: eight new rules (mirror_bottom_to_top, pic
 
 Run 38: 202 / 400 = 50.50% - Wave 24: eight new rules (mark_u_shape_bases_4, connected_8_path_between_2x2_blocks, find_3x3_frame_interior_value, sort_rows_by_nz_right_align, count_2x2_blocks_to_checkerboard, tile_2x_zero_to_8_by_column, find_most_impure_region, fan_inner_value_upward). Plus 8 tasks.
 
-Run 39: 210 / 400 = 52.50% - Wave 25: eight new rules (fill_cells_plus5, pick_hollow_shape, most_frequent_3x3, fill_zigzag_4, value_to_pattern, five_column_rank, classify_4x4_blocks, block_grid_freq). Plus 8 tasks. (CURRENT BEST)
+Run 39: 210 / 400 = 52.50% - Wave 25: eight new rules (fill_cells_plus5, pick_hollow_shape, most_frequent_3x3, fill_zigzag_4, value_to_pattern, five_column_rank, classify_4x4_blocks, block_grid_freq). Plus 8 tasks.
+
+Run 40: 219 / 400 = 54.75% - Wave 26: nine new rules (eight_cross_fixed_fill, hollow_1rect_to_6cross, container_fill_overflow, pointer_to_anchor, fill_largest_zero_rect_6, extract_3x3_around_8, move_blocks_up_by_height, extend_periodic_to_10, billiard_bounce). Plus 9 tasks. (CURRENT BEST)
 
 
 ALL 210 SOLVED TASKS AND THEIR GLASS-BOX RULES
@@ -1593,6 +1595,24 @@ fafffa47 - top_bot_equal_halves_nor_to_2.
 feca6190 - diagonal_slide_row_up_right.
 
 ff28f65a - count_2x2_blocks_to_checkerboard.
+
+272f95fa - eight_cross_fixed_fill.
+
+2c608aff - pointer_to_anchor.
+
+3eda0437 - fill_largest_zero_rect_6.
+
+41e4d17e - hollow_1rect_to_6cross.
+
+444801d8 - container_fill_overflow.
+
+508bd3b6 - billiard_bounce.
+
+5117e062 - extract_3x3_around_8.
+
+53b68214 - extend_periodic_to_10.
+
+5521c0d9 - move_blocks_up_by_height.
 
 
 WHAT COMES NEXT
