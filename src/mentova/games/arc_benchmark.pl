@@ -16987,6 +16987,605 @@ arc_transform(color_5_comps_by_size, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 33 HELPERS
+% arc_w33_nz8_bfs/6  : 8-connected BFS on non-zero cells (positions only)
+% arc_w33_nz_comps/6 : collect all 8-connected components of non-zero cells
+% arc_w33_sep_pairs/2: convert list [A,B,C,...] to pairs [A-B, B-C, ...]
+% ---------------------------------------------------------------------------
+
+% ERC BFS base case: queue empty → visited set is the component
+arc_w33_nz8_bfs(_, _, _, [], Vis, Vis).
+% ERC BFS step: expand 8-neighbours of current cell that are non-zero and unvisited
+arc_w33_nz8_bfs(Grid, NR, NC, [R-C|Q], Vis, Comp) :-
+% ERC collect all 8-adjacent unvisited non-zero neighbours
+    findall(R2-C2,
+        (   member(DR-DC, [-1-(-1),-1-0,-1-1,0-(-1),0-1,1-(-1),1-0,1-1]),
+            R2 is R+DR, C2 is C+DC,
+            R2 >= 1, R2 =< NR, C2 >= 1, C2 =< NC,
+            arc_grid_at(Grid, R2, C2, NZ), NZ \= 0,
+            \+ memberchk(R2-C2, Vis)
+        ), Nbrs),
+% ERC merge neighbours into queue and visited, dedup with sort
+    append(Q, Nbrs, Q1), sort(Q1, Q2),
+    append(Vis, Nbrs, Vis1), sort(Vis1, Vis2),
+% ERC continue BFS with updated queue and visited set
+    arc_w33_nz8_bfs(Grid, NR, NC, Q2, Vis2, Comp).
+
+% ERC base case: no cells left to process
+arc_w33_nz_comps(_, _, _, [], _, []).
+% ERC skip cell already belonging to a found component
+arc_w33_nz_comps(Grid, NR, NC, [Cell|Rest], Seen, Comps) :-
+% ERC cell already visited — skip without adding new component
+    memberchk(Cell, Seen), !,
+    arc_w33_nz_comps(Grid, NR, NC, Rest, Seen, Comps).
+% ERC unseen cell: BFS to find its full 8-connected component
+arc_w33_nz_comps(Grid, NR, NC, [Cell|Rest], Seen, [Comp|Comps]) :-
+% ERC BFS from seed cell to find entire component
+    once(arc_w33_nz8_bfs(Grid, NR, NC, [Cell], [Cell], Comp)),
+% ERC merge component into seen set
+    append(Seen, Comp, Seen2), sort(Seen2, Seen3),
+% ERC continue with remaining cells
+    arc_w33_nz_comps(Grid, NR, NC, Rest, Seen3, Comps).
+
+% ERC base case: singleton list has no pairs
+arc_w33_sep_pairs([_], []).
+% ERC recursive: pair consecutive elements
+arc_w33_sep_pairs([A, B|Rest], [A-B|Pairs]) :-
+% ERC recurse on tail
+    arc_w33_sep_pairs([B|Rest], Pairs).
+
+% ---------------------------------------------------------------------------
+% RULE: stamp_shape_at_same_color_markers   task 3e980e27
+% A "template" is one 8-connected multi-cell component containing exactly one
+% cell of "marker color" M and one-or-more cells of "key color" K.
+% Isolated single-cell components of value M are "stamps".
+% Output: each stamp position gets the full template overlaid at that M offset.
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 3e980e27
+arc_named_rule(stamp_shape_at_same_color_markers).
+% ERC transform: find template + isolated marker stamps; overlay template at each stamp
+arc_transform(stamp_shape_at_same_color_markers, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GR1w33|_], length(GR1w33, NC), NC =< 30,
+% ERC collect all non-zero cell positions (1-indexed)
+    findall(R-C, (between(1,NR,R), between(1,NC,C), arc_grid_at(Grid,R,C,NZ33), NZ33 \= 0), AllNZ33),
+% ERC require at least one non-zero cell
+    AllNZ33 \= [],
+% ERC find 8-connected components of non-zero cells
+    once(arc_w33_nz_comps(Grid, NR, NC, AllNZ33, [], Comps33)),
+% ERC find the template component: multi-cell with at least 2 distinct non-zero values
+    member(Template33, Comps33),
+    length(Template33, TLen33), TLen33 >= 2,
+    findall(V33t, (member(R33t-C33t, Template33), arc_grid_at(Grid,R33t,C33t,V33t)), TVals33),
+    sort(TVals33, TVSorted33), length(TVSorted33, TVCount33), TVCount33 >= 2,
+% ERC find the marker color M: present exactly once in template AND in at least one solo component
+    findall(V33s, (member(SC33, Comps33), length(SC33,1), SC33=[R33s-C33s], arc_grid_at(Grid,R33s,C33s,V33s)), SoloVals33),
+    sort(SoloVals33, SoloVSorted33),
+    member(M33, TVSorted33), memberchk(M33, SoloVSorted33),
+% ERC verify exactly one M-cell in the template (the anchor)
+    findall(R33m-C33m, (member(R33m-C33m, Template33), arc_grid_at(Grid,R33m,C33m,M33)), [AnchorR33-AnchorC33]),
+% ERC collect all isolated M-cell positions (single-cell components of value M)
+    findall(IR33-IC33, (member([IR33-IC33], Comps33), arc_grid_at(Grid,IR33,IC33,M33)), Markers33),
+% ERC require at least one marker stamp
+    Markers33 \= [],
+% ERC for each marker, compute the stamped cell positions with their values
+    findall(SR33-SC33-SV33,
+        (   member(MkR33-MkC33, Markers33),
+            member(TR33-TC33, Template33),
+            arc_grid_at(Grid, TR33, TC33, SV33),
+            SR33 is TR33 + (MkR33 - AnchorR33),
+            SC33 is TC33 + (MkC33 - AnchorC33),
+            SR33 >= 1, SR33 =< NR, SC33 >= 1, SC33 =< NC
+        ), StampCells33),
+% ERC build output: original values + stamped overlay cells
+    numlist(1, NR, AllRows33), numlist(1, NC, AllCols33),
+    maplist([OR33, ORow33]>>(
+        maplist([OC33, Cell33]>>(
+% ERC stamp cell takes priority; else keep original grid value
+            (   once(member(OR33-OC33-SVal33, StampCells33)) -> Cell33 = SVal33
+            ;   arc_grid_at(Grid, OR33, OC33, Cell33)
+            )
+        ), AllCols33, ORow33)
+    ), AllRows33, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: sep_grid_fill_from_rare_source   task 39e1d7f9
+% Grid is divided into equal-sized cells by separator rows and columns
+% (all cells in a separator row/col share the same value S).
+% Cells have value A (rare), value B (common), or 0 (empty).
+% Output: each empty cell adjacent (4-connected in cell-grid) to an A-cell
+% gets filled with B; all other values unchanged.
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 39e1d7f9
+arc_named_rule(sep_grid_fill_from_rare_source).
+% ERC transform: fill empty cells adjacent to the rare-value cells with the common value
+arc_transform(sep_grid_fill_from_rare_source, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GR1w33s|_], length(GR1w33s, NC), NC =< 30,
+% ERC find separator value S: the value that fills at least one complete row
+    once((
+        between(1, NR, SR33s),
+        arc_grid_at(Grid, SR33s, 1, S33),
+        S33 \= 0,
+        findall(1, (between(1,NC,C33s), arc_grid_at(Grid,SR33s,C33s,S33)), RowOK33),
+        length(RowOK33, NC)
+    )),
+% ERC find all separator rows: rows where every cell equals S
+    findall(R33s, (between(1,NR,R33s),
+                   findall(1,(between(1,NC,C33s2),arc_grid_at(Grid,R33s,C33s2,S33)),ROK33),
+                   length(ROK33,NC)), SepRows33),
+% ERC find all separator cols: cols where every cell equals S
+    findall(C33s, (between(1,NC,C33s),
+                   findall(1,(between(1,NR,R33s2),arc_grid_at(Grid,R33s2,C33s,S33)),COK33),
+                   length(COK33,NR)), SepCols33),
+% ERC build row band boundaries: [0|SepRows] ++ [NR+1], then consecutive pairs
+    NR1w33 is NR + 1,
+    sort([0|SepRows33], SepRowsB33),
+    append(SepRowsB33, [NR1w33], SepRowsAll33),
+    once(arc_w33_sep_pairs(SepRowsAll33, RowPairs33)),
+% ERC build col band boundaries similarly
+    NC1w33 is NC + 1,
+    sort([0|SepCols33], SepColsB33),
+    append(SepColsB33, [NC1w33], SepColsAll33),
+    once(arc_w33_sep_pairs(SepColsAll33, ColPairs33)),
+% ERC compute row bands: list of row-ranges [L+1..R-1] for each pair L-R
+    findall(RBand33, (member(RL33-RR33, RowPairs33), R1w33 is RL33+1, R2w33 is RR33-1, R1w33 =< R2w33, numlist(R1w33,R2w33,RBand33)), RowBands33),
+% ERC compute col bands similarly
+    findall(CBand33, (member(CL33-CR33, ColPairs33), C1w33 is CL33+1, C2w33 is CR33-1, C1w33 =< C2w33, numlist(C1w33,C2w33,CBand33)), ColBands33),
+% ERC require at least one row band and col band
+    RowBands33 \= [], ColBands33 \= [],
+% ERC compute cell values: CI-CJ-Value for each cell band pair
+    findall(CI33-CJ33-CV33,
+        (   nth1(CI33, RowBands33, RB33),
+            nth1(CJ33, ColBands33, CB33),
+            findall(V33c, (member(R33c,RB33), member(C33c,CB33), arc_grid_at(Grid,R33c,C33c,V33c), V33c \= 0, V33c \= S33), Vs33c),
+            (Vs33c = [] -> CV33 = 0 ; Vs33c = [CV33|_])
+        ), CellVals33),
+% ERC find non-zero cell values and verify exactly two distinct non-zero values
+    findall(V33d, (member(_-_-V33d, CellVals33), V33d \= 0), OccVals33),
+    sort(OccVals33, UniqueVals33), length(UniqueVals33, 2),
+    UniqueVals33 = [UV1_33, UV2_33],
+% ERC count cells of each value to find rare (A) and common (B)
+    findall(1, member(_-_-UV1_33, CellVals33), C1Ones33), length(C1Ones33, C1N33),
+    findall(1, member(_-_-UV2_33, CellVals33), C2Ones33), length(C2Ones33, C2N33),
+    (C1N33 =< C2N33 -> A33 = UV1_33, B33 = UV2_33 ; A33 = UV2_33, B33 = UV1_33),
+% ERC find cells to fill: empty cells 4-adjacent to A-cells in the cell grid
+    length(RowBands33, NBR33), length(ColBands33, NBC33),
+    findall(FCI33-FCJ33,
+        (   member(AI33-AJ33-A33, CellVals33),
+            member(DI33-DJ33, [-1-0, 1-0, 0-(-1), 0-1]),
+            NI33 is AI33+DI33, NJ33 is AJ33+DJ33,
+            NI33 >= 1, NI33 =< NBR33, NJ33 >= 1, NJ33 =< NBC33,
+            memberchk(NI33-NJ33-0, CellVals33)
+        ), FillCells33),
+% ERC build output: fill designated empty cells with B; keep all other values
+    numlist(1, NR, AllRows33s), numlist(1, NC, AllCols33s),
+    maplist([OR33s, ORow33s]>>(
+        maplist([OC33s, Cell33s]>>(
+            (   arc_grid_at(Grid, OR33s, OC33s, OV33s), OV33s \= 0 -> Cell33s = OV33s
+            ;   once((
+                    nth1(CI33b, RowBands33, RBb33), member(OR33s, RBb33),
+                    nth1(CJ33b, ColBands33, CBb33), member(OC33s, CBb33),
+                    memberchk(CI33b-CJ33b, FillCells33)
+                )) -> Cell33s = B33
+            ;   Cell33s = 0
+            )
+        ), AllCols33s, ORow33s)
+    ), AllRows33s, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: reconstruct_sym_figure_under_mask   task 3345333e
+% A figure of color V is partially obscured by a rectangle of color M (mask).
+% The visible V-cells are horizontally symmetric about a half-integer axis.
+% Output: remove mask (set to 0), reconstruct the V-cells hidden under mask
+% by reflecting the visible V-cells through the symmetry axis.
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 3345333e
+arc_named_rule(reconstruct_sym_figure_under_mask).
+% ERC transform: find mask rectangle, compute symmetry axis, reconstruct hidden figure cells
+arc_transform(reconstruct_sym_figure_under_mask, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GR1w33r|_], length(GR1w33r, NC), NC =< 30,
+% ERC find all non-zero values in the grid
+    findall(V33r, (between(1,NR,R33r), between(1,NC,C33r), arc_grid_at(Grid,R33r,C33r,V33r), V33r \= 0), AllV33r),
+    sort(AllV33r, UniqueV33r), length(UniqueV33r, 2),
+    UniqueV33r = [VA33r, VB33r],
+% ERC find which value is the mask (forms a complete rectangle) and which is the figure
+    once((
+        (Mask33 = VA33r, Fig33 = VB33r ; Mask33 = VB33r, Fig33 = VA33r),
+        findall(RM33-CM33, (between(1,NR,RM33), between(1,NC,CM33), arc_grid_at(Grid,RM33,CM33,Mask33)), MaskCells33),
+        MaskCells33 \= [],
+        findall(RM33x, member(RM33x-_, MaskCells33), MRs33), min_list(MRs33, MR1_33), max_list(MRs33, MR2_33),
+        findall(CM33x, member(_-CM33x, MaskCells33), MCs33), min_list(MCs33, MC1_33), max_list(MCs33, MC2_33),
+        TotM33 is (MR2_33 - MR1_33 + 1) * (MC2_33 - MC1_33 + 1),
+        length(MaskCells33, TotM33)
+    )),
+% ERC find all visible figure cells: value Fig, outside the mask rectangle
+    findall(R33f-C33f,
+        (   between(1,NR,R33f), between(1,NC,C33f),
+            arc_grid_at(Grid, R33f, C33f, Fig33),
+            \+ (R33f >= MR1_33, R33f =< MR2_33, C33f >= MC1_33, C33f =< MC2_33)
+        ), FigCells33),
+    FigCells33 \= [],
+% ERC compute horizontal symmetry axis: AxisCol2 = CMin + CMax (double to avoid floats)
+    findall(C33fa, member(_-C33fa, FigCells33), AllFigCols33),
+    min_list(AllFigCols33, CMin33), max_list(AllFigCols33, CMax33),
+    AxisCol2_33 is CMin33 + CMax33,
+% ERC compute which mask positions should become Fig (reconstructed by reflection)
+    findall(R33rec-C33rec,
+        (   between(MR1_33, MR2_33, R33rec),
+            between(MC1_33, MC2_33, C33rec),
+            Reflected33 is AxisCol2_33 - C33rec,
+            Reflected33 >= 1, Reflected33 =< NC,
+            memberchk(R33rec-Reflected33, FigCells33)
+        ), MaskFigCells33),
+% ERC build output: mask cells become Fig or 0; everything else unchanged
+    numlist(1, NR, AllRows33r), numlist(1, NC, AllCols33r),
+    maplist([OR33r, ORow33r]>>(
+        maplist([OC33r, Cell33r]>>(
+% ERC reconstructed mask position → Fig; non-reconstructed mask → 0; else keep original
+            (   memberchk(OR33r-OC33r, MaskFigCells33) -> Cell33r = Fig33
+            ;   arc_grid_at(Grid, OR33r, OC33r, OV33r), OV33r =:= Mask33 -> Cell33r = 0
+            ;   arc_grid_at(Grid, OR33r, OC33r, Cell33r)
+            )
+        ), AllCols33r, ORow33r)
+    ), AllRows33r, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: extract_interior_of_color_frame   task 1c786137
+% Grid contains a rectangular frame formed by a single "frame color" V:
+% the top row, bottom row, left column, and right column of some rectangle
+% are all filled with V.  Output is the interior region (everything inside
+% the frame boundary, exclusive of the frame cells themselves).
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 1c786137
+arc_named_rule(extract_interior_of_color_frame).
+% ERC transform: detect the rectangle frame and extract its interior
+arc_transform(extract_interior_of_color_frame, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GR1w33e|_], length(GR1w33e, NC), NC =< 30,
+% ERC find all distinct non-zero values in the grid
+    findall(V33e0, (between(1,NR,R33e0), between(1,NC,C33e0), arc_grid_at(Grid,R33e0,C33e0,V33e0), V33e0 \= 0), AllV33e0),
+    sort(AllV33e0, UniqueV33e0),
+% ERC find the frame color V: its cells form a complete rectangle border
+    once((
+        member(V33e, UniqueV33e0),
+        findall(RV33e-CV33e, (between(1,NR,RV33e), between(1,NC,CV33e), arc_grid_at(Grid,RV33e,CV33e,V33e)), VCells33e),
+        VCells33e \= [],
+        findall(RV33ex, member(RV33ex-_, VCells33e), VRs33e),
+        min_list(VRs33e, VR1_33e), max_list(VRs33e, VR2_33e),
+        findall(CV33ex, member(_-CV33ex, VCells33e), VCs33e),
+        min_list(VCs33e, VC1_33e), max_list(VCs33e, VC2_33e),
+        VR2_33e > VR1_33e + 1, VC2_33e > VC1_33e + 1,
+        findall(1, (between(VC1_33e,VC2_33e,ColT33), arc_grid_at(Grid,VR1_33e,ColT33,V33e)), TopOK33e),
+        length(TopOK33e, TopN33e), TopExpN33e is VC2_33e - VC1_33e + 1, TopN33e =:= TopExpN33e,
+        findall(1, (between(VC1_33e,VC2_33e,ColB33), arc_grid_at(Grid,VR2_33e,ColB33,V33e)), BotOK33e),
+        length(BotOK33e, BotN33e), BotN33e =:= TopExpN33e,
+        findall(1, (between(VR1_33e,VR2_33e,RowL33), arc_grid_at(Grid,RowL33,VC1_33e,V33e)), LeftOK33e),
+        length(LeftOK33e, LeftN33e), LeftExpN33e is VR2_33e - VR1_33e + 1, LeftN33e =:= LeftExpN33e,
+        findall(1, (between(VR1_33e,VR2_33e,RowR33), arc_grid_at(Grid,RowR33,VC2_33e,V33e)), RightOK33e),
+        length(RightOK33e, RightN33e), RightN33e =:= LeftExpN33e
+    )),
+% ERC compute interior row and column ranges (exclusive of border)
+    IR1_33e is VR1_33e + 1, IR2_33e is VR2_33e - 1,
+    IC1_33e is VC1_33e + 1, IC2_33e is VC2_33e - 1,
+    numlist(IR1_33e, IR2_33e, InnerRows33e),
+    numlist(IC1_33e, IC2_33e, InnerCols33e),
+% ERC build output: extract interior cells row by row
+    maplist([IR33e, Row33e]>>(
+        maplist([IC33e, Cell33e]>>(
+% ERC read the interior cell value directly from the grid
+            arc_grid_at(Grid, IR33e, IC33e, Cell33e)
+        ), InnerCols33e, Row33e)
+    ), InnerRows33e, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 33 RULE 1: fill_8shape_bbox_gaps_with_2
+% For every row that contains at least one 8-cell, fill 0-valued cells whose
+% column index falls within [global_min_col_of_8s .. global_max_col_of_8s]
+% with value 2.  Cells already set to 8 are left as 8.
+% ---------------------------------------------------------------------------
+
+% ERC wave33 rule declaration
+arc_named_rule(fill_8shape_bbox_gaps_with_2).
+% ERC wave33 transform head
+arc_transform(fill_8shape_bbox_gaps_with_2, Grid, Out) :-
+% ERC size guard rows
+    length(Grid, NR), NR =< 30,
+% ERC size guard cols
+    Grid = [GRfbg|_], length(GRfbg, NC), NC =< 30,
+% ERC collect column indices of all 8-cells in the whole grid
+    findall(Cfbg, (between(1,NR,Rfbg), between(1,NC,Cfbg), arc_grid_at(Grid,Rfbg,Cfbg,8)), AllC8fbg),
+% ERC require at least one 8-cell
+    AllC8fbg \= [],
+% ERC find global bounding columns of the 8-shape
+    min_list(AllC8fbg, MinCfbg),
+    max_list(AllC8fbg, MaxCfbg),
+% ERC require non-trivial range so there are interior gaps to fill
+    MinCfbg < MaxCfbg,
+% ERC enumerate row indices for maplist
+    numlist(1, NR, RowsFbg),
+% ERC build output row by row
+    maplist([Rfbg2, OutRowFbg]>>(
+% ERC collect original values for this row
+        findall(Vfbg0, (between(1,NC,Cfbg0), arc_grid_at(Grid,Rfbg2,Cfbg0,Vfbg0)), RowValsFbg),
+% ERC only modify rows that have at least one 8
+        ( member(8, RowValsFbg)
+        ->  numlist(1, NC, ColsFbg),
+% ERC per cell: fill 0 in bbox with 2 else keep original
+            maplist([Cfbg2, Vfbg2]>>(
+                arc_grid_at(Grid, Rfbg2, Cfbg2, OrigFbg),
+                ( OrigFbg =:= 0, Cfbg2 >= MinCfbg, Cfbg2 =< MaxCfbg
+                ->  Vfbg2 = 2
+                ;   Vfbg2 = OrigFbg )
+            ), ColsFbg, OutRowFbg)
+        ;   OutRowFbg = RowValsFbg
+        )
+    ), RowsFbg, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 33 RULE 2: extend_l_shape_diagonal
+% For every 3-cell L-shaped connected component: find the corner cell (the
+% one orthogonally adjacent to both endpoints), compute the diagonal extension
+% direction as dir1+dir2, and paint cells from corner+2*dir onward (skipping
+% corner+1*dir = the "outer corner") until the grid edge, using the shape color.
+% ---------------------------------------------------------------------------
+
+% ERC wave33 rule declaration
+arc_named_rule(extend_l_shape_diagonal).
+% ERC wave33 transform head
+arc_transform(extend_l_shape_diagonal, Grid, Out) :-
+% ERC size guard rows
+    length(Grid, NR), NR =< 30,
+% ERC size guard cols
+    Grid = [GReld|_], length(GReld, NC), NC =< 30,
+% ERC find all non-zero connected components
+    arc_connected_components(Grid, CompsEld),
+% ERC filter to exactly-3-cell non-background components
+    include([Comp3]>>(Comp3 = component(Cel3,Cells3), Cel3 \= 0, length(Cells3,3)), CompsEld, Cands3Eld),
+% ERC for each candidate verify L-shape and collect extension cells
+    findall(Rext-Cext-Vext, (
+        member(CompEld, Cands3Eld),
+        CompEld = component(ColorEld, CellsEld),
+        CellsEld = [_,_,_],
+% ERC try each cell as the candidate corner (adjacent to both others)
+        once((
+            member(Rcc-Ccc, CellsEld),
+            select(Rcc-Ccc, CellsEld, [R1eld-C1eld, R2eld-C2eld]),
+            Adj1 is abs(Rcc-R1eld) + abs(Ccc-C1eld), Adj1 =:= 1,
+            Adj2 is abs(Rcc-R2eld) + abs(Ccc-C2eld), Adj2 =:= 1,
+% ERC extension direction is sum of both arm directions
+            DReld is (R1eld-Rcc) + (R2eld-Rcc),
+            DCeld is (C1eld-Ccc) + (C2eld-Ccc),
+% ERC must be diagonal (both components non-zero)
+            DReld \= 0, DCeld \= 0
+        )),
+% ERC start extension 2 steps from corner (skip outer-corner cell)
+        RE0 is Rcc + 2*DReld,
+        CE0 is Ccc + 2*DCeld,
+% ERC generate cells along diagonal until grid edge
+        arc_w33_diag_cells(NR, NC, RE0, CE0, DReld, DCeld, ExtListEld),
+        member(Rext-Cext, ExtListEld),
+        Vext = ColorEld
+    ), ExtPairsEld),
+% ERC need at least one extension cell
+    ExtPairsEld \= [],
+% ERC build output: paint extension cells with their color
+    numlist(1, NR, RowsEld),
+    maplist([REld, OutRowEld]>>(
+        numlist(1, NC, ColsEld),
+        maplist([CEld, VEld]>>(
+            arc_grid_at(Grid, REld, CEld, OrigEld),
+            ( member(REld-CEld-VextEld, ExtPairsEld)
+            ->  VEld = VextEld
+            ;   VEld = OrigEld )
+        ), ColsEld, OutRowEld)
+    ), RowsEld, Out),
+% ERC deterministic cut
+    !.
+
+% ERC wave33 helper: collect diagonal cells from (R,C) in direction (DR,DC)
+arc_w33_diag_cells(NR, NC, R, C, DR, DC, [R-C|Rest]) :-
+% ERC check bounds
+    between(1, NR, R), between(1, NC, C), !,
+% ERC advance one step
+    R2 is R + DR, C2 is C + DC,
+% ERC recurse
+    arc_w33_diag_cells(NR, NC, R2, C2, DR, DC, Rest).
+% ERC base case: out of bounds
+arc_w33_diag_cells(_, _, _, _, _, _, []).
+
+% ---------------------------------------------------------------------------
+% WAVE 33 RULE 3: strip_8fill_with_4
+% Two vertical edge-strips of 2s face each other (one on left col, one on
+% right col).  The "active" strip (the one containing interior 8-cells) is
+% processed as follows: for each active row that has an 8 at column C,
+% replace the 8 with 4 and fill from the strip edge to C-1 (or C+1) with 8s.
+% The "passive" strip's row at the same INDEX within its strip is then filled
+% entirely (except the strip cell itself) with 8s.
+% ---------------------------------------------------------------------------
+
+% ERC wave33 rule declaration
+arc_named_rule(strip_8fill_with_4).
+% ERC wave33 transform head
+arc_transform(strip_8fill_with_4, Grid, Out) :-
+% ERC size guard rows
+    length(Grid, NR), NR =< 30,
+% ERC size guard cols
+    Grid = [GRsf4|_], length(GRsf4, NC), NC =< 30,
+% ERC collect rows of left strip (col 1 = value 2)
+    findall(Rsf4, (between(1,NR,Rsf4), arc_grid_at(Grid,Rsf4,1,2)), LRowsSf4),
+    sort(LRowsSf4, LeftRowsSf4),
+% ERC collect rows of right strip (col NC = value 2)
+    findall(Rsf4, (between(1,NR,Rsf4), arc_grid_at(Grid,Rsf4,NC,2)), RRowsSf4),
+    sort(RRowsSf4, RightRowsSf4),
+% ERC determine active strip (the one that has 8s in its inner span)
+    once((
+        ( member(RaL, LeftRowsSf4),
+          between(2,NC,CaL),
+          arc_grid_at(Grid,RaL,CaL,8)
+        ->  ActiveEdgeSf4 = left,
+            ActiveRowsSf4 = LeftRowsSf4,
+            PassiveRowsSf4 = RightRowsSf4
+        ;   member(RaR, RightRowsSf4),
+            NC1sf4 is NC - 1,
+            between(1,NC1sf4,CaR),
+            arc_grid_at(Grid,RaR,CaR,8),
+            ActiveEdgeSf4 = right,
+            ActiveRowsSf4 = RightRowsSf4,
+            PassiveRowsSf4 = LeftRowsSf4
+        )
+    )),
+% ERC collect (Position, Row, 8Col) for each active-strip row with an 8
+    findall(PosSf4-RaSf4-Ca8Sf4, (
+        nth1(PosSf4, ActiveRowsSf4, RaSf4),
+        ( ActiveEdgeSf4 = left
+        ->  between(2,NC,Ca8Sf4)
+        ;   NC1sf4b is NC - 1, between(1,NC1sf4b,Ca8Sf4)
+        ),
+        arc_grid_at(Grid, RaSf4, Ca8Sf4, 8)
+    ), ActiveInfoSf4),
+% ERC collect passive rows whose strip-position matches an active-8 position
+    findall(RpassSf4, (
+        member(PosSf4p-_-_, ActiveInfoSf4),
+        nth1(PosSf4p, PassiveRowsSf4, RpassSf4)
+    ), PassiveModSf4),
+% ERC build output grid row by row
+    numlist(1, NR, RowsSf4),
+    numlist(1, NC, ColsSf4),
+    maplist([RSf4, OutRowSf4]>>(
+        maplist([CSf4, VSf4]>>(
+            arc_grid_at(Grid, RSf4, CSf4, OrigSf4),
+% ERC case 1: active-strip row (has an 8 somewhere)
+            ( member(_-RSf4-Ca8s, ActiveInfoSf4)
+            ->  ( ActiveEdgeSf4 = left
+                ->  ( CSf4 > 1, CSf4 < Ca8s
+                    ->  VSf4 = 8
+                    ;   CSf4 =:= Ca8s
+                    ->  VSf4 = 4
+                    ;   VSf4 = OrigSf4
+                    )
+                ;   NC1sfx is NC - 1,
+                    ( CSf4 > Ca8s, CSf4 =< NC1sfx
+                    ->  VSf4 = 8
+                    ;   CSf4 =:= Ca8s
+                    ->  VSf4 = 4
+                    ;   VSf4 = OrigSf4
+                    )
+                )
+% ERC case 2: passive-strip row at a matching position
+            ; member(RSf4, PassiveModSf4)
+            ->  ( ActiveEdgeSf4 = left
+                ->  NC1sfp is NC - 1,
+                    ( CSf4 =< NC1sfp -> VSf4 = 8 ; VSf4 = OrigSf4 )
+                ;   ( CSf4 > 1 -> VSf4 = 8 ; VSf4 = OrigSf4 )
+                )
+% ERC case 3: unaffected row
+            ;   VSf4 = OrigSf4
+            )
+        ), ColsSf4, OutRowSf4)
+    ), RowsSf4, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 33 RULE 4: replace_5sep_match_with_5
+% The grid has an L-shaped separator of 5s: col SC rows 1..SR and row SR
+% cols 1..SC (corner at (SR,SC)).  Find all non-5 connected components,
+% classify each as "adjacent" (any cell orthogonally touches a 5) or not.
+% For each non-adjacent component whose normalised cell-pattern matches
+% any adjacent component's pattern, replace that component with 5s.
+% ---------------------------------------------------------------------------
+
+% ERC wave33 rule declaration
+arc_named_rule(replace_5sep_match_with_5).
+% ERC wave33 transform head
+arc_transform(replace_5sep_match_with_5, Grid, Out) :-
+% ERC size guard rows
+    length(Grid, NR), NR =< 30,
+% ERC size guard cols
+    Grid = [GR5sm|_], length(GR5sm, NC), NC =< 30,
+% ERC find separator row SR: first row where col 1 is 5
+    once((between(1,NR,SR5m), arc_grid_at(Grid,SR5m,1,5))),
+% ERC find separator col SC: first col where row 1 is 5
+    once((between(1,NC,SC5m), arc_grid_at(Grid,1,SC5m,5))),
+% ERC verify the row-segment of the separator is all 5s
+    findall(1,(between(1,SC5m,C5ck),arc_grid_at(Grid,SR5m,C5ck,5)),RowCk5m),
+    length(RowCk5m, SC5m),
+% ERC verify the col-segment of the separator is all 5s
+    findall(1,(between(1,SR5m,R5ck),arc_grid_at(Grid,R5ck,SC5m,5)),ColCk5m),
+    length(ColCk5m, SR5m),
+% ERC find all non-zero, non-5 connected components
+    arc_connected_components(Grid, Comps5m),
+    include([C5m]>>(C5m = component(Cv5m,_), Cv5m \= 0, Cv5m \= 5), Comps5m, NonSep5m),
+% ERC partition: "adjacent" = all cells in Q1 (row<SR, col<SC); else non-adjacent
+    SR1is is SR5m - 1, SC1is is SC5m - 1,
+    partition([Cmp5m]>>(
+        Cmp5m = component(_, Cls5m),
+        forall(member(Rq1-Cq1, Cls5m), (Rq1 =< SR1is, Cq1 =< SC1is))
+    ), NonSep5m, Adj5m, NonAdj5m),
+% ERC compute normalised pattern for each adjacent component
+    maplist([Cm5n, Pat5n]>>(
+        Cm5n = component(_, Cls5n),
+        findall(R5n-C5n, member(R5n-C5n, Cls5n), CL5n),
+        findall(R5n, member(R5n-_, CL5n), Rs5n),
+        findall(C5n, member(_-C5n, CL5n), Cs5n),
+        min_list(Rs5n, MinR5n), min_list(Cs5n, MinC5n),
+        maplist([R5n-C5n, DR5n-DC5n]>>(DR5n is R5n-MinR5n, DC5n is C5n-MinC5n), CL5n, RawPat5n),
+        sort(RawPat5n, Pat5n)
+    ), Adj5m, AdjPats5m),
+% ERC find non-adjacent components matching any adjacent pattern
+    findall(Cls5r, (
+        member(component(_, Cls5r), NonAdj5m),
+        findall(R5r-C5r, member(R5r-C5r, Cls5r), CL5r),
+        findall(R5r, member(R5r-_, CL5r), Rs5r),
+        findall(C5r, member(_-C5r, CL5r), Cs5r),
+        min_list(Rs5r, MinR5r), min_list(Cs5r, MinC5r),
+        maplist([R5r-C5r, DR5r-DC5r]>>(DR5r is R5r-MinR5r, DC5r is C5r-MinC5r), CL5r, RawPat5r),
+        sort(RawPat5r, Pat5r),
+        member(Pat5r, AdjPats5m)
+    ), ToReplace5m),
+% ERC flatten list-of-lists to get all cells to overwrite
+    append(ToReplace5m, FlatRepl5m),
+% ERC require at least one replacement cell
+    FlatRepl5m \= [],
+% ERC build output: overwrite matched cells with 5
+    numlist(1, NR, Rows5m),
+    maplist([R5out, OutRow5m]>>(
+        numlist(1, NC, Cols5m),
+        maplist([C5out, V5out]>>(
+            arc_grid_at(Grid, R5out, C5out, Orig5m),
+            ( member(R5out-C5out, FlatRepl5m)
+            ->  V5out = 5
+            ;   V5out = Orig5m )
+        ), Cols5m, OutRow5m)
+    ), Rows5m, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
