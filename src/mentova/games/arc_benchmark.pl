@@ -23202,6 +23202,218 @@ ds_col_violations(Transposed, ColModes, Total) :-
     length(Viols, Total).
 
 % ---------------------------------------------------------------------------
+% WAVE 47 RULES
+% ---------------------------------------------------------------------------
+
+% Wave 47 Rule 1: stamp_shape_at_markers (tasks 3e980e27)
+% Multi-cell connected clusters each have a unique anchor value also present as
+% isolated lone-marker cells. Each lone marker triggers stamping of the full
+% template (cluster + any 8-adjacent isolated non-anchor cells when one cluster).
+% Orientation: flip horizontally if anchor row DCs are asymmetric; else original.
+arc_named_rule(stamp_shape_at_markers).
+% Size guard and header scan.
+arc_transform(stamp_shape_at_markers, Grid, Out) :-
+    !,
+    % Enforce small grid.
+    length(Grid, NR), NR =< 30,
+    % Get column count from first row.
+    Grid = [SSAM_HDR|_], length(SSAM_HDR, NC), NC =< 30,
+    % Collect all non-zero cell positions.
+    ssam_nz_cells(Grid, 0, NZCells),
+    % Require at least one non-zero cell.
+    NZCells \= [],
+    % Find 4-connected components.
+    ssam_comps(NZCells, Grid, NR, NC, Comps),
+    % Separate multi-cell clusters from single isolated cells.
+    include([comp(Cs,_)]>>(length(Cs, CL), CL >= 2), Comps, Clusters),
+    % Isolated = components of size exactly 1.
+    include([comp(Cs,_)]>>(length(Cs, IL), IL =:= 1), Comps, IsolComps),
+    % Need both clusters and isolated cells.
+    Clusters \= [], IsolComps \= [],
+    % For each cluster find its anchor (unique value) and position.
+    findall(clu(CC, AV, ARx, ACx), (
+        member(comp(CC, _), Clusters),
+        ssam_anchor(CC, Grid, AV, ARx, ACx)
+    ), ClusInfos),
+    % At least one cluster must have a valid anchor.
+    ClusInfos \= [],
+    % Collect all anchor values.
+    findall(AV2, member(clu(_, AV2, _, _), ClusInfos), AllAVs),
+    % Flatten isolated cells to just their positions.
+    maplist([comp([RCx], _), RCx]>>true, IsolComps, IsolPosns),
+    % Classify isolated cells: lone markers (anchor value) vs extra template cells.
+    findall(LR-LC-LV, (
+        member(LR-LC, IsolPosns),
+        nth0(LR, Grid, LRow0), nth0(LC, LRow0, LV),
+        member(LV, AllAVs)
+    ), LoneMarkers),
+    % At least one lone marker required.
+    LoneMarkers \= [],
+    % Extra non-anchor isolated cells (included in template when one cluster).
+    findall(ER-EC, (
+        member(ER-EC, IsolPosns),
+        nth0(ER, Grid, ERow0), nth0(EC, ERow0, EV),
+        \+ member(EV, AllAVs)
+    ), ExtraPosns),
+    % Include extras only when exactly one template cluster.
+    length(Clusters, NClu),
+    ( NClu =:= 1 -> ExtraForStamp = ExtraPosns ; ExtraForStamp = [] ),
+    % Apply stamps for each lone marker.
+    ssam_stamp_all(LoneMarkers, ClusInfos, ExtraForStamp, Grid, NR, NC, Out).
+
+% ssam_stamp_all/7: iterate lone markers; stamp template at each position.
+ssam_stamp_all([], _, _, Grid, _, _, Grid).
+% Recursive case: process one lone marker then continue.
+ssam_stamp_all([LR-LC-LV|Rest], ClusInfos, ExtraPosns, Grid, NR, NC, Out) :-
+    % Find cluster whose anchor value matches this lone marker's value.
+    ( member(clu(CC, LV, AR, AC), ClusInfos)
+    -> % Retrieve values for cluster cells.
+       maplist([R0-C0, R0-C0-V0]>>(nth0(R0, Grid, Rw0), nth0(C0, Rw0, V0)),
+               CC, ClVals),
+       % Retrieve values for extra isolated cells.
+       maplist([R0-C0, R0-C0-V0]>>(nth0(R0, Grid, Rw0), nth0(C0, Rw0, V0)),
+               ExtraPosns, ExtraVals),
+       % Combine into full template cell list.
+       append(ClVals, ExtraVals, AllTCells),
+       % Compute (DR, DC) offsets of each cell from the anchor.
+       maplist([R0-C0-V0, o(DR,DC,V0)]>>(DR is R0-AR, DC is C0-AC),
+               AllTCells, Offsets),
+       % Compute horizontal flip: negate all DC values.
+       maplist([o(DR,DC,V0), o(DR,NDC,V0)]>>(NDC is -DC), Offsets, FlipOffsets),
+       % Choose primary orientation based on anchor-row DC symmetry.
+       ssam_primary_orient(Offsets, FlipOffsets, PrimaryOff),
+       % Use primary if it fits; else try alternate; else use primary anyway.
+       ( ssam_all_fit(LR, LC, PrimaryOff, NR, NC)
+       -> UseOff = PrimaryOff
+       ;  ( PrimaryOff = Offsets -> AltOff = FlipOffsets ; AltOff = Offsets ),
+          ( ssam_all_fit(LR, LC, AltOff, NR, NC) -> UseOff = AltOff
+          ; UseOff = PrimaryOff )
+       ),
+       % Write stamp into grid.
+       ssam_place_stamp(LR, LC, UseOff, Grid, Grid2)
+    % No matching cluster: leave grid unchanged for this marker.
+    ; Grid2 = Grid
+    ),
+    % Process remaining lone markers with updated grid.
+    ssam_stamp_all(Rest, ClusInfos, ExtraPosns, Grid2, NR, NC, Out).
+
+% ssam_primary_orient/3: determine flip vs original by two tests.
+% Test 1: anchor row (DR=0) has leftward DC but no rightward DC -> flip.
+% Test 2: row below anchor (DR=1) has rightward DC but no leftward DC -> flip.
+% Otherwise: original.
+ssam_primary_orient(Offsets, FlipOffsets, PrimaryOff) :-
+    % Gather anchor-row DC values.
+    findall(DC0, member(o(0, DC0, _), Offsets), AnchorDCs),
+    % Gather below-row DC values.
+    findall(DC1, member(o(1, DC1, _), Offsets), BelowDCs),
+    % Deduplicate both sets.
+    list_to_set(AnchorDCs, UADCs),
+    list_to_set(BelowDCs, UBDCs),
+    % Apply flip if either condition is met.
+    ( ssam_neg_no_pos(UADCs)
+    -> PrimaryOff = FlipOffsets
+    ;  ssam_pos_no_neg(UBDCs)
+    -> PrimaryOff = FlipOffsets
+    ;  PrimaryOff = Offsets
+    ).
+
+% ssam_neg_no_pos/1: true if set has at least one DC < 0 and no DC > 0.
+ssam_neg_no_pos(DCs) :-
+    member(DC, DCs), DC < 0, !,
+    \+ (member(DC2, DCs), DC2 > 0).
+
+% ssam_pos_no_neg/1: true if set has at least one DC > 0 and no DC < 0.
+ssam_pos_no_neg(DCs) :-
+    member(DC, DCs), DC > 0, !,
+    \+ (member(DC2, DCs), DC2 < 0).
+
+% ssam_all_fit/5: true if every offset cell is within grid bounds.
+ssam_all_fit(LR, LC, Offsets, NR, NC) :-
+    forall(member(o(DR, DC, _), Offsets), (
+        NR2 is LR + DR, NC2 is LC + DC,
+        NR2 >= 0, NR2 < NR, NC2 >= 0, NC2 < NC
+    )).
+
+% ssam_place_stamp/5: copy Grid replacing stamp positions with stamp values.
+ssam_place_stamp(LR, LC, Offsets, Grid, Out) :-
+    % Build row index list.
+    length(Grid, GNR), GNR1 is GNR - 1,
+    numlist(0, GNR1, RowIdxs),
+    % For each row, build its output version.
+    maplist([RI, Row]>>(
+        nth0(RI, Grid, OrigRow),
+        length(OrigRow, GNC), GNC1 is GNC - 1,
+        numlist(0, GNC1, ColIdxs),
+        % For each column: use stamp value if a stamp offset hits this cell.
+        maplist([CI, Val]>>(
+            ( member(o(DRs, DCs, SVs), Offsets),
+              SRs is LR+DRs, SCs is LC+DCs,
+              SRs =:= RI, SCs =:= CI
+            -> Val = SVs
+            ; nth0(CI, OrigRow, Val)
+            )
+        ), ColIdxs, Row)
+    ), RowIdxs, Out).
+
+% ssam_anchor/5: find unique-value cell in component and its position.
+ssam_anchor(Cells, Grid, AV, AR, AC) :-
+    % Read values of all cells in this component.
+    maplist([R0-C0, V0]>>(nth0(R0, Grid, Rw0), nth0(C0, Rw0, V0)), Cells, Vals),
+    % Unique value set.
+    list_to_set(Vals, UniqueVs),
+    % Find a value that appears exactly once.
+    member(AV, UniqueVs),
+    include([Vx]>>(Vx =:= AV), Vals, AVOccs),
+    length(AVOccs, 1), !,
+    % Locate the anchor cell position.
+    member(AR-AC, Cells),
+    nth0(AR, Grid, ARw), nth0(AC, ARw, AV).
+
+% ssam_comps/5: partition NZ cell list into 4-connected components.
+ssam_comps([], _, _, _, []).
+% Take first unvisited cell; BFS to find its full component; recurse.
+ssam_comps([RC|Rest], Grid, MaxR, MaxC, [comp(Comp, Len)|RestComps]) :-
+    ssam_bfs_4([RC], [RC], Grid, MaxR, MaxC, Comp),
+    subtract(Rest, Comp, NewRest),
+    length(Comp, Len),
+    ssam_comps(NewRest, Grid, MaxR, MaxC, RestComps).
+
+% ssam_bfs_4/6: BFS over 4-connected non-zero cells.
+ssam_bfs_4([], Visited, _, _, _, Visited).
+% Expand one cell; collect unvisited non-zero 4-neighbours.
+ssam_bfs_4([R-C|Queue], Visited, Grid, MaxR, MaxC, Comp) :-
+    findall(NR-NC, (
+        ( NR is R+1, NC = C ; NR is R-1, NC = C
+        ; NR = R, NC is C+1 ; NR = R, NC is C-1 ),
+        NR >= 0, NR < MaxR, NC >= 0, NC < MaxC,
+        nth0(NR, Grid, NRow), nth0(NC, NRow, NV), NV =\= 0,
+        \+ member(NR-NC, Visited), \+ member(NR-NC, Queue)
+    ), Nbrs),
+    append(Nbrs, Queue, NewQ),
+    append(Nbrs, Visited, NewVis),
+    ssam_bfs_4(NewQ, NewVis, Grid, MaxR, MaxC, Comp).
+
+% ssam_nz_cells/3: collect R-C positions of all non-zero cells in Grid.
+ssam_nz_cells([], _, []).
+ssam_nz_cells([Row|Rows], R, Cells) :-
+    R1 is R + 1,
+    ssam_nz_cells(Rows, R1, Rest),
+    ssam_row_nz(Row, R, 0, RowCells),
+    append(RowCells, Rest, Cells).
+
+% ssam_row_nz/4: collect column positions of non-zero values in one row.
+ssam_row_nz([], _, _, []).
+% Non-zero cell: record position and advance.
+ssam_row_nz([V|Vs], R, C, [R-C|Rest]) :-
+    V =\= 0, !,
+    C1 is C + 1,
+    ssam_row_nz(Vs, R, C1, Rest).
+% Zero cell: skip.
+ssam_row_nz([_|Vs], R, C, Rest) :-
+    C1 is C + 1,
+    ssam_row_nz(Vs, R, C1, Rest).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
