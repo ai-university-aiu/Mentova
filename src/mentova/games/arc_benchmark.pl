@@ -17586,6 +17586,308 @@ arc_transform(replace_5sep_match_with_5, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 34 RULE 1: sep_9zone_unique_route
+% Task 6d0160f0: 11x11 grid with 2 full separator rows and 2 full separator cols
+% (all 5s), creating 9 zones in a 3x3 arrangement. The cell with value 4 is the
+% route marker. Its zone = source zone. Its relative position (0-indexed row,col)
+% within the source zone = destination zone indices (ZRI, ZCI) in the 3x3 grid.
+% Copy source zone content to destination zone; all other non-separator cells = 0.
+% ---------------------------------------------------------------------------
+
+% ERC rule fact
+arc_named_rule(sep_9zone_unique_route).
+% ERC size guards and separator detection
+arc_transform(sep_9zone_unique_route, Grid, Out) :-
+% ERC row count
+    length(Grid, NR), NR =< 30,
+% ERC col count from first row
+    Grid = [GRszu|_], length(GRszu, NC), NC =< 30,
+% ERC find rows where every cell = 5
+    findall(Srszu, (
+        between(1, NR, Srszu),
+        arc_grid_at(Grid, Srszu, 1, 5),
+        \+ (between(1, NC, Cszu), arc_grid_at(Grid, Srszu, Cszu, Vszu), Vszu \= 5)
+    ), SepRowsSzu),
+% ERC require exactly 2 separator rows
+    SepRowsSzu = [SR1szu, SR2szu],
+% ERC find cols where every cell = 5
+    findall(Scszu, (
+        between(1, NC, Scszu),
+        arc_grid_at(Grid, 1, Scszu, 5),
+        \+ (between(1, NR, Rszu2), arc_grid_at(Grid, Rszu2, Scszu, Vszu2), Vszu2 \= 5)
+    ), SepColsSzu),
+% ERC require exactly 2 separator cols
+    SepColsSzu = [SC1szu, SC2szu],
+% ERC compute zone row/col range boundaries
+    PR1Eszu is SR1szu - 1,
+    PR2Sszu is SR1szu + 1,
+    PR2Eszu is SR2szu - 1,
+    PR3Sszu is SR2szu + 1,
+    PC1Eszu is SC1szu - 1,
+    PC2Sszu is SC1szu + 1,
+    PC2Eszu is SC2szu - 1,
+    PC3Sszu is SC2szu + 1,
+% ERC zone row ranges and col ranges (3x3 arrangement)
+    ZRRszu = [1-PR1Eszu, PR2Sszu-PR2Eszu, PR3Sszu-NR],
+    ZCRszu = [1-PC1Eszu, PC2Sszu-PC2Eszu, PC3Sszu-NC],
+% ERC find the route marker: the cell with value 4
+    once((
+        between(1, NR, RUniqSzu),
+        \+ member(RUniqSzu, SepRowsSzu),
+        between(1, NC, CUniqSzu),
+        \+ member(CUniqSzu, SepColsSzu),
+        arc_grid_at(Grid, RUniqSzu, CUniqSzu, 4)
+    )),
+% ERC find source zone row range containing the marker
+    once((
+        nth0(_, ZRRszu, RLoszu-RHiszu),
+        RUniqSzu >= RLoszu, RUniqSzu =< RHiszu
+    )),
+% ERC find source zone col range containing the marker
+    once((
+        nth0(_, ZCRszu, CLoszu-CHiszu),
+        CUniqSzu >= CLoszu, CUniqSzu =< CHiszu
+    )),
+% ERC relative position of marker within source zone = destination zone indices
+    RelRszu is RUniqSzu - RLoszu,
+    RelCszu is CUniqSzu - CLoszu,
+% ERC destination zone row and col ranges
+    nth0(RelRszu, ZRRszu, DRLoszu-DRHiszu),
+    nth0(RelCszu, ZCRszu, DCLoszu-DCHiszu),
+% ERC collect source zone non-zero cells with their relative positions
+    findall(Rrszu-Rcszu-Vsszu, (
+        between(RLoszu, RHiszu, RSSzu),
+        between(CLoszu, CHiszu, CSSzu),
+        arc_grid_at(Grid, RSSzu, CSSzu, Vsszu),
+        Vsszu \= 0,
+        Rrszu is RSSzu - RLoszu,
+        Rcszu is CSSzu - CLoszu
+    ), SrcCellsSzu),
+% ERC build output: sep lines stay 5, dest zone gets source content, else 0
+    numlist(1, NR, AllRowsSzu),
+    maplist([RowRszu, RowOutSzu]>>(
+        numlist(1, NC, AllColsSzu),
+        maplist([ColCszu, VoutsZu]>>(
+            ( member(RowRszu, SepRowsSzu) -> VoutsZu = 5
+            ; member(ColCszu, SepColsSzu) -> VoutsZu = 5
+            ; RowRszu >= DRLoszu, RowRszu =< DRHiszu,
+              ColCszu >= DCLoszu, ColCszu =< DCHiszu,
+              Rrel9 is RowRszu - DRLoszu,
+              Crel9 is ColCszu - DCLoszu,
+              member(Rrel9-Crel9-VsrcSzu, SrcCellsSzu)
+            -> VoutsZu = VsrcSzu
+            ; VoutsZu = 0 )
+        ), AllColsSzu, RowOutSzu)
+    ), AllRowsSzu, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 34 RULE 2: sep_grid_colored_corners
+% Task 7837ac64: large grid with one color forming complete separator rows and
+% cols at regular intervals. Non-separator values appear only at separator-row
+% × separator-col intersections. Find the bounding box of those colored
+% intersections (in separator-index space). For each cell (i,j) in that bounding
+% box: if all 4 corner intersections are the same non-separator color → output
+% that color; otherwise → 0.
+% ---------------------------------------------------------------------------
+
+% ERC rule fact
+arc_named_rule(sep_grid_colored_corners).
+% ERC size guards and separator color detection
+arc_transform(sep_grid_colored_corners, Grid, Out) :-
+% ERC row count
+    length(Grid, NR), NR =< 30,
+% ERC col count from first row
+    Grid = [GRsgc|_], length(GRsgc, NC), NC =< 30,
+% ERC find separator color: value that forms at least one complete row
+    once((
+        between(1, NR, RSgc),
+        arc_grid_at(Grid, RSgc, 1, SepCsgc),
+        SepCsgc \= 0,
+        forall(between(1, NC, CSgcCk), arc_grid_at(Grid, RSgc, CSgcCk, SepCsgc))
+    )),
+% ERC collect separator rows: rows where first AND last cell = SepCsgc
+    findall(SRsgc, (
+        between(1, NR, SRsgc),
+        arc_grid_at(Grid, SRsgc, 1, SepCsgc),
+        arc_grid_at(Grid, SRsgc, NC, SepCsgc)
+    ), AllSepRowsSgc),
+% ERC collect separator cols: cols where first row AND last row = SepCsgc
+    findall(SCsgc, (
+        between(1, NC, SCsgc),
+        arc_grid_at(Grid, 1, SCsgc, SepCsgc),
+        arc_grid_at(Grid, NR, SCsgc, SepCsgc)
+    ), AllSepColsSgc),
+    AllSepRowsSgc \= [],
+    AllSepColsSgc \= [],
+% ERC collect colored intersections (sep-row x sep-col where value != SepCsgc)
+    findall(SRci-SCci-Vci, (
+        member(SRci, AllSepRowsSgc),
+        member(SCci, AllSepColsSgc),
+        arc_grid_at(Grid, SRci, SCci, Vci),
+        Vci \= SepCsgc
+    ), ColoredIntSgc),
+    ColoredIntSgc \= [],
+% ERC collect unique separator rows/cols that have colored intersections
+    findall(SRci2, member(SRci2-_-_, ColoredIntSgc), SrWithColDup),
+    findall(SCci2, member(_-SCci2-_, ColoredIntSgc), ScWithColDup),
+    sort(SrWithColDup, SrSortedSgc),
+    sort(ScWithColDup, ScSortedSgc),
+    length(SrSortedSgc, NSrSgc), NSrSgc >= 2,
+    length(ScSortedSgc, NScSgc), NScSgc >= 2,
+% ERC compute output dimensions
+    OutNRm1Sgc is NSrSgc - 2,
+    OutNCm1Sgc is NScSgc - 2,
+    OutNRm1Sgc >= 0,
+    OutNCm1Sgc >= 0,
+% ERC build output via corner-check for each cell
+    numlist(0, OutNRm1Sgc, RangeISgc),
+    maplist([ISgc, RowOutSgc]>>(
+        numlist(0, OutNCm1Sgc, RangeJSgc),
+        maplist([JSgc, VcellSgc]>>(
+            nth0(ISgc, SrSortedSgc, SRiSgc),
+            nth0(JSgc, ScSortedSgc, SCjSgc),
+            I1sgc is ISgc + 1,
+            J1sgc is JSgc + 1,
+            nth0(I1sgc, SrSortedSgc, SRi1Sgc),
+            nth0(J1sgc, ScSortedSgc, SCj1Sgc),
+            arc_grid_at(Grid, SRiSgc, SCjSgc, V00sgc),
+            arc_grid_at(Grid, SRiSgc, SCj1Sgc, V01sgc),
+            arc_grid_at(Grid, SRi1Sgc, SCjSgc, V10sgc),
+            arc_grid_at(Grid, SRi1Sgc, SCj1Sgc, V11sgc),
+            ( V00sgc \= SepCsgc,
+              V00sgc =:= V01sgc,
+              V00sgc =:= V10sgc,
+              V00sgc =:= V11sgc
+            -> VcellSgc = V00sgc
+            ; VcellSgc = 0 )
+        ), RangeJSgc, RowOutSgc)
+    ), RangeISgc, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 34 RULE 3: fill_enclosed_cells
+% Task 7b6016b9: grid has one line color (non-zero) forming closed rectangular
+% shapes. All 0-cells that can reach the grid border through 0-cells become 3
+% (exterior background). All remaining 0-cells become 2 (enclosed interior).
+% Line-color cells are preserved unchanged.
+% ---------------------------------------------------------------------------
+
+% ERC rule fact
+arc_named_rule(fill_enclosed_cells).
+% ERC size guards and single line color detection
+arc_transform(fill_enclosed_cells, Grid, Out) :-
+% ERC row count
+    length(Grid, NR), NR =< 30,
+% ERC col count from first row
+    Grid = [GRfec|_], length(GRfec, NC), NC =< 30,
+% ERC collect all non-zero values to find exactly one line color
+    findall(Vfec, (
+        between(1, NR, Rfec),
+        between(1, NC, Cfec),
+        arc_grid_at(Grid, Rfec, Cfec, Vfec),
+        Vfec \= 0
+    ), AllNZfec),
+    AllNZfec \= [],
+    list_to_set(AllNZfec, ColorSetFec),
+    ColorSetFec = [LineCfec],
+% ERC seed BFS from all border 0-cells
+    findall(Rb-Cb, (
+        ( Rb = 1 ; Rb = NR
+        ; ( between(1, NR, Rb), ( Cb = 1 ; Cb = NC ) )
+        ),
+        between(1, NR, Rb), between(1, NC, Cb),
+        arc_grid_at(Grid, Rb, Cb, 0)
+    ), BorderSeedsFec),
+    sort(BorderSeedsFec, BorderSeedsSorted),
+% ERC BFS to find all exterior 0-cells
+    arc_w34_bfs_zeros(Grid, NR, NC, BorderSeedsSorted, [], ExteriorFec),
+% ERC require at least one interior cell (otherwise rule would just recolor bg)
+    findall(1, (
+        between(1, NR, Ri2fec),
+        between(1, NC, Ci2fec),
+        arc_grid_at(Grid, Ri2fec, Ci2fec, 0),
+        \+ member(Ri2fec-Ci2fec, ExteriorFec)
+    ), InteriorCkFec),
+    InteriorCkFec \= [],
+% ERC build output grid
+    numlist(1, NR, AllRowsFec),
+    maplist([Rfec2, RowOutFec]>>(
+        numlist(1, NC, AllColsFec),
+        maplist([Cfec2, VoutFec]>>(
+            arc_grid_at(Grid, Rfec2, Cfec2, OrigFec),
+            ( OrigFec =:= LineCfec -> VoutFec = LineCfec
+            ; member(Rfec2-Cfec2, ExteriorFec) -> VoutFec = 3
+            ; OrigFec =:= 0 -> VoutFec = 2
+            ; VoutFec = OrigFec )
+        ), AllColsFec, RowOutFec)
+    ), AllRowsFec, Out),
+% ERC deterministic cut
+    !.
+
+% ERC BFS helper for fill_enclosed_cells: expands zero-cells from border
+arc_w34_bfs_zeros(_, _, _, [], Visited, Visited) :- !.
+% ERC process head of queue; skip if already visited
+arc_w34_bfs_zeros(Grid, NR, NC, [R-C|Rest], Visited, Result) :-
+    ( member(R-C, Visited)
+    -> arc_w34_bfs_zeros(Grid, NR, NC, Rest, Visited, Result)
+    ; findall(Nr-Nc, (
+          ( Nr is R-1, Nc = C
+          ; Nr is R+1, Nc = C
+          ; Nr = R, Nc is C-1
+          ; Nr = R, Nc is C+1 ),
+          between(1, NR, Nr), between(1, NC, Nc),
+          arc_grid_at(Grid, Nr, Nc, 0),
+          \+ member(Nr-Nc, [R-C|Visited])
+      ), Neighbors),
+      append(Rest, Neighbors, NewQueue),
+      arc_w34_bfs_zeros(Grid, NR, NC, NewQueue, [R-C|Visited], Result)
+    ).
+
+% ---------------------------------------------------------------------------
+% WAVE 34 RULE 4: halve_repeated_grid
+% Task 7b7f7511: the grid is exactly twice as wide or twice as tall, with the
+% second half being an exact copy of the first half. Output = first half.
+% ---------------------------------------------------------------------------
+
+% ERC rule fact
+arc_named_rule(halve_repeated_grid).
+% ERC size guards and repetition detection
+arc_transform(halve_repeated_grid, Grid, Out) :-
+% ERC row count
+    length(Grid, NR), NR =< 30,
+% ERC col count from first row
+    Grid = [GRhrg|_], length(GRhrg, NC), NC =< 30,
+    ( NC mod 2 =:= 0,
+% ERC try halving by columns first
+      HalfNChrg is NC // 2, HalfNChrg >= 1,
+% ERC verify every row's left half equals its right half
+      forall(member(RowHrg, Grid), (
+          length(LeftHrg, HalfNChrg),
+          append(LeftHrg, RightHrg, RowHrg),
+          LeftHrg = RightHrg
+      )),
+% ERC produce output as left half of each row
+      maplist([RHrg, HalfRHrg]>>(
+          length(HalfRHrg, HalfNChrg),
+          append(HalfRHrg, _, RHrg)
+      ), Grid, Out)
+    ; NR mod 2 =:= 0,
+% ERC try halving by rows
+      HalfNRhrg is NR // 2, HalfNRhrg >= 1,
+% ERC verify top half equals bottom half
+      length(TopHrg, HalfNRhrg),
+      append(TopHrg, BotHrg, Grid),
+      TopHrg = BotHrg,
+% ERC output = top half
+      Out = TopHrg
+    ),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.
