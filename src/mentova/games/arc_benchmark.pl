@@ -23202,6 +23202,360 @@ ds_col_violations(Transposed, ColModes, Total) :-
     length(Viols, Total).
 
 % ---------------------------------------------------------------------------
+% WAVE 47 RULES
+% ---------------------------------------------------------------------------
+
+% Wave 47 Rule 1: stamp_shape_at_markers (tasks 3e980e27)
+% Multi-cell connected clusters each have a unique anchor value also present as
+% isolated lone-marker cells. Each lone marker triggers stamping of the full
+% template (cluster + any 8-adjacent isolated non-anchor cells when one cluster).
+% Orientation: flip horizontally if anchor row DCs are asymmetric; else original.
+arc_named_rule(stamp_shape_at_markers).
+% Size guard and header scan.
+arc_transform(stamp_shape_at_markers, Grid, Out) :-
+    !,
+    % Enforce small grid.
+    length(Grid, NR), NR =< 30,
+    % Get column count from first row.
+    Grid = [SSAM_HDR|_], length(SSAM_HDR, NC), NC =< 30,
+    % Collect all non-zero cell positions.
+    ssam_nz_cells(Grid, 0, NZCells),
+    % Require at least one non-zero cell.
+    NZCells \= [],
+    % Find 4-connected components.
+    ssam_comps(NZCells, Grid, NR, NC, Comps),
+    % Separate multi-cell clusters from single isolated cells.
+    include([comp(Cs,_)]>>(length(Cs, CL), CL >= 2), Comps, Clusters),
+    % Isolated = components of size exactly 1.
+    include([comp(Cs,_)]>>(length(Cs, IL), IL =:= 1), Comps, IsolComps),
+    % Need both clusters and isolated cells.
+    Clusters \= [], IsolComps \= [],
+    % For each cluster find its anchor (unique value) and position.
+    findall(clu(CC, AV, ARx, ACx), (
+        member(comp(CC, _), Clusters),
+        ssam_anchor(CC, Grid, AV, ARx, ACx)
+    ), ClusInfos),
+    % At least one cluster must have a valid anchor.
+    ClusInfos \= [],
+    % Collect all anchor values.
+    findall(AV2, member(clu(_, AV2, _, _), ClusInfos), AllAVs),
+    % Flatten isolated cells to just their positions.
+    maplist([comp([RCx], _), RCx]>>true, IsolComps, IsolPosns),
+    % Classify isolated cells: lone markers (anchor value) vs extra template cells.
+    findall(LR-LC-LV, (
+        member(LR-LC, IsolPosns),
+        nth0(LR, Grid, LRow0), nth0(LC, LRow0, LV),
+        member(LV, AllAVs)
+    ), LoneMarkers),
+    % At least one lone marker required.
+    LoneMarkers \= [],
+    % Extra non-anchor isolated cells (included in template when one cluster).
+    findall(ER-EC, (
+        member(ER-EC, IsolPosns),
+        nth0(ER, Grid, ERow0), nth0(EC, ERow0, EV),
+        \+ member(EV, AllAVs)
+    ), ExtraPosns),
+    % Include extras only when exactly one template cluster.
+    length(Clusters, NClu),
+    ( NClu =:= 1 -> ExtraForStamp = ExtraPosns ; ExtraForStamp = [] ),
+    % Apply stamps for each lone marker.
+    ssam_stamp_all(LoneMarkers, ClusInfos, ExtraForStamp, Grid, NR, NC, Out).
+
+% ssam_stamp_all/7: iterate lone markers; stamp template at each position.
+ssam_stamp_all([], _, _, Grid, _, _, Grid).
+% Recursive case: process one lone marker then continue.
+ssam_stamp_all([LR-LC-LV|Rest], ClusInfos, ExtraPosns, Grid, NR, NC, Out) :-
+    % Find cluster whose anchor value matches this lone marker's value.
+    ( member(clu(CC, LV, AR, AC), ClusInfos)
+    -> % Retrieve values for cluster cells.
+       maplist([R0-C0, R0-C0-V0]>>(nth0(R0, Grid, Rw0), nth0(C0, Rw0, V0)),
+               CC, ClVals),
+       % Retrieve values for extra isolated cells.
+       maplist([R0-C0, R0-C0-V0]>>(nth0(R0, Grid, Rw0), nth0(C0, Rw0, V0)),
+               ExtraPosns, ExtraVals),
+       % Combine into full template cell list.
+       append(ClVals, ExtraVals, AllTCells),
+       % Compute (DR, DC) offsets of each cell from the anchor.
+       maplist([R0-C0-V0, o(DR,DC,V0)]>>(DR is R0-AR, DC is C0-AC),
+               AllTCells, Offsets),
+       % Compute horizontal flip: negate all DC values.
+       maplist([o(DR,DC,V0), o(DR,NDC,V0)]>>(NDC is -DC), Offsets, FlipOffsets),
+       % Choose primary orientation based on anchor-row DC symmetry.
+       ssam_primary_orient(Offsets, FlipOffsets, PrimaryOff),
+       % Use primary if it fits; else try alternate; else use primary anyway.
+       ( ssam_all_fit(LR, LC, PrimaryOff, NR, NC)
+       -> UseOff = PrimaryOff
+       ;  ( PrimaryOff = Offsets -> AltOff = FlipOffsets ; AltOff = Offsets ),
+          ( ssam_all_fit(LR, LC, AltOff, NR, NC) -> UseOff = AltOff
+          ; UseOff = PrimaryOff )
+       ),
+       % Write stamp into grid.
+       ssam_place_stamp(LR, LC, UseOff, Grid, Grid2)
+    % No matching cluster: leave grid unchanged for this marker.
+    ; Grid2 = Grid
+    ),
+    % Process remaining lone markers with updated grid.
+    ssam_stamp_all(Rest, ClusInfos, ExtraPosns, Grid2, NR, NC, Out).
+
+% ssam_primary_orient/3: determine flip vs original by two tests.
+% Test 1: anchor row (DR=0) has leftward DC but no rightward DC -> flip.
+% Test 2: row below anchor (DR=1) has rightward DC but no leftward DC -> flip.
+% Otherwise: original.
+ssam_primary_orient(Offsets, FlipOffsets, PrimaryOff) :-
+    % Gather anchor-row DC values.
+    findall(DC0, member(o(0, DC0, _), Offsets), AnchorDCs),
+    % Gather below-row DC values.
+    findall(DC1, member(o(1, DC1, _), Offsets), BelowDCs),
+    % Deduplicate both sets.
+    list_to_set(AnchorDCs, UADCs),
+    list_to_set(BelowDCs, UBDCs),
+    % Apply flip if either condition is met.
+    ( ssam_neg_no_pos(UADCs)
+    -> PrimaryOff = FlipOffsets
+    ;  ssam_pos_no_neg(UBDCs)
+    -> PrimaryOff = FlipOffsets
+    ;  PrimaryOff = Offsets
+    ).
+
+% ssam_neg_no_pos/1: true if set has at least one DC < 0 and no DC > 0.
+ssam_neg_no_pos(DCs) :-
+    member(DC, DCs), DC < 0, !,
+    \+ (member(DC2, DCs), DC2 > 0).
+
+% ssam_pos_no_neg/1: true if set has at least one DC > 0 and no DC < 0.
+ssam_pos_no_neg(DCs) :-
+    member(DC, DCs), DC > 0, !,
+    \+ (member(DC2, DCs), DC2 < 0).
+
+% ssam_all_fit/5: true if every offset cell is within grid bounds.
+ssam_all_fit(LR, LC, Offsets, NR, NC) :-
+    forall(member(o(DR, DC, _), Offsets), (
+        NR2 is LR + DR, NC2 is LC + DC,
+        NR2 >= 0, NR2 < NR, NC2 >= 0, NC2 < NC
+    )).
+
+% ssam_place_stamp/5: copy Grid replacing stamp positions with stamp values.
+ssam_place_stamp(LR, LC, Offsets, Grid, Out) :-
+    % Build row index list.
+    length(Grid, GNR), GNR1 is GNR - 1,
+    numlist(0, GNR1, RowIdxs),
+    % For each row, build its output version.
+    maplist([RI, Row]>>(
+        nth0(RI, Grid, OrigRow),
+        length(OrigRow, GNC), GNC1 is GNC - 1,
+        numlist(0, GNC1, ColIdxs),
+        % For each column: use stamp value if a stamp offset hits this cell.
+        maplist([CI, Val]>>(
+            ( member(o(DRs, DCs, SVs), Offsets),
+              SRs is LR+DRs, SCs is LC+DCs,
+              SRs =:= RI, SCs =:= CI
+            -> Val = SVs
+            ; nth0(CI, OrigRow, Val)
+            )
+        ), ColIdxs, Row)
+    ), RowIdxs, Out).
+
+% ssam_anchor/5: find unique-value cell in component and its position.
+ssam_anchor(Cells, Grid, AV, AR, AC) :-
+    % Read values of all cells in this component.
+    maplist([R0-C0, V0]>>(nth0(R0, Grid, Rw0), nth0(C0, Rw0, V0)), Cells, Vals),
+    % Unique value set.
+    list_to_set(Vals, UniqueVs),
+    % Find a value that appears exactly once.
+    member(AV, UniqueVs),
+    include([Vx]>>(Vx =:= AV), Vals, AVOccs),
+    length(AVOccs, 1), !,
+    % Locate the anchor cell position.
+    member(AR-AC, Cells),
+    nth0(AR, Grid, ARw), nth0(AC, ARw, AV).
+
+% ssam_comps/5: partition NZ cell list into 4-connected components.
+ssam_comps([], _, _, _, []).
+% Take first unvisited cell; BFS to find its full component; recurse.
+ssam_comps([RC|Rest], Grid, MaxR, MaxC, [comp(Comp, Len)|RestComps]) :-
+    ssam_bfs_4([RC], [RC], Grid, MaxR, MaxC, Comp),
+    subtract(Rest, Comp, NewRest),
+    length(Comp, Len),
+    ssam_comps(NewRest, Grid, MaxR, MaxC, RestComps).
+
+% ssam_bfs_4/6: BFS over 4-connected non-zero cells.
+ssam_bfs_4([], Visited, _, _, _, Visited).
+% Expand one cell; collect unvisited non-zero 4-neighbours.
+ssam_bfs_4([R-C|Queue], Visited, Grid, MaxR, MaxC, Comp) :-
+    findall(NR-NC, (
+        ( NR is R+1, NC = C ; NR is R-1, NC = C
+        ; NR = R, NC is C+1 ; NR = R, NC is C-1 ),
+        NR >= 0, NR < MaxR, NC >= 0, NC < MaxC,
+        nth0(NR, Grid, NRow), nth0(NC, NRow, NV), NV =\= 0,
+        \+ member(NR-NC, Visited), \+ member(NR-NC, Queue)
+    ), Nbrs),
+    append(Nbrs, Queue, NewQ),
+    append(Nbrs, Visited, NewVis),
+    ssam_bfs_4(NewQ, NewVis, Grid, MaxR, MaxC, Comp).
+
+% ssam_nz_cells/3: collect R-C positions of all non-zero cells in Grid.
+ssam_nz_cells([], _, []).
+ssam_nz_cells([Row|Rows], R, Cells) :-
+    R1 is R + 1,
+    ssam_nz_cells(Rows, R1, Rest),
+    ssam_row_nz(Row, R, 0, RowCells),
+    append(RowCells, Rest, Cells).
+
+% ssam_row_nz/4: collect column positions of non-zero values in one row.
+ssam_row_nz([], _, _, []).
+% Non-zero cell: record position and advance.
+ssam_row_nz([V|Vs], R, C, [R-C|Rest]) :-
+    V =\= 0, !,
+    C1 is C + 1,
+    ssam_row_nz(Vs, R, C1, Rest).
+% Zero cell: skip.
+ssam_row_nz([_|Vs], R, C, Rest) :-
+    C1 is C + 1,
+    ssam_row_nz(Vs, R, C1, Rest).
+
+% ---------------------------------------------------------------------------
+% WAVE 48 RULES
+% ---------------------------------------------------------------------------
+
+% Wave 48 Rule 1: color_5comps_size6 (task d2abd087)
+% All value-5 connected 4-components of size exactly 6 -> color 2;
+% components of any other size -> color 1.  Input must be all-5-or-0.
+arc_named_rule(color_5comps_size6).
+% Main transform: replace 5-components by size-dependent color.
+arc_transform(color_5comps_size6, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Size guard.
+    length(Grid, NR), NR =< 30,
+    % Width guard.
+    Grid = [W48H|_], length(W48H, NC), NC =< 30,
+    % Input must contain only 0s and 5s.
+    \+ (member(W48Row, Grid), member(W48V, W48Row), W48V =\= 0, W48V =\= 5),
+    % Collect all value-5 cell positions.
+    w48_five_cells(Grid, 0, FiveCells),
+    % At least one 5 required.
+    FiveCells \= [],
+    % Find connected components of 5-cells via 4-connectivity BFS.
+    w48_comps(FiveCells, Grid, NR, NC, Comps),
+    % Build flat replacement list: Row-Col-OutputVal.
+    findall(W48R-W48C-W48OV, (
+        member(W48Cells-W48Sz, Comps),
+        ( W48Sz =:= 6 -> W48OV = 2 ; W48OV = 1 ),
+        member(W48R-W48C, W48Cells)
+    ), W48Reps),
+    % Reconstruct output grid.
+    NR1 is NR - 1,
+    numlist(0, NR1, W48RIs),
+    maplist([W48RI, W48Row]>>(
+        nth0(W48RI, Grid, W48Orig),
+        NC1 is NC - 1,
+        numlist(0, NC1, W48CIs),
+        maplist([W48CI, W48V2]>>(
+            ( member(W48RI-W48CI-W48RV, W48Reps)
+            -> W48V2 = W48RV
+            ; nth0(W48CI, W48Orig, W48V2)
+            )
+        ), W48CIs, W48Row)
+    ), W48RIs, Out).
+
+% w48_five_cells/3: collect (R-C) pairs where grid value == 5.
+w48_five_cells([], _, []).
+w48_five_cells([W48Row|W48Rows], W48R, W48Cells) :-
+    % Advance row index.
+    W48R1 is W48R + 1,
+    % Recurse on remaining rows.
+    w48_five_cells(W48Rows, W48R1, W48Rest),
+    % Collect 5-cells in this row.
+    w48_five_row(W48Row, W48R, 0, W48RowCells),
+    % Combine.
+    append(W48RowCells, W48Rest, W48Cells).
+
+% w48_five_row/4: collect columns where value == 5.
+w48_five_row([], _, _, []).
+w48_five_row([5|W48Vs], W48R, W48C, [W48R-W48C|W48Rest]) :-
+    % 5-cell found: record and advance.
+    W48C1 is W48C + 1,
+    w48_five_row(W48Vs, W48R, W48C1, W48Rest).
+w48_five_row([W48IV|W48Vs], W48R, W48C, W48Rest) :-
+    % Non-5 cell: skip.
+    W48IV =\= 5,
+    W48C1 is W48C + 1,
+    w48_five_row(W48Vs, W48R, W48C1, W48Rest).
+
+% w48_comps/5: partition 5-cell list into connected components.
+w48_comps([], _, _, _, []).
+w48_comps([W48RC|W48Rest], Grid, W48NR, W48NC, [W48Comp-W48Sz|W48RestC]) :-
+    % BFS from seed cell.
+    w48_bfs([W48RC], [W48RC], Grid, W48NR, W48NC, W48Comp),
+    % Remove found cells from remaining list.
+    subtract(W48Rest, W48Comp, W48New),
+    % Record component size.
+    length(W48Comp, W48Sz),
+    % Recurse.
+    w48_comps(W48New, Grid, W48NR, W48NC, W48RestC).
+
+% w48_bfs/6: breadth-first flood-fill for value-5 connected cells.
+w48_bfs([], W48Vis, _, _, _, W48Vis).
+w48_bfs([W48R-W48C|W48Q], W48Vis, Grid, W48NR, W48NC, W48Comp) :-
+    % Find unvisited 4-connected 5-valued neighbours.
+    findall(W48NR2-W48NC2, (
+        ( W48NR2 is W48R+1, W48NC2 = W48C
+        ; W48NR2 is W48R-1, W48NC2 = W48C
+        ; W48NR2 = W48R, W48NC2 is W48C+1
+        ; W48NR2 = W48R, W48NC2 is W48C-1
+        ),
+        W48NR2 >= 0, W48NR2 < W48NR,
+        W48NC2 >= 0, W48NC2 < W48NC,
+        nth0(W48NR2, Grid, W48NRow),
+        nth0(W48NC2, W48NRow, 5),
+        \+ member(W48NR2-W48NC2, W48Vis),
+        \+ member(W48NR2-W48NC2, W48Q)
+    ), W48Nbrs),
+    % Extend queue and visited set.
+    append(W48Nbrs, W48Q, W48NewQ),
+    append(W48Nbrs, W48Vis, W48NewVis),
+    % Continue BFS.
+    w48_bfs(W48NewQ, W48NewVis, Grid, W48NR, W48NC, W48Comp).
+
+% ---------------------------------------------------------------------------
+% Wave 48 Rule 2: parity_5_to_3 (task d406998b)
+% 5s at column c where (c mod 2 == NC mod 2) stay 5; others become 3.
+% Input must be all-5-or-0.
+arc_named_rule(parity_5_to_3).
+% Main transform: recolor 5s by column parity vs grid-width parity.
+arc_transform(parity_5_to_3, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Size guard.
+    length(Grid, NR), NR =< 30,
+    % Width guard.
+    Grid = [W48PH|_], length(W48PH, NC), NC =< 30,
+    % Input must contain only 0s and 5s.
+    \+ (member(W48PRw, Grid), member(W48PV0, W48PRw), W48PV0 =\= 0, W48PV0 =\= 5),
+    % At least one 5 must exist in the grid.
+    once((member(W48PR2, Grid), member(5, W48PR2))),
+    % stay-parity = NC mod 2.
+    W48StayPar is NC mod 2,
+    % Build output: each 5 at col c: stay 5 if c%2==StayPar, else -> 3.
+    NR1 is NR - 1,
+    numlist(0, NR1, W48PRIs),
+    maplist([W48PRI, W48PRow]>>(
+        nth0(W48PRI, Grid, W48POrigRow),
+        NC1 is NC - 1,
+        numlist(0, NC1, W48PCIs),
+        maplist([W48PCI, W48PVal]>>(
+            nth0(W48PCI, W48POrigRow, W48PIV),
+            ( W48PIV =:= 5
+            -> ( W48PCI mod 2 =:= W48StayPar
+               -> W48PVal = 5
+               ;  W48PVal = 3
+               )
+            ; W48PVal = W48PIV
+            )
+        ), W48PCIs, W48PRow)
+    ), W48PRIs, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
