@@ -6916,7 +6916,7 @@ arc_transform(scale_shape_into_frame, Grid, Result) :-
 % ERC
     arc_grid_dims(Grid, NR, NC),
 % ERC
-    NR =< 20, NC =< 20,
+    NR =< 30, NC =< 30,
 % ERC
     numlist(1, NR, Rs), numlist(1, NC, Cs),
 % ERC
@@ -18878,6 +18878,743 @@ arc_induce_recolor(TrainingPairs, Mapping) :-
     % Verify the complete mapping works for all training pairs.
     forall(member(pair(InG, OutG), TrainingPairs),
            arc_recolor_grid(Mapping, InG, OutG)).
+
+% ---------------------------------------------------------------------------
+% WAVE 37 RULE 1: reverse_concentric_layers
+% Task 85c4e7cd: grid is perfectly nested concentric rectangular rings;
+% each cell's color is determined by its distance from the border.
+% Output reverses the layer color sequence (innermost becomes outermost).
+% ---------------------------------------------------------------------------
+
+% ERC rule declaration
+arc_named_rule(reverse_concentric_layers).
+% ERC transform head
+arc_transform(reverse_concentric_layers, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC get column count
+    Grid = [GRrl1|_], length(GRrl1, NC), NC =< 30,
+% ERC compute max depth (0 = outermost ring)
+    MaxD is min(NR, NC) // 2 - 1,
+% ERC at least one ring exists
+    MaxD >= 0,
+% ERC collect color for each depth: depth D has cell (D+1, D+1) in 1-indexed
+    numlist(0, MaxD, Depths),
+    maplist([Drl, Drl-Crl]>>(
+        Rrl is Drl + 1, Corl is Drl + 1,
+        arc_grid_at(Grid, Rrl, Corl, Crl)
+    ), Depths, DepthColors),
+% ERC verify all cells at each depth have the expected single color
+    forall(
+        (between(1, NR, Rck), between(1, NC, Cck),
+         Dck is min(min(Rck-1, NR-Rck), min(Cck-1, NC-Cck)),
+         member(Dck-ExpCck, DepthColors)),
+        arc_grid_at(Grid, Rck, Cck, ExpCck)
+    ),
+% ERC number of layers
+    length(DepthColors, NLayersrl),
+    MaxIdxrl is NLayersrl - 1,
+% ERC build output: cell at depth D gets color of layer (MaxIdx - D)
+    numlist(1, NR, AllRowsrl),
+    maplist([Rowrl, RowListrl]>>(
+        numlist(1, NC, AllColsrl),
+        maplist([Colrl, Vrl]>>(
+            Drl2 is min(min(Rowrl-1, NR-Rowrl), min(Colrl-1, NC-Colrl)),
+            RDrl is MaxIdxrl - Drl2,
+            member(RDrl-Vrl, DepthColors)
+        ), AllColsrl, RowListrl)
+    ), AllRowsrl, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 37 RULE 2: extend_zeros_in_bands
+% Task 855e0971: grid is divided into horizontal or vertical color bands;
+% each isolated 0 within a band extends into a full line spanning that band
+% (vertical line for horizontal bands, horizontal line for vertical bands).
+% ---------------------------------------------------------------------------
+
+% ERC rule declaration
+arc_named_rule(extend_zeros_in_bands).
+% ERC transform head
+arc_transform(extend_zeros_in_bands, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC get column count
+    Grid = [GRez1|_], length(GRez1, NC), NC =< 30,
+% ERC at least one zero must exist
+    once((between(1, NR, Rez0), between(1, NC, Cez0),
+          arc_grid_at(Grid, Rez0, Cez0, 0))),
+% ERC for each zero cell, determine extension direction and collect new zeros
+    findall(NRez-NCez, (
+        between(1, NR, Rzez), between(1, NC, Czez),
+        arc_grid_at(Grid, Rzez, Czez, 0),
+        (
+% ERC try horizontal band: all non-zero in row Rzez have same color BCez
+            findall(Vez, (
+                between(1, NC, Ccez),
+                arc_grid_at(Grid, Rzez, Ccez, Vez), Vez \= 0
+            ), RowVsez),
+            RowVsez \= [],
+            sort(RowVsez, [BCez]),
+% ERC find all rows in band (same majority non-zero color)
+            findall(Rbez, (
+                between(1, NR, Rbez),
+                findall(Vbez, (
+                    between(1, NC, Ccbez),
+                    arc_grid_at(Grid, Rbez, Ccbez, Vbez), Vbez \= 0
+                ), RVsez),
+                ( RVsez = [] ; sort(RVsez, [BCez]) )
+            ), BandRowsez),
+            member(NRez, BandRowsez), NCez = Czez
+        ;
+% ERC try vertical band: all non-zero in col Czez have same color BCez
+            findall(Vez, (
+                between(1, NR, Rvez),
+                arc_grid_at(Grid, Rvez, Czez, Vez), Vez \= 0
+            ), ColVsez),
+            ColVsez \= [],
+            sort(ColVsez, [BCez]),
+% ERC find all cols in band (same majority non-zero color)
+            findall(Cbez, (
+                between(1, NC, Cbez),
+                findall(Vcbez, (
+                    between(1, NR, Rvcbez),
+                    arc_grid_at(Grid, Rvcbez, Cbez, Vcbez), Vcbez \= 0
+                ), CVsez),
+                ( CVsez = [] ; sort(CVsez, [BCez]) )
+            ), BandColsez),
+            NRez = Rzez, member(NCez, BandColsez)
+        )
+    ), NewZerosListez),
+% ERC require new zeros were generated (rule is non-trivial)
+    NewZerosListez \= [],
+    sort(NewZerosListez, NewZerosez),
+% ERC build output: new zero positions become 0; others keep original
+    numlist(1, NR, AllRowsez),
+    maplist([Rowez, RowListez]>>(
+        numlist(1, NC, AllColsez),
+        maplist([Colez, Vez2]>>(
+            ( member(Rowez-Colez, NewZerosez) -> Vez2 = 0
+            ; arc_grid_at(Grid, Rowez, Colez, Vez2)
+            )
+        ), AllColsez, RowListez)
+    ), AllRowsez, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% WAVE 37 RULE 3: recolor_closed_rect_frames
+% Task 810b9b61: closed hollow rectangular frames (all border cells = 1,
+% all interior cells = 0) are recolored from 1 to 3; open/partial shapes
+% (L-shapes, U-shapes, single cells) remain color 1.
+% ---------------------------------------------------------------------------
+
+% ERC rule declaration
+arc_named_rule(recolor_closed_rect_frames).
+% ERC transform head
+arc_transform(recolor_closed_rect_frames, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 20,
+% ERC get column count
+    Grid = [GRcrf1|_], length(GRcrf1, NC), NC =< 20,
+% ERC find all closed rectangular frames (border all 1, interior all 0)
+    findall(R1crf-R2crf-C1crf-C2crf, (
+        between(1, NR, R1crf), between(1, NR, R2crf), R2crf > R1crf + 1,
+        between(1, NC, C1crf), between(1, NC, C2crf), C2crf > C1crf + 1,
+% ERC all border cells of rectangle must be 1
+        forall(
+            (between(R1crf, R2crf, Rbcrf), between(C1crf, C2crf, Cbcrf),
+             (Rbcrf =:= R1crf ; Rbcrf =:= R2crf ; Cbcrf =:= C1crf ; Cbcrf =:= C2crf)),
+            arc_grid_at(Grid, Rbcrf, Cbcrf, 1)
+        ),
+% ERC all interior cells must be 0
+        forall(
+            (between(R1crf, R2crf, Ricrf), between(C1crf, C2crf, Cicrf),
+             Ricrf > R1crf, Ricrf < R2crf, Cicrf > C1crf, Cicrf < C2crf),
+            arc_grid_at(Grid, Ricrf, Cicrf, 0)
+        )
+    ), Framescrf),
+% ERC require at least one closed frame found
+    Framescrf \= [],
+% ERC collect all cells that are on a frame border
+    findall(Rfcrf-Cfcrf, (
+        member(R1f-R2f-C1f-C2f, Framescrf),
+        between(R1f, R2f, Rfcrf), between(C1f, C2f, Cfcrf),
+        ( Rfcrf =:= R1f ; Rfcrf =:= R2f ; Cfcrf =:= C1f ; Cfcrf =:= C2f )
+    ), FrameCellsListcrf),
+    sort(FrameCellsListcrf, FrameCellscrf),
+% ERC build output: frame cells become 3; others unchanged
+    numlist(1, NR, AllRowscrf),
+    maplist([Rowcrf, RowListcrf]>>(
+        numlist(1, NC, AllColscrf),
+        maplist([Colcrf, Vcrf]>>(
+            arc_grid_at(Grid, Rowcrf, Colcrf, InVcrf),
+            ( member(Rowcrf-Colcrf, FrameCellscrf) -> Vcrf = 3
+            ; Vcrf = InVcrf
+            )
+        ), AllColscrf, RowListcrf)
+    ), AllRowscrf, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 38 Rule 1: draw_cross_from_spanning_pairs (task 6cdd2623)
+% Task: noisy grid with 4 anchor cells of one color, two forming a
+% horizontal spanning pair (same row, cols 1 and NC) and two forming a
+% vertical spanning pair (same col, rows 1 and NR). Output: draw a full
+% horizontal line at the spanning row and/or a full vertical line at the
+% spanning col using the anchor color; all other cells become 0.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(draw_cross_from_spanning_pairs).
+% ERC transform clause
+arc_transform(draw_cross_from_spanning_pairs, Grid, Out) :-
+% ERC size guards
+    length(Grid, NR), NR =< 30,
+% ERC column count guard
+    Grid = [GRdcsp1|_], length(GRdcsp1, NC), NC =< 30,
+% ERC collect all non-zero cells
+    findall(V-R-C, (
+        between(1, NR, R), between(1, NC, C),
+        arc_grid_at(Grid, R, C, V), V \= 0
+    ), AllCells),
+% ERC extract all colors and get unique list
+    findall(VC, member(VC-_-_, AllCells), AllVsCsp),
+    sort(AllVsCsp, UniqueVsCsp),
+% ERC find anchor color with at least one spanning pair
+    findall(AC-DrawRows-DrawCols, (
+        member(AC, UniqueVsCsp),
+        findall(Rp-Cp, member(AC-Rp-Cp, AllCells), ACPosCsp),
+% ERC find rows where color spans full width (col 1 to NC)
+        findall(DR, (
+            member(DR-1, ACPosCsp),
+            member(DR-NC, ACPosCsp)
+        ), DrawRows),
+% ERC find cols where color spans full height (row 1 to NR)
+        findall(DC, (
+            member(1-DC, ACPosCsp),
+            member(NR-DC, ACPosCsp)
+        ), DrawCols),
+% ERC require at least one spanning pair exists
+        ( DrawRows \= [] ; DrawCols \= [] )
+    ), AnchorListCsp),
+% ERC require exactly one anchor color found
+    AnchorListCsp = [ACsp-DrawRowsCsp-DrawColsCsp|_],
+% ERC build output: draw lines with anchor color, zero elsewhere
+    numlist(1, NR, AllRowsCsp),
+    maplist([Rowcsp, RowListcsp]>>(
+% ERC iterate columns
+        numlist(1, NC, AllColsCsp),
+        maplist([Colcsp, Vcsp]>>(
+% ERC assign anchor color if on a draw-row or draw-col else 0
+            ( member(Rowcsp, DrawRowsCsp) -> Vcsp = ACsp
+            ; member(Colcsp, DrawColsCsp) -> Vcsp = ACsp
+            ; Vcsp = 0
+            )
+        ), AllColsCsp, RowListcsp)
+    ), AllRowsCsp, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 38 Rule 2: fill_enclosed_zeros_with_4 (task 00d62c1b)
+% Task: grid with 0s and a single non-zero wall color. Connected regions of
+% 0s that cannot be reached from the grid boundary (enclosed interiors) are
+% filled with 4. All other cells remain unchanged.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(fill_enclosed_zeros_with_4).
+% ERC transform clause
+arc_transform(fill_enclosed_zeros_with_4, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRfez1|_], length(GRfez1, NC), NC =< 30,
+% ERC collect all non-zero values; expect exactly one wall color
+    findall(Vfez, (
+        between(1, NR, Rfez0), between(1, NC, Cfez0),
+        arc_grid_at(Grid, Rfez0, Cfez0, Vfez), Vfez \= 0
+    ), VsFez),
+    sort(VsFez, [_WallFez]),
+% ERC collect all boundary zero cells as starting frontier
+    findall(Rb-Cb, (
+        arc_grid_at(Grid, Rb, Cb, 0),
+        ( Rb =:= 1 ; Rb =:= NR ; Cb =:= 1 ; Cb =:= NC )
+    ), BoundaryFez),
+% ERC flood-fill from boundary through zeros to find exterior cells
+    sort(BoundaryFez, BFrontierFez),
+    fez_bfs(Grid, NR, NC, BFrontierFez, BFrontierFez, ExteriorFez),
+% ERC build output: enclosed zeros become 4, rest unchanged
+    numlist(1, NR, AllRowsFez),
+    maplist([Rowfez, RowListfez]>>(
+        numlist(1, NC, AllColsFez),
+        maplist([Colfez, Voutfez]>>(
+            arc_grid_at(Grid, Rowfez, Colfez, InVfez),
+            ( InVfez =:= 0 ->
+                ( memberchk(Rowfez-Colfez, ExteriorFez) -> Voutfez = 0
+                ; Voutfez = 4
+                )
+            ; Voutfez = InVfez
+            )
+        ), AllColsFez, RowListfez)
+    ), AllRowsFez, Out),
+% ERC deterministic cut
+    !.
+
+% ERC BFS helper: expand frontier through zero cells
+fez_bfs(Grid, NR, NC, Frontier, Visited, Result) :-
+% ERC if frontier is non-empty, expand to neighboring zeros
+    Frontier \= [],
+    findall(R2-C2, (
+        member(R1-C1, Frontier),
+        member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+        R2 is R1 + DR, C2 is C1 + DC,
+        R2 >= 1, R2 =< NR, C2 >= 1, C2 =< NC,
+        arc_grid_at(Grid, R2, C2, 0),
+        \+ memberchk(R2-C2, Visited)
+    ), NewRaw),
+    sort(NewRaw, NewFez),
+    ( NewFez = [] ->
+        Result = Visited
+    ;
+        append(Visited, NewFez, NewVisited),
+        fez_bfs(Grid, NR, NC, NewFez, NewVisited, Result)
+    ).
+% ERC base case: empty frontier means done
+fez_bfs(_Grid, _NR, _NC, [], Visited, Visited).
+
+% ---------------------------------------------------------------------------
+% Wave 38 Rule 3: stamp_pattern_self_expand (task 007bbfb7)
+% Task: NxM input grid. For each cell (i,j): if non-zero, place the entire
+% input at block (i,j) of the N*N x M*M output; if zero, place all zeros.
+% Output size is NR*NR x NC*NC (square expansion).
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(stamp_pattern_self_expand).
+% ERC transform clause
+arc_transform(stamp_pattern_self_expand, Grid, Out) :-
+% ERC size guard: small grids only (output would be NR^2 x NC^2)
+    length(Grid, NR), NR =< 5,
+% ERC column count
+    Grid = [GRspse1|_], length(GRspse1, NC), NC =< 5,
+% ERC verify grid has at least one non-zero cell
+    once((between(1, NR, Rspse0), between(1, NC, Cspse0),
+          arc_grid_at(Grid, Rspse0, Cspse0, Vspse0), Vspse0 \= 0)),
+% ERC output rows = NR * NR, output cols = NC * NC
+    OutNR is NR * NR, OutNC is NC * NC,
+% ERC build output grid
+    numlist(1, OutNR, AllOutRowsSpse),
+    maplist([OutRowSpse, OutRowListSpse]>>(
+% ERC determine which meta-row (block row) this output row belongs to
+        MetaRowSpse is (OutRowSpse - 1) // NR + 1,
+% ERC determine which sub-row within the block
+        SubRowSpse is (OutRowSpse - 1) mod NR + 1,
+        numlist(1, OutNC, AllOutColsSpse),
+        maplist([OutColSpse, OutVSpse]>>(
+% ERC determine which meta-col (block col) this output col belongs to
+            MetaColSpse is (OutColSpse - 1) // NC + 1,
+% ERC determine which sub-col within the block
+            SubColSpse is (OutColSpse - 1) mod NC + 1,
+% ERC look up the meta-cell value in the input
+            arc_grid_at(Grid, MetaRowSpse, MetaColSpse, MetaVSpse),
+% ERC if meta-cell is non-zero, place the pattern's sub-cell value; else 0
+            ( MetaVSpse =\= 0 ->
+                arc_grid_at(Grid, SubRowSpse, SubColSpse, OutVSpse)
+            ; OutVSpse = 0
+            )
+        ), AllOutColsSpse, OutRowListSpse)
+    ), AllOutRowsSpse, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 38 Rule 4: merge_two_shapes_into_bbox (task 681b3aeb)
+% Task: exactly two colored shapes in the grid; output is a minimal bounding
+% box where both shapes tile each other's complement — merged via horizontal,
+% vertical, or complementary placement with no cell conflicts.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(merge_two_shapes_into_bbox).
+% ERC transform clause head
+arc_transform(merge_two_shapes_into_bbox, Grid, Out) :-
+% ERC size guard rows
+    length(Grid, NR), NR =< 30,
+% ERC size guard cols
+    Grid = [GRmtsb1|_], length(GRmtsb1, NC), NC =< 30,
+% ERC collect all non-zero cells as Color-Row-Col
+    findall(V-R-C, (
+        between(1, NR, R), between(1, NC, C),
+        arc_grid_at(Grid, R, C, V), V \= 0
+    ), AllMtsb),
+% ERC require exactly two distinct colors
+    findall(V, member(V-_-_, AllMtsb), VlistMtsb),
+% ERC sort to get unique color pair
+    sort(VlistMtsb, [CAmtsb, CBmtsb]),
+% ERC absolute cell positions for color A
+    findall(R-C, member(CAmtsb-R-C, AllMtsb), AbsAMtsb),
+% ERC absolute cell positions for color B
+    findall(R-C, member(CBmtsb-R-C, AllMtsb), AbsBMtsb),
+% ERC row coordinates for A bounding box
+    findall(R, member(R-_, AbsAMtsb), RAMtsb),
+% ERC col coordinates for A bounding box
+    findall(C, member(_-C, AbsAMtsb), CAMtsb),
+% ERC row coordinates for B bounding box
+    findall(R, member(R-_, AbsBMtsb), RBMtsb),
+% ERC col coordinates for B bounding box
+    findall(C, member(_-C, AbsBMtsb), CBMtsb),
+% ERC min/max row for A
+    min_list(RAMtsb, MinRAMtsb), max_list(RAMtsb, MaxRAMtsb),
+% ERC min/max col for A
+    min_list(CAMtsb, MinCAMtsb), max_list(CAMtsb, MaxCAMtsb),
+% ERC min/max row for B
+    min_list(RBMtsb, MinRBMtsb), max_list(RBMtsb, MaxRBMtsb),
+% ERC min/max col for B
+    min_list(CBMtsb, MinCBMtsb), max_list(CBMtsb, MaxCBMtsb),
+% ERC bounding box height and width for A
+    HAMtsb is MaxRAMtsb - MinRAMtsb + 1,
+    WAMtsb is MaxCAMtsb - MinCAMtsb + 1,
+% ERC bounding box height and width for B
+    HBMtsb is MaxRBMtsb - MinRBMtsb + 1,
+    WBMtsb is MaxCBMtsb - MinCBMtsb + 1,
+% ERC convert A cells to local 0-indexed coordinates
+    findall(LR-LC, (
+        member(R-C, AbsAMtsb),
+        LR is R - MinRAMtsb, LC is C - MinCAMtsb
+    ), LocAMtsb),
+% ERC convert B cells to local 0-indexed coordinates
+    findall(LR-LC, (
+        member(R-C, AbsBMtsb),
+        LR is R - MinRBMtsb, LC is C - MinCBMtsb
+    ), LocBMtsb),
+% ERC apply merge strategy to produce output
+    mtsb_do_merge(CAmtsb, CBmtsb,
+        HAMtsb, WAMtsb, LocAMtsb,
+        HBMtsb, WBMtsb, LocBMtsb, Out),
+% ERC deterministic cut
+    !.
+
+% ERC strategy 1: same size, tall or square (H>=W), A on left / B on right
+mtsb_do_merge(CA, CB, H, W, LocA, H, W, LocB, Out) :-
+% ERC require tall or square shape
+    H >= W,
+% ERC output width with 1-col overlap
+    OutW is 2 * W - 1,
+% ERC A output positions (unchanged)
+    findall(R-C, member(R-C, LocA), PosAm1),
+% ERC B output positions shifted right by W-1
+    findall(R-OC, (member(R-C, LocB), OC is C + W - 1), PosBm1),
+% ERC require no positional conflicts
+    \+ (member(Pos, PosAm1), member(Pos, PosBm1)),
+% ERC build A cell triples
+    findall(R-C-CA, member(R-C, LocA), CellsAm1),
+% ERC build B cell triples shifted right
+    findall(R-OC-CB, (member(R-C, LocB), OC is C + W - 1), CellsBm1),
+% ERC merge cell lists
+    append(CellsAm1, CellsBm1, AllCellsm1),
+% ERC produce output grid
+    mtsb_grid_from_cells(AllCellsm1, H, OutW, Out).
+
+% ERC strategy 2: same size, tall or square (H>=W), B on left / A on right
+mtsb_do_merge(CA, CB, H, W, LocA, H, W, LocB, Out) :-
+% ERC require tall or square shape
+    H >= W,
+% ERC output width with 1-col overlap
+    OutW is 2 * W - 1,
+% ERC B output positions (unchanged)
+    findall(R-C, member(R-C, LocB), PosBm2),
+% ERC A output positions shifted right by W-1
+    findall(R-OC, (member(R-C, LocA), OC is C + W - 1), PosAm2),
+% ERC require no positional conflicts
+    \+ (member(Pos, PosBm2), member(Pos, PosAm2)),
+% ERC build B cell triples
+    findall(R-C-CB, member(R-C, LocB), CellsBm2),
+% ERC build A cell triples shifted right
+    findall(R-OC-CA, (member(R-C, LocA), OC is C + W - 1), CellsAm2),
+% ERC merge cell lists
+    append(CellsBm2, CellsAm2, AllCellsm2),
+% ERC produce output grid
+    mtsb_grid_from_cells(AllCellsm2, H, OutW, Out).
+
+% ERC strategy 3: same size, wide (W>H), A on top / B on bottom
+mtsb_do_merge(CA, CB, H, W, LocA, H, W, LocB, Out) :-
+% ERC require wide shape
+    W > H,
+% ERC output height with 1-row overlap
+    OutH is 2 * H - 1,
+% ERC A output positions (unchanged)
+    findall(R-C, member(R-C, LocA), PosAm3),
+% ERC B output positions shifted down by H-1
+    findall(OR-C, (member(R-C, LocB), OR is R + H - 1), PosBm3),
+% ERC require no positional conflicts
+    \+ (member(Pos, PosAm3), member(Pos, PosBm3)),
+% ERC build A cell triples
+    findall(R-C-CA, member(R-C, LocA), CellsAm3),
+% ERC build B cell triples shifted down
+    findall(OR-C-CB, (member(R-C, LocB), OR is R + H - 1), CellsBm3),
+% ERC merge cell lists
+    append(CellsAm3, CellsBm3, AllCellsm3),
+% ERC produce output grid
+    mtsb_grid_from_cells(AllCellsm3, OutH, W, Out).
+
+% ERC strategy 4: same size, wide (W>H), B on top / A on bottom
+mtsb_do_merge(CA, CB, H, W, LocA, H, W, LocB, Out) :-
+% ERC require wide shape
+    W > H,
+% ERC output height with 1-row overlap
+    OutH is 2 * H - 1,
+% ERC B output positions (unchanged)
+    findall(R-C, member(R-C, LocB), PosBm4),
+% ERC A output positions shifted down by H-1
+    findall(OR-C, (member(R-C, LocA), OR is R + H - 1), PosAm4),
+% ERC require no positional conflicts
+    \+ (member(Pos, PosBm4), member(Pos, PosAm4)),
+% ERC build B cell triples
+    findall(R-C-CB, member(R-C, LocB), CellsBm4),
+% ERC build A cell triples shifted down
+    findall(OR-C-CA, (member(R-C, LocA), OR is R + H - 1), CellsAm4),
+% ERC merge cell lists
+    append(CellsBm4, CellsAm4, AllCellsm4),
+% ERC produce output grid
+    mtsb_grid_from_cells(AllCellsm4, OutH, W, Out).
+
+% ERC strategy 5: A strictly smaller, A fits into B's zero cells
+mtsb_do_merge(CA, CB, HA, WA, LocA, HB, WB, LocB, Out) :-
+% ERC require A fits inside B box in both dims, and is strictly smaller
+    HA =< HB, WA =< WB, ( HA < HB ; WA < WB ),
+% ERC compute B's zero positions in its bounding box (0-indexed)
+    HBm1Mtsb is HB - 1, WBm1Mtsb is WB - 1,
+    findall(R-C, (
+        between(0, HBm1Mtsb, R),
+        between(0, WBm1Mtsb, C),
+        \+ member(R-C, LocB)
+    ), BZerosMtsb),
+% ERC sort zeros for exact comparison
+    sort(BZerosMtsb, BZerosSortedMtsb),
+% ERC require A cell count equals B zero count
+    length(LocA, NAMtsb), length(BZerosMtsb, NZMtsb),
+    NAMtsb =:= NZMtsb,
+% ERC find placement offset for A within B box
+    MaxROMtsb is HB - HA, MaxCOMtsb is WB - WA,
+    mtsb_find_offset(LocA, MaxROMtsb, MaxCOMtsb, BZerosSortedMtsb, ROMtsb, COMtsb),
+% ERC compute shifted A cells
+    findall(AR-AC, (
+        member(LR-LC, LocA),
+        AR is LR + ROMtsb, AC is LC + COMtsb
+    ), ShiftedAMtsb),
+% ERC build B cell triples
+    findall(R-C-CB, member(R-C, LocB), CellsBm5),
+% ERC build shifted A cell triples
+    findall(R-C-CA, member(R-C, ShiftedAMtsb), CellsAm5),
+% ERC merge cell lists
+    append(CellsBm5, CellsAm5, AllCellsm5),
+% ERC produce output grid
+    mtsb_grid_from_cells(AllCellsm5, HB, WB, Out).
+
+% ERC strategy 6: B strictly smaller, B fits into A's zero cells
+mtsb_do_merge(CA, CB, HA, WA, LocA, HB, WB, LocB, Out) :-
+% ERC require B fits inside A box in both dims, and is strictly smaller
+    HB =< HA, WB =< WA, ( HB < HA ; WB < WA ),
+% ERC compute A's zero positions in its bounding box (0-indexed)
+    HAm1Mtsb is HA - 1, WAm1Mtsb is WA - 1,
+    findall(R-C, (
+        between(0, HAm1Mtsb, R),
+        between(0, WAm1Mtsb, C),
+        \+ member(R-C, LocA)
+    ), AZerosMtsb),
+% ERC sort zeros for exact comparison
+    sort(AZerosMtsb, AZerosSortedMtsb),
+% ERC require B cell count equals A zero count
+    length(LocB, NBMtsb), length(AZerosMtsb, NZAMtsb),
+    NBMtsb =:= NZAMtsb,
+% ERC find placement offset for B within A box
+    MaxROAMtsb is HA - HB, MaxCOAMtsb is WA - WB,
+    mtsb_find_offset(LocB, MaxROAMtsb, MaxCOAMtsb, AZerosSortedMtsb, ROAMtsb, COAMtsb),
+% ERC compute shifted B cells
+    findall(BR-BC, (
+        member(LR-LC, LocB),
+        BR is LR + ROAMtsb, BC is LC + COAMtsb
+    ), ShiftedBMtsb),
+% ERC build A cell triples
+    findall(R-C-CA, member(R-C, LocA), CellsAm6),
+% ERC build shifted B cell triples
+    findall(R-C-CB, member(R-C, ShiftedBMtsb), CellsBm6),
+% ERC merge cell lists
+    append(CellsAm6, CellsBm6, AllCellsm6),
+% ERC produce output grid
+    mtsb_grid_from_cells(AllCellsm6, HA, WA, Out).
+
+% ERC helper: find (RO,CO) offset so LocalCells shifted matches ZerosSorted exactly
+mtsb_find_offset(LocalCells, MaxRO, MaxCO, ZerosSorted, RO, CO) :-
+% ERC iterate row offsets
+    between(0, MaxRO, RO),
+% ERC iterate col offsets
+    between(0, MaxCO, CO),
+% ERC compute shifted cell positions
+    findall(SR-SC, (
+        member(LR-LC, LocalCells),
+        SR is LR + RO, SC is LC + CO
+    ), ShiftedMtsb),
+% ERC sort shifted cells for comparison
+    sort(ShiftedMtsb, ShiftedSortedMtsb),
+% ERC check exact match
+    ShiftedSortedMtsb = ZerosSorted,
+% ERC commit on first match found
+    !.
+
+% ERC helper: build NR x NC output grid from 0-indexed R-C-V cell triples
+mtsb_grid_from_cells(Cells, NR, NC, Grid) :-
+% ERC last row and col index (0-based)
+    NRm1 is NR - 1, NCm1 is NC - 1,
+% ERC row index list
+    numlist(0, NRm1, RowsMtsb),
+% ERC map each row index to a row list
+    maplist([R, RowList]>>(
+% ERC col index list for this row
+        numlist(0, NCm1, ColsMtsb),
+% ERC map each col index to a cell value
+        maplist([C, V]>>(
+% ERC look up cell value; default to 0
+            ( member(R-C-V, Cells) -> true ; V = 0 )
+        ), ColsMtsb, RowList)
+    ), RowsMtsb, Grid).
+
+% ---------------------------------------------------------------------------
+% Wave 38 Rule 5: extract_max_seed_block (task 8efcae92)
+% Task: multiple rectangular blocks of 1s containing scattered 2-seeds.
+% The output is the bounding box of the connected block with the most 2s.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(extract_max_seed_block).
+% ERC transform clause
+arc_transform(extract_max_seed_block, Grid, Out) :-
+% ERC size guard rows
+    length(Grid, NR), NR =< 30,
+% ERC size guard cols
+    Grid = [GRemsb1|_], length(GRemsb1, NC), NC =< 30,
+% ERC collect all non-zero cells as R-C pairs
+    findall(R-C, (
+        between(1, NR, R), between(1, NC, C),
+        arc_grid_at(Grid, R, C, Vemsb0), Vemsb0 \= 0
+    ), AllNZEmsb),
+% ERC require at least one non-zero cell
+    AllNZEmsb \= [],
+% ERC partition non-zero cells into 4-connected components
+    emsb_components(AllNZEmsb, Grid, NR, NC, CompsEmsb),
+% ERC count 2-seeds in each component; keep components with at least one seed
+    findall(CountEmsb-CompEmsb, (
+        member(CompEmsb, CompsEmsb),
+        findall(_, (
+            member(Remsb-Cemsb, CompEmsb),
+            arc_grid_at(Grid, Remsb, Cemsb, 2)
+        ), SeedsEmsb),
+        length(SeedsEmsb, CountEmsb),
+        CountEmsb > 0
+    ), CountedEmsb),
+% ERC require at least one seeded component
+    CountedEmsb \= [],
+% ERC select the component with the maximum seed count
+    max_member(_MaxCntEmsb-BestCompEmsb, CountedEmsb),
+% ERC compute bounding box of best component
+    findall(REmsb, member(REmsb-_, BestCompEmsb), RsEmsb),
+    findall(CEmsb, member(_-CEmsb, BestCompEmsb), CsEmsb),
+    min_list(RsEmsb, MinREmsb), max_list(RsEmsb, MaxREmsb),
+    min_list(CsEmsb, MinCEmsb), max_list(CsEmsb, MaxCEmsb),
+% ERC extract subgrid from bounding box
+    numlist(MinREmsb, MaxREmsb, OutRowsEmsb),
+    maplist([RowEmsb, RowListEmsb]>>(
+        numlist(MinCEmsb, MaxCEmsb, OutColsEmsb),
+        maplist([ColEmsb, VoutEmsb]>>(
+            arc_grid_at(Grid, RowEmsb, ColEmsb, VoutEmsb)
+        ), OutColsEmsb, RowListEmsb)
+    ), OutRowsEmsb, Out),
+% ERC deterministic cut
+    !.
+
+% ERC helper: find all 4-connected components among non-zero cells
+emsb_components([], _, _, _, []).
+% ERC take first unvisited cell as new component seed
+emsb_components([H|T], Grid, NR, NC, [CompEmsb|RestComps]) :-
+% ERC BFS from H to find its full connected component
+    emsb_bfs(Grid, NR, NC, [H], [H], CompEmsb),
+% ERC remove all visited cells from remaining cells
+    subtract(T, CompEmsb, RemainingEmsb),
+% ERC recurse on unvisited remainder
+    emsb_components(RemainingEmsb, Grid, NR, NC, RestComps).
+
+% ERC BFS expansion: expand frontier through non-zero 4-neighbors
+emsb_bfs(Grid, NR, NC, Frontier, Visited, Result) :-
+% ERC only expand when frontier is non-empty
+    Frontier \= [],
+    findall(R2emsb-C2emsb, (
+        member(R1emsb-C1emsb, Frontier),
+        member(DRemsb-DCemsb, [-1-0, 1-0, 0-(-1), 0-1]),
+        R2emsb is R1emsb + DRemsb, C2emsb is C1emsb + DCemsb,
+        R2emsb >= 1, R2emsb =< NR, C2emsb >= 1, C2emsb =< NC,
+        arc_grid_at(Grid, R2emsb, C2emsb, V2emsb), V2emsb \= 0,
+        \+ memberchk(R2emsb-C2emsb, Visited)
+    ), NewRawEmsb),
+% ERC sort new frontier to remove duplicates
+    sort(NewRawEmsb, NewFrontierEmsb),
+% ERC if no new cells, BFS is done
+    ( NewFrontierEmsb = [] ->
+        Result = Visited
+    ;
+% ERC otherwise extend visited set and recurse
+        append(Visited, NewFrontierEmsb, NewVisitedEmsb),
+        emsb_bfs(Grid, NR, NC, NewFrontierEmsb, NewVisitedEmsb, Result)
+    ).
+% ERC base case: empty frontier means all reachable cells found
+emsb_bfs(_, _, _, [], Visited, Visited).
+
+% ---------------------------------------------------------------------------
+% Wave 38 Rule 6: extract_solid_rect (task 91714a58)
+% Task: noisy grid containing exactly one solid rectangular block where all
+% cells share the same non-zero color. Output is a zero-background grid
+% with only that solid rectangle preserved.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(extract_solid_rect).
+% ERC transform clause
+arc_transform(extract_solid_rect, Grid, Out) :-
+% ERC size guard — small enough for O(NR^2 * NC^2) rectangle search
+    length(Grid, NR), NR =< 20,
+% ERC column count guard
+    Grid = [GResr1|_], length(GResr1, NC), NC =< 20,
+% ERC collect all candidate solid rectangles (area >= 4, all cells same color)
+    findall(AreaEsr-VEsr-R1esr-R2esr-C1esr-C2esr, (
+        between(1, NR, R1esr),
+        between(R1esr, NR, R2esr),
+        R2esr > R1esr,
+        between(1, NC, C1esr),
+        between(C1esr, NC, C2esr),
+        C2esr > C1esr,
+        arc_grid_at(Grid, R1esr, C1esr, VEsr), VEsr \= 0,
+        forall(
+            (between(R1esr, R2esr, R3esr), between(C1esr, C2esr, C3esr)),
+            arc_grid_at(Grid, R3esr, C3esr, VEsr)
+        ),
+        Hesr is R2esr - R1esr + 1, Wesr is C2esr - C1esr + 1,
+        AreaEsr is Hesr * Wesr
+    ), RectsEsr),
+% ERC require at least one solid rectangle found
+    RectsEsr \= [],
+% ERC select the largest solid rectangle by area
+    max_member(_-VEsr-R1esr-R2esr-C1esr-C2esr, RectsEsr),
+% ERC build output: zeros everywhere except the solid rectangle
+    numlist(1, NR, AllRowsEsr),
+    maplist([RowEsr, RowListEsr]>>(
+        numlist(1, NC, AllColsEsr),
+        maplist([ColEsr, VoutEsr]>>(
+            ( RowEsr >= R1esr, RowEsr =< R2esr,
+              ColEsr >= C1esr, ColEsr =< C2esr ->
+                VoutEsr = VEsr
+            ; VoutEsr = 0
+            )
+        ), AllColsEsr, RowListEsr)
+    ), AllRowsEsr, Out),
+% ERC deterministic cut
+    !.
 
 % ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
