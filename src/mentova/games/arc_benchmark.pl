@@ -22344,6 +22344,358 @@ sib_bfs([R-C|Queue], Visited, Grid, NR, NC, Result) :-
     sib_bfs(Queue2, Visited2, Grid, NR, NC, Result).
 
 % ---------------------------------------------------------------------------
+% Wave 44 Rule 1: five_2x2_to_8_else_2 (task 150deff5)
+% ---------------------------------------------------------------------------
+% Input: 5-cells on 0-background.
+% Rule: a 5-cell that belongs to any 2x2 all-5 block -> 8;
+%       a 5-cell not in any such block -> 2; all other cells unchanged.
+arc_named_rule(five_2x2_to_8_else_2).
+% Declare arc_transform for five_2x2_to_8_else_2.
+arc_transform(five_2x2_to_8_else_2, Grid, Out) :-
+    % Size guard: rows.
+    length(Grid, NR5v2), NR5v2 =< 30,
+    % Size guard: columns.
+    Grid = [GH5v2|_], length(GH5v2, NC5v2), NC5v2 =< 30,
+    % Require at least one 5-cell.
+    flatten(Grid, Flat5v2), member(5, Flat5v2),
+    % Build row index list.
+    numlist(1, NR5v2, AllRs5v2),
+    % Build column index list.
+    numlist(1, NC5v2, AllCs5v2),
+    % Map over every cell to produce the output.
+    maplist([R5v2, OutRow5v2]>>(
+        % Map over every column in this row.
+        maplist([C5v2, OV5v2]>>(
+            % Read current cell value.
+            arc_grid_at(Grid, R5v2, C5v2, V5v2),
+            % Decide output value.
+            ( V5v2 =:= 5 ->
+                % 5-cell: check whether it participates in a 2x2 all-5 block.
+                ( f2x2_in_block(Grid, R5v2, C5v2) -> OV5v2 = 8 ; OV5v2 = 2 )
+            % Non-5 cell: pass through unchanged.
+            ; OV5v2 = V5v2
+            )
+        ), AllCs5v2, OutRow5v2)
+    ), AllRs5v2, Out), !.
+
+% Check if (R,C) belongs to any 2x2 all-5 block.
+% The four possible top-left corners of a 2x2 containing (R,C) use offsets (DR,DC)
+% in {(0,0),(0,-1),(-1,0),(-1,-1)}.  arc_grid_at/4 fails safely out of bounds.
+f2x2_in_block(Grid, R, C) :-
+    % Try each top-left offset; cut on first success.
+    member(DR-DC, [0-0, 0-(-1), (-1)-0, (-1)-(-1)]),
+    % Compute top-left corner.
+    TLR is R + DR, TLC is C + DC,
+    % Compute opposite corner.
+    BRR is TLR + 1, BRC is TLC + 1,
+    % Verify all four cells of the 2x2 are 5.
+    arc_grid_at(Grid, TLR, TLC, 5),
+    arc_grid_at(Grid, TLR, BRC, 5),
+    arc_grid_at(Grid, BRR, TLC, 5),
+    arc_grid_at(Grid, BRR, BRC, 5), !.
+
+% ---------------------------------------------------------------------------
+% Wave 44 Rule 2: enclosed_1s_to_8 (task b2862040)
+% ---------------------------------------------------------------------------
+% Background is 9; shapes are 1-cells.
+% Rule: 1-connected-components that enclose at least one background cell
+%       (i.e. a 9-cell that cannot reach the grid boundary via a 4-connected
+%       path through 9s without crossing a 1) -> recolor to 8.
+%       All other 1-cells stay as 1.
+arc_named_rule(enclosed_1s_to_8).
+% Declare arc_transform for enclosed_1s_to_8.
+arc_transform(enclosed_1s_to_8, Grid, Out) :-
+    % Size guard: rows.
+    length(Grid, NRe1), NRe1 =< 30,
+    % Size guard: columns.
+    Grid = [GHe1|_], length(GHe1, NCe1), NCe1 =< 30,
+    % Require at least one 1-cell.
+    flatten(Grid, Flate1), member(1, Flate1),
+    % Seed flood-fill from all boundary 9-cells.
+    findall(R-C, (
+        nth1(R, Grid, Rowe1), nth1(C, Rowe1, 9),
+        ( R =:= 1 ; R =:= NRe1 ; C =:= 1 ; C =:= NCe1 )
+    ), BndSeeds),
+    % BFS through 9-cells (treating 1s as walls) to find all exterior background.
+    e1t8_bfs(BndSeeds, BndSeeds, Grid, NRe1, NCe1, Exterior),
+    % All 9-cells in the grid.
+    findall(R-C, (nth1(R, Grid, Rowe1b), nth1(C, Rowe1b, 9)), AllNines),
+    % Enclosed cells = 9-cells not reachable from the boundary.
+    subtract(AllNines, Exterior, Enclosed),
+    % Require at least one enclosed cell.
+    Enclosed \= [],
+    % Find all 1-cells.
+    findall(R-C, (nth1(R, Grid, Rowe1c), nth1(C, Rowe1c, 1)), All1s),
+    % Find connected components of 1-cells via BFS.
+    e1t8_comps(All1s, Grid, NRe1, NCe1, Comps1),
+    % Keep only components that are adjacent to at least one enclosed cell.
+    include([Comp]>>(e1t8_encloses_check(Comp, Enclosed)), Comps1, ClosedComps),
+    % Require at least one closed component.
+    ClosedComps \= [],
+    % Flatten closed components to a single set of cells to recolor.
+    flatten(ClosedComps, ClosedCells),
+    % Build output: replace closed 1-cells with 8, keep everything else.
+    numlist(1, NRe1, AllRse1), numlist(1, NCe1, AllCse1),
+    maplist([R, OutRow]>>(
+        maplist([C, OV]>>(
+            % Read cell value.
+            arc_grid_at(Grid, R, C, Ve1),
+            % Recolor closed 1-cells; pass all others through.
+            ( Ve1 =:= 1, member(R-C, ClosedCells) -> OV = 8 ; OV = Ve1 )
+        ), AllCse1, OutRow)
+    ), AllRse1, Out), !.
+
+% BFS through 9-cells: expand from the queue, treating 1-cells as walls.
+e1t8_bfs([], Visited, _, _, _, Visited).
+% Recursive BFS step: expand from head of queue.
+e1t8_bfs([R-C|Queue], Visited, Grid, NRe, NCe, Result) :-
+    % Find 4-connected 9-neighbors not yet visited.
+    findall(NR2-NC2, (
+        ( NR2 is R - 1, NC2 = C
+        ; NR2 is R + 1, NC2 = C
+        ; NR2 = R, NC2 is C - 1
+        ; NR2 = R, NC2 is C + 1
+        ),
+        NR2 >= 1, NR2 =< NRe, NC2 >= 1, NC2 =< NCe,
+        % Only traverse through background cells.
+        arc_grid_at(Grid, NR2, NC2, 9),
+        \+ member(NR2-NC2, Visited)
+    ), Nbrs),
+    % Append new neighbors to queue and visited set.
+    append(Nbrs, Queue, Queue2),
+    append(Visited, Nbrs, Visited2),
+    % Continue BFS.
+    e1t8_bfs(Queue2, Visited2, Grid, NRe, NCe, Result).
+
+% Find all connected components of 1-cells.
+e1t8_comps([], _, _, _, []).
+% Seed a new component from the first unvisited 1-cell.
+e1t8_comps([Seed|Rest], Grid, NRe, NCe, [Comp|Comps]) :-
+    % BFS to collect the full component.
+    e1t8_comp_bfs([Seed], [Seed], Grid, NRe, NCe, Comp),
+    % Remove component cells from the remaining pool.
+    subtract(Rest, Comp, Rest2),
+    % Recurse for remaining 1-cells.
+    e1t8_comps(Rest2, Grid, NRe, NCe, Comps).
+
+% BFS to collect one connected component of 1-cells.
+e1t8_comp_bfs([], Visited, _, _, _, Visited).
+% Expand from the head of the queue through 1-valued neighbors.
+e1t8_comp_bfs([R-C|Queue], Visited, Grid, NRe, NCe, Result) :-
+    % Find 4-connected 1-neighbors not yet in component.
+    findall(NR2-NC2, (
+        ( NR2 is R - 1, NC2 = C
+        ; NR2 is R + 1, NC2 = C
+        ; NR2 = R, NC2 is C - 1
+        ; NR2 = R, NC2 is C + 1
+        ),
+        NR2 >= 1, NR2 =< NRe, NC2 >= 1, NC2 =< NCe,
+        % Only expand through 1-cells.
+        arc_grid_at(Grid, NR2, NC2, 1),
+        \+ member(NR2-NC2, Visited)
+    ), Nbrs),
+    % Append neighbors to queue and visited set.
+    append(Nbrs, Queue, Queue2),
+    append(Visited, Nbrs, Visited2),
+    % Continue BFS.
+    e1t8_comp_bfs(Queue2, Visited2, Grid, NRe, NCe, Result).
+
+% Succeed if Comp is 4-adjacent to at least one enclosed cell.
+e1t8_encloses_check(Comp, Enclosed) :-
+    % Find an enclosed cell adjacent to the component; cut on first hit.
+    member(ER-EC, Enclosed),
+    ( ( NR3 is ER - 1, member(NR3-EC, Comp) )
+    ; ( NR3 is ER + 1, member(NR3-EC, Comp) )
+    ; ( NC3 is EC - 1, member(ER-NC3, Comp) )
+    ; ( NC3 is EC + 1, member(ER-NC3, Comp) )
+    ), !.
+
+% ---------------------------------------------------------------------------
+% Wave 44 Rule 3: snap_5s_to_block (task a48eeaf7)
+% ---------------------------------------------------------------------------
+% Input: a solid 2x2 block of 2-cells; scattered 5-singletons on 0-background.
+% Rule: each 5 moves to the nearest cell in the 1-step adjacency ring of the
+%       2x2 block, measured by Manhattan distance.  Ties broken lexicographically
+%       (smaller row first, then smaller column).
+arc_named_rule(snap_5s_to_block).
+% Declare arc_transform for snap_5s_to_block.
+arc_transform(snap_5s_to_block, Grid, Out) :-
+    % Size guard: rows.
+    length(Grid, NRs5), NRs5 =< 30,
+    % Size guard: columns.
+    Grid = [GHs5|_], length(GHs5, NCs5), NCs5 =< 30,
+    % Find all 2-cells.
+    findall(R-C, (nth1(R, Grid, Rows5), nth1(C, Rows5, 2)), TwoCells),
+    % Require exactly four 2-cells.
+    length(TwoCells, 4),
+    % Compute bounding box of the 2-cells.
+    findall(R, member(R-_, TwoCells), TwoRs),
+    findall(C, member(_-C, TwoCells), TwoCs),
+    min_list(TwoRs, BR1), max_list(TwoRs, BR2),
+    min_list(TwoCs, BC1), max_list(TwoCs, BC2),
+    % Verify bounding box is exactly 2 rows by 2 cols (solid 2x2 block).
+    BR2 is BR1 + 1, BC2 is BC1 + 1,
+    % Compute adjacency ring: one step outside the 2x2 block.
+    RingR1 is BR1 - 1, RingR2 is BR2 + 1,
+    RingC1 is BC1 - 1, RingC2 is BC2 + 1,
+    % Collect all ring cells within grid bounds.
+    findall(R-C, (
+        ( R = RingR1, between(RingC1, RingC2, C)
+        ; R = RingR2, between(RingC1, RingC2, C)
+        ; C = RingC1, between(RingR1, RingR2, R)
+        ; C = RingC2, between(RingR1, RingR2, R)
+        ),
+        R >= 1, R =< NRs5, C >= 1, C =< NCs5
+    ), RingRaw),
+    % Deduplicate ring cells.
+    sort(RingRaw, Ring),
+    % Find all 5-cells.
+    findall(R-C, (nth1(R, Grid, Rows5b), nth1(C, Rows5b, 5)), Fives),
+    % Require at least one 5-cell.
+    Fives \= [],
+    % Map each source 5 to its nearest ring cell.
+    maplist([FR-FC, FR-FC-NearR-NearC]>>(
+        % Find nearest ring cell by Manhattan distance (lex tie-break).
+        s5b_nearest(FR, FC, Ring, NearR-NearC)
+    ), Fives, FivesMap),
+    % Build output.
+    numlist(1, NRs5, AllRss5), numlist(1, NCs5, AllCss5),
+    maplist([R, OutRow]>>(
+        maplist([C, OV]>>(
+            % Read original value.
+            arc_grid_at(Grid, R, C, Vs5),
+            % Target positions take priority; then clear original 5-sources.
+            ( member(_-_-R-C, FivesMap) -> OV = 5
+            ; Vs5 =:= 5 -> OV = 0
+            ; OV = Vs5
+            )
+        ), AllCss5, OutRow)
+    ), AllRss5, Out), !.
+
+% Find the nearest ring cell to (FR,FC) using Manhattan distance.
+% Ties broken by msort which sorts (Dist-(R-C)) lexicographically.
+s5b_nearest(FR, FC, Ring, BestR-BestC) :-
+    % Compute distances to all ring cells.
+    maplist([RR-RC, Dist-(RR-RC)]>>(Dist is abs(FR - RR) + abs(FC - RC)), Ring, Dists),
+    % Sort ascending by distance then by row/col.
+    msort(Dists, [_-(BestR-BestC)|_]).
+
+% ---------------------------------------------------------------------------
+% Wave 44 Rule 4: l_shape_compact (task 98cf29f8)
+% ---------------------------------------------------------------------------
+% Two non-zero colors: one forms a solid rectangle (anchor, stays fixed);
+% the other forms an L-shape (mover: a wide block connected by a narrow arm).
+% Rule: remove the arm; slide the wide block along the arm direction so it
+%       starts at the arm's near end (adjacent to the anchor).
+arc_named_rule(l_shape_compact).
+% Declare arc_transform for l_shape_compact.
+arc_transform(l_shape_compact, Grid, Out) :-
+    % Size guard: rows.
+    length(Grid, NRlsc), NRlsc =< 30,
+    % Size guard: columns.
+    Grid = [GHlsc|_], length(GHlsc, NClsc), NClsc =< 30,
+    % Collect all distinct non-zero color values.
+    findall(V, (nth1(_, Grid, Rowlsc), nth1(_, Rowlsc, V), V \= 0), AllVlsc),
+    sort(AllVlsc, Colorslsc),
+    % Require exactly two colors.
+    length(Colorslsc, 2),
+    Colorslsc = [CAlsc, CBlsc],
+    % Collect cells for each color.
+    findall(R-C, (nth1(R, Grid, Rowlsc2), nth1(C, Rowlsc2, CAlsc)), ACellslsc),
+    findall(R-C, (nth1(R, Grid, Rowlsc3), nth1(C, Rowlsc3, CBlsc)), BCellslsc),
+    % Identify which color is the solid-rectangle anchor and which is the L-mover.
+    ( lsc_is_solid_rect(ACellslsc) ->
+        AnchorLsc = CAlsc, AnchorCLsc = ACellslsc,
+        MoverLsc  = CBlsc, MoverCLsc  = BCellslsc
+    ;   lsc_is_solid_rect(BCellslsc),
+        AnchorLsc = CBlsc, AnchorCLsc = BCellslsc,
+        MoverLsc  = CAlsc, MoverCLsc  = ACellslsc
+    ),
+    % Separate mover cells into the narrow arm and the wide rectangular block.
+    lsc_separate(MoverCLsc, ArmLsc, WideBlkLsc, ArmDirLsc),
+    % Count arm length.
+    length(ArmLsc, ArmLenLsc),
+    % Compute new positions of the wide block after sliding along the arm.
+    lsc_move_block(WideBlkLsc, ArmLsc, ArmDirLsc, ArmLenLsc, NewWideLsc),
+    % Build output: anchor stays; wide block at new position; arm cells cleared.
+    numlist(1, NRlsc, AllRslsc), numlist(1, NClsc, AllCslsc),
+    maplist([R, OutRow]>>(
+        maplist([C, OV]>>(
+            % Anchor cells keep their color.
+            ( member(R-C, AnchorCLsc) -> OV = AnchorLsc
+            % New wide-block cells get the mover color.
+            ; member(R-C, NewWideLsc) -> OV = MoverLsc
+            % All other mover cells (old wide block + arm) are cleared; background passes through.
+            ; arc_grid_at(Grid, R, C, OldVlsc),
+              ( OldVlsc =:= MoverLsc -> OV = 0 ; OV = OldVlsc )
+            )
+        ), AllCslsc, OutRow)
+    ), AllRslsc, Out), !.
+
+% Succeed if Cells forms a solid rectangle (bounding box fully covered).
+lsc_is_solid_rect(Cells) :-
+    % Compute bounding box.
+    findall(R, member(R-_, Cells), Rslsc), min_list(Rslsc, R1lsc), max_list(Rslsc, R2lsc),
+    findall(C, member(_-C, Cells), Cslsc), min_list(Cslsc, C1lsc), max_list(Cslsc, C2lsc),
+    % Expected number of cells if fully filled.
+    ExpNlsc is (R2lsc - R1lsc + 1) * (C2lsc - C1lsc + 1),
+    % Actual count must match expected.
+    length(Cells, ExpNlsc).
+
+% Separate L-shape cells into arm cells and wide-block cells.
+% Vertical arm: find rows that contain exactly one mover cell.
+lsc_separate(Cells, ArmCells, WideCells, vertical) :-
+    % Collect distinct rows.
+    findall(R, member(R-_, Cells), Rslsc2), sort(Rslsc2, SortedRslsc),
+    % Arm rows are those with exactly one cell.
+    include([R]>>(
+        include([R2-_]>>(R2 =:= R), Cells, RowCslsc),
+        length(RowCslsc, 1)
+    ), SortedRslsc, ArmRows),
+    ArmRows \= [],
+    % Arm cells live in the arm rows.
+    include([R-_]>>(member(R, ArmRows)), Cells, ArmCells),
+    % Wide-block cells are the remaining cells.
+    subtract(Cells, ArmCells, WideCells),
+    WideCells \= [], !.
+
+% Horizontal arm: find columns that contain exactly one mover cell.
+lsc_separate(Cells, ArmCells, WideCells, horizontal) :-
+    % Collect distinct columns.
+    findall(C, member(_-C, Cells), Cslsc2), sort(Cslsc2, SortedCslsc),
+    % Arm columns are those with exactly one cell.
+    include([C]>>(
+        include([_-C2]>>(C2 =:= C), Cells, ColRslsc),
+        length(ColRslsc, 1)
+    ), SortedCslsc, ArmCols),
+    ArmCols \= [],
+    % Arm cells live in the arm columns.
+    include([_-C]>>(member(C, ArmCols)), Cells, ArmCells),
+    % Wide-block cells are the remaining cells.
+    subtract(Cells, ArmCells, WideCells),
+    WideCells \= [], !.
+
+% Compute new positions for vertical arm movement.
+lsc_move_block(WideBlk, ArmCells, vertical, ArmLen, NewCells) :-
+    % Find arm extent and wide-block extent.
+    findall(R, member(R-_, ArmCells), ARslsc), max_list(ARslsc, AMaxRlsc),
+    findall(R, member(R-_, WideBlk), WRslsc), min_list(WRslsc, WMinRlsc),
+    % Arm above wide block -> move up (negative DR); arm below -> move down.
+    ( AMaxRlsc < WMinRlsc -> DR = -ArmLen ; DR = ArmLen ),
+    % Shift every wide-block cell by DR rows.
+    maplist([R-C, NR2-C]>>(NR2 is R + DR), WideBlk, NewCells).
+
+% Compute new positions for horizontal arm movement.
+lsc_move_block(WideBlk, ArmCells, horizontal, ArmLen, NewCells) :-
+    % Find arm extent and wide-block extent.
+    findall(C, member(_-C, ArmCells), ACslsc), max_list(ACslsc, AMaxClsc),
+    findall(C, member(_-C, WideBlk), WCslsc), min_list(WCslsc, WMinClsc),
+    % Arm left of wide block -> move left (negative DC); arm right -> move right.
+    ( AMaxClsc < WMinClsc -> DC = -ArmLen ; DC = ArmLen ),
+    % Shift every wide-block cell by DC columns.
+    maplist([R-C, R-NC2]>>(NC2 is C + DC), WideBlk, NewCells).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
