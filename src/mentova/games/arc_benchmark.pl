@@ -23556,6 +23556,261 @@ arc_transform(parity_5_to_3, Grid, Out) :-
     ), W48PRIs, Out).
 
 % ---------------------------------------------------------------------------
+% WAVE 49 RULES
+% ---------------------------------------------------------------------------
+
+% Wave 49 shared BFS helpers for non-zero 4-connected components.
+
+% w49_nz_cells/3: collect R-C pairs of all non-zero cells.
+w49_nz_cells([], _, []).
+% Advance row index, recurse, then gather this row's non-zero cells.
+w49_nz_cells([W49Row|W49Rows], W49R, W49Cells) :-
+    % Increment row counter.
+    W49R1 is W49R + 1,
+    % Recurse on remaining rows.
+    w49_nz_cells(W49Rows, W49R1, W49Rest),
+    % Collect non-zero positions in current row.
+    w49_nz_row(W49Row, W49R, 0, W49RowCells),
+    % Prepend to accumulated list.
+    append(W49RowCells, W49Rest, W49Cells).
+
+% w49_nz_row/4: collect columns whose value is non-zero.
+w49_nz_row([], _, _, []).
+% Skip zero cells.
+w49_nz_row([0|W49Vs], W49R, W49C, W49Rest) :-
+    % Advance column.
+    W49C1 is W49C + 1,
+    w49_nz_row(W49Vs, W49R, W49C1, W49Rest).
+% Record non-zero cell.
+w49_nz_row([W49V|W49Vs], W49R, W49C, [W49R-W49C|W49Rest]) :-
+    % Guard: value must be non-zero.
+    W49V =\= 0,
+    % Advance column.
+    W49C1 is W49C + 1,
+    w49_nz_row(W49Vs, W49R, W49C1, W49Rest).
+
+% w49_comps/5: partition non-zero cell list into 4-connected components (Cells-Size).
+w49_comps([], _, _, _, []).
+% Seed BFS from first cell; remove visited from remainder; recurse.
+w49_comps([W49RC|W49Rest], W49Grid, W49NR, W49NC, [W49Comp-W49Sz|W49RestC]) :-
+    % BFS flood-fill from seed.
+    w49_bfs([W49RC], [W49RC], W49Grid, W49NR, W49NC, W49Comp),
+    % Remove component cells from unvisited set.
+    subtract(W49Rest, W49Comp, W49New),
+    % Record component size.
+    length(W49Comp, W49Sz),
+    % Recurse on remaining cells.
+    w49_comps(W49New, W49Grid, W49NR, W49NC, W49RestC).
+
+% w49_bfs/6: BFS expanding into non-zero 4-neighbors not yet visited.
+w49_bfs([], W49Vis, _, _, _, W49Vis).
+w49_bfs([W49R-W49C|W49Q], W49Vis, W49Grid, W49NR, W49NC, W49Comp) :-
+    % Find unvisited 4-connected non-zero neighbours.
+    findall(W49R2-W49C2, (
+        ( W49R2 is W49R+1, W49C2 = W49C
+        ; W49R2 is W49R-1, W49C2 = W49C
+        ; W49R2 = W49R, W49C2 is W49C+1
+        ; W49R2 = W49R, W49C2 is W49C-1
+        ),
+        W49R2 >= 0, W49R2 < W49NR,
+        W49C2 >= 0, W49C2 < W49NC,
+        nth0(W49R2, W49Grid, W49NRow),
+        nth0(W49C2, W49NRow, W49NV),
+        W49NV =\= 0,
+        \+ member(W49R2-W49C2, W49Vis),
+        \+ member(W49R2-W49C2, W49Q)
+    ), W49Nbrs),
+    % Extend queue with new neighbours.
+    append(W49Nbrs, W49Q, W49NewQ),
+    % Mark new neighbours as visited.
+    append(W49Nbrs, W49Vis, W49NewVis),
+    % Continue BFS.
+    w49_bfs(W49NewQ, W49NewVis, W49Grid, W49NR, W49NC, W49Comp).
+
+% ---------------------------------------------------------------------------
+% Wave 49 Rule 1: classify_3shapes_by_turns (task e509e548)
+% Input has only 0s and 3s. Recolor each 4-connected component of 3s:
+%   >= 1 branch cell (3+ neighbors in comp) -> recolor 2
+%   no branch, 2 corner cells (H+V neighbor both present) -> recolor 6
+%   no branch, 1 corner cell -> recolor 1
+arc_named_rule(classify_3shapes_by_turns).
+% Main transform: classify each 3-component by topology and recolor.
+arc_transform(classify_3shapes_by_turns, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W49TH|_], length(W49TH, NC), NC =< 30,
+    % Input must contain only 0s and 3s.
+    \+ (member(W49TRow, Grid), member(W49TV0, W49TRow), W49TV0 =\= 0, W49TV0 =\= 3),
+    % At least one 3 must exist.
+    once((member(W49TChkRow, Grid), member(3, W49TChkRow))),
+    % Collect all non-zero cell positions.
+    w49_nz_cells(Grid, 0, W49TCells),
+    % Find all 4-connected components.
+    w49_comps(W49TCells, Grid, NR, NC, W49TComps),
+    % For each component: determine color and emit R-C-Color triples.
+    findall(W49TR-W49TC-W49TOV, (
+        member(W49TComp-_, W49TComps),
+        % Collect branch cells: degree >= 3 within component.
+        findall(W49TBR-W49TBC, (
+            member(W49TBR-W49TBC, W49TComp),
+            findall(_, (
+                member(W49TBR2-W49TBC2, W49TComp),
+                ( W49TBR2 =:= W49TBR+1, W49TBC2 =:= W49TBC
+                ; W49TBR2 =:= W49TBR-1, W49TBC2 =:= W49TBC
+                ; W49TBR2 =:= W49TBR, W49TBC2 =:= W49TBC+1
+                ; W49TBR2 =:= W49TBR, W49TBC2 =:= W49TBC-1
+                )
+            ), W49TDegList),
+            length(W49TDegList, W49TDeg),
+            W49TDeg >= 3
+        ), W49TBranches),
+        % Assign color based on branch presence then corner count.
+        ( W49TBranches \= []
+        -> W49TOV = 2
+        ;  findall(W49TCR-W49TCC, (
+               member(W49TCR-W49TCC, W49TComp),
+               once((member(W49TCR-W49TCC2, W49TComp),
+                     (W49TCC2 =:= W49TCC+1 ; W49TCC2 =:= W49TCC-1))),
+               once((member(W49TCR2-W49TCC, W49TComp),
+                     (W49TCR2 =:= W49TCR+1 ; W49TCR2 =:= W49TCR-1)))
+           ), W49TCorners),
+           length(W49TCorners, W49TNC),
+           ( W49TNC =:= 1 -> W49TOV = 1 ; W49TOV = 6 )
+        ),
+        % Emit one triple per cell in this component.
+        member(W49TR-W49TC, W49TComp)
+    ), W49TReps),
+    % Build output grid.
+    NR1 is NR - 1,
+    numlist(0, NR1, W49TRIs),
+    NC1 is NC - 1,
+    maplist([W49TRI, W49TRow2]>>(
+        nth0(W49TRI, Grid, W49TOrigRow),
+        numlist(0, NC1, W49TCIs),
+        maplist([W49TCI, W49TV2]>>(
+            ( member(W49TRI-W49TCI-W49TRV, W49TReps)
+            -> W49TV2 = W49TRV
+            ; nth0(W49TCI, W49TOrigRow, W49TV2)
+            )
+        ), W49TCIs, W49TRow2)
+    ), W49TRIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 49 Rule 2: extend_staircase_bar (task 90f3ed37)
+% Input has only 0s and 8s. Groups of consecutive non-zero rows form visual
+% bars. The complete group (any row reaches NC-1) defines the template.
+% Incomplete groups are extended with 1s beyond their global max_col.
+arc_named_rule(extend_staircase_bar).
+% Main transform: use row-proximity groups, not 4-connected components.
+arc_transform(extend_staircase_bar, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W49EH|_], length(W49EH, NC), NC =< 30,
+    % Input must contain only 0s and 8s.
+    \+ (member(W49ERow, Grid), member(W49EV0, W49ERow), W49EV0 =\= 0, W49EV0 =\= 8),
+    % At least one 8 must exist.
+    once((member(W49EChkRow, Grid), member(8, W49EChkRow))),
+    % Rightmost column index (0-based).
+    NC1 is NC - 1,
+    % Find all non-zero row indices.
+    findall(W49RI, (
+        nth0(W49RI, Grid, W49RCheck),
+        once((member(W49VCheck, W49RCheck), W49VCheck =\= 0))
+    ), W49NonZeroRows),
+    % Cluster consecutive row indices into groups.
+    w49_cluster_rows(W49NonZeroRows, W49Groups),
+    % Find exactly one complete group (has a row with 8 at NC1).
+    findall(W49CG, (
+        member(W49CG, W49Groups),
+        once((member(W49CGR, W49CG), nth0(W49CGR, Grid, W49CGRow), nth0(NC1, W49CGRow, 8)))
+    ), W49ComplGroups),
+    W49ComplGroups = [W49ComplGroup],
+    % Complete group top row.
+    W49ComplGroup = [W49CMinR|_],
+    % Extract template: (row_offset, col) for each 8-cell in complete group.
+    findall(W49TRO-W49TCO, (
+        member(W49CR, W49ComplGroup),
+        W49TRO is W49CR - W49CMinR,
+        nth0(W49CR, Grid, W49CRow),
+        between(0, NC1, W49TCO),
+        nth0(W49TCO, W49CRow, 8)
+    ), W49Template),
+    % For each incomplete group, compute global max_col and emit 1-cells.
+    findall(W49NR2-W49NC2-1, (
+        member(W49IG, W49Groups),
+        % Skip the complete group.
+        \+ once((member(W49IGR, W49IG),
+                 nth0(W49IGR, Grid, W49IGRow), nth0(NC1, W49IGRow, 8))),
+        % Group top row.
+        W49IG = [W49IMinR|_],
+        % Collect all 8-cell column indices across all rows in this group.
+        findall(W49IC, (
+            member(W49IR, W49IG),
+            nth0(W49IR, Grid, W49IRRow),
+            between(0, NC1, W49IC),
+            nth0(W49IC, W49IRRow, 8)
+        ), W49ICols),
+        % Global max_col for this group (-1 if group is all empty).
+        ( W49ICols \= []
+        -> max_list(W49ICols, W49GMaxCol)
+        ;  W49GMaxCol = -1
+        ),
+        % Guard: group has not already reached rightmost column.
+        W49GMaxCol < NC1,
+        % Template cells with col > GMaxCol become 1s at offset position.
+        member(W49TRO2-W49NC2, W49Template),
+        W49NC2 > W49GMaxCol,
+        W49NR2 is W49IMinR + W49TRO2,
+        % Bounds check.
+        W49NR2 >= 0, W49NR2 < NR,
+        W49NC2 >= 0, W49NC2 < NC,
+        % Only write to currently empty cells.
+        nth0(W49NR2, Grid, W49NCheckRow),
+        nth0(W49NC2, W49NCheckRow, 0)
+    ), W49NewCells),
+    % Require at least one new cell.
+    W49NewCells \= [],
+    % Build output grid.
+    NR1 is NR - 1,
+    numlist(0, NR1, W49ERIs),
+    maplist([W49ERI, W49ERow2]>>(
+        nth0(W49ERI, Grid, W49EOrigRow),
+        numlist(0, NC1, W49ECIs),
+        maplist([W49ECI, W49EV2]>>(
+            ( member(W49ERI-W49ECI-1, W49NewCells)
+            -> W49EV2 = 1
+            ; nth0(W49ECI, W49EOrigRow, W49EV2)
+            )
+        ), W49ECIs, W49ERow2)
+    ), W49ERIs, Out).
+
+% w49_cluster_rows/2: split sorted list of row indices into consecutive groups.
+w49_cluster_rows([], []).
+% Start accumulator with first row; delegate to acc predicate.
+w49_cluster_rows([W49R|W49Rs], W49Groups) :-
+    w49_cluster_acc(W49Rs, W49R, [W49R], W49Groups).
+
+% w49_cluster_acc/4: accumulate consecutive rows into current group.
+% Base case: reverse accumulator so group is in ascending order.
+w49_cluster_acc([], _, W49Cur, [W49CurRev]) :-
+    reverse(W49Cur, W49CurRev).
+w49_cluster_acc([W49R|W49Rs], W49Last, W49Cur, W49Groups) :-
+    % Continue current group if consecutive.
+    ( W49R =:= W49Last + 1
+    ->  w49_cluster_acc(W49Rs, W49R, [W49R|W49Cur], W49Groups)
+    ;   % Gap found: close current group, start new one.
+        reverse(W49Cur, W49CurRev),
+        w49_cluster_acc(W49Rs, W49R, [W49R], W49RestGroups),
+        W49Groups = [W49CurRev|W49RestGroups]
+    ).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
