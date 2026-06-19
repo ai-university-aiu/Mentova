@@ -22696,6 +22696,319 @@ lsc_move_block(WideBlk, ArmCells, horizontal, ArmLen, NewCells) :-
     maplist([R-C, R-NC2]>>(NC2 is C + DC), WideBlk, NewCells).
 
 % ---------------------------------------------------------------------------
+% WAVE 45 RULES
+% ---------------------------------------------------------------------------
+
+% Wave 45 Rule 1: cross_tile (task e21d9049)
+% A cross (+) of non-zero cells encodes two repeating sequences.
+% The center row is tiled with the horizontal arm sequence.
+% The center column is tiled with the vertical arm sequence.
+arc_named_rule(cross_tile).
+% arc_transform for cross_tile: detect cross, tile row and col.
+arc_transform(cross_tile, Grid, Out) :-
+    !,
+    % Check grid size within bounds.
+    length(Grid, NR), NR =< 30,
+    % Get column count from first row.
+    Grid = [CT_FR|_], length(CT_FR, NC), NC =< 30,
+    % Collect all non-zero cells as c(Row, Col, Val).
+    ct_collect(Grid, 0, Cells),
+    % Find cross center: row and col both have >= 2 non-zero cells.
+    ct_find_center(Cells, CR, CC),
+    % Extract horizontal arm sorted by col.
+    ct_arm_row(Cells, CR, HArm),
+    % Extract vertical arm sorted by row.
+    ct_arm_col(Cells, CC, VArm),
+    % HArm and VArm must be non-empty.
+    HArm \= [], VArm \= [],
+    % Get arm start positions and lengths.
+    HArm = [HS-_|_], length(HArm, HL),
+    VArm = [VS-_|_], length(VArm, VL),
+    % Build each output row.
+    NR1 is NR - 1,
+    numlist(0, NR1, RowIdxs),
+    maplist(ct_make_row(NC, CR, CC, HArm, HS, HL, VArm, VS, VL), RowIdxs, Out).
+
+% Collect all non-zero cells from the grid.
+ct_collect([], _, []).
+% Recurse through rows, accumulating non-zero cells.
+ct_collect([Row|Rows], R, Cells) :-
+    R1 is R + 1,
+    ct_collect(Rows, R1, Rest),
+    ct_row_cells(Row, R, 0, RowC),
+    append(RowC, Rest, Cells).
+
+% Collect non-zero cells from a single row.
+ct_row_cells([], _, _, []).
+% Non-zero cell: add to result.
+ct_row_cells([V|Vs], R, C, [c(R,C,V)|Rest]) :-
+    V =\= 0, !,
+    C1 is C + 1,
+    ct_row_cells(Vs, R, C1, Rest).
+% Zero cell: skip.
+ct_row_cells([_|Vs], R, C, Rest) :-
+    C1 is C + 1,
+    ct_row_cells(Vs, R, C1, Rest).
+
+% Find the cross center: a cell whose row has >= 2 non-zero cells
+% AND whose col has >= 2 non-zero cells.
+ct_find_center(Cells, CR, CC) :-
+    member(c(CR, CC, _), Cells),
+    ct_count_row(Cells, CR, RL), RL > 1,
+    ct_count_col(Cells, CC, CL), CL > 1, !.
+
+% Count non-zero cells in a given row.
+ct_count_row([], _, 0).
+% Matching row: add 1.
+ct_count_row([c(R,_,_)|T], R, N) :- !,
+    ct_count_row(T, R, N1), N is N1 + 1.
+% Non-matching row: skip.
+ct_count_row([_|T], R, N) :- ct_count_row(T, R, N).
+
+% Count non-zero cells in a given column.
+ct_count_col([], _, 0).
+% Matching col: add 1.
+ct_count_col([c(_,C,_)|T], C, N) :- !,
+    ct_count_col(T, C, N1), N is N1 + 1.
+% Non-matching col: skip.
+ct_count_col([_|T], C, N) :- ct_count_col(T, C, N).
+
+% Extract all cells in the given row as (Col-Val) pairs, sorted by col.
+ct_arm_row(Cells, CR, Arm) :-
+    findall(C-V, member(c(CR, C, V), Cells), Pairs),
+    msort(Pairs, Arm).
+
+% Extract all cells in the given col as (Row-Val) pairs, sorted by row.
+ct_arm_col(Cells, CC, Arm) :-
+    findall(R-V, member(c(R, CC, V), Cells), Pairs),
+    msort(Pairs, Arm).
+
+% Build one output row R using the tiled arm sequences.
+ct_make_row(NC, CR, CC, HArm, HS, HL, VArm, VS, VL, R, Row) :-
+    NC1 is NC - 1,
+    numlist(0, NC1, ColIdxs),
+    maplist(ct_cell(R, CR, CC, HArm, HS, HL, VArm, VS, VL), ColIdxs, Row).
+
+% Compute the value of output cell (R, C).
+% Center row: tile from horizontal arm.
+ct_cell(R, CR, _CC, HArm, HS, HL, _VArm, _VS, _VL, C, Val) :-
+    R =:= CR, !,
+    Idx0 is (C - HS) mod HL,
+    Idx is (Idx0 + HL) mod HL,
+    nth0(Idx, HArm, _-Val).
+% Center col: tile from vertical arm.
+ct_cell(_R, _CR, CC, _HArm, _HS, _HL, VArm, VS, VL, C, Val) :-
+    C =:= CC, !,
+    Idx0 is (_R - VS) mod VL,
+    Idx is (Idx0 + VL) mod VL,
+    nth0(Idx, VArm, _-Val).
+% All other cells: zero.
+ct_cell(_, _, _, _, _, _, _, _, _, _, 0).
+
+% ---------------------------------------------------------------------------
+% Wave 45 Rule 2: frame_extract (task c909285e)
+% A rectangular frame of a special color encloses a patterned interior.
+% Extract the frame + interior as a smaller bordered grid.
+arc_named_rule(frame_extract).
+% arc_transform for frame_extract: find frame, extract bordered subgrid.
+arc_transform(frame_extract, Grid, Out) :-
+    !,
+    % Check grid size within bounds.
+    length(Grid, NR), NR =< 30,
+    Grid = [FE_FR|_], length(FE_FR, NC), NC =< 30,
+    % Collect all non-zero cells.
+    fe_collect(Grid, 0, AllCells),
+    % Find the frame color and bounding box.
+    fe_find_frame(AllCells, FC, R0, C0, R1, C1),
+    % Build the bordered output subgrid.
+    fe_build(R0, C0, R1, C1, FC, Grid, Out).
+
+% Collect all non-zero cells from the grid.
+fe_collect([], _, []).
+% Recurse through rows.
+fe_collect([Row|Rows], R, Cells) :-
+    R1 is R + 1,
+    fe_collect(Rows, R1, Rest),
+    fe_row_cells(Row, R, 0, RowC),
+    append(RowC, Rest, Cells).
+
+% Collect non-zero cells from a single row.
+fe_row_cells([], _, _, []).
+% Non-zero: add.
+fe_row_cells([V|Vs], R, C, [c(R,C,V)|Rest]) :-
+    V =\= 0, !,
+    C1 is C + 1,
+    fe_row_cells(Vs, R, C1, Rest).
+% Zero: skip.
+fe_row_cells([_|Vs], R, C, Rest) :-
+    C1 is C + 1,
+    fe_row_cells(Vs, R, C1, Rest).
+
+% Find the frame color FC and bounding box (R0,C0,R1,C1).
+% The frame color must form a complete rectangular perimeter.
+fe_find_frame(AllCells, FC, R0, C0, R1, C1) :-
+    % Get all distinct non-zero colors.
+    findall(V, member(c(_,_,V), AllCells), AllVs0),
+    sort(AllVs0, AllVs),
+    % Try each color.
+    member(FC, AllVs),
+    % Collect all cells of this color.
+    findall(R-C, member(c(R,C,FC), AllCells), FCPairs),
+    % Get bounding box.
+    findall(R, member(R-_, FCPairs), Rs),
+    findall(C, member(_-C, FCPairs), Cs),
+    min_list(Rs, R0), max_list(Rs, R1),
+    min_list(Cs, C0), max_list(Cs, C1),
+    % Frame must enclose a non-trivial interior.
+    R1 > R0 + 1, C1 > C0 + 1,
+    % Frame must form a complete rectangular perimeter.
+    length(FCPairs, FCLen),
+    Perim is 2*(R1-R0) + 2*(C1-C0),
+    FCLen =:= Perim,
+    % All FC cells must lie on the border of the bounding box.
+    forall(
+        member(R-C, FCPairs),
+        ( R =:= R0 ; R =:= R1 ; C =:= C0 ; C =:= C1 )
+    ), !.
+
+% Build the bordered output: (R1-R0+1) rows x (C1-C0+1) cols.
+fe_build(R0, C0, R1, C1, FC, Grid, Out) :-
+    OutNR is R1 - R0 + 1,
+    OutNC is C1 - C0 + 1,
+    OutNR1 is OutNR - 1,
+    numlist(0, OutNR1, OutRowIdxs),
+    LastOutR is R1 - R0,
+    LastOutC is C1 - C0,
+    maplist([OutR, Row]>>(
+        OutNC1 is OutNC - 1,
+        numlist(0, OutNC1, OutColIdxs),
+        maplist([OutC, Val]>>(
+            ( OutR =:= 0 ; OutR =:= LastOutR ; OutC =:= 0 ; OutC =:= LastOutC )
+            -> Val = FC
+            ; ActualR is R0 + OutR, ActualC is C0 + OutC,
+              nth0(ActualR, Grid, GRow), nth0(ActualC, GRow, Val)
+        ), OutColIdxs, Row)
+    ), OutRowIdxs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 45 Rule 3: sort_shapes_size (task f8ff0b80)
+% Multiple colored shapes on a zero background.
+% Output: colors sorted by shape cell count, largest first, as single column.
+arc_named_rule(sort_shapes_size).
+% arc_transform for sort_shapes_size.
+arc_transform(sort_shapes_size, Grid, Out) :-
+    !,
+    % Check grid size.
+    length(Grid, NR), NR =< 30,
+    Grid = [SSS_FR|_], length(SSS_FR, NC), NC =< 30,
+    % Collect all non-zero cells.
+    sss_collect(Grid, 0, Cells),
+    % There must be non-zero cells.
+    Cells \= [],
+    % Count cells per distinct color.
+    sss_count_colors(Cells, SortedColors),
+    % Build single-column output: each color as a singleton list.
+    maplist([C, [C]]>>true, SortedColors, Out).
+
+% Collect non-zero cells from the grid.
+sss_collect([], _, []).
+% Recurse.
+sss_collect([Row|Rows], R, Cells) :-
+    R1 is R + 1,
+    sss_collect(Rows, R1, Rest),
+    sss_row_cells(Row, R, 0, RowC),
+    append(RowC, Rest, Cells).
+
+% Collect non-zero cells from one row.
+sss_row_cells([], _, _, []).
+% Non-zero: add.
+sss_row_cells([V|Vs], R, C, [c(R,C,V)|Rest]) :-
+    V =\= 0, !,
+    C1 is C + 1,
+    sss_row_cells(Vs, R, C1, Rest).
+% Zero: skip.
+sss_row_cells([_|Vs], R, C, Rest) :-
+    C1 is C + 1,
+    sss_row_cells(Vs, R, C1, Rest).
+
+% Count cells per color, return colors sorted by count descending.
+sss_count_colors(Cells, SortedColors) :-
+    findall(V, member(c(_,_,V), Cells), AllVs0),
+    % Get distinct colors.
+    sort(AllVs0, Colors),
+    % For each color, count its cells.
+    findall(Count-Color, (
+        member(Color, Colors),
+        findall(_, member(c(_,_,Color), Cells), Cc),
+        length(Cc, Count)
+    ), Pairs),
+    % Sort ascending by count.
+    msort(Pairs, Sorted),
+    % Reverse to get descending.
+    reverse(Sorted, Descending),
+    % Extract just the colors.
+    pairs_values(Descending, SortedColors).
+
+% ---------------------------------------------------------------------------
+% Wave 45 Rule 4: mirror_fill_zero (task 9ecd008a)
+% A symmetric patterned grid has a rectangular zero-region.
+% Fill the zero region using the horizontal mirror of the grid.
+arc_named_rule(mirror_fill_zero).
+% arc_transform for mirror_fill_zero.
+arc_transform(mirror_fill_zero, Grid, Out) :-
+    !,
+    % Check grid size.
+    length(Grid, NR), NR =< 30,
+    Grid = [MFZ_FR|_], length(MFZ_FR, NC), NC =< 30,
+    % Collect all zero-cell positions.
+    mfz_zeros(Grid, 0, ZCells),
+    % There must be zero cells.
+    ZCells \= [],
+    % Get bounding box of zero region.
+    findall(R, member(R-_, ZCells), ZRs),
+    findall(C, member(_-C, ZCells), ZCs),
+    min_list(ZRs, ZR0), max_list(ZRs, ZR1),
+    min_list(ZCs, ZC0), max_list(ZCs, ZC1),
+    % Verify zero region matches its bounding box exactly.
+    OutNR is ZR1 - ZR0 + 1,
+    OutNC is ZC1 - ZC0 + 1,
+    length(ZCells, ZLen),
+    ZLen =:= OutNR * OutNC,
+    % There must be non-zero cells outside the region (grid is mostly filled).
+    TotalCells is NR * NC,
+    TotalCells > ZLen,
+    % Build output by filling zero region with mirror values.
+    numlist(ZR0, ZR1, RowIdxs),
+    numlist(ZC0, ZC1, ColIdxs),
+    maplist([R, Row]>>(
+        maplist([C, Val]>>(
+            MirC is NC - 1 - C,
+            nth0(R, Grid, GRow),
+            nth0(MirC, GRow, Val)
+        ), ColIdxs, Row)
+    ), RowIdxs, Out).
+
+% Collect all zero-cell positions as (R-C) pairs.
+mfz_zeros([], _, []).
+% Recurse.
+mfz_zeros([Row|Rows], R, Zeros) :-
+    R1 is R + 1,
+    mfz_zeros(Rows, R1, Rest),
+    mfz_row_zeros(Row, R, 0, RowZ),
+    append(RowZ, Rest, Zeros).
+
+% Collect zero cells from one row.
+mfz_row_zeros([], _, _, []).
+% Zero cell: add.
+mfz_row_zeros([0|Vs], R, C, [R-C|Rest]) :- !,
+    C1 is C + 1,
+    mfz_row_zeros(Vs, R, C1, Rest).
+% Non-zero: skip.
+mfz_row_zeros([_|Vs], R, C, Rest) :-
+    C1 is C + 1,
+    mfz_row_zeros(Vs, R, C1, Rest).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
