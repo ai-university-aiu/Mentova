@@ -20013,6 +20013,602 @@ dcm_mode(List, Mode) :-
     max_member(_-Mode, Counts).
 
 % ---------------------------------------------------------------------------
+% Wave 40 Rule 1: bracket_arrows (task b7249182)
+% Exactly two isolated colored dots on the same row or same column.
+% Each dot grows a bracket-arrow shape pointing toward the other dot.
+% arm_len = D//2-2, bar at arm_len+1 steps, bar radius 2, cap 1 more step.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(bracket_arrows).
+% ERC transform clause
+arc_transform(bracket_arrows, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30, NR >= 5,
+% ERC column count
+    Grid = [GRba1|_], length(GRba1, NC), NC =< 30, NC >= 5,
+% ERC exactly two non-zero cells
+    findall(Rba-Cba-Vba, (
+        between(1, NR, Rba), between(1, NC, Cba),
+        arc_grid_at(Grid, Rba, Cba, Vba), Vba \= 0
+    ), DotsBA),
+    DotsBA = [R1ba-C1ba-V1ba, R2ba-C2ba-V2ba],
+% ERC determine orientation and sort so Lo < Hi
+    (   C1ba =:= C2ba
+    ->  Cba0 = C1ba,
+        (R1ba < R2ba -> LoRba=R1ba,LoVba=V1ba,HiRba=R2ba,HiVba=V2ba
+                      ; LoRba=R2ba,LoVba=V2ba,HiRba=R1ba,HiVba=V1ba),
+        Dba is HiRba - LoRba,
+        BarDistba is Dba // 2 - 1,
+        ArmLenba is BarDistba - 1,
+        ArmLenba >= 1,
+        BarLoba is LoRba + BarDistba,
+        BarHiba is HiRba - BarDistba,
+% ERC arm for low dot (going down)
+        findall(Rab-Cba0-LoVba, (
+            between(1, ArmLenba, Kba), Rab is LoRba + Kba
+        ), ArmLoBA),
+% ERC bar for low dot (5 cells perpendicular)
+        findall(BarLoba-Cbbar-LoVba, (
+            between(1, 5, Kbar), Cbbar is Cba0 - 3 + Kbar
+        ), BarLoBA),
+% ERC cap for low dot (2 endpoints, 1 step further)
+        CapLoRba is BarLoba + 1,
+        findall(CapLoRba-Ccap-LoVba, (
+            (Ccap is Cba0 - 2 ; Ccap is Cba0 + 2)
+        ), CapLoBA),
+% ERC arm for high dot (going up)
+        findall(Rah-Cba0-HiVba, (
+            between(1, ArmLenba, Kba2), Rah is HiRba - Kba2
+        ), ArmHiBA),
+% ERC bar for high dot
+        findall(BarHiba-Cbbarh-HiVba, (
+            between(1, 5, Kbarh), Cbbarh is Cba0 - 3 + Kbarh
+        ), BarHiBA),
+% ERC cap for high dot
+        CapHiRba is BarHiba - 1,
+        findall(CapHiRba-Ccaph-HiVba, (
+            (Ccaph is Cba0 - 2 ; Ccaph is Cba0 + 2)
+        ), CapHiBA)
+    ;
+% ERC horizontal orientation: same row
+        R1ba =:= R2ba,
+        Rba0 = R1ba,
+        (C1ba < C2ba -> LoCba=C1ba,LoVba=V1ba,HiCba=C2ba,HiVba=V2ba
+                      ; LoCba=C2ba,LoVba=V2ba,HiCba=C1ba,HiVba=V1ba),
+        Dba is HiCba - LoCba,
+        BarDistba is Dba // 2 - 1,
+        ArmLenba is BarDistba - 1,
+        ArmLenba >= 1,
+        BarLoba is LoCba + BarDistba,
+        BarHiba is HiCba - BarDistba,
+% ERC arm for left dot (going right)
+        findall(Rba0-Cal-LoVba, (
+            between(1, ArmLenba, Kba), Cal is LoCba + Kba
+        ), ArmLoBA),
+% ERC bar for left dot
+        findall(Rbl-BarLoba-LoVba, (
+            between(1, 5, Kbar), Rbl is Rba0 - 3 + Kbar
+        ), BarLoBA),
+% ERC cap for left dot
+        CapLoCba is BarLoba + 1,
+        findall(Rcapl-CapLoCba-LoVba, (
+            (Rcapl is Rba0 - 2 ; Rcapl is Rba0 + 2)
+        ), CapLoBA),
+% ERC arm for right dot (going left)
+        findall(Rba0-Car-HiVba, (
+            between(1, ArmLenba, Kba2), Car is HiCba - Kba2
+        ), ArmHiBA),
+% ERC bar for right dot
+        findall(Rbrh-BarHiba-HiVba, (
+            between(1, 5, Kbarh), Rbrh is Rba0 - 3 + Kbarh
+        ), BarHiBA),
+% ERC cap for right dot
+        CapHiCba is BarHiba - 1,
+        findall(Rcaph-CapHiCba-HiVba, (
+            (Rcaph is Rba0 - 2 ; Rcaph is Rba0 + 2)
+        ), CapHiBA)
+    ),
+% ERC merge all new cells
+    append([ArmLoBA,BarLoBA,CapLoBA,ArmHiBA,BarHiBA,CapHiBA], AllNewBA),
+% ERC all new cells must be in-bounds
+    forall(member(Rnb-Cnb-_, AllNewBA), (
+        Rnb >= 1, Rnb =< NR, Cnb >= 1, Cnb =< NC
+    )),
+% ERC build output
+    numlist(1, NR, AllRowsBA),
+    maplist([Rout, RowOut]>>(
+        numlist(1, NC, AllColsBA),
+        maplist([Cout, Vout]>>(
+            ( member(Rout-Cout-Vnew, AllNewBA) -> Vout = Vnew
+            ; arc_grid_at(Grid, Rout, Cout, Vout)
+            )
+        ), AllColsBA, RowOut)
+    ), AllRowsBA, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 40 Rule 2: fill_solid_rect_interior (task bb43febb)
+% Connected components of 5s whose bounding box is fully solid (every cell
+% in the bounding box is 5) get their strict interior (excluding perimeter
+% rows/cols) filled with color 2.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(fill_solid_rect_interior).
+% ERC transform clause
+arc_transform(fill_solid_rect_interior, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30, NR >= 3,
+% ERC column count
+    Grid = [GRfsri1|_], length(GRfsri1, NC), NC =< 30,
+% ERC collect all 5-cells as R-C pairs
+    findall(Rfsri-Cfsri, (
+        between(1, NR, Rfsri), between(1, NC, Cfsri),
+        arc_grid_at(Grid, Rfsri, Cfsri, 5)
+    ), Fives),
+    Fives \= [],
+% ERC find connected components of 5s
+    cgbs_components(Fives, FSComps),
+% ERC for each component with a solid bounding box, collect interior cells
+    findall(Rin-Cin-2, (
+        member(Comp, FSComps),
+        findall(Rfc, member(Rfc-_, Comp), RlistC),
+        findall(Cfc, member(_-Cfc, Comp), ClistC),
+        min_list(RlistC, MinRC), max_list(RlistC, MaxRC),
+        min_list(ClistC, MinCC), max_list(ClistC, MaxCC),
+% ERC entire bounding box must be filled with 5s (solid rectangle)
+        forall(
+            (between(MinRC, MaxRC, Rchk), between(MinCC, MaxCC, Cchk)),
+            arc_grid_at(Grid, Rchk, Cchk, 5)
+        ),
+% ERC interior is strictly inside the perimeter
+        InMinR is MinRC + 1, InMaxR is MaxRC - 1,
+        InMinC is MinCC + 1, InMaxC is MaxCC - 1,
+        InMinR =< InMaxR, InMinC =< InMaxC,
+        between(InMinR, InMaxR, Rin), between(InMinC, InMaxC, Cin)
+    ), AllInnerFS),
+    AllInnerFS \= [],
+% ERC build output: fill interior cells with 2
+    numlist(1, NR, AllRowsFSRI),
+    maplist([Rout, RowOut]>>(
+        numlist(1, NC, AllColsFSRI),
+        maplist([Cout, Vout]>>(
+            ( member(Rout-Cout-2, AllInnerFS) -> Vout = 2
+            ; arc_grid_at(Grid, Rout, Cout, Vout)
+            )
+        ), AllColsFSRI, RowOut)
+    ), AllRowsFSRI, Out),
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 40 Rule 3: reflect_half_pattern (task c444b776)
+% A cross of 4s (full-width row arm and/or full-height col arm) divides the
+% grid. Non-4 non-0 markers on one side are translated to the other side by
+% arm_position+1.  Only translations that stay in bounds are applied.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(reflect_half_pattern).
+% ERC transform clause
+arc_transform(reflect_half_pattern, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30, NR >= 3,
+% ERC column count
+    Grid = [GRrhp1|_], length(GRrhp1, NC), NC =< 30,
+% ERC find horizontal arm rows (full-width rows of 4s)
+    findall(Rharm, (
+        between(1, NR, Rharm),
+        findall(Vharm, (between(1, NC, Charm), arc_grid_at(Grid, Rharm, Charm, Vharm)), HVals),
+        maplist(==(4), HVals)
+    ), HArms),
+% ERC find vertical arm cols (full-height cols of 4s)
+    findall(Cvarm, (
+        between(1, NC, Cvarm),
+        findall(Vvarm, (between(1, NR, Rvarm), arc_grid_at(Grid, Rvarm, Cvarm, Vvarm)), VVals),
+        maplist(==(4), VVals)
+    ), VArms),
+% ERC at least one arm must exist
+    ( HArms \= [] ; VArms \= [] ),
+% ERC compute row section starts from HArms
+    sort(HArms, SortedH),
+    rhp_section_starts(1, NR, SortedH, RowStarts),
+% ERC compute col section starts from VArms
+    sort(VArms, SortedV),
+    rhp_section_starts(1, NC, SortedV, ColStarts),
+% ERC collect all non-4 non-0 marker cells
+    findall(Rmark-Cmark-Vmark, (
+        between(1, NR, Rmark), between(1, NC, Cmark),
+        arc_grid_at(Grid, Rmark, Cmark, Vmark),
+        Vmark \= 0, Vmark \= 4
+    ), Markers),
+    Markers \= [],
+% ERC find source section (the section containing markers)
+    member(SrcRowStart, RowStarts), member(SrcColStart, ColStarts),
+    rhp_next_boundary(SrcRowStart, SortedH, NR, SrcRowEnd),
+    rhp_next_boundary(SrcColStart, SortedV, NC, SrcColEnd),
+    forall(member(Rm-Cm-_, Markers), (
+        Rm >= SrcRowStart, Rm =< SrcRowEnd,
+        Cm >= SrcColStart, Cm =< SrcColEnd
+    )),
+    !,
+% ERC tile source section markers to all sections
+    findall(Rnew-Cnew-Vnew, (
+        member(TgtRowStart, RowStarts), member(TgtColStart, ColStarts),
+        \+ (TgtRowStart =:= SrcRowStart, TgtColStart =:= SrcColStart),
+        member(Rm2-Cm2-Vm2, Markers),
+        DRm is Rm2 - SrcRowStart,
+        DCm is Cm2 - SrcColStart,
+        Rnew is TgtRowStart + DRm,
+        Cnew is TgtColStart + DCm,
+        Rnew >= 1, Rnew =< NR, Cnew >= 1, Cnew =< NC,
+        Vnew = Vm2
+    ), AllTranslated),
+    AllTranslated \= [],
+% ERC build output: original grid plus tiled copies
+    numlist(1, NR, AllRowsRHP),
+    maplist([Rout, RowOut]>>(
+        numlist(1, NC, AllColsRHP),
+        maplist([Cout, Vout]>>(
+            ( member(Rout-Cout-Vt, AllTranslated) -> Vout = Vt
+            ; arc_grid_at(Grid, Rout, Cout, Vout)
+            )
+        ), AllColsRHP, RowOut)
+    ), AllRowsRHP, Out),
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ERC rhp_section_starts/4: compute start positions of sections between arms.
+rhp_section_starts(Start, Max, [], [Start]) :- Start =< Max.
+rhp_section_starts(Start, Max, [Arm|RestArms], [Start|RestStarts]) :-
+    Start =< Max,
+    NextStart is Arm + 1,
+    NextStart =< Max,
+    rhp_section_starts(NextStart, Max, RestArms, RestStarts).
+rhp_section_starts(Start, _Max, [Arm|_], []) :- Start > Arm.
+
+% ERC rhp_next_boundary/4: end row/col of a section starting at Start.
+rhp_next_boundary(Start, [], Max, Max) :- Start =< Max.
+rhp_next_boundary(Start, [Arm|_], _Max, End) :-
+    Arm > Start, End is Arm - 1.
+rhp_next_boundary(Start, [Arm|RestArms], Max, End) :-
+    Arm =< Start, rhp_next_boundary(Start, RestArms, Max, End).
+
+% ---------------------------------------------------------------------------
+% Wave 40 Rule 4: fill_hollow_rect_by_size (task c0f76784)
+% Hollow rectangular frames of 5s (perimeter=5, interior=0) get their
+% interior filled with a color based on interior square size:
+% 1x1 -> 6, 2x2 -> 7, 3x3 -> 8.  Multiple frames handled.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(fill_hollow_rect_by_size).
+% ERC transform clause
+arc_transform(fill_hollow_rect_by_size, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30, NR >= 3,
+% ERC column count
+    Grid = [GRfhrbs1|_], length(GRfhrbs1, NC), NC =< 30,
+% ERC find all hollow 5-frames: bounding box R1..R2, C1..C2 where
+%     perimeter is all 5 and interior is all 0, interior size in {1,2,3}
+    findall(R1f-C1f-R2f-C2f-Fillf, (
+        between(1, NR, R1f), between(1, NR, R2f), R2f > R1f,
+        R2f =< NR,
+        between(1, NC, C1f), between(1, NC, C2f), C2f > C1f,
+        C2f =< NC,
+% ERC perimeter cells must all be 5
+        forall(
+            ( ( between(R1f, R2f, Rfp), (Cfp=C1f ; Cfp=C2f) )
+            ; ( between(C1f, C2f, Cfp), (Rfp=R1f ; Rfp=R2f) )
+            ),
+            arc_grid_at(Grid, Rfp, Cfp, 5)
+        ),
+% ERC interior must be all 0
+        In1R is R1f+1, In2R is R2f-1, In1C is C1f+1, In2C is C2f-1,
+        In1R =< In2R, In1C =< In2C,
+        forall(
+            (between(In1R, In2R, Rfi), between(In1C, In2C, Cfi)),
+            arc_grid_at(Grid, Rfi, Cfi, 0)
+        ),
+% ERC interior size: width and height both in {1,2,3}
+        InH is In2R - In1R + 1, InW is In2C - In1C + 1,
+        InH =:= InW,
+        member(InH, [1,2,3]),
+        ( InH =:= 1 -> Fillf = 6 ; InH =:= 2 -> Fillf = 7 ; Fillf = 8 )
+    ), Frames),
+    Frames \= [],
+% ERC build output: fill each frame's interior
+    numlist(1, NR, AllRowsFHR),
+    maplist([Rout, RowOut]>>(
+        numlist(1, NC, AllColsFHR),
+        maplist([Cout, Vout]>>(
+            ( member(R1x-C1x-R2x-C2x-Fx, Frames),
+              R1x1 is R1x+1, R2x1 is R2x-1,
+              C1x1 is C1x+1, C2x1 is C2x-1,
+              Rout >= R1x1, Rout =< R2x1,
+              Cout >= C1x1, Cout =< C2x1
+            -> Vout = Fx
+            ; arc_grid_at(Grid, Rout, Cout, Vout)
+            )
+        ), AllColsFHR, RowOut)
+    ), AllRowsFHR, Out),
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 40 Rule 5: l_path_connect (task d4a91cb9)
+% Two dots: one color 2 and one color 8.  Draw an L-shaped path of color 4
+% connecting them. The corner of the L is at (row_of_2, col_of_8).
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(l_path_connect).
+% ERC transform clause
+arc_transform(l_path_connect, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRlpc1|_], length(GRlpc1, NC), NC =< 30,
+% ERC exactly two non-zero cells: one is 2, one is 8
+    findall(Rlp-Clp-Vlp, (
+        between(1, NR, Rlp), between(1, NC, Clp),
+        arc_grid_at(Grid, Rlp, Clp, Vlp), Vlp \= 0
+    ), DotsLP),
+    DotsLP = [_-_-_, _-_-_],
+    member(R2lp-C2lp-2, DotsLP),
+    member(R8lp-C8lp-8, DotsLP),
+    R2lp \= R8lp, C2lp \= C8lp,
+% ERC corner at (row_of_2, col_of_8); horizontal includes corner, vertical excludes both dot rows
+    MinCLP is min(C2lp, C8lp), MaxCLP is max(C2lp, C8lp),
+    MinRLP is min(R2lp, R8lp), MaxRLP is max(R2lp, R8lp),
+% ERC horizontal: row R2lp, all cols from min to max except dot2 col
+    findall(R2lp-Chlp-4, (
+        between(MinCLP, MaxCLP, Chlp), Chlp \= C2lp
+    ), HSegLP),
+% ERC vertical: col C8lp, all rows between the two dots (exclusive of both)
+    findall(Rvlp-C8lp-4, (
+        between(MinRLP, MaxRLP, Rvlp), Rvlp \= R2lp, Rvlp \= R8lp
+    ), VSegLP),
+    append([HSegLP, VSegLP], AllLP),
+    AllLP \= [],
+% ERC build output
+    numlist(1, NR, AllRowsLP),
+    maplist([Rout, RowOut]>>(
+        numlist(1, NC, AllColsLP),
+        maplist([Cout, Vout]>>(
+            ( member(Rout-Cout-Vlpn, AllLP) -> Vout = Vlpn
+            ; arc_grid_at(Grid, Rout, Cout, Vout)
+            )
+        ), AllColsLP, RowOut)
+    ), AllRowsLP, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 40 Rule 6: column_seeds_deflect (task d9f24cd1)
+% Seeds (color 2) at the bottom row shoot vertical streams upward.
+% A stream at col C blocked by a 5 at (R,C) fills rows R+1..NR-1 at col C,
+% then deflects right to col C+1, filling rows 0..R at col C+1.
+% Unblocked streams fill rows 1..NR-1 at their column.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(column_seeds_deflect).
+% ERC transform clause
+arc_transform(column_seeds_deflect, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30, NR >= 3,
+% ERC column count
+    Grid = [GRcsd1|_], length(GRcsd1, NC), NC =< 30,
+% ERC find seeds at bottom row (row NR)
+    findall(Cseed, (
+        between(1, NC, Cseed),
+        arc_grid_at(Grid, NR, Cseed, 2)
+    ), Seeds),
+    Seeds \= [],
+% ERC find all 5-cells (obstacles)
+    findall(Robs-Cobs, (
+        between(1, NR, Robs), between(1, NC, Cobs),
+        arc_grid_at(Grid, Robs, Cobs, 5)
+    ), Fives5),
+% ERC generate all new 2-cells from each seed stream
+    findall(Rnew-Cnew-2, (
+        member(Cs, Seeds),
+% ERC check if a 5 blocks this column above the seed
+        (   member(Rblock-Cs, Fives5)
+        ->  findall(Rb, member(Rb-Cs, Fives5), RbList),
+            max_list(RbList, RblockMax),
+            StopRow is RblockMax + 1,
+% ERC fill col Cs from StopRow to NR-1
+            between(StopRow, NR, Rnew), Rnew \= NR, Cnew = Cs
+        ;   % unblocked: fill from row 1 to NR-1
+            between(1, NR, Rnew), Rnew \= NR, Cnew = Cs
+        )
+    ), DirectCells),
+% ERC generate deflected streams for blocked seeds
+    findall(Rnew2-Cnew2-2, (
+        member(Cs2, Seeds),
+        member(Rblock2-Cs2, Fives5),
+        findall(Rb2, member(Rb2-Cs2, Fives5), Rb2List),
+        max_list(Rb2List, RblockMax2),
+        StopRow2 is RblockMax2 + 1,
+        CDeflect is Cs2 + 1,
+        CDeflect =< NC,
+% ERC deflected stream goes from row StopRow2 up to row 1
+        between(1, StopRow2, Rnew2),
+        Cnew2 = CDeflect
+    ), DeflectedCells),
+    append(DirectCells, DeflectedCells, AllNew2),
+    AllNew2 \= [],
+% ERC build output
+    numlist(1, NR, AllRowsCSD),
+    maplist([Rout, RowOut]>>(
+        numlist(1, NC, AllColsCSD),
+        maplist([Cout, Vout]>>(
+            ( member(Rout-Cout-2, AllNew2) -> Vout = 2
+            ; arc_grid_at(Grid, Rout, Cout, Vout)
+            )
+        ), AllColsCSD, RowOut)
+    ), AllRowsCSD, Out),
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 40 Rule 7: fill_u_frame_stream (task d4f3cd78)
+% A U-shaped rectangular frame of 5s (all perimeter cells are 5 except
+% exactly one gap cell). Fill the interior with 8. Also fill the gap cell
+% and shoot a stream of 8s outward from the gap to the grid edge.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(fill_u_frame_stream).
+% ERC transform clause
+arc_transform(fill_u_frame_stream, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30, NR >= 4,
+% ERC column count
+    Grid = [GRufs1|_], length(GRufs1, NC), NC =< 30,
+% ERC collect all 5-cells
+    findall(Rufs-Cufs, (
+        between(1, NR, Rufs), between(1, NC, Cufs),
+        arc_grid_at(Grid, Rufs, Cufs, 5)
+    ), FivesUF),
+    FivesUF \= [],
+% ERC compute bounding box of all 5s
+    findall(Rufr, member(Rufr-_, FivesUF), RlistUF),
+    findall(Cufr, member(_-Cufr, FivesUF), ClistUF),
+    min_list(RlistUF, MinRUF), max_list(RlistUF, MaxRUF),
+    min_list(ClistUF, MinCUF), max_list(ClistUF, MaxCUF),
+% ERC bounding box must have at least 3 rows and 3 cols
+    MaxRUF - MinRUF >= 2, MaxCUF - MinCUF >= 2,
+% ERC count perimeter cells of bounding box
+    findall(Rp-Cp, (
+        ( between(MinRUF, MaxRUF, Rp), (Cp=MinCUF ; Cp=MaxCUF) )
+        ; ( between(MinCUF, MaxCUF, Cp), (Rp=MinRUF ; Rp=MaxRUF) )
+    ), PerimAll),
+    sort(PerimAll, PerimSet),
+    length(PerimSet, NPerim),
+% ERC count how many perimeter cells are actually 5
+    findall(Rpf-Cpf, (
+        member(Rpf-Cpf, PerimSet),
+        arc_grid_at(Grid, Rpf, Cpf, 5)
+    ), PerimFives),
+    length(PerimFives, NFives),
+% ERC exactly one gap (one perimeter cell is not 5)
+    GapCount is NPerim - NFives,
+    GapCount =:= 1,
+% ERC find the gap cell
+    member(Rgap-Cgap, PerimSet),
+    \+ arc_grid_at(Grid, Rgap, Cgap, 5),
+% ERC determine outward direction from gap
+    (   Rgap =:= MinRUF -> DRufs = -1, DCufs = 0
+    ;   Rgap =:= MaxRUF -> DRufs =  1, DCufs = 0
+    ;   Cgap =:= MinCUF -> DRufs =  0, DCufs = -1
+    ;   DRufs = 0, DCufs = 1
+    ),
+% ERC interior cells to fill with 8
+    InMinRUF is MinRUF + 1, InMaxRUF is MaxRUF - 1,
+    InMinCUF is MinCUF + 1, InMaxCUF is MaxCUF - 1,
+    findall(Rin-Cin-8, (
+        between(InMinRUF, InMaxRUF, Rin),
+        between(InMinCUF, InMaxCUF, Cin)
+    ), InteriorCells),
+% ERC stream cells from gap outward to grid edge (including gap cell)
+    findall(Rst-Cst-8, (
+        between(0, 30, Kst),
+        Rst is Rgap + DRufs * Kst,
+        Cst is Cgap + DCufs * Kst,
+        Rst >= 1, Rst =< NR, Cst >= 1, Cst =< NC,
+        \+ arc_grid_at(Grid, Rst, Cst, 5)
+    ), StreamCells),
+    append(InteriorCells, StreamCells, AllNewUF),
+    AllNewUF \= [],
+% ERC build output
+    numlist(1, NR, AllRowsUFS),
+    maplist([Rout, RowOut]>>(
+        numlist(1, NC, AllColsUFS),
+        maplist([Cout, Vout]>>(
+            ( member(Rout-Cout-8, AllNewUF) -> Vout = 8
+            ; arc_grid_at(Grid, Rout, Cout, Vout)
+            )
+        ), AllColsUFS, RowOut)
+    ), AllRowsUFS, Out),
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 40 Rule 8: color_groups_by_size (task ea32f347)
+% Three connected components (4-connected) of 5s. Sort by size descending.
+% Largest -> color 1, middle -> color 4, smallest -> color 2.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(color_groups_by_size).
+% ERC transform clause
+arc_transform(color_groups_by_size, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRcgbs1|_], length(GRcgbs1, NC), NC =< 30,
+% ERC collect all 5-cells
+    findall(Rcg-Ccg, (
+        between(1, NR, Rcg), between(1, NC, Ccg),
+        arc_grid_at(Grid, Rcg, Ccg, 5)
+    ), FivesCG),
+    FivesCG \= [],
+% ERC find connected components of 5s
+    cgbs_components(FivesCG, Components),
+    length(Components, 3),
+% ERC sort by size descending
+    findall(Sz-Comp, (
+        member(Comp, Components), length(Comp, Sz)
+    ), Sized),
+    msort(Sized, SortedAsc),
+    reverse(SortedAsc, [_-CompL, _-CompM, _-CompS]),
+% ERC assign colors
+    findall(Rcl-Ccl-1, member(Rcl-Ccl, CompL), CellsL),
+    findall(Rcm-Ccm-4, member(Rcm-Ccm, CompM), CellsM),
+    findall(Rcs-Ccs-2, member(Rcs-Ccs, CompS), CellsS),
+    append([CellsL, CellsM, CellsS], AllNewCG),
+% ERC build output
+    numlist(1, NR, AllRowsCG),
+    maplist([Rout, RowOut]>>(
+        numlist(1, NC, AllColsCG),
+        maplist([Cout, Vout]>>(
+            ( member(Rout-Cout-Vcg, AllNewCG) -> Vout = Vcg
+            ; arc_grid_at(Grid, Rout, Cout, Vout)
+            )
+        ), AllColsCG, RowOut)
+    ), AllRowsCG, Out),
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ERC cgbs_components/2: find connected components of a set of R-C cells.
+cgbs_components([], []).
+% ERC recursive: pick first cell, BFS to get its component, recurse on rest.
+cgbs_components([Seed|Rest], [Comp|Others]) :-
+% ERC BFS from seed
+    cgbs_bfs([Seed], Rest, Comp, Remaining),
+% ERC recurse on remaining cells
+    cgbs_components(Remaining, Others).
+
+% ERC cgbs_bfs/4: expand frontier, building component from available cells.
+cgbs_bfs([], Avail, [], Avail).
+cgbs_bfs([H|T], Avail, [H|CompRest], Remaining) :-
+    H = Rh-Ch,
+% ERC find 4-connected neighbors that are in Avail
+    findall(Rn-Cn, (
+        member(DRcg-DCcg, [-1-0,1-0,0-(-1),0-1]),
+        Rn is Rh + DRcg, Cn is Ch + DCcg,
+        member(Rn-Cn, Avail)
+    ), Neighbors),
+% ERC add neighbors to frontier, remove from available
+    subtract(Avail, Neighbors, Avail2),
+    append(T, Neighbors, NewFrontier),
+% ERC continue BFS
+    cgbs_bfs(NewFrontier, Avail2, CompRest, Remaining).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
