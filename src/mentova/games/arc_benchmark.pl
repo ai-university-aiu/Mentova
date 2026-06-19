@@ -20609,6 +20609,284 @@ cgbs_bfs([H|T], Avail, [H|CompRest], Remaining) :-
     cgbs_bfs(NewFrontier, Avail2, CompRest, Remaining).
 
 % ---------------------------------------------------------------------------
+% Wave 41 Rule 1: l_path_2to3 (task a2fd1cf0)
+% Exactly two non-zero cells: one color 2 and one color 3.
+% Draw an L-path of color 8 with corner at (row_of_2, col_of_3).
+% Horizontal arm: row of dot-2, cols between the two dots (excluding dot-2 col).
+% Vertical arm: col of dot-3, rows between the two dots (excluding both dot rows).
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(l_path_2to3).
+% ERC transform clause
+arc_transform(l_path_2to3, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRlp23a|_], length(GRlp23a, NC23), NC23 =< 30,
+% ERC collect all non-zero cells
+    findall(Rlp23-Clp23-Vlp23, (
+        between(1, NR, Rlp23), between(1, NC23, Clp23),
+        arc_grid_at(Grid, Rlp23, Clp23, Vlp23), Vlp23 \= 0
+    ), Dots23),
+% ERC exactly two non-zero cells
+    Dots23 = [_-_-_, _-_-_],
+% ERC identify dot-2 and dot-3 positions
+    member(R2d-C2d-2, Dots23),
+    member(R3d-C3d-3, Dots23),
+% ERC dots must be in different rows and columns (L not straight line)
+    R2d \= R3d, C2d \= C3d,
+% ERC horizontal segment: row of dot-2, cols min..max excluding dot-2 col
+    MinC23 is min(C2d, C3d), MaxC23 is max(C2d, C3d),
+    MinR23 is min(R2d, R3d), MaxR23 is max(R2d, R3d),
+% ERC build horizontal segment cells
+    findall(R2d-Ch23-8, (
+        between(MinC23, MaxC23, Ch23), Ch23 \= C2d
+    ), HSeg23),
+% ERC build vertical segment cells (col of dot-3, rows between dots exclusive)
+    findall(Rv23-C3d-8, (
+        between(MinR23, MaxR23, Rv23), Rv23 \= R2d, Rv23 \= R3d
+    ), VSeg23),
+% ERC combine segments
+    append(HSeg23, VSeg23, AllSeg23),
+    AllSeg23 \= [],
+% ERC build output grid
+    numlist(1, NR, AllRows23),
+    maplist([Rout23, RowOut23]>>(
+        numlist(1, NC23, AllCols23),
+        maplist([Cout23, Vout23]>>(
+            ( member(Rout23-Cout23-Vn23, AllSeg23) -> Vout23 = Vn23
+            ; arc_grid_at(Grid, Rout23, Cout23, Vout23)
+            )
+        ), AllCols23, RowOut23)
+    ), AllRows23, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 41 Rule 2: eject_corner_markers (task 952a094c)
+% A hollow rectangular frame of one color encloses exactly four non-zero cells
+% at the four interior corners. Remove the interior cells and place them at the
+% four exterior corners of the frame, rotated 180 degrees:
+%   interior top-left    -> exterior bottom-right
+%   interior top-right   -> exterior bottom-left
+%   interior bottom-left -> exterior top-right
+%   interior bottom-right-> exterior top-left
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(eject_corner_markers).
+% ERC transform clause
+arc_transform(eject_corner_markers, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRecm|_], length(GRecm, NCecm), NCecm =< 30,
+% ERC collect all non-zero cells
+    findall(Recm-Cecm-Vecm, (
+        between(1, NR, Recm), between(1, NCecm, Cecm),
+        arc_grid_at(Grid, Recm, Cecm, Vecm), Vecm \= 0
+    ), AllCecm),
+% ERC find bounding box of all non-zero cells
+    findall(Recm, member(Recm-_-_, AllCecm), Rsecm),
+    findall(Cecm, member(_-Cecm-_, AllCecm), Csecm),
+    min_list(Rsecm, R1ecm), max_list(Rsecm, R2ecm),
+    min_list(Csecm, C1ecm), max_list(Csecm, C2ecm),
+% ERC frame must have room for interior (at least 3 cells wide/tall)
+    R2ecm > R1ecm + 2, C2ecm > C1ecm + 2,
+% ERC read frame color from top-left corner
+    arc_grid_at(Grid, R1ecm, C1ecm, FVecm), FVecm \= 0,
+% ERC verify all perimeter cells of bounding box have frame color
+    forall(
+        ( between(R1ecm, R2ecm, Rpecm), ( Cpecm = C1ecm ; Cpecm = C2ecm ) ),
+        arc_grid_at(Grid, Rpecm, Cpecm, FVecm)
+    ),
+    forall(
+        ( between(C1ecm, C2ecm, Cpecm), ( Rpecm = R1ecm ; Rpecm = R2ecm ) ),
+        arc_grid_at(Grid, Rpecm, Cpecm, FVecm)
+    ),
+% ERC compute interior corner positions
+    InMinRecm is R1ecm + 1, InMaxRecm is R2ecm - 1,
+    InMinCecm is C1ecm + 1, InMaxCecm is C2ecm - 1,
+% ERC read the four interior corner marker values
+    arc_grid_at(Grid, InMinRecm, InMinCecm, VTLecm),
+    arc_grid_at(Grid, InMinRecm, InMaxCecm, VTRecm),
+    arc_grid_at(Grid, InMaxRecm, InMinCecm, VBLecm),
+    arc_grid_at(Grid, InMaxRecm, InMaxCecm, VBRecm),
+% ERC markers must be non-zero and different from frame color
+    VTLecm \= 0, VTRecm \= 0, VBLecm \= 0, VBRecm \= 0,
+    VTLecm \= FVecm, VTRecm \= FVecm, VBLecm \= FVecm, VBRecm \= FVecm,
+% ERC verify all non-corner interior cells are zero
+    forall(
+        ( between(InMinRecm, InMaxRecm, Riecm),
+          between(InMinCecm, InMaxCecm, Ciecm),
+          \+ (Riecm =:= InMinRecm, Ciecm =:= InMinCecm),
+          \+ (Riecm =:= InMinRecm, Ciecm =:= InMaxCecm),
+          \+ (Riecm =:= InMaxRecm, Ciecm =:= InMinCecm),
+          \+ (Riecm =:= InMaxRecm, Ciecm =:= InMaxCecm) ),
+        arc_grid_at(Grid, Riecm, Ciecm, 0)
+    ),
+% ERC compute exterior corner positions
+    ExBRRe is R2ecm + 1, ExBRCe is C2ecm + 1,
+    ExBLRe is R2ecm + 1, ExBLCe is C1ecm - 1,
+    ExTRRe is R1ecm - 1, ExTRCe is C2ecm + 1,
+    ExTLRe is R1ecm - 1, ExTLCe is C1ecm - 1,
+% ERC exterior corners must be within grid bounds
+    ExBRRe =< NR, ExBRCe =< NCecm,
+    ExBLRe =< NR, ExBLCe >= 1,
+    ExTRRe >= 1, ExTRCe =< NCecm,
+    ExTLRe >= 1, ExTLCe >= 1,
+% ERC build change list: clear interior corners, place at exterior corners
+    ChangesEcm = [InMinRecm-InMinCecm-0, InMinRecm-InMaxCecm-0,
+                  InMaxRecm-InMinCecm-0, InMaxRecm-InMaxCecm-0,
+                  ExBRRe-ExBRCe-VTLecm, ExBLRe-ExBLCe-VTRecm,
+                  ExTRRe-ExTRCe-VBLecm, ExTLRe-ExTLCe-VBRecm],
+% ERC build output grid
+    numlist(1, NR, AllRowsEcm),
+    maplist([Routecm, RowOutecm]>>(
+        numlist(1, NCecm, AllColsEcm),
+        maplist([Coutecm, Voutecm]>>(
+            ( member(Routecm-Coutecm-Vnecm, ChangesEcm) -> Voutecm = Vnecm
+            ; arc_grid_at(Grid, Routecm, Coutecm, Voutecm)
+            )
+        ), AllColsEcm, RowOutecm)
+    ), AllRowsEcm, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 41 Rule 3: self_similar_tile (task 8f2ea7aa)
+% All non-zero cells have the same color and form a shape with bounding box
+% of size BS_R x BS_C. The grid divides exactly into meta-blocks of that size.
+% Each block whose meta-position (DR, DC) matches a relative cell of the
+% original shape gets a copy of the shape placed at that block's base.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(self_similar_tile).
+% ERC transform clause
+arc_transform(self_similar_tile, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRsstp|_], length(GRsstp, NCsst), NCsst =< 30,
+% ERC collect all non-zero cells
+    findall(Rsst-Csst-Vsst, (
+        between(1, NR, Rsst), between(1, NCsst, Csst),
+        arc_grid_at(Grid, Rsst, Csst, Vsst), Vsst \= 0
+    ), CellsSst),
+    CellsSst = [_|_],
+% ERC all cells must share the same color
+    CellsSst = [_-_-CVsst|_],
+    forall(member(_-_-Vcheck, CellsSst), Vcheck =:= CVsst),
+% ERC compute bounding box of the shape
+    findall(Rsst, member(Rsst-_-_, CellsSst), RsSst),
+    findall(Csst, member(_-Csst-_, CellsSst), CsSst),
+    min_list(RsSst, MinRsst), max_list(RsSst, MaxRsst),
+    min_list(CsSst, MinCsst), max_list(CsSst, MaxCsst),
+% ERC block size must be at least 2 in each dimension
+    BSRsst is MaxRsst - MinRsst + 1, BSRsst >= 2,
+    BSCsst is MaxCsst - MinCsst + 1, BSCsst >= 2,
+% ERC grid dimensions must be exact multiples of block size
+    0 is NR mod BSRsst, 0 is NCsst mod BSCsst,
+% ERC compute relative positions of shape cells within bounding box
+    findall(PRsst-PCsst, (
+        member(Rsst-Csst-_, CellsSst),
+        PRsst is Rsst - MinRsst, PCsst is Csst - MinCsst
+    ), RelPossSst),
+% ERC generate all cells for all copies (meta-block DR-DC in RelPossSst)
+    findall(Nrsst-Ncsst-CVsst, (
+        member(MDRsst-MDCsst, RelPossSst),
+        member(PRsst-PCsst, RelPossSst),
+        Nrsst is MDRsst * BSRsst + PRsst + 1,
+        Ncsst is MDCsst * BSCsst + PCsst + 1,
+        Nrsst >= 1, Nrsst =< NR,
+        Ncsst >= 1, Ncsst =< NCsst
+    ), AllSstCells),
+    AllSstCells = [_|_],
+% ERC build output grid
+    numlist(1, NR, AllRowsSst),
+    maplist([Routsst, RowOutsst]>>(
+        numlist(1, NCsst, AllColsSst),
+        maplist([Coutsst, Voutsst]>>(
+            ( member(Routsst-Coutsst-Vnsst, AllSstCells) -> Voutsst = Vnsst
+            ; arc_grid_at(Grid, Routsst, Coutsst, Voutsst)
+            )
+        ), AllColsSst, RowOutsst)
+    ), AllRowsSst, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 41 Rule 4: attract_to_center (task ae3edfdc)
+% Cells with a "singleton" color appear exactly once and act as attractors.
+% For each attractor at (SR, SC), find the associated "main" color: all cells
+% of that color are in the same row or same column as the attractor.
+% Each main-color cell moves one step toward the attractor (to its orthogonal
+% neighbor on that attractor's side), and the original cell is cleared.
+% The attractor cell itself is unchanged.
+% ---------------------------------------------------------------------------
+% ERC declare rule name
+arc_named_rule(attract_to_center).
+% ERC transform clause
+arc_transform(attract_to_center, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRatc|_], length(GRatc, NColatc), NColatc =< 30,
+% ERC collect all non-zero cells
+    findall(Ratc-Catc-Vatc, (
+        between(1, NR, Ratc), between(1, NColatc, Catc),
+        arc_grid_at(Grid, Ratc, Catc, Vatc), Vatc \= 0
+    ), CellsAtc),
+% ERC find all singleton-color attractors (each color appears exactly once)
+    findall(SRatc-SCatc-SVatc, (
+        member(SRatc-SCatc-SVatc, CellsAtc),
+        findall(x, member(_-_-SVatc, CellsAtc), XsSV), length(XsSV, 1)
+    ), Singletons),
+    Singletons = [_|_],
+% ERC for each attractor, find associated main color and compute moves
+    findall(NewRatc-NewCatc-NewVatc-OldRatc-OldCatc, (
+        member(SRatc-SCatc-SVatc, Singletons),
+% ERC find main color: all its cells lie in same row or col as attractor
+        findall(CV2atc, (
+            member(_-_-CV2atc, CellsAtc), CV2atc \= SVatc,
+            findall(x, member(_-_-CV2atc, CellsAtc), XsCV2), length(XsCV2, Lcv2), Lcv2 >= 2,
+            findall(x, (
+                member(Rm2-Cm2-CV2atc, CellsAtc),
+                \+ (Rm2 =:= SRatc ; Cm2 =:= SCatc)
+            ), Mismatch), Mismatch = []
+        ), AssocVs),
+        sort(AssocVs, [CVatc]),
+% ERC for each main-color cell, determine direction and new position
+        member(MRatc-MCatc-CVatc, CellsAtc),
+        ( MRatc =:= SRatc, MCatc < SCatc ->
+            NewRatc = SRatc, NewCatc is SCatc - 1
+        ; MRatc =:= SRatc, MCatc > SCatc ->
+            NewRatc = SRatc, NewCatc is SCatc + 1
+        ; MCatc =:= SCatc, MRatc < SRatc ->
+            NewRatc is SRatc - 1, NewCatc = SCatc
+        ; MCatc =:= SCatc, MRatc > SRatc ->
+            NewRatc is SRatc + 1, NewCatc = SCatc
+        ),
+        NewVatc = CVatc, OldRatc = MRatc, OldCatc = MCatc
+    ), Moves),
+    Moves = [_|_],
+% ERC build change list from moves
+    findall(OldRatc-OldCatc-0, member(_-_-_-OldRatc-OldCatc, Moves), ClearsList),
+    findall(NewRatc-NewCatc-NewVatc, member(NewRatc-NewCatc-NewVatc-_-_, Moves), AddsList),
+    append(ClearsList, AddsList, AllChangesAtc),
+% ERC build output grid
+    numlist(1, NR, AllRowsAtc),
+    maplist([Routatc, RowOutatc]>>(
+        numlist(1, NColatc, AllColsAtc),
+        maplist([Coutatc, Voutatc]>>(
+            ( member(Routatc-Coutatc-Vnatc, AllChangesAtc) -> Voutatc = Vnatc
+            ; arc_grid_at(Grid, Routatc, Coutatc, Voutatc)
+            )
+        ), AllColsAtc, RowOutatc)
+    ), AllRowsAtc, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
