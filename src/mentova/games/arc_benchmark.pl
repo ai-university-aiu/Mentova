@@ -20887,6 +20887,1463 @@ arc_transform(attract_to_center, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% Wave 42 Rule 1: inner_gap_fill (task d6ad076f)
+% Two solid coloured rectangles; the output fills the "inner gap" region
+% (row-dimension: gap or inner intersection; col-dimension: same) with 8s.
+% ---------------------------------------------------------------------------
+% ERC named rule fact
+arc_named_rule(inner_gap_fill).
+% ERC transform clause head
+arc_transform(inner_gap_fill, Grid, Out) :-
+% ERC size guard: row count
+    length(Grid, NRigf), NRigf =< 30,
+% ERC size guard: col count
+    Grid = [GRigf|_], length(GRigf, NCigf), NCigf =< 30,
+% ERC collect all non-zero cells (1-indexed rows and cols)
+    findall(Rigf-Cigf-Vigf, (
+        between(1, NRigf, Rigf), between(1, NCigf, Cigf),
+        arc_grid_at(Grid, Rigf, Cigf, Vigf), Vigf \= 0
+    ), AllCells),
+% ERC exactly two distinct colors
+    findall(Vigf, member(_-_-Vigf, AllCells), AllVsigf),
+    sort(AllVsigf, [VA_igf, VB_igf]),
+% ERC partition into block A and block B
+    findall(Ra-Ca, member(Ra-Ca-VA_igf, AllCells), ACellsigf),
+    findall(Rb-Cb, member(Rb-Cb-VB_igf, AllCells), BCellsigf),
+% ERC bounding box rows and cols for block A
+    findall(Ra, member(Ra-_, ACellsigf), ARsigf),
+    min_list(ARsigf, MinRAigf), max_list(ARsigf, MaxRAigf),
+    findall(Ca, member(_-Ca, ACellsigf), ACsigf),
+    min_list(ACsigf, MinCAigf), max_list(ACsigf, MaxCAigf),
+% ERC bounding box rows and cols for block B
+    findall(Rb, member(Rb-_, BCellsigf), BRsigf),
+    min_list(BRsigf, MinRBigf), max_list(BRsigf, MaxRBigf),
+    findall(Cb, member(_-Cb, BCellsigf), BCsigf),
+    min_list(BCsigf, MinCBigf), max_list(BCsigf, MaxCBigf),
+% ERC verify block A is a solid rectangle (count = bbox area)
+    length(ACellsigf, CntAigf),
+    SzAigf is (MaxRAigf - MinRAigf + 1) * (MaxCAigf - MinCAigf + 1),
+    CntAigf =:= SzAigf,
+% ERC verify block B is a solid rectangle
+    length(BCellsigf, CntBigf),
+    SzBigf is (MaxRBigf - MinRBigf + 1) * (MaxCBigf - MinCBigf + 1),
+    CntBigf =:= SzBigf,
+% ERC compute inner row range: use inner intersection if rows overlap, else the gap
+    OvRmin is max(MinRAigf, MinRBigf),
+    OvRmax is min(MaxRAigf, MaxRBigf),
+    ( OvRmax >= OvRmin ->
+        InnerR1 is OvRmin + 1, InnerR2 is OvRmax - 1
+    ; MaxRAigf < MinRBigf ->
+        InnerR1 is MaxRAigf + 1, InnerR2 is MinRBigf - 1
+    ;
+        InnerR1 is MaxRBigf + 1, InnerR2 is MinRAigf - 1
+    ),
+% ERC row range must be non-empty
+    InnerR1 =< InnerR2,
+% ERC compute inner col range: use inner intersection if cols overlap, else the gap
+    OvCmin is max(MinCAigf, MinCBigf),
+    OvCmax is min(MaxCAigf, MaxCBigf),
+    ( OvCmax >= OvCmin ->
+        InnerC1 is OvCmin + 1, InnerC2 is OvCmax - 1
+    ; MaxCAigf < MinCBigf ->
+        InnerC1 is MaxCAigf + 1, InnerC2 is MinCBigf - 1
+    ;
+        InnerC1 is MaxCBigf + 1, InnerC2 is MinCAigf - 1
+    ),
+% ERC col range must be non-empty
+    InnerC1 =< InnerC2,
+% ERC collect all cells in the inner gap rectangle
+    findall(Rf-Cf, (
+        between(InnerR1, InnerR2, Rf), between(InnerC1, InnerC2, Cf)
+    ), FillSet),
+% ERC fill set must be non-empty
+    FillSet \= [],
+% ERC build output grid: fill gap cells with 8, keep all others unchanged
+    numlist(1, NRigf, AllRsigf),
+    maplist([Routigf, RowOutigf]>>(
+        numlist(1, NCigf, AllCsigf),
+        maplist([Coutigf, Voutigf]>>(
+            ( member(Routigf-Coutigf, FillSet) -> Voutigf = 8
+            ; arc_grid_at(Grid, Routigf, Coutigf, Voutigf)
+            )
+        ), AllCsigf, RowOutigf)
+    ), AllRsigf, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 2: extract_bounded_subgrid (task 5daaa586)
+% Two separator rows (all cells non-zero) and two separator cols
+% (all cells non-zero) bound a rectangular region.  Output that region.
+% ---------------------------------------------------------------------------
+% ERC named rule fact
+arc_named_rule(extract_bounded_subgrid).
+% ERC transform clause head
+arc_transform(extract_bounded_subgrid, Grid, Out) :-
+% ERC size guard: row count
+    length(Grid, NRebs), NRebs =< 30,
+% ERC size guard: col count
+    Grid = [GRebs|_], length(GRebs, NCebs), NCebs =< 30,
+% ERC find rows where every cell is non-zero (separator rows)
+    findall(Rebs, (
+        between(1, NRebs, Rebs),
+        \+ (between(1, NCebs, Cebs), arc_grid_at(Grid, Rebs, Cebs, 0))
+    ), SepRowsebs),
+% ERC require exactly 2 separator rows
+    SepRowsebs = [SR1ebs, SR2ebs],
+% ERC first separator row must be before second
+    SR1ebs < SR2ebs,
+% ERC find cols where every cell is non-zero (separator cols)
+    findall(Cebs2, (
+        between(1, NCebs, Cebs2),
+        \+ (between(1, NRebs, Rebs2), arc_grid_at(Grid, Rebs2, Cebs2, 0))
+    ), SepColsebs),
+% ERC require exactly 2 separator cols
+    SepColsebs = [SC1ebs, SC2ebs],
+% ERC first separator col must be before second
+    SC1ebs < SC2ebs,
+% ERC the subgrid must be strictly smaller than the full grid in at least one dim
+    (SR2ebs - SR1ebs + 1 < NRebs ; SC2ebs - SC1ebs + 1 < NCebs),
+% ERC extract rows SR1..SR2, cols SC1..SC2
+    findall(RowOutebs, (
+        between(SR1ebs, SR2ebs, Rebs3),
+        findall(Vebs, (
+            between(SC1ebs, SC2ebs, Cebs3),
+            arc_grid_at(Grid, Rebs3, Cebs3, Vebs)
+        ), RowOutebs)
+    ), Out),
+% ERC output must be non-empty
+    Out \= [],
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 3: fill_periodic_holes (task 484b58aa)
+% Grid is a 2-D periodic tile with rectangular 0-holes punched out.
+% Discover the minimal row period PR and col period PC, build a phase
+% map from non-zero cells, then fill every 0 from the map.
+% ---------------------------------------------------------------------------
+% ERC named rule fact
+arc_named_rule(fill_periodic_holes).
+% ERC transform clause head
+arc_transform(fill_periodic_holes, Grid, Out) :-
+% ERC size guard: row count
+    length(Grid, NRfph), NRfph =< 30,
+% ERC size guard: col count
+    Grid = [GRfph|_], length(GRfph, NCfph), NCfph =< 30,
+% ERC at least one 0-cell exists (something to fill)
+    once((between(1, NRfph, _Rfph0), between(1, NCfph, _Cfph0),
+          arc_grid_at(Grid, _Rfph0, _Cfph0, 0))),
+% ERC find minimal row period PRfph: smallest P < NR s.t. no same-col
+% ERC non-zero pair at row distance P disagrees
+    NRfphM1 is NRfph - 1,
+    between(1, NRfphM1, PRfph),
+    \+ (between(1, NRfph, Rfph2), between(1, NCfph, Cfph2),
+        R2fph is Rfph2 + PRfph, R2fph =< NRfph,
+        arc_grid_at(Grid, Rfph2, Cfph2, Va2fph), Va2fph \= 0,
+        arc_grid_at(Grid, R2fph,  Cfph2, Vb2fph), Vb2fph \= 0,
+        Va2fph \= Vb2fph),
+    !,
+% ERC build phase map: (PhR, C) -> first non-zero value found
+% ERC PhR is the row phase (0-indexed mod PRfph)
+    findall(PhRfph-Cpmfph-Vpmfph, (
+        between(1, NRfph, Rpmfph), between(1, NCfph, Cpmfph),
+        arc_grid_at(Grid, Rpmfph, Cpmfph, Vpmfph), Vpmfph \= 0,
+        PhRfph is (Rpmfph - 1) mod PRfph
+    ), PhaseMapRawfph),
+% ERC deduplicate: keep first entry per (PhR, C) key
+    sort(PhaseMapRawfph, PhaseMapfph),
+% ERC phase map must be non-empty
+    PhaseMapfph \= [],
+% ERC build output: fill each 0 from the phase map by (PhR, C) lookup
+    numlist(1, NRfph, AllRsfph),
+    maplist([Routfph, RowOutfph]>>(
+        numlist(1, NCfph, AllCsfph),
+        maplist([Coutfph, Voutfph]>>(
+            arc_grid_at(Grid, Routfph, Coutfph, Vcurrfph),
+            ( Vcurrfph \= 0 ->
+                Voutfph = Vcurrfph
+            ;   PhRlkp is (Routfph - 1) mod PRfph,
+                member(PhRlkp-Coutfph-Voutfph, PhaseMapfph)
+            )
+        ), AllCsfph, RowOutfph)
+    ), AllRsfph, Out),
+% ERC output must be non-empty
+    Out \= [],
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 4: fill_max_zero_cross (task 2bee17df)
+% Count zeros per row; find maximum row-zero count; count zeros per col;
+% find maximum col-zero count.  Replace every 0 in a max-zero row OR a
+% max-zero col with value 3.
+% Guard: input values in {0,2,8} only; at least one 0 exists.
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(fill_max_zero_cross).
+% ERC transform clause head
+arc_transform(fill_max_zero_cross, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRfmzc), NRfmzc =< 30,
+% ERC col count guard
+    Grid = [GRfmzc|_], length(GRfmzc, NCfmzc), NCfmzc =< 30,
+% ERC values-only-0-2-8 guard
+    \+ (member(Rowfmzc0, Grid), member(Vfmzc0, Rowfmzc0),
+        Vfmzc0 \= 0, Vfmzc0 \= 2, Vfmzc0 \= 8),
+% ERC at least one 0 cell in the grid
+    once((member(Rfmzcchk, Grid), member(0, Rfmzcchk))),
+% ERC build list of R-ZeroCount pairs for rows
+    numlist(1, NRfmzc, AllRsfmzc),
+% ERC collect per-row zero counts
+    findall(Rfmzc-ZRfmzc, (
+        member(Rfmzc, AllRsfmzc),
+        nth1(Rfmzc, Grid, Rowfmzc),
+        findall(_, member(0, Rowfmzc), Zfmzc),
+        length(Zfmzc, ZRfmzc)
+    ), RowZCountsfmzc),
+% ERC extract just the zero counts
+    findall(ZRfmzc2, member(_-ZRfmzc2, RowZCountsfmzc), RowCntsfmzc),
+% ERC find maximum row zero count
+    max_list(RowCntsfmzc, MaxRowZfmzc),
+% ERC max must be positive
+    MaxRowZfmzc > 0,
+% ERC collect row indices that hit the max
+    findall(Rfmzc3, member(Rfmzc3-MaxRowZfmzc, RowZCountsfmzc), MaxRowsfmzc),
+% ERC enumerate columns 1..NC
+    numlist(1, NCfmzc, AllCsfmzc),
+% ERC build list of C-ZeroCount pairs for cols
+    findall(Cfmzc-ZCfmzc, (
+        member(Cfmzc, AllCsfmzc),
+        findall(_, (between(1, NRfmzc, Rfmzc4),
+                    arc_grid_at(Grid, Rfmzc4, Cfmzc, 0)), Zcolfmzc),
+        length(Zcolfmzc, ZCfmzc)
+    ), ColZCountsfmzc),
+% ERC extract col zero counts
+    findall(ZCfmzc2, member(_-ZCfmzc2, ColZCountsfmzc), ColCntsfmzc),
+% ERC find maximum col zero count
+    max_list(ColCntsfmzc, MaxColZfmzc),
+% ERC max col count must be positive
+    MaxColZfmzc > 0,
+% ERC collect col indices that hit the max
+    findall(Cfmzc3, member(Cfmzc3-MaxColZfmzc, ColZCountsfmzc), MaxColsfmzc),
+% ERC build output replacing 0 in max rows/cols with 3
+    maplist([Routfmzc, RowOutfmzc]>>(
+        maplist([Coutfmzc, Voutfmzc]>>(
+% ERC read original cell value
+            arc_grid_at(Grid, Routfmzc, Coutfmzc, Vinfmzc),
+% ERC cell is 0 in a max-zero row or col: set to 3; else keep original
+            ( Vinfmzc =:= 0,
+              ( member(Routfmzc, MaxRowsfmzc) ; member(Coutfmzc, MaxColsfmzc) )
+            -> Voutfmzc = 3
+            ;  Voutfmzc = Vinfmzc )
+        ), AllCsfmzc, RowOutfmzc)
+    ), AllRsfmzc, Out),
+% ERC output must differ from input
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 5: two_to_wall_expand (task ecdecbb3)
+% Grid has isolated 2-markers and full 8-walls (rows or cols entirely 8).
+% Each 2-marker sends arms in all four cardinal directions; when an arm
+% hits the first 8 it encounters: the path from marker to wall fills with
+% 2, the wall cell becomes 2, and a 3x3 halo of 8s is placed around the
+% wall intersection (halo centre stays 2).
+% Guard: values in {0,2,8}; at most 10 isolated 2-markers.
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(two_to_wall_expand).
+% ERC transform clause head
+arc_transform(two_to_wall_expand, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRttwe), NRttwe =< 30,
+% ERC col count guard
+    Grid = [GRttwe|_], length(GRttwe, NCttwe), NCttwe =< 30,
+% ERC values-only-0-2-8 guard
+    \+ (member(Rowttwe0, Grid), member(Vttwe0, Rowttwe0),
+        Vttwe0 \= 0, Vttwe0 \= 2, Vttwe0 \= 8),
+% ERC collect all 2-marker positions
+    findall(MRttwe-MCttwe, (
+        between(1, NRttwe, MRttwe),
+        between(1, NCttwe, MCttwe),
+        arc_grid_at(Grid, MRttwe, MCttwe, 2)
+    ), Markersttwe),
+% ERC at least one marker must exist
+    Markersttwe \= [],
+% ERC limit markers to avoid firing on grids with 2-walls
+    length(Markersttwe, NMttwe), NMttwe =< 10,
+% ERC scan each marker in each direction; collect (fill-path, wall-pos) triples
+    findall(fill(FillsW, WRttwe, WCttwe), (
+        member(MRm-MCm, Markersttwe),
+        member(DRm-DCm, [-1-0, 1-0, 0-(-1), 0-1]),
+        R1m is MRm + DRm, C1m is MCm + DCm,
+        between(1, NRttwe, R1m), between(1, NCttwe, C1m),
+        ttwe_scan(Grid, NRttwe, NCttwe, R1m, C1m, DRm, DCm, FillsW, WRttwe, WCttwe)
+    ), WallInfosttwe),
+% ERC at least one arm must have reached a wall
+    WallInfosttwe \= [],
+% ERC collect all fill cells from all arms
+    findall(RCfill, (
+        member(fill(Fillsf, _, _), WallInfosttwe),
+        member(RCfill, Fillsf)
+    ), AllFillCellsttwe),
+% ERC collect all wall-centre positions
+    findall(WRc-WCc, member(fill(_, WRc, WCc), WallInfosttwe), WallCentersttwe),
+% ERC collect all 3x3 halo cells (non-centre) around each wall intersection
+    findall(RFf-CFf, (
+        member(WRfr-WCfr, WallCentersttwe),
+        member(DRfr, [-1, 0, 1]),
+        member(DCfr, [-1, 0, 1]),
+        ( DRfr \= 0 ; DCfr \= 0 ),
+        RFf is WRfr + DRfr, CFf is WCfr + DCfr,
+        between(1, NRttwe, RFf), between(1, NCttwe, CFf)
+    ), FrameCellsttwe),
+% ERC build output: halo-8 wins, then wall-centre-2, then fill-2, else keep
+    numlist(1, NRttwe, AllRttwe), numlist(1, NCttwe, AllCttwe),
+    maplist([Ro, RowO]>>(
+        maplist([Co, Vo]>>(
+% ERC read original cell value
+            arc_grid_at(Grid, Ro, Co, Vinttwe),
+% ERC priority: halo cell -> 8; wall centre -> 2; fill cell -> 2; else keep
+            ( member(Ro-Co, FrameCellsttwe) -> Vo = 8
+            ; member(Ro-Co, WallCentersttwe) -> Vo = 2
+            ; member(Ro-Co, AllFillCellsttwe) -> Vo = 2
+            ; Vo = Vinttwe )
+        ), AllCttwe, RowO)
+    ), AllRttwe, Out),
+% ERC output must differ from input
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ERC ttwe_scan base case: current cell is the wall (value 8); path ends here
+ttwe_scan(Grid, _NRts, _NCts, R, C, _dRts, _dCts, [], R, C) :-
+% ERC confirm the wall cell is 8
+    arc_grid_at(Grid, R, C, 8).
+% ERC ttwe_scan recursive case: step through non-8 cells collecting fill coords
+ttwe_scan(Grid, NRts, NCts, R, C, DRts, DCts, [R-C|Rest], WallR, WallC) :-
+% ERC current cell must not be 8
+    arc_grid_at(Grid, R, C, Vstep), Vstep \= 8,
+% ERC advance one step in the scan direction
+    R2 is R + DRts, C2 is C + DCts,
+% ERC next cell must be within grid bounds
+    between(1, NRts, R2), between(1, NCts, C2),
+% ERC recurse into next cell
+    ttwe_scan(Grid, NRts, NCts, R2, C2, DRts, DCts, Rest, WallR, WallC).
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 6: color_5_by_stripe (task c9f8e694)
+% Column 1 holds a stripe of colors (non-5 values).  Every 5 in the grid
+% is replaced by the column-1 value from the same row.
+% Guard: col 1 has no 5s; all non-zero values in cols 2+ are exactly 5;
+% at least one non-zero stripe value; at least one 5 in cols 2+;
+% no row with a 5 in cols 2+ has a zero stripe value in col 1.
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(color_5_by_stripe).
+% ERC transform clause head
+arc_transform(color_5_by_stripe, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRcsbs), NRcsbs =< 30,
+% ERC col count guard: at least 2 cols needed
+    Grid = [GRcsbs|_], length(GRcsbs, NCcsbs), NCcsbs >= 2,
+% ERC NC upper bound
+    NCcsbs =< 30,
+% ERC col 1 must contain no 5s (stripe values are never 5)
+    \+ (between(1, NRcsbs, Rcsbs0), arc_grid_at(Grid, Rcsbs0, 1, 5)),
+% ERC all non-zero values in cols 2+ must be exactly 5
+    \+ (between(1, NRcsbs, Rcsbs1), between(2, NCcsbs, Ccsbs1),
+        arc_grid_at(Grid, Rcsbs1, Ccsbs1, Vcsbs1), Vcsbs1 \= 0, Vcsbs1 \= 5),
+% ERC at least one non-zero stripe value in col 1
+    once((between(1, NRcsbs, Rcsbs2), arc_grid_at(Grid, Rcsbs2, 1, Vcsbs2), Vcsbs2 \= 0)),
+% ERC at least one 5 exists in cols 2+
+    once((between(1, NRcsbs, Rcsbs3), between(2, NCcsbs, Ccsbs3),
+          arc_grid_at(Grid, Rcsbs3, Ccsbs3, 5))),
+% ERC every row with a 5 in cols 2+ must have a non-zero stripe value in col 1
+    \+ (between(1, NRcsbs, Rcsbs4),
+        arc_grid_at(Grid, Rcsbs4, 1, StrVchk), StrVchk =:= 0,
+        once((between(2, NCcsbs, Ccsbs4), arc_grid_at(Grid, Rcsbs4, Ccsbs4, 5)))),
+% ERC enumerate rows and cols for maplist
+    numlist(1, NRcsbs, AllRcsbs), numlist(1, NCcsbs, AllCcsbs),
+% ERC build output grid: 5 -> stripe value, else keep original
+    maplist([Rocsbs, RowOcsbs]>>(
+% ERC get stripe value for this row from col 1
+        arc_grid_at(Grid, Rocsbs, 1, StrVcsbs),
+% ERC map each column cell
+        maplist([Cocsbs, Vocsbs]>>(
+% ERC read original cell value
+            arc_grid_at(Grid, Rocsbs, Cocsbs, Vincsbs),
+% ERC replace 5 with stripe value; keep all other values
+            ( Vincsbs =:= 5 -> Vocsbs = StrVcsbs ; Vocsbs = Vincsbs )
+        ), AllCcsbs, RowOcsbs)
+    ), AllRcsbs, Out),
+% ERC output must differ from input
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 7: max_color_columns (task a3325580)
+% Find all distinct non-zero colors; count cells per color; find max count.
+% Keep only colors whose count equals the max.  Sort those colors by their
+% leftmost column position (ascending).  Output a grid of max-count rows
+% where every row is the sorted color list.
+% Guard: at least 2 distinct non-zero colors; max count >= 2.
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(max_color_columns).
+% ERC transform clause head
+arc_transform(max_color_columns, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRmcc), NRmcc =< 30,
+% ERC col count guard
+    Grid = [GRmcc|_], length(GRmcc, NCmcc), NCmcc =< 30,
+% ERC collect all non-zero cell values across the grid
+    findall(Vmcc, (member(Rowmcc, Grid), member(Vmcc, Rowmcc), Vmcc \= 0), AllColorsmcc),
+% ERC at least 2 non-zero cells must exist
+    length(AllColorsmcc, NAllmcc), NAllmcc >= 2,
+% ERC obtain distinct color list
+    sort(AllColorsmcc, DistinctColorsmcc),
+% ERC at least 2 distinct non-zero colors required
+    length(DistinctColorsmcc, NDmcc), NDmcc >= 2,
+% ERC count occurrences of each distinct color
+    findall(Cmcc-Nmcc, (
+        member(Cmcc, DistinctColorsmcc),
+        findall(_, (member(Rowmcc2, Grid), member(Cmcc, Rowmcc2)), CellsMcc),
+        length(CellsMcc, Nmcc)
+    ), ColorCountsmcc),
+% ERC extract count values for max computation
+    findall(Nmcc2, member(_-Nmcc2, ColorCountsmcc), CountListmcc),
+% ERC find maximum cell count across all colors
+    max_list(CountListmcc, MaxCntmcc),
+% ERC max count must be at least 2
+    MaxCntmcc >= 2,
+% ERC collect colors that achieve the maximum count
+    findall(Cmcc2, member(Cmcc2-MaxCntmcc, ColorCountsmcc), MaxColorsmcc),
+% ERC at least one color must hit the max
+    MaxColorsmcc \= [],
+% ERC find leftmost column position for each max-count color
+    findall(LeftColmcc-Colormcc, (
+        member(Colormcc, MaxColorsmcc),
+        findall(Cmcc3, (
+            between(1, NRmcc, Rmcc3),
+            between(1, NCmcc, Cmcc3),
+            arc_grid_at(Grid, Rmcc3, Cmcc3, Colormcc)
+        ), ColPosmcc),
+        min_list(ColPosmcc, LeftColmcc)
+    ), SortKeysmcc),
+% ERC sort colors by leftmost column (keysort preserves ties)
+    keysort(SortKeysmcc, SortedKeysmcc),
+% ERC extract sorted color list
+    findall(Colormcc2, member(_-Colormcc2, SortedKeysmcc), SortedColorsmcc),
+% ERC output must have at least 1 max-count color
+    length(SortedColorsmcc, NOutColsmcc), NOutColsmcc >= 1,
+% ERC output must be strictly smaller than input in at least one dimension
+    ( MaxCntmcc < NRmcc ; NOutColsmcc < NCmcc ),
+% ERC build output: MaxCntmcc identical rows each equal to SortedColorsmcc
+    findall(SortedColorsmcc, between(1, MaxCntmcc, _), Out),
+% ERC output must differ from input
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 8: expand_2_in_3_blob (task b527c5c6)
+% Each rectangular blob of 3s contains exactly one 2 on an edge.  An arm
+% of 3s (with a 2-spine on the axis of the original 2) extends outward from
+% that edge to the grid boundary.  Arm perpendicular size = 2*(T-1)+1
+% where T is the blob dimension parallel to the arm direction.
+% Guard: all non-zero values are 2 or 3; at least one 2; every 2 lies on
+% exactly one edge of its filled-rectangle 3+2 blob.
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(expand_2_in_3_blob).
+% ERC transform clause head
+arc_transform(expand_2_in_3_blob, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRe23b), NRe23b =< 30,
+% ERC col count guard
+    Grid = [GRe23b|_], length(GRe23b, NCe23b), NCe23b =< 30,
+% ERC all non-zero values must be 2 or 3 (pure 2/3 grid)
+    \+ (member(Rowe23b, Grid), member(Ve23b, Rowe23b),
+        Ve23b \= 0, Ve23b \= 2, Ve23b \= 3),
+% ERC at least one 2 exists in the grid
+    once((between(1, NRe23b, Rte23b), between(1, NCe23b, Cte23b),
+          arc_grid_at(Grid, Rte23b, Cte23b, 2))),
+% ERC collect arm descriptors for every 2-cell in the grid
+    findall(e23b_arm(AR0,AR1,AC0,AC1,Dir,Main),
+        e23b_find_arm(Grid, NRe23b, NCe23b, AR0, AR1, AC0, AC1, Dir, Main),
+        Armse23b),
+% ERC must have at least one valid arm
+    Armse23b \= [],
+% ERC build row index list
+    numlist(1, NRe23b, AllRse23b),
+% ERC build col index list
+    numlist(1, NCe23b, AllCse23b),
+% ERC construct output: apply arm fills, keep all other cells unchanged
+    maplist([Ro23b, RowOut23b]>>(
+        maplist([Co23b, Vo23b]>>(
+            arc_grid_at(Grid, Ro23b, Co23b, Vin23b),
+            ( e23b_cell_fill(Armse23b, Ro23b, Co23b, Vfill23b) ->
+                Vo23b = Vfill23b
+            ;   Vo23b = Vin23b
+            )
+        ), AllCse23b, RowOut23b)
+    ), AllRse23b, Out),
+% ERC output must differ from input
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ERC scan leftward from (R,C) along row R to find leftmost connected non-zero col
+e23b_leftmost(Grid, R, C, C0) :-
+% ERC try one step left
+    C1 is C - 1, C1 >= 1,
+% ERC cell to the left must be non-zero
+    arc_grid_at(Grid, R, C1, V1), V1 \= 0,
+% ERC continue scanning left
+    !, e23b_leftmost(Grid, R, C1, C0).
+% ERC base case: no further non-zero cell to the left
+e23b_leftmost(_, _, C, C).
+
+% ERC scan rightward from (R,C) along row R to find rightmost connected non-zero col
+e23b_rightmost(Grid, R, C, NC, C1) :-
+% ERC try one step right
+    C2 is C + 1, C2 =< NC,
+% ERC cell to the right must be non-zero
+    arc_grid_at(Grid, R, C2, V2), V2 \= 0,
+% ERC continue scanning right
+    !, e23b_rightmost(Grid, R, C2, NC, C1).
+% ERC base case: no further non-zero cell to the right
+e23b_rightmost(_, _, C, _, C).
+
+% ERC scan upward from (R,C) along col C to find topmost connected non-zero row
+e23b_topmost(Grid, R, C, R0) :-
+% ERC try one step up
+    R1 is R - 1, R1 >= 1,
+% ERC cell above must be non-zero
+    arc_grid_at(Grid, R1, C, V1), V1 \= 0,
+% ERC continue scanning up
+    !, e23b_topmost(Grid, R1, C, R0).
+% ERC base case: no further non-zero cell above
+e23b_topmost(_, R, _, R).
+
+% ERC scan downward from (R,C) along col C to find bottommost connected non-zero row
+e23b_bottommost(Grid, R, C, NR, R1) :-
+% ERC try one step down
+    R2 is R + 1, R2 =< NR,
+% ERC cell below must be non-zero
+    arc_grid_at(Grid, R2, C, V2), V2 \= 0,
+% ERC continue scanning down
+    !, e23b_bottommost(Grid, R2, C, NR, R1).
+% ERC base case: no further non-zero cell below
+e23b_bottommost(_, R, _, _, R).
+
+% ERC find arm descriptor for a single 2-cell (R2,C2) in Grid
+e23b_find_arm(Grid, NR, NC, AR0, AR1, AC0, AC1, Dir, Main) :-
+% ERC pick a 2-cell position
+    between(1, NR, R2),
+    between(1, NC, C2),
+    arc_grid_at(Grid, R2, C2, 2),
+% ERC connected scan to find blob col bounds in row R2
+    e23b_leftmost(Grid, R2, C2, BlobC0),
+    e23b_rightmost(Grid, R2, C2, NC, BlobC1),
+% ERC connected scan to find blob row bounds in col C2
+    e23b_topmost(Grid, R2, C2, BlobR0),
+    e23b_bottommost(Grid, R2, C2, NR, BlobR1),
+% ERC entire bounding box must be filled (rectangular blob, no holes)
+    \+ (between(BlobR0, BlobR1, Rbv), between(BlobC0, BlobC1, Cbv),
+        arc_grid_at(Grid, Rbv, Cbv, Vbv), Vbv =:= 0),
+% ERC exactly one 2 must exist in this blob
+    findall(_, (between(BlobR0, BlobR1, Rb2), between(BlobC0, BlobC1, Cb2),
+                arc_grid_at(Grid, Rb2, Cb2, 2)), TwosBlob),
+    length(TwosBlob, 1),
+% ERC determine arm direction and compute bounds
+    e23b_arm_params(R2, C2, BlobR0, BlobR1, BlobC0, BlobC1, NR, NC,
+                    AR0, AR1, AC0, AC1, Dir, Main).
+
+% ERC LEFT arm: 2 is on the left edge of its blob
+e23b_arm_params(R2, C2, _BR0, _BR1, BlobC0, BlobC1, NR, _NC,
+                AR0, AR1, 1, AC1, h, R2) :-
+% ERC 2 must be at the leftmost column of the blob
+    C2 =:= BlobC0,
+% ERC arm must have space to the left of the blob
+    AC1 is BlobC0 - 1, AC1 >= 1,
+% ERC arm height = 2*(blob_width - 1) + 1
+    NCols is BlobC1 - BlobC0 + 1,
+    Half is NCols - 1,
+% ERC arm row bounds must fit within the grid
+    AR0 is R2 - Half, AR0 >= 1,
+    AR1 is R2 + Half, AR1 =< NR.
+
+% ERC RIGHT arm: 2 is on the right edge of its blob
+e23b_arm_params(R2, C2, _BR0, _BR1, BlobC0, BlobC1, NR, NC,
+                AR0, AR1, AC0, NC, h, R2) :-
+% ERC 2 must be at the rightmost column (not also leftmost)
+    C2 =:= BlobC1, C2 =\= BlobC0,
+% ERC arm must have space to the right of the blob
+    AC0 is BlobC1 + 1, AC0 =< NC,
+% ERC arm height = 2*(blob_width - 1) + 1
+    NCols is BlobC1 - BlobC0 + 1,
+    Half is NCols - 1,
+% ERC arm row bounds must fit within the grid
+    AR0 is R2 - Half, AR0 >= 1,
+    AR1 is R2 + Half, AR1 =< NR.
+
+% ERC UP arm: 2 is on the top edge of its blob
+e23b_arm_params(R2, C2, BlobR0, BlobR1, _BC0, _BC1, _NR, NC,
+                1, AR1, AC0, AC1, v, C2) :-
+% ERC 2 must be at the topmost row of the blob
+    R2 =:= BlobR0,
+% ERC arm must have space above the blob
+    AR1 is BlobR0 - 1, AR1 >= 1,
+% ERC arm width = 2*(blob_height - 1) + 1
+    NRows is BlobR1 - BlobR0 + 1,
+    Half is NRows - 1,
+% ERC arm col bounds must fit within the grid
+    AC0 is C2 - Half, AC0 >= 1,
+    AC1 is C2 + Half, AC1 =< NC.
+
+% ERC DOWN arm: 2 is on the bottom edge of its blob
+e23b_arm_params(R2, C2, BlobR0, BlobR1, _BC0, _BC1, NR, NC,
+                AR0, NR, AC0, AC1, v, C2) :-
+% ERC 2 must be at the bottommost row (not also topmost)
+    R2 =:= BlobR1, R2 =\= BlobR0,
+% ERC arm must have space below the blob
+    AR0 is BlobR1 + 1, AR0 =< NR,
+% ERC arm width = 2*(blob_height - 1) + 1
+    NRows is BlobR1 - BlobR0 + 1,
+    Half is NRows - 1,
+% ERC arm col bounds must fit within the grid
+    AC0 is C2 - Half, AC0 >= 1,
+    AC1 is C2 + Half, AC1 =< NC.
+
+% ERC determine fill value for a cell that falls inside an arm region
+e23b_cell_fill([e23b_arm(AR0,AR1,AC0,AC1,Dir,Main)|_], R, C, V) :-
+% ERC cell must be within this arm's bounding box
+    R >= AR0, R =< AR1, C >= AC0, C =< AC1,
+% ERC axis cells (same row as 2 for h-arm, same col for v-arm) get value 2
+    !,
+    ( (Dir = h, R =:= Main ; Dir = v, C =:= Main) -> V = 2 ; V = 3 ).
+% ERC try next arm in the list
+e23b_cell_fill([_|Rest], R, C, V) :-
+    e23b_cell_fill(Rest, R, C, V).
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 9: connect_markers_to_blob (task d43fd935)
+% A rectangular blob of 3s sits in a grid with scattered single-color
+% markers.  Any marker that shares a row with the blob is connected to the
+% blob horizontally (line of that color from marker to blob edge).  Any
+% marker that shares a column with the blob is connected vertically.
+% Markers that share neither row nor column are left unchanged.
+% Guard: exactly one rectangular blob of pure 3s; at least one marker;
+% fill paths must be non-empty (marker not already adjacent to blob).
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(connect_markers_to_blob).
+% ERC transform clause head
+arc_transform(connect_markers_to_blob, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRcmtb), NRcmtb =< 30,
+% ERC col count guard
+    Grid = [GRcmtb|_], length(GRcmtb, NCcmtb), NCcmtb =< 30,
+% ERC at least one 3 must exist (blob present)
+    once((member(Rowcmtb, Grid), member(3, Rowcmtb))),
+% ERC collect all 3-cell positions
+    findall(Rcmtb-Ccmtb,
+        (between(1, NRcmtb, Rcmtb), between(1, NCcmtb, Ccmtb),
+         arc_grid_at(Grid, Rcmtb, Ccmtb, 3)),
+        ThreeCellscmtb),
+% ERC find blob bounding box from 3-cell positions
+    findall(Rtcmtb, member(Rtcmtb-_, ThreeCellscmtb), Rscmtb),
+    min_list(Rscmtb, BR0cmtb), max_list(Rscmtb, BR1cmtb),
+    findall(Ctcmtb, member(_-Ctcmtb, ThreeCellscmtb), Cscmtb),
+    min_list(Cscmtb, BC0cmtb), max_list(Cscmtb, BC1cmtb),
+% ERC entire bounding box must be filled with 3s (no holes, no non-3 cells)
+    \+ (between(BR0cmtb, BR1cmtb, Rbcmtb), between(BC0cmtb, BC1cmtb, Cbcmtb),
+        arc_grid_at(Grid, Rbcmtb, Cbcmtb, Vbcmtb), Vbcmtb \= 3),
+% ERC no 3s exist outside the bounding box (exactly one blob)
+    \+ (between(1, NRcmtb, Rxcmtb), between(1, NCcmtb, Cxcmtb),
+        arc_grid_at(Grid, Rxcmtb, Cxcmtb, 3),
+        \+ (Rxcmtb >= BR0cmtb, Rxcmtb =< BR1cmtb,
+            Cxcmtb >= BC0cmtb, Cxcmtb =< BC1cmtb)),
+% ERC at least one non-zero non-3 marker must exist
+    once((between(1, NRcmtb, Rmcmtb), between(1, NCcmtb, Cmcmtb),
+          arc_grid_at(Grid, Rmcmtb, Cmcmtb, Vmcmtb),
+          Vmcmtb \= 0, Vmcmtb \= 3)),
+% ERC collect all connection fills from markers to blob
+    findall(cmtb_fill(FR0,FR1,FC0,FC1,FV),
+        cmtb_marker_fill(Grid, NRcmtb, NCcmtb,
+                         BR0cmtb, BR1cmtb, BC0cmtb, BC1cmtb,
+                         FR0, FR1, FC0, FC1, FV),
+        Fillscmtb),
+% ERC at least one fill must be produced (something changes)
+    Fillscmtb \= [],
+% ERC build output: apply fills on top of original grid
+    numlist(1, NRcmtb, AllRscmtb),
+    numlist(1, NCcmtb, AllCscmtb),
+    maplist([Rocmtb, RowOcmtb]>>(
+        maplist([Cocmtb, Vocmtb]>>(
+            arc_grid_at(Grid, Rocmtb, Cocmtb, Vincmtb),
+            ( cmtb_apply_fills(Fillscmtb, Rocmtb, Cocmtb, Vfcmtb) ->
+                Vocmtb = Vfcmtb
+            ;   Vocmtb = Vincmtb
+            )
+        ), AllCscmtb, RowOcmtb)
+    ), AllRscmtb, Out),
+% ERC output must differ from input
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ERC horizontal fill: marker in a blob row, outside blob col range
+cmtb_marker_fill(Grid, _NRh, NCh, BR0, BR1, BC0, BC1,
+                 Rm, Rm, FC0, FC1, Vm) :-
+% ERC restrict search to blob row range only
+    between(BR0, BR1, Rm),
+% ERC scan all cols
+    between(1, NCh, Cm),
+% ERC marker col must be outside blob col range
+    \+ (Cm >= BC0, Cm =< BC1),
+% ERC cell must be a non-zero non-3 marker
+    arc_grid_at(Grid, Rm, Cm, Vm), Vm \= 0, Vm \= 3,
+% ERC compute fill col range between marker and blob
+    ( Cm < BC0 ->
+        FC0 is Cm + 1, FC1 is BC0 - 1
+    ;   FC0 is BC1 + 1, FC1 is Cm - 1
+    ),
+% ERC fill range must be non-empty (marker not adjacent to blob)
+    FC0 =< FC1.
+
+% ERC vertical fill: marker in a blob col, outside blob row range
+cmtb_marker_fill(Grid, NRv, _NCv, BR0, BR1, BC0, BC1,
+                 FR0, FR1, Cm, Cm, Vm) :-
+% ERC restrict search to blob col range only
+    between(BC0, BC1, Cm),
+% ERC scan all rows
+    between(1, NRv, Rm),
+% ERC marker row must be outside blob row range
+    \+ (Rm >= BR0, Rm =< BR1),
+% ERC cell must be a non-zero non-3 marker
+    arc_grid_at(Grid, Rm, Cm, Vm), Vm \= 0, Vm \= 3,
+% ERC compute fill row range between marker and blob
+    ( Rm < BR0 ->
+        FR0 is Rm + 1, FR1 is BR0 - 1
+    ;   FR0 is BR1 + 1, FR1 is Rm - 1
+    ),
+% ERC fill range must be non-empty (marker not adjacent to blob)
+    FR0 =< FR1.
+
+% ERC apply fill to a cell: first matching fill rectangle wins
+cmtb_apply_fills([cmtb_fill(FR0,FR1,FC0,FC1,FV)|_], R, C, FV) :-
+% ERC cell must be within the fill rectangle
+    R >= FR0, R =< FR1, C >= FC0, C =< FC1,
+    !.
+% ERC try next fill in list
+cmtb_apply_fills([_|Rest], R, C, FV) :-
+    cmtb_apply_fills(Rest, R, C, FV).
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 10: extend_period_pattern_shifted (task caa06a1f)
+% A grid contains a periodic 2D tile pattern in part of the grid and a solid
+% filler color in the rest.  The tile has column period Pc (= number of
+% distinct non-filler colors, 2 or 3) and row period Pr (smallest P such
+% that rows repeat with period P, 1..Pc).  Output: tile the CYCLE-SHIFTED
+% version of the tile across the whole grid (each color advances by 1 in the
+% per-row-1 cycle extracted from the top-left of the pattern region).
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(extend_period_pattern_shifted).
+% ERC transform clause head
+arc_transform(extend_period_pattern_shifted, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRepps), NRepps =< 30,
+% ERC col count guard
+    Grid = [GRepps|_], length(GRepps, NCepps), NCepps =< 30,
+% ERC find the filler color: first pair of horizontally adjacent same-color cells
+    NCepps1 is NCepps - 1,
+    once((between(1, NRepps, Rfepps),
+          between(1, NCepps1, Cfepps),
+          Cf2epps is Cfepps + 1,
+          arc_grid_at(Grid, Rfepps, Cfepps, Fepps), Fepps \= 0,
+          arc_grid_at(Grid, Rfepps, Cf2epps, Fepps))),
+% ERC collect all distinct non-filler non-zero pattern colors
+    findall(Vpat, (member(Rpat, Grid), member(Vpat, Rpat),
+                   Vpat \= 0, Vpat \= Fepps), AllPatepps),
+    sort(AllPatepps, PatColsepps),
+% ERC column period = number of distinct pattern colors, must be 2 or 3
+    length(PatColsepps, Pcepps),
+    ( Pcepps =:= 2 ; Pcepps =:= 3 ),
+% ERC find row period: smallest Pr in 1..Pc where rows repeat with that period
+    between(1, Pcepps, Prepps),
+    epps_row_period_ok(Grid, NRepps, NCepps, Fepps, Prepps), !,
+% ERC extract cycle from row 1 cols 1..Pc (top-left corner of pattern region)
+    findall(Cv, (between(1, Pcepps, Cc), arc_grid_at(Grid, 1, Cc, Cv)), Cycleepps),
+    length(Cycleepps, Pcepps),
+% ERC cycle must not contain filler
+    \+ member(Fepps, Cycleepps),
+% ERC all cycle entries must be distinct
+    sort(Cycleepps, SortedCycleepps),
+    length(SortedCycleepps, Pcepps),
+% ERC build row and col index lists
+    numlist(1, NRepps, AllRsepps),
+    numlist(1, NCepps, AllCsepps),
+% ERC output: tile the cycle-shifted pattern across the whole grid
+    maplist([Roepps, RowOepps]>>(
+        maplist([Coepps, Voepps]>>(
+% ERC map (R,C) back to tile position using periods
+            Rtepps is ((Roepps - 1) mod Prepps) + 1,
+            Ctepps is ((Coepps - 1) mod Pcepps) + 1,
+% ERC look up the tile value at that position
+            arc_grid_at(Grid, Rtepps, Ctepps, TileVepps),
+% ERC find its index in the cycle and advance by 1
+            nth0(TIdxepps, Cycleepps, TileVepps),
+            TIdxNepps is (TIdxepps + 1) mod Pcepps,
+            nth0(TIdxNepps, Cycleepps, Voepps)
+        ), AllCsepps, RowOepps)
+    ), AllRsepps, Out),
+% ERC output must differ from input
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ERC true if rows repeat with period Pr (ignoring filler and zero cells)
+epps_row_period_ok(Grid, NR, NC, F, Pr) :-
+% ERC no row r has a different non-filler value from the corresponding row r+Pr
+    \+ (between(1, NR, Rchk), R2chk is Rchk + Pr, R2chk =< NR,
+        between(1, NC, Cchk),
+        arc_grid_at(Grid, Rchk, Cchk, V1chk), V1chk \= 0, V1chk \= F,
+        arc_grid_at(Grid, R2chk, Cchk, V2chk), V2chk \= 0, V2chk \= F,
+        V1chk \= V2chk).
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 11: frame_via_markers (task 928ad970)
+% A hollow rectangular inner frame (single non-zero non-5 color) sits in the
+% grid alongside exactly four 5-valued marker cells.  The bounding box of the
+% four markers, contracted by 1 on each side, defines the outer frame.
+% Output: draw the outer frame (same color as the inner frame) and keep the
+% rest of the grid unchanged.
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(frame_via_markers).
+% ERC transform clause head
+arc_transform(frame_via_markers, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRfvm), NRfvm =< 30,
+% ERC col count guard
+    Grid = [GRfvm|_], length(GRfvm, NCfvm), NCfvm =< 30,
+% ERC collect all marker (value 5) positions
+    findall(Rfvm-Cfvm,
+        (between(1,NRfvm,Rfvm), between(1,NCfvm,Cfvm),
+         arc_grid_at(Grid,Rfvm,Cfvm,5)), Markersfvm),
+% ERC must have exactly 4 markers
+    length(Markersfvm, 4),
+% ERC marker bounding box
+    findall(Rmfvm, member(Rmfvm-_,Markersfvm), MRowsfvm),
+    findall(Cmfvm, member(_-Cmfvm,Markersfvm), MColsfvm),
+    min_list(MRowsfvm, MR0fvm), max_list(MRowsfvm, MR1fvm),
+    min_list(MColsfvm, MC0fvm), max_list(MColsfvm, MC1fvm),
+% ERC outer frame bounds: 1 inside the marker bounding box
+    OFR0fvm is MR0fvm + 1, OFR1fvm is MR1fvm - 1,
+    OFC0fvm is MC0fvm + 1, OFC1fvm is MC1fvm - 1,
+% ERC outer frame must be a valid rectangle
+    OFR0fvm < OFR1fvm, OFC0fvm < OFC1fvm,
+% ERC find the frame color (the unique non-zero non-5 color)
+    findall(Vpatfvm,
+        (member(Rowpatfvm,Grid), member(Vpatfvm,Rowpatfvm),
+         Vpatfvm \= 0, Vpatfvm \= 5), AllPatfvm),
+    sort(AllPatfvm, [FColorfvm]),
+% ERC collect inner frame cells
+    findall(Rifvm-Cifvm,
+        (between(1,NRfvm,Rifvm), between(1,NCfvm,Cifvm),
+         arc_grid_at(Grid,Rifvm,Cifvm,FColorfvm)), InnerFcellsfvm),
+    InnerFcellsfvm \= [],
+% ERC inner frame bounding box
+    findall(Rfifvm, member(Rfifvm-_,InnerFcellsfvm), IFRowsfvm),
+    findall(Cfifvm, member(_-Cfifvm,InnerFcellsfvm), IFColsfvm),
+    min_list(IFRowsfvm, IFR0fvm), max_list(IFRowsfvm, IFR1fvm),
+    min_list(IFColsfvm, IFC0fvm), max_list(IFColsfvm, IFC1fvm),
+% ERC all inner-frame cells lie on the border of their bounding box (hollow)
+    \+ (member(Rckfvm-Cckfvm, InnerFcellsfvm),
+        Rckfvm > IFR0fvm, Rckfvm < IFR1fvm,
+        Cckfvm > IFC0fvm, Cckfvm < IFC1fvm),
+% ERC outer frame strictly encloses inner frame
+    OFR0fvm < IFR0fvm, OFR1fvm > IFR1fvm,
+    OFC0fvm < IFC0fvm, OFC1fvm > IFC1fvm,
+% ERC build output: copy grid and add outer frame cells
+    numlist(1, NRfvm, AllRsfvm),
+    numlist(1, NCfvm, AllCsfvm),
+    maplist([Rofvm, RowOfvm]>>(
+        maplist([Cofvm, Vofvm]>>(
+            arc_grid_at(Grid, Rofvm, Cofvm, Vinfvm),
+            ( fvm_on_frame(Rofvm, Cofvm, OFR0fvm, OFR1fvm, OFC0fvm, OFC1fvm) ->
+                Vofvm = FColorfvm
+            ; Vofvm = Vinfvm )
+        ), AllCsfvm, RowOfvm)
+    ), AllRsfvm, Out),
+% ERC output must differ from input
+    Out \= Grid,
+% ERC deterministic cut
+    !.
+
+% ERC true when (R,C) lies on the border of rectangle R0..R1 x C0..C1
+fvm_on_frame(R, C, R0, R1, C0, C1) :-
+% ERC cell must be inside the rectangle
+    R >= R0, R =< R1, C >= C0, C =< C1,
+% ERC cell must be on at least one edge
+    ( R =:= R0 ; R =:= R1 ; C =:= C0 ; C =:= C1 ).
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 12: grid_cell_hflip (task 9f236235)
+% A single "divider" color fills entire rows and entire columns, creating a
+% regular cell grid.  Each cell is either empty (all-0) or filled with one
+% non-divider color.  Output: the cell-value matrix reflected horizontally
+% (column order reversed).
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(grid_cell_hflip).
+% ERC transform clause head
+arc_transform(grid_cell_hflip, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRgchf), NRgchf =< 30,
+% ERC col count guard
+    Grid = [GRgchf|_], length(GRgchf, NCgchf), NCgchf =< 30,
+% ERC find divider color: fills at least one entire row
+    once((nth1(_,Grid,DrowGchf), DrowGchf = [Dgchf|_], Dgchf \= 0,
+          maplist(=(Dgchf), DrowGchf))),
+% ERC collect divider rows (1-indexed, sorted)
+    findall(Rdgchf,
+        (between(1,NRgchf,Rdgchf),
+         nth1(Rdgchf,Grid,Drowg2chf), maplist(=(Dgchf),Drowg2chf)),
+        DivRsgchf),
+    DivRsgchf \= [],
+% ERC collect divider cols: all rows have value D in that col
+    findall(Cdgchf,
+        (between(1,NCgchf,Cdgchf),
+         \+ (between(1,NRgchf,Rchkcg), arc_grid_at(Grid,Rchkcg,Cdgchf,Vchkcg),
+             Vchkcg \= Dgchf)),
+        DivCsgchf),
+    DivCsgchf \= [],
+% ERC grid must not start or end with a divider row
+    DivRsgchf = [DR1gchf|_], DR1gchf > 1,
+    last(DivRsgchf, DRLgchf), DRLgchf < NRgchf,
+% ERC grid must not start or end with a divider col
+    DivCsgchf = [DC1gchf|_], DC1gchf > 1,
+    last(DivCsgchf, DCLgchf), DCLgchf < NCgchf,
+% ERC compute cell-rep rows: 1, then DivRow+1 for each divider
+    maplist([Digchf, Rigchf]>>(Rigchf is Digchf + 1), [0|DivRsgchf], RowRepsgchf),
+% ERC compute cell-rep cols
+    maplist([Digchf2, Cigchf]>>(Cigchf is Digchf2 + 1), [0|DivCsgchf], ColRepsgchf),
+    length(RowRepsgchf, NRCgchf), NRCgchf >= 2,
+    length(ColRepsgchf, NCCgchf), NCCgchf >= 2,
+% ERC extract cell-value grid
+    maplist([Rrepgchf, CellRowgchf]>>(
+        maplist([Crepgchf, FValgchf]>>(
+            arc_grid_at(Grid, Rrepgchf, Crepgchf, Vcelgchf),
+            ( Vcelgchf \= Dgchf -> FValgchf = Vcelgchf ; FValgchf = 0 )
+        ), ColRepsgchf, CellRowgchf)
+    ), RowRepsgchf, CellGridgchf),
+% ERC flip horizontally (reverse each row)
+    maplist([InRowgchf, OutRowgchf]>>(reverse(InRowgchf, OutRowgchf)),
+            CellGridgchf, Out),
+% ERC output must differ from un-flipped cell grid
+    Out \= CellGridgchf,
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 42 Rule 13: l_shapes_to_quads (task a61ba2ce)
+% Exactly four non-zero colors each occupy exactly 3 cells that fit in a 2x2
+% bounding box (an L-tromino with one corner missing).  The four shapes have
+% four different missing corners.  Output: a 4x4 grid where each shape is
+% placed in the 2x2 quadrant determined by the OPPOSITE corner (missing
+% bottom-right -> top-left quadrant, etc.).
+% ---------------------------------------------------------------------------
+% ERC named-rule declaration
+arc_named_rule(l_shapes_to_quads).
+% ERC transform clause head
+arc_transform(l_shapes_to_quads, Grid, Out) :-
+% ERC row count guard
+    length(Grid, NRlstq), NRlstq =< 30,
+% ERC col count guard
+    Grid = [GRlstq|_], length(GRlstq, NClstq), NClstq =< 30,
+% ERC collect all non-zero cell values
+    findall(Vlstq, (member(Rlstq,Grid), member(Vlstq,Rlstq), Vlstq \= 0), AllVlstq),
+    sort(AllVlstq, AllColorslstq),
+% ERC must have exactly 4 colors
+    length(AllColorslstq, 4),
+% ERC each color has exactly 3 cells forming a 2x2-bounded L-shape
+    maplist([Clstq, Clstq-Patlstq]>>(
+        findall(R3lstq-C3lstq,
+            (between(1,NRlstq,R3lstq), between(1,NClstq,C3lstq),
+             arc_grid_at(Grid,R3lstq,C3lstq,Clstq)), Cells3lstq),
+        length(Cells3lstq, 3),
+        lstq_l_shape(Clstq, Cells3lstq, Patlstq)
+    ), AllColorslstq, ShapeInfolstq),
+% ERC all four missing corners must be distinct
+    maplist([_-Palstq, Mclstq]>>(lstq_missing_corner(Palstq, Mclstq)),
+            ShapeInfolstq, MissCornerslstq),
+    sort(MissCornerslstq, SortedMisslstq),
+    length(SortedMisslstq, 4),
+% ERC build 4x4 output
+    numlist(1, 4, Rows4lstq),
+    numlist(1, 4, Cols4lstq),
+    maplist([Rout, RowOut]>>(
+        maplist([Cout, Vout]>>(
+            lstq_output_cell(ShapeInfolstq, Rout, Cout, Vout)
+        ), Cols4lstq, RowOut)
+    ), Rows4lstq, Out),
+% ERC deterministic cut
+    !.
+
+% ERC derive 2x2 pattern from 3 L-shape cells and color
+lstq_l_shape(Color, Cells, pat(V00,V01,V10,V11)) :-
+% ERC bounding box must be exactly 2x2
+    findall(Rls, member(Rls-_, Cells), Rowsls),
+    findall(Cls, member(_-Cls, Cells), Colsls),
+    min_list(Rowsls, R0ls), max_list(Rowsls, R1ls), R1ls is R0ls + 1,
+    min_list(Colsls, C0ls), max_list(Colsls, C1ls), C1ls is C0ls + 1,
+% ERC fill pattern (Color if cell present, 0 otherwise)
+    ( member(R0ls-C0ls, Cells) -> V00 = Color ; V00 = 0 ),
+    ( member(R0ls-C1ls, Cells) -> V01 = Color ; V01 = 0 ),
+    ( member(R1ls-C0ls, Cells) -> V10 = Color ; V10 = 0 ),
+    ( member(R1ls-C1ls, Cells) -> V11 = Color ; V11 = 0 ),
+% ERC exactly one corner must be missing
+    include(==(0), [V00,V01,V10,V11], Zerovals),
+    length(Zerovals, 1).
+
+% ERC identify the missing corner atom
+lstq_missing_corner(pat(0,_,_,_), tl) :- !.
+lstq_missing_corner(pat(_,0,_,_), tr) :- !.
+lstq_missing_corner(pat(_,_,0,_), bl) :- !.
+lstq_missing_corner(pat(_,_,_,0), br) :- !.
+
+% ERC map missing corner to output-quadrant top-left (1-indexed)
+lstq_quad_origin(tl, 3, 3).
+lstq_quad_origin(tr, 3, 1).
+lstq_quad_origin(bl, 1, 3).
+lstq_quad_origin(br, 1, 1).
+
+% ERC look up value in 4x4 output at (R,C) using shape info
+lstq_output_cell(ShapeInfos, R, C, V) :-
+% ERC find which quadrant (R,C) belongs to
+    ( R =< 2 -> QR0 = 1 ; QR0 = 3 ),
+    ( C =< 2 -> QC0 = 1 ; QC0 = 3 ),
+% ERC find the shape whose missing corner maps to this quadrant
+    member(_Color-Pat, ShapeInfos),
+    lstq_missing_corner(Pat, Miss),
+    lstq_quad_origin(Miss, QR0, QC0), !,
+% ERC relative position within the 2x2 quadrant
+    RI is R - QR0,  % 0 or 1
+    CI is C - QC0,  % 0 or 1
+    lstq_pat_val(Pat, RI, CI, V).
+
+% ERC extract value at position (RI,CI) from 2x2 pattern
+lstq_pat_val(pat(V,_,_,_), 0, 0, V) :- !.
+lstq_pat_val(pat(_,V,_,_), 0, 1, V) :- !.
+lstq_pat_val(pat(_,_,V,_), 1, 0, V) :- !.
+lstq_pat_val(pat(_,_,_,V), 1, 1, V) :- !.
+
+% ---------------------------------------------------------------------------
+% Wave 43 Rule 1: colored_lines_sort (task 8e1813be)
+% ---------------------------------------------------------------------------
+% Each non-5 color appears as a full row or full column; sort N colors by
+% position and output an N×N matrix filled by rows (or cols).
+arc_named_rule(colored_lines_sort).
+% Declare arc_transform clause for colored_lines_sort.
+arc_transform(colored_lines_sort, Grid, Out) :-
+    % Size guard: grid must fit within 30×30.
+    length(Grid, NRcls), NRcls =< 30,
+    % Extract column count from first row.
+    Grid = [GHcls|_], length(GHcls, NCcls), NCcls =< 30,
+    % Collect all distinct non-zero non-5 values present in the grid.
+    findall(V, (member(Rowcls, Grid), member(V, Rowcls), V \= 0, V \= 5), AllVcls),
+    % Sort to get unique color list.
+    sort(AllVcls, Colorscls),
+    % Require between 2 and 9 colors.
+    length(Colorscls, Ncls), Ncls >= 2, Ncls =< 9,
+    % Require a 5-block to be present in the grid.
+    flatten(Grid, Flatcls), member(5, Flatcls),
+    % Try horizontal orientation: all cells of each color share one row.
+    ( maplist([C]>>(
+          findall(R, (nth1(R, Grid, Rowx), member(C, Rowx)), Rscls),
+          sort(Rscls, [_])
+      ), Colorscls) ->
+      Orientcls = row
+    % Try vertical orientation: all cells of each color share one column.
+    ; maplist([C]>>(
+          findall(Cc, (member(Rowcc, Grid), nth1(Cc, Rowcc, C)), Cscls),
+          sort(Cscls, [_])
+      ), Colorscls),
+      Orientcls = col
+    ),
+    % Get representative position for each color.
+    maplist([Cc2, Pos-Cc2]>>(
+        ( Orientcls = row ->
+            findall(R3, (nth1(R3, Grid, Rv3), member(Cc2, Rv3)), Rs3cls),
+            Rs3cls = [Pos|_]
+        ;   findall(Cc3, (member(Rv3b, Grid), nth1(Cc3, Rv3b, Cc2)), Cs3cls),
+            Cs3cls = [Pos|_]
+        )
+    ), Colorscls, PosColorscls),
+    % Sort colors by their position (row or column index).
+    msort(PosColorscls, SortedPCcls),
+    % Extract the sorted color values from the Pos-Color pairs.
+    findall(Cv, member(_-Cv, SortedPCcls), SortedColorscls),
+    % Build an N×N output grid.
+    numlist(1, Ncls, NsClsidx),
+    ( Orientcls = row ->
+        % Each output row i is filled with the ith sorted color.
+        maplist([I, ORow]>>(
+            nth1(I, SortedColorscls, OC),
+            length(ORow, Ncls),
+            maplist(=(OC), ORow)
+        ), NsClsidx, Out)
+    ;   % Each output column j is one color; build the shared row template.
+        length(OutRowcls, Ncls),
+        maplist([I, OC]>>(nth1(I, SortedColorscls, OC)), NsClsidx, OutRowcls),
+        length(Out, Ncls),
+        maplist(=(OutRowcls), Out)
+    ), !.
+
+% ---------------------------------------------------------------------------
+% Wave 43 Rule 2: stamp_frame_colorize (task 9aec4887)
+% ---------------------------------------------------------------------------
+% Input has a hollow rectangle frame built from 4 colors (top/bottom rows,
+% left/right cols) and a free-form 8-pattern elsewhere.  Output = frame
+% border of same dimensions with 8-cells colored by nearest frame edge
+% (tie → keep the pattern color).
+arc_named_rule(stamp_frame_colorize).
+% Declare arc_transform for stamp_frame_colorize.
+arc_transform(stamp_frame_colorize, Grid, Out) :-
+    % Size guards.
+    length(Grid, NRsfc), NRsfc =< 30,
+    Grid = [GHsfc|_], length(GHsfc, NCsfc), NCsfc =< 30,
+    % Collect all non-zero colors.
+    findall(V, (member(Rowsfc, Grid), member(V, Rowsfc), V \= 0), AllVsfc),
+    sort(AllVsfc, Colorssfc),
+    % Require exactly 5 distinct colors.
+    length(Colorssfc, 5),
+    % Separate horizontal colors (appear in exactly one row each).
+    include([C]>>(
+        findall(R, (nth1(R, Grid, Rx), member(C, Rx)), Rsh),
+        sort(Rsh, [_])
+    ), Colorssfc, HorizCssfc),
+    % Require exactly 2 horizontal colors.
+    length(HorizCssfc, 2),
+    % Separate vertical colors (appear in exactly one column each).
+    include([C]>>(
+        findall(Cc, (member(Rv, Grid), nth1(Cc, Rv, C)), Csv),
+        sort(Csv, [_])
+    ), Colorssfc, VertCssfc),
+    % Require exactly 2 vertical colors.
+    length(VertCssfc, 2),
+    % The remaining color is the pattern color.
+    subtract(Colorssfc, HorizCssfc, Tmp1sfc),
+    subtract(Tmp1sfc, VertCssfc, PatCssfc),
+    length(PatCssfc, 1),
+    PatCssfc = [PatColorsfc],
+    % Get the row for each horizontal color.
+    HorizCssfc = [HC1sfc, HC2sfc],
+    once((nth1(R1sfc, Grid, Rh1), member(HC1sfc, Rh1))),
+    once((nth1(R2sfc, Grid, Rh2), member(HC2sfc, Rh2))),
+    % Assign top/bottom based on row index.
+    ( R1sfc < R2sfc ->
+        TopColsfc = HC1sfc, TopRsfc = R1sfc,
+        BotColsfc = HC2sfc, BotRsfc = R2sfc
+    ;   TopColsfc = HC2sfc, TopRsfc = R2sfc,
+        BotColsfc = HC1sfc, BotRsfc = R1sfc
+    ),
+    % Get the column for each vertical color.
+    VertCssfc = [VC1sfc, VC2sfc],
+    once((member(Rvc1, Grid), nth1(C1sfc, Rvc1, VC1sfc))),
+    once((member(Rvc2, Grid), nth1(C2sfc, Rvc2, VC2sfc))),
+    % Assign left/right based on column index.
+    ( C1sfc < C2sfc ->
+        LeftColsfc = VC1sfc, LeftCsfc = C1sfc,
+        RightColsfc = VC2sfc, RightCsfc = C2sfc
+    ;   LeftColsfc = VC2sfc, LeftCsfc = C2sfc,
+        RightColsfc = VC1sfc, RightCsfc = C1sfc
+    ),
+    % Compute interior dimensions.
+    IntHsfc is BotRsfc - TopRsfc - 1,
+    IntWsfc is RightCsfc - LeftCsfc - 1,
+    % Interior must be at least 1×1.
+    IntHsfc >= 1, IntWsfc >= 1,
+    % Verify top border spans exactly LeftC+1 to RightC-1.
+    nth1(TopRsfc, Grid, TopRowsfc),
+    findall(Cc, nth1(Cc, TopRowsfc, TopColsfc), TopColssfc),
+    min_list(TopColssfc, TCminsfc), max_list(TopColssfc, TCmaxsfc),
+    TCminsfc =:= LeftCsfc + 1, TCmaxsfc =:= RightCsfc - 1,
+    % Verify bottom border spans same col range.
+    nth1(BotRsfc, Grid, BotRowsfc),
+    findall(Cc, nth1(Cc, BotRowsfc, BotColsfc), BotColssfc),
+    min_list(BotColssfc, BCminsfc), max_list(BotColssfc, BCmaxsfc),
+    BCminsfc =:= LeftCsfc + 1, BCmaxsfc =:= RightCsfc - 1,
+    % Verify left border spans TopR+1 to BotR-1.
+    findall(Rr, (nth1(Rr, Grid, Rlv), nth1(LeftCsfc, Rlv, LeftColsfc)), LeftRssfc),
+    min_list(LeftRssfc, LRminsfc), max_list(LeftRssfc, LRmaxsfc),
+    LRminsfc =:= TopRsfc + 1, LRmaxsfc =:= BotRsfc - 1,
+    % Verify right border spans same row range.
+    findall(Rr, (nth1(Rr, Grid, Rrv), nth1(RightCsfc, Rrv, RightColsfc)), RightRssfc),
+    min_list(RightRssfc, RRminsfc), max_list(RightRssfc, RRmaxsfc),
+    RRminsfc =:= TopRsfc + 1, RRmaxsfc =:= BotRsfc - 1,
+    % Find all pattern-color cells and their bounding box.
+    findall(Rp-Cp, (nth1(Rp, Grid, Rowp), nth1(Cp, Rowp, PatColorsfc)), PatCellssfc),
+    PatCellssfc \= [],
+    findall(Rp, member(Rp-_, PatCellssfc), PatRssfc),
+    findall(Cp, member(_-Cp, PatCellssfc), PatCssfc2),
+    min_list(PatRssfc, PatR0sfc), max_list(PatRssfc, PatR1sfc),
+    min_list(PatCssfc2, PatC0sfc), max_list(PatCssfc2, PatC1sfc),
+    % Pattern bounding box must match interior dimensions.
+    PatHsfc is PatR1sfc - PatR0sfc + 1, PatWsfc is PatC1sfc - PatC0sfc + 1,
+    PatHsfc =:= IntHsfc, PatWsfc =:= IntWsfc,
+    % Build output: (IntH+2) × (IntW+2) grid.
+    OutHsfc is IntHsfc + 2,
+    OutWsfc is IntWsfc + 2,
+    numlist(1, OutHsfc, ORssfc),
+    numlist(1, OutWsfc, OCssfc),
+    maplist([Orsfc, ORowsfc]>>(
+        maplist([Ocsfc, OValsfc]>>(
+            % Convert to 0-indexed.
+            Risfc is Orsfc - 1,
+            Cisfc is Ocsfc - 1,
+            % Corner cells are background (0).
+            ( Risfc =:= 0, Cisfc =:= 0 -> OValsfc = 0
+            ; Risfc =:= 0, Cisfc =:= OutWsfc - 1 -> OValsfc = 0
+            ; Risfc =:= OutHsfc - 1, Cisfc =:= 0 -> OValsfc = 0
+            ; Risfc =:= OutHsfc - 1, Cisfc =:= OutWsfc - 1 -> OValsfc = 0
+            % Top border row.
+            ; Risfc =:= 0 -> OValsfc = TopColsfc
+            % Bottom border row.
+            ; Risfc =:= OutHsfc - 1 -> OValsfc = BotColsfc
+            % Left border column.
+            ; Cisfc =:= 0 -> OValsfc = LeftColsfc
+            % Right border column.
+            ; Cisfc =:= OutWsfc - 1 -> OValsfc = RightColsfc
+            % Interior cell: check pattern and assign nearest-edge color.
+            ;   IntRisfc is Risfc - 1,
+                IntCisfc is Cisfc - 1,
+                GRisfc is PatR0sfc + IntRisfc,
+                GCisfc is PatC0sfc + IntCisfc,
+                arc_grid_at(Grid, GRisfc, GCisfc, PVsfc),
+                ( PVsfc =:= PatColorsfc ->
+                    % Compute distances to each frame edge.
+                    DTsfc = IntRisfc,
+                    DBsfc is IntHsfc - 1 - IntRisfc,
+                    DLsfc = IntCisfc,
+                    DRsfcv is IntWsfc - 1 - IntCisfc,
+                    % Minimum distance to any edge.
+                    MinDsfc is min(min(DTsfc, DBsfc), min(DLsfc, DRsfcv)),
+                    % Assign edge color if exactly one edge achieves minimum.
+                    ( DTsfc =:= MinDsfc, DBsfc =\= MinDsfc, DLsfc =\= MinDsfc, DRsfcv =\= MinDsfc ->
+                        OValsfc = TopColsfc
+                    ; DBsfc =:= MinDsfc, DTsfc =\= MinDsfc, DLsfc =\= MinDsfc, DRsfcv =\= MinDsfc ->
+                        OValsfc = BotColsfc
+                    ; DLsfc =:= MinDsfc, DTsfc =\= MinDsfc, DBsfc =\= MinDsfc, DRsfcv =\= MinDsfc ->
+                        OValsfc = LeftColsfc
+                    ; DRsfcv =:= MinDsfc, DTsfc =\= MinDsfc, DBsfc =\= MinDsfc, DLsfc =\= MinDsfc ->
+                        OValsfc = RightColsfc
+                    % Tie: keep the pattern color.
+                    ;   OValsfc = PatColorsfc
+                    )
+                % Non-pattern interior cell: background.
+                ;   OValsfc = 0
+                )
+            )
+        ), OCssfc, ORowsfc)
+    ), ORssfc, Out), !.
+
+% ---------------------------------------------------------------------------
+% Wave 43 Rule 3: merge_sym_patterns (task c8cbb738)
+% ---------------------------------------------------------------------------
+% Background is the most common color.  Every other color forms exactly
+% 4 cells that are either a rectangle (4 corners) or a diamond (4 arms).
+% Output: (2*max_half+1)² grid placing each color at the corresponding
+% symmetric positions around the center, filled with background elsewhere.
+arc_named_rule(merge_sym_patterns).
+% Declare arc_transform for merge_sym_patterns.
+arc_transform(merge_sym_patterns, Grid, Out) :-
+    % Size guards.
+    length(Grid, NRmsp), NRmsp =< 30,
+    Grid = [GHmsp|_], length(GHmsp, NCmsp), NCmsp =< 30,
+    % Find background as the most frequent value.
+    flatten(Grid, Flatmsp),
+    msort(Flatmsp, SortedFlat),
+    msp_most_common(SortedFlat, Bgmsp),
+    % Collect all non-background colors.
+    findall(V, (member(V, Flatmsp), V \= Bgmsp), NonBgVmsp),
+    sort(NonBgVmsp, Colorsmsp),
+    % Need 2 to 6 non-background colors.
+    Colorsmsp \= [],
+    length(Colorsmsp, NCmsp2), NCmsp2 >= 2, NCmsp2 =< 6,
+    % Each non-background color must have exactly 4 cells.
+    maplist([Cm]>>(
+        findall(R-C, (nth1(R, Grid, Rw), nth1(C, Rw, Cm)), Cells4),
+        length(Cells4, 4)
+    ), Colorsmsp),
+    % Classify each color as rect or diam and compute dR/dC.
+    maplist([Cm, msp_spec(Cm, DR, DC, Shape)]>>(
+        findall(R-C, (nth1(R, Grid, Rw), nth1(C, Rw, Cm)), Cells4),
+        msort(Cells4, [P1msp, P2msp, P3msp, P4msp]),
+        P1msp = R1m-C1m, P2msp = R2m-C2m,
+        P3msp = R3m-C3m, P4msp = R4m-C4m,
+        ( R1m =:= R2m, R3m =:= R4m, R1m < R3m, C1m =:= C3m, C2m =:= C4m, C1m < C2m ->
+            % Rectangle: 4 corners of a bounding box.
+            DR is (R3m - R1m) // 2,
+            DC is (C2m - C1m) // 2,
+            Shape = rect
+        ; R2m =:= R3m, C2m < C3m, C1m =:= C4m, R1m < R2m, R2m < R4m ->
+            % Diamond: 4 arms of a cross.
+            DR is (R4m - R1m) // 2,
+            DC is (C3m - C2m) // 2,
+            Shape = diam
+        )
+    ), Colorsmsp, Specsmsp),
+    % Compute max half-span across all specs.
+    maplist([msp_spec(_, DR, DC, _), Mx]>>(Mx is max(DR, DC)), Specsmsp, MaxDsmsp),
+    max_list(MaxDsmsp, MaxHalfmsp),
+    MaxHalfmsp >= 1,
+    % Output is a (2*MaxHalf+1)² square.
+    OutNmsp is 2 * MaxHalfmsp + 1,
+    % Center index (0-based).
+    Centermsp = MaxHalfmsp,
+    % Generate 0-based index list.
+    OutNm1 is OutNmsp - 1,
+    numlist(0, OutNm1, Idxsmsp),
+    % Build output row by row.
+    maplist([Or, ORow]>>(
+        maplist([Oc, OVal]>>(
+            % Check if any spec places a color at (Or,Oc).
+            ( member(msp_spec(Cmsp, DRmsp, DCmsp, Shapemsp), Specsmsp),
+              msp_hit(Shapemsp, Or, Oc, Centermsp, DRmsp, DCmsp) ->
+                OVal = Cmsp
+            ;   OVal = Bgmsp
+            )
+        ), Idxsmsp, ORow)
+    ), Idxsmsp, Out), !.
+
+% Check whether output cell (Or,Oc) corresponds to a rectangle pattern
+% with half-spans DR,DC centered at Center.
+msp_hit(rect, Or, Oc, Ctr, DR, DC) :-
+    ( Or =:= Ctr - DR ; Or =:= Ctr + DR ),
+    ( Oc =:= Ctr - DC ; Oc =:= Ctr + DC ).
+% Check whether output cell (Or,Oc) corresponds to a diamond pattern.
+msp_hit(diam, Or, Oc, Ctr, DR, DC) :-
+    ( Or =:= Ctr - DR, Oc =:= Ctr
+    ; Or =:= Ctr,      Oc =:= Ctr - DC
+    ; Or =:= Ctr,      Oc =:= Ctr + DC
+    ; Or =:= Ctr + DR, Oc =:= Ctr
+    ).
+
+% Find the most common element in a sorted list.
+msp_most_common([H|T], Most) :-
+    msp_most_common(T, H, 1, H, 1, Most).
+msp_most_common([], _, _, Best, _, Best).
+msp_most_common([H|T], Cur, CurCnt, Best, BestCnt, Most) :-
+    ( H == Cur ->
+        NewCnt is CurCnt + 1,
+        ( NewCnt > BestCnt ->
+            msp_most_common(T, H, NewCnt, H, NewCnt, Most)
+        ;   msp_most_common(T, H, NewCnt, Best, BestCnt, Most)
+        )
+    ;   msp_most_common(T, H, 1, Best, BestCnt, Most)
+    ).
+
+% ---------------------------------------------------------------------------
+% Wave 43 Rule 4: stamp_into_5blocks (task e76a88a6)
+% ---------------------------------------------------------------------------
+% One non-zero non-5 source region; one or more solid rectangular 5-regions
+% of the same dimensions.  Replace every 5-cell with the corresponding
+% source cell; source cells stay in place.
+arc_named_rule(stamp_into_5blocks).
+% Declare arc_transform for stamp_into_5blocks.
+arc_transform(stamp_into_5blocks, Grid, Out) :-
+    % Size guards.
+    length(Grid, NRsib), NRsib =< 30,
+    Grid = [GHsib|_], length(GHsib, NCsib), NCsib =< 30,
+    % Require at least one 5 in the grid.
+    flatten(Grid, Flatsib), member(5, Flatsib),
+    % Find all non-zero non-5 cells and their bounding box (source region).
+    findall(R-C, (nth1(R, Grid, Rsib), nth1(C, Rsib, V), V \= 0, V \= 5), SrcCells),
+    SrcCells \= [],
+    findall(R, member(R-_, SrcCells), SrcRs),
+    findall(C, member(_-C, SrcCells), SrcCs),
+    min_list(SrcRs, SR0), max_list(SrcRs, SR1),
+    min_list(SrcCs, SC0), max_list(SrcCs, SC1),
+    % Source dimensions.
+    SrcHsib is SR1 - SR0 + 1,
+    SrcWsib is SC1 - SC0 + 1,
+    % Find all 5-cells and compute connected components.
+    findall(R-C, (nth1(R, Grid, Rsib2), nth1(C, Rsib2, 5)), All5sib),
+    sib_find_comps(All5sib, Grid, NRsib, NCsib, Compssib),
+    % Require at least one 5-component.
+    Compssib \= [],
+    % Each component must be a rectangle of same size as source.
+    maplist([Comp]>>(
+        findall(R, member(R-_, Comp), CRs),
+        findall(C, member(_-C, Comp), CCs),
+        min_list(CRs, CR0), max_list(CRs, CR1),
+        min_list(CCs, CC0), max_list(CCs, CC1),
+        CompH is CR1 - CR0 + 1, CompW is CC1 - CC0 + 1,
+        CompH =:= SrcHsib, CompW =:= SrcWsib,
+        % Verify solid rectangle: correct number of cells.
+        ExpectedN is CompH * CompW,
+        length(Comp, ExpectedN)
+    ), Compssib),
+    % Build output: copy grid, replace each 5-cell using source.
+    numlist(1, NRsib, AllRssib),
+    numlist(1, NCsib, AllCssib),
+    maplist([R, OutRow]>>(
+        maplist([C, OV]>>(
+            arc_grid_at(Grid, R, C, InV),
+            ( InV =:= 5 ->
+                sib_src_val(Grid, Compssib, SR0, SC0, R, C, OV)
+            ;   OV = InV
+            )
+        ), AllCssib, OutRow)
+    ), AllRssib, Out), !.
+
+% Find the source value for a 5-cell at (R,C) using its component's offset.
+sib_src_val(Grid, Comps, SR0, SC0, R, C, Val) :-
+    member(Comp, Comps),
+    member(R-C, Comp), !,
+    findall(Rcc, member(Rcc-_, Comp), CRs),
+    findall(Ccc, member(_-Ccc, Comp), CCs),
+    min_list(CRs, CR0), min_list(CCs, CC0),
+    DR is R - CR0,
+    DC is C - CC0,
+    GR is SR0 + DR,
+    GC is SC0 + DC,
+    arc_grid_at(Grid, GR, GC, Val).
+
+% Find connected components of 5-cells via BFS.
+sib_find_comps([], _, _, _, []).
+sib_find_comps([Seed|Rest], Grid, NR, NC, [Comp|Comps]) :-
+    sib_bfs([Seed], [Seed], Grid, NR, NC, Comp),
+    subtract(Rest, Comp, Rest2),
+    sib_find_comps(Rest2, Grid, NR, NC, Comps).
+
+% BFS expansion for 5-cell connected component.
+sib_bfs([], Visited, _, _, _, Visited).
+sib_bfs([R-C|Queue], Visited, Grid, NR, NC, Result) :-
+    findall(NR2-NC2, (
+        ( NR2 is R - 1, NC2 = C
+        ; NR2 is R + 1, NC2 = C
+        ; NR2 = R, NC2 is C - 1
+        ; NR2 = R, NC2 is C + 1
+        ),
+        NR2 >= 1, NR2 =< NR, NC2 >= 1, NC2 =< NC,
+        arc_grid_at(Grid, NR2, NC2, 5),
+        \+ member(NR2-NC2, Visited)
+    ), Neighbors),
+    append(Neighbors, Queue, Queue2),
+    append(Visited, Neighbors, Visited2),
+    sib_bfs(Queue2, Visited2, Grid, NR, NC, Result).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
