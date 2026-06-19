@@ -23009,6 +23009,199 @@ mfz_row_zeros([_|Vs], R, C, Rest) :-
     mfz_row_zeros(Vs, R, C1, Rest).
 
 % ---------------------------------------------------------------------------
+% WAVE 46 RULES
+% ---------------------------------------------------------------------------
+
+% Wave 46 Rule 1: zero_comp_size_to_color (task e8593010)
+% Grid background is one non-zero color (e.g. 5). Zero-cells form connected
+% components. Size-1 component -> color 3, size-2 -> 2, size-3 -> 1.
+arc_named_rule(zero_comp_size_to_color).
+% arc_transform for zero_comp_size_to_color: BFS components of 0-cells.
+arc_transform(zero_comp_size_to_color, Grid, Out) :-
+    !,
+    % Size guard.
+    length(Grid, NR), NR =< 30,
+    % Get column count.
+    Grid = [ZCS_FR|_], length(ZCS_FR, NC), NC =< 30,
+    % All non-zero cells must be exactly one background color.
+    findall(V, (member(Row, Grid), member(V, Row), V =\= 0), AllNZ),
+    AllNZ \= [],
+    sort(AllNZ, [BgColor]),
+    BgColor =\= 0,
+    % Collect all zero-cell positions.
+    zcs_collect_zeros(Grid, 0, Zeros),
+    Zeros \= [],
+    % Find connected components and assign labels.
+    zcs_find_all_comps(Zeros, Grid, NR, NC, LabelMap),
+    % Build output.
+    NR1 is NR - 1,
+    numlist(0, NR1, RowIdxs),
+    maplist([R, Row]>>(
+        NC1 is NC - 1,
+        numlist(0, NC1, ColIdxs),
+        maplist([C, Val]>>(
+            nth0(R, Grid, GRow),
+            nth0(C, GRow, GV),
+            ( GV =:= 0
+            -> ( member(R-C-Label, LabelMap) -> Val = Label ; Val = 0 )
+            ; Val = GV
+            )
+        ), ColIdxs, Row)
+    ), RowIdxs, Out).
+
+% Collect all zero-cell positions from grid (0-indexed rows).
+zcs_collect_zeros([], _, []).
+zcs_collect_zeros([Row|Rows], R, Zeros) :-
+    R1 is R + 1,
+    zcs_collect_zeros(Rows, R1, Rest),
+    zcs_row_zeros(Row, R, 0, RowZ),
+    append(RowZ, Rest, Zeros).
+
+% Collect zero positions from a single row.
+zcs_row_zeros([], _, _, []).
+zcs_row_zeros([0|Vs], R, C, [R-C|Rest]) :- !,
+    C1 is C + 1,
+    zcs_row_zeros(Vs, R, C1, Rest).
+zcs_row_zeros([_|Vs], R, C, Rest) :-
+    C1 is C + 1,
+    zcs_row_zeros(Vs, R, C1, Rest).
+
+% Find all connected components and build a label map.
+zcs_find_all_comps([], _, _, _, []).
+zcs_find_all_comps([RC|Remaining], Grid, MaxR, MaxC, Map) :-
+    % BFS from RC to find entire component.
+    zcs_bfs([RC], [RC], Grid, MaxR, MaxC, Comp),
+    % Assign label by component size.
+    length(Comp, Len),
+    ( Len =:= 1 -> Label = 3
+    ; Len =:= 2 -> Label = 2
+    ; Len =:= 3 -> Label = 1
+    ; Label = 0
+    ),
+    % Build label entries for this component.
+    maplist([Cell, Cell-Label]>>true, Comp, Entries),
+    % Remove component cells from remaining list.
+    subtract(Remaining, Comp, NewRemaining),
+    % Recurse for remaining cells.
+    zcs_find_all_comps(NewRemaining, Grid, MaxR, MaxC, RestMap),
+    append(Entries, RestMap, Map).
+
+% BFS over 4-connected zero-cells starting from Queue, tracking Visited.
+zcs_bfs([], Visited, _, _, _, Visited).
+zcs_bfs([R-C|Queue], Visited, Grid, MaxR, MaxC, Comp) :-
+    findall(NR-NC, (
+        ( NR is R+1, NC = C
+        ; NR is R-1, NC = C
+        ; NR = R, NC is C+1
+        ; NR = R, NC is C-1
+        ),
+        NR >= 0, NR < MaxR, NC >= 0, NC < MaxC,
+        nth0(NR, Grid, NRow), nth0(NC, NRow, 0),
+        \+ member(NR-NC, Visited),
+        \+ member(NR-NC, Queue)
+    ), Neighbors),
+    append(Neighbors, Queue, NewQueue),
+    append(Neighbors, Visited, NewVisited),
+    zcs_bfs(NewQueue, NewVisited, Grid, MaxR, MaxC, Comp).
+
+% ---------------------------------------------------------------------------
+% Wave 46 Rule 2: denoise_stripes (task e26a3af2)
+% Grid has horizontal or vertical color stripes contaminated with noise.
+% Each row (horizontal) or column (vertical) has one dominant color.
+% Replace every cell in the stripe with its dominant color.
+arc_named_rule(denoise_stripes).
+% arc_transform for denoise_stripes: compare row vs col violation counts.
+arc_transform(denoise_stripes, Grid, Out) :-
+    !,
+    % Size guard.
+    length(Grid, NR), NR =< 30,
+    Grid = [DS_FR|_], length(DS_FR, NC), NC =< 30,
+    % Compute row modes.
+    maplist(ds_mode, Grid, RowModes),
+    % Require at least 2 distinct row modes.
+    sort(RowModes, UniqueRowModes), length(UniqueRowModes, URM), URM >= 2,
+    % Compute column modes via local transpose.
+    ds_transpose(Grid, Transposed),
+    maplist(ds_mode, Transposed, ColModes),
+    sort(ColModes, UniqueColModes), length(UniqueColModes, UCM), UCM >= 2,
+    % Count violations for each orientation.
+    ds_row_violations(Grid, RowModes, RowViol),
+    ds_col_violations(Transposed, ColModes, ColViol),
+    % Use orientation with fewer violations.
+    TotalCells is NR * NC,
+    MinViol is min(RowViol, ColViol),
+    % Require at least 10% noise to show something happened.
+    MinViol > 0,
+    % Require at most 30% noise (clear stripe structure).
+    MaxAllowed is (TotalCells * 3) // 10,
+    MinViol =< MaxAllowed,
+    ( RowViol =< ColViol
+    -> % Horizontal stripes: fill each row with its mode.
+       NR1 is NR - 1,
+       numlist(0, NR1, RI),
+       maplist([R, Row]>>(
+           nth0(R, RowModes, Mode),
+           length(Row, NC),
+           maplist(=(Mode), Row)
+       ), RI, Out)
+    ;  % Vertical stripes: fill each column with its mode.
+       NR1 is NR - 1,
+       NC1 is NC - 1,
+       numlist(0, NR1, RI2),
+       numlist(0, NC1, CI),
+       maplist([R, Row]>>(
+           maplist([C, Val]>>(
+               nth0(C, ColModes, Val)
+           ), CI, Row)
+       ), RI2, Out)
+    ).
+
+% Local transpose: swap rows and columns (0-indexed lists).
+ds_transpose(Grid, Transposed) :-
+    Grid = [FR|_], length(FR, NC),
+    NC1 is NC - 1,
+    numlist(0, NC1, CIs),
+    maplist([C, Col]>>(
+        maplist([Row, Val]>>(nth0(C, Row, Val)), Grid, Col)
+    ), CIs, Transposed).
+
+% Find mode (most frequent element) of a list.
+ds_mode(List, Mode) :-
+    sort(List, Uniq),
+    findall(Count-Val, (
+        member(Val, Uniq),
+        findall(_, member(Val, List), Insts),
+        length(Insts, Count)
+    ), Pairs),
+    max_member(_-Mode, Pairs), !.
+
+% Count cells that differ from their row's mode.
+ds_row_violations(Grid, RowModes, Total) :-
+    length(Grid, NR), NR1 is NR - 1,
+    numlist(0, NR1, RI),
+    findall(V, (
+        member(R, RI),
+        nth0(R, Grid, Row),
+        nth0(R, RowModes, Mode),
+        member(V, Row),
+        V \= Mode
+    ), Viols),
+    length(Viols, Total).
+
+% Count cells that differ from their column's mode.
+ds_col_violations(Transposed, ColModes, Total) :-
+    length(Transposed, NC), NC1 is NC - 1,
+    numlist(0, NC1, CI),
+    findall(V, (
+        member(C, CI),
+        nth0(C, Transposed, Col),
+        nth0(C, ColModes, Mode),
+        member(V, Col),
+        V \= Mode
+    ), Viols),
+    length(Viols, Total).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
