@@ -16628,6 +16628,365 @@ arc_transform(draw_3_frame_around_2_clusters, Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
+% WAVE 32 HELPERS
+% arc_w32_bfs_val/7: BFS through 4-connected cells of value V
+% arc_w32_collect_comps/7: collect all connected components of value V
+% arc_w32_rank_sizes/3: map sorted distinct sizes to rank colors 1,2,3...
+% ---------------------------------------------------------------------------
+
+% ERC BFS base case: empty queue yields visited set as component
+arc_w32_bfs_val(_, _, _, _, [], Vis, Vis).
+% ERC BFS recursive: expand neighbours of value V not yet visited
+arc_w32_bfs_val(Grid, NR, NC, V, [R-C|Q], Vis, Comp) :-
+% ERC find all 4-adjacent unvisited same-value neighbours
+    findall(R2-C2,
+        (   member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+            R2 is R+DR, C2 is C+DC,
+            R2 >= 1, R2 =< NR, C2 >= 1, C2 =< NC,
+            arc_grid_at(Grid, R2, C2, V),
+            \+ memberchk(R2-C2, Vis)
+        ), Nbrs),
+% ERC merge neighbours into queue and visited set, dedup with sort
+    append(Q, Nbrs, Q1), sort(Q1, Q2),
+    append(Vis, Nbrs, Vis1), sort(Vis1, Vis2),
+% ERC continue BFS with updated queue and visited
+    arc_w32_bfs_val(Grid, NR, NC, V, Q2, Vis2, Comp).
+
+% ERC find all connected components of value V in Grid
+arc_w32_val_comps(Grid, NR, NC, V, Comps) :-
+% ERC collect all cells with value V
+    findall(R-C, (between(1,NR,R), between(1,NC,C), arc_grid_at(Grid,R,C,V)), AllCells),
+% ERC partition cells into connected components
+    arc_w32_collect_comps(Grid, NR, NC, V, AllCells, [], Comps).
+
+% ERC base case: no cells left
+arc_w32_collect_comps(_, _, _, _, [], _, []).
+% ERC skip cells already in a discovered component
+arc_w32_collect_comps(Grid, NR, NC, V, [Cell|Rest], Seen, Comps) :-
+% ERC cell already visited — skip it
+    memberchk(Cell, Seen), !,
+    arc_w32_collect_comps(Grid, NR, NC, V, Rest, Seen, Comps).
+% ERC cell not yet visited — BFS to find its full component
+arc_w32_collect_comps(Grid, NR, NC, V, [Cell|Rest], Seen, [Comp|Comps]) :-
+% ERC BFS from this seed cell
+    once(arc_w32_bfs_val(Grid, NR, NC, V, [Cell], [Cell], Comp)),
+% ERC merge component into seen set
+    append(Seen, Comp, Seen2), sort(Seen2, Seen3),
+% ERC continue with remaining cells
+    arc_w32_collect_comps(Grid, NR, NC, V, Rest, Seen3, Comps).
+
+% ERC assign rank colors 1,2,3... to a descending list of distinct sizes
+arc_w32_rank_sizes([], _, []).
+% ERC map head size to current rank, recurse with incremented rank
+arc_w32_rank_sizes([Sz|Rest], Rank, [Sz-Rank|More]) :-
+% ERC next rank
+    Rank1 is Rank + 1,
+    arc_w32_rank_sizes(Rest, Rank1, More).
+
+% ---------------------------------------------------------------------------
+% RULE: assemble_3x3_from_5_anchors   task 137eaa0f
+% Each non-5 coloured cell is within Chebyshev-1 of a 5-cell anchor.
+% Offset from anchor maps to 3x3 output position; 5 goes to center (2,2).
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 137eaa0f
+arc_named_rule(assemble_3x3_from_5_anchors).
+% ERC transform: gather fragment pieces relative to 5-anchors and assemble 3x3
+arc_transform(assemble_3x3_from_5_anchors, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRow0|_], length(GRow0, NC), NC =< 30,
+% ERC collect all 5-cell anchor positions (1-indexed)
+    findall(R5-C5, (between(1,NR,R5), between(1,NC,C5), arc_grid_at(Grid,R5,C5,5)), Fives),
+% ERC require at least one anchor
+    Fives \= [],
+% ERC for each non-zero non-5 cell find the nearest 5-anchor within Chebyshev-1 distance
+    findall(DR-DC-V,
+        (   between(1,NR,R), between(1,NC,C),
+            arc_grid_at(Grid,R,C,V), V =\= 0, V =\= 5,
+            once((member(R5-C5, Fives),
+                  DR is R-R5, DC is C-C5,
+                  abs(DR) =< 1, abs(DC) =< 1))
+        ), Pieces),
+% ERC require at least one piece
+    Pieces \= [],
+% ERC build 3x3 output: center (2,2) is 5; other cells use offset lookup
+    numlist(1,3,AllRows3), numlist(1,3,AllCols3),
+% ERC outer maplist over 3 output rows
+    maplist([OR, Row]>>(
+% ERC inner maplist over 3 output columns
+        maplist([OC, Cell]>>(
+% ERC compute offset from center
+            DR2 is OR-2, DC2 is OC-2,
+% ERC center cell is always 5; other cells from piece lookup
+            (   OR =:= 2, OC =:= 2 -> Cell = 5
+            ;   once(member(DR2-DC2-V2, Pieces)) -> Cell = V2
+            ;   Cell = 0
+            )
+        ), AllCols3, Row)
+    ), AllRows3, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: scale_5x5_by_color_count   task 469497ad
+% Input is always 5x5. K = number of distinct non-zero values.
+% Output is K*5 x K*5: each input cell becomes a K×K block.
+% 2s placed at K diagonal steps outward from each block corner.
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 469497ad
+arc_named_rule(scale_5x5_by_color_count).
+% ERC transform: scale 5x5 grid by color count with corner diagonals
+arc_transform(scale_5x5_by_color_count, Grid, Out) :-
+% ERC guard: must be exactly 5x5
+    length(Grid, 5), Grid = [GRow0|_], length(GRow0, 5),
+% ERC find K = number of distinct non-zero values
+    findall(V, (between(1,5,R), between(1,5,C), arc_grid_at(Grid,R,C,V), V =\= 0), AllVals0),
+% ERC deduplicate values and count
+    sort(AllVals0, UniqueVals), length(UniqueVals, K), K >= 2, K =< 5,
+% ERC find bounding box of block cells in the 4x4 inner region (rows 1-4 cols 1-4)
+    findall(R-C, (between(1,4,R), between(1,4,C), arc_grid_at(Grid,R,C,BV), BV =\= 0), BCells),
+% ERC require at least one block cell
+    BCells \= [],
+% ERC extract block row and col lists
+    findall(BR, member(BR-_, BCells), BRsL),
+    findall(BC, member(_-BC, BCells), BCsL),
+% ERC compute bounding box of block (1-indexed)
+    min_list(BRsL, GR1), max_list(BRsL, GR2),
+    min_list(BCsL, GC1), max_list(BCsL, GC2),
+% ERC scaled block range (1-indexed): each input cell -> K rows/cols
+    SR1 is K*(GR1-1)+1, SR2 is K*GR2,
+    SC1 is K*(GC1-1)+1, SC2 is K*GC2,
+% ERC K-1 for diagonal step count
+    K1 is K-1,
+% ERC max 1-indexed coordinate in the K*4 x K*4 inner region
+    MaxInner is K*4,
+% ERC upper-left diagonal: start (SR1-1, SC1-1) step (-1,-1) for K steps
+    findall(OR-OC, (between(0,K1,I),
+                    OR is SR1-1-I, OC is SC1-1-I,
+                    OR >= 1, OC >= 1, OR =< MaxInner, OC =< MaxInner), UL2s),
+% ERC upper-right diagonal: start (SR1-1, SC2+1) step (-1,+1) for K steps
+    findall(OR-OC, (between(0,K1,I),
+                    OR is SR1-1-I, OC is SC2+1+I,
+                    OR >= 1, OC >= 1, OR =< MaxInner, OC =< MaxInner), UR2s),
+% ERC lower-left diagonal: start (SR2+1, SC1-1) step (+1,-1) for K steps
+    findall(OR-OC, (between(0,K1,I),
+                    OR is SR2+1+I, OC is SC1-1-I,
+                    OR >= 1, OC >= 1, OR =< MaxInner, OC =< MaxInner), LL2s),
+% ERC lower-right diagonal: start (SR2+1, SC2+1) step (+1,+1) for K steps
+    findall(OR-OC, (between(0,K1,I),
+                    OR is SR2+1+I, OC is SC2+1+I,
+                    OR >= 1, OC >= 1, OR =< MaxInner, OC =< MaxInner), LR2s),
+% ERC merge and deduplicate all 2-positions
+    append([UL2s, UR2s, LL2s, LR2s], AllTwos0), sort(AllTwos0, AllTwos),
+% ERC output size is K*5
+    OutSize is K*5,
+    numlist(1, OutSize, AllOutRows), numlist(1, OutSize, AllOutCols),
+% ERC build output: scale each input cell; overlay 2s in empty positions
+    maplist([OR2, Row]>>(
+        maplist([OC2, Cell]>>(
+% ERC map output cell back to source input cell via integer division
+            SR is (OR2-1)//K + 1, SC is (OC2-1)//K + 1,
+            arc_grid_at(Grid, SR, SC, SV),
+% ERC non-zero source value -> use it; zero but 2-position -> 2; else 0
+            (   SV =\= 0 -> Cell = SV
+            ;   memberchk(OR2-OC2, AllTwos) -> Cell = 2
+            ;   Cell = 0
+            )
+        ), AllOutCols, Row)
+    ), AllOutRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: extract_5frame_with_interior_8s   task 3f7978a0
+% Input has a rectangular frame: 8s at 4 corners, 5s on vertical sides.
+% Scattered 8s outside or inside the frame are filtered/kept respectively.
+% Output is the frame's bounding box with interior 8s preserved.
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 3f7978a0
+arc_named_rule(extract_5frame_with_interior_8s).
+% ERC transform: extract rectangular 5-sided frame and keep interior 8s
+arc_transform(extract_5frame_with_interior_8s, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRow1|_], length(GRow1, NC), NC =< 30,
+% ERC collect all 5-cells (the frame sides)
+    findall(R-C, (between(1,NR,R), between(1,NC,C), arc_grid_at(Grid,R,C,5)), FiveCells),
+% ERC require at least one 5-cell
+    FiveCells \= [],
+% ERC the frame has exactly 2 vertical side columns
+    findall(C, member(_-C, FiveCells), SideCList),
+    sort(SideCList, SideCols), length(SideCols, 2),
+    SideCols = [LeftCol, RightCol],
+% ERC find row extent of 5s on the left side column
+    findall(R, member(R-LeftCol, FiveCells), FiveRows),
+    min_list(FiveRows, TopFiveRow), max_list(FiveRows, BotFiveRow),
+% ERC corner rows are immediately above and below the 5-rows
+    TopRow is TopFiveRow - 1, BotRow is BotFiveRow + 1,
+% ERC corner rows must be within grid bounds
+    TopRow >= 1, BotRow =< NR,
+% ERC verify 8s at all four frame corners
+    arc_grid_at(Grid, TopRow, LeftCol,  8),
+    arc_grid_at(Grid, TopRow, RightCol, 8),
+    arc_grid_at(Grid, BotRow, LeftCol,  8),
+    arc_grid_at(Grid, BotRow, RightCol, 8),
+% ERC frame dimensions
+    FrameH is BotRow - TopRow + 1,
+    FrameW is RightCol - LeftCol + 1,
+    numlist(1, FrameH, FRows), numlist(1, FrameW, FCols),
+% ERC build output frame: corners=8, sides=5, interior 8s from grid, else 0
+    maplist([FR, FRowOut]>>(
+        maplist([FC, Cell]>>(
+% ERC map frame-local position to grid position
+            GR is TopRow + FR - 1, GC is LeftCol + FC - 1,
+% ERC corner cells get 8; side cells get 5; interior: check for 8 in grid
+            (   (FR =:= 1 ; FR =:= FrameH), (FC =:= 1 ; FC =:= FrameW) -> Cell = 8
+            ;   (FC =:= 1 ; FC =:= FrameW) -> Cell = 5
+            ;   arc_grid_at(Grid, GR, GC, V8), V8 =:= 8 -> Cell = 8
+            ;   Cell = 0
+            )
+        ), FCols, FRowOut)
+    ), FRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: unique_color_region   task 0b148d64
+% Input has 2 colors; one appears in more connected regions, one in fewer.
+% Output is the bounding box of the color with fewer connected regions.
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 0b148d64
+arc_named_rule(unique_color_region).
+% ERC transform: output the region of the color with fewer connected components
+arc_transform(unique_color_region, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRow2|_], length(GRow2, NC), NC =< 30,
+% ERC collect all non-zero values
+    findall(V, (between(1,NR,R), between(1,NC,C), arc_grid_at(Grid,R,C,V), V =\= 0), AllVals),
+% ERC must have exactly 2 distinct colors
+    sort(AllVals, Colors), length(Colors, 2),
+    Colors = [C1, C2],
+% ERC find connected components for each color
+    once(arc_w32_val_comps(Grid, NR, NC, C1, Comps1)),
+    once(arc_w32_val_comps(Grid, NR, NC, C2, Comps2)),
+% ERC count components per color
+    length(Comps1, N1), length(Comps2, N2),
+% ERC the unique color has fewer components
+    (N1 < N2 -> UniqueComps = Comps1 ; UniqueComps = Comps2),
+% ERC collect all cells of the unique color across all its components
+    findall(R-C, (member(Comp, UniqueComps), member(R-C, Comp)), UCells),
+% ERC compute bounding box over all unique-color cells
+    findall(R, member(R-_, UCells), URs),
+    findall(C, member(_-C, UCells), UCs),
+    min_list(URs, MinR), max_list(URs, MaxR),
+    min_list(UCs, MinC), max_list(UCs, MaxC),
+% ERC build output as grid sub-section at bounding box
+    numlist(MinR, MaxR, OutRows), numlist(MinC, MaxC, OutCols),
+% ERC outer maplist over output rows
+    maplist([ORu, Row]>>(
+% ERC inner maplist over output columns
+        maplist([OCu, Cell]>>(
+% ERC copy cell value directly from grid
+            arc_grid_at(Grid, ORu, OCu, Cell)
+        ), OutCols, Row)
+    ), OutRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: mark_shared_zero_across_1_divider   task 1b2d62fb
+% Input has a centre column of all 1s as divider. Left and right halves have
+% 9s and 0s. Output marks 8 where both halves are 0, else 0.
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 1b2d62fb
+arc_named_rule(mark_shared_zero_across_1_divider).
+% ERC transform: output 8 where both left and right sides are background 0
+arc_transform(mark_shared_zero_across_1_divider, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRow3|_], length(GRow3, NC), NC =< 30,
+% ERC find the divider column: first column where every cell equals 1
+    once((between(1,NC,DC),
+          \+ (between(1,NR,Rd), arc_grid_at(Grid,Rd,DC,Vd), Vd =\= 1))),
+% ERC half-width must be positive and symmetric
+    HW is DC - 1, HW > 0,
+    RW is NC - DC, RW =:= HW,
+% ERC build output: NR rows × HW cols; 8 where both sides are 0, else 0
+    numlist(1, NR, AllRowsD), numlist(1, HW, HalfCols),
+% ERC outer maplist over rows
+    maplist([Rd2, Row]>>(
+% ERC inner maplist over half-columns
+        maplist([Cd, Cell]>>(
+% ERC left cell value
+            arc_grid_at(Grid, Rd2, Cd, LV),
+% ERC right cell value (mirrored across divider)
+            RCd is DC + Cd,
+            arc_grid_at(Grid, Rd2, RCd, RV),
+% ERC output 8 if both sides are 0, else 0
+            (LV =:= 0, RV =:= 0 -> Cell = 8 ; Cell = 0)
+        ), HalfCols, Row)
+    ), AllRowsD, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% RULE: color_5_comps_by_size   task 6e82a1ae
+% Input has 5-valued connected components of 3 distinct sizes.
+% Output replaces 5s with 1 (largest), 2 (medium), 3 (smallest).
+% ---------------------------------------------------------------------------
+
+% ERC declare named rule for task 6e82a1ae
+arc_named_rule(color_5_comps_by_size).
+% ERC transform: colour each 5-component by its size rank (1=largest, 3=smallest)
+arc_transform(color_5_comps_by_size, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC column count
+    Grid = [GRow4|_], length(GRow4, NC), NC =< 30,
+% ERC find all connected components of 5-cells
+    once(arc_w32_val_comps(Grid, NR, NC, 5, Comps)),
+% ERC require at least one component
+    Comps \= [],
+% ERC compute (size, component) pairs
+    findall(Sz-Comp5, (member(Comp5, Comps), length(Comp5, Sz)), SzComps),
+% ERC extract all sizes (with duplicates)
+    findall(Sz, member(Sz-_, SzComps), AllSzs),
+% ERC sort ascending then reverse to get descending distinct sizes
+    sort(AllSzs, AscSizes), reverse(AscSizes, DescSizes),
+% ERC build size-to-rank map: largest=1, next=2, smallest=3
+    arc_w32_rank_sizes(DescSizes, 1, SzColorMap),
+% ERC build flat list of (row, col, color) for all 5-cells
+    findall(Rk-Ck-Clr,
+        (   member(SzK-CompK, SzComps),
+            member(Rk-Ck, CompK),
+            member(SzK-Clr, SzColorMap)
+        ), CellColors),
+% ERC build output: replace 5s with rank color, keep all other values
+    numlist(1, NR, AllNRows), numlist(1, NC, AllNCols),
+% ERC outer maplist over rows
+    maplist([ORs, Row]>>(
+% ERC inner maplist over columns
+        maplist([OCs, Cell]>>(
+% ERC if this cell has a rank color use it, else use original grid value
+            (   once(member(ORs-OCs-ClrOut, CellColors)) -> Cell = ClrOut
+            ;   arc_grid_at(Grid, ORs, OCs, OrigV), Cell = OrigV
+            )
+        ), AllNCols, Row)
+    ), AllNRows, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
 % INDUCTION ENGINE
 % arc_fits_all(+Rule, +TrainingPairs) — true if Rule correctly maps every
 %   training input to its expected output.

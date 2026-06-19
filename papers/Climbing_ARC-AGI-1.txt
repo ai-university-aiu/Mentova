@@ -1180,10 +1180,12 @@ Run 43: 242 / 400 = 60.50% - Wave 29: eighteen new rules (draw_x_diagonals, fill
 
 Run 44: 251 / 400 = 62.75% - Wave 30: nine new rules (fill_2cluster_bbox_with_4, reflect_fives_through_2frame, replace_1s_in_8bbox_with_3, add_3border_4fill_to_6shapes, complete_band_through_crossing, shoot_isolated_into_8block, extend_marker_from_arrow, fill_8block_by_quadrant, remove_stray_cells). Plus 9 tasks.
 
-Run 45: 256 / 400 = 64.00% - Wave 31: five new rules (stamp_1234_around_5_blocks, fill_3x3_zero_blocks_with_1, fill_below_shape_by_color_count, fill_horiz_gap_with_9, draw_3_frame_around_2_clusters). Plus 5 tasks. (CURRENT BEST)
+Run 45: 256 / 400 = 64.00% - Wave 31: five new rules (stamp_1234_around_5_blocks, fill_3x3_zero_blocks_with_1, fill_below_shape_by_color_count, fill_horiz_gap_with_9, draw_3_frame_around_2_clusters). Plus 5 tasks.
+
+Run 46: 261 / 400 = 65.25% - Wave 32: six new rules (assemble_3x3_from_5_anchors, scale_5x5_by_color_count, extract_5frame_with_interior_8s, unique_color_region, mark_shared_zero_across_1_divider, color_5_comps_by_size). Plus 5 net new tasks. (CURRENT BEST)
 
 
-ALL 256 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 261 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1205,6 +1207,8 @@ ALL 256 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 0a938d79 - two_cell_alternating_stripes.
 
+0b148d64 - unique_color_region.
+
 0ca9ddb6 - surround_1_ortho_7_and_2_diag_4.
 
 0d3d703e - recolor_auto.
@@ -1214,6 +1218,8 @@ ALL 256 SOLVED TASKS AND THEIR GLASS-BOX RULES
 06df4c85 - span_fill_separator_grid.
 
 1190e5a7 - count_separator_grid.
+
+137eaa0f - assemble_3x3_from_5_anchors.
 
 178fcbfb - fill_row_or_col_by_2.
 
@@ -1315,6 +1321,8 @@ ALL 256 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 3de23699 - extract_inner_shape_recolor.
 
+3f7978a0 - extract_5frame_with_interior_8s.
+
 40853293 - connect_paired_same_value.
 
 4093f84a - extend_5block_toward_markers.
@@ -1338,6 +1346,8 @@ ALL 256 SOLVED TASKS AND THEIR GLASS-BOX RULES
 4612dd53 - fill_frame_gaps.
 
 46442a0e - tile_rotate_2x2.
+
+469497ad - scale_5x5_by_color_count.
 
 46f33fce - scale_even_cells_to_4x4_blocks.
 
@@ -1410,6 +1420,8 @@ ALL 256 SOLVED TASKS AND THEIR GLASS-BOX RULES
 6d0aefbc - tile_reflect_h.
 
 6e02f1e3 - grid_3x3_row_pattern_to_diagonal.
+
+6e82a1ae - color_5_comps_by_size.
 
 6f8cd79b - fill_border(8).
 
@@ -1714,7 +1726,7 @@ This paper will be extended with a new attempt entry after every future benchmar
 
 The mountain is still being climbed.
 
-The score at the time of writing is 256 / 400 = 64.00% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
+The score at the time of writing is 261 / 400 = 65.25% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
 
 
 APPENDIX 1: ALL THE HUMAN STEPS FOR SOLVING ARC-AGI PUZZLES
