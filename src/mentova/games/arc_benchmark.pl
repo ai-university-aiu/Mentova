@@ -18776,6 +18776,39 @@ arc_induce_rule_400(TrainingPairs, Rule) :-
     arc_fits_all(Rule, TrainingPairs),
     % Cut to prevent backtracking to other rules once one is found.
     !.
+% Parametric induction: wrap_isolated_dots(ColorMap) — learn dot-to-frame color map.
+arc_induce_rule_400(TrainingPairs, wrap_isolated_dots(ColorMap)) :-
+% ERC require at least one training pair
+    TrainingPairs = [pair(FirstInWid, FirstOutWid)|_],
+% ERC get grid dimensions from the first input
+    length(FirstInWid, NRwid), FirstInWid = [FR1wid|_], length(FR1wid, NCwid),
+% ERC collect (dot_color -> frame_color) from isolated pixels in first training pair
+    findall(Vwid-FVwid, (
+        between(1, NRwid, Rwid), between(1, NCwid, Cwid),
+        arc_grid_at(FirstInWid, Rwid, Cwid, Vwid), Vwid \= 0,
+        forall(
+            (member(DRwid0-DCwid0, [-1-0, 1-0, 0-(-1), 0-1]),
+             R2wid0 is Rwid + DRwid0, C2wid0 is Cwid + DCwid0,
+             R2wid0 >= 1, R2wid0 =< NRwid, C2wid0 >= 1, C2wid0 =< NCwid),
+            arc_grid_at(FirstInWid, R2wid0, C2wid0, 0)
+        ),
+        member(DRwid1-DCwid1,
+            [-1-(-1), -1-0, -1-1, 0-(-1), 0-1, 1-(-1), 1-0, 1-1]),
+        R3wid is Rwid + DRwid1, C3wid is Cwid + DCwid1,
+        R3wid >= 1, R3wid =< NRwid, C3wid >= 1, C3wid =< NCwid,
+        arc_grid_at(FirstOutWid, R3wid, C3wid, FVwid),
+        FVwid \= 0, FVwid \= Vwid
+    ), RawPairsWid),
+% ERC require at least one mapping entry
+    RawPairsWid \= [],
+    sort(RawPairsWid, ColorMap),
+% ERC verify ColorMap is a function: each dot color maps to exactly one frame color
+    findall(Vk, member(Vk-_, ColorMap), VsListWid),
+    sort(VsListWid, VsSortedWid),
+    length(VsListWid, NVwid), length(VsSortedWid, NVwid),
+% ERC verify the mapping fits all training pairs exactly
+    arc_fits_all(wrap_isolated_dots(ColorMap), TrainingPairs),
+    !.
 
 % ---------------------------------------------------------------------------
 % COMPOSITE (TWO-STEP) RULE SEARCH
@@ -19082,8 +19115,8 @@ arc_transform(draw_cross_from_spanning_pairs, Grid, Out) :-
 % ERC extract all colors and get unique list
     findall(VC, member(VC-_-_, AllCells), AllVsCsp),
     sort(AllVsCsp, UniqueVsCsp),
-% ERC find anchor color with at least one spanning pair
-    findall(AC-DrawRows-DrawCols, (
+% ERC find anchor color with at least one spanning pair; rank by total span count
+    findall(TotalCsp-AC-DrawRows-DrawCols, (
         member(AC, UniqueVsCsp),
         findall(Rp-Cp, member(AC-Rp-Cp, AllCells), ACPosCsp),
 % ERC find rows where color spans full width (col 1 to NC)
@@ -19097,10 +19130,15 @@ arc_transform(draw_cross_from_spanning_pairs, Grid, Out) :-
             member(NR-DC, ACPosCsp)
         ), DrawCols),
 % ERC require at least one spanning pair exists
-        ( DrawRows \= [] ; DrawCols \= [] )
+        ( DrawRows \= [] ; DrawCols \= [] ),
+% ERC total number of spanning lines found
+        length(DrawRows, NRowsCsp), length(DrawCols, NColsCsp),
+        TotalCsp is NRowsCsp + NColsCsp
     ), AnchorListCsp),
-% ERC require exactly one anchor color found
-    AnchorListCsp = [ACsp-DrawRowsCsp-DrawColsCsp|_],
+% ERC require at least one anchor color found
+    AnchorListCsp \= [],
+% ERC select color with the most spanning lines to disambiguate false positives
+    max_member(_-ACsp-DrawRowsCsp-DrawColsCsp, AnchorListCsp),
 % ERC build output: draw lines with anchor color, zero elsewhere
     numlist(1, NR, AllRowsCsp),
     maplist([Rowcsp, RowListcsp]>>(
@@ -19615,6 +19653,364 @@ arc_transform(extract_solid_rect, Grid, Out) :-
     ), AllRowsEsr, Out),
 % ERC deterministic cut
     !.
+
+% ---------------------------------------------------------------------------
+% Wave 39 Rule 1: color_block_to_grid (task 90c28cc7)
+% Input is a grid of solid-color rectangular blocks (a mosaic).
+% Output has one cell per block showing that block's color.
+% ---------------------------------------------------------------------------
+arc_named_rule(color_block_to_grid).
+arc_transform(color_block_to_grid, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+% ERC get column count
+    Grid = [GRcbtg1|_], length(GRcbtg1, NC), NC =< 30,
+% ERC compute color-run signature for each non-zero row
+    findall(Rcbtg-Sig, (
+        between(1, NR, Rcbtg),
+        cbg_row_sig(Grid, Rcbtg, NC, Sig),
+        Sig \= []
+    ), RowSigs),
+% ERC require at least one non-zero row
+    RowSigs \= [],
+% ERC group consecutive rows with the same signature into bands
+    cbg_band_reps(RowSigs, BandReps),
+% ERC require at least two bands (so output has more than one row)
+    BandReps = [_,_|_],
+% ERC collect all distinct col-band start positions across all signatures
+    findall(CS, (member(_-Sig, RowSigs), member(CS-_, Sig)), AllCS),
+    sort(AllCS, ColBandStarts),
+% ERC require at least two col bands (so output has more than one column)
+    ColBandStarts = [_,_|_],
+% ERC build output: one row per row-band, one cell per col-band
+    maplist([_RowRepCbtg-BandSig, OutRow]>>(
+        maplist([CStart, OutV]>>(
+% ERC find the color that covers this col-band start position
+            cbg_color_at(BandSig, CStart, OutV)
+        ), ColBandStarts, OutRow)
+    ), BandReps, Out),
+% ERC deterministic cut
+    !.
+
+% cbg_row_sig(+Grid, +R, +NC, -Sig): color-run starts for row R.
+cbg_row_sig(Grid, R, NC, Sig) :-
+% ERC collect (ColStart - Color) for each new color run in row R
+    findall(C-V, (
+        between(1, NC, C),
+        arc_grid_at(Grid, R, C, V), V \= 0,
+        ( C =:= 1 -> true ;
+            CPrev is C - 1,
+            arc_grid_at(Grid, R, CPrev, VPrev),
+            VPrev \= V
+        )
+    ), Sig).
+
+% cbg_band_reps(+RowSigs, -BandReps): one rep per run of equal signatures.
+cbg_band_reps([], []).
+cbg_band_reps([R-Sig|Rest], [R-Sig|BandReps]) :-
+% ERC skip all consecutive rows with the same signature
+    cbg_skip_same_sig(Rest, Sig, Remaining),
+% ERC recurse on remaining rows
+    cbg_band_reps(Remaining, BandReps).
+
+% cbg_skip_same_sig(+Rows, +Sig, -Rest): consume rows that match Sig.
+cbg_skip_same_sig([], _, []).
+cbg_skip_same_sig([_-Sig2|Rest], Sig, Remaining) :-
+% ERC signatures match: skip this row
+    Sig = Sig2, !, cbg_skip_same_sig(Rest, Sig, Remaining).
+% ERC different signature: stop skipping
+cbg_skip_same_sig([H|T], _, [H|T]).
+
+% cbg_color_at(+Sig, +CStart, -OutV): color covering column CStart.
+cbg_color_at(Sig, CStart, OutV) :-
+% ERC all run starts at or before CStart are candidates
+    findall(RS-V, (member(RS-V, Sig), RS =< CStart), Candidates),
+% ERC require at least one candidate
+    Candidates \= [],
+% ERC the run with the largest start covers this position
+    max_member(_-OutV, Candidates).
+
+% ---------------------------------------------------------------------------
+% Wave 39 Rule 2: wrap_isolated_dots (task 913fb3ed)
+% Each isolated dot in the input gets wrapped in a 3x3 frame in the output.
+% The frame color is learned per dot-color from training pairs.
+% arc_induce_rule_400 adds a parametric clause that infers ColorMap.
+% ---------------------------------------------------------------------------
+arc_transform(wrap_isolated_dots(ColorMap), Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+    Grid = [GRwid1|_], length(GRwid1, NC), NC =< 30,
+% ERC build output row by row
+    numlist(1, NR, AllRowsWid),
+    maplist([Rwid2, OutRow]>>(
+        numlist(1, NC, AllColsWid),
+        maplist([Cwid2, Vout]>>(
+            arc_grid_at(Grid, Rwid2, Cwid2, Vin),
+            ( Vin \= 0 ->
+% ERC this cell is a dot - preserve its color
+                Vout = Vin
+            ;
+% ERC check if any 8-neighbor is a dot that frames this cell
+                ( member(DRwid2-DCwid2,
+                      [-1-(-1), -1-0, -1-1, 0-(-1), 0-1, 1-(-1), 1-0, 1-1]),
+                  R2wid2 is Rwid2 + DRwid2, C2wid2 is Cwid2 + DCwid2,
+                  R2wid2 >= 1, R2wid2 =< NR, C2wid2 >= 1, C2wid2 =< NC,
+                  arc_grid_at(Grid, R2wid2, C2wid2, DotV), DotV \= 0,
+                  member(DotV-Vout, ColorMap) ->
+                    true
+                ; Vout = 0
+                )
+            )
+        ), AllColsWid, OutRow)
+    ), AllRowsWid, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 39 Rule 3: rect_frame_to_interior (task d5d6de2d)
+% Each closed rectangular frame of 2s becomes a block of 3s at its interior;
+% the frame itself is removed (all cells become 0 or 3).
+% ---------------------------------------------------------------------------
+arc_named_rule(rect_frame_to_interior).
+arc_transform(rect_frame_to_interior, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+    Grid = [GRrfti1|_], length(GRrfti1, NC), NC =< 30,
+% ERC collect all 2-cells
+    findall(Rrfti-Crfti, (
+        between(1, NR, Rrfti), between(1, NC, Crfti),
+        arc_grid_at(Grid, Rrfti, Crfti, 2)
+    ), AllTwos),
+    AllTwos \= [],
+% ERC find connected components of 2-cells using emsb_components
+    emsb_components(AllTwos, Grid, NR, NC, TwoComps),
+% ERC for each component verify it forms a rectangular border and collect interior
+    findall(Rint-Cint, (
+        member(Comp, TwoComps),
+        Comp \= [],
+        findall(Rr, member(Rr-_, Comp), Rs),
+        findall(Cr, member(_-Cr, Comp), Cs),
+        min_list(Rs, R1r), max_list(Rs, R2r),
+        min_list(Cs, C1r), max_list(Cs, C2r),
+% ERC frame must have interior: at least 3 rows and 3 cols
+        R2r > R1r + 1, C2r > C1r + 1,
+% ERC verify component size equals rectangle perimeter
+        NExpBorder is 2*(R2r-R1r) + 2*(C2r-C1r),
+        length(Comp, NExpBorder),
+% ERC verify interior cells are all 0
+        R1int is R1r+1, R2int is R2r-1,
+        C1int is C1r+1, C2int is C2r-1,
+        forall(
+            (between(R1int, R2int, Rc0), between(C1int, C2int, Cc0)),
+            arc_grid_at(Grid, Rc0, Cc0, 0)
+        ),
+% ERC collect interior cell positions
+        between(R1int, R2int, Rint),
+        between(C1int, C2int, Cint)
+    ), InteriorCells),
+    InteriorCells \= [],
+% ERC build output: 0 everywhere except interior cells which become 3
+    numlist(1, NR, AllRowsRfti),
+    maplist([Rrfti2, OutRow]>>(
+        numlist(1, NC, AllColsRfti),
+        maplist([Crfti2, Vout]>>(
+            ( member(Rrfti2-Crfti2, InteriorCells) ->
+                Vout = 3
+            ; Vout = 0
+            )
+        ), AllColsRfti, OutRow)
+    ), AllRowsRfti, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 39 Rule 4: move_cross_by_dot_count (task e48d4e1a)
+% A cross (two perpendicular full-span lines of the same color) is displaced
+% by N steps away from the corner where N dot (value 5) cells sit.
+% ---------------------------------------------------------------------------
+arc_named_rule(move_cross_by_dot_count).
+arc_transform(move_cross_by_dot_count, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30,
+    Grid = [GRmcdc1|_], length(GRmcdc1, NC), NC =< 30,
+% ERC find dot cells (value 5) and count them
+    findall(R5-C5, (
+        between(1, NR, R5), between(1, NC, C5),
+        arc_grid_at(Grid, R5, C5, 5)
+    ), Dots),
+    Dots \= [],
+    length(Dots, N),
+% ERC determine the dots corner: their min row and max col
+    findall(R5x, member(R5x-_, Dots), R5list),
+    findall(C5x, member(_-C5x, Dots), C5list),
+    min_list(R5list, MinR5), max_list(C5list, MaxC5),
+% ERC find the horizontal line: a row where every cell equals CrossColor
+    between(1, NR, HRow),
+    findall(Vmcdc, (between(1, NC, Cmcdc0), arc_grid_at(Grid, HRow, Cmcdc0, Vmcdc)), HVals),
+    HVals \= [],
+    findall(Vnz, (member(Vnz, HVals), Vnz \= 0, Vnz \= 5), HNZ),
+    HNZ \= [],
+    sort(HNZ, [CrossColor]),
+    length(HVals, NC),
+    maplist(==(CrossColor), HVals),
+% ERC find the vertical line: a column where every cell equals CrossColor
+    between(1, NC, VCol),
+    findall(Vvcol, (between(1, NR, Rvcol), arc_grid_at(Grid, Rvcol, VCol, Vvcol)), VVals),
+    maplist(==(CrossColor), VVals),
+% ERC determine movement direction away from the dots corner
+    NR2 is NR // 2,
+    ( MinR5 =< NR2 -> DirR = 1 ; DirR = -1 ),
+    NC2 is NC // 2,
+    ( MaxC5 > NC2 -> DirC = -1 ; DirC = 1 ),
+% ERC compute new cross position
+    NewHRow is HRow + DirR * N,
+    NewVCol is VCol + DirC * N,
+    NewHRow >= 1, NewHRow =< NR,
+    NewVCol >= 1, NewVCol =< NC,
+% ERC build output: zeros except the new cross
+    numlist(1, NR, AllRowsMcdc),
+    maplist([Rmcdc, OutRow]>>(
+        numlist(1, NC, AllColsMcdc),
+        maplist([Cmcdc, Vout]>>(
+            ( Rmcdc =:= NewHRow -> Vout = CrossColor
+            ; Cmcdc =:= NewVCol -> Vout = CrossColor
+            ; Vout = 0
+            )
+        ), AllColsMcdc, OutRow)
+    ), AllRowsMcdc, Out),
+% ERC deterministic cut
+    !.
+
+% ---------------------------------------------------------------------------
+% Wave 39 Rule 5: color_blobs_from_header (task ddf7fa4f)
+% Row 1 (1-indexed) contains singleton color markers.
+% Each connected blob of 5s in subsequent rows is recolored with the marker
+% whose column falls within the blob's column extent.
+% ---------------------------------------------------------------------------
+arc_named_rule(color_blobs_from_header).
+arc_transform(color_blobs_from_header, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30, NR >= 2,
+    Grid = [GRcbfh1|_], length(GRcbfh1, NC), NC =< 30,
+% ERC find header color markers in row 1
+    findall(Hcol-Hcolor, (
+        between(1, NC, Hcol),
+        arc_grid_at(Grid, 1, Hcol, Hcolor),
+        Hcolor \= 0, Hcolor \= 5
+    ), HeaderMarkers),
+    HeaderMarkers \= [],
+% ERC collect all 5-cells in non-header rows
+    findall(R5cbfh-C5cbfh, (
+        between(2, NR, R5cbfh), between(1, NC, C5cbfh),
+        arc_grid_at(Grid, R5cbfh, C5cbfh, 5)
+    ), AllFives),
+    AllFives \= [],
+% ERC find connected components of 5-cells
+    cbfh_components(AllFives, Grid, NR, NC, FiveComps),
+% ERC for each component find its col range and matching header color
+    findall(Rcbfh-Ccbfh-HcColor, (
+        member(Comp, FiveComps),
+        Comp \= [],
+        findall(Cc0, member(_-Cc0, Comp), Cs0),
+        min_list(Cs0, MinCbfh), max_list(Cs0, MaxCbfh),
+        member(Hcol0-HcColor, HeaderMarkers),
+        Hcol0 >= MinCbfh, Hcol0 =< MaxCbfh,
+        member(Rcbfh-Ccbfh, Comp)
+    ), ColoredCells),
+    ColoredCells \= [],
+% ERC build output: replace 5s with their blob color, keep everything else
+    numlist(1, NR, AllRowsCbfh),
+    maplist([Rcbfh2, OutRow]>>(
+        numlist(1, NC, AllColsCbfh),
+        maplist([Ccbfh2, Vout]>>(
+            ( member(Rcbfh2-Ccbfh2-Vout, ColoredCells) ->
+                true
+            ; arc_grid_at(Grid, Rcbfh2, Ccbfh2, Vout)
+            )
+        ), AllColsCbfh, OutRow)
+    ), AllRowsCbfh, Out),
+% ERC deterministic cut
+    !.
+
+% cbfh_components/5: connected components among value-5 cells only.
+cbfh_components([], _, _, _, []).
+cbfh_components([H|T], Grid, NR, NC, [Comp|Rest]) :-
+% ERC BFS from H over 5-cells to find one connected component
+    cbfh_bfs([H], [H], Grid, NR, NC, Comp),
+% ERC remove component cells from remaining candidates
+    subtract(T, Comp, Remaining),
+    cbfh_components(Remaining, Grid, NR, NC, Rest).
+
+% cbfh_bfs/6: BFS expanding only to cells with value 5.
+cbfh_bfs([], Visited, _, _, _, Visited).
+cbfh_bfs(Frontier, Visited, Grid, NR, NC, Result) :-
+    Frontier \= [],
+% ERC find all unvisited 5-neighbors of the current frontier
+    findall(R2cbfh-C2cbfh, (
+        member(R1cbfh-C1cbfh, Frontier),
+        member(DRcbfh-DCcbfh, [-1-0, 1-0, 0-(-1), 0-1]),
+        R2cbfh is R1cbfh + DRcbfh, C2cbfh is C1cbfh + DCcbfh,
+        R2cbfh >= 1, R2cbfh =< NR, C2cbfh >= 1, C2cbfh =< NC,
+        arc_grid_at(Grid, R2cbfh, C2cbfh, 5),
+        \+ memberchk(R2cbfh-C2cbfh, Visited)
+    ), NewRawCbfh),
+    sort(NewRawCbfh, NewFrontierCbfh),
+    ( NewFrontierCbfh = [] ->
+        Result = Visited
+    ;
+        append(Visited, NewFrontierCbfh, NewVisitedCbfh),
+        cbfh_bfs(NewFrontierCbfh, NewVisitedCbfh, Grid, NR, NC, Result)
+    ).
+
+% ---------------------------------------------------------------------------
+% Wave 39 Rule 6: denoise_by_col_mode (task e26a3af2)
+% Each column's cells are all replaced by the modal (most common) value
+% in that column, effectively removing noise from vertical stripe patterns.
+% ---------------------------------------------------------------------------
+arc_named_rule(denoise_by_col_mode).
+arc_transform(denoise_by_col_mode, Grid, Out) :-
+% ERC size guard
+    length(Grid, NR), NR =< 30, NR >= 3,
+    Grid = [GRdcm1|_], length(GRdcm1, NC), NC =< 30,
+% ERC compute modal color for each column
+    numlist(1, NC, AllColsDcm),
+    findall(Coldcm-Mode, (
+        member(Coldcm, AllColsDcm),
+        findall(Vdcm, (between(1, NR, Rdcm), arc_grid_at(Grid, Rdcm, Coldcm, Vdcm)), ColVals),
+        dcm_mode(ColVals, Mode)
+    ), ColModes),
+    ColModes \= [],
+% ERC require at least one cell that differs from its column mode (noise exists)
+    findall(Rn, (
+        member(Coln-Moden, ColModes),
+        between(1, NR, Rn),
+        arc_grid_at(Grid, Rn, Coln, Vn),
+        Vn \= Moden
+    ), NoiseCells),
+    NoiseCells \= [],
+% ERC build output: each cell gets its column's modal color
+    numlist(1, NR, AllRowsDcm),
+    maplist([Rdcm2, OutRow]>>(
+        maplist([Cdcm, Vout]>>(
+            member(Cdcm-Vout, ColModes)
+        ), AllColsDcm, OutRow)
+    ), AllRowsDcm, Out),
+% ERC deterministic cut
+    !.
+
+% dcm_mode/2: find the most common element in a list.
+dcm_mode(List, Mode) :-
+% ERC get unique values
+    list_to_set(List, Unique),
+    Unique \= [],
+% ERC count occurrences of each unique value
+    findall(Count-V, (
+        member(V, Unique),
+        findall(_, member(V, List), Matches),
+        length(Matches, Count)
+    ), Counts),
+% ERC pick the value with the highest count
+    max_member(_-Mode, Counts).
 
 % ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
