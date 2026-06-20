@@ -1227,6 +1227,28 @@ What was learned: Zero-component classification by adjacency to seed values is a
 
 New tasks solved by wave 57 (3 new tasks): 6ecd11f4 (key_masked_by_block_pattern), 9edfc990 (fill_zero_near_one), d687bc17 (gravity_to_matching_wall).
 
+ATTEMPT 33: WAVE 58 - BOX-DOT EXTRACTION AND LINE-GRID HOLE FILL - 357 / 400 = 89.25%
+
+Date: 2026-06-20
+Score: 357 / 400 = 89.25%.
+Previous score: 355 / 400 = 88.75% (wave 57, 2026-06-20).
+Rules added: 2 (each solves its test case).
+Tasks solved: +2.
+
+What changed: Wave 58 added two new induction rules targeting two structurally distinct tasks from the remaining 45 unsolved tasks.
+
+The two scoring rules added in wave 58:
+
+box_extract_recolor_by_dots (task fcb5c309): The input contains exactly two non-zero colors: a frame color (more frequent) forming rectangular outlines or closed shapes, and a dot color (less frequent) scattered around. The rule finds all 4-connected components of the frame color and computes how many dot-color cells fall inside the bounding box of each component. It selects the frame component whose bounding box encloses the most dot cells. The output is that bounding box cropped from the grid, with every non-zero cell recolored to the dot color. Zero cells remain zero. The implementation uses arc_connected_components to find all frame components, aggregate_all to count enclosed dot cells for each, sort/4 with key 0 and @>= to pick the maximum, and maplist to build the cropped recolored output.
+
+fill_grid_regions_by_line_holes (task 83302e8f): The input has a single background value B (the most frequent non-zero value) that forms a regular grid of horizontal and vertical lines dividing the grid into rectangular regions. All other cells are 0. Some line cells are 0 (holes) instead of B. The output rule: B cells stay B; 0-valued cells on any line row or line col become 4 (marking the hole); 0-valued cells in content regions (off every line) become 4 if any of the four boundary line segments of their enclosing rectangle contains a hole, or 3 if all four boundary segments are intact. Line rows are detected as rows where more than half the cells equal B; line cols similarly. The boundary check for each content cell finds its enclosing region via include-filtered line-row and line-col lists, then tests each of the four segments for any 0-valued cell using a once-wrapped disjunction.
+
+Bugs fixed: None.
+
+What was learned: For box_extract_recolor_by_dots, counting enclosed dots per bounding box is more reliable than any structural analysis of the frame component itself - the dot density directly encodes which box to extract. For fill_grid_regions_by_line_holes, the key insight is that 0-valued line cells (holes) fully determine the 3-vs-4 assignment for all cells in the grid: background cells keep their value, holes on lines become 4, and content cells inherit the hole status of their four surrounding boundary segments. Detecting line rows and cols by a simple majority-background threshold (count > NC/2) is robust across all training pairs.
+
+New tasks solved by wave 58 (2 new tasks): 83302e8f (fill_grid_regions_by_line_holes), fcb5c309 (box_extract_recolor_by_dots).
+
 ATTEMPT 29: WAVE 54 - HALF OVERLAY AND SYMMETRIC OCCLUDER REPAIR - 349 / 400 = 87.25%
 
 Date: 2026-06-20
@@ -1383,10 +1405,12 @@ Run 65: 349 / 400 = 87.25% - Wave 54: two new rules (overlay_halves_at_5sep, rep
 Run 66: 351 / 400 = 87.75% - Wave 55: two new rules (repair_4fold_noise, downscale_3x3_block_grid). Plus 2 tasks.
 
 Run 67: 352 / 400 = 88.00% - Wave 56: one new rule (fill_rect_frame_interiors). Plus 1 task.
-Run 68: 355 / 400 = 88.75% - Wave 57: three new rules (fill_zero_near_one, gravity_to_matching_wall, key_masked_by_block_pattern). Plus 3 tasks. (CURRENT BEST)
+Run 68: 355 / 400 = 88.75% - Wave 57: three new rules (fill_zero_near_one, gravity_to_matching_wall, key_masked_by_block_pattern). Plus 3 tasks.
+
+Run 69: 357 / 400 = 89.25% - Wave 58: two new rules (box_extract_recolor_by_dots, fill_grid_regions_by_line_holes). Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 276 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 278 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1658,6 +1682,8 @@ ALL 276 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 80af3007 - self_similar_block_pattern.
 
+83302e8f - fill_grid_regions_by_line_holes.
+
 834ec97d - trail_4_shift_down.
 
 8403a5d5 - generate_vertical_stripes_from_corner.
@@ -1928,6 +1954,8 @@ b27ca6d3 - draw_3_frame_around_2_clusters.
 
 ef135b50 - fill_horiz_gap_with_9.
 
+fcb5c309 - box_extract_recolor_by_dots.
+
 fcc82909 - fill_below_shape_by_color_count.
 
 025d127b - shift_parallelogram_top.
@@ -1961,7 +1989,7 @@ This paper will be extended with a new attempt entry after every future benchmar
 
 The mountain is still being climbed.
 
-The score at the time of writing is 351 / 400 = 87.75% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
+The score at the time of writing is 357 / 400 = 89.25% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
 
 
 APPENDIX 1: ALL THE HUMAN STEPS FOR SOLVING ARC-AGI PUZZLES
@@ -3178,6 +3206,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 55: 4-Fold Noise Repair and Density-Based Do
 Dison, D. R. (2026). ARC-AGI-1 Wave 56: Rectangular Frame Interior Fill, 352 / 400 = 88.00%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 57: Zero Flood from Ones, Wall Gravity, Block-Pattern Key Mask, 355 / 400 = 88.75%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 58: Box-Dot Extraction and Line-Grid Hole Fill, 357 / 400 = 89.25%. AIU / PrologAI.
 
 
 END OF DOCUMENT
