@@ -1004,7 +1004,7 @@ The path from Acc_60 has six milestones:
 
 1. Piagetian Levels 1, 4, 6, 8 - completed at Acc_67.
 
-2. Full ARC-AGI-1 benchmark run (all 400 public tasks) - in progress. Current score: 346/400 = 86.50% (wave 53, 2026-06-20).
+2. Full ARC-AGI-1 benchmark run (all 400 public tasks) - in progress. Current score: 349/400 = 87.25% (wave 54, 2026-06-20).
 
 3. Live Pokemon emulator connection - open.
 

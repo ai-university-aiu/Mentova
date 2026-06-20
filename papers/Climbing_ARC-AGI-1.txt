@@ -1159,6 +1159,26 @@ What was learned: The diagonal bounce rule reinforces the pattern that staircase
 
 New tasks solved by wave 53 (4 new tasks): 025d127b (shift_parallelogram_top), a78176bb (diagonal_staircase_bounce), f15e1fac (rail_staircase_8s), f8a8fe49 (reflect_5s_through_frame).
 
+ATTEMPT 29: WAVE 54 - HALF OVERLAY AND SYMMETRIC OCCLUDER REPAIR - 349 / 400 = 87.25%
+
+Date: 2026-06-20
+Score: 349 / 400 = 87.25%.
+Previous score: 346 / 400 = 86.50% (wave 53, 2026-06-20).
+Rules added: 2 (both solve their test cases; one rule handles 2 tasks).
+Tasks solved: +3.
+
+What changed: Wave 54 added two new induction rules. The repair_occluded_5x5_block rule handles two tasks with the same underlying algorithm, covering both occluder colors in one Prolog predicate.
+
+The two scoring rules added in wave 54:
+
+overlay_halves_at_5sep (task e98196ab): The input has an all-5 separator row exactly in the center. The two equal halves (above and below the separator) are combined: for each cell position, the output is the nonzero value from either half, with a conflict guard ensuring no position has nonzero values in both halves simultaneously. Output dimensions are half the input height (separator excluded).
+
+repair_occluded_5x5_block (tasks dc0a314f and ff805c23): A non-zero color forms a 5x5 solid rectangular block that masks part of a globally symmetric grid. The rule dynamically identifies the occluder (the color forming exactly 25 contiguous cells in a 5x5 rectangle), then tests whether the horizontal-flip mirror patch or the vertical-flip mirror patch is free of occluder cells. Whichever mirror is valid is used to reconstruct the 5x5 output. dc0a314f (16x16 input, occluder color 3) and ff805c23 (24x24 input, occluder color 1) are both solved by this one rule.
+
+What was learned: Rectangular solid-color blocks in ARC grids almost always serve as occlusion masks. The correct reconstruction axis (h-flip vs. v-flip) can be determined by checking which mirror position is unoccluded. Writing one generic rule that tries both axes covers multiple tasks without needing to hardcode the occluder color.
+
+New tasks solved by wave 54 (3 new tasks): dc0a314f (repair_occluded_5x5_block), e98196ab (overlay_halves_at_5sep), ff805c23 (repair_occluded_5x5_block).
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -1288,10 +1308,12 @@ Run 62: 340 / 400 = 85.00% - Wave 51: two new rules (staircase_from_8, mark_2x2_
 
 Run 63: 342 / 400 = 85.50% - Wave 52: two new rules (mark_zero_lines, tile_3row_pattern). Plus 2 tasks.
 
-Run 64: 346 / 400 = 86.50% - Wave 53: four new rules (rail_staircase_8s, shift_parallelogram_top, reflect_5s_through_frame, diagonal_staircase_bounce). Plus 4 tasks. (CURRENT BEST)
+Run 64: 346 / 400 = 86.50% - Wave 53: four new rules (rail_staircase_8s, shift_parallelogram_top, reflect_5s_through_frame, diagonal_staircase_bounce). Plus 4 tasks.
+
+Run 65: 349 / 400 = 87.25% - Wave 54: two new rules (overlay_halves_at_5sep, repair_occluded_5x5_block) covering 3 tasks. Plus 3 tasks. (CURRENT BEST)
 
 
-ALL 267 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 270 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1831,6 +1853,12 @@ f15e1fac - rail_staircase_8s.
 
 f8a8fe49 - reflect_5s_through_frame.
 
+dc0a314f - repair_occluded_5x5_block.
+
+e98196ab - overlay_halves_at_5sep.
+
+ff805c23 - repair_occluded_5x5_block.
+
 
 WHAT COMES NEXT
 
@@ -1848,7 +1876,7 @@ This paper will be extended with a new attempt entry after every future benchmar
 
 The mountain is still being climbed.
 
-The score at the time of writing is 346 / 400 = 86.50% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
+The score at the time of writing is 349 / 400 = 87.25% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
 
 
 APPENDIX 1: ALL THE HUMAN STEPS FOR SOLVING ARC-AGI PUZZLES
@@ -3057,6 +3085,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 51: Staircase Growth and Connected-Component
 Dison, D. R. (2026). ARC-AGI-1 Wave 52: Zero-Line Marking and Three-Row Tiling, 342 / 400 = 85.50%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 53: Rail Staircase, Parallelogram Shift, Frame Reflection, Diagonal Bounce, 346 / 400 = 86.50%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 54: Half Overlay and Symmetric Occluder Repair, 349 / 400 = 87.25%. AIU / PrologAI.
 
 
 END OF DOCUMENT
