@@ -24676,6 +24676,436 @@ arc_transform(tile_3row_pattern, Grid, Out) :-
     ), W52CRIs, Out).
 
 % ---------------------------------------------------------------------------
+% Wave 53 Rule 1: rail_staircase_8s (task f15e1fac)
+arc_named_rule(rail_staircase_8s).
+% 8-sources in one boundary (row 0, col 0, row NR-1, or col NC-1) and 2-switches
+% in a perpendicular boundary. Each 8 defines a rail extending across the grid;
+% each 2-switch shifts the rail by one step toward the center. 4 modes handled.
+arc_transform(rail_staircase_8s, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row and column size guards.
+    length(Grid, NR), NR =< 30,
+    Grid = [W53AH|_], length(W53AH, NC), NC =< 30,
+    % Compute boundary indices.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Grid may only contain 0, 2, or 8.
+    \+ (member(W53AR, Grid), member(W53AV, W53AR),
+        W53AV =\= 0, W53AV =\= 2, W53AV =\= 8),
+    % Collect all 8-cell positions.
+    findall(W53R8-W53C8, (
+        between(0, NR1, W53R8),
+        nth0(W53R8, Grid, W53Row8),
+        between(0, NC1, W53C8),
+        nth0(W53C8, W53Row8, 8)
+    ), W53EightCells),
+    % Collect all 2-cell positions.
+    findall(W53R2-W53C2, (
+        between(0, NR1, W53R2),
+        nth0(W53R2, Grid, W53Row2),
+        between(0, NC1, W53C2),
+        nth0(W53C2, W53Row2, 2)
+    ), W53TwoCells),
+    % Both sets must be non-empty.
+    W53EightCells \= [], W53TwoCells \= [],
+    % Extract distinct row and col sets for 8s and 2s.
+    findall(W53R8U, member(W53R8U-_, W53EightCells), W53R8L),
+    list_to_set(W53R8L, W53R8Set),
+    findall(W53C8U, member(_-W53C8U, W53EightCells), W53C8L),
+    list_to_set(W53C8L, W53C8Set),
+    findall(W53R2U, member(W53R2U-_, W53TwoCells), W53R2L),
+    list_to_set(W53R2L, W53R2Set),
+    findall(W53C2U, member(_-W53C2U, W53TwoCells), W53C2L),
+    list_to_set(W53C2L, W53C2Set),
+    % Determine mode from boundary placement.
+    (
+        % Mode 1: 8s in row 0, 2s in col 0 -> vertical rails, shift RIGHT.
+        W53R8Set = [0],
+        W53C2Set = [0],
+        \+ member(0, W53R2Set),
+        findall(W53SC1, member(0-W53SC1, W53EightCells), W53SrcCoords),
+        findall(W53SW1, member(W53SW1-0, W53TwoCells), W53SwitchCoords),
+        W53FillMode = vert_right
+    ;
+        % Mode 2: 8s in row 0, 2s in col NC1 -> vertical rails, shift LEFT.
+        W53R8Set = [0],
+        W53C2Set = [NC1],
+        \+ member(0, W53R2Set),
+        findall(W53SC2, member(0-W53SC2, W53EightCells), W53SrcCoords),
+        findall(W53SW2, member(W53SW2-NC1, W53TwoCells), W53SwitchCoords),
+        W53FillMode = vert_left
+    ;
+        % Mode 3: 8s in col 0, 2s in row NR1 -> horizontal rails, shift UP.
+        W53C8Set = [0],
+        W53R2Set = [NR1],
+        \+ member(0, W53C2Set),
+        findall(W53SC3, member(W53SC3-0, W53EightCells), W53SrcCoords),
+        findall(W53SW3, member(NR1-W53SW3, W53TwoCells), W53SwitchCoords),
+        W53FillMode = horiz_up
+    ;
+        % Mode 4: 8s in col NC1, 2s in row NR1 -> horizontal rails left, shift UP.
+        W53C8Set = [NC1],
+        W53R2Set = [NR1],
+        \+ member(NC1, W53C2Set),
+        findall(W53SC4, member(W53SC4-NC1, W53EightCells), W53SrcCoords),
+        findall(W53SW4, member(NR1-W53SW4, W53TwoCells), W53SwitchCoords),
+        W53FillMode = horiz_left
+    ),
+    % Sort sources and switches.
+    sort(W53SrcCoords, W53SortedSrc),
+    sort(W53SwitchCoords, W53SortedSw),
+    % Build output starting from input grid.
+    numlist(0, NR1, W53RIs), numlist(0, NC1, W53CIs),
+    maplist([W53ORI, W53ORow]>>(
+        nth0(W53ORI, Grid, W53IRow),
+        maplist([W53OCI, W53OCV]>>(nth0(W53OCI, W53IRow, W53OCV)), W53CIs, W53ORow)
+    ), W53RIs, W53Base),
+    % Apply rail fill according to mode.
+    (
+        W53FillMode = vert_right
+    ->  w53_fill_vert(W53SortedSrc, W53SortedSw, 0, NR1, NC1, 1, W53Base, Out)
+    ;   W53FillMode = vert_left
+    ->  w53_fill_vert(W53SortedSrc, W53SortedSw, 0, NR1, NC1, -1, W53Base, Out)
+    ;   W53FillMode = horiz_up
+    ->  w53_fill_horiz(W53SortedSrc, W53SortedSw, 0, NC1, NR1, -1, W53Base, Out)
+    ;   % horiz_left: reverse switch order for rightward-to-left traversal.
+        reverse(W53SortedSw, W53SwDesc),
+        w53_fill_horiz_left(W53SortedSrc, W53SwDesc, NC1, 0, NR1, -1, W53Base, Out)
+    ).
+
+% Define w53_fill_vert/8: fill vertical rails with column shifting at switch rows.
+% Args: SrcCols, SwitchRows, StartRow, NR1, NC1, DeltaC, Grid0, GridOut.
+w53_fill_vert(SrcCols, Switches, StartRow, NR1, NC1, DC, G0, GOut) :-
+    % Split switches into next switch and remaining.
+    (   Switches = [SW|RestSW]
+    ->
+        % Fill rows StartRow to SW-1 with SrcCols.
+        SW1 is SW - 1,
+        ( SW1 >= StartRow
+        ->  w53_fill_rows_cols(G0, SrcCols, StartRow, SW1, NC1, G1)
+        ;   G1 = G0
+        ),
+        % Apply shift to SrcCols at the switch row.
+        maplist([C, NC_]>>(NC_ is C + DC), SrcCols, ShiftedRaw),
+        include([C]>>(C >= 0, C =< NC1), ShiftedRaw, ShiftedCols),
+        % Continue filling from switch row onwards.
+        w53_fill_vert(ShiftedCols, RestSW, SW, NR1, NC1, DC, G1, GOut)
+    ;
+        % No more switches: fill StartRow to NR1 with SrcCols.
+        w53_fill_rows_cols(G0, SrcCols, StartRow, NR1, NC1, GOut)
+    ).
+
+% Define w53_fill_rows_cols/6: fill all cells (R,C) for R in [R0,R1] and C in Cols with 8.
+w53_fill_rows_cols(G0, Cols, R0, R1, NC1, GOut) :-
+    % Enumerate rows to fill.
+    ( R0 > R1
+    ->  GOut = G0
+    ;   numlist(R0, R1, Rows),
+        foldl([Row, Gin, Gout]>>(
+            w53_set_cells_in_row(Gin, Row, Cols, NC1, Gout)
+        ), Rows, G0, GOut)
+    ).
+
+% Define w53_set_cells_in_row/5: set all columns Cols in Row to 8.
+w53_set_cells_in_row(G0, Row, Cols, NC1, GOut) :-
+    % Apply each column update to the grid.
+    foldl([Col, Gin, Gout]>>(
+        ( Col >= 0, Col =< NC1
+        ->  w53_set_cell(Gin, Row, Col, 8, Gout)
+        ;   Gout = Gin
+        )
+    ), Cols, G0, GOut).
+
+% Define w53_set_cell/5: set cell (R,C) to Val in a list-of-lists grid.
+w53_set_cell(G0, R, C, Val, GOut) :-
+    % Replace the cell at row R, col C with Val.
+    nth0(R, G0, OldRow),
+    w53_replace_nth0(OldRow, C, Val, NewRow),
+    w53_replace_nth0(G0, R, NewRow, GOut).
+
+% Define w53_replace_nth0/4: replace element at index I in list with Val.
+w53_replace_nth0([_|T], 0, Val, [Val|T]) :- !.
+w53_replace_nth0([H|T], I, Val, [H|T2]) :-
+    I > 0, I1 is I - 1,
+    w53_replace_nth0(T, I1, Val, T2).
+
+% Define w53_fill_horiz/8: fill horizontal rails going RIGHT with row shifting at switch cols.
+w53_fill_horiz(SrcRows, Switches, StartCol, NC1, NR1, DR, G0, GOut) :-
+    (   Switches = [SW|RestSW]
+    ->
+        SW1 is SW - 1,
+        ( SW1 >= StartCol
+        ->  w53_fill_cols_rows(G0, SrcRows, StartCol, SW1, NR1, G1)
+        ;   G1 = G0
+        ),
+        maplist([Rv, NRv]>>(NRv is Rv + DR), SrcRows, ShiftedRaw),
+        include([Rv]>>(Rv >= 0, Rv =< NR1), ShiftedRaw, ShiftedRows),
+        w53_fill_horiz(ShiftedRows, RestSW, SW, NC1, NR1, DR, G1, GOut)
+    ;
+        w53_fill_cols_rows(G0, SrcRows, StartCol, NC1, NR1, GOut)
+    ).
+
+% Define w53_fill_cols_rows/6: fill all cells (R,C) for C in [C0,C1] and R in Rows with 8.
+w53_fill_cols_rows(G0, Rows, C0, C1, NR1, GOut) :-
+    ( C0 > C1
+    ->  GOut = G0
+    ;   numlist(C0, C1, Cols),
+        foldl([Col, Gin, Gout]>>(
+            foldl([Row, Gin2, Gout2]>>(
+                ( Row >= 0, Row =< NR1
+                ->  w53_set_cell(Gin2, Row, Col, 8, Gout2)
+                ;   Gout2 = Gin2
+                )
+            ), Rows, Gin, Gout)
+        ), Cols, G0, GOut)
+    ).
+
+% Define w53_fill_horiz_left/8: fill horizontal rails going LEFT (NC1 to 0) with row shift.
+% Switches are in DESCENDING order (largest col first).
+w53_fill_horiz_left(SrcRows, Switches, StartCol, _MinCol, NR1, DR, G0, GOut) :-
+    (   Switches = [SW|RestSW]
+    ->
+        % Fill cols SW+1 to StartCol at current rows.
+        SW1 is SW + 1,
+        ( SW1 =< StartCol
+        ->  w53_fill_cols_rows(G0, SrcRows, SW1, StartCol, NR1, G1)
+        ;   G1 = G0
+        ),
+        maplist([Rv, NRv]>>(NRv is Rv + DR), SrcRows, ShiftedRaw),
+        include([Rv]>>(Rv >= 0, Rv =< NR1), ShiftedRaw, ShiftedRows),
+        w53_fill_horiz_left(ShiftedRows, RestSW, SW, 0, NR1, DR, G1, GOut)
+    ;
+        % No more switches: fill cols 0 to StartCol at current rows.
+        w53_fill_cols_rows(G0, SrcRows, 0, StartCol, NR1, GOut)
+    ).
+
+% ---------------------------------------------------------------------------
+% Wave 53 Rule B: shift_parallelogram_top (task 025d127b)
+% ---------------------------------------------------------------------------
+
+% Register shift_parallelogram_top as a named rule.
+arc_named_rule(shift_parallelogram_top).
+% Non-bottom, non-right-anchor cells of each color shift right by 1 column.
+arc_transform(shift_parallelogram_top, Grid, Out) :-
+    % Cut for determinism.
+    !,
+    % Bind NR to number of rows.
+    length(Grid, NR), NR =< 30,
+    % Bind NC via first row.
+    Grid = [W53BH|_], length(W53BH, NC), NC =< 30,
+    % Compute 0-based last indices.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Collect all non-zero values in the grid.
+    findall(V, (nth0(_, Grid, Row), nth0(_, Row, V), V =\= 0), W53BVsRaw),
+    % Deduplicate and require at least one value.
+    sort(W53BVsRaw, W53BVals), W53BVals \= [],
+    % For each value compute new (R, NewC, V) triples after the shift.
+    findall(W53BR-W53BNewC-W53BV, (
+        % Pick a value.
+        member(W53BV, W53BVals),
+        % Find all cells of this value.
+        findall(W53BRx-W53BCx,
+            (between(0, NR1, W53BRx), nth0(W53BRx, Grid, W53BRowx),
+             nth0(W53BCx, W53BRowx, W53BV)),
+            W53BCells),
+        % Skip empty cell lists.
+        W53BCells \= [],
+        % Bottom row = maximum row index for this value.
+        findall(W53BRx, member(W53BRx-_, W53BCells), W53BRs),
+        max_list(W53BRs, W53BBotR),
+        % Right anchor = maximum col in the bottom row.
+        findall(W53BCx, member(W53BBotR-W53BCx, W53BCells), W53BBotCs),
+        max_list(W53BBotCs, W53BAncC),
+        % Compute new column for each cell.
+        member(W53BR-W53BC, W53BCells),
+        % Bottom-row cells: no column shift.
+        ( W53BR =:= W53BBotR -> W53BNewC = W53BC
+        % Right-anchor cells: no column shift.
+        ; W53BC =:= W53BAncC -> W53BNewC = W53BC
+        % All other cells: shift right by 1.
+        ; W53BNewC is W53BC + 1 ),
+        % Shifted column must remain in bounds.
+        W53BNewC =< NC1
+    ), W53BNewCells),
+    % Require non-empty result.
+    W53BNewCells \= [],
+    % Build output row by row.
+    numlist(0, NR1, W53BRIs), numlist(0, NC1, W53BCIs),
+    % Map each row index to an output row.
+    maplist([W53BRI, W53BOutRow]>>(
+        % Map each column index to an output cell value.
+        maplist([W53BCI, W53BOV]>>(
+            % Destination present: use that value; otherwise zero.
+            ( member(W53BRI-W53BCI-W53BV2, W53BNewCells) -> W53BOV = W53BV2
+            ; W53BOV = 0 )
+        ), W53BCIs, W53BOutRow)
+    ), W53BRIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 53 Rule C: reflect_5s_through_frame (task f8a8fe49)
+% ---------------------------------------------------------------------------
+
+% Register reflect_5s_through_frame as a named rule.
+arc_named_rule(reflect_5s_through_frame).
+% Interior 5-cells reflect outward through the nearest boundary of a 2-frame.
+arc_transform(reflect_5s_through_frame, Grid, Out) :-
+    % Cut for determinism.
+    !,
+    % Bind NR to number of rows.
+    length(Grid, NR), NR =< 30,
+    % Bind NC via first row.
+    Grid = [W53CH|_], length(W53CH, NC), NC =< 30,
+    % Compute 0-based last indices.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Grid must contain only 0s, 2s, and 5s.
+    \+ (nth0(_, Grid, W53CRow0), nth0(_, W53CRow0, W53CV0),
+        W53CV0 =\= 0, W53CV0 =\= 2, W53CV0 =\= 5),
+    % Collect all 2-cells (the frame boundary).
+    findall(W53CR-W53CC,
+        (between(0, NR1, W53CR), nth0(W53CR, Grid, W53CRow),
+         nth0(W53CC, W53CRow, 2)),
+        W53CTwoCells),
+    % Frame must be non-empty.
+    W53CTwoCells \= [],
+    % Bounding box of the 2-frame.
+    findall(W53CR, member(W53CR-_, W53CTwoCells), W53CTwoRs),
+    min_list(W53CTwoRs, W53CTopR), max_list(W53CTwoRs, W53CBotR),
+    findall(W53CC, member(_-W53CC, W53CTwoCells), W53CTwoCs),
+    min_list(W53CTwoCs, W53CLeftC), max_list(W53CTwoCs, W53CRightC),
+    % Frame must have positive height and width.
+    W53CTopR < W53CBotR, W53CLeftC < W53CRightC,
+    % Determine reflection direction: vertical if top edge is complete.
+    ( forall(between(W53CLeftC, W53CRightC, W53CFC),
+             member(W53CTopR-W53CFC, W53CTwoCells))
+    -> W53CTopComplete = true ; W53CTopComplete = false ),
+    % Find 5-cells strictly inside the frame.
+    findall(W53CR-W53CC,
+        (between(0, NR1, W53CR), nth0(W53CR, Grid, W53CRow),
+         nth0(W53CC, W53CRow, 5),
+         W53CR > W53CTopR, W53CR < W53CBotR,
+         W53CC > W53CLeftC, W53CC < W53CRightC),
+        W53CFiveCells),
+    % At least one interior 5-cell required.
+    W53CFiveCells \= [],
+    % Compute reflected destination for each interior 5-cell.
+    findall(W53CNewR-W53CNewC, (
+        member(W53CR-W53CC, W53CFiveCells),
+        ( W53CTopComplete = true ->
+            % Vertical reflection through nearest row boundary.
+            W53CDT is W53CR - W53CTopR,
+            W53CDB is W53CBotR - W53CR,
+            ( W53CDT =< W53CDB
+            -> W53CNewR is 2*W53CTopR - W53CR
+            ;  W53CNewR is 2*W53CBotR - W53CR ),
+            W53CNewC = W53CC
+        ;
+            % Horizontal reflection through nearest col boundary.
+            W53CDL is W53CC - W53CLeftC,
+            W53CDR is W53CRightC - W53CC,
+            W53CNewR = W53CR,
+            ( W53CDL =< W53CDR
+            -> W53CNewC is 2*W53CLeftC - W53CC
+            ;  W53CNewC is 2*W53CRightC - W53CC )
+        ),
+        % Reflected position must stay in grid bounds.
+        W53CNewR >= 0, W53CNewR =< NR1,
+        W53CNewC >= 0, W53CNewC =< NC1
+    ), W53CNewFives),
+    % At least one reflected position required.
+    W53CNewFives \= [],
+    % Build output grid.
+    numlist(0, NR1, W53CRIs), numlist(0, NC1, W53CCIs),
+    % Map each row index to an output row.
+    maplist([W53CRI, W53COutRow]>>(
+        % Get the corresponding input row.
+        nth0(W53CRI, Grid, W53CInRow),
+        % Map each column index to an output cell value.
+        maplist([W53CCI, W53COV]>>(
+            % Get the input cell value.
+            nth0(W53CCI, W53CInRow, W53CInV),
+            % New reflected 5 takes priority over removing old 5.
+            ( member(W53CRI-W53CCI, W53CNewFives) -> W53COV = 5
+            % Interior 5-cells are removed.
+            ; member(W53CRI-W53CCI, W53CFiveCells) -> W53COV = 0
+            % All other cells retain their input value.
+            ; W53COV = W53CInV )
+        ), W53CCIs, W53COutRow)
+    ), W53CRIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 53 Rule D: diagonal_staircase_bounce (task a78176bb)
+% ---------------------------------------------------------------------------
+
+% Register diagonal_staircase_bounce as a named rule.
+arc_named_rule(diagonal_staircase_bounce).
+% A diagonal of V-cells with adjacent 5-staircases: each staircase spawns a new parallel diagonal.
+arc_transform(diagonal_staircase_bounce, Grid, Out) :-
+    % Cut for determinism.
+    !,
+    % Bind NR to number of rows.
+    length(Grid, NR), NR =< 30,
+    % Bind NC via first row.
+    Grid = [W53DH|_], length(W53DH, NC), NC =< 30,
+    % Compute 0-based last indices.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Exactly one non-5 non-0 value present.
+    findall(W53DV, (nth0(_, Grid, W53DRow0), nth0(_, W53DRow0, W53DV),
+                    W53DV =\= 0, W53DV =\= 5), W53DVRaw),
+    % Deduplicate and require exactly one value.
+    sort(W53DVRaw, [W53DVal]),
+    % Find all cells of that value.
+    findall(W53DR-W53DC, (between(0, NR1, W53DR), nth0(W53DR, Grid, W53DRow1),
+                           nth0(W53DC, W53DRow1, W53DVal)), W53DVCells),
+    % Require non-empty diagonal.
+    W53DVCells \= [],
+    % All V-cells must share one col-minus-row constant.
+    findall(W53DD, (member(W53DR-W53DC, W53DVCells), W53DD is W53DC - W53DR), W53DDList),
+    sort(W53DDList, [W53DDiag]),
+    % Find all 5-cells.
+    findall(W53DR-W53DC, (between(0, NR1, W53DR), nth0(W53DR, Grid, W53DRow2),
+                           nth0(W53DC, W53DRow2, 5)), W53DFiveCells),
+    % Require at least one 5-cell.
+    W53DFiveCells \= [],
+    % Right staircase: 5s at col-row > DiagD.
+    findall(W53DOff, (member(W53DR-W53DC, W53DFiveCells),
+                       W53DOff is (W53DC - W53DR) - W53DDiag, W53DOff > 0), W53DRightOffs),
+    % Left staircase: 5s at col-row < DiagD.
+    findall(W53DOff, (member(W53DR-W53DC, W53DFiveCells),
+                       W53DOff is W53DDiag - (W53DC - W53DR), W53DOff > 0), W53DLeftOffs),
+    % Build right new diagonal positions if right staircase exists.
+    ( W53DRightOffs \= [] ->
+        max_list(W53DRightOffs, W53DRMax),
+        W53DNRDiag is W53DDiag + W53DRMax + 2,
+        findall(R-C, (between(0, NR1, R), C is R + W53DNRDiag, C >= 0, C =< NC1), W53DRightNew)
+    ;   W53DRightNew = [] ),
+    % Build left new diagonal positions if left staircase exists.
+    ( W53DLeftOffs \= [] ->
+        max_list(W53DLeftOffs, W53DLMax),
+        W53DNLDiag is W53DDiag - W53DLMax - 2,
+        findall(R-C, (between(0, NR1, R), C is R + W53DNLDiag, C >= 0, C =< NC1), W53DLeftNew)
+    ;   W53DLeftNew = [] ),
+    % At least one new diagonal cell required.
+    append(W53DRightNew, W53DLeftNew, W53DNewCells),
+    W53DNewCells \= [],
+    % Build output grid.
+    numlist(0, NR1, W53DRIs), numlist(0, NC1, W53DCIs),
+    % Map each row to an output row.
+    maplist([W53DRI, W53DOutRow]>>(
+        % Get input row.
+        nth0(W53DRI, Grid, W53DInRow),
+        % Map each column to an output value.
+        maplist([W53DCI, W53DOV]>>(
+            nth0(W53DCI, W53DInRow, W53DInV),
+            % New diagonal cell: place V.
+            ( member(W53DRI-W53DCI, W53DNewCells) -> W53DOV = W53DVal
+            % 5-cell: remove it.
+            ; W53DInV =:= 5 -> W53DOV = 0
+            % All others: keep original.
+            ; W53DOV = W53DInV )
+        ), W53DCIs, W53DOutRow)
+    ), W53DRIs, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
