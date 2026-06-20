@@ -24356,157 +24356,15 @@ w51b_run_end(W51BCur, [W51BH|W51BT], W51BEnd, W51BRem) :-
     ).
 
 % ---------------------------------------------------------------------------
-% Wave 51 Rule 3: fill_rect_frame_interior (task e73095fd)
-arc_named_rule(fill_rect_frame_interior).
-% Fill 0-cells enclosed inside closed rectangular 5-frames with 4.
-% Grid boundary acts as a wall when a 5-frame abuts it.
-arc_transform(fill_rect_frame_interior, Grid, Out) :-
-    % Determinism cut.
-    !,
-    % Row size guard.
-    length(Grid, NR), NR =< 30,
-    % Column size guard.
-    Grid = [W51CH|_], length(W51CH, NC), NC =< 30,
-    % Grid must contain only 0s and 5s.
-    \+ (member(W51CRow, Grid), member(W51CV, W51CRow), W51CV =\= 0, W51CV =\= 5),
-    % Must have at least one 5 in the grid.
-    once((member(W51CChk, Grid), member(5, W51CChk))),
-    NR1 is NR - 1, NC1 is NC - 1,
-    % Find all 0-cells that are enclosed inside a valid rectangular 5-frame.
-    findall(W51FR-W51FC, (
-        % Scan all rows.
-        between(0, NR1, W51FR), nth0(W51FR, Grid, W51FRow),
-        % Scan all columns.
-        between(0, NC1, W51FC), nth0(W51FC, W51FRow, 0),
-        % Check enclosure.
-        w51c_enclosed(W51FR, W51FC, Grid, NR, NC)
-    ), W51FourCells),
-    % Must fill at least one cell.
-    W51FourCells \= [],
-    numlist(0, NR1, W51CRIs),
-    numlist(0, NC1, W51CCIs),
-    maplist([W51ORI, W51ORow]>>(
-        % Fetch original row.
-        nth0(W51ORI, Grid, W51IGRow),
-        maplist([W51OCI, W51OCV]>>(
-            % Preserve 5s.
-            ( nth0(W51OCI, W51IGRow, 5)
-            -> W51OCV = 5
-            % Fill enclosed 0-cells with 4.
-            ; member(W51ORI-W51OCI, W51FourCells)
-            -> W51OCV = 4
-            % All other cells remain 0.
-            ; W51OCV = 0
-            )
-        ), W51CCIs, W51ORow)
-    ), W51CRIs, Out).
+% Wave 51 Rule 3: fill_rect_frame_interior (task e73095fd) — superseded by wave 56 rule A
+% (fill_rect_frame_interiors). The wave 51 implementation had false-positive boundary
+% frames; removed to allow the corrected rule to apply.
+% ---------------------------------------------------------------------------
+% (arc_transform for fill_rect_frame_interior removed — superseded by fill_rect_frame_interiors)
 
-% w51c_enclosed/5: true if cell (R,C) is enclosed inside a closed rectangular 5-frame.
-% Top and bottom frame walls must be actual 5-cell rows (grid boundary is not allowed
-% for top/bottom). Left and right boundaries may use the grid edge as a wall.
-w51c_enclosed(W51R, W51C, W51Grid, W51NR, W51NC) :-
-    % Compute last valid row and column indices.
-    W51NR1 is W51NR - 1, W51NC1 is W51NC - 1,
-    % Find nearest 5 ABOVE cell in column C — must exist (no top-boundary fallback).
-    W51R1up is W51R - 1,
-    % Require at least one row above.
-    W51R1up >= 0,
-    findall(W51Rr, (between(0, W51R1up, W51Rr),
-                    nth0(W51Rr, W51Grid, W51AbRow),
-                    nth0(W51C, W51AbRow, 5)), W51AboveRows),
-    % There must be an actual 5-row above.
-    W51AboveRows \= [],
-    last(W51AboveRows, W51RTop),
-    % Find nearest 5 BELOW cell in column C — must exist (no bottom-boundary fallback).
-    W51R1dn is W51R + 1,
-    % Require at least one row below.
-    W51R1dn =< W51NR1,
-    findall(W51Rb, (between(W51R1dn, W51NR1, W51Rb),
-                    nth0(W51Rb, W51Grid, W51BelRow),
-                    nth0(W51C, W51BelRow, 5)), W51BelowRows),
-    % There must be an actual 5-row below.
-    W51BelowRows \= [],
-    W51BelowRows = [W51RBot|_],
-    % Fetch row R for left/right searches.
-    nth0(W51R, W51Grid, W51RRow),
-    % Find nearest 5 (or left grid boundary) to the left of cell in row R.
-    ( W51C =:= 0
-    -> W51CLeft = -1
-    ; W51C1lt is W51C - 1,
-      findall(W51Cl, (between(0, W51C1lt, W51Cl), nth0(W51Cl, W51RRow, 5)), W51LeftCols),
-      ( W51LeftCols = [] -> W51CLeft = -1 ; last(W51LeftCols, W51CLeft) )
-    ),
-    % Find nearest 5 (or right grid boundary) to the right of cell in row R.
-    ( W51C =:= W51NC1
-    -> W51CRight = W51NC
-    ; W51C1rt is W51C + 1,
-      findall(W51Cr, (between(W51C1rt, W51NC1, W51Cr), nth0(W51Cr, W51RRow, 5)), W51RightCols),
-      ( W51RightCols = [] -> W51CRight = W51NC ; W51RightCols = [W51CRight|_] )
-    ),
-    % Verify top wall: row RTop from col CLeft to CRight is all 5 (or boundary).
-    w51c_row_all5(W51RTop, W51CLeft, W51CRight, W51Grid, W51NR, W51NC),
-    % Verify bottom wall: row RBot from col CLeft to CRight is all 5 (or boundary).
-    w51c_row_all5(W51RBot, W51CLeft, W51CRight, W51Grid, W51NR, W51NC),
-    % Verify left wall: col CLeft from row RTop to RBot is all 5 (or boundary).
-    w51c_col_all5(W51CLeft, W51RTop, W51RBot, W51Grid, W51NR, W51NC),
-    % Verify right wall: col CRight from row RTop to RBot is all 5 (or boundary).
-    w51c_col_all5(W51CRight, W51RTop, W51RBot, W51Grid, W51NR, W51NC),
-    % Verify all interior cells (strictly inside the frame) are 0.
-    w51c_interior_all0(W51RTop, W51RBot, W51CLeft, W51CRight, W51Grid, W51NR, W51NC).
-
-% w51c_row_all5/6: all cells in row R from col C1 to C2 are 5; boundary rows always pass.
-w51c_row_all5(W51R, W51C1, W51C2, W51Grid, W51NR, W51NC) :-
-    % Top boundary (-1) always passes.
-    ( W51R =:= -1 -> true
-    % Bottom boundary (NR) always passes.
-    ; W51R =:= W51NR -> true
-    ; nth0(W51R, W51Grid, W51RowR),
-      % Clamp column range to grid bounds.
-      W51AC1 is max(0, W51C1),
-      W51AC2 is min(W51NC - 1, W51C2),
-      % Empty range always passes.
-      ( W51AC1 > W51AC2 -> true
-      % Fail if any cell in range is not 5.
-      ; \+ (between(W51AC1, W51AC2, W51CC), nth0(W51CC, W51RowR, W51V), W51V =\= 5)
-      )
-    ).
-
-% w51c_col_all5/6: all cells in col C from row R1 to R2 are 5; boundary cols always pass.
-w51c_col_all5(W51C, W51R1, W51R2, W51Grid, W51NR, W51NC) :-
-    % Left boundary (-1) always passes.
-    ( W51C =:= -1 -> true
-    % Right boundary (NC) always passes.
-    ; W51C =:= W51NC -> true
-    ; % Clamp row range to grid bounds.
-      W51AR1 is max(0, W51R1),
-      W51AR2 is min(W51NR - 1, W51R2),
-      % Empty range always passes.
-      ( W51AR1 > W51AR2 -> true
-      % Fail if any cell in range is not 5.
-      ; \+ (between(W51AR1, W51AR2, W51RR),
-            nth0(W51RR, W51Grid, W51CColRow),
-            nth0(W51C, W51CColRow, W51V), W51V =\= 5)
-      )
-    ).
-
-% w51c_interior_all0/7: all cells strictly inside the bounding rectangle are 0.
-w51c_interior_all0(W51RTop, W51RBot, W51CLeft, W51CRight, W51Grid, W51NR, W51NC) :-
-    % Compute interior row and column ranges.
-    W51IR1 is W51RTop + 1, W51IR2 is W51RBot - 1,
-    W51IC1 is W51CLeft + 1, W51IC2 is W51CRight - 1,
-    % Clamp to grid bounds.
-    W51AIR1 is max(0, W51IR1), W51AIR2 is min(W51NR - 1, W51IR2),
-    W51AIC1 is max(0, W51IC1), W51AIC2 is min(W51NC - 1, W51IC2),
-    % Empty interior always passes.
-    ( W51AIR1 > W51AIR2 -> true
-    ; W51AIC1 > W51AIC2 -> true
-    % Fail if any interior cell is non-zero.
-    ; \+ (between(W51AIR1, W51AIR2, W51IRR),
-          nth0(W51IRR, W51Grid, W51IRow),
-          between(W51AIC1, W51AIC2, W51ICC),
-          nth0(W51ICC, W51IRow, W51IV),
-          W51IV =\= 0)
-    ).
+% (w51c_enclosed and helper predicates removed — superseded by wave 56 rule A)
+% Dummy clause to satisfy any lingering cross-references (unreachable in normal flow).
+w51c_enclosed(_, _, _, _, _) :- !, fail.
 
 % ---------------------------------------------------------------------------
 % Wave 52 Rule 1: split_5s_by_2x2 (task 150deff5)
@@ -25403,6 +25261,128 @@ arc_transform(downscale_3x3_block_grid, Grid, Out) :-
             ( W55BHitCount > W55BThresh -> W55BOV = W55BNoiseColor ; W55BOV = 0 )
         ), W55BBlockIs, W55BOutRow)
     ), W55BBlockIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 56 Rule A: fill_rect_frame_interiors (task e73095fd)
+% ---------------------------------------------------------------------------
+% Grids contain 5-walled rectangular frames; output fills each interior with 4.
+% Handles full frames and frames that open flush against a grid boundary.
+% ---------------------------------------------------------------------------
+
+% Succeed iff every cell in row R of Grid, columns C1 through C2, equals 5.
+w56a_row_all5(Grid, R, C1, C2) :-
+    % Retrieve row R from Grid.
+    nth0(R, Grid, W56ARow),
+    % Check every column in [C1..C2] holds value 5.
+    forall(between(C1, C2, W56AC), nth0(W56AC, W56ARow, 5)).
+
+% Succeed iff every cell in column C of Grid, rows R1 through R2, equals 5.
+w56a_col_all5(Grid, C, R1, R2) :-
+    % Check every row in [R1..R2] at column C holds value 5.
+    forall(between(R1, R2, W56AR), (nth0(W56AR, Grid, W56ARRow), nth0(C, W56ARRow, 5))).
+
+% Case 1: full rectangular frame — all four sides are complete 5-bars.
+w56a_frame_interior(Grid, NR1, NC1, R, C) :-
+    % Choose top row R1; bottom row R2 must be at least 2 beyond R1.
+    between(0, NR1, W56AR1), W56AR2lo is W56AR1 + 2, between(W56AR2lo, NR1, W56AR2),
+    % Choose left col C1; right col C2 must be at least 2 beyond C1.
+    between(0, NC1, W56AC1), W56AC2lo is W56AC1 + 2, between(W56AC2lo, NC1, W56AC2),
+    % Top row all 5 from C1 to C2.
+    w56a_row_all5(Grid, W56AR1, W56AC1, W56AC2),
+    % Bottom row all 5 from C1 to C2.
+    w56a_row_all5(Grid, W56AR2, W56AC1, W56AC2),
+    % Left column all 5 from R1 to R2.
+    w56a_col_all5(Grid, W56AC1, W56AR1, W56AR2),
+    % Right column all 5 from R1 to R2.
+    w56a_col_all5(Grid, W56AC2, W56AR1, W56AR2),
+    % Interior row and column bounds (exclusive of the border).
+    W56ARilo is W56AR1 + 1, W56ARihi is W56AR2 - 1,
+    W56ACilo is W56AC1 + 1, W56ACihi is W56AC2 - 1,
+    % Generate each interior cell position.
+    between(W56ARilo, W56ARihi, R),
+    between(W56ACilo, W56ACihi, C).
+
+% Case 2: right-boundary frame — left wall complete, top/bottom extend to last column.
+w56a_frame_interior(Grid, NR1, NC1, R, C) :-
+    % Choose rows R1 and R2 (at least 2 apart).
+    between(0, NR1, W56AR1), W56AR2lo is W56AR1 + 2, between(W56AR2lo, NR1, W56AR2),
+    % Left wall C1 in [1..NC-2] so cell C1-1 exists and last col NC1 > C1.
+    W56AC1max is NC1 - 1,
+    between(1, W56AC1max, W56AC1),
+    % Index one step left of the left wall.
+    W56AC1m is W56AC1 - 1,
+    % Cell left of C1 on the top row must NOT be 5 (exact frame width).
+    nth0(W56AR1, Grid, W56ATROW2), nth0(W56AC1m, W56ATROW2, W56ARBTV1), W56ARBTV1 \= 5,
+    % Cell left of C1 on the bottom row must NOT be 5.
+    nth0(W56AR2, Grid, W56ABROW2), nth0(W56AC1m, W56ABROW2, W56ARBTV2), W56ARBTV2 \= 5,
+    % Top row from C1 to last column all 5.
+    w56a_row_all5(Grid, W56AR1, W56AC1, NC1),
+    % Bottom row from C1 to last column all 5.
+    w56a_row_all5(Grid, W56AR2, W56AC1, NC1),
+    % Left wall column all 5 from R1 to R2.
+    w56a_col_all5(Grid, W56AC1, W56AR1, W56AR2),
+    % Interior rows: R1+1..R2-1; interior cols: C1+1..NC1 (against right boundary).
+    W56ARilo is W56AR1 + 1, W56ARihi is W56AR2 - 1,
+    W56ACilo is W56AC1 + 1,
+    between(W56ARilo, W56ARihi, R),
+    between(W56ACilo, NC1, C).
+
+% Case 3: left-boundary frame — right wall complete, top/bottom extend from column 0.
+w56a_frame_interior(Grid, NR1, NC1, R, C) :-
+    % Choose rows R1 and R2 (at least 2 apart).
+    between(0, NR1, W56AR1), W56AR2lo is W56AR1 + 2, between(W56AR2lo, NR1, W56AR2),
+    % Right wall C2 in [1..NC-2] so cell C2+1 exists.
+    W56AC2max is NC1 - 1,
+    between(1, W56AC2max, W56AC2),
+    % Index one step right of the right wall.
+    W56AC2p is W56AC2 + 1,
+    % Cell right of C2 on the top row must NOT be 5 (exact frame width).
+    nth0(W56AR1, Grid, W56ATLRW), nth0(W56AC2p, W56ATLRW, W56ALBTV1), W56ALBTV1 \= 5,
+    % Cell right of C2 on the bottom row must NOT be 5.
+    nth0(W56AR2, Grid, W56ABLRW), nth0(W56AC2p, W56ABLRW, W56ALBTV2), W56ALBTV2 \= 5,
+    % Top row from column 0 to C2 all 5.
+    w56a_row_all5(Grid, W56AR1, 0, W56AC2),
+    % Bottom row from column 0 to C2 all 5.
+    w56a_row_all5(Grid, W56AR2, 0, W56AC2),
+    % Right wall column all 5 from R1 to R2.
+    w56a_col_all5(Grid, W56AC2, W56AR1, W56AR2),
+    % Interior rows: R1+1..R2-1; interior cols: 0..C2-1 (against left boundary).
+    W56ARilo is W56AR1 + 1, W56ARihi is W56AR2 - 1,
+    W56ACihi is W56AC2 - 1,
+    between(W56ARilo, W56ARihi, R),
+    between(0, W56ACihi, C).
+
+arc_named_rule(fill_rect_frame_interiors).
+% Input grid has 5-walled rectangular frames; output fills each interior with 4.
+arc_transform(fill_rect_frame_interiors, Grid, Out) :-
+    % Cut to make rule deterministic.
+    !, length(Grid, NR), NR =< 30,
+    % Bind header row and check column count.
+    Grid = [W56AH0|_], length(W56AH0, NC), NC =< 30,
+    % Maximum valid row and column indices.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Collect all (R,C) interior positions from all valid frames.
+    findall(W56AR-W56AC,
+        w56a_frame_interior(Grid, NR1, NC1, W56AR, W56AC),
+        W56AInteriorRaw),
+    % Remove duplicates (a cell may lie inside multiple nested frames).
+    sort(W56AInteriorRaw, W56AInterior),
+    % Row and column index lists for maplist iteration.
+    numlist(0, NR1, W56ARIs), numlist(0, NC1, W56ACIs),
+    % Build each output row.
+    maplist([W56ARI, W56AOutRow]>>(
+        % Fetch input row.
+        nth0(W56ARI, Grid, W56AInRow),
+        % Build each output cell.
+        maplist([W56ACI, W56AOV]>>(
+            % Fetch input cell value.
+            nth0(W56ACI, W56AInRow, W56AInV),
+            % Replace 0 with 4 if this cell is in the interior set; keep otherwise.
+            ( W56AInV =:= 0, memberchk(W56ARI-W56ACI, W56AInterior)
+            -> W56AOV = 4
+            ;  W56AOV = W56AInV )
+        ), W56ACIs, W56AOutRow)
+    ), W56ARIs, Out).
 
 % ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
