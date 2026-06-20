@@ -1203,6 +1203,30 @@ What was learned: Rule ordering in arc_induce_rule_400 matters - if a buggy rule
 
 New tasks solved by wave 56 (1 new task): e73095fd (fill_rect_frame_interiors).
 
+ATTEMPT 32: WAVE 57 - ZERO FLOOD FROM ONES, WALL GRAVITY, BLOCK-PATTERN KEY MASK - 355 / 400 = 88.75%
+
+Date: 2026-06-20
+Score: 355 / 400 = 88.75%.
+Previous score: 352 / 400 = 88.00% (wave 56, 2026-06-20).
+Rules added: 3 (each solves its test case).
+Tasks solved: +3.
+
+What changed: Wave 57 added three new induction rules targeting three structurally distinct tasks from the remaining 48 unsolved tasks.
+
+The three scoring rules added in wave 57:
+
+fill_zero_near_one (task 9edfc990): The input is a noisy grid with values 0-9 scattered throughout. It also contains value-1 cells at scattered positions. The zero cells form multiple disconnected 4-connected components of varying sizes. The rule classifies each zero-component by adjacency: if any cell in the component is 4-adjacent to a value-1 cell, the entire component is filled with 1 in the output. Components with no value-1 neighbor stay 0. Non-zero cells are unchanged. The implementation uses arc_connected_components to find all zero-color components, then tests each component for value-1 adjacency using a helper w57a_zero_comp_adj1.
+
+gravity_to_matching_wall (task d687bc17): The input is a rectangular room framed by four distinct wall colors: top row (one color), bottom row (another), left column (third), right column (fourth). Corners are 0. Interior cells may contain scattered non-zero values. The rule slides each matching interior value to the first position adjacent to its wall: left-matching values go to col 2, right-matching to col NC-1, top-matching to row 2, bottom-matching to row NR-1. Values that match none of the four wall colors are erased. Border cells are unchanged. The output is built by treating border cells as fixed, clearing all interior cells, then placing moved values at their target positions.
+
+key_masked_by_block_pattern (task 6ecd11f4): The input has two distinct sub-regions. The block region is a regular NxM meta-grid of uniform sub-blocks: each sub-block is either entirely filled with one repeated color (the block color) or entirely 0. The block color is identified as the most frequent non-zero value in the grid. The key region is a small NxM patch of varied colored values at a separate location. The rule finds the key bounding box from non-{0, block-color} cells, finds the block bounding box from block-color cells outside the key area, computes the sub-block size as block-dims divided by key-dims, then builds the output: for each meta-position (i,j), the output cell is key(i,j) if the block at (i,j) is filled, else 0. Handles the case where the key itself contains cells with value equal to the block color by excluding the key area when computing the block bounding box.
+
+Bugs fixed: None.
+
+What was learned: Zero-component classification by adjacency to seed values is a powerful pattern. The key insight for fill_zero_near_one was that the rule is NOT about component size (small vs large) but about proximity to the value-1 seeds. For gravity_to_matching_wall the simplest correct output construction is: keep borders fixed, zero all interior cells, then paint moved values - avoiding any tracking of original positions. For key_masked_by_block_pattern, using the most-frequent non-zero value as the block color generalizes across all training pairs regardless of which color is used for the blocks.
+
+New tasks solved by wave 57 (3 new tasks): 6ecd11f4 (key_masked_by_block_pattern), 9edfc990 (fill_zero_near_one), d687bc17 (gravity_to_matching_wall).
+
 ATTEMPT 29: WAVE 54 - HALF OVERLAY AND SYMMETRIC OCCLUDER REPAIR - 349 / 400 = 87.25%
 
 Date: 2026-06-20
@@ -1358,10 +1382,11 @@ Run 65: 349 / 400 = 87.25% - Wave 54: two new rules (overlay_halves_at_5sep, rep
 
 Run 66: 351 / 400 = 87.75% - Wave 55: two new rules (repair_4fold_noise, downscale_3x3_block_grid). Plus 2 tasks.
 
-Run 67: 352 / 400 = 88.00% - Wave 56: one new rule (fill_rect_frame_interiors). Plus 1 task. (CURRENT BEST)
+Run 67: 352 / 400 = 88.00% - Wave 56: one new rule (fill_rect_frame_interiors). Plus 1 task.
+Run 68: 355 / 400 = 88.75% - Wave 57: three new rules (fill_zero_near_one, gravity_to_matching_wall, key_masked_by_block_pattern). Plus 3 tasks. (CURRENT BEST)
 
 
-ALL 273 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 276 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1601,6 +1626,8 @@ ALL 273 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 6e82a1ae - color_5_comps_by_size.
 
+6ecd11f4 - key_masked_by_block_pattern.
+
 6f8cd79b - fill_border(8).
 
 6fa7a44f - tile_reflect_v.
@@ -1672,6 +1699,8 @@ ALL 273 SOLVED TASKS AND THEIR GLASS-BOX RULES
 9af7a82c - color_histogram.
 
 9dfd6313 - transpose.
+
+9edfc990 - fill_zero_near_one.
 
 a3df8b1e - bounce_up_single_trace.
 
@@ -1780,6 +1809,8 @@ d4469b4b - value_to_pattern.
 d511f180 - swap(5,8).
 
 d631b094 - count_cells_to_row.
+
+d687bc17 - gravity_to_matching_wall.
 
 d89b689b - fill_8block_by_quadrant.
 
@@ -3145,6 +3176,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 54: Half Overlay and Symmetric Occluder Repa
 Dison, D. R. (2026). ARC-AGI-1 Wave 55: 4-Fold Noise Repair and Density-Based Downscale, 351 / 400 = 87.75%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 56: Rectangular Frame Interior Fill, 352 / 400 = 88.00%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 57: Zero Flood from Ones, Wall Gravity, Block-Pattern Key Mask, 355 / 400 = 88.75%. AIU / PrologAI.
 
 
 END OF DOCUMENT
