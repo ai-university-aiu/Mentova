@@ -13,6 +13,10 @@ Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 Living document. Extended after every benchmark run.
 Last updated: 2026-06-18. Current best score: 227 / 400 = 56.75%.
 
+PLATFORM FACULTY ADVISORY (2026-06-20)
+
+The Fill-In-The-Gaps project added two PrologAI faculties now available to the ARC-AGI-1 climb. PR 50 (pack imagination) provides imaginative memory: mindscapes (compartmentalized mental canvases held in non-observed realities), tableaux of bound figures, and deterministic kinematic reveries. This is exactly the "mentally rotate, flip, or shift objects in imagination" strategy noted in the Human Steps below; a wave rule may now construct a mindscape, place grid objects as figures, render a reverie, and read off the predicted transformed grid before committing - mental simulation of a candidate transform. PR 51 (pack awareness) provides situational awareness as a ladder of regards with theory-of-mind divergence detection and self-reconciliation, available for self-monitoring of solver confidence. Future waves should consider these faculties; any wave that uses them must cite PR 50 or PR 51 in its ATTEMPT entry.
+
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
 Every benchmark run, every new rule, every bug fix, every performance improvement, and every score improvement described in this paper was performed autonomously, without any human coding, without any human debugging, and without any human intervention in the development loop.
