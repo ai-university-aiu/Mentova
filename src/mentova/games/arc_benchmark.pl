@@ -25385,6 +25385,207 @@ arc_transform(fill_rect_frame_interiors, Grid, Out) :-
     ), W56ARIs, Out).
 
 % ---------------------------------------------------------------------------
+% Wave 57 Rule A: fill_zero_near_one (task 9edfc990)
+% ---------------------------------------------------------------------------
+
+% Helper: w57a_zero_comp_adj1/3 — true if any cell in Cells has a value-1 neighbor in Grid.
+w57a_zero_comp_adj1(Grid, NR, NC, Cells) :-
+    member(W57AR-W57AC, Cells),
+    ( W57AR1 is W57AR-1, W57AR1 >= 1, nth1(W57AR1,Grid,W57ARw1), nth1(W57AC,W57ARw1,1)
+    ; W57AR2 is W57AR+1, W57AR2 =< NR, nth1(W57AR2,Grid,W57ARw2), nth1(W57AC,W57ARw2,1)
+    ; W57AC1 is W57AC-1, W57AC1 >= 1, nth1(W57AR,Grid,W57ARwc), nth1(W57AC1,W57ARwc,1)
+    ; W57AC2 is W57AC+1, W57AC2 =< NC, nth1(W57AR,Grid,W57ARwc2), nth1(W57AC2,W57ARwc2,1)
+    ), !.
+
+% Declare the rule name for wave-57 rule A.
+arc_named_rule(fill_zero_near_one).
+% Input: noisy grid with value-1 seeds; output fills every zero-component adjacent to a 1-cell
+% with 1. Zero-components with no value-1 neighbor stay 0.
+arc_transform(fill_zero_near_one, Grid, Out) :-
+    % Cut to keep the rule deterministic.
+    !,
+    % Grid dimensions.
+    length(Grid, W57ANR),
+    nth1(1, Grid, W57ARow0),
+    length(W57ARow0, W57ANC),
+    % Find all connected components (includes zero-color groups).
+    arc_connected_components(Grid, W57AComps),
+    % Keep only zero-color components adjacent to at least one value-1 cell.
+    include([component(W57ACcl,W57ACells)]>>(
+        W57ACcl =:= 0,
+        w57a_zero_comp_adj1(Grid, W57ANR, W57ANC, W57ACells)
+    ), W57AComps, W57AFillComps),
+    % Collect all cell positions that should become 1.
+    foldl([component(_,W57ACls), W57AAcc, W57AOut]>>(append(W57ACls,W57AAcc,W57AOut)),
+          W57AFillComps, [], W57AFillRaw),
+    % Sort to deduplicate and allow fast memberchk.
+    msort(W57AFillRaw, W57AFillCells),
+    % Build output: replace 0 with 1 at fill positions only.
+    numlist(1, W57ANR, W57ARs),
+    numlist(1, W57ANC, W57ACs),
+    maplist([W57AR, W57AOutRow]>>(
+        % Fetch the input row.
+        nth1(W57AR, Grid, W57AInRow),
+        % Map each column.
+        maplist([W57AC2, W57AOV]>>(
+            % Fetch the input cell value.
+            nth1(W57AC2, W57AInRow, W57AInV),
+            % Replace 0 with 1 if this cell is in a fill component.
+            ( W57AInV =:= 0, memberchk(W57AR-W57AC2, W57AFillCells)
+            -> W57AOV = 1
+            ;  W57AOV = W57AInV )
+        ), W57ACs, W57AOutRow)
+    ), W57ARs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 57 Rule B: gravity_to_matching_wall (task d687bc17)
+% ---------------------------------------------------------------------------
+
+% Declare the rule name for wave-57 rule B.
+arc_named_rule(gravity_to_matching_wall).
+% Input: rectangular room; each floating interior cell matches one wall color.
+% Output: each matching cell slides to be adjacent to its wall; non-matching cells vanish.
+arc_transform(gravity_to_matching_wall, Grid, Out) :-
+    % Cut to keep the rule deterministic.
+    !,
+    % Must have at least 4 rows and 4 columns to form a valid room.
+    length(Grid, GwNR), GwNR >= 4,
+    nth1(1, Grid, GwTopRow), length(GwTopRow, GwNC), GwNC >= 4,
+    % Corners of the top row must be 0.
+    nth1(1, GwTopRow, 0), nth1(GwNC, GwTopRow, 0),
+    % Top wall color from second cell of top row.
+    nth1(2, GwTopRow, GwTopC), GwTopC \= 0,
+    % Bottom row corners must be 0.
+    nth1(GwNR, Grid, GwBotRow),
+    nth1(1, GwBotRow, 0), nth1(GwNC, GwBotRow, 0),
+    % Bottom wall color from second cell of bottom row.
+    nth1(2, GwBotRow, GwBotC), GwBotC \= 0,
+    % Left wall color from first cell of second row.
+    nth1(2, Grid, GwSecRow),
+    nth1(1, GwSecRow, GwLeftC), GwLeftC \= 0,
+    % Right wall color from last cell of second row.
+    nth1(GwNC, GwSecRow, GwRightC), GwRightC \= 0,
+    % All four wall colors must be distinct.
+    sort([GwTopC, GwBotC, GwLeftC, GwRightC], GwWallsSorted),
+    length(GwWallsSorted, 4),
+    % Interior row and column ranges (1-indexed).
+    GwIntR1 is 2, GwIntRN is GwNR - 1,
+    GwIntC1 is 2, GwIntCN is GwNC - 1,
+    numlist(GwIntR1, GwIntRN, GwIntRs),
+    numlist(GwIntC1, GwIntCN, GwIntCs),
+    % Collect floating cells: interior non-zero cells that match a wall color.
+    % Each move term: gw(OldR, OldC, Color, NewR, NewC).
+    findall(gw(GwR,GwC,GwV,GwNR2,GwNC2), (
+        member(GwR, GwIntRs),
+        member(GwC, GwIntCs),
+        nth1(GwR, Grid, GwRow2),
+        nth1(GwC, GwRow2, GwV),
+        GwV \= 0,
+        ( GwV =:= GwLeftC  -> GwNR2 = GwR,      GwNC2 = 2
+        ; GwV =:= GwRightC -> GwNR2 = GwR,      GwNC2 is GwNC - 1
+        ; GwV =:= GwTopC   -> GwNR2 = 2,         GwNC2 = GwC
+        ; GwV =:= GwBotC   -> GwNR2 is GwNR - 1, GwNC2 = GwC
+        ; fail
+        )
+    ), GwMoves),
+    % Build output over all rows and columns.
+    numlist(1, GwNR, GwAllRs),
+    numlist(1, GwNC, GwAllCs),
+    maplist([GwOutR, GwOutRow]>>(
+        nth1(GwOutR, Grid, GwInRow),
+        maplist([GwOutC, GwOV]>>(
+            nth1(GwOutC, GwInRow, GwInV),
+            % Border cells (row 1, row NR, col 1, col NC): keep original.
+            ( GwOutR =:= 1 ; GwOutR =:= GwNR ; GwOutC =:= 1 ; GwOutC =:= GwNC )
+            -> GwOV = GwInV
+            % Interior cell: use moved value if a cell lands here.
+            ; member(gw(_,_,GwOV2,GwOutR,GwOutC), GwMoves)
+            -> GwOV = GwOV2
+            % Interior cell with no moved value: zero (erase original and non-matches).
+            ;  GwOV = 0
+        ), GwAllCs, GwOutRow)
+    ), GwAllRs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 57 Rule C: key_masked_by_block_pattern (task 6ecd11f4)
+% ---------------------------------------------------------------------------
+
+% Declare the rule name for wave-57 rule C.
+arc_named_rule(key_masked_by_block_pattern).
+% Large grid: a regular NxM block pattern (each block is uniform single-color or zero)
+% plus a small NxM key grid of colored values (at a separate location).
+% Output = NxM grid: key(i,j) where block(i,j)=filled, else 0.
+arc_transform(key_masked_by_block_pattern, Grid, Out) :-
+    % Cut to keep the rule deterministic.
+    !,
+    % Step 1: Find the block color = most frequent non-zero value in the grid.
+    findall(KmbV, (nth1(_,Grid,KmbRowF), member(KmbV,KmbRowF), KmbV \= 0), KmbAllNZ),
+    KmbAllNZ \= [],
+    list_to_set(KmbAllNZ, KmbUniqueVals),
+    maplist([KmbUV, KmbCount-KmbUV]>>(
+        aggregate_all(count, member(KmbUV, KmbAllNZ), KmbCount)
+    ), KmbUniqueVals, KmbFreqList),
+    % Sort descending by count; the most frequent value is the block color.
+    sort(0, @>=, KmbFreqList, [_-KmbBlockColor|_]),
+    % Step 2: Find the key region: bounding box of non-{0, block-color} cells.
+    findall(KmbKR, (nth1(KmbKR,Grid,KmbKRowA),
+                    member(KmbKV,KmbKRowA), KmbKV \= 0, KmbKV \= KmbBlockColor), KmbKRsRaw),
+    KmbKRsRaw \= [],
+    findall(KmbKC, (nth1(_,Grid,KmbKRowB),
+                    nth1(KmbKC,KmbKRowB,KmbKV2), KmbKV2 \= 0, KmbKV2 \= KmbBlockColor), KmbKCsRaw),
+    sort(KmbKRsRaw, KmbKRs), sort(KmbKCsRaw, KmbKCs),
+    arc_min_list(KmbKRs, KmbKeyR1), arc_max_list(KmbKRs, KmbKeyR2),
+    arc_min_list(KmbKCs, KmbKeyC1), arc_max_list(KmbKCs, KmbKeyC2),
+    % Key (= meta-grid) dimensions.
+    KmbKeyNR is KmbKeyR2 - KmbKeyR1 + 1,
+    KmbKeyNC is KmbKeyC2 - KmbKeyC1 + 1,
+    % Step 3: Find the block region: bounding box of block-color cells outside the key area.
+    % Exclude any block-color cell that falls inside the key bounding box.
+    findall(KmbBR-KmbBC, (
+        nth1(KmbBR,Grid,KmbBRowA),
+        nth1(KmbBC,KmbBRowA,KmbBlockColor),
+        \+ ( KmbBR >= KmbKeyR1, KmbBR =< KmbKeyR2,
+             KmbBC >= KmbKeyC1, KmbBC =< KmbKeyC2 )
+    ), KmbBlkPairs),
+    KmbBlkPairs \= [],
+    findall(KmbBR2, member(KmbBR2-_,KmbBlkPairs), KmbBRsRaw2),
+    findall(KmbBC2, member(_-KmbBC2,KmbBlkPairs), KmbBCsRaw2),
+    sort(KmbBRsRaw2, KmbBRs), sort(KmbBCsRaw2, KmbBCs),
+    arc_min_list(KmbBRs, KmbBlkR1), arc_max_list(KmbBRs, KmbBlkR2),
+    arc_min_list(KmbBCs, KmbBlkC1), arc_max_list(KmbBCs, KmbBlkC2),
+    % Block region total dimensions.
+    KmbBlkNR is KmbBlkR2 - KmbBlkR1 + 1,
+    KmbBlkNC is KmbBlkC2 - KmbBlkC1 + 1,
+    % Block size must divide evenly by meta-grid (key) dimensions.
+    0 is KmbBlkNR mod KmbKeyNR,
+    0 is KmbBlkNC mod KmbKeyNC,
+    KmbBSR is KmbBlkNR div KmbKeyNR,
+    KmbBSC is KmbBlkNC div KmbKeyNC,
+    KmbBSR >= 1, KmbBSC >= 1,
+    % Step 4: Build output: NR_key rows x NC_key cols.
+    KmbKeyNR0 is KmbKeyNR - 1,
+    KmbKeyNC0 is KmbKeyNC - 1,
+    numlist(0, KmbKeyNR0, KmbMetaRs),
+    numlist(0, KmbKeyNC0, KmbMetaCs),
+    maplist([KmbI, KmbOutRow]>>(
+        % Key row for meta-row I.
+        KmbKRow is KmbKeyR1 + KmbI,
+        nth1(KmbKRow, Grid, KmbKeyRowData),
+        maplist([KmbJ, KmbOV]>>(
+            % Key value at meta-col J.
+            KmbKCol is KmbKeyC1 + KmbJ,
+            nth1(KmbKCol, KmbKeyRowData, KmbKeyVal),
+            % Top-left cell of block (I,J) in the block region.
+            KmbBlkRowIdx is KmbBlkR1 + KmbI * KmbBSR,
+            KmbBlkColIdx is KmbBlkC1 + KmbJ * KmbBSC,
+            nth1(KmbBlkRowIdx, Grid, KmbBlkRowData),
+            nth1(KmbBlkColIdx, KmbBlkRowData, KmbBlkVal),
+            % Output = key value where block is filled, else 0.
+            ( KmbBlkVal =:= KmbBlockColor -> KmbOV = KmbKeyVal ; KmbOV = 0 )
+        ), KmbMetaCs, KmbOutRow)
+    ), KmbMetaRs, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
