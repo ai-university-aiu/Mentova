@@ -1179,6 +1179,26 @@ What was learned: Cell count alone is an unreliable criterion for distinguishing
 
 New tasks solved by wave 55 (2 new tasks): 5ad4f10b (downscale_3x3_block_grid), b8825c91 (repair_4fold_noise).
 
+ATTEMPT 31: WAVE 56 - RECTANGULAR FRAME INTERIOR FILL - 352 / 400 = 88.00%
+
+Date: 2026-06-20
+Score: 352 / 400 = 88.00%.
+Previous score: 351 / 400 = 87.75% (wave 55, 2026-06-20).
+Rules added: 1 (solves its test case).
+Tasks solved: +1.
+
+What changed: Wave 56 added one new induction rule and removed a buggy predecessor. The old wave 51 rule fill_rect_frame_interior (without the plural 's') had a false-positive boundary-frame bug: it matched left-boundary frames where the horizontal bars were wider than the declared frame width, causing spurious 4-fills. The new rule fill_rect_frame_interiors uses an exact-width guard on both boundary-frame types to prevent this: for right-boundary frames, the cell to the left of the frame's left column at both the top and bottom rows must not be 5; for left-boundary frames, the cell to the right of the frame's right column at both top and bottom rows must not be 5.
+
+The one scoring rule added in wave 56:
+
+fill_rect_frame_interiors (task e73095fd): Input grids consist of 0s and 5s. The 5-cells form rectangular frames - either full four-sided frames (all four sides completely filled with 5s) or boundary-hugging frames (one open side extends to the grid edge). Interior 0-cells of each detected frame are replaced with 4 in the output. Three detection cases: (1) full rectangular frame: all four sides fully 5-filled, fill interior; (2) right-boundary frame: left vertical wall complete, top and bottom rows extend to the last column, corners of the last column are 5, exact-width guard prevents wider matches; (3) left-boundary frame: right vertical wall complete, top and bottom rows extend from column 0, exact-width guard. All frame detection uses findall to collect interior cells, which are then filled in one pass.
+
+Bugs fixed: Removed arc_named_rule(fill_rect_frame_interior) and its body (wave 51). The rule was tried first by arc_induce_rule_400 (earlier in the file), passed all three training pairs due to the boundary-frame bug, but produced wrong output on the test case. The fix required removing the old rule so the new correct rule would be reached.
+
+What was learned: Rule ordering in arc_induce_rule_400 matters - if a buggy rule passes training pairs, it will block the correct rule from ever being tried. Boundary-frame detection requires exact-width guards to prevent matching frames that extend further than intended. When the top or bottom row is all-5s across a wider region, a stricter check on the cell just outside the declared frame boundary prevents false positives.
+
+New tasks solved by wave 56 (1 new task): e73095fd (fill_rect_frame_interiors).
+
 ATTEMPT 29: WAVE 54 - HALF OVERLAY AND SYMMETRIC OCCLUDER REPAIR - 349 / 400 = 87.25%
 
 Date: 2026-06-20
@@ -1332,10 +1352,12 @@ Run 64: 346 / 400 = 86.50% - Wave 53: four new rules (rail_staircase_8s, shift_p
 
 Run 65: 349 / 400 = 87.25% - Wave 54: two new rules (overlay_halves_at_5sep, repair_occluded_5x5_block) covering 3 tasks. Plus 3 tasks.
 
-Run 66: 351 / 400 = 87.75% - Wave 55: two new rules (repair_4fold_noise, downscale_3x3_block_grid). Plus 2 tasks. (CURRENT BEST)
+Run 66: 351 / 400 = 87.75% - Wave 55: two new rules (repair_4fold_noise, downscale_3x3_block_grid). Plus 2 tasks.
+
+Run 67: 352 / 400 = 88.00% - Wave 56: one new rule (fill_rect_frame_interiors). Plus 1 task. (CURRENT BEST)
 
 
-ALL 272 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 273 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1778,6 +1800,8 @@ ded97339 - connect_pairs_in_shared_row_or_col.
 e179c5f4 - bounce_single_cell_upward.
 
 e3497940 - fold_at_5_col_mirror.
+
+e73095fd - fill_rect_frame_interiors.
 
 e9614598 - cross_at_midpoint_of_pair.
 
@@ -3115,6 +3139,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 53: Rail Staircase, Parallelogram Shift, Fra
 Dison, D. R. (2026). ARC-AGI-1 Wave 54: Half Overlay and Symmetric Occluder Repair, 349 / 400 = 87.25%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 55: 4-Fold Noise Repair and Density-Based Downscale, 351 / 400 = 87.75%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 56: Rectangular Frame Interior Fill, 352 / 400 = 88.00%. AIU / PrologAI.
 
 
 END OF DOCUMENT
