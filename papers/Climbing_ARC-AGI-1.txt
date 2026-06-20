@@ -1115,6 +1115,26 @@ The frame-interior fill problem (fill_rect_frame_interior) teaches a fundamental
 
 New tasks solved by wave 51 (2 new tasks): d06dbe63 (staircase_from_8), a8d7556c (mark_2x2_zero_blocks).
 
+ATTEMPT 27: WAVE 52 - ZERO-LINE MARKING AND THREE-ROW TILING - 342 / 400 = 85.50%
+
+Date: 2026-06-20
+Score: 342 / 400 = 85.50%.
+Previous score: 340 / 400 = 85.00% (wave 51, 2026-06-19).
+Rules added: 3 (2 solve their test cases; 1 is dead code retained for future refinement).
+Tasks solved: +2.
+
+What changed: Wave 52 added two scoring rules for tasks c1d99e64 and 8eb1be9a. A third rule (split_5s_by_2x2 for task 150deff5) was attempted but left as dead code because it requires solving the maximum-independent-set problem for 2x2 blocks - a combinatorial problem beyond a simple all-block scan.
+
+The two scoring rules added in wave 52:
+
+mark_zero_lines (task c1d99e64): The input grid contains some non-zero values plus rows and/or columns in which every cell is 0. The rule identifies every such all-zero row and every such all-zero column, then replaces those cells with value 2. All other cells keep their original value. At least one all-zero row or column must exist; a fully-zero grid is excluded. Bug encountered during development: the findall generator for non-zero rows used an unbounded member/2 call that produced duplicate row-index entries; fixed with once/1 wrapping the membership test.
+
+tile_3row_pattern (task 8eb1be9a): The input grid has exactly 3 consecutive non-zero rows; all other rows are entirely zero. Those 3 rows form a tile. The rule repeats that tile to fill every row: output row r gets tile[(r - r0) mod 3], where r0 is the index of the first tile row. Works for any grid height, including heights not divisible by 3. Bug encountered during development: the same findall/once issue as mark_zero_lines; member/2 without once/1 inserted each row index once per non-zero cell rather than once per row.
+
+What was learned: Both rules hit the same findall duplicate bug, which is now a documented pattern to watch for. When collecting ROW INDICES that satisfy a membership condition, always use once/1 around the inner test (once((member(V, Row), V =\\= 0))) rather than a bare member/2 call. Without once/1, each row appears in the collected list once per non-zero cell, making length/2 return the wrong count and causing rule failure. This pattern applies to any findall where the generator contains a non-deterministic test that must fire at most once per candidate.
+
+New tasks solved by wave 52 (2 new tasks): 8eb1be9a (tile_3row_pattern), c1d99e64 (mark_zero_lines).
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -1240,10 +1260,12 @@ Run 60: 336 / 400 = 84.00% - Wave 49: two new rules (classify_3shapes_by_turns, 
 
 Run 61: 338 / 400 = 84.50% - Wave 50: two new rules (border_9block_with_shadow, stamp_cross_with_bridges). Plus 2 tasks.
 
-Run 62: 340 / 400 = 85.00% - Wave 51: two new rules (staircase_from_8, mark_2x2_zero_blocks). Plus 2 tasks. (CURRENT BEST)
+Run 62: 340 / 400 = 85.00% - Wave 51: two new rules (staircase_from_8, mark_2x2_zero_blocks). Plus 2 tasks.
+
+Run 63: 342 / 400 = 85.50% - Wave 52: two new rules (mark_zero_lines, tile_3row_pattern). Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 261 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 263 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1527,6 +1549,8 @@ ALL 261 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 8e5a5113 - fill_two_sections_with_rotations.
 
+8eb1be9a - tile_3row_pattern.
+
 91413438 - tile_nz_blocks.
 
 9172f3a0 - scale_up(3).
@@ -1618,6 +1642,8 @@ bda2d7a6 - concentric_ring_cycle.
 bdad9b1f - extend_lines_4_intersection.
 
 beb8660c - sort_rows_by_nz_right_align.
+
+c1d99e64 - mark_zero_lines.
 
 c3e719e8 - tile_at_majority_positions.
 
@@ -2993,6 +3019,8 @@ Dison, D. R. (2026). ARC-AGI-1 Composite Rule Search and Task Analysis. Accompli
 Dison, D. R. (2026). ARC-AGI-1 Wave 21: Eight New Structural Rules, 178 / 400 = 44.50%. Accomplishment Record Acc_73. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 51: Staircase Growth and Connected-Component Rectangle, 340 / 400 = 85.00%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 52: Zero-Line Marking and Three-Row Tiling, 342 / 400 = 85.50%. AIU / PrologAI.
 
 
 END OF DOCUMENT
