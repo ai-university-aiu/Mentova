@@ -23811,6 +23811,264 @@ w49_cluster_acc([W49R|W49Rs], W49Last, W49Cur, W49Groups) :-
     ).
 
 % ---------------------------------------------------------------------------
+% WAVE 50 RULES
+% ---------------------------------------------------------------------------
+
+% Wave 50 shared BFS helpers for 9-valued 4-connected components.
+
+% w50_block_groups/5: partition 9-cell list into 4-connected groups.
+w50_block_groups([], _, _, _, []).
+% Seed BFS from first cell; remove visited from remainder; recurse.
+w50_block_groups([W50RC|W50Rest], W50Grid, W50NR, W50NC, [W50Comp|W50RestC]) :-
+    % BFS flood-fill from seed cell.
+    w50_bfs9([W50RC], [W50RC], W50Grid, W50NR, W50NC, W50Comp),
+    % Remove found component from remaining unvisited cells.
+    subtract(W50Rest, W50Comp, W50New),
+    % Recurse on remaining cells.
+    w50_block_groups(W50New, W50Grid, W50NR, W50NC, W50RestC).
+
+% w50_bfs9/6: BFS expanding into 9-valued 4-connected neighbors not yet visited.
+w50_bfs9([], W50Vis, _, _, _, W50Vis).
+w50_bfs9([W50R-W50C|W50Q], W50Vis, W50Grid, W50NR, W50NC, W50Comp) :-
+    % Find unvisited 4-connected neighbors with value 9.
+    findall(W50R2-W50C2, (
+        % Generate the four 4-connected neighbor directions.
+        ( W50R2 is W50R+1, W50C2 = W50C
+        ; W50R2 is W50R-1, W50C2 = W50C
+        ; W50R2 = W50R, W50C2 is W50C+1
+        ; W50R2 = W50R, W50C2 is W50C-1
+        ),
+        % Bounds check.
+        W50R2 >= 0, W50R2 < W50NR,
+        W50C2 >= 0, W50C2 < W50NC,
+        % Neighbor must be 9.
+        nth0(W50R2, W50Grid, W50NRow),
+        nth0(W50C2, W50NRow, 9),
+        % Must not be already visited or queued.
+        \+ member(W50R2-W50C2, W50Vis),
+        \+ member(W50R2-W50C2, W50Q)
+    ), W50Nbrs),
+    % Extend queue and visited set with new neighbors.
+    append(W50Nbrs, W50Q, W50NewQ),
+    append(W50Nbrs, W50Vis, W50NewVis),
+    % Continue BFS.
+    w50_bfs9(W50NewQ, W50NewVis, W50Grid, W50NR, W50NC, W50Comp).
+
+% ---------------------------------------------------------------------------
+% Wave 50 Rule 1: border_9block_with_shadow (task db93a21d)
+arc_named_rule(border_9block_with_shadow).
+% Main transform: each 9-rectangle gets a 3-border of thickness=max(H,W)//2
+% and a 1-shadow extending downward from below the border to the grid bottom.
+arc_transform(border_9block_with_shadow, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W50BH|_], length(W50BH, NC), NC =< 30,
+    % Must contain only 0s and 9s.
+    \+ (member(W50BRow, Grid), member(W50BV0, W50BRow), W50BV0 =\= 0, W50BV0 =\= 9),
+    % Must have at least one 9.
+    once((member(W50BChkRow, Grid), member(9, W50BChkRow))),
+    % Collect all 9-cell positions (0-indexed).
+    NR1 is NR - 1, NC1 is NC - 1,
+    findall(W50BR-W50BC, (
+        % Iterate over all row indices.
+        between(0, NR1, W50BR),
+        nth0(W50BR, Grid, W50BGridRow),
+        % Iterate over all column indices.
+        between(0, NC1, W50BC),
+        nth0(W50BC, W50BGridRow, 9)
+    ), W50BNines),
+    % Group 9-cells into connected rectangular blocks by BFS.
+    w50_block_groups(W50BNines, Grid, NR, NC, W50BGroups),
+    % For each group: compute 3-border cells and 1-shadow cells.
+    findall(W50BR2-W50BC2-W50BVal, (
+        % Process each connected 9-block.
+        member(W50BGroup, W50BGroups),
+        % Extract bounding box row and column lists.
+        findall(W50BGR, member(W50BGR-_, W50BGroup), W50BRList),
+        findall(W50BGC, member(_-W50BGC, W50BGroup), W50BCList),
+        % Compute min/max row and column.
+        min_list(W50BRList, W50BMinR), max_list(W50BRList, W50BMaxR),
+        min_list(W50BCList, W50BMinC), max_list(W50BCList, W50BMaxC),
+        % Compute block height, width, and max dimension.
+        W50BBlockH is W50BMaxR - W50BMinR + 1,
+        W50BBlockW is W50BMaxC - W50BMinC + 1,
+        W50BDim is max(W50BBlockH, W50BBlockW),
+        % Border thickness = max dimension divided by 2.
+        W50BT is W50BDim // 2,
+        % Compute border extents clamped to grid bounds.
+        W50BTMinR is max(0, W50BMinR - W50BT),
+        W50BTMaxR is min(NR1, W50BMaxR + W50BT),
+        W50BTMinC is max(0, W50BMinC - W50BT),
+        W50BTMaxC is min(NC1, W50BMaxC + W50BT),
+        % Shadow start row is one below the border bottom.
+        W50BShadowStart is W50BMaxR + W50BT + 1,
+        % Emit either a 3-border cell or a 1-shadow cell.
+        (
+            % 3-border: any cell in the border rectangle but outside the 9-block.
+            ( between(W50BTMinR, W50BTMaxR, W50BR2),
+              between(W50BTMinC, W50BTMaxC, W50BC2),
+              ( W50BR2 < W50BMinR ; W50BR2 > W50BMaxR
+              ; W50BC2 < W50BMinC ; W50BC2 > W50BMaxC ),
+              W50BVal = 3 )
+        ;
+            % 1-shadow: cells at block columns below the border.
+            ( W50BShadowStart < NR,
+              between(W50BShadowStart, NR1, W50BR2),
+              between(W50BMinC, W50BMaxC, W50BC2),
+              W50BVal = 1 )
+        )
+    ), W50BChanges),
+    % Build output: 9s stay; 3 overrides 1 overrides background.
+    numlist(0, NR1, W50BRIs),
+    numlist(0, NC1, W50BCIs),
+    maplist([W50BERI, W50BOutRow]>>(
+        nth0(W50BERI, Grid, W50BOrigRow),
+        maplist([W50BECI, W50BECV]>>(
+            ( nth0(W50BECI, W50BOrigRow, 9)
+            % Original 9-cells remain unchanged.
+            -> W50BECV = 9
+            ; member(W50BERI-W50BECI-3, W50BChanges)
+            % 3-border takes priority over 1-shadow.
+            -> W50BECV = 3
+            ; member(W50BERI-W50BECI-1, W50BChanges)
+            % 1-shadow fills remaining gap.
+            -> W50BECV = 1
+            % Otherwise keep original (0).
+            ; nth0(W50BECI, W50BOrigRow, W50BECV)
+            )
+        ), W50BCIs, W50BOutRow)
+    ), W50BRIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 50 Rule 2: stamp_cross_with_bridges (task f35d900a)
+arc_named_rule(stamp_cross_with_bridges).
+% Main transform: each non-zero cell gets a 3x3 ring of the opposite color;
+% same-row and same-col pairs are connected by alternating 5-bridges.
+arc_transform(stamp_cross_with_bridges, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W50SH|_], length(W50SH, NC), NC =< 30,
+    % Collect all non-zero cells.
+    NR1 is NR - 1, NC1 is NC - 1,
+    findall(W50SR-W50SC-W50SV, (
+        % Iterate all rows.
+        between(0, NR1, W50SR),
+        nth0(W50SR, Grid, W50SGridRow),
+        % Iterate all columns.
+        between(0, NC1, W50SC),
+        nth0(W50SC, W50SGridRow, W50SV),
+        % Keep only non-zero.
+        W50SV =\= 0
+    ), W50SNZCells),
+    % Must have exactly 4 non-zero cells.
+    length(W50SNZCells, 4),
+    % Collect distinct values and require exactly 2.
+    findall(W50SV2, member(_-_-W50SV2, W50SNZCells), W50SVals),
+    sort(W50SVals, W50SDist),
+    length(W50SDist, 2),
+    % Compute stamp changes: 3x3 opposite-color ring around each non-zero cell.
+    findall(W50SR2-W50SC2-W50SOpp, (
+        member(W50SR0-W50SC0-W50SV0, W50SNZCells),
+        % Opposite value is the other distinct value.
+        member(W50SOpp, W50SDist),
+        W50SOpp =\= W50SV0,
+        % Iterate the 3x3 ring (exclude center).
+        between(-1, 1, W50SDR),
+        between(-1, 1, W50SDC),
+        ( W50SDR =\= 0 ; W50SDC =\= 0 ),
+        W50SR2 is W50SR0 + W50SDR,
+        W50SC2 is W50SC0 + W50SDC,
+        % Bounds check.
+        W50SR2 >= 0, W50SR2 < NR,
+        W50SC2 >= 0, W50SC2 < NC
+    ), W50SStamps),
+    % Compute row-axis 5-bridges between same-row pairs.
+    findall(W50SR3-W50SC3-5, (
+        % Pick two cells in the same row.
+        member(W50SR0a-W50SC0a-_, W50SNZCells),
+        member(W50SR0b-W50SC0b-_, W50SNZCells),
+        W50SR0a =:= W50SR0b,
+        % Left cell must have smaller column.
+        W50SC0a < W50SC0b,
+        % Gap starts 2 past left cell, ends 2 before right cell.
+        W50SGS is W50SC0a + 2,
+        W50SGE is W50SC0b - 2,
+        % Gap must be non-empty.
+        W50SGS =< W50SGE,
+        % Generate alternating 5-positions from both ends.
+        w50_gap_cells(W50SGS, W50SGE, W50SC3),
+        W50SR3 = W50SR0a
+    ), W50SRowBridges),
+    % Compute col-axis 5-bridges between same-col pairs.
+    findall(W50SR4-W50SC4-5, (
+        % Pick two cells in the same column.
+        member(W50SR0c-W50SC0c-_, W50SNZCells),
+        member(W50SR0d-W50SC0d-_, W50SNZCells),
+        W50SC0c =:= W50SC0d,
+        % Upper cell must have smaller row.
+        W50SR0c < W50SR0d,
+        % Gap starts 2 below upper cell, ends 2 above lower cell.
+        W50SGS2 is W50SR0c + 2,
+        W50SGE2 is W50SR0d - 2,
+        % Gap must be non-empty.
+        W50SGS2 =< W50SGE2,
+        % Generate alternating 5-positions from both ends.
+        w50_gap_cells(W50SGS2, W50SGE2, W50SR4),
+        W50SC4 = W50SC0c
+    ), W50SColBridges),
+    % Combine all change entries: stamps override bridges.
+    append(W50SStamps, W50SRowBridges, W50STmp),
+    append(W50STmp, W50SColBridges, W50SAllChanges),
+    % Build output grid.
+    numlist(0, NR1, W50SRIs),
+    numlist(0, NC1, W50SCIs),
+    maplist([W50SERI, W50SOutRow]>>(
+        nth0(W50SERI, Grid, W50SOrigRow),
+        maplist([W50SECI, W50SECV]>>(
+            ( nth0(W50SECI, W50SOrigRow, W50SV3), W50SV3 =\= 0
+            % Original non-zero cells retain their value.
+            -> W50SECV = W50SV3
+            ; member(W50SERI-W50SECI-W50SCV, W50SAllChanges)
+            % Stamps (listed first) take priority over 5-bridges.
+            -> W50SECV = W50SCV
+            % Otherwise cell stays 0.
+            ; W50SECV = 0
+            )
+        ), W50SCIs, W50SOutRow)
+    ), W50SRIs, Out).
+
+% w50_gap_cells/3: generate alternating positions in gap [GS,GE] from both ends.
+% Simultaneously counts inward from GS and GE with step 2 until fronts cross.
+w50_gap_cells(W50GS, W50GE, W50P) :-
+    % Gap must be non-empty.
+    W50GS =< W50GE,
+    % Delegate to accumulator.
+    w50_gap_acc(W50GS, W50GE, W50P).
+
+% w50_gap_acc/3: yield positions from both ends simultaneously, step 2 inward.
+% Base: yield the start position.
+w50_gap_acc(W50S, _, W50S).
+% Base: yield the end position if different from start.
+w50_gap_acc(W50S, W50E, W50E) :-
+    % End must differ from start to avoid duplicate.
+    W50S =\= W50E.
+% Recursive: advance both ends inward and continue if they have not crossed.
+w50_gap_acc(W50S, W50E, W50P) :-
+    % Compute next inward positions.
+    W50S2 is W50S + 2,
+    W50E2 is W50E - 2,
+    % Continue only while inner range is non-empty.
+    W50S2 =< W50E2,
+    % Recurse on inner range.
+    w50_gap_acc(W50S2, W50E2, W50P).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
