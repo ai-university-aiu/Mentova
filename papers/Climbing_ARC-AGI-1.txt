@@ -1089,6 +1089,32 @@ What was learned: wave 25 demonstrates that frequency analysis over spatial subs
 
 New tasks solved by wave 25 (8 new tasks): 54d9e175 (fill_cells_plus5), b9b7f026 (pick_hollow_shape), 39a8645d (most_frequent_3x3), 7447852a (fill_zigzag_4), d4469b4b (value_to_pattern), a61f2674 (five_column_rank), 995c5fa3 (classify_4x4_blocks), f8b3ba0a (block_grid_freq).
 
+NOTE: Waves 26 through 50 were added during sessions between 2026-06-18 and 2026-06-19 after the detailed narrative above was last maintained. Those waves brought the score from 210 / 400 = 52.50% to 338 / 400 = 84.50%. Full rule descriptions and acceptance criteria for each wave are recorded in the SPARC Completion volume (docs/PrologAI_5_Completion_v39.txt). Detailed narrative entries for waves 26 through 50 will be backfilled in a future update. The wave 51 entry below resumes the narrative.
+
+ATTEMPT 26: WAVE 51 - STAIRCASE GROWTH AND CONNECTED-COMPONENT RECTANGLE - 340 / 400 = 85.00%
+
+Date: 2026-06-19
+Score: 340 / 400 = 85.00%.
+Previous score: 338 / 400 = 84.50% (wave 50, 2026-06-19).
+Rules added: 3 (2 solve their test cases; 1 is a near miss retained for future refinement).
+Tasks solved: +2.
+
+What changed: Wave 51 identified three candidate tasks from the 60 remaining unsolved tasks and wrote named rules for each. Two rules solve their tasks completely. One rule passes all training pairs but fails the test case due to a spurious enclosure and does not contribute a point.
+
+The three rules added in wave 51:
+
+staircase_from_8 (task d06dbe63): The input contains a single cell with value 8 at some position. The rule identifies the row of that cell as the seed row. Starting from the seed row and going downward, each row i (0-indexed from the seed row) gets all cells from column 0 to column i set to 8, creating a staircase pattern that grows one cell wider per row. Passes all training pairs and the test case.
+
+mark_2x2_zero_blocks (task a8d7556c): The input grid contains only 0s and 5s, where 5-cells are fixed anchors. The zero cells form connected regions. For each 4-connected zero component (found via BFS), the rule enumerates all axis-aligned all-zero rectangles using row-pair enumeration and column run-finding, finds the maximum area among all such rectangles, then marks every cell that belongs to any rectangle achieving that maximum area with value 2. When a component contains two separate regions both achieving the maximum area (as in training pair 1, where two separate 2x2 blocks both have area 4), all cells from all max-area rectangles are marked. Passes all three training pairs and the test case. New helpers: w51b_all_comps/5, w51b_bfs/6, w51b_max_rect/4, w51b_runs/2, w51b_run_end/4.
+
+fill_rect_frame_interior (task e73095fd, near miss): The input contains only 0s and 5s. The 5-cells form rectangular frames - closed rectangular outlines. Interior 0-cells enclosed by a frame are to be filled with 4. The grid boundary may serve as the left or right wall of a frame. The rule checks each 0-cell for enclosure by: finding the nearest 5 strictly above and below in the cell's column, finding the nearest 5 to the left and right in the cell's row (or accepting the grid boundary), then verifying that the four identified frame segments form a complete closed rectangle with an all-zero interior. The rule passes all three training pairs but fails the test case because a coincidental alignment of 5-cells in the test grid forms a spurious boundary-adjacent enclosure that the rule cannot distinguish from a real frame using local checks alone. Does not contribute a point. New helpers: w51c_enclosed/5, w51c_row_all5/5, w51c_col_all5/5, w51c_interior_all0/6. Retained for future refinement.
+
+What was learned: The max-area connected-component rectangle problem (mark_2x2_zero_blocks) required three iterations to get right. The first attempt used a simple 2x2 block scan, which failed because it marked cells in sub-maximum-area blocks. The second attempt took only the largest-area rectangle per component, which failed because two equal-maximum-area blocks in the same component both needed to be marked. The third attempt collects ALL rectangles that achieve the maximum area and marks the union, which is correct. This teaches that the comparison criterion is MAXIMUM area across all rectangles in the component, and the marking criterion is ALL rectangles at that maximum - not just one.
+
+The frame-interior fill problem (fill_rect_frame_interior) teaches a fundamental limitation of per-cell local enclosure checks. A cell may be locally enclosed by a valid-looking rectangular frame (all four sides present, interior all zeros) even when those frame sides were not placed to form that particular frame. In the test case, two separate frame structures each contribute one wall to a spurious enclosure, and no simple additional local check distinguishes the spurious enclosure from a real one. Future work should approach this task by enumerating complete rectangular frames globally (checking that ALL cells on the perimeter belong to the same connected frame structure) rather than checking enclosure from individual interior cells.
+
+New tasks solved by wave 51 (2 new tasks): d06dbe63 (staircase_from_8), a8d7556c (mark_2x2_zero_blocks).
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -1182,7 +1208,39 @@ Run 44: 251 / 400 = 62.75% - Wave 30: nine new rules (fill_2cluster_bbox_with_4,
 
 Run 45: 256 / 400 = 64.00% - Wave 31: five new rules (stamp_1234_around_5_blocks, fill_3x3_zero_blocks_with_1, fill_below_shape_by_color_count, fill_horiz_gap_with_9, draw_3_frame_around_2_clusters). Plus 5 tasks.
 
-Run 46: 261 / 400 = 65.25% - Wave 32: six new rules (assemble_3x3_from_5_anchors, scale_5x5_by_color_count, extract_5frame_with_interior_8s, unique_color_region, mark_shared_zero_across_1_divider, color_5_comps_by_size). Plus 5 net new tasks. (CURRENT BEST)
+Run 46: 261 / 400 = 65.25% - Wave 32: six new rules (assemble_3x3_from_5_anchors, scale_5x5_by_color_count, extract_5frame_with_interior_8s, unique_color_region, mark_shared_zero_across_1_divider, color_5_comps_by_size). Plus 5 net new tasks.
+
+Run 47: 266 / 400 = 66.50% - Wave 33: four new rules (fill_8shape_bbox_gaps_with_2, extend_l_shape_diagonal, strip_8fill_with_4, replace_5sep_match_with_5). Plus 4 tasks.
+
+Run 48: 273 / 400 = 68.25% - Waves 34-35: seven new rules. Plus 7 tasks.
+
+Run 49: 279 / 400 = 69.75% - Wave 36. Plus 6 tasks.
+
+Run 50: 287 / 400 = 71.75% - Wave 37. Plus 8 tasks.
+
+Run 51: 295 / 400 = 73.75% - Wave 38. Plus 8 tasks.
+
+Run 52: 303 / 400 = 75.75% - Wave 39. Plus 8 tasks.
+
+Run 53: 309 / 400 = 77.25% - Wave 40. Plus 6 tasks.
+
+Run 54: 317 / 400 = 79.25% - Wave 41. Plus 8 tasks.
+
+Run 55: 325 / 400 = 81.25% - Wave 44: cumulative through wave 44. Score per SPARC Completion v33.
+
+Run 56: 329 / 400 = 82.25% - Wave 45: four new rules (cross_tile, frame_extract, sort_shapes_size, mirror_fill_zero). Plus 4 tasks.
+
+Run 57: 331 / 400 = 82.75% - Wave 46: two new rules (zero_comp_size_to_color, denoise_stripes). Plus 2 tasks.
+
+Run 58: 332 / 400 = 83.00% - Wave 47: stamp_shape_at_markers orientation fix. Plus 1 task.
+
+Run 59: 334 / 400 = 83.50% - Wave 48: two new rules (color_5comps_size6, parity_5_to_3). Plus 2 tasks.
+
+Run 60: 336 / 400 = 84.00% - Wave 49: two new rules (classify_3shapes_by_turns, extend_staircase_bar). Plus 2 tasks.
+
+Run 61: 338 / 400 = 84.50% - Wave 50: two new rules (border_9block_with_shadow, stamp_cross_with_bridges). Plus 2 tasks.
+
+Run 62: 340 / 400 = 85.00% - Wave 51: two new rules (staircase_from_8, mark_2x2_zero_blocks). Plus 2 tasks. (CURRENT BEST)
 
 
 ALL 261 SOLVED TASKS AND THEIR GLASS-BOX RULES
@@ -1515,6 +1573,8 @@ a85d4709 - col5_to_row_color.
 
 a87f7484 - pick_densest_3x3_block.
 
+a8d7556c - mark_2x2_zero_blocks.
+
 a9f96cdd - diagonal_neighbors_from_single_2.
 
 aabf363d - recolor_blob_to_marker.
@@ -1578,6 +1638,8 @@ ce22a75a - expand_5_to_3x3_ones.
 ce4f8723 - two_halves_at_4sep_or_to_3.
 
 d037b0a7 - fill_column_downward.
+
+d06dbe63 - staircase_from_8.
 
 d0f5fe59 - components_to_identity.
 
@@ -2930,9 +2992,9 @@ Dison, D. R. (2026). ARC-AGI-1 Composite Rule Search and Task Analysis. Accompli
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 21: Eight New Structural Rules, 178 / 400 = 44.50%. Accomplishment Record Acc_73. AIU / PrologAI.
 
+Dison, D. R. (2026). ARC-AGI-1 Wave 51: Staircase Growth and Connected-Component Rectangle, 340 / 400 = 85.00%. AIU / PrologAI.
+
 
 END OF DOCUMENT
 
-(Living document. The next entry will be added after the next benchmark run,
-recording the new score, every new rule added, every bug fixed, and every
-lesson learned from the run before it.)
+(Living document. After every wave: add a new ATTEMPT entry with date, score, rules added, bugs fixed, and lessons learned. Add score progression rows. Insert new task IDs into the solved tasks list. Update the REFERENCES section.)
