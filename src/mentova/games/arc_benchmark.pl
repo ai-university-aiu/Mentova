@@ -24509,6 +24509,173 @@ w51c_interior_all0(W51RTop, W51RBot, W51CLeft, W51CRight, W51Grid, W51NR, W51NC)
     ).
 
 % ---------------------------------------------------------------------------
+% Wave 52 Rule 1: split_5s_by_2x2 (task 150deff5)
+arc_named_rule(split_5s_by_2x2).
+% 5-cells belonging to any 2x2 all-5 block become 8; isolated 5-cells become 2; 0s stay 0.
+arc_transform(split_5s_by_2x2, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W52AH|_], length(W52AH, NC), NC =< 30,
+    % Grid must contain only 0s and 5s.
+    \+ (member(W52ARow, Grid), member(W52AV, W52ARow),
+        W52AV =\= 0, W52AV =\= 5),
+    % Must have at least one 5 in the grid.
+    once((member(W52AChk, Grid), member(5, W52AChk))),
+    % Compute index bounds.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Find all cells that belong to at least one 2x2 all-5 block.
+    W52NR2 is NR - 2, W52NC2 is NC - 2,
+    findall(W52AR-W52AC, (
+        % Enumerate top-left corners of all 2x2 candidate blocks.
+        between(0, W52NR2, W52BR),
+        between(0, W52NC2, W52BC),
+        % Pre-compute neighbor indices.
+        W52BR1 is W52BR + 1,
+        W52BC1 is W52BC + 1,
+        % Verify top-left cell is 5.
+        nth0(W52BR, Grid, W52BRow0),
+        nth0(W52BC, W52BRow0, 5),
+        % Verify top-right cell is 5.
+        nth0(W52BC1, W52BRow0, 5),
+        % Verify bottom row.
+        nth0(W52BR1, Grid, W52BRow1),
+        % Verify bottom-left cell is 5.
+        nth0(W52BC, W52BRow1, 5),
+        % Verify bottom-right cell is 5.
+        nth0(W52BC1, W52BRow1, 5),
+        % Yield all four cells of this confirmed 2x2 block.
+        member(W52AR-W52AC,
+               [W52BR-W52BC, W52BR-W52BC1, W52BR1-W52BC, W52BR1-W52BC1])
+    ), W52BlockCellsList),
+    % Remove duplicates for fast membership tests.
+    list_to_set(W52BlockCellsList, W52BlockCells),
+    % Must have found at least one 2x2 block (otherwise rule does not apply).
+    W52BlockCells \= [],
+    % Build output grid: 0->0, block-5->8, isolated-5->2.
+    numlist(0, NR1, W52RIs),
+    numlist(0, NC1, W52CIs),
+    maplist([W52ORI, W52ORow]>>(
+        % Fetch the original row.
+        nth0(W52ORI, Grid, W52IGRow),
+        maplist([W52OCI, W52OCV]>>(
+            % Read original cell value.
+            nth0(W52OCI, W52IGRow, W52IV),
+            % Map 0 -> 0, block-5 -> 8, isolated-5 -> 2.
+            ( W52IV =:= 0
+            -> W52OCV = 0
+            ; member(W52ORI-W52OCI, W52BlockCells)
+            -> W52OCV = 8
+            ; W52OCV = 2
+            )
+        ), W52CIs, W52ORow)
+    ), W52RIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 52 Rule 2: mark_zero_lines (task c1d99e64)
+arc_named_rule(mark_zero_lines).
+% Rows and columns that are entirely 0 get replaced with 2; all other cells keep their value.
+arc_transform(mark_zero_lines, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W52BH|_], length(W52BH, NC), NC =< 30,
+    % Compute last indices.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Collect indices of rows that are entirely 0.
+    findall(ZR, (
+        % Candidate row index.
+        between(0, NR1, ZR),
+        % Fetch row.
+        nth0(ZR, Grid, ZRow),
+        % All cells in this row must be 0.
+        \+ (member(ZV, ZRow), ZV =\= 0)
+    ), ZeroRows),
+    % Collect indices of columns that are entirely 0.
+    findall(ZC, (
+        % Candidate column index.
+        between(0, NC1, ZC),
+        % Every row must have 0 at this column.
+        \+ (nth0(_, Grid, ZRow2), nth0(ZC, ZRow2, ZV2), ZV2 =\= 0)
+    ), ZeroCols),
+    % At least one zero-row or zero-col must exist; otherwise rule does not apply.
+    ( ZeroRows = [], ZeroCols = [] -> fail ; true ),
+    % At least one row must be non-zero; a fully-zero grid is excluded.
+    \+ (forall(member(W52BRow, Grid), forall(member(W52BV, W52BRow), W52BV =:= 0))),
+    % Build index lists for maplist.
+    numlist(0, NR1, W52BRIs), numlist(0, NC1, W52BCIs),
+    % Map every cell: zero-row or zero-col -> 2; others unchanged.
+    maplist([W52BORI, W52BORow]>>(
+        % Fetch original row.
+        nth0(W52BORI, Grid, W52BIRow),
+        maplist([W52BOCI, W52BOCV]>>(
+            % Read original cell.
+            nth0(W52BOCI, W52BIRow, W52BIV),
+            % Apply replacement rule.
+            ( member(W52BORI, ZeroRows) -> W52BOCV = 2
+            ; member(W52BOCI, ZeroCols) -> W52BOCV = 2
+            ; W52BOCV = W52BIV )
+        ), W52BCIs, W52BORow)
+    ), W52BRIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 52 Rule 3: tile_3row_pattern (task 8eb1be9a)
+arc_named_rule(tile_3row_pattern).
+% Exactly 3 consecutive non-zero rows form a tile; tile is repeated to fill the whole grid.
+arc_transform(tile_3row_pattern, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W52CH|_], length(W52CH, NC), NC =< 30,
+    % NC not used in index arithmetic but silences singleton warning.
+    NC >= 1,
+    % Compute last row index.
+    NR1 is NR - 1,
+    % Collect row indices that have at least one non-zero cell.
+    findall(R, (
+        % Candidate row index.
+        between(0, NR1, R),
+        % Fetch row.
+        nth0(R, Grid, Row),
+        % Must have at least one non-zero cell; once avoids duplicate row entries.
+        once((member(V, Row), V =\= 0))
+    ), NZRows),
+    % Must have exactly three non-zero rows.
+    length(NZRows, 3),
+    % Unpack: R0 is first non-zero row, R1 is second, R2 is third.
+    NZRows = [R0, R1, R2],
+    % The three rows must be consecutive.
+    R1 is R0 + 1, R2 is R0 + 2,
+    % All rows outside [R0,R2] must be entirely zero.
+    \+ (
+        between(0, NR1, Rx),
+        Rx \= R0, Rx \= R1, Rx \= R2,
+        nth0(Rx, Grid, RowX),
+        member(VX, RowX), VX =\= 0
+    ),
+    % Extract the three tile rows.
+    nth0(R0, Grid, Tile0),
+    nth0(R1, Grid, Tile1),
+    nth0(R2, Grid, Tile2),
+    % Build row-index list.
+    numlist(0, NR1, W52CRIs),
+    % Map each output row to the appropriate tile row.
+    maplist([W52CORI, W52CORow]>>(
+        % Compute tile index using modulo-3 on offset from R0.
+        W52CTIdx is (W52CORI - R0) mod 3,
+        % Select the tile row.
+        ( W52CTIdx =:= 0 -> W52CORow = Tile0
+        ; W52CTIdx =:= 1 -> W52CORow = Tile1
+        ; W52CORow = Tile2 )
+    ), W52CRIs, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
