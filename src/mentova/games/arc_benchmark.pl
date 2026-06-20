@@ -25106,6 +25106,139 @@ arc_transform(diagonal_staircase_bounce, Grid, Out) :-
     ), W53DRIs, Out).
 
 % ---------------------------------------------------------------------------
+% Wave 54 Rule A: overlay_halves_at_5sep (task e98196ab)
+% ---------------------------------------------------------------------------
+
+% Register overlay_halves_at_5sep as a named rule.
+arc_named_rule(overlay_halves_at_5sep).
+% Separator row of all-5s divides input into equal halves; output is the nonzero overlay of both halves.
+arc_transform(overlay_halves_at_5sep, Grid, Out) :-
+    % Cut for determinism.
+    !,
+    % Bind NR to number of rows.
+    length(Grid, NR), NR =< 30,
+    % Bind NC via first row.
+    Grid = [W54AH|_], length(W54AH, NC), NC =< 30,
+    % Grid must have an odd number of rows greater than 1.
+    NR > 1, NR mod 2 =:= 1,
+    % Last 0-based row index.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Find the single all-5 separator row.
+    findall(W54ASR, (between(0, NR1, W54ASR),
+                     nth0(W54ASR, Grid, W54ASRow),
+                     forall(nth0(_, W54ASRow, W54ASV), W54ASV =:= 5)), W54ASepList),
+    % Require exactly one separator row.
+    W54ASepList = [W54ASep],
+    % Separator must be in the exact middle.
+    W54ASep > 0,
+    W54ABotStart is W54ASep + 1,
+    W54AHalfH is NR - W54ABotStart,
+    W54AHalfH =:= W54ASep,
+    % Extract top rows (before separator) and bottom rows (after separator).
+    length(W54ATopRows, W54ASep),
+    append(W54ATopRows, [_|W54ABotRows], Grid),
+    % Build output: cell-wise nonzero overlay of top and bottom.
+    W54ASep1 is W54ASep - 1,
+    numlist(0, W54ASep1, W54ARIs), numlist(0, NC1, W54ACIs),
+    % Map each row index to an output row.
+    maplist([W54ARI, W54AOutRow]>>(
+        % Get top and bottom rows.
+        nth0(W54ARI, W54ATopRows, W54ATRow),
+        nth0(W54ARI, W54ABotRows, W54ABRow),
+        % Map each column to an output value.
+        maplist([W54ACI, W54AOV]>>(
+            nth0(W54ACI, W54ATRow, W54ATV),
+            nth0(W54ACI, W54ABRow, W54ABV),
+            % Conflict guard: both nonzero means rule does not apply.
+            ( W54ATV =\= 0, W54ABV =\= 0 -> fail
+            % Top wins if nonzero.
+            ; W54ATV =\= 0 -> W54AOV = W54ATV
+            % Bottom wins otherwise (including both zero).
+            ; W54AOV = W54ABV )
+        ), W54ACIs, W54AOutRow)
+    ), W54ARIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 54 Rule B: repair_occluded_5x5_block (tasks dc0a314f and ff805c23)
+% ---------------------------------------------------------------------------
+
+% Register repair_occluded_5x5_block as a named rule.
+arc_named_rule(repair_occluded_5x5_block).
+% A 5x5 solid block of one color masks a symmetric grid; output is the 5x5 reconstruction from h-flip or v-flip.
+arc_transform(repair_occluded_5x5_block, Grid, Out) :-
+    % Cut for determinism.
+    !,
+    % Bind NR to number of rows.
+    length(Grid, NR), NR =< 30,
+    % Bind NC via first row.
+    Grid = [W54BH|_], length(W54BH, NC), NC =< 30,
+    % Input must be strictly larger than 5x5 for the repair to make sense.
+    NR > 5, NC > 5,
+    % Last 0-based row and column indices.
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Collect all distinct non-zero cell values.
+    findall(W54BV, (nth0(_, Grid, W54BRow0), nth0(_, W54BRow0, W54BV),
+                    W54BV =\= 0), W54BVsRaw),
+    sort(W54BVsRaw, W54BVals),
+    % Find the occluder: a non-zero color forming exactly a 5x5 solid rectangle.
+    once((
+        member(W54BOcc, W54BVals),
+        findall(W54BR-W54BC,
+            (between(0, NR1, W54BR), nth0(W54BR, Grid, W54BRow1),
+             nth0(W54BC, W54BRow1, W54BOcc)), W54BOccCells),
+        % Exactly 25 cells of occluder color.
+        length(W54BOccCells, 25),
+        % All 25 cells form a solid 5x5 rectangle.
+        findall(W54BR, member(W54BR-_, W54BOccCells), W54BOccRList),
+        sort(W54BOccRList, W54BOccRSorted),
+        length(W54BOccRSorted, 5),
+        min_list(W54BOccRSorted, W54BRBase),
+        W54BRBaseEnd is W54BRBase + 4,
+        max_list(W54BOccRSorted, W54BRBaseEnd),
+        findall(W54BC2, member(_-W54BC2, W54BOccCells), W54BOccCList),
+        sort(W54BOccCList, W54BOccCSorted),
+        length(W54BOccCSorted, 5),
+        min_list(W54BOccCSorted, W54BCBase),
+        W54BCBaseEnd is W54BCBase + 4,
+        max_list(W54BOccCSorted, W54BCBaseEnd)
+    )),
+    % Diagonal indices 0..4 used for both rows and columns of the 5x5 patch.
+    numlist(0, 4, W54BDIs),
+    % Try h-flip: for each cell at (r0+dr, c0+dc), mirror is at (r0+dr, NC-1-(c0+dc)).
+    ( \+ (member(W54BHDR, W54BDIs), member(W54BHDC, W54BDIs),
+           W54BHMR is W54BRBase + W54BHDR,
+           W54BHMC is NC - 1 - W54BCBase - W54BHDC,
+           W54BHMC >= 0, W54BHMC =< NC1,
+           nth0(W54BHMR, Grid, W54BHRW),
+           nth0(W54BHMC, W54BHRW, W54BOcc)) ->
+        % H-flip mirror patch is unoccluded: extract it.
+        maplist([W54BMHDR, W54BOutRow]>>(
+            W54BMHGR is W54BRBase + W54BMHDR,
+            nth0(W54BMHGR, Grid, W54BMHGRW),
+            maplist([W54BMHDC, W54BOV]>>(
+                W54BMHMC is NC - 1 - W54BCBase - W54BMHDC,
+                nth0(W54BMHMC, W54BMHGRW, W54BOV)
+            ), W54BDIs, W54BOutRow)
+        ), W54BDIs, Out)
+    ;   % Try v-flip: mirror is at (NR-1-(r0+dr), c0+dc).
+        \+ (member(W54BVDR, W54BDIs), member(W54BVDC, W54BDIs),
+             W54BVMR is NR - 1 - W54BRBase - W54BVDR,
+             W54BVMC is W54BCBase + W54BVDC,
+             W54BVMR >= 0, W54BVMR =< NR1,
+             nth0(W54BVMR, Grid, W54BVRW),
+             nth0(W54BVMC, W54BVRW, W54BOcc)),
+        % V-flip mirror patch is unoccluded: extract it.
+        maplist([W54BMVDR, W54BOutRow]>>(
+            W54BMVMR is NR - 1 - W54BRBase - W54BMVDR,
+            nth0(W54BMVMR, Grid, W54BMVGRW),
+            maplist([W54BMVDC, W54BOV]>>(
+                W54BMVMC is W54BCBase + W54BMVDC,
+                nth0(W54BMVMC, W54BMVGRW, W54BOV)
+            ), W54BDIs, W54BOutRow)
+        ), W54BDIs, Out)
+    ).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
