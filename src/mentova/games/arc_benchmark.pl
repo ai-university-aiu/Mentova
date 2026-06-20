@@ -25239,6 +25239,172 @@ arc_transform(repair_occluded_5x5_block, Grid, Out) :-
     ).
 
 % ---------------------------------------------------------------------------
+% Wave 55 Rule A: repair_4fold_noise (task b8825c91)
+% ---------------------------------------------------------------------------
+
+% Register repair_4fold_noise as a named rule.
+arc_named_rule(repair_4fold_noise).
+% Grid is 4-fold symmetric except for cells of one noise color; replace noise cells from symmetric partner.
+arc_transform(repair_4fold_noise, Grid, Out) :-
+    % Cut for determinism.
+    !,
+    % Bind NR to number of rows.
+    length(Grid, NR), NR =< 30,
+    % Bind NC via first row.
+    Grid = [W55AH|_], length(W55AH, NC), NC =< 30,
+    % Grid must have even dimensions for 4-fold symmetry.
+    NR > 1, NC > 1,
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Collect all distinct non-zero values present in the grid.
+    findall(W55AV, (nth0(_, Grid, W55ARow0), nth0(_, W55ARow0, W55AV)), W55AVsRaw),
+    sort(W55AVsRaw, W55AVals),
+    % Find the noise color N: the unique color such that removing all N-cells
+    % leaves the grid 4-fold symmetric under h-flip, v-flip, and 180-rotation.
+    once((
+        member(W55AN, W55AVals),
+        % Ensure at least one N-cell exists.
+        ( nth0(_, Grid, W55ANRow), nth0(_, W55ANRow, W55AN) ),
+        % Symmetry check: for every (R, C), the non-N values at
+        % {(R,C), (R,NC-1-C), (NR-1-R,C), (NR-1-R,NC-1-C)} must all be equal.
+        forall(
+            (between(0, NR1, W55AR), nth0(W55AR, Grid, W55ARow1),
+             between(0, NC1, W55AC), nth0(W55AC, W55ARow1, W55AV0),
+             W55AV0 =\= W55AN),
+            (
+                W55AMR is NR - 1 - W55AR, W55AMC is NC - 1 - W55AC,
+                nth0(W55AR, Grid, W55ARow2), nth0(W55AMC, W55ARow2, W55AV1),
+                ( W55AV1 =:= W55AN ; W55AV1 =:= W55AV0 ),
+                nth0(W55AMR, Grid, W55ARow3), nth0(W55AC, W55ARow3, W55AV2),
+                ( W55AV2 =:= W55AN ; W55AV2 =:= W55AV0 ),
+                nth0(W55AMR, Grid, W55ARow4), nth0(W55AMC, W55ARow4, W55AV3),
+                ( W55AV3 =:= W55AN ; W55AV3 =:= W55AV0 )
+            )
+        )
+    )),
+    % Rebuild the grid: replace each N-cell with its first non-N mirror partner.
+    numlist(0, NR1, W55ARIs), numlist(0, NC1, W55ACIs),
+    maplist([W55ARI, W55AOutRow]>>(
+        nth0(W55ARI, Grid, W55AInRow),
+        maplist([W55ACI, W55AOV]>>(
+            nth0(W55ACI, W55AInRow, W55AInV),
+            ( W55AInV =\= W55AN ->
+                W55AOV = W55AInV
+            ;   W55AMRI is NR - 1 - W55ARI,
+                W55AMCI is NC - 1 - W55ACI,
+                % Try h-flip mirror.
+                ( nth0(W55ARI, Grid, W55AHRW), nth0(W55AMCI, W55AHRW, W55AHV),
+                  W55AHV =\= W55AN -> W55AOV = W55AHV
+                % Try v-flip mirror.
+                ; nth0(W55AMRI, Grid, W55AVRW), nth0(W55ACI, W55AVRW, W55AVV),
+                  W55AVV =\= W55AN -> W55AOV = W55AVV
+                % Try 180-rotation mirror.
+                ; nth0(W55AMRI, Grid, W55ADRW), nth0(W55AMCI, W55ADRW, W55ADV),
+                  W55ADV =\= W55AN -> W55AOV = W55ADV
+                % Fallback: keep N (shouldn't happen if validity passed).
+                ; W55AOV = W55AInV
+                )
+            )
+        ), W55ACIs, W55AOutRow)
+    ), W55ARIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 55 Rule B: downscale_3x3_block_grid (task 5ad4f10b)
+% ---------------------------------------------------------------------------
+
+% Register downscale_3x3_block_grid as a named rule.
+arc_named_rule(downscale_3x3_block_grid).
+% Input has a shape color (organized 3x3 blocks) and noise pixels; output 3x3 marks filled blocks.
+arc_transform(downscale_3x3_block_grid, Grid, Out) :-
+    % Cut for determinism.
+    !,
+    % Bind NR and check size guard.
+    length(Grid, NR), NR =< 30,
+    % Bind NC and check size guard.
+    Grid = [W55BH|_], length(W55BH, NC), NC =< 30,
+    % Require input larger than 3x3.
+    NR > 3, NC > 3,
+    % Compute max indices.
+    NR1 is NR - 1,
+    % Collect all non-zero colors.
+    findall(W55BV, (nth0(_, Grid, W55BRow0), nth0(_, W55BRow0, W55BV), W55BV =\= 0), W55BVsRaw),
+    % Deduplicate and require exactly two colors.
+    sort(W55BVsRaw, W55BVals), length(W55BVals, 2),
+    % Bind the two color variables.
+    W55BVals = [W55BV1, W55BV2],
+    % Collect all cells of V1.
+    findall(W55BR-W55BC, (between(0, NR1, W55BR), nth0(W55BR, Grid, W55BROW1),
+                           nth0(W55BC, W55BROW1, W55BV1)), W55BCells1),
+    % Count V1 cells.
+    length(W55BCells1, W55BN1),
+    % Extract V1 row indices.
+    findall(W55BRX, member(W55BRX-_, W55BCells1), W55BRList1), sort(W55BRList1, W55BRSort1),
+    % Compute V1 row bbox.
+    min_list(W55BRSort1, W55BV1RMin), max_list(W55BRSort1, W55BV1RMax),
+    % Extract V1 col indices.
+    findall(W55BCX, member(_-W55BCX, W55BCells1), W55BCList1), sort(W55BCList1, W55BCSort1),
+    % Compute V1 col bbox.
+    min_list(W55BCSort1, W55BV1CMin), max_list(W55BCSort1, W55BV1CMax),
+    % Bbox area for V1.
+    W55BArea1 is (W55BV1RMax - W55BV1RMin + 1) * (W55BV1CMax - W55BV1CMin + 1),
+    % Collect all cells of V2.
+    findall(W55BR-W55BC, (between(0, NR1, W55BR), nth0(W55BR, Grid, W55BROW2),
+                           nth0(W55BC, W55BROW2, W55BV2)), W55BCells2),
+    % Count V2 cells.
+    length(W55BCells2, W55BN2),
+    % Extract V2 row indices.
+    findall(W55BRX, member(W55BRX-_, W55BCells2), W55BRList2), sort(W55BRList2, W55BRSort2),
+    % Compute V2 row bbox.
+    min_list(W55BRSort2, W55BV2RMin), max_list(W55BRSort2, W55BV2RMax),
+    % Extract V2 col indices.
+    findall(W55BCX, member(_-W55BCX, W55BCells2), W55BCList2), sort(W55BCList2, W55BCSort2),
+    % Compute V2 col bbox.
+    min_list(W55BCSort2, W55BV2CMin), max_list(W55BCSort2, W55BV2CMax),
+    % Bbox area for V2.
+    W55BArea2 is (W55BV2RMax - W55BV2RMin + 1) * (W55BV2CMax - W55BV2CMin + 1),
+    % Shape = higher density (N/Area); compare via cross-multiplication to avoid floats.
+    ( W55BN1 * W55BArea2 >= W55BN2 * W55BArea1
+    ->  W55BShapeColor = W55BV1, W55BNoiseColor = W55BV2,
+        W55BR0 = W55BV1RMin, W55BR1x = W55BV1RMax,
+        W55BC0 = W55BV1CMin, W55BC1x = W55BV1CMax
+    ;   W55BShapeColor = W55BV2, W55BNoiseColor = W55BV1,
+        W55BR0 = W55BV2RMin, W55BR1x = W55BV2RMax,
+        W55BC0 = W55BV2CMin, W55BC1x = W55BV2CMax
+    ),
+    % Compute block height and width by dividing bbox by 3.
+    W55BBH is (W55BR1x - W55BR0 + 1) // 3,
+    % Compute block width.
+    W55BBW is (W55BC1x - W55BC0 + 1) // 3,
+    % Guard: blocks must be non-empty.
+    W55BBH > 0, W55BBW > 0,
+    % Total cells per block for threshold.
+    W55BBlockTotal is W55BBH * W55BBW,
+    % Build 3x3 output grid using block indices.
+    numlist(0, 2, W55BBlockIs),
+    maplist([W55BBI, W55BOutRow]>>(
+        % Row range for this block row.
+        W55BBRSTART is W55BR0 + W55BBI * W55BBH,
+        % End row index (inclusive).
+        W55BBREND is W55BBRSTART + W55BBH - 1,
+        maplist([W55BBJ, W55BOV]>>(
+            % Col range for this block col.
+            W55BBCSTART is W55BC0 + W55BBJ * W55BBW,
+            % End col index (inclusive).
+            W55BBCEND is W55BBCSTART + W55BBW - 1,
+            % Count shape cells in this block.
+            findall(1, (between(W55BBRSTART, W55BBREND, W55BRY),
+                        nth0(W55BRY, Grid, W55BRYROW),
+                        between(W55BBCSTART, W55BBCEND, W55BCY),
+                        nth0(W55BCY, W55BRYROW, W55BShapeColor)), W55BBlockHits),
+            % Number of shape cells in block.
+            length(W55BBlockHits, W55BHitCount),
+            % Majority threshold.
+            W55BThresh is W55BBlockTotal // 2,
+            % Majority shape cells -> noise color output; otherwise background.
+            ( W55BHitCount > W55BThresh -> W55BOV = W55BNoiseColor ; W55BOV = 0 )
+        ), W55BBlockIs, W55BOutRow)
+    ), W55BBlockIs, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
