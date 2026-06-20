@@ -1135,6 +1135,30 @@ What was learned: Both rules hit the same findall duplicate bug, which is now a 
 
 New tasks solved by wave 52 (2 new tasks): 8eb1be9a (tile_3row_pattern), c1d99e64 (mark_zero_lines).
 
+ATTEMPT 28: WAVE 53 - RAIL STAIRCASE, PARALLELOGRAM SHIFT, FRAME REFLECTION, DIAGONAL BOUNCE - 346 / 400 = 86.50%
+
+Date: 2026-06-20
+Score: 346 / 400 = 86.50%.
+Previous score: 342 / 400 = 85.50% (wave 52, 2026-06-20).
+Rules added: 4 (all 4 solve their test cases).
+Tasks solved: +4.
+
+What changed: Wave 53 added four new induction rules, each derived from visual inspection of training examples plus Python verification before Prolog implementation.
+
+The four scoring rules added in wave 53:
+
+rail_staircase_8s (task f15e1fac): The input contains a single non-zero value (8) placed in an L-shaped or staircase anchor pattern. The rule identifies the anchor cells and grows a filled staircase: for each row at offset i from the topmost anchor row, the output fills columns 0 through i with value 8. The staircase fans downward and to the right from the anchor position.
+
+shift_parallelogram_top (task 025d127b): The input contains one or more parallelogram shapes made of non-zero colors. For each color, the bottommost row of cells and the rightmost anchor cell in that row are fixed in place; every other cell in the parallelogram shifts one column to the right. The effect is that non-bottom, non-right-anchor cells move right by 1, converting a slanted parallelogram into a more vertical shape.
+
+reflect_5s_through_frame (task f8a8fe49): The input contains a rectangular frame of 2-cells and 5-cells inside that frame. The 5-cells reflect outward through the nearest boundary of the frame: if the top edge of the frame is completely filled with 2s, the reflection is vertical (each 5-cell maps to its mirror image across the nearer of the top or bottom frame boundary); otherwise the reflection is horizontal (each 5-cell maps across the nearer of the left or right frame boundary). The original 5-cells are removed; the reflected positions are placed. Algorithm: the top-edge completeness test is done with forall over the column range.
+
+diagonal_staircase_bounce (task a78176bb): The input contains a main diagonal of V-cells (all sharing the same col-minus-row constant D) plus 5-cells forming staircases adjacent to it. For each side (right: 5s with col-row > D; left: 5s with col-row < D), the maximum offset from D is computed. A new diagonal of V-cells is placed at D + max_right_offset + 2 (if a right staircase exists) and/or at D - max_left_offset - 2 (if a left staircase exists). All 5-cells are removed from the output; the original V-diagonal is retained.
+
+What was learned: The diagonal bounce rule reinforces the pattern that staircase markers in ARC tasks almost always encode an offset or distance measurement. When 5-cells appear in a stepped pattern adjacent to a primary structure, the step count (max offset from the structure) controls where the secondary structure is placed. The offset plus a gap constant (here 2) is the positioning formula.
+
+New tasks solved by wave 53 (4 new tasks): 025d127b (shift_parallelogram_top), a78176bb (diagonal_staircase_bounce), f15e1fac (rail_staircase_8s), f8a8fe49 (reflect_5s_through_frame).
+
 THE COMPLETE SCORE PROGRESSION
 
 This table records every scored benchmark run in chronological order.
@@ -1262,10 +1286,12 @@ Run 61: 338 / 400 = 84.50% - Wave 50: two new rules (border_9block_with_shadow, 
 
 Run 62: 340 / 400 = 85.00% - Wave 51: two new rules (staircase_from_8, mark_2x2_zero_blocks). Plus 2 tasks.
 
-Run 63: 342 / 400 = 85.50% - Wave 52: two new rules (mark_zero_lines, tile_3row_pattern). Plus 2 tasks. (CURRENT BEST)
+Run 63: 342 / 400 = 85.50% - Wave 52: two new rules (mark_zero_lines, tile_3row_pattern). Plus 2 tasks.
+
+Run 64: 346 / 400 = 86.50% - Wave 53: four new rules (rail_staircase_8s, shift_parallelogram_top, reflect_5s_through_frame, diagonal_staircase_bounce). Plus 4 tasks. (CURRENT BEST)
 
 
-ALL 263 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 267 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1797,6 +1823,14 @@ ef135b50 - fill_horiz_gap_with_9.
 
 fcc82909 - fill_below_shape_by_color_count.
 
+025d127b - shift_parallelogram_top.
+
+a78176bb - diagonal_staircase_bounce.
+
+f15e1fac - rail_staircase_8s.
+
+f8a8fe49 - reflect_5s_through_frame.
+
 
 WHAT COMES NEXT
 
@@ -1814,7 +1848,7 @@ This paper will be extended with a new attempt entry after every future benchmar
 
 The mountain is still being climbed.
 
-The score at the time of writing is 261 / 400 = 65.25% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
+The score at the time of writing is 346 / 400 = 86.50% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
 
 
 APPENDIX 1: ALL THE HUMAN STEPS FOR SOLVING ARC-AGI PUZZLES
@@ -3021,6 +3055,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 21: Eight New Structural Rules, 178 / 400 = 
 Dison, D. R. (2026). ARC-AGI-1 Wave 51: Staircase Growth and Connected-Component Rectangle, 340 / 400 = 85.00%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 52: Zero-Line Marking and Three-Row Tiling, 342 / 400 = 85.50%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 53: Rail Staircase, Parallelogram Shift, Frame Reflection, Diagonal Bounce, 346 / 400 = 86.50%. AIU / PrologAI.
 
 
 END OF DOCUMENT
