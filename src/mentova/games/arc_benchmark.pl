@@ -24069,6 +24069,446 @@ w50_gap_acc(W50S, W50E, W50P) :-
     w50_gap_acc(W50S2, W50E2, W50P).
 
 % ---------------------------------------------------------------------------
+% WAVE 51 RULES
+% ---------------------------------------------------------------------------
+
+% w51a_up_cell/5: generate each 5-cell in the UP staircase arm from staircase_from_8.
+% UP arm repeats: 1 vertical step up then 3-cell horizontal RIGHT until off-grid.
+w51a_up_cell(W51Row, W51Col, W51NR, W51NC, W51R-W51C) :-
+    % Guard: row in valid grid range.
+    W51Row >= 0, W51Row < W51NR,
+    % Guard: anchor column in valid grid range.
+    W51Col >= 0, W51Col < W51NC,
+    (
+        % Branch A: vertical step cell at (Row, Col).
+        W51R = W51Row, W51C = W51Col
+    ;
+        % Branch B: 3-cell horizontal at row Row-1, cols Col to Col+2.
+        W51Row1 is W51Row - 1,
+        % Require row above is within grid.
+        W51Row1 >= 0,
+        % Try each of 3 rightward offsets (0, 1, 2).
+        member(W51DC, [0,1,2]),
+        % Compute target column.
+        W51HC is W51Col + W51DC,
+        % Bound-check the target column.
+        W51HC < W51NC,
+        % Assign output row and column.
+        W51R = W51Row1, W51C = W51HC
+    ;
+        % Branch C: recurse to next step (2 rows up, 2 cols right).
+        W51NextR is W51Row - 2,
+        W51NextC is W51Col + 2,
+        % Continue generating cells from next step.
+        w51a_up_cell(W51NextR, W51NextC, W51NR, W51NC, W51R-W51C)
+    ).
+
+% w51a_dn_cell/5: generate each 5-cell in the DOWN staircase arm from staircase_from_8.
+% DOWN arm repeats: 1 vertical step down then 3-cell horizontal LEFT until off-grid.
+w51a_dn_cell(W51Row, W51Col, W51NR, W51NC, W51R-W51C) :-
+    % Guard: row in valid grid range.
+    W51Row >= 0, W51Row < W51NR,
+    % Guard: anchor column in valid grid range.
+    W51Col >= 0, W51Col < W51NC,
+    (
+        % Branch A: vertical step cell at (Row, Col).
+        W51R = W51Row, W51C = W51Col
+    ;
+        % Branch B: 3-cell horizontal at row Row+1, cols Col to Col-2.
+        W51Row1 is W51Row + 1,
+        % Require row below is within grid.
+        W51Row1 < W51NR,
+        % Try each of 3 leftward offsets (0, 1, 2).
+        member(W51DC, [0,1,2]),
+        % Compute target column (going left).
+        W51HC is W51Col - W51DC,
+        % Bound-check the target column.
+        W51HC >= 0,
+        % Assign output row and column.
+        W51R = W51Row1, W51C = W51HC
+    ;
+        % Branch C: recurse to next step (2 rows down, 2 cols left).
+        W51NextR is W51Row + 2,
+        W51NextC is W51Col - 2,
+        % Continue generating cells from next step.
+        w51a_dn_cell(W51NextR, W51NextC, W51NR, W51NC, W51R-W51C)
+    ).
+
+% ---------------------------------------------------------------------------
+% Wave 51 Rule 1: staircase_from_8 (task d06dbe63)
+arc_named_rule(staircase_from_8).
+% Single 8-cell emits two L-shaped staircase arms of 5s:
+% UP arm steps 1 up + 3 right each cycle; DOWN arm steps 1 down + 3 left each cycle.
+arc_transform(staircase_from_8, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W51AH|_], length(W51AH, NC), NC =< 30,
+    % Grid must contain only 0s and 8s.
+    \+ (member(W51ARow, Grid), member(W51AV, W51ARow), W51AV =\= 0, W51AV =\= 8),
+    % Locate the single 8-cell.
+    NR1 is NR - 1, NC1 is NC - 1,
+    findall(W51ER-W51EC, (
+        % Scan all rows.
+        between(0, NR1, W51ER), nth0(W51ER, Grid, W51ERow),
+        % Scan all columns.
+        between(0, NC1, W51EC), nth0(W51EC, W51ERow, 8)
+    ), W51Eights),
+    % Must be exactly one 8-cell.
+    W51Eights = [W51SR-W51SC],
+    % Collect all UP arm 5-cells (starting one row above the 8).
+    W51UpRow0 is W51SR - 1,
+    findall(W51RU-W51CU, w51a_up_cell(W51UpRow0, W51SC, NR, NC, W51RU-W51CU), W51UpRaw),
+    % Collect all DOWN arm 5-cells (starting one row below the 8).
+    W51DnRow0 is W51SR + 1,
+    findall(W51RD-W51CD, w51a_dn_cell(W51DnRow0, W51SC, NR, NC, W51RD-W51CD), W51DnRaw),
+    % Merge both arms and deduplicate.
+    append(W51UpRaw, W51DnRaw, W51AllRaw),
+    sort(W51AllRaw, W51Fives),
+    % Build output: preserve all original non-zero values; add 5s at arm positions.
+    numlist(0, NR1, W51RIs),
+    numlist(0, NC1, W51CIs),
+    maplist([W51ORI, W51ORow]>>(
+        % Fetch original row.
+        nth0(W51ORI, Grid, W51IGRow),
+        maplist([W51OCI, W51OCV]>>(
+            % Keep any existing non-zero value (including the 8).
+            ( nth0(W51OCI, W51IGRow, W51OIV), W51OIV =\= 0
+            -> W51OCV = W51OIV
+            % Place 5 at an arm cell.
+            ; member(W51ORI-W51OCI, W51Fives)
+            -> W51OCV = 5
+            % Otherwise 0.
+            ; W51OCV = 0
+            )
+        ), W51CIs, W51ORow)
+    ), W51RIs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 51 Rule 2: mark_2x2_zero_blocks (task a8d7556c)
+arc_named_rule(mark_2x2_zero_blocks).
+% For each connected zero component, find the max-area all-zero rectangle.
+% Mark all cells that belong to any such rectangle achieving the max area.
+arc_transform(mark_2x2_zero_blocks, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W51BH|_], length(W51BH, NC), NC =< 30,
+    % Grid must contain only 0s and 5s.
+    \+ (member(W51BRow, Grid), member(W51BV, W51BRow), W51BV =\= 0, W51BV =\= 5),
+    % Must have at least one 5 in the grid.
+    once((member(W51BChk, Grid), member(5, W51BChk))),
+    % Collect all zero cells.
+    NR1 is NR - 1, NC1 is NC - 1,
+    findall(W51BR-W51BC, (
+        % Scan each row.
+        between(0, NR1, W51BR),
+        % Fetch the row.
+        nth0(W51BR, Grid, W51BZRow),
+        % Scan each column.
+        between(0, NC1, W51BC),
+        % Keep only zero-valued cells.
+        nth0(W51BC, W51BZRow, 0)
+    ), W51AllZeros),
+    % Partition zeros into 4-connected components using BFS.
+    w51b_all_comps(W51AllZeros, Grid, NR, NC, W51Comps),
+    % For each component: find max-area all-zero rectangle; collect cells.
+    findall(W51MC, (
+        % Try each connected zero component.
+        member(W51Comp, W51Comps),
+        % Find the largest all-zero rectangle in this component.
+        w51b_max_rect(W51Comp, Grid, W51Rect, W51Area),
+        % Only mark if area is at least a 2x2 block.
+        W51Area >= 4,
+        % Emit each cell of the rectangle.
+        member(W51MC, W51Rect)
+    ), W51MarkDupes),
+    % Must mark at least one cell.
+    W51MarkDupes \= [],
+    % Deduplicate across components.
+    sort(W51MarkDupes, W51MarkCells),
+    numlist(0, NR1, W51BRIs),
+    numlist(0, NC1, W51BCIs),
+    maplist([W51ORI, W51ORow]>>(
+        % Fetch original row.
+        nth0(W51ORI, Grid, W51IGRow),
+        maplist([W51OCI, W51OCV]>>(
+            % Preserve 5s.
+            ( nth0(W51OCI, W51IGRow, 5)
+            -> W51OCV = 5
+            % Mark rectangle cells with 2.
+            ; member(W51ORI-W51OCI, W51MarkCells)
+            -> W51OCV = 2
+            % All other cells remain 0.
+            ; W51OCV = 0
+            )
+        ), W51BCIs, W51ORow)
+    ), W51BRIs, Out).
+
+% w51b_all_comps/5: partition zero-cell list into 4-connected components.
+w51b_all_comps([], _, _, _, []).
+w51b_all_comps([W51BH|W51BT], W51BGrid, W51BNR, W51BNC, [W51BComp|W51BRest]) :-
+    % BFS from the first unvisited zero cell.
+    w51b_bfs([W51BH], [W51BH], W51BGrid, W51BNR, W51BNC, W51BComp),
+    % Remove component cells from the remaining list.
+    subtract(W51BT, W51BComp, W51BRemaining),
+    % Recurse on remaining zeros.
+    w51b_all_comps(W51BRemaining, W51BGrid, W51BNR, W51BNC, W51BRest).
+
+% w51b_bfs/6: breadth-first search; accumulates all 4-connected zero cells.
+w51b_bfs([], W51BVis, _, _, _, W51BVis).
+w51b_bfs([W51BR-W51BC|W51BQ], W51BVis, W51BGrid, W51BNR, W51BNC, W51BComp) :-
+    % Last valid row and column.
+    W51BNR1 is W51BNR - 1, W51BNC1 is W51BNC - 1,
+    % Find unvisited 4-connected zero neighbours.
+    findall(W51BR2-W51BC2, (
+        % Four cardinal directions.
+        ( W51BR2 is W51BR+1, W51BC2 = W51BC
+        ; W51BR2 is W51BR-1, W51BC2 = W51BC
+        ; W51BR2 = W51BR,    W51BC2 is W51BC+1
+        ; W51BR2 = W51BR,    W51BC2 is W51BC-1
+        ),
+        % In-bounds check.
+        W51BR2 >= 0, W51BR2 =< W51BNR1,
+        W51BC2 >= 0, W51BC2 =< W51BNC1,
+        % Must be zero.
+        nth0(W51BR2, W51BGrid, W51BNRow), nth0(W51BC2, W51BNRow, 0),
+        % Not already visited or queued.
+        \+ member(W51BR2-W51BC2, W51BVis),
+        \+ member(W51BR2-W51BC2, W51BQ)
+    ), W51BNbrs),
+    % Append new neighbours to queue and visited set.
+    append(W51BNbrs, W51BQ, W51BNewQ),
+    append(W51BNbrs, W51BVis, W51BNewVis),
+    % Continue BFS.
+    w51b_bfs(W51BNewQ, W51BNewVis, W51BGrid, W51BNR, W51BNC, W51BComp).
+
+% w51b_max_rect/4: find all max-area all-zero rectangles in a connected component.
+% RectCells is the union of all cells from rectangles achieving MaxArea.
+w51b_max_rect(W51BComp, W51BGrid, W51BRectCells, W51BMaxArea) :-
+    % Bounding box rows.
+    findall(R, member(R-_, W51BComp), W51BRs),
+    min_list(W51BRs, W51BMinR), max_list(W51BRs, W51BMaxR),
+    % Bounding box columns.
+    findall(C, member(_-C, W51BComp), W51BCs),
+    min_list(W51BCs, W51BMinC), max_list(W51BCs, W51BMaxC),
+    % Enumerate all all-zero rectangles of height>=2 and width>=2.
+    findall(W51BArea-W51BR1-W51BR2-W51BC1-W51BC2, (
+        % Try each row pair (height >= 2).
+        between(W51BMinR, W51BMaxR, W51BR1),
+        between(W51BR1, W51BMaxR, W51BR2),
+        W51BR2 > W51BR1,
+        % Find columns valid across all rows R1..R2.
+        findall(W51BCC, (
+            between(W51BMinC, W51BMaxC, W51BCC),
+            % All cells in this column, rows R1..R2, must be zero.
+            \+ (between(W51BR1, W51BR2, W51BRR),
+                nth0(W51BRR, W51BGrid, W51BRRow),
+                nth0(W51BCC, W51BRRow, W51BV),
+                W51BV =\= 0)
+        ), W51BValidCols),
+        % Find all maximal contiguous runs of valid columns.
+        w51b_runs(W51BValidCols, W51BRuns),
+        % Each run of width >= 2 gives one candidate rectangle.
+        member(W51BC1-W51BC2, W51BRuns),
+        W51BC2 > W51BC1,
+        % Compute rectangle area.
+        W51BArea is (W51BR2 - W51BR1 + 1) * (W51BC2 - W51BC1 + 1)
+    ), W51BOpts),
+    % If no valid rectangle found, return empty.
+    ( W51BOpts = [] ->
+        W51BMaxArea = 0, W51BRectCells = []
+    ;
+        % Sort to put largest area last.
+        msort(W51BOpts, W51BSorted),
+        % Extract the maximum area.
+        last(W51BSorted, W51BMaxArea-_-_-_-_),
+        % Collect cells from ALL rectangles achieving max area.
+        findall(W51BR-W51BC, (
+            member(W51BMaxArea-W51BR1b-W51BR2b-W51BC1b-W51BC2b, W51BSorted),
+            between(W51BR1b, W51BR2b, W51BR),
+            between(W51BC1b, W51BC2b, W51BC)
+        ), W51BRectCells)
+    ).
+
+% w51b_runs/2: convert a sorted integer list to a list of contiguous run Start-End pairs.
+w51b_runs([], []).
+w51b_runs([W51BC|W51BT], [W51BC-W51BEnd|W51BRest]) :-
+    % Extend the run as far as consecutive integers continue.
+    w51b_run_end(W51BC, W51BT, W51BEnd, W51BRem),
+    % Recurse on remainder.
+    w51b_runs(W51BRem, W51BRest).
+
+% w51b_run_end/4: advance the current run end while the next value is consecutive.
+w51b_run_end(W51BCur, [], W51BCur, []).
+w51b_run_end(W51BCur, [W51BH|W51BT], W51BEnd, W51BRem) :-
+    W51BNext is W51BCur + 1,
+    ( W51BH =:= W51BNext ->
+        % Continue the run.
+        w51b_run_end(W51BH, W51BT, W51BEnd, W51BRem)
+    ;
+        % End of run.
+        W51BEnd = W51BCur, W51BRem = [W51BH|W51BT]
+    ).
+
+% ---------------------------------------------------------------------------
+% Wave 51 Rule 3: fill_rect_frame_interior (task e73095fd)
+arc_named_rule(fill_rect_frame_interior).
+% Fill 0-cells enclosed inside closed rectangular 5-frames with 4.
+% Grid boundary acts as a wall when a 5-frame abuts it.
+arc_transform(fill_rect_frame_interior, Grid, Out) :-
+    % Determinism cut.
+    !,
+    % Row size guard.
+    length(Grid, NR), NR =< 30,
+    % Column size guard.
+    Grid = [W51CH|_], length(W51CH, NC), NC =< 30,
+    % Grid must contain only 0s and 5s.
+    \+ (member(W51CRow, Grid), member(W51CV, W51CRow), W51CV =\= 0, W51CV =\= 5),
+    % Must have at least one 5 in the grid.
+    once((member(W51CChk, Grid), member(5, W51CChk))),
+    NR1 is NR - 1, NC1 is NC - 1,
+    % Find all 0-cells that are enclosed inside a valid rectangular 5-frame.
+    findall(W51FR-W51FC, (
+        % Scan all rows.
+        between(0, NR1, W51FR), nth0(W51FR, Grid, W51FRow),
+        % Scan all columns.
+        between(0, NC1, W51FC), nth0(W51FC, W51FRow, 0),
+        % Check enclosure.
+        w51c_enclosed(W51FR, W51FC, Grid, NR, NC)
+    ), W51FourCells),
+    % Must fill at least one cell.
+    W51FourCells \= [],
+    numlist(0, NR1, W51CRIs),
+    numlist(0, NC1, W51CCIs),
+    maplist([W51ORI, W51ORow]>>(
+        % Fetch original row.
+        nth0(W51ORI, Grid, W51IGRow),
+        maplist([W51OCI, W51OCV]>>(
+            % Preserve 5s.
+            ( nth0(W51OCI, W51IGRow, 5)
+            -> W51OCV = 5
+            % Fill enclosed 0-cells with 4.
+            ; member(W51ORI-W51OCI, W51FourCells)
+            -> W51OCV = 4
+            % All other cells remain 0.
+            ; W51OCV = 0
+            )
+        ), W51CCIs, W51ORow)
+    ), W51CRIs, Out).
+
+% w51c_enclosed/5: true if cell (R,C) is enclosed inside a closed rectangular 5-frame.
+% Top and bottom frame walls must be actual 5-cell rows (grid boundary is not allowed
+% for top/bottom). Left and right boundaries may use the grid edge as a wall.
+w51c_enclosed(W51R, W51C, W51Grid, W51NR, W51NC) :-
+    % Compute last valid row and column indices.
+    W51NR1 is W51NR - 1, W51NC1 is W51NC - 1,
+    % Find nearest 5 ABOVE cell in column C — must exist (no top-boundary fallback).
+    W51R1up is W51R - 1,
+    % Require at least one row above.
+    W51R1up >= 0,
+    findall(W51Rr, (between(0, W51R1up, W51Rr),
+                    nth0(W51Rr, W51Grid, W51AbRow),
+                    nth0(W51C, W51AbRow, 5)), W51AboveRows),
+    % There must be an actual 5-row above.
+    W51AboveRows \= [],
+    last(W51AboveRows, W51RTop),
+    % Find nearest 5 BELOW cell in column C — must exist (no bottom-boundary fallback).
+    W51R1dn is W51R + 1,
+    % Require at least one row below.
+    W51R1dn =< W51NR1,
+    findall(W51Rb, (between(W51R1dn, W51NR1, W51Rb),
+                    nth0(W51Rb, W51Grid, W51BelRow),
+                    nth0(W51C, W51BelRow, 5)), W51BelowRows),
+    % There must be an actual 5-row below.
+    W51BelowRows \= [],
+    W51BelowRows = [W51RBot|_],
+    % Fetch row R for left/right searches.
+    nth0(W51R, W51Grid, W51RRow),
+    % Find nearest 5 (or left grid boundary) to the left of cell in row R.
+    ( W51C =:= 0
+    -> W51CLeft = -1
+    ; W51C1lt is W51C - 1,
+      findall(W51Cl, (between(0, W51C1lt, W51Cl), nth0(W51Cl, W51RRow, 5)), W51LeftCols),
+      ( W51LeftCols = [] -> W51CLeft = -1 ; last(W51LeftCols, W51CLeft) )
+    ),
+    % Find nearest 5 (or right grid boundary) to the right of cell in row R.
+    ( W51C =:= W51NC1
+    -> W51CRight = W51NC
+    ; W51C1rt is W51C + 1,
+      findall(W51Cr, (between(W51C1rt, W51NC1, W51Cr), nth0(W51Cr, W51RRow, 5)), W51RightCols),
+      ( W51RightCols = [] -> W51CRight = W51NC ; W51RightCols = [W51CRight|_] )
+    ),
+    % Verify top wall: row RTop from col CLeft to CRight is all 5 (or boundary).
+    w51c_row_all5(W51RTop, W51CLeft, W51CRight, W51Grid, W51NR, W51NC),
+    % Verify bottom wall: row RBot from col CLeft to CRight is all 5 (or boundary).
+    w51c_row_all5(W51RBot, W51CLeft, W51CRight, W51Grid, W51NR, W51NC),
+    % Verify left wall: col CLeft from row RTop to RBot is all 5 (or boundary).
+    w51c_col_all5(W51CLeft, W51RTop, W51RBot, W51Grid, W51NR, W51NC),
+    % Verify right wall: col CRight from row RTop to RBot is all 5 (or boundary).
+    w51c_col_all5(W51CRight, W51RTop, W51RBot, W51Grid, W51NR, W51NC),
+    % Verify all interior cells (strictly inside the frame) are 0.
+    w51c_interior_all0(W51RTop, W51RBot, W51CLeft, W51CRight, W51Grid, W51NR, W51NC).
+
+% w51c_row_all5/6: all cells in row R from col C1 to C2 are 5; boundary rows always pass.
+w51c_row_all5(W51R, W51C1, W51C2, W51Grid, W51NR, W51NC) :-
+    % Top boundary (-1) always passes.
+    ( W51R =:= -1 -> true
+    % Bottom boundary (NR) always passes.
+    ; W51R =:= W51NR -> true
+    ; nth0(W51R, W51Grid, W51RowR),
+      % Clamp column range to grid bounds.
+      W51AC1 is max(0, W51C1),
+      W51AC2 is min(W51NC - 1, W51C2),
+      % Empty range always passes.
+      ( W51AC1 > W51AC2 -> true
+      % Fail if any cell in range is not 5.
+      ; \+ (between(W51AC1, W51AC2, W51CC), nth0(W51CC, W51RowR, W51V), W51V =\= 5)
+      )
+    ).
+
+% w51c_col_all5/6: all cells in col C from row R1 to R2 are 5; boundary cols always pass.
+w51c_col_all5(W51C, W51R1, W51R2, W51Grid, W51NR, W51NC) :-
+    % Left boundary (-1) always passes.
+    ( W51C =:= -1 -> true
+    % Right boundary (NC) always passes.
+    ; W51C =:= W51NC -> true
+    ; % Clamp row range to grid bounds.
+      W51AR1 is max(0, W51R1),
+      W51AR2 is min(W51NR - 1, W51R2),
+      % Empty range always passes.
+      ( W51AR1 > W51AR2 -> true
+      % Fail if any cell in range is not 5.
+      ; \+ (between(W51AR1, W51AR2, W51RR),
+            nth0(W51RR, W51Grid, W51CColRow),
+            nth0(W51C, W51CColRow, W51V), W51V =\= 5)
+      )
+    ).
+
+% w51c_interior_all0/7: all cells strictly inside the bounding rectangle are 0.
+w51c_interior_all0(W51RTop, W51RBot, W51CLeft, W51CRight, W51Grid, W51NR, W51NC) :-
+    % Compute interior row and column ranges.
+    W51IR1 is W51RTop + 1, W51IR2 is W51RBot - 1,
+    W51IC1 is W51CLeft + 1, W51IC2 is W51CRight - 1,
+    % Clamp to grid bounds.
+    W51AIR1 is max(0, W51IR1), W51AIR2 is min(W51NR - 1, W51IR2),
+    W51AIC1 is max(0, W51IC1), W51AIC2 is min(W51NC - 1, W51IC2),
+    % Empty interior always passes.
+    ( W51AIR1 > W51AIR2 -> true
+    ; W51AIC1 > W51AIC2 -> true
+    % Fail if any interior cell is non-zero.
+    ; \+ (between(W51AIR1, W51AIR2, W51IRR),
+          nth0(W51IRR, W51Grid, W51IRow),
+          between(W51AIC1, W51AIC2, W51ICC),
+          nth0(W51ICC, W51IRow, W51IV),
+          W51IV =\= 0)
+    ).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
