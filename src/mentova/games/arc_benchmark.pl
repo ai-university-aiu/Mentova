@@ -25586,6 +25586,194 @@ arc_transform(key_masked_by_block_pattern, Grid, Out) :-
     ), KmbMetaRs, Out).
 
 % ---------------------------------------------------------------------------
+% Wave 58 Rule A: box_extract_recolor_by_dots (task fcb5c309)
+% ---------------------------------------------------------------------------
+
+% Declare the rule name for wave-58 rule A.
+arc_named_rule(box_extract_recolor_by_dots).
+% Two non-zero colors exist: a numerous frame color forming rectangular boxes,
+% and a sparse dot color scattered around. Output = the frame-box whose
+% bounding box encloses the most dot-color cells, cropped to that bounding box,
+% with every non-zero cell recolored to the dot color.
+arc_transform(box_extract_recolor_by_dots, Grid, Out) :-
+    % Cut to keep the rule deterministic.
+    !,
+    % Get grid dimensions and apply size guard.
+    arc_grid_dims(Grid, W58aNR, W58aNC),
+    % Size guard: skip grids larger than 30x30.
+    W58aNR =< 30, W58aNC =< 30,
+    % Collect all non-zero values in the grid.
+    findall(W58aV, (nth1(_,Grid,W58aRow), member(W58aV,W58aRow), W58aV \= 0), W58aNZ),
+    % Must have at least some non-zero values.
+    W58aNZ \= [],
+    % Exactly two distinct non-zero colors: frame color and dot color.
+    list_to_set(W58aNZ, W58aColors),
+    W58aColors = [W58aC1, W58aC2],
+    % Count occurrences to identify the more-frequent (frame) color.
+    aggregate_all(count, member(W58aC1, W58aNZ), W58aN1),
+    aggregate_all(count, member(W58aC2, W58aNZ), W58aN2),
+    % Assign frame = more frequent, dot = less frequent.
+    ( W58aN1 >= W58aN2 -> W58aFrame = W58aC1, W58aDot = W58aC2
+    ;                     W58aFrame = W58aC2, W58aDot = W58aC1 ),
+    % Find all 4-connected components in the grid.
+    arc_connected_components(Grid, W58aComps),
+    % For each frame-colored component, count dot cells inside its bounding box.
+    findall(W58aBox,
+        ( member(component(W58aFrame, W58aCells), W58aComps),
+          % Extract row and column indices of this component's cells.
+          findall(W58aRr, member(W58aRr-_, W58aCells), W58aRs),
+          findall(W58aCc, member(_-W58aCc, W58aCells), W58aCsL),
+          % Bounding box of the component.
+          arc_min_list(W58aRs, W58aR1), arc_max_list(W58aRs, W58aR2),
+          arc_min_list(W58aCsL, W58aColC1), arc_max_list(W58aCsL, W58aColC2),
+          % Count dot-colored cells within the bounding box.
+          aggregate_all(count,
+              ( nth1(W58aDR, Grid, W58aDRow), W58aDR >= W58aR1, W58aDR =< W58aR2,
+                nth1(W58aDC, W58aDRow, W58aDot), W58aDC >= W58aColC1, W58aDC =< W58aColC2 ),
+              W58aDotCount),
+          % Record bounding box with dot count.
+          W58aBox = box(W58aDotCount, W58aR1, W58aR2, W58aColC1, W58aColC2) ),
+        W58aBoxes),
+    % Must have found at least one frame-color box.
+    W58aBoxes \= [],
+    % Pick the box enclosing the most dot cells (sort descending by dot count).
+    sort(0, @>=, W58aBoxes, [box(_, W58aWR1, W58aWR2, W58aWC1, W58aWC2)|_]),
+    % Build row and column index lists for the winning bounding box.
+    numlist(W58aWR1, W58aWR2, W58aOutRs),
+    numlist(W58aWC1, W58aWC2, W58aOutCs),
+    % Build output: crop to winning box, recolor all non-zero cells to dot color.
+    maplist([W58aOR, W58aOutRow]>>(
+        % Fetch the input row at this output row index.
+        nth1(W58aOR, Grid, W58aInRow),
+        maplist([W58aOC, W58aOV]>>(
+            % Fetch the input cell value at this output column index.
+            nth1(W58aOC, W58aInRow, W58aInV),
+            % Non-zero input cells become the dot color; zero cells stay zero.
+            ( W58aInV =\= 0 -> W58aOV = W58aDot ; W58aOV = 0 )
+        ), W58aOutCs, W58aOutRow)
+    ), W58aOutRs, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 58 Rule C: fill_grid_regions_by_line_holes (task 83302e8f)
+% ---------------------------------------------------------------------------
+
+% Declare the rule name for wave-58 rule C.
+arc_named_rule(fill_grid_regions_by_line_holes).
+% A background value B forms regular rows and columns of lines across the grid.
+% Some line cells are holes (value 0 instead of B). Output: B stays B; holes on
+% lines become 4; content cells (0-valued, off every line) become 3 when all
+% four bounding boundary segments are intact, or 4 when any segment has a hole.
+arc_transform(fill_grid_regions_by_line_holes, Grid, Out) :-
+    % Cut to keep the rule deterministic.
+    !,
+    % Get grid dimensions and apply size guard.
+    arc_grid_dims(Grid, W58CNR, W58CNC),
+    % Size guard: skip grids larger than 30x30.
+    W58CNR =< 30, W58CNC =< 30,
+    % Step 1: Find background value = most common non-zero value.
+    findall(W58CV, (nth1(_,Grid,W58CR), member(W58CV,W58CR), W58CV \= 0), W58CNZVs),
+    % Grid must contain at least one non-zero value.
+    W58CNZVs \= [],
+    % Count occurrences of each distinct non-zero value.
+    list_to_set(W58CNZVs, W58CUniqs),
+    maplist([W58CU, W58CCnt-W58CU]>>(
+        aggregate_all(count, member(W58CU, W58CNZVs), W58CCnt)
+    ), W58CUniqs, W58CFreqs),
+    % Sort descending; the most frequent non-zero value is the background.
+    sort(0, @>=, W58CFreqs, [_-W58CBG|_]),
+    % Step 2: Find line rows = rows where >half the cells equal the background.
+    numlist(1, W58CNR, W58CAllRows),
+    include([W58CR2]>>(
+        % Fetch this row.
+        nth1(W58CR2, Grid, W58CRowD),
+        % Count background cells in this row.
+        aggregate_all(count, (member(W58CVal, W58CRowD), W58CVal =:= W58CBG), W58CCntBG),
+        % Line row if more than half the cells are background.
+        W58CCntBG * 2 > W58CNC
+    ), W58CAllRows, W58CLineRows),
+    % Must have found at least one line row.
+    W58CLineRows \= [],
+    % Step 3: Find line cols = cols where >half the cells equal the background.
+    numlist(1, W58CNC, W58CAllCols),
+    include([W58CC2]>>(
+        % Collect all values in this column.
+        findall(W58CColV, (nth1(_,Grid,W58CColRow), nth1(W58CC2,W58CColRow,W58CColV)), W58CColVals),
+        % Count background cells in this column.
+        aggregate_all(count, (member(W58CCV, W58CColVals), W58CCV =:= W58CBG), W58CCntCol),
+        % Line col if more than half the cells are background.
+        W58CCntCol * 2 > W58CNR
+    ), W58CAllCols, W58CLineCols),
+    % Must have found at least one line col.
+    W58CLineCols \= [],
+    % Step 4: Build output: each cell gets background, 4, or 3.
+    maplist([W58COR, W58COutRow]>>(
+        % Fetch the input row.
+        nth1(W58COR, Grid, W58CInRow),
+        maplist([W58COC, W58COV]>>(
+            % Fetch the input cell value.
+            nth1(W58COC, W58CInRow, W58CInV),
+            % Background cells stay unchanged.
+            ( W58CInV =:= W58CBG
+            -> W58COV = W58CBG
+            % Zero cell on any line (row or col) is a hole: output 4.
+            ;  once(( memberchk(W58COR, W58CLineRows) ; memberchk(W58COC, W58CLineCols) ))
+            -> W58COV = 4
+            % Content cell: output 4 if its region has a boundary hole, else 3.
+            ;  w58c_region_has_hole(Grid, W58CNR, W58CNC, W58CLineRows, W58CLineCols, W58COR, W58COC)
+            -> W58COV = 4
+            % Content cell with fully intact boundaries: output 3.
+            ;  W58COV = 3
+            )
+        ), W58CAllCols, W58COutRow)
+    ), W58CAllRows, Out).
+
+% Helper: succeed if any boundary segment of the region enclosing (R,C) has a hole.
+% A hole is a 0-valued cell on the boundary line row or col of the region.
+w58c_region_has_hole(Grid, NR, NC, LineRows, LineCols, R, C) :-
+    % Top boundary: last line row strictly less than R; default 0 (grid top edge).
+    ( include([W58CLR]>>(W58CLR < R), LineRows, W58CAbv), W58CAbv \= []
+    -> last(W58CAbv, W58CTopB) ; W58CTopB = 0 ),
+    % Bottom boundary: first line row strictly greater than R; default NR+1 (grid bottom).
+    ( include([W58CLR2]>>(W58CLR2 > R), LineRows, W58CBlw), W58CBlw \= []
+    -> W58CBlw = [W58CBotB|_] ; W58CBotB is NR + 1 ),
+    % Left boundary: last line col strictly less than C; default 0 (grid left edge).
+    ( include([W58CLC]>>(W58CLC < C), LineCols, W58CLft), W58CLft \= []
+    -> last(W58CLft, W58CLeftB) ; W58CLeftB = 0 ),
+    % Right boundary: first line col strictly greater than C; default NC+1 (grid right).
+    ( include([W58CLC2]>>(W58CLC2 > C), LineCols, W58CRgt), W58CRgt \= []
+    -> W58CRgt = [W58CRightB|_] ; W58CRightB is NC + 1 ),
+    % Column range of this region.
+    W58CRegCS is W58CLeftB + 1, W58CRegCE is W58CRightB - 1,
+    % Row range of this region.
+    W58CRegRS is W58CTopB + 1, W58CRegRE is W58CBotB - 1,
+    % Build region col and row index lists (empty if degenerate range).
+    ( W58CRegCS =< W58CRegCE -> numlist(W58CRegCS, W58CRegCE, W58CRegCols) ; W58CRegCols = [] ),
+    ( W58CRegRS =< W58CRegRE -> numlist(W58CRegRS, W58CRegRE, W58CRegRows) ; W58CRegRows = [] ),
+    % Succeed (finding one hole) if any boundary segment contains a 0-valued cell.
+    once((
+        % Top boundary line row: check region col range for holes.
+        ( W58CTopB >= 1,
+          nth1(W58CTopB, Grid, W58CTopRow),
+          member(W58CBC, W58CRegCols),
+          nth1(W58CBC, W58CTopRow, 0) )
+        % Bottom boundary line row: check region col range for holes.
+        ; ( W58CBotB =< NR,
+            nth1(W58CBotB, Grid, W58CBotRow),
+            member(W58CBC2, W58CRegCols),
+            nth1(W58CBC2, W58CBotRow, 0) )
+        % Left boundary line col: check region row range for holes.
+        ; ( W58CLeftB >= 1,
+            member(W58CRR, W58CRegRows),
+            nth1(W58CRR, Grid, W58CLRow),
+            nth1(W58CLeftB, W58CLRow, 0) )
+        % Right boundary line col: check region row range for holes.
+        ; ( W58CRightB =< NC,
+            member(W58CRR2, W58CRegRows),
+            nth1(W58CRR2, Grid, W58CRRow),
+            nth1(W58CRightB, W58CRRow, 0) )
+    )).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
