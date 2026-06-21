@@ -26001,6 +26001,236 @@ w59b_rotk(K, R, C, Cr2, Cc2, NR, NC) :-
     w59b_rotk(K1, MR, MC, Cr2, Cc2, NR, NC).
 
 % ---------------------------------------------------------------------------
+% Wave 60 Rule A: extreme_region_fill  (task 6455b5f5)
+% The grid contains walls of value 2 that divide the interior into
+% rectangular 0-filled rooms.  Find all 4-connected components of 0-cells.
+% Fill the component with the most cells with value 1, and the component
+% with the fewest cells with value 8.  Middle-sized components keep 0.
+% All non-zero (wall) cells are left unchanged.
+% ---------------------------------------------------------------------------
+
+% Declare the named rule.
+arc_named_rule(extreme_region_fill).
+% Entry point: find 0-components, classify by size, build output.
+arc_transform(extreme_region_fill, Grid, Out) :-
+    % Enforce maximum grid size to bound search.
+    arc_grid_dims(Grid, W60ANR, W60ANC),
+    % Reject grids that exceed the size limit.
+    W60ANR =< 30, W60ANC =< 30,
+    % Find all 4-connected same-color components in the grid.
+    arc_connected_components(Grid, W60AAllComps),
+    % Keep only components whose color is exactly 0.
+    include([component(W60ACV,_)]>>(W60ACV =:= 0), W60AAllComps, W60AZeroComps),
+    % Require at least two distinct 0-regions (so a largest and smallest exist).
+    W60AZeroComps = [_,_|_],
+    % Compute the cell count of each 0-component.
+    maplist([component(0,W60ACells),W60ASz]>>(length(W60ACells,W60ASz)),
+            W60AZeroComps, W60ASizes),
+    % Find the maximum component size.
+    arc_max_list(W60ASizes, W60AMaxSz),
+    % Find the minimum component size.
+    arc_min_list(W60ASizes, W60AMinSz),
+    % Guard: max and min must differ so the rule is unambiguous.
+    W60AMaxSz =\= W60AMinSz,
+    % Build a flat list of R-C-FillColor triples for every 0-cell.
+    findall(W60AR-W60AC-W60AFill, (
+        % Pair each component with its size by index.
+        nth0(W60AIdx, W60AZeroComps, component(0, W60ACells2)),
+        % Retrieve the corresponding size for this component.
+        nth0(W60AIdx, W60ASizes, W60ASz2),
+        % Assign fill color: 1 for largest, 8 for smallest, 0 for middle.
+        ( W60ASz2 =:= W60AMaxSz -> W60AFill = 1
+        ; W60ASz2 =:= W60AMinSz -> W60AFill = 8
+        ; W60AFill = 0 ),
+        % Enumerate every cell in this component.
+        member(W60AR-W60AC, W60ACells2)
+    ), W60AFillMap),
+    % Enumerate all row indices for output construction.
+    numlist(1, W60ANR, W60AAllRows),
+    % Enumerate all column indices for output construction.
+    numlist(1, W60ANC, W60AAllCols),
+    % Build the output grid row by row.
+    maplist([W60AOR, W60AOutRow]>>(
+        % Retrieve the original input row.
+        nth1(W60AOR, Grid, W60AInRow),
+        % Build each output cell in this row.
+        maplist([W60AOC, W60AOV]>>(
+            % Read the current input cell value.
+            nth1(W60AOC, W60AInRow, W60AIV),
+            % Non-zero cells (walls) are kept unchanged.
+            ( W60AIV =\= 0 -> W60AOV = W60AIV
+            % Zero cells use the assigned fill color from the map.
+            ; once(member(W60AOR-W60AOC-W60AOF, W60AFillMap)) -> W60AOV = W60AOF
+            % Fallback: cell was 0 and not in map (should not occur).
+            ; W60AOV = 0 )
+        ), W60AAllCols, W60AOutRow)
+    ), W60AAllRows, Out), !.
+
+% ---------------------------------------------------------------------------
+% Wave 60 Rule B: diagonal_cavity_stamp  (task e8dc4411)
+% The grid has a background color B (most frequent value), a cavity (the
+% set of 0-cells), and a single marker cell M whose value differs from B
+% and 0.  Find the diagonal direction D from the cavity centroid to M.
+% Compute step S = smallest k s.t. cavity+k*D shares no cell with cavity.
+% Stamp copies of the cavity (in color M) at k*S*D for k=1,2,..., stopping
+% when all cavity cells are off-grid.  Original cavity 0s are preserved.
+% ---------------------------------------------------------------------------
+
+% Declare the named rule.
+arc_named_rule(diagonal_cavity_stamp).
+% Entry point: identify cavity, marker, direction, step, then stamp.
+arc_transform(diagonal_cavity_stamp, Grid, Out) :-
+    % Enforce maximum grid size.
+    arc_grid_dims(Grid, W60BNR, W60BNC),
+    % Reject oversized grids.
+    W60BNR =< 30, W60BNC =< 30,
+    % Collect every cell value into a flat list for frequency analysis.
+    findall(W60BV, (nth1(_, Grid, W60BRow), nth1(_, W60BRow, W60BV)), W60BAllVals),
+    % Sort the value list to enable run-length frequency counting.
+    msort(W60BAllVals, W60BSortedVals),
+    % Compute run-length pairs Count-Value from the sorted value list.
+    w60b_run_lengths(W60BSortedVals, W60BRLPairs),
+    % Sort run-length pairs descending by count to find the most frequent value.
+    sort(0, @>=, W60BRLPairs, [_-W60BB|_]),
+    % Collect all 0-cells as the cavity.
+    findall(W60BCR-W60BCC, (
+        % Enumerate row positions.
+        nth1(W60BCR, Grid, W60BCRow),
+        % Find columns containing 0 in this row.
+        nth1(W60BCC, W60BCRow, 0)
+    ), W60BCavity),
+    % Require at least one cavity cell.
+    W60BCavity \= [],
+    % Collect all marker cells: non-background, non-zero.
+    findall(W60BMR-W60BMC-W60BMV, (
+        % Enumerate row positions.
+        nth1(W60BMR, Grid, W60BMRow),
+        % Find columns with non-background, non-zero values.
+        nth1(W60BMC, W60BMRow, W60BMV),
+        % Exclude the background value.
+        W60BMV =\= W60BB,
+        % Exclude zero (cavity) cells.
+        W60BMV =\= 0
+    ), W60BMarkers),
+    % Require exactly one marker cell.
+    W60BMarkers = [W60BMR0-W60BMC0-W60BMV0],
+    % Compute the sum of cavity row indices for centroid calculation.
+    maplist([W60BCR2-_,W60BCR2]>>(true), W60BCavity, W60BCavRs),
+    % Compute the sum of cavity column indices for centroid calculation.
+    maplist([_-W60BCC2,W60BCC2]>>(true), W60BCavity, W60BCavCs),
+    % Sum the row indices.
+    sumlist(W60BCavRs, W60BSumR),
+    % Sum the column indices.
+    sumlist(W60BCavCs, W60BSumC),
+    % Count the number of cavity cells.
+    length(W60BCavity, W60BCavLen),
+    % Determine diagonal direction by comparing marker position to centroid sum.
+    % Use integer arithmetic: marker*len vs sum to avoid floating-point.
+    % Row component of direction D.
+    ( W60BMR0 * W60BCavLen > W60BSumR -> W60BDR = 1
+    ; W60BMR0 * W60BCavLen < W60BSumR -> W60BDR = -1
+    ; W60BDR = 0 ),
+    % Column component of direction D.
+    ( W60BMC0 * W60BCavLen > W60BSumC -> W60BDC = 1
+    ; W60BMC0 * W60BCavLen < W60BSumC -> W60BDC = -1
+    ; W60BDC = 0 ),
+    % Require a true diagonal (both components non-zero).
+    W60BDR =\= 0, W60BDC =\= 0,
+    % Find the smallest step S s.t. cavity+S*D does not overlap the cavity.
+    w60b_step(W60BCavity, W60BDR, W60BDC, 1, W60BS),
+    % Generate all in-bounds stamp cells for j=1,2,... until all go off-grid.
+    w60b_stamps(W60BCavity, W60BDR, W60BDC, W60BS, W60BNR, W60BNC, 1, W60BAllStamps),
+    % Require at least one stamp cell was generated.
+    W60BAllStamps \= [],
+    % Enumerate all row indices for output construction.
+    numlist(1, W60BNR, W60BAllRows),
+    % Enumerate all column indices for output construction.
+    numlist(1, W60BNC, W60BAllCols),
+    % Build output: paint stamp cells M_val; keep all other cells unchanged.
+    maplist([W60BOR, W60BOutRow]>>(
+        % Retrieve the original input row.
+        nth1(W60BOR, Grid, W60BInRow),
+        % Build each output cell in this row.
+        maplist([W60BOC, W60BOV]>>(
+            % Read the original input cell value.
+            nth1(W60BOC, W60BInRow, W60BIV),
+            % Stamp cells receive the marker color.
+            ( memberchk(W60BOR-W60BOC, W60BAllStamps) -> W60BOV = W60BMV0
+            % All other cells are unchanged.
+            ; W60BOV = W60BIV )
+        ), W60BAllCols, W60BOutRow)
+    ), W60BAllRows, Out), !.
+
+% w60b_run_lengths/2 — convert a msort-ed list into Count-Value run-length pairs.
+% Base case: empty list has no runs.
+w60b_run_lengths([], []).
+% Non-empty: kick off the accumulator with count 1 for the first element.
+w60b_run_lengths([V|Vs], Result) :-
+    % Start counting with the first value and count 1.
+    w60b_rl_acc(Vs, V, 1, Result).
+
+% w60b_rl_acc/4 — accumulate run-length pairs.
+% Base case: no remaining elements; emit the final run.
+w60b_rl_acc([], V, N, [N-V]).
+% Same value continues the current run.
+w60b_rl_acc([V|Vs], V, N, Result) :-
+    % Increment the count for this run.
+    N1 is N + 1,
+    % Continue accumulating.
+    w60b_rl_acc(Vs, V, N1, Result).
+% Different value starts a new run.
+w60b_rl_acc([W|Vs], V, N, [N-V|Rest]) :-
+    % W and V differ (no cut needed; previous clause handles equal case).
+    W \= V,
+    % Start new run for W with count 1.
+    w60b_rl_acc(Vs, W, 1, Rest).
+
+% w60b_step/5 — find smallest k>=Start s.t. cavity shifted by k*(DR,DC) is
+% disjoint from the original cavity.
+w60b_step(Cavity, DR, DC, K, S) :-
+    % Bound the search to prevent infinite loops on degenerate inputs.
+    K =< 30,
+    % Test whether every shifted cell avoids the original cavity.
+    ( forall(member(W60BSR-W60BSC, Cavity), (
+          % Compute the shifted row.
+          W60BSR2 is W60BSR + K * DR,
+          % Compute the shifted column.
+          W60BSC2 is W60BSC + K * DC,
+          % Require the shifted cell is not in the original cavity.
+          \+ memberchk(W60BSR2-W60BSC2, Cavity)
+      ))
+    % No overlap at K: this is the step.
+    -> S = K
+    % Overlap found: try the next value.
+    ; K1 is K + 1, w60b_step(Cavity, DR, DC, K1, S) ).
+
+% w60b_stamps/8 — collect all in-bounds stamp cells for j=J,J+1,...
+% Returns flat list of R-C positions that should be painted with marker color.
+w60b_stamps(Cavity, DR, DC, S, NR, NC, J, Stamps) :-
+    % Compute the row shift for this copy.
+    W60BShiftR is J * S * DR,
+    % Compute the column shift for this copy.
+    W60BShiftC is J * S * DC,
+    % Collect the subset of shifted cavity cells that land inside the grid.
+    findall(W60BSR3-W60BSC3, (
+        % Enumerate each cavity cell.
+        member(W60BSR3A-W60BSC3A, Cavity),
+        % Apply the shift.
+        W60BSR3 is W60BSR3A + W60BShiftR,
+        W60BSC3 is W60BSC3A + W60BShiftC,
+        % Accept only in-bounds cells.
+        W60BSR3 >= 1, W60BSR3 =< NR,
+        W60BSC3 >= 1, W60BSC3 =< NC
+    ), W60BStampJ),
+    % If no cell landed in-bounds, the stamping is complete.
+    ( W60BStampJ = [] ->
+        Stamps = []
+    % Otherwise, collect this stamp and recurse for the next copy.
+    ; J1 is J + 1,
+      w60b_stamps(Cavity, DR, DC, S, NR, NC, J1, W60BRestStamps),
+      append(W60BStampJ, W60BRestStamps, Stamps) ).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
