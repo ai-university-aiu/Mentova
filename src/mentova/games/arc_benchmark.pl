@@ -27526,6 +27526,401 @@ arc_transform(f1cefba8, Grid, Out) :-
     ), AllRows, Out).
 
 % ---------------------------------------------------------------------------
+% WAVE 67 RULES
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % Named rule: fill 5-gaps in symmetric 2-cross arms with 8 (50846271).
+arc_named_rule(cross_arm_gap_fill).
+% ERC 0.10 % Radius >= 2; fill 5-cells in arm spans of crosses from maximal 2/5 row and col arms.
+arc_transform(cross_arm_gap_fill, Grid, Out) :-
+% ERC 0.10 % get grid dimensions
+    arc_grid_dims(Grid, NR, NC),
+% ERC 0.10 % find maximal row arms: endpoints are 2, span all 2/5, no wider span in same run
+    findall(RA-CLA-CRA, (
+        between(1, NR, RA),
+        findall(C, (between(1, NC, C), arc_grid_at(Grid, RA, C, 2)), Cs2),
+        Cs2 \= [],
+        member(CLA, Cs2), member(CRA, Cs2), CLA < CRA,
+        numlist(CLA, CRA, SpanR),
+        forall(member(Cx, SpanR),
+               (arc_grid_at(Grid, RA, Cx, Vr), (Vr =:= 2 ; Vr =:= 5))),
+        \+ (member(CLX, Cs2), CLX < CLA,
+            CLXp is CLX + 1, numlist(CLXp, CLA, SpL),
+            forall(member(X, SpL), (arc_grid_at(Grid, RA, X, VX), (VX =:= 2 ; VX =:= 5)))),
+        \+ (member(CRX, Cs2), CRX > CRA,
+            CRAp is CRA + 1, numlist(CRAp, CRX, SpR),
+            forall(member(X, SpR), (arc_grid_at(Grid, RA, X, VX), (VX =:= 2 ; VX =:= 5))))
+    ), RowArms0),
+    sort(RowArms0, RowArms),
+    RowArms \= [],
+% ERC 0.10 % find maximal col arms: endpoints are 2, span all 2/5, no wider span in same run
+    findall(CA-RTA-RBA, (
+        between(1, NC, CA),
+        findall(R, (between(1, NR, R), arc_grid_at(Grid, R, CA, 2)), Rs2),
+        Rs2 \= [],
+        member(RTA, Rs2), member(RBA, Rs2), RTA < RBA,
+        numlist(RTA, RBA, SpanC),
+        forall(member(Rx, SpanC),
+               (arc_grid_at(Grid, Rx, CA, Vc), (Vc =:= 2 ; Vc =:= 5))),
+        \+ (member(RTX, Rs2), RTX < RTA,
+            RTXp is RTX + 1, numlist(RTXp, RTA, SpU),
+            forall(member(X, SpU), (arc_grid_at(Grid, X, CA, VX), (VX =:= 2 ; VX =:= 5)))),
+        \+ (member(RBX, Rs2), RBX > RBA,
+            RBAp is RBA + 1, numlist(RBAp, RBX, SpD),
+            forall(member(X, SpD), (arc_grid_at(Grid, X, CA, VX), (VX =:= 2 ; VX =:= 5))))
+    ), ColArms0),
+    sort(ColArms0, ColArms),
+% ERC 0.10 % detect crosses: row arm plus matching col arm (Case 1) or symmetric no-col arm (Case 2)
+    findall(RA-CC-Rad, (
+        member(RA-CLA-CRA, RowArms),
+        between(CLA, CRA, CC),
+        HL is CC - CLA, HR is CRA - CC, HM is max(HL, HR),
+        (
+            % Case 1: col arm overlaps or is adjacent to center row RA
+            member(CC-RTA-RBA, ColArms),
+            ( (RTA =< RA, RA =< RBA) ; RTA =:= RA + 1 ; RBA =:= RA - 1 )
+        ->
+            VU is max(0, RA - RTA), VD is max(0, RBA - RA), VM is max(VU, VD),
+            Rad is max(max(HM, VM), 2)
+        ;
+            % Case 2: no Case 1 anywhere in this row arm; center is 2 and symmetric
+            arc_grid_at(Grid, RA, CC, 2),
+            HL =:= HR,
+            \+ (between(CLA, CRA, CCx),
+                member(CCx-RTAx-RBAx, ColArms),
+                ( (RTAx =< RA, RA =< RBAx) ; RTAx =:= RA + 1 ; RBAx =:= RA - 1 )),
+            RV2a is max(1, RA - HM), RV2b is min(NR, RA + HM),
+            numlist(RV2a, RV2b, VSpan),
+            forall(member(VR, VSpan),
+                   (arc_grid_at(Grid, VR, CC, VV), (VV =:= 2 ; VV =:= 5))),
+            Rad is max(HM, 2)
+        )
+    ), Crosses),
+    Crosses \= [],
+% ERC 0.10 % collect fill positions: 5-valued cells within Rad of center along row and col axes
+    findall(RF-CF, (
+        member(RC-CC-Rad, Crosses),
+        CLf is max(1, CC - Rad), CRf is min(NC, CC + Rad),
+        RTf is max(1, RC - Rad), RBf is min(NR, RC + Rad),
+        ( (between(CLf, CRf, CF), RF = RC) ; (between(RTf, RBf, RF), CF = CC) ),
+        arc_grid_at(Grid, RF, CF, 5)
+    ), FillPairs0),
+    sort(FillPairs0, FillPairs), FillPairs \= [],
+% ERC 0.10 % build output: replace 5 with 8 at fill positions, preserve all other cells
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([RI, OutRow]>>(
+        maplist([CI, OV]>>(
+            (member(RI-CI, FillPairs) -> OV = 8 ; arc_grid_at(Grid, RI, CI, OV))
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ERC 0.10 % Named rule: complete partial symmetry templates from complete instances (72322fa7).
+arc_named_rule(complete_partial_templates).
+% ERC 0.10 % Learn (center,arm,offsets) templates from complete instances; fill incomplete ones.
+arc_transform(complete_partial_templates, Grid, Out) :-
+% ERC 0.10 % get grid dimensions
+    arc_grid_dims(Grid, NR, NC),
+% ERC 0.10 % find every complete template instance: center Vc surrounded by all-same-color arms
+    findall(tmpl(Vc,Va,Offs), (
+        member(Offs, [
+            [(-1,0),(1,0),(0,-1),(0,1)],
+            [(-1,-1),(-1,1),(1,-1),(1,1)],
+            [(0,-1),(0,1)],
+            [(-1,0),(1,0)]
+        ]),
+        between(1, NR, Rc), between(1, NC, Cc),
+        arc_grid_at(Grid, Rc, Cc, Vc), Vc \= 0,
+        Offs = [(Dr1,Dc1)|_],
+        Ra1 is Rc+Dr1, Ca1 is Cc+Dc1,
+        Ra1 >= 1, Ra1 =< NR, Ca1 >= 1, Ca1 =< NC,
+        arc_grid_at(Grid, Ra1, Ca1, Va), Va \= 0, Va \= Vc,
+        forall(member((Dr,Dc), Offs), (
+            Rax is Rc+Dr, Cax is Cc+Dc,
+            Rax >= 1, Rax =< NR, Cax >= 1, Cax =< NC,
+            arc_grid_at(Grid, Rax, Cax, Va)
+        ))
+    ), Templates0),
+    sort(Templates0, Templates),
+    Templates \= [],
+% ERC 0.10 % generate adds: missing arm cells (center present) and missing centers (all arms present)
+    findall(RF-CF-VF, (
+        member(tmpl(Vc,Va,Offs), Templates),
+        (
+            between(1, NR, Rc), between(1, NC, Cc),
+            arc_grid_at(Grid, Rc, Cc, Vc),
+            member((Dr,Dc), Offs),
+            RF is Rc+Dr, CF is Cc+Dc,
+            RF >= 1, RF =< NR, CF >= 1, CF =< NC,
+            arc_grid_at(Grid, RF, CF, 0), VF = Va
+        ;
+            between(1, NR, Rc), between(1, NC, Cc),
+            arc_grid_at(Grid, Rc, Cc, 0),
+            forall(member((Dr,Dc), Offs), (
+                Rax is Rc+Dr, Cax is Cc+Dc,
+                Rax >= 1, Rax =< NR, Cax >= 1, Cax =< NC,
+                arc_grid_at(Grid, Rax, Cax, Va)
+            )),
+            RF = Rc, CF = Cc, VF = Vc
+        )
+    ), Adds0),
+    sort(Adds0, Adds),
+    Adds \= [],
+% ERC 0.10 % build output: apply adds, preserve rest
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([RI, OutRow]>>(
+        maplist([CI, OV]>>(
+            ( member(RI-CI-OV0, Adds), OV = OV0 -> true
+            ; arc_grid_at(Grid, RI, CI, OV) )
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ERC 0.10 % Named rule: fill interior of largest all-zero rectangle plus all-direction extensions (a64e4611).
+arc_named_rule(fill_largest_zero_region_3).
+% ERC 0.10 % Interior of largest all-zero rect filled with 3; adjacent all-zero arm bands filled too.
+arc_transform(fill_largest_zero_region_3, Grid, Out) :-
+% ERC 0.10 % get grid dimensions
+    arc_grid_dims(Grid, NR, NC),
+% ERC 0.10 % find the largest all-zero axis-aligned rectangle
+    arc_largest_zero_rect(Grid, NR, NC, R1, R2, C1, C2),
+% ERC 0.10 % interior: shrink each side by 1 unless that side is at the grid boundary
+    (R1 =:= 1  -> IR1 = R1  ; IR1 is R1 + 1),
+    (R2 =:= NR -> IR2 = R2  ; IR2 is R2 - 1),
+    (C1 =:= 1  -> IC1 = C1  ; IC1 is C1 + 1),
+    (C2 =:= NC -> IC2 = C2  ; IC2 is C2 - 1),
+% ERC 0.10 % collect core interior fill cells (all are zero by construction)
+    findall(RF-CF, (between(IR1,IR2,RF), between(IC1,IC2,CF)), CoreCells),
+% ERC 0.10 % right extension: interior rows where ALL cols IC2+1..NC are zero
+    ERL is IC2 + 1,
+    ( ERL > NC ->
+        RightFills = []
+    ;
+        numlist(ERL, NC, RCols),
+        findall(R, (
+            between(IR1, IR2, R),
+            forall(member(C, RCols), arc_grid_at(Grid, R, C, 0))
+        ), RightRows),
+        arc_consec_runs(RightRows, RRuns),
+        findall(RF-CF, (
+            member(RA-RB, RRuns),
+            (RA =:= 1 -> FRA = RA ; FRA is RA + 1),
+            (RB =:= NR -> FRB = RB ; FRB is RB - 1),
+            FRA =< FRB, between(FRA, FRB, RF), between(ERL, NC, CF)
+        ), RightFills)
+    ),
+% ERC 0.10 % left extension: interior rows where ALL cols 1..IC1-1 are zero
+    ELL is IC1 - 1,
+    ( ELL < 1 ->
+        LeftFills = []
+    ;
+        numlist(1, ELL, LCols),
+        findall(R, (
+            between(IR1, IR2, R),
+            forall(member(C, LCols), arc_grid_at(Grid, R, C, 0))
+        ), LeftRows),
+        arc_consec_runs(LeftRows, LRuns),
+        findall(RF-CF, (
+            member(LA-LB, LRuns),
+            (LA =:= 1 -> FLA = LA ; FLA is LA + 1),
+            (LB =:= NR -> FLB = LB ; FLB is LB - 1),
+            FLA =< FLB, between(FLA, FLB, RF), between(1, ELL, CF)
+        ), LeftFills)
+    ),
+% ERC 0.10 % top extension: interior cols where ALL rows 1..IR1-1 are zero
+    ETT is IR1 - 1,
+    ( ETT < 1 ->
+        TopFills = []
+    ;
+        numlist(1, ETT, TRows),
+        findall(C, (
+            between(IC1, IC2, C),
+            forall(member(R, TRows), arc_grid_at(Grid, R, C, 0))
+        ), TopCols),
+        arc_consec_runs(TopCols, TRuns),
+        findall(RF-CF, (
+            member(CA-CB, TRuns),
+            (CA =:= 1 -> FCA = CA ; FCA is CA + 1),
+            (CB =:= NC -> FCB = CB ; FCB is CB - 1),
+            FCA =< FCB, between(1, ETT, RF), between(FCA, FCB, CF)
+        ), TopFills)
+    ),
+% ERC 0.10 % bottom extension: interior cols where ALL rows IR2+1..NR are zero
+    EBB is IR2 + 1,
+    ( EBB > NR ->
+        BotFills = []
+    ;
+        numlist(EBB, NR, BRows),
+        findall(C, (
+            between(IC1, IC2, C),
+            forall(member(R, BRows), arc_grid_at(Grid, R, C, 0))
+        ), BotCols),
+        arc_consec_runs(BotCols, BRuns),
+        findall(RF-CF, (
+            member(CA-CB, BRuns),
+            (CA =:= 1 -> FCA = CA ; FCA is CA + 1),
+            (CB =:= NC -> FCB = CB ; FCB is CB - 1),
+            FCA =< FCB, between(EBB, NR, RF), between(FCA, FCB, CF)
+        ), BotFills)
+    ),
+% ERC 0.10 % combine all fill cells; must be non-empty
+    append([CoreCells, RightFills, LeftFills, TopFills, BotFills], AllFills0),
+    sort(AllFills0, AllFills), AllFills \= [],
+% ERC 0.10 % build output: set fill cells to 3, preserve everything else
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([RI, OutRow]>>(
+        maplist([CI, OV]>>(
+            (member(RI-CI, AllFills) -> OV = 3 ; arc_grid_at(Grid, RI, CI, OV))
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ERC 0.10 % Find the axis-aligned rectangle of all zeros with maximum area.
+arc_largest_zero_rect(Grid, NR, NC, BR1, BR2, BC1, BC2) :-
+    findall(Area-rect(R1,R2,C1,C2), (
+        between(1, NC, C1),
+        between(C1, NC, C2),
+        numlist(C1, C2, CSpan),
+        findall(R, (
+            between(1, NR, R),
+            forall(member(C, CSpan), arc_grid_at(Grid, R, C, 0))
+        ), ValidRows),
+        ValidRows \= [],
+        arc_consec_runs(ValidRows, Runs),
+        member(R1-R2, Runs),
+        Area is (R2 - R1 + 1) * (C2 - C1 + 1)
+    ), Cands),
+    Cands \= [],
+    sort(0, @>=, Cands, [_-rect(BR1,BR2,BC1,BC2)|_]).
+
+% ERC 0.10 % Partition a sorted integer list into maximal consecutive runs.
+arc_consec_runs([], []).
+% ERC 0.10 % Seed first run and delegate to accumulator.
+arc_consec_runs([H|T], Runs) :-
+    arc_consec_runs_acc(T, H, H, Runs).
+
+% ERC 0.10 % Base: emit the last open run.
+arc_consec_runs_acc([], S, E, [S-E]).
+% ERC 0.10 % Extend current run if H is the next consecutive integer; else close and start new.
+arc_consec_runs_acc([H|T], S, E, Runs) :-
+    Next is E + 1,
+    ( H =:= Next ->
+        arc_consec_runs_acc(T, S, H, Runs)
+    ;
+        arc_consec_runs_acc(T, H, H, Rest),
+        Runs = [S-E|Rest]
+    ).
+
+% ERC 0.10 % Return the component list with the greatest length from a sized list.
+arc_max_pair_by_size([X], X).
+% ERC 0.10 % Compare head length to best-of-tail length, keep the larger.
+arc_max_pair_by_size([H-HL|T], Best) :-
+    arc_max_pair_by_size(T, TB-TBL),
+    (HL >= TBL -> Best = H-HL ; Best = TB-TBL).
+
+% ERC 0.10 % Named rule: rigid-transform the fully-annotated template shape to each 2-only target (36d67576).
+arc_named_rule(arm_template_transfer).
+% ERC 0.10 % Template has 1/2/3 marks on a 4-shape; transfer marks via rigid transform to each target (2 only).
+arc_transform(arm_template_transfer, Grid, Out) :-
+% ERC 0.10 % grid dimensions
+    arc_grid_dims(Grid, NR, NC),
+% ERC 0.10 % collect all non-zero cell positions
+    findall(Rz-Cz, (between(1,NR,Rz), between(1,NC,Cz), arc_grid_at(Grid,Rz,Cz,Vz), Vz\=0), NZCells),
+    NZCells \= [],
+% ERC 0.10 % partition non-zero cells into 4-connected components
+    arc_att_comps(NZCells, Grid, NR, NC, AllComps),
+% ERC 0.10 % for each component collect its 4-cells and non-4 marker fills
+    findall(FC-MK, (
+        member(Comp, AllComps),
+        findall(Rf-Cf, (member(Rf-Cf, Comp), arc_grid_at(Grid,Rf,Cf,4)), FC0),
+        sort(FC0, FC), FC \= [],
+        findall(Rf-Cf-Vf, (member(Rf-Cf, Comp), arc_grid_at(Grid,Rf,Cf,Vf), Vf\=4), MK0),
+        sort(MK0, MK)
+    ), CompList),
+% ERC 0.10 % template: the component whose marks include at least one 1 and one 3
+    member(TFC-TMK, CompList),
+    member(_-_-1, TMK), member(_-_-3, TMK),
+    member(T2R-T2C-2, TMK),
+% ERC 0.10 % template anchor: first sorted 4-cell orthogonally adjacent to the template 2-mark
+    findall(AR-AC, (
+        member(AR-AC, TFC),
+        ( AR is T2R+1, AC=T2C ; AR is T2R-1, AC=T2C ;
+          AR=T2R, AC is T2C+1 ; AR=T2R, AC is T2C-1 )
+    ), TAL0), sort(TAL0, [TAR-TAC|_]),
+% ERC 0.10 % template shape and fills expressed as offsets from the anchor
+    findall(DR-DC, (member(Rr-Cr, TFC), DR is Rr-TAR, DC is Cr-TAC), TR0),
+    sort(TR0, TRelShape),
+    findall(DR-DC-Vr, (member(Rr-Cr-Vr, TMK), DR is Rr-TAR, DC is Cr-TAC), TRelFills),
+    T2DR is T2R-TAR, T2DC is T2C-TAC,
+% ERC 0.10 % for each target component apply the matching rigid transform and collect new fills
+    findall(NRf-NCf-Vfill, (
+        member(GFC-GMK, CompList),
+        GFC \= TFC,
+        member(G2R-G2C-2, GMK),
+        \+ member(_-_-1, GMK), \+ member(_-_-3, GMK),
+% ERC 0.10 % target anchor: first sorted 4-cell adjacent to the target 2-mark
+        findall(AR-AC, (
+            member(AR-AC, GFC),
+            ( AR is G2R+1, AC=G2C ; AR is G2R-1, AC=G2C ;
+              AR=G2R, AC is G2C+1 ; AR=G2R, AC is G2C-1 )
+        ), GAL0), sort(GAL0, [GAR-GAC|_]),
+% ERC 0.10 % target shape as offsets from target anchor
+        findall(DR-DC, (member(Rr-Cr, GFC), DR is Rr-GAR, DC is Cr-GAC), GR0),
+        sort(GR0, GRelShape),
+        G2DR is G2R-GAR, G2DC is G2C-GAC,
+% ERC 0.10 % pick the rigid transform that maps template 2-rel to target 2-rel and template shape to target shape
+        arc_att_rigid(A, B, Cm, D),
+        A*T2DR + B*T2DC =:= G2DR, Cm*T2DR + D*T2DC =:= G2DC,
+        findall(R2-C2, (member(Rs-Cs, TRelShape), R2 is A*Rs+B*Cs, C2 is Cm*Rs+D*Cs), TS0),
+        sort(TS0, TS), TS = GRelShape,
+% ERC 0.10 % apply the matched transform to each non-2 template fill to get the target fill position
+        member(FDR-FDC-Vfill, TRelFills), Vfill\=2,
+        NRf is A*FDR + B*FDC + GAR, NCf is Cm*FDR + D*FDC + GAC,
+        NRf >= 1, NRf =< NR, NCf >= 1, NCf =< NC,
+        arc_grid_at(Grid, NRf, NCf, 0)
+    ), Fills0),
+    sort(Fills0, Fills), Fills \= [],
+% ERC 0.10 % build output: write new fills, copy everything else unchanged
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([RI, OutRow]>>(
+        maplist([CI, OV]>>(
+            ( member(RI-CI-Vo, Fills) -> OV=Vo ; arc_grid_at(Grid,RI,CI,OV) )
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ERC 0.10 % arc_att_comps: group non-zero cells into 4-connected components via DFS flood fill.
+arc_att_comps([], _, _, _, []).
+arc_att_comps([R-C|Rest], Grid, NR, NC, [Comp|More]) :-
+% ERC 0.10 % flood fill from the first unvisited cell
+    arc_att_mfill_rc(Grid, R, C, NR, NC, [], Vis),
+% ERC 0.10 % sort the component for deterministic ordering
+    msort(Vis, Comp),
+% ERC 0.10 % remove all component cells from the remaining pool
+    findall(X, (member(X, Rest), \+ memberchk(X, Comp)), Rem),
+    arc_att_comps(Rem, Grid, NR, NC, More).
+
+% ERC 0.10 % arc_att_mfill_rc: DFS flood fill collecting all non-zero cells reachable from R-C.
+arc_att_mfill_rc(Grid, R, C, NR, NC, VisIn, VisOut) :-
+    ( memberchk(R-C, VisIn)
+    ->  VisOut = VisIn
+    ;   arc_grid_at(Grid, R, C, Vc), Vc \= 0
+    ->  Vis1 = [R-C | VisIn],
+        R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+        ( R1 >= 1  -> arc_att_mfill_rc(Grid, R1, C,  NR, NC, Vis1, Vis2) ; Vis2 = Vis1 ),
+        ( R2 =< NR -> arc_att_mfill_rc(Grid, R2, C,  NR, NC, Vis2, Vis3) ; Vis3 = Vis2 ),
+        ( C1 >= 1  -> arc_att_mfill_rc(Grid, R,  C1, NR, NC, Vis3, Vis4) ; Vis4 = Vis3 ),
+        ( C2 =< NC -> arc_att_mfill_rc(Grid, R,  C2, NR, NC, Vis4, VisOut) ; VisOut = Vis4 )
+    ;   VisOut = VisIn
+    ).
+
+% ERC 0.10 % arc_att_rigid: the 8 rigid-transform matrices; new_r = A*r+B*c, new_c = Cm*r+D*c.
+arc_att_rigid( 1,  0,  0,  1).
+arc_att_rigid( 0,  1, -1,  0).
+arc_att_rigid(-1,  0,  0, -1).
+arc_att_rigid( 0, -1,  1,  0).
+arc_att_rigid( 1,  0,  0, -1).
+arc_att_rigid(-1,  0,  0,  1).
+arc_att_rigid( 0,  1,  1,  0).
+arc_att_rigid( 0, -1, -1,  0).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
