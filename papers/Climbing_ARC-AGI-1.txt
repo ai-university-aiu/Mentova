@@ -1249,6 +1249,43 @@ What was learned: For box_extract_recolor_by_dots, counting enclosed dots per bo
 
 New tasks solved by wave 58 (2 new tasks): 83302e8f (fill_grid_regions_by_line_holes), fcb5c309 (box_extract_recolor_by_dots).
 
+ATTEMPT 34: WAVE 59 - FRAME INTERIOR RADIATE AND ROTATIONAL SYMMETRY COMPLETION - 359 / 400 = 89.75%
+
+Date: 2026-06-20
+Score: 359 / 400 = 89.75%.
+Previous score: 357 / 400 = 89.25% (wave 58, 2026-06-20).
+Rules added: 2.
+Tasks solved: +2.
+
+What changed: Wave 59 added two new induction rules targeting shapes with structural
+geometric completions.
+
+The two scoring rules added in wave 59:
+
+fill_frame_interior_radiate (task aba27056): The input has exactly one non-zero color
+forming a rectangular frame with one open side - a contiguous run of 0-cells along one
+border wall of the bounding box. Output: the frame color is preserved; all interior 0-cells
+(strictly inside the bbox) become 4; the opening cells (the gap) become 4. Then 4s radiate
+outward in a starburst from the opening wall: at each step D, the opening column or row
+range is projected fully, and two expanding boundary tracks add one cell per side per step.
+
+complete_rotational_symmetry (task e40b9e2f): The input has exactly two non-zero colors
+whose combined shape is incomplete under 4-fold (90-degree CW) rotational symmetry. The
+rotational centre is found by locating the farthest-apart pair of rows with identical
+non-zero patterns; those rows determine the centre row, and the min-max non-zero column
+range of the pivot row (or of the symmetric rows for half-integer centres) determines the
+centre column. Each non-zero input cell's three 90-degree CW rotational images around the
+computed centre are added to the output with the same color value.
+
+What was learned: ARC frames with openings produce 4-fill patterns with a starburst
+outward radiation - the opening width and position fully determine the pattern shape. For
+rotational symmetry completion, the identical-row-pair method gives an exact integer or
+half-integer centre without solving an optimization problem, and the pivot row's column
+range pins the perpendicular axis cleanly.
+
+New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
+e40b9e2f (complete_rotational_symmetry).
+
 ATTEMPT 29: WAVE 54 - HALF OVERLAY AND SYMMETRIC OCCLUDER REPAIR - 349 / 400 = 87.25%
 
 Date: 2026-06-20
@@ -1407,10 +1444,12 @@ Run 66: 351 / 400 = 87.75% - Wave 55: two new rules (repair_4fold_noise, downsca
 Run 67: 352 / 400 = 88.00% - Wave 56: one new rule (fill_rect_frame_interiors). Plus 1 task.
 Run 68: 355 / 400 = 88.75% - Wave 57: three new rules (fill_zero_near_one, gravity_to_matching_wall, key_masked_by_block_pattern). Plus 3 tasks.
 
-Run 69: 357 / 400 = 89.25% - Wave 58: two new rules (box_extract_recolor_by_dots, fill_grid_regions_by_line_holes). Plus 2 tasks. (CURRENT BEST)
+Run 69: 357 / 400 = 89.25% - Wave 58: two new rules (box_extract_recolor_by_dots, fill_grid_regions_by_line_holes). Plus 2 tasks.
+
+Run 70: 359 / 400 = 89.75% - Wave 59: two new rules (fill_frame_interior_radiate, complete_rotational_symmetry). Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 278 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 280 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1756,6 +1795,8 @@ a9f96cdd - diagonal_neighbors_from_single_2.
 
 aabf363d - recolor_blob_to_marker.
 
+aba27056 - fill_frame_interior_radiate.
+
 ac0a08a4 - scale_up_by_count.
 
 ae4f1146 - most_minority_3x3_block.
@@ -1861,6 +1902,8 @@ ded97339 - connect_pairs_in_shared_row_or_col.
 e179c5f4 - bounce_single_cell_upward.
 
 e3497940 - fold_at_5_col_mirror.
+
+e40b9e2f - complete_rotational_symmetry.
 
 e73095fd - fill_rect_frame_interiors.
 
@@ -1989,7 +2032,7 @@ This paper will be extended with a new attempt entry after every future benchmar
 
 The mountain is still being climbed.
 
-The score at the time of writing is 357 / 400 = 89.25% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
+The score at the time of writing is 359 / 400 = 89.75% by pure induction from training examples, with no pretraining on the ARC-AGI corpus, and every correct answer attributed to a named, independently verifiable transformation rule.
 
 
 APPENDIX 1: ALL THE HUMAN STEPS FOR SOLVING ARC-AGI PUZZLES
@@ -3208,6 +3251,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 56: Rectangular Frame Interior Fill, 352 / 4
 Dison, D. R. (2026). ARC-AGI-1 Wave 57: Zero Flood from Ones, Wall Gravity, Block-Pattern Key Mask, 355 / 400 = 88.75%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 58: Box-Dot Extraction and Line-Grid Hole Fill, 357 / 400 = 89.25%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 59: Frame Interior Radiate and Rotational Symmetry Completion, 359 / 400 = 89.75%. AIU / PrologAI.
 
 
 END OF DOCUMENT

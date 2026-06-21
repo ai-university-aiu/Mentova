@@ -25774,6 +25774,233 @@ w58c_region_has_hole(Grid, NR, NC, LineRows, LineCols, R, C) :-
     )).
 
 % ---------------------------------------------------------------------------
+% Wave 59 Rule A: fill_frame_interior_radiate  (task aba27056)
+% A single-colour rectangular frame has one open side (0-cells on that border
+% wall).  Output fills the frame interior with 4, fills the opening cells with
+% 4, then radiates 4s outward: at each step D the opening projection is
+% repeated and two boundary tracks expand by D cells on each side.
+% ---------------------------------------------------------------------------
+
+% Declare the named rule.
+arc_named_rule(fill_frame_interior_radiate).
+% Entry point: size guard, then detect and fill.
+arc_transform(fill_frame_interior_radiate, Grid, Out) :-
+    !,
+    % Enforce maximum grid size.
+    arc_grid_dims(Grid, W59ANR, W59ANC),
+    W59ANR =< 30, W59ANC =< 30,
+    % Collect every non-zero value in the grid.
+    findall(W59AV,(nth1(_,Grid,W59ARow),member(W59AV,W59ARow),W59AV \= 0),W59ANZVs),
+    % Require at least one non-zero cell.
+    W59ANZVs \= [],
+    % Require exactly one distinct non-zero colour (the frame colour).
+    list_to_set(W59ANZVs, [W59AC]),
+    % Find all rows that contain the frame colour.
+    findall(W59AR,(nth1(W59AR,Grid,W59ARw),member(W59AC,W59ARw)),W59ACRows),
+    % Find all columns that contain the frame colour.
+    findall(W59ACc,(nth1(_,Grid,W59ARw2),nth1(W59ACc,W59ARw2,W59AC)),W59ACCols),
+    % Compute the bounding box of the frame.
+    arc_min_list(W59ACRows,W59AR1), arc_max_list(W59ACRows,W59AR2),
+    arc_min_list(W59ACCols,W59AC1), arc_max_list(W59ACCols,W59AC2),
+    % Fetch the top and bottom wall rows for opening detection.
+    nth1(W59AR1, Grid, W59ATopRow),
+    nth1(W59AR2, Grid, W59ABotRow),
+    % Build column and row ranges spanning the bounding box.
+    numlist(W59AC1, W59AC2, W59ABCols),
+    numlist(W59AR1, W59AR2, W59ABRows),
+    % Find 0-cells on each of the four border walls.
+    include([W59Acc]>>(nth1(W59Acc,W59ATopRow,0)),   W59ABCols, W59ATopOpen),
+    include([W59Acc2]>>(nth1(W59Acc2,W59ABotRow,0)), W59ABCols, W59ABotOpen),
+    include([W59Arr]>>(nth1(W59Arr,Grid,W59ALRow),nth1(W59AC1,W59ALRow,0)), W59ABRows, W59ALeftOpen),
+    include([W59Arr2]>>(nth1(W59Arr2,Grid,W59ARRow),nth1(W59AC2,W59ARRow,0)), W59ABRows, W59ARightOpen),
+    % Pick the first wall that has any 0-cell as the opening side.
+    ( W59ATopOpen \= []
+    -> W59ADir=top,    W59AOpenPos=W59AR1, W59AOpenCells=W59ATopOpen,
+       arc_min_list(W59ATopOpen,W59AOpenMin),   arc_max_list(W59ATopOpen,W59AOpenMax)
+    ; W59ABotOpen \= []
+    -> W59ADir=bottom, W59AOpenPos=W59AR2, W59AOpenCells=W59ABotOpen,
+       arc_min_list(W59ABotOpen,W59AOpenMin),   arc_max_list(W59ABotOpen,W59AOpenMax)
+    ; W59ALeftOpen \= []
+    -> W59ADir=left,   W59AOpenPos=W59AC1, W59AOpenCells=W59ALeftOpen,
+       arc_min_list(W59ALeftOpen,W59AOpenMin),  arc_max_list(W59ALeftOpen,W59AOpenMax)
+    ; W59ARightOpen \= []
+    -> W59ADir=right,  W59AOpenPos=W59AC2, W59AOpenCells=W59ARightOpen,
+       arc_min_list(W59ARightOpen,W59AOpenMin), arc_max_list(W59ARightOpen,W59AOpenMax)
+    ),
+    % Interior: all cells strictly inside the bounding box.
+    W59AIntR1 is W59AR1+1, W59AIntR2 is W59AR2-1,
+    W59AIntC1 is W59AC1+1, W59AIntC2 is W59AC2-1,
+    % Collect R-C pairs for the interior region.
+    ( W59AIntR1 =< W59AIntR2, W59AIntC1 =< W59AIntC2
+    -> findall(W59AIR-W59AIC,
+               (between(W59AIntR1,W59AIntR2,W59AIR),between(W59AIntC1,W59AIntC2,W59AIC)),
+               W59AIntRC)
+    ;  W59AIntRC = [] ),
+    % Convert opening cell coordinates to R-C pairs.
+    ( (W59ADir=top ; W59ADir=bottom)
+    -> maplist([W59ACx,W59AOpenPos-W59ACx]>>(true), W59AOpenCells, W59AOpRC)
+    ;  maplist([W59ARx,W59ARx-W59AOpenPos]>>(true), W59AOpenCells, W59AOpRC) ),
+    % Collect outward-radiated R-C pairs via the starburst helper.
+    w59a_radiated(W59ANR, W59ANC, W59ADir, W59AOpenMin, W59AOpenMax, W59AOpenPos, W59ARadRC),
+    % Merge all fill positions into a sorted, deduplicated set.
+    append([W59AIntRC, W59AOpRC, W59ARadRC], W59AAllFillRaw),
+    sort(W59AAllFillRaw, W59AFillSet),
+    % Enumerate all grid rows and columns for the output pass.
+    numlist(1, W59ANR, W59AAllRows),
+    numlist(1, W59ANC, W59AAllCols),
+    % Build each output row: frame colour preserved, fill positions become 4.
+    maplist([W59AOR,W59AOutRow]>>(
+        nth1(W59AOR, Grid, W59AInRow),
+        maplist([W59AOC,W59AOV]>>(
+            nth1(W59AOC, W59AInRow, W59AIV),
+            ( W59AIV =:= W59AC        -> W59AOV = W59AC
+            ; memberchk(W59AOR-W59AOC, W59AFillSet) -> W59AOV = 4
+            ;                            W59AOV = 0 )
+        ), W59AAllCols, W59AOutRow)
+    ), W59AAllRows, Out).
+
+% Collect every R-C cell that receives a 4 from the outward starburst.
+% At step D: mark opening-projection cells + two expanding boundary tracks.
+w59a_radiated(NR, NC, Dir, OpenMin, OpenMax, OpenPos, Cells) :-
+    % Compute the maximum outward step before leaving the grid.
+    ( Dir=top    -> MaxD is OpenPos-1
+    ; Dir=bottom -> MaxD is NR-OpenPos
+    ; Dir=left   -> MaxD is OpenPos-1
+    ;               MaxD is NC-OpenPos ),
+    % For each step D generate the three contributing cell groups.
+    findall(R-C, (
+        between(1, MaxD, D),
+        % Compute the outward grid position at distance D.
+        ( Dir=top    -> OutP is OpenPos-D
+        ; Dir=bottom -> OutP is OpenPos+D
+        ; Dir=left   -> OutP is OpenPos-D
+        ;               OutP is OpenPos+D ),
+        ( % Opening projection: every coordinate in [OpenMin..OpenMax].
+          between(OpenMin, OpenMax, Perp),
+          ( (Dir=top;Dir=bottom) -> R=OutP, C=Perp ; R=Perp, C=OutP )
+        ; % Left/upper boundary track expands by one cell per step.
+          LB is OpenMin-D, LB >= 1,
+          ( (Dir=top;Dir=bottom) -> R=OutP, C=LB ; R=LB, C=OutP )
+        ; % Right/lower boundary track expands by one cell per step.
+          RB is OpenMax+D,
+          ( (Dir=top;Dir=bottom) -> RB =< NC ; RB =< NR ),
+          ( (Dir=top;Dir=bottom) -> R=OutP, C=RB ; R=RB, C=OutP )
+        )
+    ), Raw),
+    % Deduplicate (boundary tracks and projection can overlap near corners).
+    sort(Raw, Cells).
+
+% ---------------------------------------------------------------------------
+% Wave 59 Rule B: complete_rotational_symmetry  (task e40b9e2f)
+% Input has exactly two non-zero colours forming a shape that lacks full
+% 4-fold (90-degree) rotational symmetry.  The centre is found via the
+% symmetric-row-pair method: two rows with identical non-zero patterns
+% determine the centre row; their pivot row (or their own col range)
+% determines the centre col.  Each non-zero cell's three 90-degree-CW
+% rotational images are added to the output with the same colour value.
+% ---------------------------------------------------------------------------
+
+% Declare the named rule.
+arc_named_rule(complete_rotational_symmetry).
+% Entry point: find cells, compute centre, add rotational copies.
+arc_transform(complete_rotational_symmetry, Grid, Out) :-
+    !,
+    % Enforce maximum grid size.
+    arc_grid_dims(Grid, W59BNR, W59BNC),
+    W59BNR =< 30, W59BNC =< 30,
+    % Collect all non-zero cells as R-C-V triples.
+    findall(W59BR-W59BC-W59BV,
+        (nth1(W59BR,Grid,W59BRow),nth1(W59BC,W59BRow,W59BV),W59BV \= 0),
+        W59BCells),
+    % Require at least one non-zero cell.
+    W59BCells \= [],
+    % Require exactly two distinct non-zero colours.
+    findall(W59BV2, member(_-_-W59BV2, W59BCells), W59BAllVs),
+    list_to_set(W59BAllVs, [_,_]),
+    % Locate the rotational centre via the symmetric row pair.
+    w59b_find_centre(Grid, W59BCr2, W59BCc2),
+    % Generate the three 90-degree-CW rotational images of every input cell.
+    findall(W59BNR3-W59BNC3-W59BV3, (
+        member(W59BR3-W59BC3-W59BV3, W59BCells),
+        member(W59BK, [1,2,3]),
+        w59b_rotk(W59BK, W59BR3, W59BC3, W59BCr2, W59BCc2, W59BNR3, W59BNC3),
+        W59BNR3 >= 1, W59BNR3 =< W59BNR,
+        W59BNC3 >= 1, W59BNC3 =< W59BNC
+    ), W59BNewRaw),
+    % Deduplicate the new-cell list.
+    sort(W59BNewRaw, W59BNew),
+    % Guard: at least one new cell lands on a currently empty (0) position.
+    once(( member(W59BNR4-W59BNC4-_, W59BNew),
+           nth1(W59BNR4, Grid, W59BNRow), nth1(W59BNC4, W59BNRow, 0) )),
+    % Enumerate all grid rows and columns for the output pass.
+    numlist(1, W59BNR, W59BAllRows),
+    numlist(1, W59BNC, W59BAllCols),
+    % Build output: keep existing non-zero cells; fill empty cells from W59BNew.
+    maplist([W59BOR,W59BOutRow]>>(
+        nth1(W59BOR, Grid, W59BInRow),
+        maplist([W59BOC,W59BOV]>>(
+            nth1(W59BOC, W59BInRow, W59BIV),
+            ( W59BIV =\= 0 -> W59BOV = W59BIV
+            ; once(member(W59BOR-W59BOC-W59BVf, W59BNew)) -> W59BOV = W59BVf
+            ; W59BOV = 0 )
+        ), W59BAllCols, W59BOutRow)
+    ), W59BAllRows, Out).
+
+% Find centre as doubled (Cr2, Cc2) via the symmetric row pair.
+% Two rows with identical non-zero patterns are found; their sum is Cr2.
+% The pivot row (integer centre) or the symmetric rows themselves give Cc2.
+w59b_find_centre(Grid, Cr2, Cc2) :-
+    % Collect (row, sorted non-zero column-value pattern) for non-empty rows.
+    findall(W59BR-W59BPat,
+        (nth1(W59BR, Grid, W59BRow),
+         findall(W59BC-W59BV,
+             (nth1(W59BC, W59BRow, W59BV), W59BV \= 0), W59BPat0),
+         W59BPat0 \= [],
+         msort(W59BPat0, W59BPat)),
+        W59BRowPats),
+    % Find all pairs of rows sharing the same pattern; record the gap.
+    findall(W59BDiff-W59BRA-W59BRB,
+        (member(W59BRA-W59BP, W59BRowPats),
+         member(W59BRB-W59BP, W59BRowPats),
+         W59BRA < W59BRB,
+         W59BDiff is W59BRB - W59BRA),
+        W59BPairs),
+    % Require at least one such pair.
+    W59BPairs \= [],
+    % Take the pair with the greatest row gap (outermost symmetric pair).
+    sort(0, @>=, W59BPairs, [_-W59BSR1-W59BSR2|_]),
+    % Doubled centre row = sum of the two symmetric rows.
+    Cr2 is W59BSR1 + W59BSR2,
+    % Determine centre col: use pivot row if centre row is integer.
+    ( Cr2 mod 2 =:= 0
+    -> W59BPivR is Cr2 // 2,
+       nth1(W59BPivR, Grid, W59BPivRow),
+       findall(W59BPC, (nth1(W59BPC, W59BPivRow, W59BPV), W59BPV \= 0), W59BPCols),
+       W59BPCols \= []
+    % Half-integer centre row: derive col axis from the symmetric rows.
+    ; nth1(W59BSR1, Grid, W59BSymRow),
+       findall(W59BSC, (nth1(W59BSC, W59BSymRow, W59BSV), W59BSV \= 0), W59BPCols)
+    ),
+    % Centre col doubled = min non-zero col + max non-zero col of that row.
+    arc_min_list(W59BPCols, W59BMinC),
+    arc_max_list(W59BPCols, W59BMaxC),
+    Cc2 is W59BMinC + W59BMaxC.
+
+% Apply K 90-degree CW rotations around centre (Cr2/2, Cc2/2) using doubled coords.
+% Base case: zero rotations = identity.
+w59b_rotk(0, R, C, _, _, R, C) :- !.
+% Recursive case: one rotation step then K-1 more.
+w59b_rotk(K, R, C, Cr2, Cc2, NR, NC) :-
+    K > 0, K1 is K-1,
+    % 90-degree CW: new_r = cr + (c - cc),  new_c = cc - (r - cr).
+    NR2 is Cr2 + 2*C - Cc2,
+    NC2 is Cc2 - 2*R + Cr2,
+    % Both doubled coords must be even to land on an integer grid cell.
+    NR2 mod 2 =:= 0, NC2 mod 2 =:= 0,
+    MR is NR2//2, MC is NC2//2,
+    w59b_rotk(K1, MR, MC, Cr2, Cc2, NR, NC).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
