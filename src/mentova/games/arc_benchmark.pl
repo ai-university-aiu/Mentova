@@ -26231,6 +26231,142 @@ w60b_stamps(Cavity, DR, DC, S, NR, NC, J, Stamps) :-
       append(W60BStampJ, W60BRestStamps, Stamps) ).
 
 % ---------------------------------------------------------------------------
+% Wave 61 Rule A: concentric_square_rings  (task 5c2c9af4)
+% ---------------------------------------------------------------------------
+
+% Declare the named rule for concentric square rings.
+arc_named_rule(concentric_square_rings).
+% Apply: dots lie on a diagonal with equal spacing s; color every cell whose
+% Chebyshev distance from the centre dot is divisible by s.
+arc_transform(concentric_square_rings, Grid, Out) :-
+    % Size guard.
+    arc_grid_dims(Grid, W61ANR, W61ANC),
+    % Enforce reasonable grid size.
+    W61ANR =< 30, W61ANC =< 30,
+    % Collect every non-zero cell as a candidate dot.
+    findall(W61AR-W61AC-W61AV, (
+        nth1(W61AR, Grid, W61ARow),
+        nth1(W61AC, W61ARow, W61AV),
+        W61AV =\= 0
+    ), W61ADots),
+    % Require at least two dots to compute a spacing.
+    W61ADots = [_,_|_],
+    % All dots must share exactly one colour.
+    findall(W61AVC, member(_-_-W61AVC, W61ADots), W61AColorList),
+    % sort/2 removes duplicates; if more than one colour the unification fails.
+    sort(W61AColorList, [W61AColor]),
+    % Sort dots by row then column for consistent ordering.
+    msort(W61ADots, W61ASorted),
+    % Extract first two dots to derive spacing s.
+    W61ASorted = [W61ADR1-W61ADC1-_,W61ADR2-W61ADC2-_|_],
+    % Spacing is the absolute row difference between consecutive dots.
+    W61AS is abs(W61ADR2 - W61ADR1),
+    % Spacing must be positive (dots must not share a row).
+    W61AS > 0,
+    % Verify the column spacing also equals s for the first pair.
+    abs(W61ADC2 - W61ADC1) =:= W61AS,
+    % Verify every consecutive pair has equal absolute row and col spacing s.
+    forall(
+        (nth1(W61AKA, W61ASorted, W61ARA-W61ACA-_),
+         W61AKB is W61AKA + 1,
+         nth1(W61AKB, W61ASorted, W61ARB-W61ACB-_)),
+        (abs(W61ARB - W61ARA) =:= W61AS, abs(W61ACB - W61ACA) =:= W61AS)
+    ),
+    % Centre is the middle dot (1-indexed midpoint of the sorted list).
+    length(W61ASorted, W61ANDots),
+    W61AMid is (W61ANDots + 1) // 2,
+    % Bind the centre row and column.
+    nth1(W61AMid, W61ASorted, W61ACR-W61ACC-_),
+    % Enumerate all row and column indices.
+    numlist(1, W61ANR, W61ARows),
+    numlist(1, W61ANC, W61ACols),
+    % Build the output: colour a cell iff its Chebyshev distance from centre
+    % is an exact multiple of s; otherwise output 0.
+    maplist([W61AOR, W61AOutRow]>>(
+        maplist([W61AOC, W61AOV]>>(
+            % Chebyshev distance from centre dot.
+            W61ADist is max(abs(W61AOR - W61ACR), abs(W61AOC - W61ACC)),
+            % Colour if distance is divisible by s.
+            ( W61ADist mod W61AS =:= 0 -> W61AOV = W61AColor ; W61AOV = 0 )
+        ), W61ACols, W61AOutRow)
+    ), W61ARows, Out), !.
+
+% ---------------------------------------------------------------------------
+% Wave 61 Rule B helpers: corner_ripple_even_chebyshev  (task d22278a0)
+% ---------------------------------------------------------------------------
+
+% w61b_cell_value/4: compute the output colour at (R,C) given corner seeds.
+% Seeds is a list of SR-SC-SV triples.  Algorithm: (1) find minimum Chebyshev
+% distance; (2) if unique nearest seed, check parity; (3) if Chebyshev tie,
+% break by Manhattan; (4) if still tied, output 0.  Parity is always of the
+% Chebyshev distance: even → seed colour, odd → 0.
+w61b_cell_value(W61BHR, W61BHC, W61BHSeeds, W61BHVal) :-
+    % Compute Chebyshev and Manhattan distances to every seed.
+    findall(W61BHC2-W61BHM2-W61BHV2, (
+        member(W61BHSR-W61BHSC-W61BHV2, W61BHSeeds),
+        W61BHC2 is max(abs(W61BHR - W61BHSR), abs(W61BHC - W61BHSC)),
+        W61BHM2 is abs(W61BHR - W61BHSR) + abs(W61BHC - W61BHSC)
+    ), W61BHAll),
+    % Minimum Chebyshev distance over all seeds.
+    findall(W61BHC3, member(W61BHC3-_-_, W61BHAll), W61BHCList),
+    min_list(W61BHCList, W61BHMinC),
+    % Keep only entries tied at minimum Chebyshev.
+    include([W61BHC4-_-_]>>(W61BHC4 =:= W61BHMinC), W61BHAll, W61BHTied),
+    ( W61BHTied = [_-_-W61BHWin] ->
+        % Unique Chebyshev nearest: parity of Chebyshev distance decides.
+        ( W61BHMinC mod 2 =:= 0 -> W61BHVal = W61BHWin ; W61BHVal = 0 )
+    ;
+        % Chebyshev tie: break by Manhattan distance.
+        findall(W61BHM5, member(_-W61BHM5-_, W61BHTied), W61BHMList),
+        min_list(W61BHMList, W61BHMinM),
+        include([_-W61BHM6-_]>>(W61BHM6 =:= W61BHMinM), W61BHTied, W61BHMTied),
+        ( W61BHMTied = [_-_-W61BHMWin] ->
+            % Unique Manhattan winner: parity of Chebyshev distance decides.
+            ( W61BHMinC mod 2 =:= 0 -> W61BHVal = W61BHMWin ; W61BHVal = 0 )
+        ;
+            % Unresolvable tie: output 0.
+            W61BHVal = 0
+        )
+    ).
+
+% ---------------------------------------------------------------------------
+% Wave 61 Rule B: corner_ripple_even_chebyshev  (task d22278a0)
+% ---------------------------------------------------------------------------
+
+% Declare the named rule for corner ripple with even Chebyshev coloring.
+arc_named_rule(corner_ripple_even_chebyshev).
+% Apply: seeds sit at grid corners; each cell takes the colour of its unique
+% nearest seed (Chebyshev) when that distance is even, else 0; ties give 0.
+arc_transform(corner_ripple_even_chebyshev, Grid, Out) :-
+    % Size guard.
+    arc_grid_dims(Grid, W61BNR, W61BNC),
+    % Enforce reasonable grid size.
+    W61BNR =< 30, W61BNC =< 30,
+    % Collect all non-zero cells as candidate corner seeds.
+    findall(W61BR-W61BC-W61BV, (
+        nth1(W61BR, Grid, W61BRow),
+        nth1(W61BC, W61BRow, W61BV),
+        W61BV =\= 0
+    ), W61BSeeds),
+    % At least one seed must be present.
+    W61BSeeds \= [],
+    % Every seed must occupy one of the four grid corners.
+    forall(member(W61BSR2-W61BSC2-_, W61BSeeds), (
+        ( W61BSR2 =:= 1 ; W61BSR2 =:= W61BNR ),
+        ( W61BSC2 =:= 1 ; W61BSC2 =:= W61BNC )
+    )),
+    % Enumerate row and column indices.
+    numlist(1, W61BNR, W61BRows),
+    numlist(1, W61BNC, W61BCols),
+    % Build the output grid via the helper predicate.
+    maplist([W61BOR, W61BOutRow]>>(
+        maplist([W61BOC, W61BOV]>>(
+            % Delegate per-cell value computation to the helper.
+            w61b_cell_value(W61BOR, W61BOC, W61BSeeds, W61BOV)
+        ), W61BCols, W61BOutRow)
+    ), W61BRows, Out), !.
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 

@@ -1286,6 +1286,45 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 36: WAVE 61 - CONCENTRIC SQUARE RINGS AND CORNER RIPPLE EVEN CHEBYSHEV - 363 / 400 = 90.75%
+
+Date: 2026-06-20
+Score: 363 / 400 = 90.75%.
+Previous score: 361 / 400 = 90.25% (wave 60, 2026-06-20).
+Rules added: 2.
+Tasks solved: +2.
+
+What changed: Wave 61 added two new induction rules targeting distance-based coloring
+patterns among the remaining 39 unsolved tasks.
+
+The two scoring rules added in wave 61:
+
+concentric_square_rings (task 5c2c9af4): The input contains N dots (N >= 2) that all
+share one color C and lie on a diagonal with equal absolute row and column spacing s.
+The rule identifies the middle dot as the center and assigns color C to every output
+cell whose Chebyshev distance (maximum of absolute row and column offsets from the
+center) is exactly divisible by s; all other cells become 0. The result is a set of
+concentric square rings of color C spaced s apart, radiating outward from the center.
+
+corner_ripple_even_chebyshev (task d22278a0): Every non-zero cell in the input sits at
+one of the four grid corners. Each corner seed carries a color value. For each output
+cell the rule computes the Chebyshev distance to every seed, then determines ownership
+by the nearest seed (Manhattan distance breaks Chebyshev ties; a tie unresolvable by
+Manhattan yields 0). The cell takes the winning seed's color when the Chebyshev distance
+is even, and 0 when the distance is odd.
+
+What was learned: Concentric square rings are fully determined by three quantities: the
+spacing s (derived from the inter-dot row or column gap), the center dot position, and
+the single shared color. The Chebyshev modular test is therefore a one-line decision.
+For the corner ripple, Chebyshev distance creates an L-infinity Voronoi diagram; parity
+of the Chebyshev distance then creates the alternating color-zero stripe pattern observed
+in the examples. Using Manhattan as a tie-breaker handles the cases where two seeds lie
+symmetrically relative to a cell - Manhattan resolves these because Manhattan breaks
+symmetry along diagonals that Chebyshev cannot distinguish.
+
+New tasks solved by wave 61 (2 new tasks): 5c2c9af4 (concentric_square_rings),
+d22278a0 (corner_ripple_even_chebyshev).
+
 ATTEMPT 35: WAVE 60 - EXTREME REGION FILL AND DIAGONAL CAVITY STAMP - 361 / 400 = 90.25%
 
 Date: 2026-06-20
@@ -1486,7 +1525,9 @@ Run 69: 357 / 400 = 89.25% - Wave 58: two new rules (box_extract_recolor_by_dots
 
 Run 70: 359 / 400 = 89.75% - Wave 59: two new rules (fill_frame_interior_radiate, complete_rotational_symmetry). Plus 2 tasks.
 
-Run 71: 361 / 400 = 90.25% - Wave 60: two new rules (extreme_region_fill, diagonal_cavity_stamp). Plus 2 tasks. (CURRENT BEST)
+Run 71: 361 / 400 = 90.25% - Wave 60: two new rules (extreme_region_fill, diagonal_cavity_stamp). Plus 2 tasks.
+
+Run 72: 363 / 400 = 90.75% - Wave 61: two new rules (concentric_square_rings, corner_ripple_even_chebyshev). Plus 2 tasks. (CURRENT BEST)
 
 
 ALL 280 SOLVED TASKS AND THEIR GLASS-BOX RULES
@@ -1696,6 +1737,8 @@ ALL 280 SOLVED TASKS AND THEIR GLASS-BOX RULES
 5bd6f4ac - extract_top_right_3x3.
 
 5c0a986e - extend_2x2_blocks_diagonal.
+
+5c2c9af4 - concentric_square_rings.
 
 60b61512 - fill_component_bbox_with_7.
 
@@ -1910,6 +1953,8 @@ d0f5fe59 - components_to_identity.
 d10ecb37 - extract_2x2_rotation_seed.
 
 d13f3404 - diagonal_stripe.
+
+d22278a0 - corner_ripple_even_chebyshev.
 
 d23f8c26 - keep_center_column.
 
@@ -3299,6 +3344,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 58: Box-Dot Extraction and Line-Grid Hole Fi
 Dison, D. R. (2026). ARC-AGI-1 Wave 59: Frame Interior Radiate and Rotational Symmetry Completion, 359 / 400 = 89.75%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 60: Extreme Region Fill and Diagonal Cavity Stamp, 361 / 400 = 90.25%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 61: Concentric Square Rings and Corner Ripple Even Chebyshev, 363 / 400 = 90.75%. AIU / PrologAI.
 
 
 END OF DOCUMENT
