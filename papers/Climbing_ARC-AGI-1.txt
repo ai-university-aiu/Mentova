@@ -1286,6 +1286,49 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 39: WAVE 64 - FRAME STAMP AT ZERO INTERIOR AND TEMPLATE STAMP AT 4 CLUSTER - 368 / 400 = 92.00%
+
+Date: 2026-06-20
+Score: 368 / 400 = 92.00%.
+Previous score: 366 / 400 = 91.50% (wave 63, 2026-06-20).
+Rules added: 2 (2 net new tasks).
+Tasks solved: +2.
+
+What changed: Wave 64 added two new named rules to arc_benchmark.pl targeting two
+structurally distinct tasks from the remaining 34 unsolved tasks.
+
+frame_stamp_at_zero_interior (task 890034e9): The input contains one uniquely-colored
+rectangular frame - a border of cells all with value V surrounding an all-zero interior.
+The rule detects this source frame by verifying that every V-cell in the entire grid equals
+exactly the perimeter count (2*FH + 2*FW - 4), which disambiguates the real frame from
+grids where that color happens to appear elsewhere. The interior dimensions IH x IW are
+extracted, then every IH x IW all-zero region in the grid that has room for a full border
+inside the grid bounds (and is not the source frame's own interior) is stamped with a
+V-colored border frame in the output.
+
+template_stamp_at_4_cluster (task 7df24a62): The input contains a 1-bordered template
+frame and scattered 4-cells outside it. The template is the LARGEST-area 1-bordered
+rectangle whose interior contains 4s (and only 0, 1, and 4 values). The template interior
+has K 4-cells and dimensions IH x IW. Both orientations are tried: IH x IW and (when IH
+differs from IW) the transposed IW x IH. A valid cluster must contain exactly K 4-cells
+and its 4-cells must span the full visible interior in both row and column dimensions.
+Frame placement may start outside the grid bounds (the interior clips to grid bounds).
+For each matched cluster, all 0-cells in the visible frame region become 1; existing
+4-cells are left unchanged.
+
+What was learned: Template selection by AREA (largest-area 1-bordered rectangle) is
+essential when the template contains inner sub-rectangles that would also qualify. Always
+try both orientations when IH differs from IW, as scattered clusters may be transposed
+relative to the template. Out-of-bounds frame placement is needed when a cluster's bounding
+box touches the grid edge. The uniqueness criterion for frame_stamp_at_zero_interior (total
+V-cell count equal to perimeter) is the correct discriminator for identifying the source
+frame when multiple same-colored borders could appear.
+
+Bugs fixed: None.
+
+New tasks solved by wave 64 (2 net new tasks): 890034e9 (frame_stamp_at_zero_interior),
+7df24a62 (template_stamp_at_4_cluster).
+
 ATTEMPT 38: WAVE 63 - FIVE SHAPE FAT THIN + THREE SUPPLEMENTAL RULES - 366 / 400 = 91.50%
 
 Date: 2026-06-20
@@ -1615,10 +1658,11 @@ Run 71: 361 / 400 = 90.25% - Wave 60: two new rules (extreme_region_fill, diagon
 Run 72: 363 / 400 = 90.75% - Wave 61: two new rules (concentric_square_rings, corner_ripple_even_chebyshev). Plus 2 tasks.
 
 Run 73: 365 / 400 = 91.25% - Wave 62: two new rules (graybox_hole_fill_by_unique_shape, corner_nested_frame). Plus 2 tasks.
-Run 74: 366 / 400 = 91.50% - Wave 63: four new rules (1 net new: five_shape_fat_thin). Plus 1 task. (CURRENT BEST)
+Run 74: 366 / 400 = 91.50% - Wave 63: four new rules (1 net new: five_shape_fat_thin). Plus 1 task.
+Run 75: 368 / 400 = 92.00% - Wave 64: frame_stamp_at_zero_interior + template_stamp_at_4_cluster. Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 366 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 368 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1892,6 +1936,8 @@ ALL 366 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 7ddcd7ec - extend_diagonals_from_2x2.
 
+7df24a62 - template_stamp_at_4_cluster.
+
 7f4411dc - remove_stray_cells.
 
 7fe24cdd - tile_rotate_2x2.
@@ -1907,6 +1953,8 @@ ALL 366 SOLVED TASKS AND THEIR GLASS-BOX RULES
 88a10436 - stamp_pattern_at_5.
 
 88a62173 - unique_quadrant_at_zero_cross.
+
+890034e9 - frame_stamp_at_zero_interior.
 
 8be77c9e - tile_reflect_v.
 
@@ -3444,6 +3492,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 61: Concentric Square Rings and Corner Rippl
 Dison, D. R. (2026). ARC-AGI-1 Wave 62: Graybox Hole Fill by Unique Shape and Corner Nested Frame, 365 / 400 = 91.25%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 63: Five Shape Fat Thin and Three Supplemental Rules, 366 / 400 = 91.50%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 64: Frame Stamp at Zero Interior and Template Stamp at 4 Cluster, 368 / 400 = 92.00%. AIU / PrologAI.
 
 
 END OF DOCUMENT
