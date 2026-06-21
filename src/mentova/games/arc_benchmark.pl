@@ -1,4 +1,4 @@
-/*  Mentova — ARC-AGI-1 Full Benchmark Runner  (Acc_71, extended Acc_73)
+/*  Mentova — ARC-AGI-1 Full Benchmark Runner  (Acc_71, extended Acc_74)
 
     Runs all 400 public ARC-AGI-1 training tasks through Mentova's
     inductive reasoning engine and reports an honest score.
@@ -26898,6 +26898,238 @@ arc_transform(five_shape_fat_thin, Grid, Out) :-
     ), AllRows, Out).
 
 % ---------------------------------------------------------------------------
+% Wave 64 Rule A: frame_stamp_at_zero_interior  (task 890034e9)
+% The grid contains exactly one colored rectangular frame: border cells all
+% share a color V that appears nowhere else in the grid, and the interior is
+% all zero. Find every IH x IW all-zero region (excluding the source interior)
+% that fits with a full border inside the grid, and stamp a V-colored frame
+% border around each one.
+% ---------------------------------------------------------------------------
+% ERC 0.10 % helper: verify every cell in row R from col C1..C2 equals Val
+w64a_row_eq(Grid, R, C1, C2, Val) :-
+% ERC 0.10 % fail as soon as any cell in the row range deviates from Val
+    forall(between(C1, C2, C), arc_grid_at(Grid, R, C, Val)).
+% ERC 0.10 % helper: verify every cell in col C from row R1..R2 equals Val
+w64a_col_eq(Grid, C, R1, R2, Val) :-
+% ERC 0.10 % fail as soon as any cell in the column range deviates from Val
+    forall(between(R1, R2, R), arc_grid_at(Grid, R, C, Val)).
+% ERC 0.10 % find unique source frame: border color Val, interior all 0, no extra Val cells
+w64a_source_frame(Grid, NR, NC, R1, C1, R2, C2, Val, IH, IW) :-
+% ERC 0.10 % enumerate candidate top-left rows
+    between(1, NR, R1),
+% ERC 0.10 % bottom row must be at least two rows below top
+    R2lo is R1 + 2,
+    between(R2lo, NR, R2),
+% ERC 0.10 % enumerate candidate left columns
+    between(1, NC, C1),
+% ERC 0.10 % right column must be at least two columns right of left
+    C2lo is C1 + 2,
+    between(C2lo, NC, C2),
+% ERC 0.10 % read the top-left corner cell to determine the frame color
+    arc_grid_at(Grid, R1, C1, Val),
+    Val \= 0,
+% ERC 0.10 % top border row must be uniformly Val
+    w64a_row_eq(Grid, R1, C1, C2, Val),
+% ERC 0.10 % bottom border row must be uniformly Val
+    w64a_row_eq(Grid, R2, C1, C2, Val),
+% ERC 0.10 % side columns between top and bottom must be uniformly Val
+    R1b is R1 + 1, R2b is R2 - 1,
+    w64a_col_eq(Grid, C1, R1b, R2b, Val),
+    w64a_col_eq(Grid, C2, R1b, R2b, Val),
+% ERC 0.10 % interior of the frame must be entirely zero
+    C1b is C1 + 1, C2b is C2 - 1,
+    forall((between(R1b, R2b, Ri), between(C1b, C2b, Ci)),
+           arc_grid_at(Grid, Ri, Ci, 0)),
+% ERC 0.10 % count all Val-colored cells; they must equal exactly the perimeter size
+    FH is R2 - R1 + 1, FW is C2 - C1 + 1,
+    PerimN is 2 * FH + 2 * FW - 4,
+    findall(x, (between(1,NR,Rp), between(1,NC,Cp), arc_grid_at(Grid,Rp,Cp,Val)), AllV),
+    length(AllV, PerimN),
+% ERC 0.10 % compute interior height and width
+    IH is R2 - R1 - 1,
+    IW is C2 - C1 - 1.
+% ERC 0.10 % declare frame_stamp_at_zero_interior as a named ARC rule
+arc_named_rule(frame_stamp_at_zero_interior).
+% ERC 0.10 % transform: find source frame, collect zero-interior regions, stamp borders
+arc_transform(frame_stamp_at_zero_interior, Grid, Out) :-
+% ERC 0.10 % restrict to grids no larger than 30x30 for tractable search
+    arc_grid_dims(Grid, NR, NC),
+    NR =< 30, NC =< 30,
+% ERC 0.10 % find the uniquely-colored source frame
+    w64a_source_frame(Grid, NR, NC, SR1, SC1, _SR2, _SC2, Val, IH, IW),
+% ERC 0.10 % upper bounds on stamp interior start row and column
+    FRmax is NR - IH, FCmax is NC - IW,
+% ERC 0.10 % collect all IH x IW all-zero regions where a full border fits inside the grid
+    findall(s(FR,FC), (
+        between(2, FRmax, FR),
+        FR2e is FR + IH - 1,
+        between(2, FCmax, FC),
+        FC2e is FC + IW - 1,
+% ERC 0.10 % exclude the source frame's own interior
+        \+ (FR =:= SR1 + 1, FC =:= SC1 + 1),
+% ERC 0.10 % every cell in the candidate interior must be zero
+        forall((between(FR, FR2e, Ri), between(FC, FC2e, Ci)),
+               arc_grid_at(Grid, Ri, Ci, 0))
+    ), Stamps),
+    Stamps \= [],
+% ERC 0.10 % build the output by writing color Val to border cells of each stamp
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([R, OutRow]>>(
+        maplist([C, OV]>>(
+            arc_grid_at(Grid, R, C, GV),
+% ERC 0.10 % for each stamp, check if this cell lies on the frame border
+            ( member(s(FR,FC), Stamps),
+              FRe is FR + IH - 1,
+              FBR1 is FR - 1, FBR2 is FRe + 1,
+              FCe is FC + IW - 1,
+              FBC1 is FC - 1, FBC2 is FCe + 1,
+              R >= FBR1, R =< FBR2,
+              C >= FBC1, C =< FBC2,
+              ( R =:= FBR1 ; R =:= FBR2 ; C =:= FBC1 ; C =:= FBC2 )
+            -> OV = Val
+            ; OV = GV )
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 64 Rule B: template_stamp_at_4_cluster  (task 7df24a62)
+% The grid contains a 1-bordered rectangular "template" frame with 4-cells
+% and 0/1-cells in its interior. Scattered 4-cells outside the template form
+% clusters whose bounding box exactly matches the template interior (or its
+% transpose). For each matching cluster stamp a 1-bordered frame around it
+% and fill every 0-cell inside the frame with 1 (leave existing 4-cells in
+% place). The frame may extend one row or column outside the grid boundary.
+% ---------------------------------------------------------------------------
+% ERC 0.10 % helper: verify every cell in row R from col C1..C2 equals 1
+w64b_row_ones(Grid, R, C1, C2) :-
+% ERC 0.10 % fail as soon as any cell deviates from 1
+    forall(between(C1, C2, C), arc_grid_at(Grid, R, C, 1)).
+% ERC 0.10 % helper: verify every cell in col C from row R1..R2 equals 1
+w64b_col_ones(Grid, C, R1, R2) :-
+% ERC 0.10 % fail as soon as any cell deviates from 1
+    forall(between(R1, R2, R), arc_grid_at(Grid, R, C, 1)).
+% ERC 0.10 % find the largest-area 1-bordered template with 4s in its interior
+w64b_best_template(Grid, NR, NC, TR1, TC1, TR2, TC2, IH, IW, K) :-
+% ERC 0.10 % collect all valid 1-bordered frame candidates with area tag
+    findall(Area-d(R1,C1,R2,C2,H,W,Kk), (
+        between(1, NR, R1),
+        R2lo is R1 + 2, between(R2lo, NR, R2),
+        between(1, NC, C1),
+        C2lo is C1 + 2, between(C2lo, NC, C2),
+% ERC 0.10 % all four border sides must be uniformly 1
+        w64b_row_ones(Grid, R1, C1, C2),
+        w64b_row_ones(Grid, R2, C1, C2),
+        R1b is R1 + 1, R2b is R2 - 1,
+        w64b_col_ones(Grid, C1, R1b, R2b),
+        w64b_col_ones(Grid, C2, R1b, R2b),
+% ERC 0.10 % collect all interior values into a flat list
+        C1b is C1 + 1, C2b is C2 - 1,
+        findall(V, (
+            between(R1b, R2b, Ri), between(C1b, C2b, Ci),
+            arc_grid_at(Grid, Ri, Ci, V)
+        ), IVs),
+        IVs \= [],
+% ERC 0.10 % interior must contain only values from {0, 1, 4}
+        forall(member(IV, IVs), (IV =:= 0 ; IV =:= 1 ; IV =:= 4)),
+% ERC 0.10 % interior must contain at least one 4-cell
+        member(4, IVs),
+% ERC 0.10 % count the 4-cells to determine K
+        include(==(4), IVs, Fours),
+        length(Fours, Kk),
+        H is R2 - R1 - 1, W is C2 - C1 - 1,
+        Area is (R2 - R1 + 1) * (C2 - C1 + 1)
+    ), Cands),
+    Cands \= [],
+% ERC 0.10 % pick the candidate with the largest area (last after ascending sort)
+    msort(Cands, Sorted),
+    last(Sorted, _-d(TR1, TC1, TR2, TC2, IH, IW, K)).
+% ERC 0.10 % find all frame placements of interior size OH x OW with exactly K scattered 4s
+w64b_frames_orient(NR, NC, Scattered, OH, OW, K, Frames) :-
+% ERC 0.10 % frame height and width (interior plus 2-cell border)
+    FH is OH + 2, FW is OW + 2,
+% ERC 0.10 % allow frame top row to start one above the grid (out-of-bounds clipping)
+    FRlo is -OH, FRhi is NR - 1,
+    FClo is -OW, FChi is NC - 1,
+    findall(f(FR,FC,FR2,FC2), (
+        between(FRlo, FRhi, FR),
+        FR2 is FR + FH - 1,
+% ERC 0.10 % visible interior row range (clipped to grid bounds)
+        IR0 is max(FR + 1, 1),
+        IR1 is min(FR2 - 1, NR),
+        IR0 =< IR1,
+        between(FClo, FChi, FC),
+        FC2 is FC + FW - 1,
+% ERC 0.10 % visible interior column range (clipped to grid bounds)
+        IC0 is max(FC + 1, 1),
+        IC1 is min(FC2 - 1, NC),
+        IC0 =< IC1,
+% ERC 0.10 % filter scattered list to those inside the visible interior
+        include([R-C]>>(IR0 =< R, R =< IR1, IC0 =< C, C =< IC1), Scattered, I4s),
+% ERC 0.10 % cluster must contain exactly K cells
+        length(I4s, K),
+        I4s \= [],
+% ERC 0.10 % cluster bounding box must span the full visible interior in both dimensions
+        findall(R, member(R-_, I4s), Rs4),
+        findall(C, member(_-C, I4s), Cs4),
+        arc_min_list(Rs4, MinR), arc_max_list(Rs4, MaxR),
+        arc_min_list(Cs4, MinC), arc_max_list(Cs4, MaxC),
+        MinR =:= IR0, MaxR =:= IR1,
+        MinC =:= IC0, MaxC =:= IC1
+    ), Frames).
+% ERC 0.10 % collect frames for the direct orientation (IH x IW) and transposed (IW x IH)
+w64b_all_frames(NR, NC, Scattered, IH, IW, K, Frames) :-
+% ERC 0.10 % always try the direct orientation first
+    w64b_frames_orient(NR, NC, Scattered, IH, IW, K, F1),
+% ERC 0.10 % if dimensions differ, also try the transposed orientation
+    ( IH =\= IW ->
+        w64b_frames_orient(NR, NC, Scattered, IW, IH, K, F2),
+        append(F1, F2, Frames)
+    ;
+        Frames = F1
+    ).
+% ERC 0.10 % check whether (R,C) lies within the grid-visible portion of frame f(FR,FC,FR2,FC2)
+w64b_in_visible(R, C, NR, NC, f(FR,FC,FR2,FC2)) :-
+% ERC 0.10 % clip frame bounds to grid extents
+    Rmin is max(FR, 1), Rmax is min(FR2, NR),
+    Cmin is max(FC, 1), Cmax is min(FC2, NC),
+    R >= Rmin, R =< Rmax, C >= Cmin, C =< Cmax.
+% ERC 0.10 % declare template_stamp_at_4_cluster as a named ARC rule
+arc_named_rule(template_stamp_at_4_cluster).
+% ERC 0.10 % transform: find template, locate 4-clusters, stamp 1-bordered frames
+arc_transform(template_stamp_at_4_cluster, Grid, Out) :-
+% ERC 0.10 % restrict to grids no larger than 30x30
+    arc_grid_dims(Grid, NR, NC),
+    NR =< 30, NC =< 30,
+% ERC 0.10 % quick guard: grid must contain both 1-cells and 4-cells
+    flatten(Grid, GFlat),
+    member(1, GFlat),
+    member(4, GFlat),
+% ERC 0.10 % find the largest valid 1-bordered template frame
+    w64b_best_template(Grid, NR, NC, TR1, TC1, TR2, TC2, IH, IW, K),
+% ERC 0.10 % collect scattered 4-cells that lie outside the template region
+    findall(R-C, (
+        between(1, NR, R), between(1, NC, C),
+        arc_grid_at(Grid, R, C, 4),
+        \+ (TR1 =< R, R =< TR2, TC1 =< C, C =< TC2)
+    ), Scattered),
+% ERC 0.10 % find all qualifying frame placements (both orientations)
+    w64b_all_frames(NR, NC, Scattered, IH, IW, K, Frames),
+    Frames \= [],
+% ERC 0.10 % build the output: set each 0-cell inside a frame to 1; leave all other cells
+    numlist(1, NR, AllRows), numlist(1, NC, AllCols),
+    maplist([R, OutRow]>>(
+        maplist([C, OV]>>(
+            arc_grid_at(Grid, R, C, GV),
+% ERC 0.10 % stamp only background (0) cells that fall inside a visible frame
+            ( GV =:= 0,
+              member(Frame, Frames),
+              w64b_in_visible(R, C, NR, NC, Frame)
+            -> OV = 1
+            ; OV = GV )
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
@@ -26955,7 +27187,7 @@ arc_attempt_task(task(TaskId, TrainingPairs, TestIn, TestOut), Result) :-
 % Define arc_benchmark_print/0: run the full benchmark and print a report.
 arc_benchmark_print :-
     % Print the benchmark header.
-    format("~n=== ARC-AGI-1 Full Benchmark Run (Acc_73: wave 63 rules) ===~n"),
+    format("~n=== ARC-AGI-1 Full Benchmark Run (Acc_74: wave 64 rules) ===~n"),
     format("400 public training tasks. Pure induction. No pretraining. Glass-box rules.~n"),
     format("Two search levels: (1) single named rule; (2) ordered pair of named rules.~n~n"),
     % Run the benchmark.
