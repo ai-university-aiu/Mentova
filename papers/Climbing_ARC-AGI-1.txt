@@ -1286,6 +1286,40 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 41: WAVE 66 - FRAME BORDER MARKERS PROJECT BEAMS - 371 / 400 = 92.75%
+
+Date: 2026-06-21
+Score: 371 / 400 = 92.75%.
+Previous score: 370 / 400 = 92.50% (wave 65, 2026-06-21).
+Rules added: 1 (1 net new task).
+Tasks solved: +1.
+
+What changed: Wave 66 added one new named rule in arc_benchmark.pl solving one structurally
+distinct task from the remaining 30 unsolved tasks.
+
+f1cefba8 (frame_border_marker_beams): The input contains a two-color rectangular frame
+with thick borders (at least 2 rows and 2 columns thick). One color forms the frame border
+(FrameC) and the other fills the interior (FillC). A small number of FillC-colored "marker"
+cells appear on the border rows or border columns. Each marker projects a beam perpendicular
+to its border side: markers on border rows (top/bottom) project vertical beams spanning
+the full column; markers on border columns (left/right) project horizontal beams spanning
+the full row. Inside the frame region, beam cells are colored FrameC. Outside the frame
+region, beam cells are colored FillC. Non-beam cells inside the frame are preserved from
+the input. Non-beam cells outside the frame are set to zero. Border rows are identified as
+rows whose FillC cell count is less than half the frame width; border columns are identified
+similarly by their FillC count vs. half the frame height. This threshold correctly excludes
+interior FillC rows even when one or two marker cells are present in the border rows.
+
+What was learned: The marker-detection criterion (FillC count less than half frame width)
+is more robust than looking for rows with exactly zero or one FillC cell, because the task
+allows multiple markers per border row. Using the bounding box of all nonzero cells to
+identify the frame region is clean and avoids searching for FrameC explicitly when two
+colors are always present.
+
+Bugs fixed: None.
+
+New tasks solved by wave 66 (1 new task): f1cefba8 (frame_border_marker_beams).
+
 ATTEMPT 40: WAVE 65 - LZ PATH MARKER CONNECTOR AND FRAME EDGE COLOR CENTER ADJACENT - 370 / 400 = 92.50%
 
 Date: 2026-06-21
@@ -1705,7 +1739,9 @@ Run 73: 365 / 400 = 91.25% - Wave 62: two new rules (graybox_hole_fill_by_unique
 Run 74: 366 / 400 = 91.50% - Wave 63: four new rules (1 net new: five_shape_fat_thin). Plus 1 task.
 Run 75: 368 / 400 = 92.00% - Wave 64: frame_stamp_at_zero_interior + template_stamp_at_4_cluster. Plus 2 tasks.
 
-Run 76: 370 / 400 = 92.50% - Wave 65: w65a_marker_lz_path + frame_edge_color_8s center-adjacent enhancement. Plus 2 tasks. (CURRENT BEST)
+Run 76: 370 / 400 = 92.50% - Wave 65: w65a_marker_lz_path + frame_edge_color_8s center-adjacent enhancement. Plus 2 tasks.
+
+Run 77: 371 / 400 = 92.75% - Wave 66: f1cefba8 frame border markers project beams. Plus 1 task. (CURRENT BEST)
 
 
 ALL 370 SOLVED TASKS AND THEIR GLASS-BOX RULES
@@ -2295,6 +2331,8 @@ dc0a314f - repair_occluded_5x5_block.
 e98196ab - overlay_halves_at_5sep.
 
 ff805c23 - repair_occluded_5x5_block.
+
+f1cefba8 - frame_border_marker_beams.
 
 
 WHAT COMES NEXT
@@ -3546,6 +3584,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 63: Five Shape Fat Thin and Three Supplement
 Dison, D. R. (2026). ARC-AGI-1 Wave 64: Frame Stamp at Zero Interior and Template Stamp at 4 Cluster, 368 / 400 = 92.00%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 65: LZ Path Marker Connector and Frame Edge Center-Adjacent Enhancement, 370 / 400 = 92.50%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 66: Frame Border Markers Project Beams, 371 / 400 = 92.75%. AIU / PrologAI.
 
 
 END OF DOCUMENT
