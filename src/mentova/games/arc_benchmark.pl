@@ -26367,6 +26367,340 @@ arc_transform(corner_ripple_even_chebyshev, Grid, Out) :-
     ), W61BRows, Out), !.
 
 % ---------------------------------------------------------------------------
+% Wave 62 Rule A: graybox_hole_fill_by_unique_shape  (task 228f6490)
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % declare the named rule for the gray-box hole-fill transform
+arc_named_rule(graybox_hole_fill_by_unique_shape).
+% ERC 0.10 % main transform: fill each interior hole of a gray rectangle with the matching unique loose shape
+arc_transform(graybox_hole_fill_by_unique_shape, W62AGrid, W62AOut) :-
+% ERC 0.10 % measure the number of rows in the grid
+    length(W62AGrid, W62ANR),
+% ERC 0.10 % measure the number of columns from the first row
+    W62AGrid = [W62AFirstRow|_],
+% ERC 0.10 % get the column count
+    length(W62AFirstRow, W62ANC),
+% ERC 0.10 % enforce the size guard on rows
+    W62ANR =< 30,
+% ERC 0.10 % enforce the size guard on columns
+    W62ANC =< 30,
+% ERC 0.10 % collect every cell coordinate paired with its value
+    w62a_cells(W62AGrid, W62ANR, W62ANC, W62ACells),
+% ERC 0.10 % find all interior holes (0-components fully bordered by 5)
+    w62a_holes(W62ACells, W62ANR, W62ANC, W62AHoles),
+% ERC 0.10 % find loose colored components (color not 0 and not 5), 8-connected, with their color
+    w62a_loose(W62ACells, W62ANR, W62ANC, W62ALoose),
+% ERC 0.10 % keep only movers: loose comps whose color appears as exactly one component
+    w62a_movers(W62ALoose, W62AMovers),
+% ERC 0.10 % assign each hole the mover of matching normalized shape and build edits
+    w62a_assign(W62AHoles, W62AMovers, W62AFills, W62AErase),
+% ERC 0.10 % apply fills and erasures to produce the output grid
+    w62a_apply(W62AGrid, W62ANR, W62ANC, W62AFills, W62AErase, W62AOut),
+% ERC 0.10 % commit to this solution
+    !.
+
+% ERC 0.10 % build a list of cell(R,C,V) terms for the whole grid
+w62a_cells(W62AGrid, W62ANR, W62ANC, W62ACells) :-
+% ERC 0.10 % enumerate rows 0..NR-1 collecting cells
+    findall(cell(W62AR,W62AC,W62AV),
+        ( between(1, W62ANR, W62AR1), W62AR is W62AR1-1,
+          nth0(W62AR, W62AGrid, W62ARow),
+          between(1, W62ANC, W62AC1), W62AC is W62AC1-1,
+          nth0(W62AC, W62ARow, W62AV) ),
+        W62ACells).
+
+% ERC 0.10 % look up the value at a coordinate, defaulting to -1 if out of range
+w62a_val(W62ACells, W62AR, W62AC, W62AV) :-
+% ERC 0.10 % succeed with the stored value if the cell exists
+    ( memberchk(cell(W62AR,W62AC,W62AV0), W62ACells) -> W62AV = W62AV0 ; W62AV = -1 ).
+
+% ERC 0.10 % flood a 4-connected component of value 0 starting from a seed
+w62a_flood0(_, _, _, [], W62AAcc, W62AAcc) :- !.
+% ERC 0.10 % recursive flood: pop a frontier cell, expand to 0-neighbors
+w62a_flood0(W62ACells, W62ANR, W62ANC, [(R,C)|W62AT], W62AAcc, W62AOut) :-
+% ERC 0.10 % gather valid 0-valued neighbors not already in the accumulator
+    findall((W62ANr,W62ANc),
+        ( member((W62ADr,W62ADc), [(1,0),(-1,0),(0,1),(0,-1)]),
+          W62ANr is R+W62ADr, W62ANc is C+W62ADc,
+          W62ANr >= 0, W62ANr < W62ANR, W62ANc >= 0, W62ANc < W62ANC,
+          w62a_val(W62ACells, W62ANr, W62ANc, 0),
+          \+ member((W62ANr,W62ANc), W62AAcc) ),
+        W62ANbrsDup),
+% ERC 0.10 % remove duplicates among newly found neighbors
+    sort(W62ANbrsDup, W62ANbrs),
+% ERC 0.10 % add the new neighbors to the visited accumulator
+    append(W62AAcc, W62ANbrs, W62AAcc2),
+% ERC 0.10 % append new frontier to the remaining frontier
+    append(W62AT, W62ANbrs, W62AFront2),
+% ERC 0.10 % continue flooding
+    w62a_flood0(W62ACells, W62ANR, W62ANC, W62AFront2, W62AAcc2, W62AOut).
+
+% ERC 0.10 % find all interior holes: 0-components not touching border and bordered only by 5
+w62a_holes(W62ACells, W62ANR, W62ANC, W62AHoles) :-
+% ERC 0.10 % collect all zero cell coordinates
+    findall((W62AR,W62AC), member(cell(W62AR,W62AC,0), W62ACells), W62AZeros),
+% ERC 0.10 % group the zero cells into connected components
+    w62a_components0(W62ACells, W62ANR, W62ANC, W62AZeros, [], W62AComps),
+% ERC 0.10 % filter components to those qualifying as interior holes
+    findall(W62AComp,
+        ( member(W62AComp, W62AComps),
+          w62a_is_hole(W62ACells, W62ANR, W62ANC, W62AComp) ),
+        W62AHoles).
+
+% ERC 0.10 % build connected components over the remaining zero cells
+w62a_components0(_, _, _, [], _, []) :- !.
+% ERC 0.10 % skip a cell already assigned to a prior component
+w62a_components0(W62ACells, W62ANR, W62ANC, [W62AS|W62AT], W62ASeen, W62AComps) :-
+% ERC 0.10 % if the seed is already seen, move on
+    member(W62AS, W62ASeen), !,
+% ERC 0.10 % recurse over the rest
+    w62a_components0(W62ACells, W62ANR, W62ANC, W62AT, W62ASeen, W62AComps).
+% ERC 0.10 % grow a new component from an unseen seed
+w62a_components0(W62ACells, W62ANR, W62ANC, [W62AS|W62AT], W62ASeen, [W62AComp|W62ARest]) :-
+% ERC 0.10 % flood from the seed to obtain its full component
+    w62a_flood0(W62ACells, W62ANR, W62ANC, [W62AS], [W62AS], W62AComp),
+% ERC 0.10 % mark all component cells as seen
+    append(W62ASeen, W62AComp, W62ASeen2),
+% ERC 0.10 % continue with the remaining seeds
+    w62a_components0(W62ACells, W62ANR, W62ANC, W62AT, W62ASeen2, W62ARest).
+
+% ERC 0.10 % a hole touches no border and every non-self neighbor is value 5
+w62a_is_hole(W62ACells, W62ANR, W62ANC, W62AComp) :-
+% ERC 0.10 % verify no cell sits on the grid border
+    \+ ( member((W62AR,W62AC), W62AComp),
+         ( W62AR =:= 0 ; W62AC =:= 0 ; W62AR =:= W62ANR-1 ; W62AC =:= W62ANC-1 ) ),
+% ERC 0.10 % verify every external 4-neighbor of the component is gray (5)
+    \+ ( member((W62AR,W62AC), W62AComp),
+         member((W62ADr,W62ADc), [(1,0),(-1,0),(0,1),(0,-1)]),
+         W62ANr is W62AR+W62ADr, W62ANc is W62AC+W62ADc,
+         \+ member((W62ANr,W62ANc), W62AComp),
+         w62a_val(W62ACells, W62ANr, W62ANc, W62AV),
+         W62AV =\= 5 ).
+
+% ERC 0.10 % find loose colored components: value not 0 and not 5, 8-connected, tagged with color
+w62a_loose(W62ACells, W62ANR, W62ANC, W62ALoose) :-
+% ERC 0.10 % collect coordinates of all colored (non 0, non 5) cells
+    findall((W62AR,W62AC),
+        ( member(cell(W62AR,W62AC,W62AV), W62ACells), W62AV =\= 0, W62AV =\= 5 ),
+        W62AColored),
+% ERC 0.10 % group colored cells into 8-connected components
+    w62a_componentsC(W62ACells, W62ANR, W62ANC, W62AColored, [], W62ACompsRaw),
+% ERC 0.10 % attach each component's color (value of its first cell)
+    findall(loose(W62AColor,W62AComp),
+        ( member(W62AComp, W62ACompsRaw),
+          W62AComp = [(W62AR0,W62AC0)|_],
+          w62a_val(W62ACells, W62AR0, W62AC0, W62AColor) ),
+        W62ALoose).
+
+% ERC 0.10 % build 8-connected components over colored cells
+w62a_componentsC(_, _, _, [], _, []) :- !.
+% ERC 0.10 % skip a colored cell already assigned
+w62a_componentsC(W62ACells, W62ANR, W62ANC, [W62AS|W62AT], W62ASeen, W62AComps) :-
+% ERC 0.10 % if already seen, recurse over the rest
+    member(W62AS, W62ASeen), !,
+% ERC 0.10 % continue
+    w62a_componentsC(W62ACells, W62ANR, W62ANC, W62AT, W62ASeen, W62AComps).
+% ERC 0.10 % grow a new colored component from an unseen seed
+w62a_componentsC(W62ACells, W62ANR, W62ANC, [W62AS|W62AT], W62ASeen, [W62AComp|W62ARest]) :-
+% ERC 0.10 % determine the color of the seed cell so the flood stays same-color
+    W62AS = (W62ASr,W62ASc),
+% ERC 0.10 % read the seed color value
+    w62a_val(W62ACells, W62ASr, W62ASc, W62ASeedColor),
+% ERC 0.10 % flood the colored component using same-color 8-connected adjacency
+    w62a_floodC(W62ACells, W62ANR, W62ANC, W62ASeedColor, [W62AS], [W62AS], W62AComp),
+% ERC 0.10 % mark all its cells as seen
+    append(W62ASeen, W62AComp, W62ASeen2),
+% ERC 0.10 % recurse over remaining seeds
+    w62a_componentsC(W62ACells, W62ANR, W62ANC, W62AT, W62ASeen2, W62ARest).
+
+% ERC 0.10 % flood an 8-connected component of a single color
+w62a_floodC(_, _, _, _, [], W62AAcc, W62AAcc) :- !.
+% ERC 0.10 % expand a colored frontier cell to its 8-neighbors of the same color
+w62a_floodC(W62ACells, W62ANR, W62ANC, W62AColor, [(R,C)|W62AT], W62AAcc, W62AOut) :-
+% ERC 0.10 % gather valid same-color 8-neighbors not already visited
+    findall((W62ANr,W62ANc),
+        ( member((W62ADr,W62ADc),
+            [(1,0),(-1,0),(0,1),(0,-1),(1,1),(1,-1),(-1,1),(-1,-1)]),
+          W62ANr is R+W62ADr, W62ANc is C+W62ADc,
+          W62ANr >= 0, W62ANr < W62ANR, W62ANc >= 0, W62ANc < W62ANC,
+          w62a_val(W62ACells, W62ANr, W62ANc, W62AColor),
+          \+ member((W62ANr,W62ANc), W62AAcc) ),
+        W62ANbrsDup),
+% ERC 0.10 % deduplicate the new neighbors
+    sort(W62ANbrsDup, W62ANbrs),
+% ERC 0.10 % add them to the accumulator
+    append(W62AAcc, W62ANbrs, W62AAcc2),
+% ERC 0.10 % append them to the frontier
+    append(W62AT, W62ANbrs, W62AFront2),
+% ERC 0.10 % keep flooding within the same color
+    w62a_floodC(W62ACells, W62ANR, W62ANC, W62AColor, W62AFront2, W62AAcc2, W62AOut).
+
+% ERC 0.10 % select movers: loose comps whose color occurs as exactly one loose component
+w62a_movers(W62ALoose, W62AMovers) :-
+% ERC 0.10 % keep a loose comp only if no other loose comp shares its color
+    findall(loose(W62AColor,W62AComp),
+        ( member(loose(W62AColor,W62AComp), W62ALoose),
+          findall(1, member(loose(W62AColor,_), W62ALoose), W62ACountList),
+          length(W62ACountList, 1) ),
+        W62AMovers).
+
+% ERC 0.10 % normalize a list of coordinates to top-left origin and sort
+w62a_norm(W62ACoords, W62ANorm) :-
+% ERC 0.10 % find the minimum row
+    findall(W62AR, member((W62AR,_), W62ACoords), W62ARs), min_list(W62ARs, W62AMinR),
+% ERC 0.10 % find the minimum column
+    findall(W62AC, member((_,W62AC), W62ACoords), W62ACs), min_list(W62ACs, W62AMinC),
+% ERC 0.10 % shift every coordinate and sort the result
+    findall((W62ADr,W62ADc),
+        ( member((W62AR,W62AC), W62ACoords),
+          W62ADr is W62AR-W62AMinR, W62ADc is W62AC-W62AMinC ),
+        W62AShift),
+% ERC 0.10 % sort to a canonical order
+    sort(W62AShift, W62ANorm).
+
+% ERC 0.10 % assign each hole a mover with matching shape; produce fills and erasures
+w62a_assign([], _, [], []) :- !.
+% ERC 0.10 % process one hole against the available movers
+w62a_assign([W62AHole|W62AHoles], W62AMovers, W62AFills, W62AErase) :-
+% ERC 0.10 % normalize the hole's shape
+    w62a_norm(W62AHole, W62AHoleN),
+% ERC 0.10 % find a mover whose normalized shape matches this hole
+    ( select(loose(W62AColor,W62AComp), W62AMovers, W62AMovers2),
+      w62a_norm(W62AComp, W62AHoleN)
+    ->
+% ERC 0.10 % build fill terms coloring each hole cell with the mover color
+        findall(fill(W62AR,W62AC,W62AColor), member((W62AR,W62AC), W62AHole), W62AHoleFills),
+% ERC 0.10 % build erase terms removing each cell of the consumed mover
+        findall(erase(W62AR,W62AC), member((W62AR,W62AC), W62AComp), W62AThisErase),
+% ERC 0.10 % recurse with the mover removed from the pool
+        w62a_assign(W62AHoles, W62AMovers2, W62AFillsRest, W62AEraseRest),
+% ERC 0.10 % accumulate fills
+        append(W62AHoleFills, W62AFillsRest, W62AFills),
+% ERC 0.10 % accumulate erasures
+        append(W62AThisErase, W62AEraseRest, W62AErase)
+    ;
+% ERC 0.10 % no match for this hole: leave it unchanged and continue
+        w62a_assign(W62AHoles, W62AMovers, W62AFills, W62AErase)
+    ).
+
+% ERC 0.10 % apply the fills and erasures to each cell to build the output grid
+w62a_apply(W62AGrid, W62ANR, W62ANC, W62AFills, W62AErase, W62AOut) :-
+% ERC 0.10 % build each output row by index
+    findall(W62AOutRow,
+        ( between(1, W62ANR, W62AR1), W62AR is W62AR1-1,
+          nth0(W62AR, W62AGrid, W62AInRow),
+          findall(W62AVOut,
+            ( between(1, W62ANC, W62AC1), W62AC is W62AC1-1,
+              nth0(W62AC, W62AInRow, W62AVIn),
+              ( member(fill(W62AR,W62AC,W62AFC), W62AFills) -> W62AVOut = W62AFC
+              ; member(erase(W62AR,W62AC), W62AErase) -> W62AVOut = 0
+              ; W62AVOut = W62AVIn ) ),
+            W62AOutRow) ),
+        W62AOut).
+
+% ---------------------------------------------------------------------------
+% Wave 62 Rule B: corner_nested_frame  (task 9d9215db)
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % generate integers from Start to End inclusive with step 2
+w62b_range_step2(W62BRS, W62BRE, W62BOut) :-
+% ERC 0.10 % base case: start exceeds end, return empty list
+    ( W62BRS > W62BRE ->
+        W62BOut = []
+    ;
+% ERC 0.10 % recursive case: advance by 2 and prepend start
+        W62BRN is W62BRS + 2,
+        w62b_range_step2(W62BRN, W62BRE, W62BRT),
+        W62BOut = [W62BRS|W62BRT]
+    ).
+
+% ERC 0.10 % declare the named rule for the corner nested frame transform
+arc_named_rule(corner_nested_frame).
+% ERC 0.10 % main transform: expand a sparse corner seed into a 4-fold symmetric nested frame
+arc_transform(corner_nested_frame, Grid, Out) :-
+% ERC 0.10 % measure grid dimensions
+    arc_grid_dims(Grid, W62BNR, W62BNC),
+% ERC 0.10 % enforce size guard on rows
+    W62BNR =< 30,
+% ERC 0.10 % enforce size guard on columns
+    W62BNC =< 30,
+% ERC 0.10 % this rule only applies to square grids
+    W62BNR =:= W62BNC,
+% ERC 0.10 % collect all non-zero seed cells as R-C-V triples
+    findall(W62BR-W62BC-W62BV, (
+        nth1(W62BR, Grid, W62BRow),
+        nth1(W62BC, W62BRow, W62BV),
+        W62BV =\= 0
+    ), W62BSeeds),
+% ERC 0.10 % require at least one seed cell
+    W62BSeeds \= [],
+% ERC 0.10 % collect just the row indices to compute centroid
+    findall(W62BCR, member(W62BCR-_-_, W62BSeeds), W62BRList),
+% ERC 0.10 % collect just the column indices for centroid
+    findall(W62BCC, member(_-W62BCC-_, W62BSeeds), W62BCList),
+% ERC 0.10 % sum all row indices
+    sumlist(W62BRList, W62BSumR),
+% ERC 0.10 % sum all column indices
+    sumlist(W62BCList, W62BSumC),
+% ERC 0.10 % count the number of seed cells
+    length(W62BSeeds, W62BNS),
+% ERC 0.10 % if mean row <= NR/2 the seeds are in the top half
+    ( W62BSumR * 2 =< W62BNS * W62BNR -> W62BRDir = top ; W62BRDir = bot ),
+% ERC 0.10 % if mean col <= NC/2 the seeds are in the left half
+    ( W62BSumC * 2 =< W62BNS * W62BNC -> W62BCDir = left ; W62BCDir = right ),
+% ERC 0.10 % compute distances from the nearest corner for each seed
+    findall(W62BSR2-W62BSC2-W62BSV2-W62BRD2-W62BCD2, (
+        member(W62BSR2-W62BSC2-W62BSV2, W62BSeeds),
+        ( W62BRDir = top -> W62BRD2 is W62BSR2 - 1 ; W62BRD2 is W62BNR - W62BSR2 ),
+        ( W62BCDir = left -> W62BCD2 is W62BSC2 - 1 ; W62BCD2 is W62BNC - W62BSC2 )
+    ), W62BSeeds2),
+% ERC 0.10 % guard: every seed must be a corner cell (RD=CD) or an arm cell (|RD-CD|=2)
+    forall(member(_-_-_-W62BRD3-W62BCD3, W62BSeeds2),
+        ( W62BRD3 =:= W62BCD3 ; abs(W62BRD3 - W62BCD3) =:= 2 )),
+% ERC 0.10 % generate all output cells from corners and arm fills
+    findall(W62BOR-W62BOC-W62BOV, (
+        member(W62BSR3-W62BSC3-W62BSV3-W62BRD4-W62BCD4, W62BSeeds2),
+        W62BMR3 is W62BNR + 1 - W62BSR3,
+        W62BMC3 is W62BNC + 1 - W62BSC3,
+        ( W62BRD4 =:= W62BCD4 ->
+% ERC 0.10 % corner cell: place value at all 4 symmetric positions
+            member(W62BOR-W62BOC,
+                [W62BSR3-W62BSC3, W62BMR3-W62BSC3, W62BSR3-W62BMC3, W62BMR3-W62BMC3]),
+            W62BOV = W62BSV3
+        ; W62BRD4 < W62BCD4 ->
+% ERC 0.10 % horizontal arm: fill the arm row and its mirror row
+            member(W62BOR, [W62BSR3, W62BMR3]),
+            W62BCStart is min(W62BSC3, W62BMC3),
+            W62BCEnd is max(W62BSC3, W62BMC3),
+            w62b_range_step2(W62BCStart, W62BCEnd, W62BCFill),
+            member(W62BOC, W62BCFill),
+            W62BOV = W62BSV3
+        ;
+% ERC 0.10 % vertical arm: fill the arm column and its mirror column
+            member(W62BOC, [W62BSC3, W62BMC3]),
+            W62BRStart is min(W62BSR3, W62BMR3),
+            W62BREnd is max(W62BSR3, W62BMR3),
+            w62b_range_step2(W62BRStart, W62BREnd, W62BRFill),
+            member(W62BOR, W62BRFill),
+            W62BOV = W62BSV3
+        )
+    ), W62BAllCells),
+% ERC 0.10 % sort and deduplicate all output cell entries
+    sort(W62BAllCells, W62BSorted),
+% ERC 0.10 % build the output grid row by row
+    numlist(1, W62BNR, W62BAllRows),
+    numlist(1, W62BNC, W62BAllCols),
+    maplist([W62BGOR2, W62BOutRow]>>(
+        maplist([W62BGOC2, W62BGOV2]>>(
+            ( memberchk(W62BGOR2-W62BGOC2-W62BVT2, W62BSorted) ->
+                W62BGOV2 = W62BVT2
+            ;
+                W62BGOV2 = 0
+            )
+        ), W62BAllCols, W62BOutRow)
+    ), W62BAllRows, Out), !.
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
