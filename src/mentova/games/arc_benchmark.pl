@@ -1,4 +1,4 @@
-/*  Mentova — ARC-AGI-1 Full Benchmark Runner  (Acc_71, extended Acc_72)
+/*  Mentova — ARC-AGI-1 Full Benchmark Runner  (Acc_71, extended Acc_73)
 
     Runs all 400 public ARC-AGI-1 training tasks through Mentova's
     inductive reasoning engine and reports an honest score.
@@ -26701,6 +26701,203 @@ arc_transform(corner_nested_frame, Grid, Out) :-
     ), W62BAllRows, Out), !.
 
 % ---------------------------------------------------------------------------
+% Wave 63 Rule A: concat_vflip  (task 8be77c9e)
+% Output = input rows followed by input rows in reverse order (vertical mirror).
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % declare the named rule for vertical-flip concatenation
+arc_named_rule(concat_vflip).
+% ERC 0.10 % transform: append the row-reversed grid below the original
+arc_transform(concat_vflip, Grid, Out) :-
+% ERC 0.10 % require the grid to have at least one row
+    Grid \= [],
+% ERC 0.10 % reverse the row order to get the vertical flip
+    reverse(Grid, Flipped),
+% ERC 0.10 % concatenate original rows then flipped rows
+    append(Grid, Flipped, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 63 Rule B: color_6_to_2  (task b1948b0a)
+% Replace every cell with value 6 by the value 2; all other values unchanged.
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % declare the named rule for 6-to-2 relabeling
+arc_named_rule(color_6_to_2).
+% ERC 0.10 % transform: map 6 -> 2 across every cell, leave other values
+arc_transform(color_6_to_2, Grid, Out) :-
+% ERC 0.10 % grid must contain at least one 6 to be applicable
+    flatten(Grid, Flat),
+    member(6, Flat),
+% ERC 0.10 % grid must also contain a 7 (the other color in this task)
+    member(7, Flat),
+% ERC 0.10 % grid must contain only 6s and 7s (no other non-zero values)
+    \+ (member(V, Flat), V \= 0, V \= 6, V \= 7),
+% ERC 0.10 % map each row through the 6->2 replacement
+    maplist([Row, OutRow]>>(
+        maplist([V, OV]>>(( V =:= 6 -> OV = 2 ; OV = V )), Row, OutRow)
+    ), Grid, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 63 Rule C: extract_non1_bbox  (task a740d043)
+% Find bounding box of all non-1 cells; extract that sub-grid with 1 -> 0.
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % declare the named rule for non-1 bounding-box extraction
+arc_named_rule(extract_non1_bbox).
+% ERC 0.10 % transform: crop to the tight bounding box of non-1 cells, 1 -> 0
+arc_transform(extract_non1_bbox, Grid, Out) :-
+% ERC 0.10 % collect all (R,C) positions of cells that are not equal to 1
+    findall(R-C, (
+        nth1(R, Grid, Row),
+        nth1(C, Row, V),
+        V =\= 1
+    ), NonOnes),
+% ERC 0.10 % require at least one non-1 cell
+    NonOnes \= [],
+% ERC 0.10 % extract row and column indices from the non-1 cell list
+    findall(R, member(R-_, NonOnes), Rs),
+    findall(C, member(_-C, NonOnes), Cs),
+% ERC 0.10 % compute bounding box: min and max row
+    arc_min_list(Rs, MinR),
+    arc_max_list(Rs, MaxR),
+% ERC 0.10 % compute bounding box: min and max column
+    arc_min_list(Cs, MinC),
+    arc_max_list(Cs, MaxC),
+% ERC 0.10 % require at least one row with a background cell (1 must appear)
+    flatten(Grid, GFlat),
+    member(1, GFlat),
+% ERC 0.10 % require grid is entirely 1s and non-1s (no 0 background)
+    \+ member(0, GFlat),
+% ERC 0.10 % build row index list for the bounding box
+    numlist(MinR, MaxR, RowRange),
+% ERC 0.10 % build column index list for the bounding box
+    numlist(MinC, MaxC, ColRange),
+% ERC 0.10 % extract each row of the bounding box, replacing 1 with 0
+    maplist([R, OutRow]>>(
+        nth1(R, Grid, InRow),
+        maplist([C, OV]>>(
+            nth1(C, InRow, V),
+            ( V =:= 1 -> OV = 0 ; OV = V )
+        ), ColRange, OutRow)
+    ), RowRange, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 63 Rule D: five_shape_fat_thin  (task 150deff5)
+% In a 5-colored shape, find the maximum non-overlapping set of 2x2 all-5
+% blocks such that every remaining 5-cell has at least one 5-cell neighbor
+% that is also not in any selected block (no isolated 2-cells).
+% Selected block cells -> 8; remaining 5-cells -> 2; 0-cells -> 0.
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % helper: check that two 2x2 blocks do not share any cell
+w63d_blocks_noconflict(b(R1,C1), b(R2,C2)) :-
+% ERC 0.10 % blocks share a cell iff both row-dist and col-dist are <= 1
+    DR is abs(R1-R2), DC is abs(C1-C2),
+% ERC 0.10 % they are conflict-free when row-dist > 1 or col-dist > 1
+    ( DR > 1 ; DC > 1 ).
+
+% ERC 0.10 % helper: check a block list is mutually non-overlapping
+w63d_non_overlapping([]).
+% ERC 0.10 % recursive clause: head must not conflict with any tail block
+w63d_non_overlapping([B|Bs]) :-
+% ERC 0.10 % verify head is conflict-free with every block in the tail
+    maplist(w63d_blocks_noconflict(B), Bs),
+% ERC 0.10 % recurse to check remaining blocks against each other
+    w63d_non_overlapping(Bs).
+
+% ERC 0.10 % helper: collect all 1-indexed R-C cell positions covered by a block list
+w63d_block_cells(Blocks, Cells) :-
+% ERC 0.10 % each b(BR,BC) covers its 2x2 footprint of four cells
+    findall(R-C, (
+        member(b(BR,BC), Blocks),
+        member(DR, [0,1]), member(DC, [0,1]),
+        R is BR+DR, C is BC+DC
+    ), Cells).
+
+% ERC 0.10 % helper: true when R-C has at least one 2-cell neighbor in TwoCells
+w63d_has_2cell_nbr(R, C, TwoCells) :-
+% ERC 0.10 % try each of the four cardinal directions
+    member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+    R1 is R+DR, C1 is C+DC,
+% ERC 0.10 % succeed if the neighbor is in the 2-cells list
+    member(R1-C1, TwoCells), !.
+
+% ERC 0.10 % helper: check that no 5-cell outside SelBlocks is isolated
+w63d_no_isolated(SelBlocks, Fives) :-
+% ERC 0.10 % find cells covered by selected blocks
+    w63d_block_cells(SelBlocks, SelCells),
+% ERC 0.10 % 2-cells are 5-cells not covered by any selected block
+    subtract(Fives, SelCells, TwoCells),
+% ERC 0.10 % every 2-cell must have at least one 2-cell neighbor
+    forall(member(R-C, TwoCells),
+           w63d_has_2cell_nbr(R, C, TwoCells)).
+
+% ERC 0.10 % helper: generate a sublist of List with the same length as Sub
+w63d_sublist(_, []).
+% ERC 0.10 % include head in the sublist
+w63d_sublist([H|T], [H|Rest]) :- w63d_sublist(T, Rest).
+% ERC 0.10 % skip head and continue
+w63d_sublist([_|T], Sub) :- w63d_sublist(T, Sub).
+
+% ERC 0.10 % find the maximum-size valid non-overlapping block selection
+w63d_best_blocks(AllBlocks, Fives, SelBlocks) :-
+% ERC 0.10 % count total available blocks for the size loop
+    length(AllBlocks, NB),
+% ERC 0.10 % try sizes from NB down to 1 using the inverse counter
+    between(1, NB, Inv),
+    K is NB + 1 - Inv,
+% ERC 0.10 % create a candidate list of exactly K variables
+    length(SelBlocks, K),
+% ERC 0.10 % fill SelBlocks with a K-element sublist of AllBlocks
+    w63d_sublist(AllBlocks, SelBlocks),
+% ERC 0.10 % verify no two blocks in the selection overlap
+    w63d_non_overlapping(SelBlocks),
+% ERC 0.10 % verify no 5-cell becomes isolated (cut on first valid selection)
+    w63d_no_isolated(SelBlocks, Fives), !.
+
+% ERC 0.10 % declare the named rule for fat-thin 5-shape partitioning
+arc_named_rule(five_shape_fat_thin).
+% ERC 0.10 % transform: partition 5-region into 2x2 fat blocks (8) and thin arms (2)
+arc_transform(five_shape_fat_thin, Grid, Out) :-
+% ERC 0.10 % get grid dimensions (1-indexed)
+    arc_grid_dims(Grid, NR, NC),
+% ERC 0.10 % apply size guard to avoid runaway on large grids
+    NR =< 30, NC =< 30,
+% ERC 0.10 % compute last valid row and column indices for 2x2 block search
+    NR1 is NR - 1, NC1 is NC - 1,
+% ERC 0.10 % collect all 2x2 all-5 blocks using 1-indexed top-left corner
+    findall(b(R,C), (
+        between(1, NR1, R), R2 is R+1,
+        between(1, NC1, C), C2 is C+1,
+        arc_grid_at(Grid, R, C, 5),
+        arc_grid_at(Grid, R, C2, 5),
+        arc_grid_at(Grid, R2, C, 5),
+        arc_grid_at(Grid, R2, C2, 5)
+    ), AllBlocks),
+% ERC 0.10 % rule requires at least one 2x2 block to be applicable
+    AllBlocks \= [],
+% ERC 0.10 % collect all 1-indexed positions of 5-cells in the grid
+    findall(R-C, (
+        between(1, NR, R), between(1, NC, C),
+        arc_grid_at(Grid, R, C, 5)
+    ), Fives),
+% ERC 0.10 % find the best valid block selection
+    w63d_best_blocks(AllBlocks, Fives, SelBlocks),
+% ERC 0.10 % build the set of cell positions covered by selected blocks
+    w63d_block_cells(SelBlocks, SelCells),
+% ERC 0.10 % build the output grid row by row
+    numlist(1, NR, AllRows),
+    numlist(1, NC, AllCols),
+    maplist([R, OutRow]>>(
+        maplist([C, OV]>>(
+            arc_grid_at(Grid, R, C, GV),
+            ( GV =:= 5 ->
+                ( member(R-C, SelCells) -> OV = 8 ; OV = 2 )
+            ; OV = GV )
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
@@ -26758,7 +26955,7 @@ arc_attempt_task(task(TaskId, TrainingPairs, TestIn, TestOut), Result) :-
 % Define arc_benchmark_print/0: run the full benchmark and print a report.
 arc_benchmark_print :-
     % Print the benchmark header.
-    format("~n=== ARC-AGI-1 Full Benchmark Run (Acc_72: composite rules) ===~n"),
+    format("~n=== ARC-AGI-1 Full Benchmark Run (Acc_73: wave 63 rules) ===~n"),
     format("400 public training tasks. Pure induction. No pretraining. Glass-box rules.~n"),
     format("Two search levels: (1) single named rule; (2) ordered pair of named rules.~n~n"),
     % Run the benchmark.
