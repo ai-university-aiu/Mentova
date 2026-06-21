@@ -1286,6 +1286,44 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 35: WAVE 60 - EXTREME REGION FILL AND DIAGONAL CAVITY STAMP - 361 / 400 = 90.25%
+
+Date: 2026-06-20
+Score: 361 / 400 = 90.25%.
+Previous score: 359 / 400 = 89.75% (wave 59, 2026-06-20).
+Rules added: 2.
+Tasks solved: +2.
+
+What changed: Wave 60 added two new induction rules targeting structurally distinct
+patterns among the remaining 41 unsolved tasks.
+
+The two scoring rules added in wave 60:
+
+extreme_region_fill (task 6455b5f5): The input grid contains walls of value 2 that
+partition the interior into rectangular 0-filled rooms. The rule finds all 4-connected
+components of 0-cells using flood-fill, computes the cell count of each component, then
+fills the largest component with value 1 and the smallest component with value 8. Middle-
+sized components remain 0. All non-zero (wall) cells are unchanged. The rule requires at
+least two distinct 0-regions with unequal sizes.
+
+diagonal_cavity_stamp (task e8dc4411): The input grid has a background color B (the most
+frequent value), a cavity of 0-cells, and exactly one marker cell whose value M differs
+from B and 0. The rule computes the cavity centroid, determines the diagonal direction D
+from centroid to marker, and finds the smallest step S such that the cavity shifted by
+S in direction D shares no cell with the original cavity. It then stamps copies of the
+cavity (painted with color M) at offsets 1*S*D, 2*S*D, and so on, stopping when no
+cavity cell lands within the grid bounds. The original cavity 0-cells and marker are
+preserved.
+
+What was learned: Extreme-region fill is a compact instance of connected-component
+analysis with size-based coloring - three regions with distinct sizes provide unambiguous
+classification. Diagonal cavity stamping requires a non-overlapping step computation that
+depends on the specific cavity shape and direction, not just the grid size; using
+integer-arithmetic centroid comparison avoids floating-point rounding entirely.
+
+New tasks solved by wave 60 (2 new tasks): 6455b5f5 (extreme_region_fill),
+e8dc4411 (diagonal_cavity_stamp).
+
 ATTEMPT 29: WAVE 54 - HALF OVERLAY AND SYMMETRIC OCCLUDER REPAIR - 349 / 400 = 87.25%
 
 Date: 2026-06-20
@@ -1446,7 +1484,9 @@ Run 68: 355 / 400 = 88.75% - Wave 57: three new rules (fill_zero_near_one, gravi
 
 Run 69: 357 / 400 = 89.25% - Wave 58: two new rules (box_extract_recolor_by_dots, fill_grid_regions_by_line_holes). Plus 2 tasks.
 
-Run 70: 359 / 400 = 89.75% - Wave 59: two new rules (fill_frame_interior_radiate, complete_rotational_symmetry). Plus 2 tasks. (CURRENT BEST)
+Run 70: 359 / 400 = 89.75% - Wave 59: two new rules (fill_frame_interior_radiate, complete_rotational_symmetry). Plus 2 tasks.
+
+Run 71: 361 / 400 = 90.25% - Wave 60: two new rules (extreme_region_fill, diagonal_cavity_stamp). Plus 2 tasks. (CURRENT BEST)
 
 
 ALL 280 SOLVED TASKS AND THEIR GLASS-BOX RULES
@@ -1668,6 +1708,8 @@ ALL 280 SOLVED TASKS AND THEIR GLASS-BOX RULES
 662c240a - pick_nonsymmetric_block.
 
 6430c8c4 - two_halves_at_4sep_nor_to_3.
+
+6455b5f5 - extreme_region_fill.
 
 67385a82 - recolor_multi_cell_comps_to_8.
 
@@ -1906,6 +1948,8 @@ e3497940 - fold_at_5_col_mirror.
 e40b9e2f - complete_rotational_symmetry.
 
 e73095fd - fill_rect_frame_interiors.
+
+e8dc4411 - diagonal_cavity_stamp.
 
 e9614598 - cross_at_midpoint_of_pair.
 
@@ -3253,6 +3297,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 57: Zero Flood from Ones, Wall Gravity, Bloc
 Dison, D. R. (2026). ARC-AGI-1 Wave 58: Box-Dot Extraction and Line-Grid Hole Fill, 357 / 400 = 89.25%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 59: Frame Interior Radiate and Rotational Symmetry Completion, 359 / 400 = 89.75%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 60: Extreme Region Fill and Diagonal Cavity Stamp, 361 / 400 = 90.25%. AIU / PrologAI.
 
 
 END OF DOCUMENT
