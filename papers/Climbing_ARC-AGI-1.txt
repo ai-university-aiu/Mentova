@@ -1286,6 +1286,45 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 37: WAVE 62 - GRAYBOX HOLE FILL BY UNIQUE SHAPE AND CORNER NESTED FRAME - 365 / 400 = 91.25%
+
+Date: 2026-06-20
+Score: 365 / 400 = 91.25%.
+Previous score: 363 / 400 = 90.75% (wave 61, 2026-06-20).
+Rules added: 2.
+Tasks solved: +2.
+
+What changed: Wave 62 added two new induction rules. Rule A targets shape-matching placement
+of colored blobs into gray-rectangle interior holes. Rule B targets 4-fold symmetric nested
+frame expansion from a sparse corner seed.
+
+The two scoring rules added in wave 62:
+
+graybox_hole_fill_by_unique_shape (task 228f6490): The input contains gray (value 5)
+rectangles with interior zero-cell holes, and loose colored blobs in the background.
+For each color that appears as exactly one loose component (a unique-color mover), the
+rule matches the mover's normalized shape to an interior hole, fills the hole with the
+mover's color, and erases the mover. Distractor colors (multiple components of the same
+color) are left in place.
+
+corner_nested_frame (task 9d9215db): A sparse 19x19 grid has a small cluster of non-zero
+cells in one corner quadrant. Corner cells (equal row-distance and column-distance from
+the nearest grid corner) define frame corner values; arm cells (distances differ by 2)
+define arm values. Each cell is reflected to all four symmetric positions, and each arm
+value fills between its symmetric positions with step 2. The output is a 4-fold symmetric
+nested rectangular frame.
+
+What was learned: Gray-box hole-fill requires distinguishing holes (interior zero regions
+completely bordered by gray) from background zeros, and matching shapes by normalized
+coordinate lists. Distractor blobs (non-unique colors) must be excluded from consideration
+to avoid false matches. For corner_nested_frame, the key insight is that the step between
+adjacent frame levels is always 2, the corner vs arm distinction is determined by whether
+row-distance equals column-distance from the nearest corner, and the arm fill is simply
+a step-2 fill between a seed and its mirror.
+
+New tasks solved by wave 62 (2 new tasks): 228f6490 (graybox_hole_fill_by_unique_shape),
+9d9215db (corner_nested_frame).
+
 ATTEMPT 36: WAVE 61 - CONCENTRIC SQUARE RINGS AND CORNER RIPPLE EVEN CHEBYSHEV - 363 / 400 = 90.75%
 
 Date: 2026-06-20
@@ -1527,10 +1566,12 @@ Run 70: 359 / 400 = 89.75% - Wave 59: two new rules (fill_frame_interior_radiate
 
 Run 71: 361 / 400 = 90.25% - Wave 60: two new rules (extreme_region_fill, diagonal_cavity_stamp). Plus 2 tasks.
 
-Run 72: 363 / 400 = 90.75% - Wave 61: two new rules (concentric_square_rings, corner_ripple_even_chebyshev). Plus 2 tasks. (CURRENT BEST)
+Run 72: 363 / 400 = 90.75% - Wave 61: two new rules (concentric_square_rings, corner_ripple_even_chebyshev). Plus 2 tasks.
+
+Run 73: 365 / 400 = 91.25% - Wave 62: two new rules (graybox_hole_fill_by_unique_shape, corner_nested_frame). Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 280 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 365 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1597,6 +1638,8 @@ ALL 280 SOLVED TASKS AND THEIR GLASS-BOX RULES
 22168020 - fill_row_span_with_cell_color.
 
 2281f1f4 - stamp_row1_pattern_as_2.
+
+228f6490 - graybox_hole_fill_by_unique_shape.
 
 22eb0ac0 - fill_row_if_endpoints_match.
 
@@ -1847,6 +1890,8 @@ ALL 280 SOLVED TASKS AND THEIR GLASS-BOX RULES
 99fa7670 - extend_right_then_down_to_corner.
 
 9af7a82c - color_histogram.
+
+9d9215db - corner_nested_frame.
 
 9dfd6313 - transpose.
 
@@ -3346,6 +3391,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 59: Frame Interior Radiate and Rotational Sy
 Dison, D. R. (2026). ARC-AGI-1 Wave 60: Extreme Region Fill and Diagonal Cavity Stamp, 361 / 400 = 90.25%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 61: Concentric Square Rings and Corner Ripple Even Chebyshev, 363 / 400 = 90.75%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 62: Graybox Hole Fill by Unique Shape and Corner Nested Frame, 365 / 400 = 91.25%. AIU / PrologAI.
 
 
 END OF DOCUMENT
