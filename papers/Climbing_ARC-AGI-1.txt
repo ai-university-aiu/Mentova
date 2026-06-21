@@ -1286,6 +1286,52 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 38: WAVE 63 - FIVE SHAPE FAT THIN + THREE SUPPLEMENTAL RULES - 366 / 400 = 91.50%
+
+Date: 2026-06-20
+Score: 366 / 400 = 91.50%.
+Previous score: 365 / 400 = 91.25% (wave 62, 2026-06-20).
+Rules added: 4 (1 net new task).
+Tasks solved: +1 net (three target tasks were already solved by earlier rules).
+
+What changed: Wave 63 added four named rules to arc_benchmark.pl. Three were redundant
+(the target tasks were already solved by earlier rules in the library). The one net new
+rule is five_shape_fat_thin which partitions a 5-colored region into fat 2x2 blocks and
+thin connected cells using a maximum-coverage-with-no-isolation constraint.
+
+The four rules added in wave 63:
+
+concat_vflip (task 8be77c9e): The output is the input rows followed by the input rows in
+reverse order (vertical mirror appended below). Task already solved by tile_reflect_v;
+concat_vflip is a valid alternative rule.
+
+color_6_to_2 (task b1948b0a): Replace every cell with value 6 by value 2; all other values
+unchanged. Only applies to grids containing exclusively 6 and 7 as non-zero values. Task
+already solved by the swap recolor mechanism; color_6_to_2 is a named alternative.
+
+extract_non1_bbox (task a740d043): Find the tight bounding box of all cells that are not 1
+(1 being the background), extract that sub-grid, and replace remaining 1-cells inside it
+with 0. Task already solved by crop_nonbg_bbox; extract_non1_bbox is a named alternative.
+
+five_shape_fat_thin (task 150deff5): A connected shape made entirely of 5-cells is to be
+partitioned into fat parts and thin parts. Fat parts are non-overlapping 2x2 all-5 blocks.
+The selection criterion is maximum coverage subject to the constraint that every remaining
+5-cell (one not in any selected block) must have at least one 4-adjacent neighbor that is
+also a remaining 5-cell (no isolated thin cells). Selected block cells become 8; remaining
+5-cells become 2; all other cells stay 0. A greedy search from largest to smallest set size
+with a cut on the first valid selection (tried in row-major order) finds the answer.
+
+What was learned: When adding new rules, always verify whether the target tasks are already
+in the solved set before announcing a net score gain. Three of four wave 63 targets were
+already covered by existing rules. The five_shape_fat_thin rule demonstrates that certain
+ARC tasks require constraint-satisfaction (maximum set with no-isolation property) rather
+than a simple greedy or geometric rule. The no-isolated-cell constraint is the key
+discriminator: maximum independent set alone does not produce the correct answer.
+
+Bugs fixed: None.
+
+New tasks solved by wave 63 (1 net new task): 150deff5 (five_shape_fat_thin).
+
 ATTEMPT 37: WAVE 62 - GRAYBOX HOLE FILL BY UNIQUE SHAPE AND CORNER NESTED FRAME - 365 / 400 = 91.25%
 
 Date: 2026-06-20
@@ -1568,10 +1614,11 @@ Run 71: 361 / 400 = 90.25% - Wave 60: two new rules (extreme_region_fill, diagon
 
 Run 72: 363 / 400 = 90.75% - Wave 61: two new rules (concentric_square_rings, corner_ripple_even_chebyshev). Plus 2 tasks.
 
-Run 73: 365 / 400 = 91.25% - Wave 62: two new rules (graybox_hole_fill_by_unique_shape, corner_nested_frame). Plus 2 tasks. (CURRENT BEST)
+Run 73: 365 / 400 = 91.25% - Wave 62: two new rules (graybox_hole_fill_by_unique_shape, corner_nested_frame). Plus 2 tasks.
+Run 74: 366 / 400 = 91.50% - Wave 63: four new rules (1 net new: five_shape_fat_thin). Plus 1 task. (CURRENT BEST)
 
 
-ALL 365 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 366 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1606,6 +1653,8 @@ ALL 365 SOLVED TASKS AND THEIR GLASS-BOX RULES
 1190e5a7 - count_separator_grid.
 
 137eaa0f - assemble_3x3_from_5_anchors.
+
+150deff5 - five_shape_fat_thin.
 
 178fcbfb - fill_row_or_col_by_2.
 
@@ -3393,6 +3442,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 60: Extreme Region Fill and Diagonal Cavity 
 Dison, D. R. (2026). ARC-AGI-1 Wave 61: Concentric Square Rings and Corner Ripple Even Chebyshev, 363 / 400 = 90.75%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 62: Graybox Hole Fill by Unique Shape and Corner Nested Frame, 365 / 400 = 91.25%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 63: Five Shape Fat Thin and Three Supplemental Rules, 366 / 400 = 91.50%. AIU / PrologAI.
 
 
 END OF DOCUMENT
