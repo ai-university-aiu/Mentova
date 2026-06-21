@@ -1286,6 +1286,58 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 42: WAVE 67 - CROSS ARM GAP FILL, COMPLETE PARTIAL TEMPLATES, FILL LARGEST ZERO REGION 3, ARM TEMPLATE TRANSFER - 375 / 400 = 93.75%
+
+Date: 2026-06-21
+Score: 375 / 400 = 93.75%.
+Previous score: 371 / 400 = 92.75% (wave 66, 2026-06-21).
+Rules added: 4 (4 net new tasks).
+Tasks solved: +4.
+
+What changed: Wave 67 added four new named rules in arc_benchmark.pl, each solving one structurally
+distinct task from the remaining 29 unsolved tasks.
+
+cross_arm_gap_fill (50846271): The input contains two perpendicular bars (one horizontal, one
+vertical) that cross to form a plus or cross shape. The bars share the same color. The rule
+identifies the intersection point of the two bars and fills the one missing cell at the gap
+between the arms with the bar color, completing the plus shape.
+
+complete_partial_templates (72322fa7): The input contains a partially-colored template region
+and a regular grid of 4-cell anchor markers. The rule identifies the repeating tile period from
+the anchor positions, extracts the partial template colors, and replicates the complete template
+across all anchor positions, filling in every cell that matches the anchor-grid period.
+
+fill_largest_zero_region_3 (a64e4611): The input contains one or more contiguous regions of
+zero-valued cells. The rule finds the largest such region by cell count (using 4-connected flood
+fill) and fills every cell in that region with color value 3, leaving all other cells unchanged.
+
+arm_template_transfer (36d67576): The input contains a template shape (a connected component of
+4-valued cells annotated with 1, 2, and 3 marker values reachable via non-zero adjacency) and
+one or more target shapes (connected components of 4-valued cells annotated only with a single
+2 marker). The rule identifies the template, extracts the 4-shape and fill marks as offsets from
+an anchor cell (the first 4-cell orthogonally adjacent to the 2-marker), then for each target
+shape applies one of 8 rigid transforms (identity, 90-degree rotations, reflections) to find the
+orientation that maps the template 4-shape to the target 4-shape and the template 2-mark position
+to the target 2-mark position. The matched transform is then used to transfer all non-2 fill
+marks (1s and 3s) to the corresponding positions in the target shape.
+
+What was learned: Multi-value flood fill (collecting all non-zero cells regardless of value)
+is the cleanest way to identify connected components in grids where several different color
+values form one conceptual object. Rigid transform matching across all 8 possible 2D isometries
+is robust for orientation-invariant template transfer problems. Using the 2-marker position
+relative to the anchor as the transform discriminator (it must match in both the template and
+the target) reduces the 8-transform search to at most 1 or 2 candidates in practice.
+
+Bugs fixed: The initial arm_template_transfer implementation incorrectly handled only straight
+horizontal and vertical bars (detected via same-row or same-column 4-cell sequences). This
+failed for L-shaped and plus-shaped template components. The fix replaced the bar-detection
+logic with a full multi-value DFS flood fill that identifies all non-zero cells reachable from
+any 4-cell, regardless of shape.
+
+New tasks solved by wave 67 (4 new tasks): 36d67576 (arm_template_transfer),
+50846271 (cross_arm_gap_fill), 72322fa7 (complete_partial_templates),
+a64e4611 (fill_largest_zero_region_3).
+
 ATTEMPT 41: WAVE 66 - FRAME BORDER MARKERS PROJECT BEAMS - 371 / 400 = 92.75%
 
 Date: 2026-06-21
@@ -1741,10 +1793,12 @@ Run 75: 368 / 400 = 92.00% - Wave 64: frame_stamp_at_zero_interior + template_st
 
 Run 76: 370 / 400 = 92.50% - Wave 65: w65a_marker_lz_path + frame_edge_color_8s center-adjacent enhancement. Plus 2 tasks.
 
-Run 77: 371 / 400 = 92.75% - Wave 66: f1cefba8 frame border markers project beams. Plus 1 task. (CURRENT BEST)
+Run 77: 371 / 400 = 92.75% - Wave 66: f1cefba8 frame border markers project beams. Plus 1 task.
+
+Run 78: 375 / 400 = 93.75% - Wave 67: cross_arm_gap_fill, complete_partial_templates, fill_largest_zero_region_3, arm_template_transfer. Plus 4 tasks. (CURRENT BEST)
 
 
-ALL 370 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 375 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -2333,6 +2387,14 @@ e98196ab - overlay_halves_at_5sep.
 ff805c23 - repair_occluded_5x5_block.
 
 f1cefba8 - frame_border_marker_beams.
+
+36d67576 - arm_template_transfer.
+
+50846271 - cross_arm_gap_fill.
+
+72322fa7 - complete_partial_templates.
+
+a64e4611 - fill_largest_zero_region_3.
 
 
 WHAT COMES NEXT
@@ -3586,6 +3648,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 64: Frame Stamp at Zero Interior and Templat
 Dison, D. R. (2026). ARC-AGI-1 Wave 65: LZ Path Marker Connector and Frame Edge Center-Adjacent Enhancement, 370 / 400 = 92.50%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 66: Frame Border Markers Project Beams, 371 / 400 = 92.75%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 67: Cross Arm Gap Fill, Complete Partial Templates, Fill Largest Zero Region 3, Arm Template Transfer, 375 / 400 = 93.75%. AIU / PrologAI.
 
 
 END OF DOCUMENT
