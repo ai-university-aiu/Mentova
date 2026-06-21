@@ -1,4 +1,4 @@
-/*  Mentova — ARC-AGI-1 Full Benchmark Runner  (Acc_71, extended Acc_74)
+/*  Mentova — ARC-AGI-1 Full Benchmark Runner  (Acc_71, extended Acc_75)
 
     Runs all 400 public ARC-AGI-1 training tasks through Mentova's
     inductive reasoning engine and reports an honest score.
@@ -18478,7 +18478,17 @@ arc_transform(frame_edge_color_8s, Grid, Out) :-
                ; IntR =:= H8 -> V = BotColor
                ; IntC =:= 0 -> V = LeftColor
                ; IntC =:= W8 -> V = RightColor
-               ; V = 8
+% ERC 0.10 % center-adjacent rule for odd x odd templates (H8 and W8 both even)
+               ; ( H8 mod 2 =:= 0, W8 mod 2 =:= 0 ->
+                   CR is H8 // 2, CC is W8 // 2,
+                   ( IntR =:= CR - 1, IntC =:= CC -> V = TopColor
+                   ; IntR =:= CR + 1, IntC =:= CC -> V = BotColor
+                   ; IntR =:= CR, IntC =:= CC - 1 -> V = LeftColor
+                   ; IntR =:= CR, IntC =:= CC + 1 -> V = RightColor
+                   ; V = 8
+                   )
+                 ; V = 8
+                 )
                )
             ; V = 0
             )
@@ -27130,6 +27140,310 @@ arc_transform(template_stamp_at_4_cluster, Grid, Out) :-
     ), AllRows, Out).
 
 % ---------------------------------------------------------------------------
+% Wave 65a: L/Z-path marker connector (task 2dd70a9a)
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % find a horizontal (h) pair of V-cells: row R, columns C and C+1
+w65a_find_pair(Grid, NR, NC, V, h, R, C, C1) :-
+% ERC 0.10 % iterate over all rows
+    between(1, NR, R),
+% ERC 0.10 % stop at column NC-1 to keep the right neighbor in bounds
+    NC1 is NC - 1,
+% ERC 0.10 % iterate over candidate left column
+    between(1, NC1, C),
+% ERC 0.10 % right-neighbor column
+    C1 is C + 1,
+% ERC 0.10 % both cells must carry value V
+    arc_grid_at(Grid, R, C, V),
+    arc_grid_at(Grid, R, C1, V), !.
+% ERC 0.10 % find a vertical (v) pair of V-cells: column Col, rows R and R+1
+w65a_find_pair(Grid, NR, NC, V, v, Col, R, R1) :-
+% ERC 0.10 % iterate over all columns
+    between(1, NC, Col),
+% ERC 0.10 % stop at row NR-1 to keep the lower neighbor in bounds
+    NR1 is NR - 1,
+% ERC 0.10 % iterate over candidate top row
+    between(1, NR1, R),
+% ERC 0.10 % lower-neighbor row
+    R1 is R + 1,
+% ERC 0.10 % both cells must carry value V
+    arc_grid_at(Grid, R, Col, V),
+    arc_grid_at(Grid, R1, Col, V), !.
+
+% ERC 0.10 % all cells in row R from column Lo to Hi must be background (0)
+w65a_row_clear_0(Grid, R, Lo, Hi) :-
+% ERC 0.10 % forall succeeds vacuously when Lo > Hi
+    forall(between(Lo, Hi, C), arc_grid_at(Grid, R, C, 0)).
+
+% ERC 0.10 % all cells in column C from row Lo to Hi must be background (0)
+w65a_col_clear_0(Grid, C, Lo, Hi) :-
+% ERC 0.10 % empty range: trivially clear
+    ( Lo > Hi -> true
+% ERC 0.10 % non-empty range: every row must hold 0
+    ;   forall(between(Lo, Hi, R), arc_grid_at(Grid, R, C, 0))
+    ).
+
+% ERC 0.10 % check that the horizontal arm from marker span [L,H] to bridge column C is clear
+w65a_arm_row_ok(Grid, Row, L, H, C) :-
+% ERC 0.10 % C lies right of the marker: arm extends from H+1 to C on that row
+    ( C > H ->
+        Alo is H + 1,
+        w65a_row_clear_0(Grid, Row, Alo, C)
+% ERC 0.10 % C lies left of the marker: arm extends from C to L-1 on that row
+    ; C < L ->
+        Ahi is L - 1,
+        w65a_row_clear_0(Grid, Row, C, Ahi)
+% ERC 0.10 % C is inside the marker span: no arm cell is needed
+    ;   true
+    ).
+
+% ERC 0.10 % connect two h-oriented markers via the rightmost valid bridge column
+w65a_connect(Grid, _NR, NC, h, P2, L2, H2, P3, L3, H3, PathCells) :-
+% ERC 0.10 % assign the upper-row marker to RA and the lower-row marker to RB
+    ( P2 < P3 ->
+        RA_row = P2, RA_L = L2, RA_H = H2,
+        RB_row = P3, RB_L = L3, RB_H = H3
+    ;
+        RA_row = P3, RA_L = L3, RA_H = H3,
+        RB_row = P2, RB_L = L2, RB_H = H2
+    ),
+% ERC 0.10 % bridge rows span strictly between the two marker rows
+    Rlo is RA_row + 1,
+    Rhi is RB_row - 1,
+% ERC 0.10 % require at least one gap row for the bridge
+    Rlo =< Rhi,
+% ERC 0.10 % scan columns right-to-left (Crev=1 gives C=NC, …, Crev=NC gives C=1)
+    between(1, NC, Crev),
+    C is NC - Crev + 1,
+% ERC 0.10 % bridge column must be clear throughout the row span
+    w65a_col_clear_0(Grid, C, Rlo, Rhi),
+% ERC 0.10 % horizontal arm from the upper marker to the bridge column must be clear
+    w65a_arm_row_ok(Grid, RA_row, RA_L, RA_H, C),
+% ERC 0.10 % horizontal arm from the lower marker to the bridge column must be clear
+    w65a_arm_row_ok(Grid, RB_row, RB_L, RB_H, C),
+% ERC 0.10 % commit to the first (rightmost) valid bridge column
+    !,
+% ERC 0.10 % build upper arm cells along row RA_row
+    ( C > RA_H ->
+        Alo is RA_H + 1,
+        findall(RA_row-Ca, between(Alo, C, Ca), PathA)
+    ; C < RA_L ->
+        Ahi is RA_L - 1,
+        findall(RA_row-Ca, between(C, Ahi, Ca), PathA)
+    ;   PathA = []
+    ),
+% ERC 0.10 % bridge cells: column C, rows Rlo through Rhi
+    findall(Rb-C, between(Rlo, Rhi, Rb), PathBridge),
+% ERC 0.10 % build lower arm cells along row RB_row
+    ( C > RB_H ->
+        Blo is RB_H + 1,
+        findall(RB_row-Cb, between(Blo, C, Cb), PathB)
+    ; C < RB_L ->
+        Bhi is RB_L - 1,
+        findall(RB_row-Cb, between(C, Bhi, Cb), PathB)
+    ;   PathB = []
+    ),
+% ERC 0.10 % merge and deduplicate all path cells
+    append([PathA, PathBridge, PathB], PathCells0),
+    sort(PathCells0, PathCells).
+
+% ERC 0.10 % connect two v-oriented markers via the topmost valid bridge row
+w65a_connect(Grid, _NR, _NC, v, P2, L2, H2, P3, L3, H3, PathCells) :-
+% ERC 0.10 % P is the column index; L/H are top and bottom rows of each v-marker
+    Cmin is min(P2, P3),
+    Cmax is max(P2, P3),
+% ERC 0.10 % RA = marker whose bottom row (RA_hi) comes first; RB = marker whose top row (RB_lo) comes later
+    ( H2 < L3 ->
+        RA_col = P2, RA_hi = H2, RB_col = P3, RB_lo = L3
+    ;
+        RA_col = P3, RA_hi = H3, RB_col = P2, RB_lo = L2
+    ),
+% ERC 0.10 % bridge rows lie strictly between the two markers
+    Rlo_bridge is RA_hi + 1,
+    Rhi_bridge is RB_lo - 1,
+% ERC 0.10 % require at least one row between the markers
+    Rlo_bridge =< Rhi_bridge,
+% ERC 0.10 % scan bridge rows top-to-bottom to find the topmost valid one
+    between(Rlo_bridge, Rhi_bridge, R),
+% ERC 0.10 % bridge row must be clear across the full column span
+    w65a_row_clear_0(Grid, R, Cmin, Cmax),
+% ERC 0.10 % column RA_col must be clear from Rlo_bridge down to R (arm A)
+    w65a_col_clear_0(Grid, RA_col, Rlo_bridge, R),
+% ERC 0.10 % column RB_col must be clear from R up to Rhi_bridge (arm B)
+    w65a_col_clear_0(Grid, RB_col, R, Rhi_bridge),
+% ERC 0.10 % commit to the first (topmost) valid bridge row
+    !,
+% ERC 0.10 % arm A: column RA_col from Rlo_bridge to bridge row R
+    findall(Ra-RA_col, between(Rlo_bridge, R, Ra), PathA),
+% ERC 0.10 % bridge: row R from Cmin to Cmax
+    findall(R-Cb, between(Cmin, Cmax, Cb), PathBridge),
+% ERC 0.10 % arm B: column RB_col from row R+1 to Rhi_bridge
+    R1 is R + 1,
+    ( R1 =< Rhi_bridge ->
+        findall(Rb-RB_col, between(R1, Rhi_bridge, Rb), PathB)
+    ;   PathB = []
+    ),
+% ERC 0.10 % merge and deduplicate all path cells
+    append([PathA, PathBridge, PathB], PathCells0),
+    sort(PathCells0, PathCells).
+
+% ERC 0.10 % declare w65a_marker_lz_path as a named ARC rule (task 2dd70a9a)
+arc_named_rule(w65a_marker_lz_path).
+% ERC 0.10 % connect the 2-cell pair to the 3-cell pair via an L/Z path painted with 3s
+arc_transform(w65a_marker_lz_path, Grid, Out) :-
+% ERC 0.10 % get grid dimensions
+    arc_grid_dims(Grid, NR, NC),
+% ERC 0.10 % quick guard: grid must contain both a 2-cell and a 3-cell
+    flatten(Grid, Flat),
+    member(2, Flat),
+    member(3, Flat),
+% ERC 0.10 % find the 2-marker pair (orientation, axis position, lo, hi)
+    w65a_find_pair(Grid, NR, NC, 2, O2, P2, L2, H2),
+% ERC 0.10 % find the 3-marker pair
+    w65a_find_pair(Grid, NR, NC, 3, O3, P3, L3, H3),
+% ERC 0.10 % both pairs must share the same orientation (h/h or v/v)
+    O2 = O3,
+% ERC 0.10 % compute the L/Z path cells connecting the two markers
+    w65a_connect(Grid, NR, NC, O2, P2, L2, H2, P3, L3, H3, PathCells),
+    PathCells \= [],
+% ERC 0.10 % build output: background cells on the path become 3; all others unchanged
+    numlist(1, NR, AllRows),
+    numlist(1, NC, AllCols),
+    maplist([R, OutRow]>>(
+        maplist([C, OV]>>(
+            arc_grid_at(Grid, R, C, GV),
+% ERC 0.10 % only paint cells that are currently background (0)
+            ( GV =:= 0, memberchk(R-C, PathCells) -> OV = 3 ; OV = GV )
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ---------------------------------------------------------------------------
+% Wave 65b: Template-in-frame edge labeling (task 9aec4887)
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % relabel one template interior cell (DR,DC) within a TH x TW template
+w65b_cell_out(DR, DC, TH, TW, TV, TopC, BotC, LftC, RgtC, OV) :-
+% ERC 0.10 % 0-valued template cells are always 0 in the output
+    ( TV =:= 0 ->
+        OV = 0
+    ;
+% ERC 0.10 % determine edge membership for this template position
+        ( DR =:= 1  -> OnTop   = 1 ; OnTop   = 0 ),
+        ( DR =:= TH -> OnBot   = 1 ; OnBot   = 0 ),
+        ( DC =:= 1  -> OnLeft  = 1 ; OnLeft  = 0 ),
+        ( DC =:= TW -> OnRight = 1 ; OnRight = 0 ),
+% ERC 0.10 % count how many template edges this position touches
+        EdgeCount is OnTop + OnBot + OnLeft + OnRight,
+% ERC 0.10 % corner cell (two or more edges): keep the original value
+        ( EdgeCount >= 2 ->
+            OV = TV
+% ERC 0.10 % single-edge cell: take the color of that edge's frame border
+        ; EdgeCount =:= 1 ->
+            ( OnTop   =:= 1 -> OV = TopC
+            ; OnBot   =:= 1 -> OV = BotC
+            ; OnLeft  =:= 1 -> OV = LftC
+            ;                   OV = RgtC
+            )
+% ERC 0.10 % interior cell: apply center-adjacent rule for odd x odd templates
+        ;
+            ( TH mod 2 =:= 1, TW mod 2 =:= 1 ->
+% ERC 0.10 % 1-indexed center position of the template
+                CR is (TH + 1) // 2,
+                CC is (TW + 1) // 2,
+% ERC 0.10 % the four cells adjacent to center each receive a frame-edge color
+                ( DR =:= CR - 1, DC =:= CC -> OV = TopC
+                ; DR =:= CR + 1, DC =:= CC -> OV = BotC
+                ; DR =:= CR, DC =:= CC - 1 -> OV = LftC
+                ; DR =:= CR, DC =:= CC + 1 -> OV = RgtC
+% ERC 0.10 % all other interior cells keep their original value
+                ;                              OV = TV
+                )
+% ERC 0.10 % even-dimension template: no center-adjacent rule; interior cells unchanged
+            ;   OV = TV
+            )
+        )
+    ).
+
+% ERC 0.10 % declare w65b_frame_template_label as a named ARC rule (task 9aec4887)
+arc_named_rule(w65b_frame_template_label).
+% ERC 0.10 % embed the 8-cell template in a TH+2 x TW+2 output with edge-recolored border
+arc_transform(w65b_frame_template_label, Grid, Out) :-
+% ERC 0.10 % get grid dimensions
+    arc_grid_dims(Grid, NR, NC),
+% ERC 0.10 % quick guard: grid must contain 8-cells (the template marker)
+    flatten(Grid, GFlat),
+    member(8, GFlat),
+% ERC 0.10 % collect all positions of 8-cells (define the template bounding box)
+    findall(R-C, (
+        between(1, NR, R), between(1, NC, C),
+        arc_grid_at(Grid, R, C, 8)
+    ), Cells8),
+    Cells8 \= [],
+% ERC 0.10 % compute bounding-box rows and columns of the template
+    findall(R, member(R-_, Cells8), Rs8),
+    findall(C, member(_-C, Cells8), Cs8),
+    arc_min_list(Rs8, TR0), arc_max_list(Rs8, TR1),
+    arc_min_list(Cs8, TC0), arc_max_list(Cs8, TC1),
+% ERC 0.10 % template height and width
+    TH is TR1 - TR0 + 1,
+    TW is TC1 - TC0 + 1,
+% ERC 0.10 % collect all non-zero non-8 cells (the colored frame surrounding the template)
+    findall(R-C-V, (
+        between(1, NR, R), between(1, NC, C),
+        arc_grid_at(Grid, R, C, V),
+        V \= 0, V \= 8
+    ), FrameCells),
+    FrameCells \= [],
+% ERC 0.10 % find the extreme rows and columns spanned by the frame
+    findall(R, member(R-_-_, FrameCells), FRs),
+    findall(C, member(_-C-_, FrameCells), FCs),
+    arc_min_list(FRs, FRtop), arc_max_list(FRs, FRbot),
+    arc_min_list(FCs, FClt),  arc_max_list(FCs, FCrt),
+% ERC 0.10 % sample one cell from each border side to get its color
+    member(FRtop-_-TopColor, FrameCells),
+    member(FRbot-_-BotColor, FrameCells),
+    member(_-FClt-LftColor,  FrameCells),
+    member(_-FCrt-RgtColor,  FrameCells),
+% ERC 0.10 % frame interior dimensions must exactly match the template dimensions
+    FIntH is FRbot - FRtop - 1,
+    FIntW is FCrt  - FClt  - 1,
+    FIntH =:= TH,
+    FIntW =:= TW,
+% ERC 0.10 % output is template plus a 1-cell border on every side
+    OutH is TH + 2,
+    OutW is TW + 2,
+    numlist(1, OutH, OutRows),
+    numlist(1, OutW, OutCols),
+% ERC 0.10 % build the output grid row by row, column by column
+    maplist([OR, OutRow]>>(
+        maplist([OC, OV]>>(
+% ERC 0.10 % four corner cells are always 0
+            ( OR =:= 1,    OC =:= 1    -> OV = 0
+            ; OR =:= 1,    OC =:= OutW -> OV = 0
+            ; OR =:= OutH, OC =:= 1    -> OV = 0
+            ; OR =:= OutH, OC =:= OutW -> OV = 0
+% ERC 0.10 % top border row (non-corner): frame top color
+            ; OR =:= 1    -> OV = TopColor
+% ERC 0.10 % bottom border row (non-corner): frame bottom color
+            ; OR =:= OutH -> OV = BotColor
+% ERC 0.10 % left border column (non-corner): frame left color
+            ; OC =:= 1    -> OV = LftColor
+% ERC 0.10 % right border column (non-corner): frame right color
+            ; OC =:= OutW -> OV = RgtColor
+% ERC 0.10 % interior cell: look up template value and apply edge-recoloring
+            ;
+              DR is OR - 1,
+              DC is OC - 1,
+              TplR is TR0 + DR - 1,
+              TplC is TC0 + DC - 1,
+              arc_grid_at(Grid, TplR, TplC, TV),
+              w65b_cell_out(DR, DC, TH, TW, TV,
+                            TopColor, BotColor, LftColor, RgtColor, OV)
+            )
+        ), OutCols, OutRow)
+    ), OutRows, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
@@ -27187,7 +27501,7 @@ arc_attempt_task(task(TaskId, TrainingPairs, TestIn, TestOut), Result) :-
 % Define arc_benchmark_print/0: run the full benchmark and print a report.
 arc_benchmark_print :-
     % Print the benchmark header.
-    format("~n=== ARC-AGI-1 Full Benchmark Run (Acc_74: wave 64 rules) ===~n"),
+    format("~n=== ARC-AGI-1 Full Benchmark Run (Acc_75: wave 65 rules) ===~n"),
     format("400 public training tasks. Pure induction. No pretraining. Glass-box rules.~n"),
     format("Two search levels: (1) single named rule; (2) ordered pair of named rules.~n~n"),
     % Run the benchmark.
