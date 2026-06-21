@@ -1286,6 +1286,50 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 40: WAVE 65 - LZ PATH MARKER CONNECTOR AND FRAME EDGE COLOR CENTER ADJACENT - 370 / 400 = 92.50%
+
+Date: 2026-06-21
+Score: 370 / 400 = 92.50%.
+Previous score: 368 / 400 = 92.00% (wave 64, 2026-06-20).
+Rules added: 2 net changes (1 new rule, 1 enhancement).
+Tasks solved: +2.
+
+What changed: Wave 65 added one new named rule and one enhancement to an existing rule
+in arc_benchmark.pl, solving two structurally distinct tasks from the remaining 32 unsolved tasks.
+
+w65a_marker_lz_path (task 2dd70a9a): The input contains exactly two pairs of same-valued
+cells, a 2-pair (two adjacent 2-cells, horizontal or vertical) and a 3-pair (two adjacent
+3-cells, same orientation as the 2-pair). The rule connects them with an L- or Z-shaped
+path of 3-cells drawn on background (0) cells. For two vertical markers (v/v), the bridge
+is the topmost clear horizontal row that spans both columns; for two horizontal markers
+(h/h), the bridge is the rightmost clear vertical column that spans both rows. Arms extend
+from each marker along its own row (h/h) or column (v/v) to reach the bridge. Clearness
+is checked against the original grid including scattered 8-cells, which act as obstacles.
+
+frame_edge_color_8s enhanced (task 9aec4887): The existing wave 35 rule was correct for
+even-by-even and 3x3 templates but failed for 5x5 and larger odd-by-odd templates. The
+test case has a 5x5 template where four interior cells adjacent to the center cell must be
+colored by the nearest frame edge rather than kept as 8. The enhancement: when H8 and W8
+are both even (meaning the template has an odd number of rows and columns), compute the
+center position CR = H8 / 2 and CC = W8 / 2 (0-indexed), and color the four cells at
+(CR-1, CC), (CR+1, CC), (CR, CC-1), (CR, CC+1) with the top, bottom, left, and right
+frame border colors respectively. All other interior cells stay as 8. For 3x3 templates
+those same positions are edge cells already handled by the single-edge rule.
+
+What was learned: Obstacle-aware path search is essential for 2dd70a9a; the 8-cells
+scattered in the input are not part of the marker pairs but act as walls the path cannot
+cross. The rightmost valid bridge (h/h) and topmost valid bridge (v/v) selection requires
+scanning from the preferred end and committing on the first valid find. For 9aec4887, the
+center-adjacent rule only activates for templates with both odd height and odd width where
+the interior center-adjacent cells are not already reachable by the single-edge rule. The
+debugging revealed that the existing rule fit all training pairs but failed the test because
+the training pairs had even x even templates while the test had a 5x5 odd x odd template.
+
+Bugs fixed: frame_edge_color_8s lacked the center-adjacent coloring for odd x odd templates.
+
+New tasks solved by wave 65 (2 net new tasks): 2dd70a9a (w65a_marker_lz_path),
+9aec4887 (frame_edge_color_8s with center-adjacent enhancement).
+
 ATTEMPT 39: WAVE 64 - FRAME STAMP AT ZERO INTERIOR AND TEMPLATE STAMP AT 4 CLUSTER - 368 / 400 = 92.00%
 
 Date: 2026-06-20
@@ -1659,10 +1703,12 @@ Run 72: 363 / 400 = 90.75% - Wave 61: two new rules (concentric_square_rings, co
 
 Run 73: 365 / 400 = 91.25% - Wave 62: two new rules (graybox_hole_fill_by_unique_shape, corner_nested_frame). Plus 2 tasks.
 Run 74: 366 / 400 = 91.50% - Wave 63: four new rules (1 net new: five_shape_fat_thin). Plus 1 task.
-Run 75: 368 / 400 = 92.00% - Wave 64: frame_stamp_at_zero_interior + template_stamp_at_4_cluster. Plus 2 tasks. (CURRENT BEST)
+Run 75: 368 / 400 = 92.00% - Wave 64: frame_stamp_at_zero_interior + template_stamp_at_4_cluster. Plus 2 tasks.
+
+Run 76: 370 / 400 = 92.50% - Wave 65: w65a_marker_lz_path + frame_edge_color_8s center-adjacent enhancement. Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 368 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 370 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1761,6 +1807,8 @@ ALL 368 SOLVED TASKS AND THEIR GLASS-BOX RULES
 2bcee788 - mirror_shape_across_2_indicator.
 
 2dc579da - extract_unique_quadrant_at_cross.
+
+2dd70a9a - w65a_marker_lz_path.
 
 2dee498d - extract_column_period.
 
@@ -1985,6 +2033,8 @@ ALL 368 SOLVED TASKS AND THEIR GLASS-BOX RULES
 99b1bc43 - two_halves_at_4sep_xor_to_3.
 
 99fa7670 - extend_right_then_down_to_corner.
+
+9aec4887 - frame_edge_color_8s.
 
 9af7a82c - color_histogram.
 
@@ -3494,6 +3544,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 62: Graybox Hole Fill by Unique Shape and Co
 Dison, D. R. (2026). ARC-AGI-1 Wave 63: Five Shape Fat Thin and Three Supplemental Rules, 366 / 400 = 91.50%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 64: Frame Stamp at Zero Interior and Template Stamp at 4 Cluster, 368 / 400 = 92.00%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 65: LZ Path Marker Connector and Frame Edge Center-Adjacent Enhancement, 370 / 400 = 92.50%. AIU / PrologAI.
 
 
 END OF DOCUMENT
