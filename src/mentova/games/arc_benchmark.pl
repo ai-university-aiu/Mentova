@@ -27444,6 +27444,88 @@ arc_transform(w65b_frame_template_label, Grid, Out) :-
     ), OutRows, Out).
 
 % ---------------------------------------------------------------------------
+% f1cefba8 — frame border markers project beams through frame and exterior
+% ---------------------------------------------------------------------------
+
+% ERC 0.10 % declare f1cefba8 as a named ARC rule
+arc_named_rule(f1cefba8).
+% ERC 0.10 % two-color frame: IC markers on border rows/cols create beams
+arc_transform(f1cefba8, Grid, Out) :-
+% ERC 0.10 % get grid dimensions
+    arc_grid_dims(Grid, NR, NC),
+% ERC 0.10 % collect every non-zero cell to identify colors and frame bounding box
+    findall(R-C-V, (
+        between(1, NR, R), between(1, NC, C),
+        arc_grid_at(Grid, R, C, V), V \= 0
+    ), NonZero),
+    NonZero \= [],
+% ERC 0.10 % exactly two distinct non-zero colors must be present
+    findall(V, member(_-_-V, NonZero), Vs),
+    sort(Vs, [C1, C2]),
+% ERC 0.10 % outer bounding box of all non-zero cells is the frame region
+    findall(R, member(R-_-_, NonZero), NZRs),
+    findall(Co, member(_-Co-_, NonZero), NZCs),
+    arc_min_list(NZRs, FR1), arc_max_list(NZRs, FR2),
+    arc_min_list(NZCs, FC1), arc_max_list(NZCs, FC2),
+    FrameW is FC2 - FC1 + 1,
+    FrameH is FR2 - FR1 + 1,
+% ERC 0.10 % frame color is the value at the top-left corner of the frame bounding box
+    arc_grid_at(Grid, FR1, FC1, CornerV),
+    ( CornerV =:= C1 -> FrameC = C1, FillC = C2 ; FrameC = C2, FillC = C1 ),
+% ERC 0.10 % border rows: rows where FillC cell count is less than half the frame width
+    findall(R, (
+        between(FR1, FR2, R),
+        findall(Co2, (
+            between(FC1, FC2, Co2),
+            arc_grid_at(Grid, R, Co2, FillC)
+        ), FillsInRow),
+        length(FillsInRow, FCnt),
+        FCnt * 2 < FrameW
+    ), BorderRows),
+% ERC 0.10 % border cols: cols where FillC cell count is less than half the frame height
+    findall(Co, (
+        between(FC1, FC2, Co),
+        findall(R2, (
+            between(FR1, FR2, R2),
+            arc_grid_at(Grid, R2, Co, FillC)
+        ), FillsInCol),
+        length(FillsInCol, FCnt2),
+        FCnt2 * 2 < FrameH
+    ), BorderCols),
+% ERC 0.10 % vertical beams: one per FillC cell found in a border row (beam at that column)
+    findall(BC, (
+        member(R-BC-FillC, NonZero),
+        member(R, BorderRows)
+    ), VBeamCols0),
+    sort(VBeamCols0, VBeamCols),
+% ERC 0.10 % horizontal beams: one per FillC cell found in a border col (beam at that row)
+    findall(BR, (
+        member(BR-Co-FillC, NonZero),
+        member(Co, BorderCols)
+    ), HBeamRows0),
+    sort(HBeamRows0, HBeamRows),
+% ERC 0.10 % build output grid: beams override, then frame interior, then zero exterior
+    numlist(1, NR, AllRows),
+    numlist(1, NC, AllCols),
+    maplist([R, OutRow]>>(
+        maplist([Co, OV]>>(
+            ( member(Co, VBeamCols) ->
+% ERC 0.10 % vertical beam: frame region rows get FrameC; exterior rows get FillC
+                ( FR1 =< R, R =< FR2 -> OV = FrameC ; OV = FillC )
+            ; member(R, HBeamRows) ->
+% ERC 0.10 % horizontal beam: frame region cols get FrameC; exterior cols get FillC
+                ( FC1 =< Co, Co =< FC2 -> OV = FrameC ; OV = FillC )
+            ; FR1 =< R, R =< FR2, FC1 =< Co, Co =< FC2 ->
+% ERC 0.10 % non-beam cell inside frame: preserve original value (FC or IC, no marker remains)
+                arc_grid_at(Grid, R, Co, OV)
+            ;
+% ERC 0.10 % exterior non-beam cell: always zero
+                OV = 0
+            )
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ---------------------------------------------------------------------------
 % BENCHMARK RUNNER
 % ---------------------------------------------------------------------------
 
@@ -27501,7 +27583,7 @@ arc_attempt_task(task(TaskId, TrainingPairs, TestIn, TestOut), Result) :-
 % Define arc_benchmark_print/0: run the full benchmark and print a report.
 arc_benchmark_print :-
     % Print the benchmark header.
-    format("~n=== ARC-AGI-1 Full Benchmark Run (Acc_75: wave 65 rules) ===~n"),
+    format("~n=== ARC-AGI-1 Full Benchmark Run (Acc_76: wave 66 rules) ===~n"),
     format("400 public training tasks. Pure induction. No pretraining. Glass-box rules.~n"),
     format("Two search levels: (1) single named rule; (2) ordered pair of named rules.~n~n"),
     % Run the benchmark.
