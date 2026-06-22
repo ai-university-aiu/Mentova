@@ -1286,6 +1286,83 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 43: WAVE 68 - DIAMOND COLUMN FILL, NINE CORNER TILES, GRID LINES FROM HOLES, CHEBYSHEV WAVE, BFS ALT COLOR, BILATERAL SYMMETRY 9, GRAVITY FILL BORDER, TEMPLATE PATCH COMPLETE - 383 / 400 = 95.75%
+
+Date: 2026-06-21
+Score: 383 / 400 = 95.75%.
+Previous score: 375 / 400 = 93.75% (wave 67, 2026-06-21).
+Rules added: 10 (8 net new tasks; 2 rules pass training pairs but not the test input or no task).
+Tasks solved: +8.
+
+What changed: Wave 68 added ten new named rules in arc_benchmark.pl. Eight of those rules each solve one
+structurally distinct task from the remaining 25 unsolved tasks, raising the score from 375 to 383.
+
+diamond_col_indicator_fill (6d58a25d): The input contains an expanding diamond outline (color A)
+whose tip is at the top, plus scattered noise dots (color B). Each noise dot whose column falls
+strictly inside the diamond's widest row AND whose row is strictly below the diamond's bottom row
+marks a column. For each marked column, the rule fills cells of color B from the first hollow row
+of that column downward to the bottom of the grid.
+
+assemble_nine_corner_tiles (a8c38be5): The input contains exactly nine 3x3 tiles, each made of
+background value 5 plus one other color. The position of the non-5 cells within each tile determines
+where it goes in the 3x3 output arrangement (top-left, top-center, top-right, etc.). The output is
+the nine tiles assembled into one 9x9 grid in the arrangement specified by their corner patterns.
+
+grid_lines_from_holes (8731374e): The input contains a large rectangular block filled with background
+color BG, with one or more hole cells of color H inside it. The output is a grid the same size as
+the block with BG everywhere except: for each hole at relative position (RR, RC), the entire row RR
+and entire column RC within the block are set to H.
+
+fill_chebyshev_wave (73251a56): The grid has zero-holes and non-zero cells forming a diagonal-distance
+wave pattern. The number of distinct non-zero values K and the top-left corner value S define the
+wave formula: distance d = abs(R-C); d=0 gives S; d=1 gives ((S-2+K) mod K)+1; d>=2 gives
+((d//2 - 1 + S - 1) mod K) + 1. Every zero cell is filled using this formula.
+
+arc_bfs_alt_color (b782dc8a): The grid has value 8 (walls), value 0 (corridors), and exactly two
+path colors CA and CB with CA < CB. CA marks the BFS seed center (even distance from start) and CB
+marks adjacent seed arms (odd distance). The rule detects the start generically as the CA cell whose
+every non-8 neighbor has color CB, then BFS-floods from start through all non-8 cells, coloring
+even-distance cells CA and odd-distance cells CB. Unreachable zero-corridors stay 0; walls stay 8.
+
+fill_sym9_bilateral (3631a71a): The input contains cells of value 9 scattered among non-zero colored
+cells. The rule replaces every 9 by inferring its correct color from the bilaterally symmetric partner
+cell (point symmetry about the grid center, using 1-indexed center coordinates NR+1-R and NC+1-C).
+The replacement priority is: (1) same row, partner column; (2) partner row, same column; (3) partner
+row and partner column. If none are non-9, the replacement is 0.
+
+gravity_fill_border (5daaa586): The input contains a rectangular interior region bordered by cells of
+a dominant color, with scattered non-background marker cells inside the region. The rule determines
+a gravity direction (up, down, left, or right) from which border the interior meets, then for each
+column (or row) containing a marker, fills the interior cells of that column (or row) from the marker
+position in the gravity direction toward the far border, using the marker's color.
+
+template_patch_complete (57aa92db): The input contains multiple connected components, each comprising
+a block of center-color cells and arm-color cells. One component is a complete template (arm cells
+appear both above and below the center block, and in all expected offset positions relative to the
+center). Remaining components are partial (arms appear only above or missing one side). The rule
+identifies the complete template, extracts arm offset positions at unit scale, then for each partial
+component scales those offsets by the component's block size N and fills missing arm blocks with the
+appropriate arm color, completing the partial components to match the template structure.
+
+What was learned: The `once/1` wrapper is essential when checking existential conditions inside
+findall - without it, member/1 goals that satisfy a condition for multiple list elements create a
+Cartesian product and multiply candidates. The bilateral symmetry axis for point reflection about
+the grid center is (NR+1-R, NC+1-C) in 1-indexed coordinates, not (NR-1-R, NC-1-C). Connected
+components identified by BFS flood fill are the cleanest representation for tasks involving multiple
+interrelated objects of varying scale.
+
+Bugs fixed: fill_sym9_bilateral initially used NR1-R (= NR-1-R) for the bilateral reflection row,
+which gave an axis one step off from the true center. Fixed to NR+1-R (1-indexed reflection).
+template_patch_complete had a `member(RA-_-_, TA), RA < MinCR, member(RB-_-_, TA), RB > MaxCR`
+pattern inside findall; with 3 cells satisfying RA<MinCR and 2 satisfying RB>MaxCR, findall produced
+6 identical candidates instead of 1, causing the `TmplCands = [TmplCenters-TmplArms]` singleton check
+to fail. Fixed by wrapping each member check with once/1.
+
+New tasks solved by wave 68 (8 new tasks): 3631a71a (fill_sym9_bilateral),
+57aa92db (template_patch_complete), 5daaa586 (gravity_fill_border), 6d58a25d (diamond_col_indicator_fill),
+73251a56 (fill_chebyshev_wave), 8731374e (grid_lines_from_holes), a8c38be5 (assemble_nine_corner_tiles),
+b782dc8a (arc_bfs_alt_color).
+
 ATTEMPT 42: WAVE 67 - CROSS ARM GAP FILL, COMPLETE PARTIAL TEMPLATES, FILL LARGEST ZERO REGION 3, ARM TEMPLATE TRANSFER - 375 / 400 = 93.75%
 
 Date: 2026-06-21
@@ -1795,10 +1872,12 @@ Run 76: 370 / 400 = 92.50% - Wave 65: w65a_marker_lz_path + frame_edge_color_8s 
 
 Run 77: 371 / 400 = 92.75% - Wave 66: f1cefba8 frame border markers project beams. Plus 1 task.
 
-Run 78: 375 / 400 = 93.75% - Wave 67: cross_arm_gap_fill, complete_partial_templates, fill_largest_zero_region_3, arm_template_transfer. Plus 4 tasks. (CURRENT BEST)
+Run 78: 375 / 400 = 93.75% - Wave 67: cross_arm_gap_fill, complete_partial_templates, fill_largest_zero_region_3, arm_template_transfer. Plus 4 tasks.
+
+Run 79: 383 / 400 = 95.75% - Wave 68: diamond_col_indicator_fill, assemble_nine_corner_tiles, grid_lines_from_holes, fill_chebyshev_wave, arc_bfs_alt_color, fill_sym9_bilateral, gravity_fill_border, template_patch_complete. Plus 8 tasks. (CURRENT BEST)
 
 
-ALL 375 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 383 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1916,6 +1995,8 @@ ALL 375 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 3618c87e - gravity_1_to_bottom.
 
+3631a71a - fill_sym9_bilateral.
+
 363442ee - stamp_template_at_1_marker.
 
 36fdfd69 - fill_2cluster_bbox_with_4.
@@ -2006,6 +2087,8 @@ ALL 375 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 56ff96f3 - fill_bbox_of_color_pairs.
 
+57aa92db - template_patch_complete.
+
 5ad4f10b - downscale_3x3_block_grid.
 
 5bd6f4ac - extract_top_right_3x3.
@@ -2013,6 +2096,8 @@ ALL 375 SOLVED TASKS AND THEIR GLASS-BOX RULES
 5c0a986e - extend_2x2_blocks_diagonal.
 
 5c2c9af4 - concentric_square_rings.
+
+5daaa586 - gravity_fill_border.
 
 60b61512 - fill_component_bbox_with_7.
 
@@ -2044,6 +2129,8 @@ ALL 375 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 6d0aefbc - tile_reflect_h.
 
+6d58a25d - diamond_col_indicator_fill.
+
 6e02f1e3 - grid_3x3_row_pattern_to_diagonal.
 
 6e82a1ae - color_5_comps_by_size.
@@ -2053,6 +2140,8 @@ ALL 375 SOLVED TASKS AND THEIR GLASS-BOX RULES
 6f8cd79b - fill_border(8).
 
 6fa7a44f - tile_reflect_v.
+
+73251a56 - fill_chebyshev_wave.
 
 7447852a - fill_zigzag_4.
 
@@ -2087,6 +2176,8 @@ ALL 375 SOLVED TASKS AND THEIR GLASS-BOX RULES
 834ec97d - trail_4_shift_down.
 
 8403a5d5 - generate_vertical_stripes_from_corner.
+
+8731374e - grid_lines_from_holes.
 
 88a10436 - stamp_pattern_at_5.
 
@@ -2156,6 +2247,8 @@ a85d4709 - col5_to_row_color.
 
 a87f7484 - pick_densest_3x3_block.
 
+a8c38be5 - assemble_nine_corner_tiles.
+
 a8d7556c - mark_2x2_zero_blocks.
 
 a9f96cdd - diagonal_neighbors_from_single_2.
@@ -2181,6 +2274,8 @@ b1948b0a - swap(2,6).
 b548a754 - extend_rect_toward_8.
 
 b60334d2 - surround_5_with_cross_and_diag5.
+
+b782dc8a - arc_bfs_alt_color.
 
 b8825c91 - repair_4fold_noise.
 
