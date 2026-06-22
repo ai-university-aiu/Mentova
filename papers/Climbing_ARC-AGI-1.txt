@@ -1286,6 +1286,48 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 44: WAVE 69 - PLACE-TEMPLATES BUG FIX, BICOLOR DIAGONAL RAYS - 385 / 400 = 96.25%
+
+Date: 2026-06-22
+Score: 385 / 400 = 96.25%.
+Previous score: 383 / 400 = 95.75% (wave 68, 2026-06-21).
+Rules added: 2 net new tasks; 1 existing rule bug fixed.
+Tasks solved: +2.
+
+What changed: Wave 69 fixed a subset-matching bug in place_templates_at_markers and added a
+new bicolor_diagonal_rays rule in arc_benchmark.pl, solving 2 tasks from the remaining 17
+unsolved tasks and raising the score from 383 to 385.
+
+place_templates_at_markers bug fix (e6721834): The original rule collected all marker-region
+cells matching the template's accent color across the entire marker zone and compared their
+normalized shapes against the template shape. This failed when 5 isolated single-cell markers
+existed and the template had 3 non-bg cells - the shapes were different sizes and could never
+match. The fix replaced shape normalization with per-offset validation: for each (template cell,
+marker cell) pair, compute the offset, verify all template cells shift to valid marker positions
+under that offset, collect all valid offsets, and require exactly 1 unique result via sort.
+
+bicolor_diagonal_rays (d07ae81c): The input has exactly 2 background colors (the 2 most
+frequent values) and sparse seed cells (all other values). Each seed cell fires diagonal rays
+in all four 45-degree directions. The home background color of each seed (determined by an
+orthogonal neighbor) defines its color key. Each cell on a diagonal ray from any seed has its
+background color replaced by the seed color whose home_bg matches that cell's current color.
+
+What was learned: When a rule uses findall to collect a unique offset, verify uniqueness with
+sort/2 - if the result is not a singleton list, the rule should fail cleanly rather than
+succeed with a wrong offset. The filter_cluster_extract approach (downscale filter by 2, match
+candidate) works for tasks where the filter is much larger than the candidates but fails for
+tasks where the filter is small and no candidate dimensions match the scaled template. The
+bicolor_diagonal_rays rule requires identifying background colors by frequency (most frequent =
+primary BG, second most frequent = secondary BG) rather than by count uniqueness, because
+some grids contain two seed cells of the same non-bg color.
+
+Bugs fixed: place_templates_at_markers used shape normalization to match a template against
+marker positions. When 5 separate single-cell markers existed and the template had 3 non-bg
+cells, no normalization could equate them. Fixed by per-offset exhaustive validation.
+
+New tasks solved by wave 69 (2 new tasks): d07ae81c (bicolor_diagonal_rays),
+e6721834 (place_templates_at_markers bug fix).
+
 ATTEMPT 43: WAVE 68 - DIAMOND COLUMN FILL, NINE CORNER TILES, GRID LINES FROM HOLES, CHEBYSHEV WAVE, BFS ALT COLOR, BILATERAL SYMMETRY 9, GRAVITY FILL BORDER, TEMPLATE PATCH COMPLETE - 383 / 400 = 95.75%
 
 Date: 2026-06-21
@@ -1874,10 +1916,12 @@ Run 77: 371 / 400 = 92.75% - Wave 66: f1cefba8 frame border markers project beam
 
 Run 78: 375 / 400 = 93.75% - Wave 67: cross_arm_gap_fill, complete_partial_templates, fill_largest_zero_region_3, arm_template_transfer. Plus 4 tasks.
 
-Run 79: 383 / 400 = 95.75% - Wave 68: diamond_col_indicator_fill, assemble_nine_corner_tiles, grid_lines_from_holes, fill_chebyshev_wave, arc_bfs_alt_color, fill_sym9_bilateral, gravity_fill_border, template_patch_complete. Plus 8 tasks. (CURRENT BEST)
+Run 79: 383 / 400 = 95.75% - Wave 68: diamond_col_indicator_fill, assemble_nine_corner_tiles, grid_lines_from_holes, fill_chebyshev_wave, arc_bfs_alt_color, fill_sym9_bilateral, gravity_fill_border, template_patch_complete. Plus 8 tasks.
+
+Run 80: 385 / 400 = 96.25% - Wave 69: place_templates_at_markers bug fix (e6721834), bicolor_diagonal_rays (d07ae81c). Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 383 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 385 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -2325,6 +2369,8 @@ d037b0a7 - fill_column_downward.
 
 d06dbe63 - staircase_from_8.
 
+d07ae81c - bicolor_diagonal_rays.
+
 d0f5fe59 - components_to_identity.
 
 d10ecb37 - extract_2x2_rotation_seed.
@@ -2368,6 +2414,8 @@ e179c5f4 - bounce_single_cell_upward.
 e3497940 - fold_at_5_col_mirror.
 
 e40b9e2f - complete_rotational_symmetry.
+
+e6721834 - place_templates_at_markers.
 
 e73095fd - fill_rect_frame_interiors.
 
@@ -3745,6 +3793,10 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 65: LZ Path Marker Connector and Frame Edge 
 Dison, D. R. (2026). ARC-AGI-1 Wave 66: Frame Border Markers Project Beams, 371 / 400 = 92.75%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 67: Cross Arm Gap Fill, Complete Partial Templates, Fill Largest Zero Region 3, Arm Template Transfer, 375 / 400 = 93.75%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 68: Diamond Column Fill, Nine Corner Tiles, Grid Lines From Holes, Chebyshev Wave, BFS Alt Color, Bilateral Symmetry 9, Gravity Fill Border, Template Patch Complete, 383 / 400 = 95.75%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 69: Place-Templates Bug Fix and Bicolor Diagonal Rays, 385 / 400 = 96.25%. AIU / PrologAI.
 
 
 END OF DOCUMENT
