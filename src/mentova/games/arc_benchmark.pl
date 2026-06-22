@@ -29761,3 +29761,684 @@ arc_transform(filter_cluster_extract, Grid, Out) :-
             nth0(GR3, Grid, GRow3), nth0(GC3, GRow3, V)
         ), OutCols, OutRow)
     ), OutRows, Out).
+
+% ERC 0.10 %
+arc_named_rule(stamp_arm_at_obstacles).
+% ERC 0.10 %
+arc_transform(stamp_arm_at_obstacles, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR), Grid = [GR0|_], length(GR0, NC),
+% ERC 0.10 %
+    NR1 is NR - 1, NC1 is NC - 1,
+% ERC 0.10 %
+    flatten(Grid, AllV),
+% ERC 0.10 %
+    findall(W, (member(W, AllV), W =\= 0, W =\= 5), Vs),
+% ERC 0.10 %
+    sort(Vs, [ArmVal]),
+% ERC 0.10 %
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,ArmVal)), ArmCells),
+% ERC 0.10 %
+    ArmCells \= [],
+% ERC 0.10 %
+    findall(AR, member(AR-_, ArmCells), ARs),
+% ERC 0.10 %
+    findall(AC, member(_-AC, ArmCells), ACs),
+% ERC 0.10 %
+    min_list(ARs, MinAR), min_list(ACs, MinAC),
+% ERC 0.10 %
+    findall(DR-DC, (member(AR-AC, ArmCells), DR is AR-MinAR, DC is AC-MinAC), Offsets),
+% ERC 0.10 %
+    findall(SR-SC, (
+% ERC 0.10 %
+        between(0, NR1, SR), between(0, NC1, SC),
+% ERC 0.10 %
+        forall(member(DR-DC, Offsets), (
+% ERC 0.10 %
+            TR is SR+DR, TC is SC+DC,
+% ERC 0.10 %
+            TR >= 0, TR =< NR1, TC >= 0, TC =< NC1,
+% ERC 0.10 %
+            nth0(TR, Grid, TRow), nth0(TC, TRow, 0)
+% ERC 0.10 %
+        ))
+% ERC 0.10 %
+    ), ValidAnchors),
+% ERC 0.10 %
+    findall(SR2-SC2, (
+% ERC 0.10 %
+        member(SR-SC, ValidAnchors),
+% ERC 0.10 %
+        member(DR-DC, Offsets),
+% ERC 0.10 %
+        SR2 is SR+DR, SC2 is SC+DC
+% ERC 0.10 %
+    ), StampRaw),
+% ERC 0.10 %
+    sort(StampRaw, Stamped),
+% ERC 0.10 %
+    numlist(0, NR1, AllRows), numlist(0, NC1, AllCols),
+% ERC 0.10 %
+    maplist([R, OutRow]>>(
+% ERC 0.10 %
+        maplist([C, V]>>(
+% ERC 0.10 %
+            nth0(R, Grid, GRow), nth0(C, GRow, GV),
+% ERC 0.10 %
+            ( GV =\= 0 -> V = GV
+% ERC 0.10 %
+            ; memberchk(R-C, Stamped) -> V = ArmVal
+% ERC 0.10 %
+            ; V = 0
+% ERC 0.10 %
+            )
+% ERC 0.10 %
+        ), AllCols, OutRow)
+% ERC 0.10 %
+    ), AllRows, Out).
+
+% ERC 0.10 %
+arc_rbl_bs(BlockCells, R, C, V, BS) :-
+% ERC 0.10 %
+    C1 is C + 1,
+% ERC 0.10 %
+    ( memberchk(R-C1-V, BlockCells) ->
+% ERC 0.10 %
+        arc_rbl_bs(BlockCells, R, C1, V, BS1),
+% ERC 0.10 %
+        BS is BS1 + 1
+% ERC 0.10 %
+    ;   BS = 1
+% ERC 0.10 %
+    ).
+
+% ERC 0.10 %
+arc_named_rule(recipe_block_layout).
+% ERC 0.10 %
+arc_transform(recipe_block_layout, Grid, Out) :-
+% ERC 0.10 %
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,4)), FourCells),
+% ERC 0.10 %
+    length(FourCells, 4),
+% ERC 0.10 %
+    findall(R4, member(R4-_, FourCells), R4s),
+% ERC 0.10 %
+    findall(C4, member(_-C4, FourCells), C4s),
+% ERC 0.10 %
+    min_list(R4s, MinR4), max_list(R4s, MaxR4),
+% ERC 0.10 %
+    min_list(C4s, MinC4), max_list(C4s, MaxC4),
+% ERC 0.10 %
+    NRout is MaxR4 - MinR4 + 1,
+% ERC 0.10 %
+    NCout is MaxC4 - MinC4 + 1,
+% ERC 0.10 %
+    NRout1 is NRout - 1, NCout1 is NCout - 1,
+% ERC 0.10 %
+    findall(R-C-V, (
+% ERC 0.10 %
+        between(MinR4, MaxR4, R), nth0(R, Grid, Row),
+% ERC 0.10 %
+        between(MinC4, MaxC4, C), nth0(C, Row, V),
+% ERC 0.10 %
+        V =\= 0, V =\= 4
+% ERC 0.10 %
+    ), BlockCells),
+% ERC 0.10 %
+    BlockCells \= [],
+% ERC 0.10 %
+    sort(BlockCells, [FB_R-FB_C-FB_V|_]),
+% ERC 0.10 %
+    arc_rbl_bs(BlockCells, FB_R, FB_C, FB_V, BlockSize),
+% ERC 0.10 %
+    findall(BR, member(BR-_-_, BlockCells), BRList),
+% ERC 0.10 %
+    findall(BC2, member(_-BC2-_, BlockCells), BCList),
+% ERC 0.10 %
+    min_list(BRList, MinBR), min_list(BCList, MinBC),
+% ERC 0.10 %
+    MinBlockR is MinBR - MinR4,
+% ERC 0.10 %
+    MinBlockC is MinBC - MinC4,
+% ERC 0.10 %
+    findall(R-C-V, (
+% ERC 0.10 %
+        nth0(R, Grid, Row2), nth0(C, Row2, V),
+% ERC 0.10 %
+        V =\= 0, V =\= 4,
+% ERC 0.10 %
+        \+ (R >= MinR4, R =< MaxR4, C >= MinC4, C =< MaxC4)
+% ERC 0.10 %
+    ), RecipeCells),
+% ERC 0.10 %
+    RecipeCells \= [],
+% ERC 0.10 %
+    findall(RR, member(RR-_-_, RecipeCells), RRList),
+% ERC 0.10 %
+    findall(RC, member(_-RC-_, RecipeCells), RCList),
+% ERC 0.10 %
+    min_list(RRList, MinRecR), min_list(RCList, MinRecC),
+% ERC 0.10 %
+    BS1 is BlockSize - 1,
+% ERC 0.10 %
+    findall(OR-OC-FV, (
+% ERC 0.10 %
+        member(RecR-RecC-FV, RecipeCells),
+% ERC 0.10 %
+        RRow is RecR - MinRecR,
+% ERC 0.10 %
+        RCol is RecC - MinRecC,
+% ERC 0.10 %
+        between(0, BS1, DR),
+% ERC 0.10 %
+        between(0, BS1, DC),
+% ERC 0.10 %
+        OR is MinBlockR + RRow * BlockSize + DR,
+% ERC 0.10 %
+        OC is MinBlockC + RCol * BlockSize + DC
+% ERC 0.10 %
+    ), FillRaw),
+% ERC 0.10 %
+    FillRaw \= [],
+% ERC 0.10 %
+    numlist(0, NRout1, AllRows), numlist(0, NCout1, AllCols),
+% ERC 0.10 %
+    maplist([R, OutRow]>>(
+% ERC 0.10 %
+        maplist([C, V]>>(
+% ERC 0.10 %
+            ( (R =:= 0 ; R =:= NRout1), (C =:= 0 ; C =:= NCout1) -> V = 4
+% ERC 0.10 %
+            ; member(R-C-FV, FillRaw) -> V = FV
+% ERC 0.10 %
+            ; V = 0
+% ERC 0.10 %
+            )
+% ERC 0.10 %
+        ), AllCols, OutRow)
+% ERC 0.10 %
+    ), AllRows, Out).
+
+% ERC 0.10 %
+arc_sgf_arm_rows(ArmCells, ArmRows) :-
+% ERC 0.10 %
+    findall(R, (
+% ERC 0.10 %
+        member(R-C1, ArmCells),
+% ERC 0.10 %
+        C2 is C1 + 1,
+% ERC 0.10 %
+        memberchk(R-C2, ArmCells)
+% ERC 0.10 %
+    ), ARaw),
+% ERC 0.10 %
+    sort(ARaw, ArmRows).
+
+% ERC 0.10 %
+arc_sgf_min_gap([A, B | T], P) :-
+% ERC 0.10 %
+    G is B - A,
+% ERC 0.10 %
+    ( T = [] -> P = G
+% ERC 0.10 %
+    ; arc_sgf_min_gap([B|T], P2),
+% ERC 0.10 %
+      ( G < P2 -> P = G ; P = P2 )
+% ERC 0.10 %
+    ).
+
+% ERC 0.10 %
+arc_sgf_zero_rows(Grid, R0, R1) :-
+% ERC 0.10 %
+    forall(between(R0, R1, R), (
+% ERC 0.10 %
+        nth0(R, Grid, Row),
+% ERC 0.10 %
+        forall(member(V, Row), V =:= 0)
+% ERC 0.10 %
+    )).
+
+% ERC 0.10 %
+arc_sgf_zero_cols(Grid, C0, C1) :-
+% ERC 0.10 %
+    forall(member(Row, Grid), (
+% ERC 0.10 %
+        forall(between(C0, C1, C), (
+% ERC 0.10 %
+            nth0(C, Row, V),
+% ERC 0.10 %
+            V =:= 0
+% ERC 0.10 %
+        ))
+% ERC 0.10 %
+    )).
+
+% ERC 0.10 %
+arc_named_rule(staircase_grid_fill).
+% ERC 0.10 %
+arc_transform(staircase_grid_fill, Grid, Out) :-
+% ERC 0.10 %
+    flatten(Grid, AllFV),
+% ERC 0.10 %
+    findall(W, (member(W, AllFV), W =\= 0), Ws),
+% ERC 0.10 %
+    sort(Ws, [ArmV]),
+% ERC 0.10 %
+    length(Grid, NR), Grid = [FR|_], length(FR, NC),
+% ERC 0.10 %
+    NR1 is NR - 1, NC1 is NC - 1,
+% ERC 0.10 %
+    findall(R-C, (nth0(R,Grid,GRw), nth0(C,GRw,ArmV)), ArmCells),
+% ERC 0.10 %
+    arc_sgf_arm_rows(ArmCells, ArmRows),
+% ERC 0.10 %
+    length(ArmRows, NAR), NAR >= 2,
+% ERC 0.10 %
+    arc_sgf_min_gap(ArmRows, P), P >= 2,
+% ERC 0.10 %
+    min_list(ArmRows, MinAR), max_list(ArmRows, MaxAR),
+% ERC 0.10 %
+    findall(WAR, (
+% ERC 0.10 %
+        member(WAR-_, ArmCells),
+% ERC 0.10 %
+        \+ memberchk(WAR, ArmRows),
+% ERC 0.10 %
+        WAR > MinAR, WAR < MaxAR
+% ERC 0.10 %
+    ), BARaw),
+% ERC 0.10 %
+    sort(BARaw, BetweenArmRows),
+% ERC 0.10 %
+    findall(WC, (member(BAR, BetweenArmRows), member(BAR-WC, ArmCells)), WCRaw),
+% ERC 0.10 %
+    sort(WCRaw, WallCols),
+% ERC 0.10 %
+    WallCols \= [],
+% ERC 0.10 %
+    max_list(WallCols, MaxWC),
+% ERC 0.10 %
+    min_list(WallCols, MinWC),
+% ERC 0.10 %
+    PM1 is P - 1,
+% ERC 0.10 %
+    NR_Pm1 is NR - P, NC_Pm1 is NC - P,
+% ERC 0.10 %
+    ( arc_sgf_zero_rows(Grid, 0, PM1) -> EmptyAbove = 1 ; EmptyAbove = 0 ),
+% ERC 0.10 %
+    ( arc_sgf_zero_rows(Grid, NR_Pm1, NR1) -> EmptyBelow = 1 ; EmptyBelow = 0 ),
+% ERC 0.10 %
+    ( arc_sgf_zero_cols(Grid, 0, PM1) -> EmptyLeft = 1 ; EmptyLeft = 0 ),
+% ERC 0.10 %
+    ( arc_sgf_zero_cols(Grid, NC_Pm1, NC1) -> EmptyRight = 1 ; EmptyRight = 0 ),
+% ERC 0.10 %
+    D is NR - 1,
+% ERC 0.10 %
+    numlist(0, NR1, AllRows), numlist(0, NC1, AllCols),
+% ERC 0.10 %
+    ( EmptyAbove =:= 1, EmptyRight =:= 1 ->
+% ERC 0.10 %
+        RA is MinAR mod P,
+% ERC 0.10 %
+        RW is MaxWC mod P,
+% ERC 0.10 %
+        maplist([R, OutRow]>>(
+% ERC 0.10 %
+            maplist([C, V]>>(
+% ERC 0.10 %
+                S is R + C,
+% ERC 0.10 %
+                ( R mod P =:= RA, S =< D -> V = ArmV
+% ERC 0.10 %
+                ; C mod P =:= RW, S >= D -> V = ArmV
+% ERC 0.10 %
+                ; V = 5
+% ERC 0.10 %
+                )
+% ERC 0.10 %
+            ), AllCols, OutRow)
+% ERC 0.10 %
+        ), AllRows, Out)
+% ERC 0.10 %
+    ; EmptyBelow =:= 1, EmptyLeft =:= 1 ->
+% ERC 0.10 %
+        RA2 is MaxAR mod P,
+% ERC 0.10 %
+        RW2 is MinWC mod P,
+% ERC 0.10 %
+        maplist([R, OutRow]>>(
+% ERC 0.10 %
+            maplist([C, V]>>(
+% ERC 0.10 %
+                S is R + C,
+% ERC 0.10 %
+                ( C mod P =:= RW2, S =< D -> V = ArmV
+% ERC 0.10 %
+                ; R mod P =:= RA2, S >= D -> V = ArmV
+% ERC 0.10 %
+                ; V = 5
+% ERC 0.10 %
+                )
+% ERC 0.10 %
+            ), AllCols, OutRow)
+% ERC 0.10 %
+        ), AllRows, Out)
+% ERC 0.10 %
+    ; EmptyRight =:= 1 ->
+% ERC 0.10 %
+        NewWC is MaxWC + P,
+% ERC 0.10 %
+        FirstNewAR is MaxAR + P,
+% ERC 0.10 %
+        FNARmod is FirstNewAR mod P,
+% ERC 0.10 %
+        maplist([R, OutRow]>>(
+% ERC 0.10 %
+            maplist([C, V]>>(
+% ERC 0.10 %
+                nth0(R, Grid, GRow2), nth0(C, GRow2, GV),
+% ERC 0.10 %
+                ( GV =\= 0 -> V = GV
+% ERC 0.10 %
+                ; R < FirstNewAR ->
+% ERC 0.10 %
+                    ( NewWC < NC, C =:= NewWC -> V = ArmV ; V = 5 )
+% ERC 0.10 %
+                ; R mod P =:= FNARmod -> V = ArmV
+% ERC 0.10 %
+                ; V = 5
+% ERC 0.10 %
+                )
+% ERC 0.10 %
+            ), AllCols, OutRow)
+% ERC 0.10 %
+        ), AllRows, Out)
+% ERC 0.10 %
+    ).
+
+% ---------------------------------------------------------------------------
+% crop_mirror_horizontal — task 7468f01a
+% Find the bounding box of all non-zero cells, crop to it, then reverse each row.
+% ---------------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(crop_mirror_horizontal).
+% ERC 0.10 %
+arc_transform(crop_mirror_horizontal, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR),
+% ERC 0.10 %
+    NR1 is NR - 1,
+% ERC 0.10 %
+    Grid = [GR0|_], length(GR0, NC),
+% ERC 0.10 %
+    NC1 is NC - 1,
+% ERC 0.10 %
+    findall(R-C, (between(0, NR1, R), nth0(R, Grid, Row), between(0, NC1, C), nth0(C, Row, V), V =\= 0), NZCells),
+% ERC 0.10 %
+    NZCells \= [],
+% ERC 0.10 %
+    findall(R, member(R-_, NZCells), NZRows),
+% ERC 0.10 %
+    findall(C, member(_-C, NZCells), NZCols),
+% ERC 0.10 %
+    min_list(NZRows, MinR), max_list(NZRows, MaxR),
+% ERC 0.10 %
+    min_list(NZCols, MinC), max_list(NZCols, MaxC),
+% ERC 0.10 %
+    numlist(MinR, MaxR, CropRows),
+% ERC 0.10 %
+    maplist([R, Row]>>(
+% ERC 0.10 %
+        nth0(R, Grid, FullRow),
+% ERC 0.10 %
+        numlist(MinC, MaxC, ColRange),
+% ERC 0.10 %
+        maplist([C, V]>>(nth0(C, FullRow, V)), ColRange, Cropped),
+% ERC 0.10 %
+        reverse(Cropped, Row)
+% ERC 0.10 %
+    ), CropRows, Out).
+
+% ---------------------------------------------------------------------------
+% frame_content_align — task 846bdb03
+% Find the rectangle frame (corners=color 4, left/right edges=two other
+% colors, top/bottom interior=0).  Find the content shape elsewhere.
+% If the content has the left-edge color on its left side, place it
+% directly; otherwise flip it horizontally.  Output = frame with content.
+% ---------------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(frame_content_align).
+% ERC 0.10 %
+arc_transform(frame_content_align, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR), NR1 is NR - 1,
+% ERC 0.10 %
+    Grid = [GR0|_], length(GR0, NC), NC1 is NC - 1,
+% ERC 0.10 %
+    findall(R-C, (between(0,NR1,R), nth0(R,Grid,Rw),
+                  between(0,NC1,C), nth0(C,Rw,4)), Fours),
+% ERC 0.10 %
+    length(Fours, 4),
+% ERC 0.10 %
+    findall(R, member(R-_,Fours), FRs),
+% ERC 0.10 %
+    findall(C, member(_-C,Fours), FCs),
+% ERC 0.10 %
+    min_list(FRs, FR1), max_list(FRs, FR2),
+% ERC 0.10 %
+    min_list(FCs, FC1), max_list(FCs, FC2),
+% ERC 0.10 %
+    FR1p1 is FR1 + 1,
+% ERC 0.10 %
+    nth0(FR1p1, Grid, ERow),
+% ERC 0.10 %
+    nth0(FC1, ERow, LC), nth0(FC2, ERow, RC),
+% ERC 0.10 %
+    LC \= 0, LC \= 4, RC \= 0, RC \= 4,
+% ERC 0.10 %
+    findall(R-C-V, (
+% ERC 0.10 %
+        between(0,NR1,R), nth0(R,Grid,Rw2),
+% ERC 0.10 %
+        between(0,NC1,C), nth0(C,Rw2,V),
+% ERC 0.10 %
+        V \= 0, V \= 4,
+% ERC 0.10 %
+        \+ (between(FR1,FR2,R), between(FC1,FC2,C))
+% ERC 0.10 %
+    ), Cont),
+% ERC 0.10 %
+    Cont \= [],
+% ERC 0.10 %
+    findall(R, member(R-_-_,Cont), CRs),
+% ERC 0.10 %
+    findall(C, member(_-C-_,Cont), CCs),
+% ERC 0.10 %
+    min_list(CRs, CR1), min_list(CCs, CC1), max_list(CCs, CC2),
+% ERC 0.10 %
+    findall(C2, member(_-C2-LC,Cont), LCl),
+% ERC 0.10 %
+    findall(C2, member(_-C2-RC,Cont), RCl),
+% ERC 0.10 %
+    min_list(LCl, MinLC), min_list(RCl, MinRC),
+% ERC 0.10 %
+    (MinLC < MinRC -> Flip = false ; Flip = true),
+% ERC 0.10 %
+    FH is FR2 - FR1 + 1, FW is FC2 - FC1 + 1,
+% ERC 0.10 %
+    FHm1 is FH - 1, FWm1 is FW - 1,
+% ERC 0.10 %
+    findall(ORow, (
+% ERC 0.10 %
+        between(0, FHm1, OR),
+% ERC 0.10 %
+        findall(V, (
+% ERC 0.10 %
+            between(0, FWm1, OC),
+% ERC 0.10 %
+            ( (OR =:= 0 ; OR =:= FHm1), (OC =:= 0 ; OC =:= FWm1)
+% ERC 0.10 %
+            -> V = 4
+% ERC 0.10 %
+            ; (OR =:= 0 ; OR =:= FHm1)
+% ERC 0.10 %
+            -> V = 0
+% ERC 0.10 %
+            ; OC =:= 0
+% ERC 0.10 %
+            -> V = LC
+% ERC 0.10 %
+            ; OC =:= FWm1
+% ERC 0.10 %
+            -> V = RC
+% ERC 0.10 %
+            ; IR is OR - 1, IC is OC - 1,
+% ERC 0.10 %
+              GR2 is CR1 + IR,
+% ERC 0.10 %
+              (Flip == true -> GC2 is CC2 - IC ; GC2 is CC1 + IC),
+% ERC 0.10 %
+              nth0(GR2, Grid, GRw2), nth0(GC2, GRw2, V)
+% ERC 0.10 %
+            )
+% ERC 0.10 %
+        ), ORow)
+% ERC 0.10 %
+    ), Out).
+
+% ---------------------------------------------------------------------------
+% stamp_tile_indicators — task 045e512c
+% The input has one stamp (color with most cells, compact bounding box) and
+% indicator cells of other colors.  Each indicator cell lies within the first
+% tile of the stamp shifted by one period (SH+1 rows or SW+1 cols) in one of
+% 8 axis-aligned or diagonal directions.  The rule tiles the stamp from the
+% indicator outward in that direction, replacing stamp cells with the indicator
+% color, until the tile falls completely off the grid.
+% ---------------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(stamp_tile_indicators).
+% ERC 0.10 %
+arc_transform(stamp_tile_indicators, Grid, Out) :-
+% ERC 0.10 %
+    !,
+% ERC 0.10 %
+    length(Grid, NR), NR1 is NR - 1, NR =< 30,
+% ERC 0.10 %
+    Grid = [STI_GR0|_], length(STI_GR0, NC), NC1 is NC - 1, NC =< 30,
+% ERC 0.10 %
+    findall(R-C-V, (between(0,NR1,R), nth0(R,Grid,Rw),
+                    between(0,NC1,C), nth0(C,Rw,V), V \= 0), STI_All),
+% ERC 0.10 %
+    STI_All \= [],
+% ERC 0.10 %
+    findall(V, member(_-_-V, STI_All), STI_Vs),
+% ERC 0.10 %
+    msort(STI_Vs, STI_VsS),
+% ERC 0.10 %
+    sti_max_freq(STI_VsS, STI_SC),
+% ERC 0.10 %
+    findall(R, member(R-_-STI_SC, STI_All), STI_SRs),
+% ERC 0.10 %
+    findall(C, member(_-C-STI_SC, STI_All), STI_SCs),
+% ERC 0.10 %
+    min_list(STI_SRs, STI_StR1), max_list(STI_SRs, STI_StR2),
+% ERC 0.10 %
+    min_list(STI_SCs, STI_StC1), max_list(STI_SCs, STI_StC2),
+% ERC 0.10 %
+    STI_SH is STI_StR2 - STI_StR1 + 1, STI_SW is STI_StC2 - STI_StC1 + 1,
+% ERC 0.10 %
+    STI_SH =< 10, STI_SW =< 10,
+% ERC 0.10 %
+    STI_PR is STI_SH + 1, STI_PC is STI_SW + 1,
+% ERC 0.10 %
+    findall(DR-DC-IC, (
+% ERC 0.10 %
+        member(R-C-IC, STI_All), IC \= STI_SC,
+% ERC 0.10 %
+        member(SgnR-SgnC, [1-0, -1-0, 0-1, 0-( -1),
+                            1-1, 1-( -1), -1-1, -1-( -1)]),
+% ERC 0.10 %
+        DR is SgnR * STI_PR, DC is SgnC * STI_PC,
+% ERC 0.10 %
+        TR is STI_StR1 + DR, TC is STI_StC1 + DC,
+% ERC 0.10 %
+        IRR is R - TR, ICC is C - TC,
+% ERC 0.10 %
+        IRR >= 0, IRR < STI_SH, ICC >= 0, ICC < STI_SW,
+% ERC 0.10 %
+        StampR is STI_StR1 + IRR, StampC is STI_StC1 + ICC,
+% ERC 0.10 %
+        nth0(StampR, Grid, STI_SRow), nth0(StampC, STI_SRow, STI_SC)
+% ERC 0.10 %
+    ), STI_Tilings0),
+% ERC 0.10 %
+    sort(STI_Tilings0, STI_Tilings),
+% ERC 0.10 %
+    STI_Tilings \= [],
+% ERC 0.10 %
+    findall(ORow, (
+% ERC 0.10 %
+        between(0, NR1, OR),
+% ERC 0.10 %
+        findall(OV, (
+% ERC 0.10 %
+            between(0, NC1, OC),
+% ERC 0.10 %
+            nth0(OR, Grid, STI_GRwO), nth0(OC, STI_GRwO, STI_InV),
+% ERC 0.10 %
+            ( sti_tile_color(OR, OC, STI_Tilings, STI_StR1, STI_StC1,
+                             STI_SH, STI_SW, STI_PR, STI_PC, STI_SC, Grid, OV)
+% ERC 0.10 %
+            -> true
+% ERC 0.10 %
+            ; OV = STI_InV )
+% ERC 0.10 %
+        ), ORow)
+% ERC 0.10 %
+    ), Out).
+
+% ERC 0.10 %
+sti_max_freq(SortedList, Mode) :-
+% ERC 0.10 %
+    sort(SortedList, Uniq),
+% ERC 0.10 %
+    findall(Count-V, (
+% ERC 0.10 %
+        member(V, Uniq),
+% ERC 0.10 %
+        include(=(V), SortedList, Matches),
+% ERC 0.10 %
+        length(Matches, Count)
+% ERC 0.10 %
+    ), Pairs),
+% ERC 0.10 %
+    max_member(_-Mode, Pairs).
+
+% ERC 0.10 %
+sti_tile_color(R, C, Tilings, StR1, StC1, SH, SW, _PR, _PC, SC, Grid, IColor) :-
+% ERC 0.10 %
+    member(DR-DC-IColor, Tilings),
+% ERC 0.10 %
+    between(1, 30, K),
+% ERC 0.10 %
+    TR is StR1 + K * DR,
+% ERC 0.10 %
+    TC is StC1 + K * DC,
+% ERC 0.10 %
+    IRR is R - TR,
+% ERC 0.10 %
+    ICC is C - TC,
+% ERC 0.10 %
+    IRR >= 0, IRR < SH,
+% ERC 0.10 %
+    ICC >= 0, ICC < SW,
+% ERC 0.10 %
+    StampR is StR1 + IRR,
+% ERC 0.10 %
+    StampC is StC1 + ICC,
+% ERC 0.10 %
+    nth0(StampR, Grid, SRow),
+% ERC 0.10 %
+    nth0(StampC, SRow, SC),
+% ERC 0.10 %
+    !.

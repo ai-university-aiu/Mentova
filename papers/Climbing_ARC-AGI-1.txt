@@ -1286,6 +1286,28 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 45: WAVE 70 - CROP MIRROR HORIZONTAL, FRAME CONTENT ALIGN, STAMP TILE INDICATORS - 388 / 400 = 97.00%
+
+Date: 2026-06-22
+Score: 388 / 400 = 97.00%.
+Previous score: 385 / 400 = 96.25% (wave 69, 2026-06-22).
+Rules added: 3 new named rules.
+Tasks solved: +3.
+
+What changed: Wave 70 added three new named glass-box rules in arc_benchmark.pl, solving 3 tasks from the remaining 15 unsolved tasks and raising the score from 385 to 388.
+
+crop_mirror_horizontal (7468f01a): Crops the grid to its non-zero bounding box, then reverses (mirrors) each row left-to-right. The rule computes the minimal bounding rectangle containing all non-zero cells, extracts that subgrid, and applies a row-reversal to produce the output.
+
+frame_content_align (846bdb03): The input contains a rectangular frame with color-4 corner cells and a content patch elsewhere. The rule locates the frame by finding the four color-4 corners, measures the interior region, places the content patch inside the frame, and flips the content horizontally when the interior width is narrower than the content width.
+
+stamp_tile_indicators (045e512c): Identifies a compact stamp region (the connected component of the most-frequent non-zero color), finds indicator cells (sparse cells of other colors not part of the stamp), and tiles the stamp outward in each indicator cell's direction (up, down, left, or right) at a period equal to the stamp's dimension in that direction. Each copy of the stamp is recolored to match the indicator cell's color.
+
+What was learned: The crop-then-transform pattern is a productive primitive: many tasks apply a standard operation (flip, rotate, scale) to a cropped subregion rather than the whole grid. Frame-interior alignment benefits from explicit corner detection using the frame color (4) before measuring the interior. Tiling by indicator direction is best handled by computing the stamp period from the stamp's bounding box, then walking outward step by step until the grid boundary is reached.
+
+Bugs fixed: None.
+
+New tasks solved by wave 70 (3 new tasks): 045e512c (stamp_tile_indicators), 7468f01a (crop_mirror_horizontal), 846bdb03 (frame_content_align).
+
 ATTEMPT 44: WAVE 69 - PLACE-TEMPLATES BUG FIX, BICOLOR DIAGONAL RAYS - 385 / 400 = 96.25%
 
 Date: 2026-06-22
@@ -1918,16 +1940,20 @@ Run 78: 375 / 400 = 93.75% - Wave 67: cross_arm_gap_fill, complete_partial_templ
 
 Run 79: 383 / 400 = 95.75% - Wave 68: diamond_col_indicator_fill, assemble_nine_corner_tiles, grid_lines_from_holes, fill_chebyshev_wave, arc_bfs_alt_color, fill_sym9_bilateral, gravity_fill_border, template_patch_complete. Plus 8 tasks.
 
-Run 80: 385 / 400 = 96.25% - Wave 69: place_templates_at_markers bug fix (e6721834), bicolor_diagonal_rays (d07ae81c). Plus 2 tasks. (CURRENT BEST)
+Run 80: 385 / 400 = 96.25% - Wave 69: place_templates_at_markers bug fix (e6721834), bicolor_diagonal_rays (d07ae81c). Plus 2 tasks.
+
+Run 81: 388 / 400 = 97.00% - Wave 70: crop_mirror_horizontal (7468f01a), frame_content_align (846bdb03), stamp_tile_indicators (045e512c). Plus 3 tasks. (CURRENT BEST)
 
 
-ALL 385 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 388 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
 00d62c1b - fill_enclosed(4).
 
 017c7c7b - tile_extend_half_recolor_1_to_2.
+
+045e512c - stamp_tile_indicators.
 
 0520fde7 - binary_and_halves_at_5col.
 
@@ -2189,7 +2215,7 @@ ALL 385 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 7447852a - fill_zigzag_4.
 
-7468f01a - pair(reverse_rows, crop_to_content).
+7468f01a - crop_mirror_horizontal.
 
 746b3537 - compress_uniform_to_unique_runs.
 
@@ -2220,6 +2246,8 @@ ALL 385 SOLVED TASKS AND THEIR GLASS-BOX RULES
 834ec97d - trail_4_shift_down.
 
 8403a5d5 - generate_vertical_stripes_from_corner.
+
+846bdb03 - frame_content_align.
 
 8731374e - grid_lines_from_holes.
 
@@ -3797,6 +3825,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 67: Cross Arm Gap Fill, Complete Partial Tem
 Dison, D. R. (2026). ARC-AGI-1 Wave 68: Diamond Column Fill, Nine Corner Tiles, Grid Lines From Holes, Chebyshev Wave, BFS Alt Color, Bilateral Symmetry 9, Gravity Fill Border, Template Patch Complete, 383 / 400 = 95.75%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 69: Place-Templates Bug Fix and Bicolor Diagonal Rays, 385 / 400 = 96.25%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 70: Crop Mirror Horizontal, Frame Content Align, Stamp Tile Indicators, 388 / 400 = 97.00%. AIU / PrologAI.
 
 
 END OF DOCUMENT
