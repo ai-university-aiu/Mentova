@@ -29151,16 +29151,32 @@ arc_transform(place_templates_at_markers, Grid, Out) :-
         ), CCACList),
         sort(CCACList, [TAC]),
         findall(R-C, (member(R-C, CC), nth0(R,Grid,Row), nth0(C,Row,TAC)), TACells),
-        findall(R-C, (member(R-C, MH_Cells), nth0(R,Grid,Row), nth0(C,Row,TAC)), MACells),
-        arc_ptm_normalize(TACells, TNorm),
-        arc_ptm_normalize(MACells, MNorm),
-        TNorm = MNorm,
-        findall(R, member(R-_, TACells), TARs), min_list(TARs, TAMinR),
-        findall(Cx, member(_-Cx, TACells), TACx), min_list(TACx, TAMinC),
-        findall(R, member(R-_, MACells), MARs), min_list(MARs, MAMinR),
-        findall(Cx, member(_-Cx, MACells), MACx), min_list(MACx, MAMinC),
-        OffR is MAMinR - TAMinR,
-        OffC is MAMinC - TAMinC
+        % ERC 0.10 %
+        TACells \= [],
+        % ERC 0.10 %
+        findall(R-C, (member(R-C, MH_Cells), nth0(R,Grid,RowMH), nth0(C,RowMH,TAC)), MACellsTAC),
+        % ERC 0.10 %
+        findall(OR-OC, (
+            % ERC 0.10 %
+            member(TR-TC, TACells),
+            % ERC 0.10 %
+            member(MAR-MACC, MACellsTAC),
+            % ERC 0.10 %
+            OR is MAR - TR,
+            % ERC 0.10 %
+            OC is MACC - TC,
+            % ERC 0.10 %
+            forall(member(TR3-TC3, TACells), (
+                % ERC 0.10 %
+                MR3 is TR3 + OR,
+                % ERC 0.10 %
+                MC3 is TC3 + OC,
+                % ERC 0.10 %
+                member(MR3-MC3, MACellsTAC)
+            ))
+        ), AllOffsets),
+        % ERC 0.10 %
+        sort(AllOffsets, [OffR-OffC])
     ), Placements),
     % ERC 0.10 %
     Placements \= [],
@@ -29578,3 +29594,170 @@ arc_transform(template_patch_complete, Grid, Out) :-
             )
         ), AllCols, OutRow)
     ), AllRows, Out).
+
+% ERC 0.10 %
+arc_named_rule(bicolor_diagonal_rays).
+% ERC 0.10 %
+arc_transform(bicolor_diagonal_rays, Grid, Out) :-
+    % ERC 0.10 %
+    length(Grid, NR), Grid = [FR|_], length(FR, NC),
+    % ERC 0.10 %
+    NR1 is NR - 1, NC1 is NC - 1,
+    % ERC 0.10 %
+    flatten(Grid, All),
+    % ERC 0.10 %
+    sort(All, AllVals),
+    % ERC 0.10 %
+    findall(Cnt-V, (
+        % ERC 0.10 %
+        member(V, AllVals),
+        % ERC 0.10 %
+        include(=(V), All, Oc), length(Oc, Cnt)
+    ), CntVs),
+    % ERC 0.10 %
+    sort(1, @>=, CntVs, [_-BG1,_-BG2|_]),
+    % ERC 0.10 %
+    findall(SR-SC-SV, (
+        % ERC 0.10 %
+        nth0(SR, Grid, SRow), nth0(SC, SRow, SV),
+        % ERC 0.10 %
+        SV =\= BG1, SV =\= BG2
+    ), SeedCells),
+    % ERC 0.10 %
+    SeedCells \= [],
+    % ERC 0.10 %
+    findall(SR-SC-SV-HBG, (
+        % ERC 0.10 %
+        member(SR-SC-SV, SeedCells),
+        % ERC 0.10 %
+        arc_bdr_home(SR, SC, Grid, NR, NC, HBG)
+    ), SeedInfo),
+    % ERC 0.10 %
+    findall(BG-SV2, member(_-_-SV2-BG, SeedInfo), BGCPs),
+    % ERC 0.10 %
+    sort(BGCPs, BGColorSet),
+    % ERC 0.10 %
+    numlist(0, NR1, AllRows), numlist(0, NC1, AllCols),
+    % ERC 0.10 %
+    maplist([R, OutRow]>>(
+        % ERC 0.10 %
+        maplist([C, V]>>(
+            % ERC 0.10 %
+            nth0(R, Grid, GRow), nth0(C, GRow, GV),
+            % ERC 0.10 %
+            findall(done, (
+                % ERC 0.10 %
+                member(SR-SC-_-_, SeedInfo),
+                % ERC 0.10 %
+                R =\= SR, C =\= SC,
+                % ERC 0.10 %
+                DRa is abs(R - SR), DCa is abs(C - SC),
+                % ERC 0.10 %
+                DRa =:= DCa
+            ), OnRays),
+            % ERC 0.10 %
+            ( OnRays \= [] ->
+                % ERC 0.10 %
+                ( member(GV-SV3, BGColorSet) -> V = SV3 ; V = GV )
+            % ERC 0.10 %
+            ; V = GV )
+        ), AllCols, OutRow)
+    ), AllRows, Out).
+
+% ERC 0.10 %
+arc_bdr_home(SR, SC, Grid, NR, NC, HBG) :-
+    % ERC 0.10 %
+    member(DR-DC, [0-1, 0-( -1), 1-0, (-1)-0]),
+    % ERC 0.10 %
+    R2 is SR + DR, C2 is SC + DC,
+    % ERC 0.10 %
+    R2 >= 0, R2 < NR, C2 >= 0, C2 < NC,
+    % ERC 0.10 %
+    nth0(R2, Grid, Row2), nth0(C2, Row2, HBG),
+    % ERC 0.10 %
+    !.
+
+% ERC 0.10 %
+arc_named_rule(filter_cluster_extract).
+% ERC 0.10 %
+arc_transform(filter_cluster_extract, Grid, Out) :-
+    % ERC 0.10 %
+    flatten(Grid, All),
+    % ERC 0.10 %
+    arc_ptm_dom(All, BG),
+    % ERC 0.10 %
+    findall(R-C, (nth0(R, Grid, GRow), nth0(C, GRow, GV), GV =\= BG), NonBG),
+    % ERC 0.10 %
+    arc_ptm_cc(NonBG, AllCCs),
+    % ERC 0.10 %
+    findall(Len-CC, (member(CC, AllCCs), length(CC, Len)), SizePairs),
+    % ERC 0.10 %
+    sort(1, @>=, SizePairs, [_-FilterCC|RestPairs]),
+    % ERC 0.10 %
+    findall(CC, member(_-CC, RestPairs), CandCCs),
+    % ERC 0.10 %
+    findall(R, member(R-_, FilterCC), FRs),
+    % ERC 0.10 %
+    min_list(FRs, FR0), max_list(FRs, FR1),
+    % ERC 0.10 %
+    findall(C, member(_-C, FilterCC), FCs),
+    % ERC 0.10 %
+    min_list(FCs, FC0), max_list(FCs, FC1),
+    % ERC 0.10 %
+    FRH is FR1 - FR0 + 1, FCW is FC1 - FC0 + 1,
+    % ERC 0.10 %
+    TRH is (FRH + 1) // 2, TCW is (FCW + 1) // 2,
+    % ERC 0.10 %
+    TRH1 is TRH - 1, TCW1 is TCW - 1,
+    % ERC 0.10 %
+    numlist(0, TRH1, TRowsL), numlist(0, TCW1, TColsL),
+    % ERC 0.10 %
+    findall(DR-DC-TV, (
+        % ERC 0.10 %
+        member(DR, TRowsL), member(DC, TColsL),
+        % ERC 0.10 %
+        GRT is FR0 + DR * 2, GCT is FC0 + DC * 2,
+        % ERC 0.10 %
+        nth0(GRT, Grid, TGRow), nth0(GCT, TGRow, TGV),
+        % ERC 0.10 %
+        ( TGV =:= BG -> TV = 0 ; TV = 1 )
+    ), TemplateCells),
+    % ERC 0.10 %
+    member(CandCC, CandCCs),
+    % ERC 0.10 %
+    findall(R, member(R-_, CandCC), CRs),
+    % ERC 0.10 %
+    min_list(CRs, CR0), max_list(CRs, CR1),
+    % ERC 0.10 %
+    findall(C, member(_-C, CandCC), CCols),
+    % ERC 0.10 %
+    min_list(CCols, CC0), max_list(CCols, CC1),
+    % ERC 0.10 %
+    CRH is CR1 - CR0 + 1, CCW is CC1 - CC0 + 1,
+    % ERC 0.10 %
+    CCW =:= TCW,
+    % ERC 0.10 %
+    ( CRH =:= TRH ; CRH =:= TRH + 1 ),
+    % ERC 0.10 %
+    forall(member(DRf-DCf-TVf, TemplateCells), (
+        % ERC 0.10 %
+        GR2 is CR0 + DRf, GC2 is CC0 + DCf,
+        % ERC 0.10 %
+        nth0(GR2, Grid, CRow), nth0(GC2, CRow, CV),
+        % ERC 0.10 %
+        ( TVf =:= 0 -> CV =:= BG ; CV =\= BG )
+    )),
+    % ERC 0.10 %
+    CRH1 is CRH - 1, CCW1 is CCW - 1,
+    % ERC 0.10 %
+    numlist(0, CRH1, OutRows), numlist(0, CCW1, OutCols),
+    % ERC 0.10 %
+    maplist([DRo, OutRow]>>(
+        % ERC 0.10 %
+        maplist([DCo, V]>>(
+            % ERC 0.10 %
+            GR3 is CR0 + DRo, GC3 is CC0 + DCo,
+            % ERC 0.10 %
+            nth0(GR3, Grid, GRow3), nth0(GC3, GRow3, V)
+        ), OutCols, OutRow)
+    ), OutRows, Out).
