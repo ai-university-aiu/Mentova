@@ -1286,6 +1286,28 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 47: WAVE 72 - COLOR SWAP PAIRS, MARKER RING COMPLEMENT, ROTATE CLUSTER TO ISOLATED - 393 / 400 = 98.25%
+
+Date: 2026-06-23
+Score: 393 / 400 = 98.25%.
+Previous score: 390 / 400 = 97.50% (wave 71, 2026-06-22).
+Rules added: 3 new named rules.
+Tasks solved: +3.
+
+What changed: Wave 72 added three new named glass-box rules in arc_benchmark.pl, solving 3 tasks from the remaining 10 unsolved tasks and raising the score from 390 to 393.
+
+color_swap_pairs (0d3d703e): The grid consists of 3x3 cells where every row is uniform (all cells in a row have the same value). A fixed symmetric 10-way color-swap table is applied cell-by-cell: 1 swaps with 5, 2 swaps with 6, 3 swaps with 4, 8 swaps with 9; colors 0 and 7 map to themselves. Implementation: maplist(maplist(w72_swap_color), Grid, Out) with 10 deterministic w72_swap_color/2 clauses covering all values 0-9. All 4 training pairs and the test case pass.
+
+marker_ring_complement (913fb3ed): The grid has isolated single non-zero cells (colors 2, 3, or 8) on a zero background. Each such cell receives a 3x3 ring of its complement color: 2 gets a ring of color 1, 3 gets a ring of color 6, 8 gets a ring of color 4. The center cell retains its original color. Implementation uses findall to collect all non-zero cells, then foldl with w72_place_ring/5, which looks up the ring color via w72_ring_color/2 and paints the 8 surrounding cells (clamped to grid bounds). All 4 training pairs and the test case pass.
+
+rotate_cluster_to_isolated (0e206a2e): The grid contains template clusters (4-connected components of 2 or more non-zero cells) and isolated single-cell markers. Each template cluster has one dominant frame color (the most frequent color in the cluster) and several labeled cells of minority colors. The centroid of the frame-color cells defines the cluster center. The labeled non-frame cells, expressed as (row, column) offsets from the centroid, must map to isolated single-cell markers of matching color via one of the 8 rigid isometries (identity, rotate90cw, rotate90ccw, rotate180, flipH, flipV, flipD, flipA), reusing the existing tsam_iso/4 predicate. The rule finds the unique isometry and new center, then places the entire rotated cluster on an otherwise blank grid at that center. Helpers: w72_frame_color/2 (finds mode color), w72_centroid_fc/4 (centroid of frame cells), w72_find_rot/7 (isometry search with forall verification), w72_place_tpl/10 (stamps the rotated cluster). All 3 training pairs and the test case pass.
+
+What was learned: Fixed symmetric color-swap tables are a distinct and identifiable ARC pattern - when every row is uniform and values come in reciprocal pairs, a simple bijective table is the correct rule. Ring-complement patterns are detectable by finding isolated non-background cells and identifying the complement relationship. Cluster-to-isolated rotation is the most complex structural pattern yet solved: the key insight is to decompose the cluster into frame color (anchor) and labeled offsets, then treat it as a rigid-body placement problem over 8 isometries. Reusing tsam_iso/4 from earlier waves paid off directly.
+
+Bugs fixed: w72_place_ring initial version used \\+(R2 =:= R, C2 =:= C) which SWI-Prolog parsed as \\+/2 (non-existent). Fixed to \\+((R2 =:= R, C2 =:= C)) with double parentheses.
+
+New tasks solved by wave 72 (3 new tasks): 0d3d703e (color_swap_pairs), 913fb3ed (marker_ring_complement), 0e206a2e (rotate_cluster_to_isolated).
+
 ATTEMPT 46: WAVE 71 - ORNAMENT CROSS IN RECT, TEMPLATE STAMP AT MARKERS - 390 / 400 = 97.50%
 
 Date: 2026-06-22
@@ -1966,10 +1988,12 @@ Run 80: 385 / 400 = 96.25% - Wave 69: place_templates_at_markers bug fix (e67218
 
 Run 81: 388 / 400 = 97.00% - Wave 70: crop_mirror_horizontal (7468f01a), frame_content_align (846bdb03), stamp_tile_indicators (045e512c). Plus 3 tasks.
 
-Run 82: 390 / 400 = 97.50% - Wave 71: ornament_cross_in_rect (264363fd), template_stamp_at_markers (6aa20dc0). Plus 2 tasks. (CURRENT BEST)
+Run 82: 390 / 400 = 97.50% - Wave 71: ornament_cross_in_rect (264363fd), template_stamp_at_markers (6aa20dc0). Plus 2 tasks.
+
+Run 83: 393 / 400 = 98.25% - Wave 72: color_swap_pairs (0d3d703e), marker_ring_complement (913fb3ed), rotate_cluster_to_isolated (0e206a2e). Plus 3 tasks. (CURRENT BEST)
 
 
-ALL 390 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 393 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -1997,9 +2021,11 @@ ALL 390 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 0ca9ddb6 - surround_1_ortho_7_and_2_diag_4.
 
-0d3d703e - recolor_auto.
+0d3d703e - color_swap_pairs.
 
 0dfd9992 - fill_periodic_holes_2d.
+
+0e206a2e - rotate_cluster_to_isolated.
 
 06df4c85 - span_fill_separator_grid.
 
@@ -2294,6 +2320,8 @@ ALL 390 SOLVED TASKS AND THEIR GLASS-BOX RULES
 8e5a5113 - fill_two_sections_with_rotations.
 
 8eb1be9a - tile_3row_pattern.
+
+913fb3ed - marker_ring_complement.
 
 91413438 - tile_nz_blocks.
 
@@ -3857,6 +3885,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 69: Place-Templates Bug Fix and Bicolor Diag
 Dison, D. R. (2026). ARC-AGI-1 Wave 70: Crop Mirror Horizontal, Frame Content Align, Stamp Tile Indicators, 388 / 400 = 97.00%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 71: Ornament Cross in Rect, Template Stamp at Markers, 390 / 400 = 97.50%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 72: Color Swap Pairs, Marker Ring Complement, Rotate Cluster to Isolated, 393 / 400 = 98.25%. AIU / PrologAI.
 
 
 END OF DOCUMENT
