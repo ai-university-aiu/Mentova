@@ -30928,3 +30928,201 @@ tsam_iso(rotate90ccw, DR, DC, NDR, NDC) :- NDR is -DC, NDC is DR.
 tsam_iso(flipD, DR, DC, DC, DR).
 % ERC 0.10 %
 tsam_iso(flipA, DR, DC, NDR, NDC) :- NDR is -DC, NDC is -DR.
+% -----------------------------------------------------------------------
+% Wave 72: color_swap_pairs (0d3d703e), marker_ring_complement (913fb3ed),
+%          rotate_cluster_to_isolated (0e206a2e)
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(color_swap_pairs).
+% ERC 0.10 %
+arc_transform(color_swap_pairs, Grid, Out) :-
+% ERC 0.10 %
+    maplist(maplist(w72_swap_color), Grid, Out).
+% ERC 0.10 %
+w72_swap_color(0, 0).
+% ERC 0.10 %
+w72_swap_color(1, 5).
+% ERC 0.10 %
+w72_swap_color(2, 6).
+% ERC 0.10 %
+w72_swap_color(3, 4).
+% ERC 0.10 %
+w72_swap_color(4, 3).
+% ERC 0.10 %
+w72_swap_color(5, 1).
+% ERC 0.10 %
+w72_swap_color(6, 2).
+% ERC 0.10 %
+w72_swap_color(7, 7).
+% ERC 0.10 %
+w72_swap_color(8, 9).
+% ERC 0.10 %
+w72_swap_color(9, 8).
+% ERC 0.10 %
+arc_named_rule(marker_ring_complement).
+% ERC 0.10 %
+arc_transform(marker_ring_complement, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR),
+% ERC 0.10 %
+    nth0(0, Grid, GR00),
+% ERC 0.10 %
+    length(GR00, NC),
+% ERC 0.10 %
+    findall(R-C-V,
+% ERC 0.10 %
+            (nth0(R,Grid,Row), nth0(C,Row,V), V \= 0),
+% ERC 0.10 %
+            Cells),
+% ERC 0.10 %
+    foldl(w72_place_ring(NR,NC), Cells, Grid, Out).
+% ERC 0.10 %
+w72_ring_color(2, 1).
+% ERC 0.10 %
+w72_ring_color(3, 6).
+% ERC 0.10 %
+w72_ring_color(8, 4).
+% ERC 0.10 %
+w72_place_ring(NR, NC, R-C-V, Gin, Gout) :-
+% ERC 0.10 %
+    w72_ring_color(V, RC),
+% ERC 0.10 %
+    R0 is R - 1, R1 is R + 1,
+% ERC 0.10 %
+    C0 is C - 1, C1 is C + 1,
+% ERC 0.10 %
+    findall(R2-C2,
+% ERC 0.10 %
+            (between(R0,R1,R2), between(C0,C1,C2),
+% ERC 0.10 %
+             R2 >= 0, R2 < NR, C2 >= 0, C2 < NC,
+% ERC 0.10 %
+             \+((R2 =:= R, C2 =:= C))),
+% ERC 0.10 %
+            RingCells),
+% ERC 0.10 %
+    foldl([Rc-Cc, G, Go]>>(w53_set_cell(G, Rc, Cc, RC, Go)),
+% ERC 0.10 %
+          RingCells, Gin, Gout).
+% ERC 0.10 %
+arc_named_rule(rotate_cluster_to_isolated).
+% ERC 0.10 %
+arc_transform(rotate_cluster_to_isolated, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR),
+% ERC 0.10 %
+    nth0(0, Grid, GR0),
+% ERC 0.10 %
+    length(GR0, NC),
+% ERC 0.10 %
+    tsam_all_nonbg_comps(Grid, 0, AllComps),
+% ERC 0.10 %
+    include([C]>>(length(C,L), L > 1), AllComps, TplComps),
+% ERC 0.10 %
+    include([C]>>(length(C,L), L =:= 1), AllComps, SingComps),
+% ERC 0.10 %
+    maplist([S,M]>>(S = [M]), SingComps, Markers),
+% ERC 0.10 %
+    w72_zero_grid(NR, NC, Blank),
+% ERC 0.10 %
+    foldl(w72_match_place(Markers, NR, NC), TplComps, Blank, Out).
+% ERC 0.10 %
+w72_zero_row(NC, Row) :-
+% ERC 0.10 %
+    length(Row, NC),
+% ERC 0.10 %
+    maplist(=(0), Row).
+% ERC 0.10 %
+w72_zero_grid(NR, NC, Grid) :-
+% ERC 0.10 %
+    length(Grid, NR),
+% ERC 0.10 %
+    maplist(w72_zero_row(NC), Grid).
+% ERC 0.10 %
+w72_match_place(Markers, NR, NC, Comp, Gin, Gout) :-
+% ERC 0.10 %
+    w72_frame_color(Comp, FC),
+% ERC 0.10 %
+    w72_centroid_fc(Comp, FC, CR, CC),
+% ERC 0.10 %
+    findall(DR-DC-V,
+% ERC 0.10 %
+            (member(R-C-V, Comp), V \= FC,
+% ERC 0.10 %
+             DR is R - CR, DC is C - CC),
+% ERC 0.10 %
+            NonFcOffs),
+% ERC 0.10 %
+    w72_find_rot(Markers, NonFcOffs, NR, NC, NewCR, NewCC, Iso),
+% ERC 0.10 %
+    w72_place_tpl(Comp, CR, CC, NewCR, NewCC, Iso, NR, NC, Gin, Gout).
+% ERC 0.10 %
+w72_frame_color(Comp, FC) :-
+% ERC 0.10 %
+    findall(V, member(_-_-V, Comp), Vs),
+% ERC 0.10 %
+    sort(Vs, Unique),
+% ERC 0.10 %
+    maplist([V, V-N]>>(include(=(V), Vs, Sub), length(Sub, N)),
+% ERC 0.10 %
+            Unique, Pairs),
+% ERC 0.10 %
+    sort(2, @>=, Pairs, [FC-_|_]).
+% ERC 0.10 %
+w72_centroid_fc(Comp, FC, CR, CC) :-
+% ERC 0.10 %
+    findall(R, member(R-_-FC, Comp), Rs),
+% ERC 0.10 %
+    findall(C, member(_-C-FC, Comp), Cs),
+% ERC 0.10 %
+    length(Rs, N), N > 0,
+% ERC 0.10 %
+    foldl([X,S,T]>>(T is S + X), Rs, 0, SumR),
+% ERC 0.10 %
+    foldl([X,S,T]>>(T is S + X), Cs, 0, SumC),
+% ERC 0.10 %
+    AvgR is SumR / N, AvgC is SumC / N,
+% ERC 0.10 %
+    CR is round(AvgR), CC is round(AvgC).
+% ERC 0.10 %
+w72_find_rot(Markers, NonFcOffs, NR, NC, NewCR, NewCC, Iso) :-
+% ERC 0.10 %
+    member(Iso, [identity, rotate90cw, rotate90ccw, rotate180,
+% ERC 0.10 %
+                 flipH, flipV, flipD, flipA]),
+% ERC 0.10 %
+    member(DR-DC-AColor, NonFcOffs),
+% ERC 0.10 %
+    member(AR-AC-AColor, Markers),
+% ERC 0.10 %
+    tsam_iso(Iso, DR, DC, IDR, IDC),
+% ERC 0.10 %
+    NewCR is AR - IDR, NewCC is AC - IDC,
+% ERC 0.10 %
+    NewCR >= 0, NewCR < NR, NewCC >= 0, NewCC < NC,
+% ERC 0.10 %
+    forall(member(DR2-DC2-Color2, NonFcOffs),
+% ERC 0.10 %
+           (tsam_iso(Iso, DR2, DC2, IDR2, IDC2),
+% ERC 0.10 %
+            NR2 is NewCR + IDR2, NC2 is NewCC + IDC2,
+% ERC 0.10 %
+            member(NR2-NC2-Color2, Markers))), !.
+% ERC 0.10 %
+w72_place_tpl(Comp, OldCR, OldCC, NewCR, NewCC, Iso, NR, NC, Gin, Gout) :-
+% ERC 0.10 %
+    foldl([R-C-V, G, Go]>>(
+% ERC 0.10 %
+              DR is R - OldCR, DC is C - OldCC,
+% ERC 0.10 %
+              tsam_iso(Iso, DR, DC, IDR, IDC),
+% ERC 0.10 %
+              NR2 is NewCR + IDR, NC2 is NewCC + IDC,
+% ERC 0.10 %
+              (NR2 >= 0, NR2 < NR, NC2 >= 0, NC2 < NC ->
+% ERC 0.10 %
+                  w53_set_cell(G, NR2, NC2, V, Go)
+% ERC 0.10 %
+              ;   Go = G)),
+% ERC 0.10 %
+          Comp, Gin, Gout).
