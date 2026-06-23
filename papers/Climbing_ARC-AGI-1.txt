@@ -1286,6 +1286,28 @@ range pins the perpendicular axis cleanly.
 New tasks solved by wave 59 (2 new tasks): aba27056 (fill_frame_interior_radiate),
 e40b9e2f (complete_rotational_symmetry).
 
+ATTEMPT 46: WAVE 71 - ORNAMENT CROSS IN RECT, TEMPLATE STAMP AT MARKERS - 390 / 400 = 97.50%
+
+Date: 2026-06-22
+Score: 390 / 400 = 97.50%.
+Previous score: 388 / 400 = 97.00% (wave 70, 2026-06-22).
+Rules added: 2 new named rules.
+Tasks solved: +2.
+
+What changed: Wave 71 added two new named glass-box rules in arc_benchmark.pl plus a shared helper and a bug fix, solving 2 tasks from the remaining 12 unsolved tasks and raising the score from 388 to 390.
+
+arc_background/2 (new shared helper): Computes the background color of any grid as the statistical mode (most frequent value) of the flattened cell values. Uses flatten/2, msort/2, and a linear scan (arc_bg_mode/2, arc_bg_mode_a/6) without requiring imported aggregation predicates. Both wave-71 rules call this helper.
+
+ornament_cross_in_rect (264363fd): The grid contains a background of color BG, a large rectangle of fill color FC, accent cells of a third color inside the rectangle, and a cross-shaped ornament of a fourth color OC. The ornament has a center cell, horizontal and vertical arms extending to the rectangle boundary, and mark cells at symmetric offsets around the center. The rule identifies the ornament center, arm colors, and mark offsets, then for each accent cell (AR,AC) computes the rectangle bounds by scanning outward to BG, draws full-span arms, places marks at learned offsets, preserves the accent cell, and erases the original ornament. All 3 training pairs and the test case pass.
+
+template_stamp_at_markers (6aa20dc0): The grid contains a template shape with body color BodyC and two terminal colors ColA and ColB, plus A-markers (monochromatic NxN squares of color ColA). The rule finds the template cells as all non-background connected components that are not complete monochromatic NxN squares. A helper tsam_augment_tpl/3 addresses the edge case where the template's B-terminal is a 1x1 isolated cell: when TplCells yields only 1 non-body color, the rule finds the template body bounding box and pulls in any square-comp cells within that bbox, recovering the B-terminal. For each A-marker the rule tries all 8 rigid isometries to find which one places the scaled B position at a ColB cell in the original grid, then stamps a scaled NxN block for each template cell. All 3 training pairs and the test case pass.
+
+What was learned: Bounding-box augmentation is an effective technique for recovering isolated template terminals that fall within a template's spatial extent but are not 4-connected to the main component. The 8-isometry search is robust to reflection and rotation of the template pattern. Shared named helpers like arc_background/2 reduce code duplication when multiple rules share the same preprocessing step.
+
+Bugs fixed: ocir_apply_one had a branch that erased the accent center cell when the ornament center color (OC) equaled the mark color (MarkC). Analysis of all training pairs confirmed that accent cells always remain in the expected output regardless of color equality. The branch was removed.
+
+New tasks solved by wave 71 (2 new tasks): 264363fd (ornament_cross_in_rect), 6aa20dc0 (template_stamp_at_markers).
+
 ATTEMPT 45: WAVE 70 - CROP MIRROR HORIZONTAL, FRAME CONTENT ALIGN, STAMP TILE INDICATORS - 388 / 400 = 97.00%
 
 Date: 2026-06-22
@@ -1942,10 +1964,12 @@ Run 79: 383 / 400 = 95.75% - Wave 68: diamond_col_indicator_fill, assemble_nine_
 
 Run 80: 385 / 400 = 96.25% - Wave 69: place_templates_at_markers bug fix (e6721834), bicolor_diagonal_rays (d07ae81c). Plus 2 tasks.
 
-Run 81: 388 / 400 = 97.00% - Wave 70: crop_mirror_horizontal (7468f01a), frame_content_align (846bdb03), stamp_tile_indicators (045e512c). Plus 3 tasks. (CURRENT BEST)
+Run 81: 388 / 400 = 97.00% - Wave 70: crop_mirror_horizontal (7468f01a), frame_content_align (846bdb03), stamp_tile_indicators (045e512c). Plus 3 tasks.
+
+Run 82: 390 / 400 = 97.50% - Wave 71: ornament_cross_in_rect (264363fd), template_stamp_at_markers (6aa20dc0). Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 388 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 390 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -2034,6 +2058,8 @@ ALL 388 SOLVED TASKS AND THEIR GLASS-BOX RULES
 25d8a9c8 - uniform_rows_to_5.
 
 25ff71a9 - shift_v(2).
+
+264363fd - ornament_cross_in_rect.
 
 27a28665 - shape_3x3_to_1x1_number.
 
@@ -2196,6 +2222,8 @@ ALL 388 SOLVED TASKS AND THEIR GLASS-BOX RULES
 6855a6e4 - reflect_fives_through_2frame.
 
 68b16354 - vertical_flip.
+
+6aa20dc0 - template_stamp_at_markers.
 
 6d0aefbc - tile_reflect_h.
 
@@ -3827,6 +3855,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 68: Diamond Column Fill, Nine Corner Tiles, 
 Dison, D. R. (2026). ARC-AGI-1 Wave 69: Place-Templates Bug Fix and Bicolor Diagonal Rays, 385 / 400 = 96.25%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 70: Crop Mirror Horizontal, Frame Content Align, Stamp Tile Indicators, 388 / 400 = 97.00%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 71: Ornament Cross in Rect, Template Stamp at Markers, 390 / 400 = 97.50%. AIU / PrologAI.
 
 
 END OF DOCUMENT
