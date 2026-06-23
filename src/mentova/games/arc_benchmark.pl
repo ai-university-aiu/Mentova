@@ -30442,3 +30442,489 @@ sti_tile_color(R, C, Tilings, StR1, StC1, SH, SW, _PR, _PC, SC, Grid, IColor) :-
     nth0(StampC, SRow, SC),
 % ERC 0.10 %
     !.
+
+
+% -----------------------------------------------------------------------
+% Wave-71 shared helper: arc_background/2
+% Most-frequent cell value = background. Reused by both wave-71 rules.
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_background(Grid, BG) :-
+% ERC 0.10 %
+    flatten(Grid, Flat),
+% ERC 0.10 %
+    msort(Flat, Sorted),
+% ERC 0.10 %
+    arc_bg_mode(Sorted, BG).
+% ERC 0.10 %
+arc_bg_mode([H|T], M) :- arc_bg_mode_a(T, H, 1, H, 1, M).
+% ERC 0.10 %
+arc_bg_mode_a([], Cur, CC, Best, BC, M) :- (CC>BC -> M=Cur ; M=Best).
+% ERC 0.10 %
+arc_bg_mode_a([H|T], Cur, CC, Best, BC, M) :-
+% ERC 0.10 %
+    ( H=Cur ->
+% ERC 0.10 %
+        CC1 is CC+1,
+% ERC 0.10 %
+        (CC1>BC -> B1=Cur, BC1=CC1 ; B1=Best, BC1=BC),
+% ERC 0.10 %
+        arc_bg_mode_a(T, Cur, CC1, B1, BC1, M)
+% ERC 0.10 %
+    ; arc_bg_mode_a(T, H, 1, Best, BC, M) ).
+% -----------------------------------------------------------------------
+% Wave-71 rule: ornament_cross_in_rect (task 264363fd)
+% Detect a small ornament cluster outside filled rectangles. Decode its
+% arm directions and mark offsets relative to its center. For each accent
+% cell inside a filled rectangle, stamp the cross pattern and mark cells
+% within the rectangle bounds, then erase the ornament from the output.
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(ornament_cross_in_rect).
+% ERC 0.10 %
+arc_transform(ornament_cross_in_rect, Grid, Out) :-
+% ERC 0.10 %
+    arc_background(Grid, BG),
+% ERC 0.10 %
+    ocir_fill_color(Grid, BG, FC),
+% ERC 0.10 %
+    ocir_accent_cells(Grid, BG, FC, Accents),
+% ERC 0.10 %
+    Accents \= [],
+% ERC 0.10 %
+    ocir_ornament_cells(Grid, BG, FC, OrnCells),
+% ERC 0.10 %
+    OrnCells \= [],
+% ERC 0.10 %
+    ocir_center_color(Accents, OC),
+% ERC 0.10 %
+    ocir_ornament_center(OrnCells, OC, OR, OCcol),
+% ERC 0.10 %
+    ocir_arm_info(OrnCells, OR, OCcol, OC, HArm, VArm, ArmC, MarkOff, MarkC),
+% ERC 0.10 %
+    ocir_apply_all(Accents, Grid, BG, HArm, VArm, ArmC, MarkOff, MarkC, OC, G1),
+% ERC 0.10 %
+    ocir_erase_cells(OrnCells, BG, G1, Out).
+% ERC 0.10 %
+ocir_fill_color(Grid, BG, FC) :-
+% ERC 0.10 %
+    findall(V, (nth0(_,Grid,Row), nth0(_,Row,V), V\=BG), Vs),
+% ERC 0.10 %
+    msort(Vs, Sorted),
+% ERC 0.10 %
+    ocir_mode(Sorted, FC).
+% ERC 0.10 %
+ocir_mode([H|T], M) :- ocir_mode_a(T, H, 1, H, 1, M).
+% ERC 0.10 %
+ocir_mode_a([], Cur, CC, Best, BC, M) :- (CC>BC -> M=Cur ; M=Best).
+% ERC 0.10 %
+ocir_mode_a([H|T], Cur, CC, Best, BC, M) :-
+% ERC 0.10 %
+    ( H=Cur ->
+% ERC 0.10 %
+        CC1 is CC+1,
+% ERC 0.10 %
+        (CC1>BC -> B1=Cur, BC1=CC1 ; B1=Best, BC1=BC),
+% ERC 0.10 %
+        ocir_mode_a(T, Cur, CC1, B1, BC1, M)
+% ERC 0.10 %
+    ; ocir_mode_a(T, H, 1, Best, BC, M) ).
+% ERC 0.10 %
+ocir_accent_cells(Grid, BG, FC, Acc) :-
+% ERC 0.10 %
+    findall(R-C-V, (
+% ERC 0.10 %
+        nth0(R,Grid,Row), nth0(C,Row,V), V\=BG, V\=FC,
+% ERC 0.10 %
+        once((nth0(Cl,Row,FC),Cl<C)),
+% ERC 0.10 %
+        once((nth0(Cr,Row,FC),Cr>C))
+% ERC 0.10 %
+    ), Acc).
+% ERC 0.10 %
+ocir_ornament_cells(Grid, BG, FC, Orn) :-
+% ERC 0.10 %
+    findall(R-C-V, (
+% ERC 0.10 %
+        nth0(R,Grid,Row), nth0(C,Row,V), V\=BG, V\=FC,
+% ERC 0.10 %
+        \+ocir_row_bracketed(Row, C, FC)
+% ERC 0.10 %
+    ), Orn).
+% ERC 0.10 %
+ocir_row_bracketed(Row, C, FC) :-
+% ERC 0.10 %
+    once((nth0(Cl,Row,FC),Cl<C)),
+% ERC 0.10 %
+    once((nth0(Cr,Row,FC),Cr>C)).
+% ERC 0.10 %
+ocir_center_color([_-_-V|_], V).
+% ERC 0.10 %
+ocir_ornament_center(OrnCells, OC, OR, OCcol) :-
+% ERC 0.10 %
+    findall(N-R-C, (
+% ERC 0.10 %
+        member(R-C-OC, OrnCells),
+% ERC 0.10 %
+        findall(x, (member(R2-C2-_, OrnCells),
+% ERC 0.10 %
+                    abs(R2-R)+abs(C2-C) =:= 1), Ns),
+% ERC 0.10 %
+        length(Ns, N)
+% ERC 0.10 %
+    ), Scored),
+% ERC 0.10 %
+    max_member(_-OR-OCcol, Scored).
+% ERC 0.10 %
+ocir_arm_info(OrnCells, OR, OCcol, OC, HArm, VArm, ArmC, MarkOff, MarkC) :-
+% ERC 0.10 %
+    findall(DR-DC-V, (
+% ERC 0.10 %
+        member(R-C-V, OrnCells),
+% ERC 0.10 %
+        DR is R-OR, DC is C-OCcol, (DR\=0 ; DC\=0)
+% ERC 0.10 %
+    ), RelCells),
+% ERC 0.10 %
+    ( member(0-DC2-ArmCH, RelCells), DC2>=2 ->
+% ERC 0.10 %
+        HArm=true, ArmC=ArmCH
+% ERC 0.10 %
+    ; member(0-DC2-ArmCH, RelCells), DC2=< -2 ->
+% ERC 0.10 %
+        HArm=true, ArmC=ArmCH
+% ERC 0.10 %
+    ; HArm=false ),
+% ERC 0.10 %
+    ( member(DR2-0-ArmCV, RelCells), DR2>=2 ->
+% ERC 0.10 %
+        VArm=true, (var(ArmC) -> ArmC=ArmCV ; true)
+% ERC 0.10 %
+    ; member(DR2-0-ArmCV, RelCells), DR2=< -2 ->
+% ERC 0.10 %
+        VArm=true, (var(ArmC) -> ArmC=ArmCV ; true)
+% ERC 0.10 %
+    ; VArm=false ),
+% ERC 0.10 %
+    ( var(ArmC) -> ArmC=0 ; true ),
+% ERC 0.10 %
+    findall(DR-DC, (member(DR-DC-V2,RelCells), V2\=ArmC), MarkOff0),
+% ERC 0.10 %
+    sort(MarkOff0, MarkOff),
+% ERC 0.10 %
+    ( MarkOff\=[], member(MDR-MDC, MarkOff), member(MDR-MDC-MarkC, RelCells) -> true
+% ERC 0.10 %
+    ; MarkC = -1 ).
+% ERC 0.10 %
+ocir_apply_all([], G, _, _, _, _, _, _, _, G).
+% ERC 0.10 %
+ocir_apply_all([R-C-_|Rest], G0, BG, HA, VA, AC, MO, MC, OC, G) :-
+% ERC 0.10 %
+    ocir_rect_bounds(G0, BG, R, C, R1, R2, C1, C2),
+% ERC 0.10 %
+    ocir_apply_one(R, C, R1, R2, C1, C2, BG, HA, VA, AC, MO, MC, OC, G0, G1),
+% ERC 0.10 %
+    ocir_apply_all(Rest, G1, BG, HA, VA, AC, MO, MC, OC, G).
+% ERC 0.10 %
+ocir_rect_bounds(Grid, BG, R, C, R1, R2, C1, C2) :-
+% ERC 0.10 %
+    ocir_scan_up(Grid, BG, R, C, R1),
+% ERC 0.10 %
+    ocir_scan_dn(Grid, BG, R, C, R2),
+% ERC 0.10 %
+    nth0(R, Grid, Row),
+% ERC 0.10 %
+    length(Row, NC),
+% ERC 0.10 %
+    ocir_scan_lt(Row, BG, C, C1),
+% ERC 0.10 %
+    ocir_scan_rt(Row, BG, NC, C, C2).
+% ERC 0.10 %
+ocir_scan_up(Grid, BG, R, C, R1) :-
+% ERC 0.10 %
+    R0 is R-1,
+% ERC 0.10 %
+    ( R0<0 -> R1=R
+% ERC 0.10 %
+    ; nth0(R0,Grid,Row0), nth0(C,Row0,V0),
+% ERC 0.10 %
+      (V0=BG -> R1=R ; ocir_scan_up(Grid, BG, R0, C, R1)) ).
+% ERC 0.10 %
+ocir_scan_dn(Grid, BG, R, C, R2) :-
+% ERC 0.10 %
+    length(Grid, NR), NR1 is NR-1, R0 is R+1,
+% ERC 0.10 %
+    ( R0>NR1 -> R2=R
+% ERC 0.10 %
+    ; nth0(R0,Grid,Row0), nth0(C,Row0,V0),
+% ERC 0.10 %
+      (V0=BG -> R2=R ; ocir_scan_dn(Grid, BG, R0, C, R2)) ).
+% ERC 0.10 %
+ocir_scan_lt(Row, BG, C, C1) :-
+% ERC 0.10 %
+    C0 is C-1,
+% ERC 0.10 %
+    ( C0<0 -> C1=C
+% ERC 0.10 %
+    ; nth0(C0,Row,V0),
+% ERC 0.10 %
+      (V0=BG -> C1=C ; ocir_scan_lt(Row, BG, C0, C1)) ).
+% ERC 0.10 %
+ocir_scan_rt(Row, BG, NC, C, C2) :-
+% ERC 0.10 %
+    NC1 is NC-1, C0 is C+1,
+% ERC 0.10 %
+    ( C0>NC1 -> C2=C
+% ERC 0.10 %
+    ; nth0(C0,Row,V0),
+% ERC 0.10 %
+      (V0=BG -> C2=C ; ocir_scan_rt(Row, BG, NC, C0, C2)) ).
+% ERC 0.10 %
+ocir_apply_one(R, C, R1, R2, C1, C2, BG, HA, VA, AC, MO, MC, _OC, Gin, Gout) :-
+% ERC 0.10 %
+    ( HA=true ->
+% ERC 0.10 %
+        findall(Col,(between(C1,C2,Col),Col\=C),HCols),
+% ERC 0.10 %
+        foldl([Col,G,Go]>>(w53_set_cell(G,R,Col,AC,Go)), HCols, Gin, Ga)
+% ERC 0.10 %
+    ; Ga=Gin ),
+% ERC 0.10 %
+    ( VA=true ->
+% ERC 0.10 %
+        findall(RR,(between(R1,R2,RR),RR\=R),VRows),
+% ERC 0.10 %
+        foldl([RR,G,Go]>>(w53_set_cell(G,RR,C,AC,Go)), VRows, Ga, Gb)
+% ERC 0.10 %
+    ; Gb=Ga ),
+% ERC 0.10 %
+    foldl([DR-DC,G,Go]>>(
+% ERC 0.10 %
+        MR is R+DR, MCo is C+DC,
+% ERC 0.10 %
+        (MR>=R1,MR=<R2,MCo>=C1,MCo=<C2 ->
+% ERC 0.10 %
+            w53_set_cell(G,MR,MCo,MC,Go) ; Go=G)
+% ERC 0.10 %
+    ), MO, Gb, Gc),
+% ERC 0.10 %
+    Gout=Gc.
+% ERC 0.10 %
+ocir_erase_cells([], _, G, G).
+% ERC 0.10 %
+ocir_erase_cells([R-C-_|T], BG, G0, G) :-
+% ERC 0.10 %
+    w53_set_cell(G0, R, C, BG, G1),
+% ERC 0.10 %
+    ocir_erase_cells(T, BG, G1, G).
+
+% -----------------------------------------------------------------------
+% Wave-71 rule: template_stamp_at_markers (task 6aa20dc0)
+% Separate non-BG cells into monochromatic complete-NxN-square "marker"
+% components and everything else ("template" cells). Find the body color
+% and two terminal colors from the template. For each terminal-A-colored
+% square marker of size NxN, search for the matching terminal-B-colored
+% NxN square marker at the position implied by one of the 8 isometries
+% applied to the template A-to-B offset scaled by N. Stamp the full
+% scaled template there.
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(template_stamp_at_markers).
+% ERC 0.10 %
+arc_transform(template_stamp_at_markers, Grid, Out) :-
+% ERC 0.10 %
+    arc_background(Grid, BG),
+% ERC 0.10 %
+    tsam_all_nonbg_comps(Grid, BG, Comps),
+% ERC 0.10 %
+    include(tsam_is_square_comp, Comps, SqComps),
+% ERC 0.10 %
+    exclude(tsam_is_square_comp, Comps, NonSqComps),
+% ERC 0.10 %
+    NonSqComps \= [],
+% ERC 0.10 %
+    findall(R-C-V, (member(Tc,NonSqComps), member(R-C-V,Tc)), TplCells0),
+% ERC 0.10 %
+    tsam_augment_tpl(TplCells0, SqComps, TplCells),
+% ERC 0.10 %
+    findall(TV, member(_-_-TV, TplCells), TVs),
+% ERC 0.10 %
+    msort(TVs, TVMS), ocir_mode(TVMS, BodyC),
+% ERC 0.10 %
+    findall(V2,(member(_-_-V2,TplCells),V2\=BodyC), Terms),
+% ERC 0.10 %
+    sort(Terms, [ColA,ColB|_]),
+% ERC 0.10 %
+    member(AR-AC-ColA, TplCells), !,
+% ERC 0.10 %
+    member(BRt-BCt-ColB, TplCells), !,
+% ERC 0.10 %
+    DAB is BRt-AR, DABc is BCt-AC,
+% ERC 0.10 %
+    include([Comp]>>(Comp=[_-_-ColA|_]), SqComps, AMarkers),
+% ERC 0.10 %
+    length(Grid, NR), nth0(0, Grid, GR00), length(GR00, NC),
+% ERC 0.10 %
+    foldl(tsam_stamp_marker(Grid,TplCells,ColA,ColB,AR,AC,DAB,DABc,NR,NC),
+% ERC 0.10 %
+          AMarkers, Grid, Out).
+% ERC 0.10 %
+tsam_is_square_comp(Comp) :-
+% ERC 0.10 %
+    findall(V, member(_-_-V,Comp), Vs),
+% ERC 0.10 %
+    sort(Vs, [_]),
+% ERC 0.10 %
+    findall(R, member(R-_-_,Comp), Rs),
+% ERC 0.10 %
+    arc_min_list(Rs, MinR), arc_max_list(Rs, MaxR),
+% ERC 0.10 %
+    findall(C, member(_-C-_,Comp), Cs),
+% ERC 0.10 %
+    arc_min_list(Cs, MinC), arc_max_list(Cs, MaxC),
+% ERC 0.10 %
+    N is MaxR-MinR+1, M is MaxC-MinC+1,
+% ERC 0.10 %
+    N =:= M, length(Comp, Sz), Sz =:= N*M.
+% ERC 0.10 %
+tsam_augment_tpl(TplCells0, SqComps, TplCells) :-
+% ERC 0.10 %
+    findall(TV0, member(_-_-TV0, TplCells0), TVs0),
+% ERC 0.10 %
+    msort(TVs0, TVM0), ocir_mode(TVM0, BC0),
+% ERC 0.10 %
+    findall(V0,(member(_-_-V0,TplCells0),V0\=BC0), T0),
+% ERC 0.10 %
+    sort(T0, S0),
+% ERC 0.10 %
+    ( S0 = [_,_|_] ->
+% ERC 0.10 %
+        TplCells = TplCells0
+% ERC 0.10 %
+    ; findall(R0, member(R0-_-_, TplCells0), Rs0),
+% ERC 0.10 %
+      arc_min_list(Rs0, MinR), arc_max_list(Rs0, MaxR),
+% ERC 0.10 %
+      findall(C0, member(_-C0-_, TplCells0), Cs0),
+% ERC 0.10 %
+      arc_min_list(Cs0, MinC), arc_max_list(Cs0, MaxC),
+% ERC 0.10 %
+      findall(R2-C2-V2,(member(SqC,SqComps),member(R2-C2-V2,SqC),
+% ERC 0.10 %
+                        R2>=MinR,R2=<MaxR,C2>=MinC,C2=<MaxC), Extra),
+% ERC 0.10 %
+      append(TplCells0, Extra, TplCells) ).
+% ERC 0.10 %
+tsam_all_nonbg_comps(Grid, BG, Comps) :-
+% ERC 0.10 %
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,V), V\=BG), Seeds),
+% ERC 0.10 %
+    tsam_comps_seeds(Seeds, Grid, BG, [], Comps).
+% ERC 0.10 %
+tsam_comps_seeds([], _, _, _, []).
+% ERC 0.10 %
+tsam_comps_seeds([R-C|Rest], Grid, BG, Seen, Comps) :-
+% ERC 0.10 %
+    ( memberchk(R-C, Seen) ->
+% ERC 0.10 %
+        tsam_comps_seeds(Rest, Grid, BG, Seen, Comps)
+% ERC 0.10 %
+    ; tsam_flood_nonbg(Grid, R, C, BG, [], Vis),
+% ERC 0.10 %
+      findall(R2-C2-V2,
+% ERC 0.10 %
+              (member(R2-C2,Vis),nth0(R2,Grid,Ro2),nth0(C2,Ro2,V2)),
+% ERC 0.10 %
+              Comp),
+% ERC 0.10 %
+      append(Seen, Vis, Seen2),
+% ERC 0.10 %
+      tsam_comps_seeds(Rest, Grid, BG, Seen2, RestC),
+% ERC 0.10 %
+      Comps=[Comp|RestC] ).
+% ERC 0.10 %
+tsam_flood_nonbg(_, R, C, _, Vis, Vis) :- memberchk(R-C, Vis), !.
+% ERC 0.10 %
+tsam_flood_nonbg(Grid, R, C, BG, VisIn, VisOut) :-
+% ERC 0.10 %
+    nth0(R,Grid,Row0), nth0(C,Row0,V0), V0\=BG, !,
+% ERC 0.10 %
+    Vis1=[R-C|VisIn],
+% ERC 0.10 %
+    length(Grid,NR0), NR1 is NR0-1,
+% ERC 0.10 %
+    nth0(0,Grid,GR0), length(GR0,NC0), NC1 is NC0-1,
+% ERC 0.10 %
+    R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+% ERC 0.10 %
+    (R1>=0 -> tsam_flood_nonbg(Grid,R1,C,BG,Vis1,Vis2) ; Vis2=Vis1),
+% ERC 0.10 %
+    (R2=<NR1 -> tsam_flood_nonbg(Grid,R2,C,BG,Vis2,Vis3) ; Vis3=Vis2),
+% ERC 0.10 %
+    (C1>=0 -> tsam_flood_nonbg(Grid,R,C1,BG,Vis3,Vis4) ; Vis4=Vis3),
+% ERC 0.10 %
+    (C2=<NC1 -> tsam_flood_nonbg(Grid,R,C2,BG,Vis4,VisOut) ; VisOut=Vis4).
+% ERC 0.10 %
+tsam_flood_nonbg(_, _, _, _, Vis, Vis).
+% ERC 0.10 %
+tsam_stamp_marker(OrigGrid, TplCells, ColA, ColB, AR, AC, DAB, DABc, NR, NC,
+% ERC 0.10 %
+                  AComp, Gin, Gout) :-
+% ERC 0.10 %
+    findall(R, member(R-_-ColA,AComp), Rs),
+% ERC 0.10 %
+    arc_min_list(Rs, ATR), arc_max_list(Rs, ABR),
+% ERC 0.10 %
+    findall(C, member(_-C-ColA,AComp), Cs), arc_min_list(Cs, ATC),
+% ERC 0.10 %
+    N is ABR-ATR+1,
+% ERC 0.10 %
+    ( tsam_find_iso(OrigGrid,ColB,ATR,ATC,N,DAB,DABc,NR,NC,Iso) ->
+% ERC 0.10 %
+        foldl(tsam_stamp_cell(AR,AC,ATR,ATC,N,Iso), TplCells, Gin, Gout)
+% ERC 0.10 %
+    ; Gout=Gin ).
+% ERC 0.10 %
+tsam_find_iso(OG, ColB, ATR, ATC, N, DAB, DABc, NR, NC, Iso) :-
+% ERC 0.10 %
+    member(Iso,[identity,rotate180,flipH,flipV,rotate90cw,rotate90ccw,flipD,flipA]),
+% ERC 0.10 %
+    tsam_iso(Iso, DAB, DABc, IDR, IDC),
+% ERC 0.10 %
+    BRe is ATR+N*IDR, BCe is ATC+N*IDC,
+% ERC 0.10 %
+    BRe>=0, BRe<NR, BCe>=0, BCe<NC,
+% ERC 0.10 %
+    nth0(BRe,OG,BRow), nth0(BCe,BRow,ColB), !.
+% ERC 0.10 %
+tsam_stamp_cell(AR, AC, ATR, ATC, N, Iso, R-C-V, Gin, Gout) :-
+% ERC 0.10 %
+    DR is R-AR, DC is C-AC,
+% ERC 0.10 %
+    tsam_iso(Iso, DR, DC, IDR, IDC),
+% ERC 0.10 %
+    SR is ATR+N*IDR, SC is ATC+N*IDC,
+% ERC 0.10 %
+    N1 is N-1,
+% ERC 0.10 %
+    findall(I-J,(between(0,N1,I),between(0,N1,J)),IJs),
+% ERC 0.10 %
+    foldl([I-J,G,Go]>>(R2 is SR+I, C2 is SC+J, w53_set_cell(G,R2,C2,V,Go)),
+% ERC 0.10 %
+          IJs, Gin, Gout).
+% ERC 0.10 %
+tsam_iso(identity, DR, DC, DR, DC).
+% ERC 0.10 %
+tsam_iso(rotate180, DR, DC, NDR, NDC) :- NDR is -DR, NDC is -DC.
+% ERC 0.10 %
+tsam_iso(flipH, DR, DC, DR, NDC) :- NDC is -DC.
+% ERC 0.10 %
+tsam_iso(flipV, DR, DC, NDR, DC) :- NDR is -DR.
+% ERC 0.10 %
+tsam_iso(rotate90cw, DR, DC, NDR, NDC) :- NDR is DC, NDC is -DR.
+% ERC 0.10 %
+tsam_iso(rotate90ccw, DR, DC, NDR, NDC) :- NDR is -DC, NDC is DR.
+% ERC 0.10 %
+tsam_iso(flipD, DR, DC, DC, DR).
+% ERC 0.10 %
+tsam_iso(flipA, DR, DC, NDR, NDC) :- NDR is -DC, NDC is -DR.
