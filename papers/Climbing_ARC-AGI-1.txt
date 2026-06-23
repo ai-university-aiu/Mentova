@@ -1308,6 +1308,26 @@ Bugs fixed: w72_place_ring initial version used \\+(R2 =:= R, C2 =:= C) which SW
 
 New tasks solved by wave 72 (3 new tasks): 0d3d703e (color_swap_pairs), 913fb3ed (marker_ring_complement), 0e206a2e (rotate_cluster_to_isolated).
 
+ATTEMPT 48: WAVE 73 - CROSS ARM 180, SCALE 2X TEMPLATE MATCH - 394 / 400 = 98.50%
+
+Date: 2026-06-23
+Score: 394 / 400 = 98.50%.
+Previous score: 392 / 400 = 98.00% (wave 72 actual; documentation previously showed 393 due to ce602527 being counted before it was committed).
+Rules added: 2 new named rules.
+Tasks solved: +2.
+
+What changed: Wave 73 added two new named glass-box rules in arc_benchmark.pl. The pre-wave confirmed benchmark score was 392/400 (8 tasks remaining). Wave 73 solves 2 of those 8, reaching 394/400 with 6 tasks remaining.
+
+cross_arm_180 (1b60fb0c): The input is a 10x10 grid containing a cross-shaped figure made of color-1 cells. One arm of the cross is asymmetric relative to the others. The rule finds the 180-degree rotation center that maximizes the number of symmetric 1-cell pairs (by searching all integer and half-integer centers encoded as integer R2,C2 where the true center = R2/2, C2/2). Asymmetric 1-cells are those whose 180-degree partner position is not occupied by a 1-cell. The output places color-2 cells at the 180-rotation of each asymmetric cell (wherever the position is currently 0). Implementation uses w73_best_center/5 (brute-force over 19x19 center candidates with include/3 scoring) and foldl with w53_set_cell/5. Training pairs: T0 center (4.5,4.5), T1 and T2 center (5.0,5.0), all 3 training pairs pass. Task solved: 1b60fb0c.
+
+scale2x_template_match (ce602527): The input contains exactly 3 non-background shapes. The largest shape (by cell count) is a 2x-upscaled version of the correct answer, possibly cropped at the grid boundary. The rule identifies the background (most frequent value), finds the largest non-bg shape, normalizes it to a 0/1 pattern, then for each smaller shape normalizes it and scales it 2x in both dimensions. If the 2x-scaled small pattern contains the large pattern as a submatrix (at any offset), that small shape's bounding box from the input is the output. Implementation uses w73_norm_bb/4, w73_scale2x/2, w73_scale_row/2, w73_is_submatrix/2, and w73_extract_bb/3. All 4 training pairs pass. Task solved: ce602527.
+
+What was learned: 180-degree rotational symmetry analysis requires searching over half-integer centers (encoded as integer pairs), not just integer centers, because cross-shaped figures can have even-width spines. The brute-force center search over 19x19 candidates for a 10x10 grid is fast (milliseconds). For scale-matching, the key insight is that the large shape may be a CROPPED window of the 2x-scaled small shape (the shape runs off the grid edge), so the correct test is submatrix containment (any offset), not same-size equality.
+
+Bugs fixed: None.
+
+New tasks solved by wave 73 (2 new tasks): 1b60fb0c (cross_arm_180), ce602527 (scale2x_template_match).
+
 ATTEMPT 46: WAVE 71 - ORNAMENT CROSS IN RECT, TEMPLATE STAMP AT MARKERS - 390 / 400 = 97.50%
 
 Date: 2026-06-22
@@ -1990,10 +2010,12 @@ Run 81: 388 / 400 = 97.00% - Wave 70: crop_mirror_horizontal (7468f01a), frame_c
 
 Run 82: 390 / 400 = 97.50% - Wave 71: ornament_cross_in_rect (264363fd), template_stamp_at_markers (6aa20dc0). Plus 2 tasks.
 
-Run 83: 393 / 400 = 98.25% - Wave 72: color_swap_pairs (0d3d703e), marker_ring_complement (913fb3ed), rotate_cluster_to_isolated (0e206a2e). Plus 3 tasks. (CURRENT BEST)
+Run 83: 393 / 400 = 98.25% - Wave 72: color_swap_pairs (0d3d703e), marker_ring_complement (913fb3ed), rotate_cluster_to_isolated (0e206a2e). Plus 3 tasks. (Documented; actual benchmark score was 392 before wave 73 committed ce602527.)
+
+Run 84: 394 / 400 = 98.50% - Wave 73: cross_arm_180 (1b60fb0c), scale2x_template_match (ce602527). Plus 2 tasks. (CURRENT BEST)
 
 
-ALL 393 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 394 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -2040,6 +2062,8 @@ ALL 393 SOLVED TASKS AND THEIR GLASS-BOX RULES
 1a07d186 - gravity_to_rail.
 
 1b2d62fb - left_right_at_1col_sep_nor_to_8.
+
+1b60fb0c - cross_arm_180.
 
 1bfc4729 - halve_grid_by_two_cells.
 
@@ -2448,6 +2472,8 @@ cf98881b - overlay_sep2_three_sections.
 ce22a75a - expand_5_to_3x3_ones.
 
 ce4f8723 - two_halves_at_4sep_or_to_3.
+
+ce602527 - scale2x_template_match.
 
 d037b0a7 - fill_column_downward.
 
@@ -3887,6 +3913,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 70: Crop Mirror Horizontal, Frame Content Al
 Dison, D. R. (2026). ARC-AGI-1 Wave 71: Ornament Cross in Rect, Template Stamp at Markers, 390 / 400 = 97.50%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 72: Color Swap Pairs, Marker Ring Complement, Rotate Cluster to Isolated, 393 / 400 = 98.25%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 73: Cross Arm 180, Scale 2X Template Match, 394 / 400 = 98.50%. AIU / PrologAI.
 
 
 END OF DOCUMENT

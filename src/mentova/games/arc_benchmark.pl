@@ -31126,3 +31126,182 @@ w72_place_tpl(Comp, OldCR, OldCC, NewCR, NewCC, Iso, NR, NC, Gin, Gout) :-
               ;   Go = G)),
 % ERC 0.10 %
           Comp, Gin, Gout).
+% -----------------------------------------------------------------------
+% Wave 73: cross_arm_180 (1b60fb0c), scale2x_template_match (ce602527)
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(cross_arm_180).
+% ERC 0.10 %
+arc_transform(cross_arm_180, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR), Grid = [Row0|_], length(Row0, NC),
+% ERC 0.10 %
+    findall(PR-PC, (nth0(PR, Grid, Row), nth0(PC, Row, 1)), Cells1),
+% ERC 0.10 %
+    Cells1 \= [],
+% ERC 0.10 %
+    w73_best_center(Cells1, NR, NC, R2, C2),
+% ERC 0.10 %
+    include([PR-PC]>>(MR is R2-PR, MC is C2-PC,
+% ERC 0.10 %
+                      MR >= 0, MR < NR, MC >= 0, MC < NC,
+% ERC 0.10 %
+                      \+ member(MR-MC, Cells1)),
+% ERC 0.10 %
+             Cells1, Asym),
+% ERC 0.10 %
+    Asym \= [],
+% ERC 0.10 %
+    findall(MR-MC, (
+% ERC 0.10 %
+        member(PR-PC, Asym),
+% ERC 0.10 %
+        MR is R2-PR, MC is C2-PC,
+% ERC 0.10 %
+        MR >= 0, MR < NR, MC >= 0, MC < NC,
+% ERC 0.10 %
+        nth0(MR, Grid, TRow), nth0(MC, TRow, 0)
+% ERC 0.10 %
+    ), Twos),
+% ERC 0.10 %
+    foldl([MR-MC, G, Go]>>(w53_set_cell(G, MR, MC, 2, Go)), Twos, Grid, Out).
+% ERC 0.10 %
+w73_best_center(Cells1, NR, NC, BestR2, BestC2) :-
+% ERC 0.10 %
+    MaxR2 is 2*NR - 1, MaxC2 is 2*NC - 1,
+% ERC 0.10 %
+    findall(N-R2-C2, (
+% ERC 0.10 %
+        between(1, MaxR2, R2), between(1, MaxC2, C2),
+% ERC 0.10 %
+        include([PR-PC]>>(MR is R2-PR, MC is C2-PC,
+% ERC 0.10 %
+                          MR >= 0, MR < NR, MC >= 0, MC < NC,
+% ERC 0.10 %
+                          member(MR-MC, Cells1)),
+% ERC 0.10 %
+                 Cells1, Sym),
+% ERC 0.10 %
+        length(Sym, N)
+% ERC 0.10 %
+    ), Scored),
+% ERC 0.10 %
+    sort(1, @>=, Scored, [_-BestR2-BestC2|_]).
+% ERC 0.10 %
+arc_named_rule(scale2x_template_match).
+% ERC 0.10 %
+arc_transform(scale2x_template_match, Grid, Out) :-
+% ERC 0.10 %
+    append(Grid, Vals), msort(Vals, SortedV), sort(SortedV, UniqV),
+% ERC 0.10 %
+    findall(N-V, (member(V, UniqV),
+% ERC 0.10 %
+                  include(=(V), SortedV, Same), length(Same, N)), CNs),
+% ERC 0.10 %
+    sort(1, @>=, CNs, [_-BG|_]),
+% ERC 0.10 %
+    findall(N-V, (
+% ERC 0.10 %
+        member(V, UniqV), V \= BG,
+% ERC 0.10 %
+        findall(PR-PC, (nth0(PR, Grid, Row), nth0(PC, Row, V)), Cells),
+% ERC 0.10 %
+        length(Cells, N)
+% ERC 0.10 %
+    ), SzVs),
+% ERC 0.10 %
+    sort(1, @>=, SzVs, [_-LV|RestSz]),
+% ERC 0.10 %
+    findall(PR-PC, (nth0(PR, Grid, Row), nth0(PC, Row, LV)), LCells),
+% ERC 0.10 %
+    w73_norm_bb(Grid, LCells, LV, LNorm),
+% ERC 0.10 %
+    member(_-SV, RestSz),
+% ERC 0.10 %
+    findall(PR-PC, (nth0(PR, Grid, Row), nth0(PC, Row, SV)), SCells),
+% ERC 0.10 %
+    w73_norm_bb(Grid, SCells, SV, SNorm),
+% ERC 0.10 %
+    w73_scale2x(SNorm, Scaled),
+% ERC 0.10 %
+    w73_is_submatrix(Scaled, LNorm), !,
+% ERC 0.10 %
+    w73_extract_bb(Grid, SCells, Out).
+% ERC 0.10 %
+w73_norm_bb(Grid, Cells, FG, NGrid) :-
+% ERC 0.10 %
+    findall(R, member(R-_, Cells), Rs),
+% ERC 0.10 %
+    findall(C, member(_-C, Cells), Cs),
+% ERC 0.10 %
+    min_list(Rs, R0), max_list(Rs, R1),
+% ERC 0.10 %
+    min_list(Cs, C0), max_list(Cs, C1),
+% ERC 0.10 %
+    findall(Row, (
+% ERC 0.10 %
+        between(R0, R1, R),
+% ERC 0.10 %
+        nth0(R, Grid, GRow),
+% ERC 0.10 %
+        findall(Bit, (between(C0, C1, C), nth0(C, GRow, V),
+% ERC 0.10 %
+                      (V = FG -> Bit = 1 ; Bit = 0)), Row)
+% ERC 0.10 %
+    ), NGrid).
+% ERC 0.10 %
+w73_extract_bb(Grid, Cells, BBGrid) :-
+% ERC 0.10 %
+    findall(R, member(R-_, Cells), Rs),
+% ERC 0.10 %
+    findall(C, member(_-C, Cells), Cs),
+% ERC 0.10 %
+    min_list(Rs, R0), max_list(Rs, R1),
+% ERC 0.10 %
+    min_list(Cs, C0), max_list(Cs, C1),
+% ERC 0.10 %
+    findall(Row, (
+% ERC 0.10 %
+        between(R0, R1, R),
+% ERC 0.10 %
+        nth0(R, Grid, GRow),
+% ERC 0.10 %
+        findall(V, (between(C0, C1, C), nth0(C, GRow, V)), Row)
+% ERC 0.10 %
+    ), BBGrid).
+% ERC 0.10 %
+w73_scale2x([], []).
+% ERC 0.10 %
+w73_scale2x([Row|Rest], [Row2x, Row2x|Rest2]) :-
+% ERC 0.10 %
+    w73_scale_row(Row, Row2x),
+% ERC 0.10 %
+    w73_scale2x(Rest, Rest2).
+% ERC 0.10 %
+w73_scale_row([], []).
+% ERC 0.10 %
+w73_scale_row([V|Rest], [V, V|Rest2]) :-
+% ERC 0.10 %
+    w73_scale_row(Rest, Rest2).
+% ERC 0.10 %
+w73_is_submatrix(Large, Small) :-
+% ERC 0.10 %
+    length(Large, LR), length(Small, SR), SR =< LR,
+% ERC 0.10 %
+    Large = [LRow0|_], length(LRow0, LC),
+% ERC 0.10 %
+    Small = [SRow0|_], length(SRow0, SC), SC =< LC,
+% ERC 0.10 %
+    MaxDR is LR - SR, MaxDC is LC - SC,
+% ERC 0.10 %
+    between(0, MaxDR, DR), between(0, MaxDC, DC),
+% ERC 0.10 %
+    forall(
+% ERC 0.10 %
+        (nth0(SI, Small, SRow2), nth0(SJ, SRow2, SV)),
+% ERC 0.10 %
+        (LI is DR + SI, LJ is DC + SJ,
+% ERC 0.10 %
+         nth0(LI, Large, LRow2), nth0(LJ, LRow2, SV))
+% ERC 0.10 %
+    ), !.
