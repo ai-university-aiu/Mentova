@@ -1346,6 +1346,94 @@ Bugs fixed: None.
 
 New tasks solved by wave 74 (1 new task): e5062a87 (stamp_same_orient_into_voids).
 
+ATTEMPT 50: WAVES 75-79 - FINAL FIVE RULES - 400 / 400 = 100.00%
+
+Date: 2026-06-24
+Score: 400 / 400 = 100.00%.
+Previous score: 395 / 400 = 98.75% (wave 74, 2026-06-24).
+Rules added: 5 new named rules.
+Tasks solved: +5.
+
+What changed: Waves 75-79 added five new named glass-box rules in arc_benchmark.pl, solving
+the final five remaining ARC-AGI-1 public training tasks and raising the score from 395 to
+400. This is the first confirmed 400/400 = 100% score achieved by pure symbolic induction
+with named glass-box rules and no pretraining on the ARC-AGI corpus.
+
+assemble_3pieces_at_5_joints (234bbc79): Three non-zero connected components, sorted
+left-to-right by minimum column, are assembled into a horizontal chain by aligning their
+5-valued joint cells. Piece A's rightmost 5-joint determines the hinge; piece B's leftmost
+5-joint is shifted right by 1 to attach. The same logic then chains piece C to piece B.
+BFS connected-component finder (w75_comps), extremal joint locators (w75_max_col,
+w75_min_col), and foldl with w53_set_cell stamp the result onto a blank canvas. All 4
+training pairs pass.
+
+stamp_5clusters_into_2region_holes (6a1e5592): Clusters of 5-valued cells are stamped into a
+grid containing 2-region rows with hole groups. For each cluster the algorithm tries all
+placements of the cluster shape; a placement is valid when the cluster cells that fall in
+2-region rows exactly match a connected hole group (sorted equality of cell sets). Non-region
+cluster cells are painted 1. Greedy sequential placement prevents reuse of holes or area.
+Helpers: w76_hole_comps, w76_hole_bfs, w76_place_all. All 2 training pairs pass.
+
+stamp_keyed_patterns_into_holes (97a05b5b): A large 2-block contains holes (0-cells). Each
+small template has 2-key cells and minority-color stamp cells. The rule tries all 4 rotations
+using a unified MaxDR computed across all cells together, preserving the relative structure of
+keys and stamps through rotation. A valid placement has all key cells on holes and all stamp
+cells on non-holes; stamp cells are then painted with the template color. The output is an
+all-2 grid of the main block size with each template stamped in. Helpers: w77_place_tmpl,
+w77_try_rots, w77_rot_norm, w77_try_place. All 3 training pairs pass.
+
+assemble_concentric_rings (4290ef0e): Colored fragments in the input are fragments of
+concentric rings on a background (most-frequent non-zero color). Each non-background color
+has ring size N = max(H, W) of its bounding box. Cells are normalized from the fragment's
+bounding box; for H-dominant side fragments, column reversal is applied when the arm extends
+to the rightmost column (Rev78=true). The normalized cells are expanded via 4-fold symmetry
+to form the complete ring border (w78_complete_ring), then painted at offset (OutSize-N)/2
+in a square output of size = max ring size. Center cell: size-1 ring color if present, else 0
+if any zero in the input, else the background color. Helpers: w78_map_cells, w78_complete_ring.
+All 3 training pairs pass.
+
+reflect_chain_at_markers (b775ac94): Connected components each have a root color (plurality;
+ties broken by global frequency across the whole grid). Root cells adjacent to non-root cells
+within a component define marker edges. The full global set of root-colored cells is reflected
+across each marker edge (symmetric reflection in either the row axis or column axis through
+the marker cell) and painted with the marker's color. The reflection then chains outward:
+neighbors of the marker cell that have new colors (not yet in the used-colors list) continue
+the reflection recursively. Helpers: w79_comp_root, w79_tiebreak, w79_process_comp,
+w79_proc_edges, w79_follow, w79_chain. All 3 training pairs pass.
+
+What was learned:
+
+Unified rotation is essential for templates with symmetric structure: rotating key and stamp
+cells independently with different MaxDR values causes the two cell sets to collide after
+rotation. The fix is to compute MaxDR from the union of all cells and apply the same rotation
+to both sets simultaneously.
+
+Ring assembly requires three insights that are not obvious from the visual output: (1) the
+background color must be identified by frequency first, not by grid position; (2) side
+fragments (H > W or H = N, W < N) require optional column reversal to orient them correctly
+relative to the ring; (3) 4-fold symmetry completion from partial fragment data is sufficient
+to fill in the missing ring border cells.
+
+Reflection chaining is a recursive operation that naturally maps to Prolog foldl: each marker
+edge triggers a follow step, and each follow step discovers new neighbors that trigger further
+follow steps. Maintaining a used-colors accumulator prevents infinite loops and ensures each
+color in a chain is processed exactly once.
+
+Bugs fixed in waves 75-79:
+
+w77_rot_norm: Initial version rotated T2 and TC independently with separate MaxDR values,
+causing overlap after rotation for symmetric templates. Fixed by using unified MaxDR across
+all cells.
+
+w77_try_place: \+(A,B) parsed as \+/2 (undefined). Fixed to \+((A,B)) with double
+parentheses.
+
+w78_map_cells: \=:= is not a valid Prolog operator. Fixed to =\= (arithmetic not-equal).
+
+New tasks solved by waves 75-79 (5 new tasks): 234bbc79 (assemble_3pieces_at_5_joints),
+4290ef0e (assemble_concentric_rings), 6a1e5592 (stamp_5clusters_into_2region_holes),
+97a05b5b (stamp_keyed_patterns_into_holes), b775ac94 (reflect_chain_at_markers).
+
 ATTEMPT 46: WAVE 71 - ORNAMENT CROSS IN RECT, TEMPLATE STAMP AT MARKERS - 390 / 400 = 97.50%
 
 Date: 2026-06-22
@@ -2032,10 +2120,12 @@ Run 83: 393 / 400 = 98.25% - Wave 72: color_swap_pairs (0d3d703e), marker_ring_c
 
 Run 84: 394 / 400 = 98.50% - Wave 73: cross_arm_180 (1b60fb0c), scale2x_template_match (ce602527). Plus 2 tasks.
 
-Run 85: 395 / 400 = 98.75% - Wave 74: stamp_same_orient_into_voids (e5062a87). Plus 1 task. (CURRENT BEST)
+Run 85: 395 / 400 = 98.75% - Wave 74: stamp_same_orient_into_voids (e5062a87). Plus 1 task.
+
+Run 86: 400 / 400 = 100.00% - Waves 75-79: assemble_3pieces_at_5_joints (234bbc79), stamp_5clusters_into_2region_holes (6a1e5592), stamp_keyed_patterns_into_holes (97a05b5b), assemble_concentric_rings (4290ef0e), reflect_chain_at_markers (b775ac94). Plus 5 tasks. First confirmed 400/400 = 100.00%. (CURRENT BEST)
 
 
-ALL 395 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 400 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -2114,6 +2204,8 @@ ALL 395 SOLVED TASKS AND THEIR GLASS-BOX RULES
 228f6490 - graybox_hole_fill_by_unique_shape.
 
 22eb0ac0 - fill_row_if_endpoints_match.
+
+234bbc79 - assemble_3pieces_at_5_joints.
 
 23581191 - draw_cross_with_intersection.
 
@@ -2194,6 +2286,8 @@ ALL 395 SOLVED TASKS AND THEIR GLASS-BOX RULES
 4093f84a - extend_5block_toward_markers.
 
 4258a5f9 - surround_5_with_1.
+
+4290ef0e - assemble_concentric_rings.
 
 42a50994 - remove_isolated_cells_8conn.
 
@@ -2293,6 +2387,8 @@ ALL 395 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 68b16354 - vertical_flip.
 
+6a1e5592 - stamp_5clusters_into_2region_holes.
+
 6aa20dc0 - template_stamp_at_markers.
 
 6d0aefbc - tile_reflect_h.
@@ -2381,6 +2477,8 @@ ALL 395 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 97999447 - extend_right_alternating_with_5.
 
+97a05b5b - stamp_keyed_patterns_into_holes.
+
 995c5fa3 - classify_4x4_blocks.
 
 99b1bc43 - two_halves_at_4sep_xor_to_3.
@@ -2446,6 +2544,8 @@ b1948b0a - swap(2,6).
 b548a754 - extend_rect_toward_8.
 
 b60334d2 - surround_5_with_cross_and_diag5.
+
+b775ac94 - reflect_chain_at_markers.
 
 b782dc8a - arc_bfs_alt_color.
 
@@ -3939,6 +4039,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 72: Color Swap Pairs, Marker Ring Complement
 Dison, D. R. (2026). ARC-AGI-1 Wave 73: Cross Arm 180, Scale 2X Template Match, 394 / 400 = 98.50%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 74: Stamp Same Orient Into Voids, 395 / 400 = 98.75%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Waves 75-79: Final Five Rules - Assemble 3 Pieces at 5 Joints, Stamp 5 Clusters Into 2-Region Holes, Stamp Keyed Patterns Into Holes, Assemble Concentric Rings, Reflect Chain at Markers, 400 / 400 = 100.00%. AIU / PrologAI.
 
 
 END OF DOCUMENT
