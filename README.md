@@ -52,6 +52,22 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 
 ---
 
+## Glass-Box vs Black-Box
+
+| Property | Mentova | Large Language Model (LLM) / Transformer |
+|---|---|---|
+| Every answer is inspectable | ✅ Yes | ❌ No |
+| Reasoning is a named proof | ✅ Yes | ❌ No |
+| No large language model (LLM) required | ✅ Yes | ❌ No |
+| Hallucination possible | ❌ None by design | ✅ Frequent |
+| ARC-AGI-1 score | **100.00%** — confirmed perfect score | < 50% (best frontier models) |
+| Zero-shot induction on new tasks | ✅ Yes | ❌ No |
+| Justification tree readable | ✅ Yes | ❌ No |
+| Written in symbolic logic | ✅ Yes — pure Prolog | ❌ No — matrix arithmetic |
+| Can explain every step in plain language | ✅ Yes | ❌ No |
+
+---
+
 ## Landmark Achievements
 
 | Achievement | Result |
