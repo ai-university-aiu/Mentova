@@ -23,7 +23,11 @@ Mentova is a program written in [PrologAI](https://github.com/ai-university-aiu/
 
 It is born, proven, and grown one reasoning type at a time, following the Demonstration and Proof-of-Concept Plan (Volume 6 of the PrologAI SPARC series).
 
-Mentova is not a chatbot. It is not a language model. It is a **reasoning mind** — a system that knows what it knows, knows how it knows it, and can show you the proof.
+Mentova is not a chatbot.
+
+It is not a language model.
+
+It is a **reasoning mind** — a system that knows what it knows, knows how it knows it, and can show you the proof.
 
 ---
 
@@ -66,7 +70,13 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 
 Mentova achieved 400/400 = 100% on the [ARC-AGI-1 benchmark](https://arcprize.org) — the first system in the world to do so using **pure symbolic induction**.
 
-No pretraining. No neural weights. No internet knowledge. Every task solved by inducing a named glass-box rule from that task's own training examples.
+No pretraining.
+
+No neural weights.
+
+No internet knowledge.
+
+Every task solved by inducing a named glass-box rule from that task's own training examples.
 
 The 79-wave climb took place from first principles, one rule at a time:
 
@@ -87,7 +97,9 @@ Achievement report: [papers/ARC-AGI-1_Perfect_Score_Report.txt](papers/ARC-AGI-1
 
 ## Reasoning Ladder — 48/48 Complete
 
-Mentova climbs 48 reasoning rungs, foundational first. The birth sequence (Rungs 1–9) is the minimum viable Mentova.
+Mentova climbs 48 reasoning rungs, foundational first.
+
+The birth sequence (Rungs 1–9) is the minimum viable Mentova.
 
 <details>
 <summary>View all 48 reasoning rungs</summary>
@@ -192,7 +204,11 @@ Mentova/
 
 ### The Reasoning Engine — src/mentova/
 
-Every reasoning type Mentova supports is a self-contained Prolog module. Each module accepts a query through `mentova_query/3` and returns `answer(Conclusion, Justification)` — the proof, not just the answer. Nothing is hidden.
+Every reasoning type Mentova supports is a self-contained Prolog module.
+
+Each module accepts a query through `mentova_query/3` and returns `answer(Conclusion, Justification)` — the proof, not just the answer.
+
+Nothing is hidden.
 
 **Core Files**
 
@@ -279,7 +295,9 @@ Every reasoning type Mentova supports is a self-contained Prolog module. Each mo
 
 ### The Games Suite — src/mentova/games/
 
-Mentova has a game body that enrolls interactive environments as perceptual-motor bodies. Each game driver below plugs into that harness.
+Mentova has a game body that enrolls interactive environments as perceptual-motor bodies.
+
+Each game driver below plugs into that harness.
 
 | File | What it does |
 |---|---|
@@ -311,7 +329,9 @@ Mentova has a game body that enrolls interactive environments as perceptual-moto
 
 ### Papers — papers/
 
-75 scientific papers, one per accomplished milestone. Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
+75 scientific papers, one per accomplished milestone.
+
+Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
 | Range | Contents |
 |---|---|
@@ -323,7 +343,9 @@ Mentova has a game body that enrolls interactive environments as perceptual-moto
 
 ### Announcements — announcements/
 
-73 announcements in LinkedIn format — one per accomplishment. Each announcement is paired with its scientific paper and written after the evidence is confirmed.
+73 announcements in LinkedIn format — one per accomplishment.
+
+Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
 ### Data — data/
 
@@ -334,7 +356,9 @@ Mentova has a game body that enrolls interactive environments as perceptual-moto
 
 ### Demos — demos/
 
-20 demonstration scripts — one per major capability track. Each demo is runnable end-to-end.
+20 demonstration scripts — one per major capability track.
+
+Each demo is runnable end-to-end.
 
 | File | What it demonstrates |
 |---|---|
