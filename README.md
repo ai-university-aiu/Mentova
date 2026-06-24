@@ -435,6 +435,12 @@ Each demo is runnable end-to-end.
 
 **Prerequisite:** [PrologAI](https://github.com/ai-university-aiu/PrologAI) and SWI-Prolog 9.0.4+ (SWI stands for Sociaal-Wetenschappelijke Informatica — the University of Amsterdam research group where Jan Wielemaker created it in 1987; SWI is the Dutch name for Social Scientific Informatics)
 
+No large language model (LLM) required.
+
+No pretraining required.
+
+No internet connection required.
+
 ```prolog
 % Start Mentova
 ?- [src/mentova/boot].
@@ -455,6 +461,12 @@ R = answer(yes, just(whale, is_a, mammal, chain([whale, mammal]))).
 % Run a workspace cycle
 ?- mentova_query(workspace, run_cycle(1), R).
 ```
+
+Every answer returns `answer(Conclusion, Justification)` — the conclusion plus a readable proof trace.
+
+No black box.
+
+No guessing.
 
 ---
 
