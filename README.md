@@ -47,6 +47,16 @@ No guessing.
 
 Every answer Mentova produces comes with a **readable justification tree** — not just the conclusion, but every reasoning step that led to it.
 
+No large language model (LLM) is involved.
+
+No neural weights are consulted.
+
+No black box.
+
+No guessing.
+
+Every conclusion is a named, inspectable symbolic proof — readable by any person, auditable by any tool.
+
 ```prolog
 ?- mentova_query(deductive, is_a(tweety, bird), R).
 R = answer(yes, just(tweety, is_a, bird, chain([tweety, bird]))).
