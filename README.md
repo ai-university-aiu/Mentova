@@ -27,7 +27,19 @@ Mentova is not a chatbot.
 
 It is not a language model.
 
+It is not a neural network.
+
+It is not a statistical model.
+
+It does not use a large language model (LLM).
+
+It does not require pretraining, internet knowledge, or neural weights of any kind.
+
 It is a **reasoning mind** — a system that knows what it knows, knows how it knows it, and can show you the proof.
+
+No black box.
+
+No guessing.
 
 ---
 
