@@ -1328,6 +1328,24 @@ Bugs fixed: None.
 
 New tasks solved by wave 73 (2 new tasks): 1b60fb0c (cross_arm_180), ce602527 (scale2x_template_match).
 
+ATTEMPT 49: WAVE 74 - STAMP SAME ORIENT INTO VOIDS - 395 / 400 = 98.75%
+
+Date: 2026-06-24
+Score: 395 / 400 = 98.75%.
+Previous score: 394 / 400 = 98.50% (wave 73, 2026-06-23).
+Rules added: 1 new named rule.
+Tasks solved: +1.
+
+What changed: Wave 74 added one new named glass-box rule in arc_benchmark.pl, solving 1 of the 6 remaining tasks and raising the score from 394 to 395. Five tasks remain: 234bbc79, 4290ef0e, 6a1e5592, 97a05b5b, b775ac94.
+
+stamp_same_orient_into_voids (e5062a87): The input is a 10x10 grid with cells of value 0 (void), 2 (cluster), and 5 (wall). The 2-cluster defines a shape that must be replicated into matching void positions. The rule: (1) normalizes the cluster as offsets from its top-left corner; (2) finds interior offsets, which are positions not in the cluster but fully surrounded by cluster cells on all four cardinal sides (for example, the center cell of a diamond cross shape); (3) enumerates all same-orientation placements where every cluster-cell offset maps to a 0 in the grid; (4) discards placements where any interior offset does not map to a 5; (5) for 1D shapes (all cells share the same row or all share the same column), further restricts placements to those in the same rows or columns as the original cluster; (6) applies greedy non-overlapping selection in anchor raster order using w74_greedy/3 with intersection/3; (7) marks all selected void cells as 2 via foldl and w53_set_cell/5. T0: cross shape (4 cells) copied to 4 new positions, with center-must-be-5 constraint eliminating 2 false candidates. T1: horizontal bar (4 cells) copied only within its own row. T2: L-shape (4 cells) copied to 3 new positions, no conflicts. Test: 3x2 block (6 cells) copied to 2 new positions. All 3 training pairs and the test case pass. Task solved: e5062a87.
+
+What was learned: Same-orientation shape placement (no rotation or reflection) is a distinct and identifiable ARC rule when the grid has a clear wall/void/cluster structure (values 0/2/5). The interior-cell-must-be-5 constraint is critical for cross-shaped clusters: without it, false placements where the center is a void cell would be accepted. For 1D shapes (bars), same-row or same-column restriction is necessary to exclude false placements in different rows or columns. Greedy non-overlapping selection in raster order resolves cases where valid placements share cell positions.
+
+Bugs fixed: None.
+
+New tasks solved by wave 74 (1 new task): e5062a87 (stamp_same_orient_into_voids).
+
 ATTEMPT 46: WAVE 71 - ORNAMENT CROSS IN RECT, TEMPLATE STAMP AT MARKERS - 390 / 400 = 97.50%
 
 Date: 2026-06-22
@@ -2012,10 +2030,12 @@ Run 82: 390 / 400 = 97.50% - Wave 71: ornament_cross_in_rect (264363fd), templat
 
 Run 83: 393 / 400 = 98.25% - Wave 72: color_swap_pairs (0d3d703e), marker_ring_complement (913fb3ed), rotate_cluster_to_isolated (0e206a2e). Plus 3 tasks. (Documented; actual benchmark score was 392 before wave 73 committed ce602527.)
 
-Run 84: 394 / 400 = 98.50% - Wave 73: cross_arm_180 (1b60fb0c), scale2x_template_match (ce602527). Plus 2 tasks. (CURRENT BEST)
+Run 84: 394 / 400 = 98.50% - Wave 73: cross_arm_180 (1b60fb0c), scale2x_template_match (ce602527). Plus 2 tasks.
+
+Run 85: 395 / 400 = 98.75% - Wave 74: stamp_same_orient_into_voids (e5062a87). Plus 1 task. (CURRENT BEST)
 
 
-ALL 394 SOLVED TASKS AND THEIR GLASS-BOX RULES
+ALL 395 SOLVED TASKS AND THEIR GLASS-BOX RULES
 
 007bbfb7 - self_tile.
 
@@ -2524,6 +2544,8 @@ e179c5f4 - bounce_single_cell_upward.
 e3497940 - fold_at_5_col_mirror.
 
 e40b9e2f - complete_rotational_symmetry.
+
+e5062a87 - stamp_same_orient_into_voids.
 
 e6721834 - place_templates_at_markers.
 
@@ -3915,6 +3937,8 @@ Dison, D. R. (2026). ARC-AGI-1 Wave 71: Ornament Cross in Rect, Template Stamp a
 Dison, D. R. (2026). ARC-AGI-1 Wave 72: Color Swap Pairs, Marker Ring Complement, Rotate Cluster to Isolated, 393 / 400 = 98.25%. AIU / PrologAI.
 
 Dison, D. R. (2026). ARC-AGI-1 Wave 73: Cross Arm 180, Scale 2X Template Match, 394 / 400 = 98.50%. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-1 Wave 74: Stamp Same Orient Into Voids, 395 / 400 = 98.75%. AIU / PrologAI.
 
 
 END OF DOCUMENT
