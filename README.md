@@ -371,7 +371,7 @@ Mentova has a game body that enrolls interactive environments as perceptual-moto
 
 ## Quick Start
 
-**Prerequisite:** [PrologAI](https://github.com/ai-university-aiu/PrologAI) and SWI-Prolog 9.0.4+
+**Prerequisite:** [PrologAI](https://github.com/ai-university-aiu/PrologAI) and SWI-Prolog 9.0.4+ (SWI stands for Sociaal-Wetenschappelijke Informatica — the University of Amsterdam research group where Jan Wielemaker created it in 1987; SWI is the Dutch name for Social Scientific Informatics)
 
 ```prolog
 % Start Mentova
