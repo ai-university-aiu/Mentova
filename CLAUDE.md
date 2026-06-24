@@ -53,3 +53,5 @@ DIRECTORY LAYOUT
 ELEMENT NAMES
 
 Element names are original to PrologAI; do not introduce source-origin terms.
+
+README UPDATE RULE: After any significant update to the Mentova codebase — new accomplishment, new benchmark result, new protocol support, new growth path milestone closed — update README.md in the Mentova repository root to reflect the change. The README must always show the current state: accurate accomplishment count, current ARC-AGI scores, growth path status, and up-to-date capability descriptions. This update goes in the same PR as the code change.
