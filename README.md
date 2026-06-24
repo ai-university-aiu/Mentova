@@ -68,7 +68,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 
 ## ARC-AGI-1: 400/400 = 100.00%
 
-Mentova achieved 400/400 = 100% on the [ARC-AGI-1 benchmark](https://arcprize.org) — the first system in the world to do so using **pure symbolic induction**.
+Mentova, running on its PrologAI cognitive substrate, achieved 400/400 = 100% on the [ARC-AGI-1 benchmark](https://arcprize.org) — the first system in the world to do so using **pure symbolic induction**.
 
 No pretraining.
 
