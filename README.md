@@ -12,7 +12,7 @@
 
 <p align="center">
   <strong>The world's first glass-box synthetic mind, written in <a href="https://github.com/ai-university-aiu/PrologAI">PrologAI</a>.</strong><br>
-  Every answer comes with a readable justification tree. No black box. No LLM. No transformer.
+  Every answer comes with a readable justification tree. No black box. No large language model (LLM). No transformer.
 </p>
 
 ---
