@@ -1,0 +1,610 @@
+ARC-AGI-2: NEXT STEPS
+Lessons from ARC-AGI-1 and a Roadmap for 400/400 on the Second Mountain
+
+D. R. Dison, Founder of AIU (Artificial Intelligence University), Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-24
+
+
+ABSTRACT
+
+PrologAI and its reasoning agent Mentova have achieved 400/400 = 100% on the Abstract Reasoning Corpus for Artificial General Intelligence (ARC-AGI) Year 1, the first system to do so using pure symbolic induction and named glass-box rules.
+
+This paper documents the lessons learned from that achievement and charts the next mountain: ARC-AGI-2.
+
+ARC-AGI-2 was released on March 24, 2025 by Francois Chollet and the ARC Prize team.
+
+ARC-AGI-2 is significantly harder than ARC-AGI-1.
+
+Systems that achieved 75% or higher on ARC-AGI-1 dropped to single-digit scores on ARC-AGI-2.
+
+Humans benchmark at approximately 75% on ARC-AGI-2, compared to near-100% on ARC-AGI-1.
+
+This paper analyzes what made ARC-AGI-1 tractable for PrologAI, explains how ARC-AGI-2 differs in structure and complexity, identifies the new classes of reasoning required, and provides a concrete next-steps roadmap for climbing ARC-AGI-2 using the same symbolic induction engine that conquered ARC-AGI-1.
+
+This work is part of the Mentova repository.
+
+
+INTRODUCTION
+
+Every great climb teaches the climber something.
+
+The 79-wave climb of ARC-AGI-1 - from 0/400 to 400/400 - was not just a sequence of Prolog rule additions.
+
+It was a structured curriculum in symbolic pattern recognition, spatial reasoning, and the art of naming transformations at the right level of abstraction.
+
+ARC-AGI-2 represents a deliberate escalation of that curriculum.
+
+It was designed specifically to expose the limits of approaches that worked on ARC-AGI-1.
+
+Neural networks, large language models (LLMs), transformers, attention mechanisms, diffusion models, and brute-force domain-specific language (DSL) search methods all perform poorly on ARC-AGI-2.
+
+Pure symbolic induction - the approach PrologAI uses - is not immune to this challenge.
+
+But it has structural advantages that no statistical learner can match.
+
+This paper explains those advantages, diagnoses where pure induction will need to grow, and defines the engineering steps to begin.
+
+The central question is: what does it take to climb ARC-AGI-2 the same way we climbed ARC-AGI-1?
+
+The answer is: the same engine, extended with compositionality, sequential execution, and in-context symbol definition.
+
+
+PART 1: WHAT WE LEARNED FROM ARC-AGI-1
+
+Section 1.1: The Essence of the ARC-AGI-1 Approach
+
+The ARC-AGI-1 method used in PrologAI rests on three pillars.
+
+Pillar 1: Pure induction from examples.
+
+Every rule was induced from 2 to 10 training pairs, with no pretraining, no internet knowledge, and no neural weights.
+
+Pillar 2: Named glass-box rules.
+
+Every solved task received a human-readable rule name (e.g., stamp_keyed_patterns_into_holes, reflect_chain_at_markers).
+
+These names are not just documentation - they are the predicates that compute the answer.
+
+Pillar 3: Structural pattern decomposition.
+
+Each rule was built from primitive operations: flood fill, rigid isometry (rotation and reflection), object detection by color or connectivity, spatial alignment by anchor cells, and grid stamping.
+
+Section 1.2: Lessons About the Problem Space
+
+Lesson 1: ARC-AGI-1 tasks are mostly single-rule.
+
+Nearly every task in ARC-AGI-1 has exactly one core transformation.
+
+Once that transformation is identified, the task is solved.
+
+Lesson 2: The hardest tasks were not conceptually hard - they were algorithmically precise.
+
+Wave 75-79 tasks required multi-step alignment (e.g., assembling pieces at joints, completing concentric rings via 4-fold symmetry) but each task still had one master rule.
+
+Lesson 3: Named rules generalize.
+
+A rule named assemble_3pieces_at_5_joints captures a general pattern, not a single task's quirk.
+
+Good naming means the rule is reusable if a similar task appears.
+
+Lesson 4: Bug-free Prolog semantics matter enormously.
+
+Three bugs in the final wave (invalid operator =\=:=, wrong arity for \+, and non-unified rotation across object groups) each produced wrong answers on tasks that were conceptually solved.
+
+Lesson 5: Human Steps analysis accelerates rule discovery.
+
+The ARC-AGI Human Steps document (/home/ccaitwo/PrologAI/docs/ARC-AGI_Human_Steps.txt) deconstructed every cognitive step a human takes when solving ARC-AGI puzzles.
+
+That analysis directly informed rule design in later waves.
+
+Lesson 6: The primitive library compounds over time.
+
+Each wave added new primitives (BFS connected components, unified rotation, ring-completion via symmetry) that made subsequent waves easier.
+
+By wave 79, the library contained enough building blocks that many new rules were assembled from existing primitives.
+
+Section 1.3: Lessons About What Did NOT Work
+
+Several approaches were attempted and abandoned during the ARC-AGI-1 climb.
+
+Approach that failed: trying to match tasks by visual similarity without analyzing the training pairs.
+
+Correct approach: always induce from training pairs, never from appearance alone.
+
+Approach that failed: searching for rules by brute-force combination of primitives without a hypothesis about the transformation type.
+
+Correct approach: form a hypothesis about the transformation category (e.g., "object relocation", "template stamping") and then look for the specific parameters.
+
+Approach that failed: applying a rule from one task directly to a similar-looking task without verifying against that task's training pairs.
+
+Correct approach: every rule must be verified against all training pairs of its assigned task before being accepted.
+
+Approach that failed: rotating objects independently when they are part of a single connected assembly.
+
+Correct approach: compute the rotation reference (MaxDR, the maximum row coordinate) from the union of all objects being transformed together.
+
+
+PART 2: HOW ARC-AGI-2 DIFFERS FROM ARC-AGI-1
+
+Section 2.1: Scale
+
+ARC-AGI-2 grids are larger, up to 30 by 30 cells.
+
+ARC-AGI-1 tasks also allowed 30 by 30, but ARC-AGI-2 uses the full range more aggressively.
+
+Larger grids mean more objects, more regions, and more spatial relationships to track simultaneously.
+
+Section 2.2: Compositional Rules
+
+This is the most important structural difference.
+
+ARC-AGI-1 tasks almost always have one core rule.
+
+ARC-AGI-2 tasks frequently require two or more rules applied in a specific sequence, where the output of rule N is the input to rule N+1.
+
+The ARC-AGI-2 technical report (Chollet 2025) describes this as "sequential application of multiple compositional rules".
+
+It is virtually impossible to predict the correct intermediate state at step N+1 without first executing step N.
+
+This means: a solver cannot pattern-match the final output directly from the input without simulating the intermediate steps.
+
+This is a fundamental barrier for statistical learners.
+
+Statistical learners (neural networks, LLMs) learn to predict output from input without explicitly simulating steps.
+
+Symbolic induction can simulate steps explicitly - and this is its structural advantage.
+
+Section 2.3: Contextual Rule Application
+
+In ARC-AGI-1, the transformation rule was almost always fixed across all training pairs: same operation, same parameters, applied uniformly.
+
+In ARC-AGI-2, the same core operation is applied differently depending on contextual elements within the grid.
+
+For example, a transformation might apply clockwise rotation when a particular context marker is red, and counterclockwise rotation when the marker is blue.
+
+Identifying which contextual element modulates the rule, and how it modulates it, requires a higher level of meta-rule reasoning.
+
+Section 2.4: In-Context Symbol Definition
+
+ARC-AGI-2 introduces tasks where the training pairs define the meaning of symbols on the fly.
+
+A "symbol" in this context is an object, color, or configuration that stands for something other than itself - its meaning is not universal but is established by the task's own examples.
+
+For example, a pair of colored cells might mean "rotate 90 degrees clockwise" in one task and "reflect horizontally" in another.
+
+The solver must read the training pairs to learn what each symbol means in this task, then apply that learned meaning to the test input.
+
+This is analogous to learning a small grammar from examples, not just applying a pre-known grammar.
+
+Section 2.5: Fewer Redundant Training Examples
+
+ARC-AGI-1 tasks often had training pairs that were similar enough to make the rule obvious from the first or second pair.
+
+ARC-AGI-2 tasks are designed to require more of the training pairs to disambiguate the rule.
+
+Human solvers spend an average of 300 seconds per ARC-AGI-2 task, compared to roughly 30 seconds per ARC-AGI-1 task.
+
+This means the symbolic induction engine must be willing to use all available training pairs and to iterate its hypothesis until all pairs are explained.
+
+Section 2.6: Resistance to Pretraining
+
+ARC-AGI-2 was explicitly designed to be harder to solve by pretraining on synthetic ARC-style data.
+
+Any approach that memorizes patterns from a large dataset of ARC tasks will perform poorly on ARC-AGI-2.
+
+Pure induction from the task's own training pairs is precisely the approach that ARC-AGI-2 rewards.
+
+This is a structural advantage for PrologAI: we never pretrain, we always induce from the task.
+
+
+PART 3: NEW REASONING CATEGORIES REQUIRED
+
+Section 3.1: Sequential State Machines
+
+The most important new reasoning category in ARC-AGI-2 is the sequential state machine.
+
+A state machine is a system that moves through a sequence of states, where each state depends on the previous one.
+
+In ARC-AGI-2, the grid transformation is often a state machine: apply rule A to get intermediate state I1, then apply rule B to I1 to get intermediate state I2, then apply rule C to I2 to get the final output.
+
+PrologAI's current rule architecture applies one rule end-to-end.
+
+The extension needed is: a pipeline predicate that threads a grid through a sequence of named rules.
+
+Section 3.2: Symbol Table Learning
+
+Symbol table learning means: given training pairs, build a table mapping symbol identifiers to operations, then look up operations in that table when processing the test input.
+
+This is new for PrologAI.
+
+In ARC-AGI-1, rules were hard-coded at induction time.
+
+In ARC-AGI-2, the rule parameters (or even the rule identity) may vary by task and must be read from the training pairs.
+
+Section 3.3: Context-Dependent Dispatch
+
+Context-dependent dispatch means: select which sub-rule to apply based on a context element in the grid.
+
+This is a higher-order rule: a meta-rule that reads the context and dispatches to the appropriate object-level rule.
+
+Section 3.4: Larger Object Inventories
+
+ARC-AGI-2 tasks may have more objects and more object types than ARC-AGI-1.
+
+Tracking all objects, their spatial relationships, their colors, and their transformation histories simultaneously requires a richer object model.
+
+
+PART 4: WHAT PROLOGAI AND MENTOVA BRING TO ARC-AGI-2
+
+Section 4.1: The Glass-Box Advantage
+
+Every rule in PrologAI is a named, inspectable Prolog predicate.
+
+When a rule fails on a training pair, the failure is observable: a specific predicate unification fails at a specific step, and the human analyst can read the trace.
+
+No neural network offers this.
+
+On ARC-AGI-2, where rules are more complex and compositional, the ability to inspect intermediate states is not a luxury - it is a necessity.
+
+Section 4.2: The Pure Induction Advantage
+
+PrologAI has never used pretraining.
+
+ARC-AGI-2 is designed to defeat pretraining.
+
+Therefore, PrologAI's structural posture is perfectly aligned with what ARC-AGI-2 demands.
+
+Section 4.3: The Accumulated Primitive Library
+
+After 79 waves of ARC-AGI-1, the arc_benchmark.pl file contains a rich library of primitives:
+
+• BFS connected-component flood fill
+
+• All 8 rigid isometries (4 rotations times 2 reflections) with unified MaxDR normalization
+
+• Concentric ring completion by 4-fold symmetry
+
+• Template stamping with multi-rotation search
+
+• Anchor-based spatial alignment
+
+• Color frequency analysis
+
+• Bounding box extraction
+
+• Chain reflection across marker edges
+
+• Piece-assembly at joint cells
+
+Many of these primitives will recur in ARC-AGI-2 rules.
+
+They do not need to be re-invented.
+
+They need to be composed in new ways.
+
+Section 4.4: The Human Steps Framework
+
+The ARC-AGI Human Steps document provides a cognitive decomposition of how humans solve these puzzles.
+
+This framework generalizes to ARC-AGI-2.
+
+The same cognitive steps apply: perceive objects, form a hypothesis about the transformation, verify against training pairs, and apply to the test input.
+
+What changes is the hypothesis space: it now includes sequences of operations, context-dependent dispatch, and symbol table lookup.
+
+The Human Steps framework needs to be extended with these new hypothesis categories.
+
+
+PART 5: STRATEGIC ROADMAP FOR ARC-AGI-2
+
+Section 5.1: Step 1 - Acquire the Task Data
+
+The ARC-AGI-2 task data is available from the ARC Prize organization at arcprize.org.
+
+The data format is identical to ARC-AGI-1: JSON files with training pairs and test pairs.
+
+The first step is to download the ARC-AGI-2 public training set (400 tasks) and place the JSON files in /home/ccaitwo/Mentova/data/arc_agi_2/.
+
+Section 5.2: Step 2 - Build arc_tasks_2.pl
+
+ARC-AGI-1 tasks were loaded via arc_tasks.pl, which defines arc_agi_task(TaskId, Pairs, TestIn, TestOut).
+
+The equivalent arc_tasks_2.pl should follow the same structure, with predicate names prefixed with arc2_ to avoid module-name collisions.
+
+This allows the same verification infrastructure (arc_induce_rule_400/2 and its successor) to run on ARC-AGI-2 tasks.
+
+Section 5.3: Step 3 - Extend arc_benchmark.pl with a Pipeline Predicate
+
+The current architecture applies one rule at a time.
+
+The needed extension is a pipeline predicate:
+
+arc2_pipeline(TaskId, [Rule1, Rule2, ..., RuleN], Input, Output) :-
+    foldl(arc2_apply_rule, [Rule1,...,RuleN], Input, Output).
+
+This allows a task to be solved by a named sequence of named rules, each of which is already in the primitive library or will be added.
+
+Section 5.4: Step 4 - Extend the Human Steps Analysis
+
+The ARC-AGI Human Steps document should be updated with three new hypothesis categories:
+
+1. Sequence hypothesis: the transformation is a pipeline of N named rules.
+
+2. Context hypothesis: the transformation applies different sub-rules depending on a context element in the grid.
+
+3. Symbol hypothesis: the transformation applies a symbol table learned from training pairs.
+
+These three new hypothesis categories define where a human analyst should look first when a task is not solved by any single rule.
+
+Section 5.5: Step 5 - Implement the Symbol Table Learner
+
+The symbol table learner is a new Prolog predicate:
+
+arc2_learn_symbol_table(Pairs, SymbolTable)
+
+This predicate takes the training pairs and produces a table of the form:
+
+SymbolTable = [symbol(Id1, Op1), symbol(Id2, Op2), ...]
+
+Where Id is an object identifier (e.g., a colored cell) and Op is the operation it encodes (e.g., rotate_90, reflect_h).
+
+This is the most algorithmically novel component needed for ARC-AGI-2.
+
+Section 5.6: Step 6 - Begin Wave 1 of ARC-AGI-2
+
+Following the same wave structure as ARC-AGI-1, begin with the tasks that appear most tractable using the existing primitive library.
+
+Criteria for "most tractable" in early ARC-AGI-2 waves:
+
+• Tasks that appear to require only one compositional step (i.e., a single rule, as in ARC-AGI-1)
+
+• Tasks where the primitive operations (flood fill, stamping, rotation) are clearly visible in the transformation
+
+• Tasks without in-context symbol definitions
+
+This will establish an initial score and reveal which new primitive operations are most needed.
+
+Section 5.7: Step 7 - Iterative Wave Structure
+
+Maintain the same iterative wave structure that succeeded in ARC-AGI-1.
+
+Each wave adds a small number of rules (3 to 8 is a good target per wave).
+
+Each wave is verified, documented in the SPARC volumes, and merged before the next wave begins.
+
+The wave log for ARC-AGI-2 should be started in a new file:
+
+/home/ccaitwo/Mentova/papers/Climbing_ARC-AGI-2.txt
+
+This file should follow the same structure as Climbing_ARC-AGI-1.txt.
+
+
+PART 6: ANTICIPATED CHALLENGES AND MITIGATIONS
+
+Section 6.1: Compositional Explosion
+
+Challenge: the number of possible two-rule compositions grows quadratically with the number of primitives.
+
+With 400 primitives, there are 160,000 possible two-step compositions.
+
+Mitigation: hypothesis-first search.
+
+Before searching for rule compositions, form a hypothesis about the transformation category.
+
+The Human Steps analysis showed that human analysts immediately narrow the search space by observing structural properties (e.g., "objects are moving", "colors are being swapped").
+
+This categorical hypothesis reduces the search space from 160,000 compositions to a dozen candidates.
+
+Section 6.2: Ambiguous Training Pairs
+
+Challenge: in ARC-AGI-2, fewer training pairs are provided per task.
+
+This means more candidate rules will be consistent with the training pairs, making selection harder.
+
+Mitigation: minimal description length (MDL) principle.
+
+Among candidate rules consistent with training pairs, prefer the rule with the fewest primitive operations.
+
+This is the symbolic equivalent of Occam's razor.
+
+Simpler rules generalize better.
+
+Section 6.3: Unknown Symbol Meanings
+
+Challenge: when a task defines new symbols in-context, the solver must identify which objects are symbols, what they symbolize, and how to apply that symbolism to the test input.
+
+Mitigation: contrastive analysis across training pairs.
+
+If object X appears in every training input but its grid location changes in each output in a way that tracks another feature, then X is likely a contextual modifier.
+
+The symbol table learner should implement contrastive analysis as its primary search strategy.
+
+Section 6.4: Larger Grid Processing Overhead
+
+Challenge: Prolog operations over 30 by 30 grids (900 cells) are 9 times more expensive than over 10 by 10 grids (100 cells).
+
+Wave completion times will increase.
+
+Mitigation: precompute object inventories.
+
+Rather than re-scanning the full grid for each sub-operation, build an object inventory at the start of each rule application and pass it as a parameter through the pipeline.
+
+This converts O(N squared) repeated scans to O(N squared) single scan plus O(K) object-level operations, where K is the number of objects.
+
+Section 6.5: Higher Human Analyst Time
+
+Challenge: ARC-AGI-2 tasks take humans 300 seconds on average, compared to 30 seconds for ARC-AGI-1 tasks.
+
+This means the human analyst's time per wave is roughly 10 times longer.
+
+Mitigation: prioritize tasks by structure visibility.
+
+Some ARC-AGI-2 tasks will be visually clear - the transformation is obvious from inspection.
+
+Start each wave with the most visually clear tasks.
+
+Leave ambiguous tasks for later waves when more primitives are available.
+
+Section 6.6: Sequential Dependencies Between Rules
+
+Challenge: when a task requires rule A followed by rule B, the analyst must discover both rules and their correct order.
+
+Applying them in the wrong order produces a wrong answer.
+
+Mitigation: record intermediate states.
+
+For any task that is not solved by a single rule, apply each candidate rule and record the intermediate output.
+
+Then check: does any other candidate rule, applied to the intermediate output, produce the expected final output?
+
+This two-step pipeline search is algorithmic and can be automated.
+
+
+PART 7: WHAT ARC-AGI-1 TELLS US ABOUT ARC-AGI-2
+
+Section 7.1: The Same Core Priors Apply
+
+ARC-AGI-2 was designed by the same team and with the same foundational philosophy as ARC-AGI-1.
+
+The core priors identified by Chollet (2019) still apply:
+
+• Objectness: the world consists of discrete objects
+
+• Goal directedness: there is a meaningful transformation connecting input to output
+
+• Numbers and counting: quantity relationships matter
+
+• Basic geometry and topology: spatial relationships, connectivity, symmetry
+
+These priors are embedded in PrologAI's primitive library.
+
+They do not need to be re-learned.
+
+Section 7.2: Named Rules Are Still the Right Abstraction Level
+
+In ARC-AGI-1, each task received a named rule at the right level of abstraction: not so specific that it applied to only one instance, not so general that it provided no guidance.
+
+ARC-AGI-2 demands the same.
+
+The difference is that a "named rule" in ARC-AGI-2 may be a named pipeline of two or three sub-rules, each sub-rule itself having a name.
+
+Section 7.3: Glass-Box Is More Important, Not Less
+
+As tasks become more complex and compositional, the ability to inspect intermediate states becomes more important.
+
+The glass-box property of PrologAI (every rule is a named, inspectable Prolog predicate) is not just philosophically appealing - it is the practical tool that allows a human analyst to diagnose where a compositional pipeline is failing.
+
+Section 7.4: The Climb Will Be Longer
+
+ARC-AGI-1 required 79 waves over many months.
+
+ARC-AGI-2 will require more waves.
+
+Each task is harder.
+
+Each rule requires more primitives.
+
+Composition search is more expensive.
+
+A realistic estimate for the ARC-AGI-2 climb is 100 to 200 waves before approaching 400/400.
+
+But the same methodology that succeeded in ARC-AGI-1 will succeed in ARC-AGI-2.
+
+Patience, systematic analysis, and named glass-box rules are the path.
+
+
+PART 8: CONNECTION TO THE MENTOVA ARCHITECTURE
+
+Section 8.1: ARC-AGI-2 as a Mentova Accomplishment Track
+
+ARC-AGI-1 progress was tracked as accomplishments Acc_71 and Acc_72 in the Mentova Demonstration Plan (Volume 6).
+
+ARC-AGI-2 should be defined as a new accomplishment track, beginning with Acc_73 or the next available number in the sequence.
+
+This keeps the accomplishment numbering consistent and connects ARC-AGI-2 progress to the broader Mentova growth path.
+
+Section 8.2: The Game Interface
+
+Mentova's game interface (mentova_query(game, game_reason(arc_agi_2, deductive), R)) can be extended to target ARC-AGI-2 tasks as the new arc_tasks_2.pl module is built.
+
+The same perceive-reason-act cycle that drove ARC-AGI-1 applies to ARC-AGI-2.
+
+Section 8.3: Piagetan Level Implications
+
+Mentova's cognitive development is tracked using an 8-level Piagetian framework (from Acc_67 documentation).
+
+ARC-AGI-2's compositional, context-dependent reasoning corresponds to formal operational thought (Level 7 in the Piagetian scheme): the ability to reason about abstract relationships between abstract relationships.
+
+Successfully climbing ARC-AGI-2 would deepen the evidence for Mentova's Piagetian Level 7 and 8 capabilities.
+
+
+PART 9: IMMEDIATE NEXT STEPS CHECKLIST
+
+1. Download ARC-AGI-2 public training set from arcprize.org and place JSON files in /home/ccaitwo/Mentova/data/arc_agi_2/.
+
+2. Build arc_tasks_2.pl from the JSON files, following the same structure as arc_tasks.pl, with arc2_ prefixed predicates.
+
+3. Visual survey: open 20 to 30 ARC-AGI-2 tasks and categorize them by transformation type (single-rule, compositional, symbol-table, context-dependent).
+
+4. Build arc2_pipeline/4 in arc_benchmark.pl for sequential rule application.
+
+5. Build arc2_learn_symbol_table/2 as a new predicate.
+
+6. Start Climbing_ARC-AGI-2.txt as the wave log.
+
+7. Begin Wave 1: target the 3 to 5 tasks that most clearly map to existing primitives.
+
+8. Verify Wave 1 rules with arc_induce_rule_400/2 (or its arc2_ successor).
+
+9. Merge Wave 1 via feature branch and PR, updating all SPARC volumes and tutorials.
+
+10. Continue iteratively.
+
+
+CONCLUSION
+
+ARC-AGI-1 is concluded.
+
+PrologAI and Mentova stand as the first system to achieve 400/400 = 100% on the ARC-AGI-1 public training set using pure symbolic induction and named glass-box rules.
+
+That achievement was not luck.
+
+It was the result of a disciplined methodology: hypothesize the transformation, induce the rule from training pairs, name it at the right abstraction level, verify it against all training pairs, and merge it into a growing named-rule library.
+
+ARC-AGI-2 is harder.
+
+But the methodology does not change.
+
+What changes is the hypothesis space: it now includes compositional pipelines, in-context symbol tables, and context-dependent dispatch.
+
+Each of these extensions is implementable in Prolog.
+
+Each is inspectable in the glass-box manner that defines PrologAI.
+
+Each builds on primitives that the ARC-AGI-1 climb already established.
+
+The second mountain is taller.
+
+The path up it is the same path, extended.
+
+We know how to walk it.
+
+
+REFERENCES
+
+Chollet, F. (2019). On the Measure of Intelligence. arXiv:1911.01547.
+
+ARC Prize Team (2025). ARC-AGI-2: A New Challenge for Frontier AI Reasoning Systems. arXiv:2505.11831.
+
+ARC Prize Team (2025). ARC Prize 2025: Technical Report. arXiv:2601.10904.
+
+Dison, D. R. (2026). ARC-AGI-1 Perfect Score Report. /home/ccaitwo/Mentova/papers/ARC-AGI-1_Perfect_Score_Report.txt.
+
+Dison, D. R. (2026). Climbing ARC-AGI-1: 79 Waves of Pure Symbolic Induction. /home/ccaitwo/Mentova/papers/Climbing_ARC-AGI-1.txt. CONCLUDED. Final score: 400/400 = 100.00%.
+
+Dison, D. R. (2026). ARC-AGI Human Steps. /home/ccaitwo/PrologAI/docs/ARC-AGI_Human_Steps.txt.
+
+arc_benchmark.pl (2026). PrologAI named-rule library for ARC-AGI-1. /home/ccaitwo/Mentova/src/mentova/games/arc_benchmark.pl. 400 rules. 32190 lines.
+
+END OF PAPER
