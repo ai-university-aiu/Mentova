@@ -66,17 +66,17 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 
 ---
 
-## ARC-AGI-1: 400/400 = 100.00%
+## ARC-AGI-1 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 1): 400/400 = 100.00%
 
 Mentova, running on its PrologAI cognitive substrate, is the **first digital system in the world** to achieve a confirmed perfect score, all 400/400 = 100% result on the [ARC-AGI-1 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 1)](https://arcprize.org) public training set benchmark - using pure symbolic induction with named glass-box rules — no neural weights, no internet knowledge, no large language model (LLM).
 
-No pretraining.
+No large language model (LLM).
 
 No neural weights.
 
 No internet knowledge.
 
-Every task solved by inducing a named glass-box rule from that task's own training examples.
+Every task solved by inducing a named glass-box rule from that task's own training examples — pure symbolic induction, from scratch, on each task's own examples.
 
 The 79-wave climb took place from first principles, one rule at a time:
 
