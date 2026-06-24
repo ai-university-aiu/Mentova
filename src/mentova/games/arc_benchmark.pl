@@ -31469,3 +31469,718 @@ w74_greedy([P|Rest], Used, Sel) :-
         w74_greedy(Rest, Used, Sel)
 % ERC 0.10 %
     ).
+
+% -----------------------------------------------------------------------
+% Wave 75: assemble_3pieces_at_5_joints (234bbc79)
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(assemble_3pieces_at_5_joints).
+% ERC 0.10 %
+arc_transform(assemble_3pieces_at_5_joints, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR),
+% ERC 0.10 %
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,V), V\=0), NZCells),
+% ERC 0.10 %
+    w75_comps(NZCells, Grid, Comps0),
+% ERC 0.10 %
+    length(Comps0, 3),
+% ERC 0.10 %
+    maplist([Comp,MinC-Comp]>>(findall(CC,member(_-CC,Comp),Css),min_list(Css,MinC)), Comps0, Tagged),
+% ERC 0.10 %
+    msort(Tagged, [_-CompA,_-CompB,_-CompC]),
+% ERC 0.10 %
+    w75_piece_color(Grid, CompA, ColA),
+% ERC 0.10 %
+    w75_piece_color(Grid, CompB, ColB),
+% ERC 0.10 %
+    w75_piece_color(Grid, CompC, ColC),
+% ERC 0.10 %
+    findall(R-C,(member(R-C,CompA),nth0(R,Grid,Ra),nth0(C,Ra,5)), JA),
+% ERC 0.10 %
+    findall(R-C,(member(R-C,CompB),nth0(R,Grid,Rb),nth0(C,Rb,5)), JBU),
+% ERC 0.10 %
+    findall(R-C,(member(R-C,CompC),nth0(R,Grid,Rc),nth0(C,Rc,5)), JC),
+% ERC 0.10 %
+    (JA\=[] -> w75_max_col(JA,ExitA) ; w75_max_col(CompA,ExitA)),
+% ERC 0.10 %
+    sort(2,@=<,JBU,JBS),
+% ERC 0.10 %
+    (JBS\=[] -> JBS=[EntryB|_], last(JBS,ExitB) ; w75_min_col(CompB,EntryB), w75_max_col(CompB,ExitB)),
+% ERC 0.10 %
+    (JC\=[] -> w75_min_col(JC,EntryC) ; w75_min_col(CompC,EntryC)),
+% ERC 0.10 %
+    ExitA=ERA-ECA, EntryB=ERB-ECB,
+% ERC 0.10 %
+    ShiftBR is ERA-ERB, ShiftBC is ECA+1-ECB,
+% ERC 0.10 %
+    ExitB=EB2R-EB2C, EB2SR is EB2R+ShiftBR, EB2SC is EB2C+ShiftBC,
+% ERC 0.10 %
+    EntryC=ERC2-ECC2,
+% ERC 0.10 %
+    ShiftCR is EB2SR-ERC2, ShiftCC is EB2SC+1-ECC2,
+% ERC 0.10 %
+    findall(R-C-ColA, member(R-C,CompA), CellsA),
+% ERC 0.10 %
+    findall(R2-C2-ColB, (member(R-C,CompB),R2 is R+ShiftBR,C2 is C+ShiftBC), CellsB),
+% ERC 0.10 %
+    findall(R2-C2-ColC, (member(R-C,CompC),R2 is R+ShiftCR,C2 is C+ShiftCC), CellsC),
+% ERC 0.10 %
+    append(CellsA,CellsB,CAB), append(CAB,CellsC,AllCells),
+% ERC 0.10 %
+    findall(C2, member(_-C2-_, AllCells), ColsList),
+% ERC 0.10 %
+    max_list(ColsList, MaxC), NCOut is MaxC+1,
+% ERC 0.10 %
+    findall(Row2,(between(1,NR,_),length(Row2,NCOut),maplist(=(0),Row2)), BlankGrid),
+% ERC 0.10 %
+    foldl([R2-C2-V, G, Go]>>(
+% ERC 0.10 %
+        (R2>=0,R2<NR,C2>=0,C2<NCOut -> w53_set_cell(G,R2,C2,V,Go) ; Go=G)
+% ERC 0.10 %
+    ), AllCells, BlankGrid, Out).
+% ERC 0.10 %
+w75_comps([], _, []) :- !.
+% ERC 0.10 %
+w75_comps([Seed|Rest], Grid, [Comp|Comps]) :-
+% ERC 0.10 %
+    w75_bfs(Grid, [Seed], [], CompU),
+% ERC 0.10 %
+    sort(CompU, Comp),
+% ERC 0.10 %
+    subtract(Rest, Comp, Rest2),
+% ERC 0.10 %
+    w75_comps(Rest2, Grid, Comps).
+% ERC 0.10 %
+w75_bfs(_, [], Visited, Visited) :- !.
+% ERC 0.10 %
+w75_bfs(Grid, [R-C|Frontier], Visited0, Out) :-
+% ERC 0.10 %
+    (memberchk(R-C, Visited0) ->
+% ERC 0.10 %
+        w75_bfs(Grid, Frontier, Visited0, Out)
+% ERC 0.10 %
+    ;
+% ERC 0.10 %
+        Visited1=[R-C|Visited0],
+% ERC 0.10 %
+        length(Grid,NRb), Grid=[GR0|_], length(GR0,NCb),
+% ERC 0.10 %
+        NRb1 is NRb-1, NCb1 is NCb-1,
+% ERC 0.10 %
+        Nr is R-1, Sr is R+1, Wc is C-1, Ec is C+1,
+% ERC 0.10 %
+        findall(NR2-NC2,(
+% ERC 0.10 %
+            member(NR2-NC2,[Nr-C,Sr-C,R-Wc,R-Ec]),
+% ERC 0.10 %
+            NR2>=0,NR2=<NRb1,NC2>=0,NC2=<NCb1,
+% ERC 0.10 %
+            nth0(NR2,Grid,NbrRow),nth0(NC2,NbrRow,NV),NV\=0
+% ERC 0.10 %
+        ), NewCells),
+% ERC 0.10 %
+        append(Frontier, NewCells, Frontier2),
+% ERC 0.10 %
+        w75_bfs(Grid, Frontier2, Visited1, Out)
+% ERC 0.10 %
+    ).
+% ERC 0.10 %
+w75_piece_color(Grid, Cells, Color) :-
+% ERC 0.10 %
+    member(R-C, Cells),
+% ERC 0.10 %
+    nth0(R,Grid,Row), nth0(C,Row,V),
+% ERC 0.10 %
+    V\=5, !, Color=V.
+% ERC 0.10 %
+w75_max_col(Cells, MaxR-MaxC) :-
+% ERC 0.10 %
+    findall(C, member(_-C,Cells), Cs),
+% ERC 0.10 %
+    max_list(Cs, MaxC),
+% ERC 0.10 %
+    member(MaxR-MaxC, Cells), !.
+% ERC 0.10 %
+w75_min_col(Cells, MinR-MinC) :-
+% ERC 0.10 %
+    findall(C, member(_-C,Cells), Cs),
+% ERC 0.10 %
+    min_list(Cs, MinC),
+% ERC 0.10 %
+    member(MinR-MinC, Cells), !.
+% -----------------------------------------------------------------------
+% Wave 76: stamp_5clusters_into_2region_holes (6a1e5592)
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(stamp_5clusters_into_2region_holes).
+% ERC 0.10 %
+arc_transform(stamp_5clusters_into_2region_holes, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR), Grid=[FR76|_], length(FR76, NC),
+% ERC 0.10 %
+    NR1 is NR-1, NC1 is NC-1,
+% ERC 0.10 %
+    findall(R-C,(nth0(R,Grid,Row),nth0(C,Row,V),V\=0), NZC76),
+% ERC 0.10 %
+    w75_comps(NZC76, Grid, AllComps76),
+% ERC 0.10 %
+    include([Comp76]>>(forall(member(R-C,Comp76),(nth0(R,Grid,Row2),nth0(C,Row2,5)))), AllComps76, Clusters0),
+% ERC 0.10 %
+    maplist([Comp76,K-Comp76]>>(
+% ERC 0.10 %
+        findall(R2,member(R2-_,Comp76),Rs2), min_list(Rs2,MR2),
+% ERC 0.10 %
+        findall(C2,member(_-C2,Comp76),Cs2), min_list(Cs2,MC2), K=MR2-MC2
+% ERC 0.10 %
+    ), Clusters0, TC76),
+% ERC 0.10 %
+    msort(TC76, STC76),
+% ERC 0.10 %
+    maplist([_-Comp76b,Comp76b]>>true, STC76, Clusters),
+% ERC 0.10 %
+    findall(R,(between(0,NR1,R),nth0(R,Grid,Row3),member(2,Row3)), TwoRows),
+% ERC 0.10 %
+    findall(R-C,(member(R,TwoRows),nth0(R,Grid,Row4),nth0(C,Row4,0)), HoleCells),
+% ERC 0.10 %
+    w76_hole_comps(HoleCells, HoleGroups),
+% ERC 0.10 %
+    append(Clusters, AllClusterCells),
+% ERC 0.10 %
+    foldl([R-C,G,Go]>>(w53_set_cell(G,R,C,0,Go)), AllClusterCells, Grid, Grid1),
+% ERC 0.10 %
+    w76_place_all(Clusters, Grid, Grid1, NC1, NR1, TwoRows, HoleGroups, [], [], Out).
+% ERC 0.10 %
+w76_hole_comps([], []) :- !.
+% ERC 0.10 %
+w76_hole_comps([Seed|Rest], [Comp|Comps]) :-
+% ERC 0.10 %
+    w76_hole_bfs([Seed|Rest], [Seed], [], CompU),
+% ERC 0.10 %
+    sort(CompU, Comp),
+% ERC 0.10 %
+    subtract(Rest, Comp, Rest2),
+% ERC 0.10 %
+    w76_hole_comps(Rest2, Comps).
+% ERC 0.10 %
+w76_hole_bfs(_, [], Visited, Visited) :- !.
+% ERC 0.10 %
+w76_hole_bfs(HoleCells, [R-C|Frontier], Visited0, Out) :-
+% ERC 0.10 %
+    (memberchk(R-C, Visited0) ->
+% ERC 0.10 %
+        w76_hole_bfs(HoleCells, Frontier, Visited0, Out)
+% ERC 0.10 %
+    ;
+% ERC 0.10 %
+        Visited1=[R-C|Visited0],
+% ERC 0.10 %
+        Nr76 is R-1, Sr76 is R+1, Wc76 is C-1, Ec76 is C+1,
+% ERC 0.10 %
+        findall(N76,(
+% ERC 0.10 %
+            member(N76,[Nr76-C,Sr76-C,R-Wc76,R-Ec76]),
+% ERC 0.10 %
+            memberchk(N76,HoleCells),
+% ERC 0.10 %
+            \+memberchk(N76,Visited1)
+% ERC 0.10 %
+        ), New76),
+% ERC 0.10 %
+        append(Frontier, New76, Frontier2),
+% ERC 0.10 %
+        w76_hole_bfs(HoleCells, Frontier2, Visited1, Out)
+% ERC 0.10 %
+    ).
+% ERC 0.10 %
+w76_place_all([], _, G, _, _, _, _, _, _, G).
+% ERC 0.10 %
+w76_place_all([Cluster|Rest], OrigGrid, G0, NC1, NR1, TwoRows, HoleGroups, UsedH, UsedA, Out) :-
+% ERC 0.10 %
+    findall(R2,member(R2-_,Cluster),Rs76), min_list(Rs76,MR76),
+% ERC 0.10 %
+    findall(C2,member(_-C2,Cluster),Cs76), min_list(Cs76,MC76),
+% ERC 0.10 %
+    findall(DR-DC,(member(R-C,Cluster),DR is R-MR76,DC is C-MC76), Shape76),
+% ERC 0.10 %
+    findall(DR,member(DR-_,Shape76),DRs76), max_list(DRs76,MaxDR76),
+% ERC 0.10 %
+    findall(DC,member(_-DC,Shape76),DCs76), max_list(DCs76,MaxDC76),
+% ERC 0.10 %
+    MaxSR76 is NR1-MaxDR76, MaxSC76 is NC1-MaxDC76,
+% ERC 0.10 %
+    between(0,MaxSR76,SR76), between(0,MaxSC76,SC76),
+% ERC 0.10 %
+    findall(R2-C2,(member(DR-DC,Shape76),R2 is SR76+DR,C2 is SC76+DC), Placement),
+% ERC 0.10 %
+    forall(member(R2-C2,Placement),(nth0(R2,OrigGrid,Row76),nth0(C2,Row76,0))),
+% ERC 0.10 %
+    intersection(Placement,UsedA,[]),
+% ERC 0.10 %
+    include([R2-_]>>(member(R2,TwoRows)), Placement, InRegion),
+% ERC 0.10 %
+    InRegion\=[],
+% ERC 0.10 %
+    sort(InRegion,InRegS),
+% ERC 0.10 %
+    member(HG76, HoleGroups), sort(HG76,HGS76), HGS76=InRegS,
+% ERC 0.10 %
+    intersection(HG76,UsedH,[]),
+% ERC 0.10 %
+    !,
+% ERC 0.10 %
+    foldl([R2-C2,G,Go]>>(w53_set_cell(G,R2,C2,1,Go)), Placement, G0, G1),
+% ERC 0.10 %
+    append(UsedH,HG76,UsedH2), append(UsedA,Placement,UsedA2),
+% ERC 0.10 %
+    w76_place_all(Rest, OrigGrid, G1, NC1, NR1, TwoRows, HoleGroups, UsedH2, UsedA2, Out).
+% -----------------------------------------------------------------------
+% Wave 77: stamp_keyed_patterns_into_holes (97a05b5b)
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(stamp_keyed_patterns_into_holes).
+% ERC 0.10 %
+arc_transform(stamp_keyed_patterns_into_holes, Grid, Out) :-
+% ERC 0.10 %
+    findall(R-C,(nth0(R,Grid,Row),nth0(C,Row,V),V\=0), NZC77),
+% ERC 0.10 %
+    w75_comps(NZC77, Grid, AllComps77),
+% ERC 0.10 %
+    maplist([Comp77,Len77-Comp77]>>(length(Comp77,Len77)), AllComps77, LC77),
+% ERC 0.10 %
+    max_member(_-MainComp, LC77),
+% ERC 0.10 %
+    exclude(==(MainComp), AllComps77, Templates),
+% ERC 0.10 %
+    findall(R,member(R-_,MainComp),MRs77), findall(C,member(_-C,MainComp),MCs77),
+% ERC 0.10 %
+    min_list(MRs77,R0M), max_list(MRs77,R1M),
+% ERC 0.10 %
+    min_list(MCs77,C0M), max_list(MCs77,C1M),
+% ERC 0.10 %
+    OutR77 is R1M-R0M+1, OutC77 is C1M-C0M+1,
+% ERC 0.10 %
+    findall(DR-DC,(
+% ERC 0.10 %
+        between(R0M,R1M,R2), between(C0M,C1M,C2),
+% ERC 0.10 %
+        nth0(R2,Grid,Row2), nth0(C2,Row2,0),
+% ERC 0.10 %
+        DR is R2-R0M, DC is C2-C0M
+% ERC 0.10 %
+    ), Holes77U),
+% ERC 0.10 %
+    sort(Holes77U, Holes77),
+% ERC 0.10 %
+    findall(Row77,(between(1,OutR77,_),length(Row77,OutC77),maplist(=(2),Row77)), Out77Start),
+% ERC 0.10 %
+    foldl([Tmpl,G,Go]>>(w77_place_tmpl(Grid,Tmpl,Holes77,OutR77,OutC77,G,Go)), Templates, Out77Start, Out).
+% ERC 0.10 %
+w77_place_tmpl(Grid, Tmpl, Holes, OutR, OutC, GIn, GOut) :-
+% ERC 0.10 %
+    findall(V77,(member(R-C,Tmpl),nth0(R,Grid,Row),nth0(C,Row,V77),V77\=2), NT77),
+% ERC 0.10 %
+    ( NT77=[] -> GOut=GIn ;
+% ERC 0.10 %
+        msort(NT77, NTS77), sort(NTS77, UNT77),
+% ERC 0.10 %
+        maplist([V77,N77-V77]>>(include(=(V77),NTS77,S77),length(S77,N77)), UNT77, Cnt77),
+% ERC 0.10 %
+        max_member(_-Color77, Cnt77),
+% ERC 0.10 %
+        findall(R-C,(member(R-C,Tmpl),nth0(R,Grid,Row2),nth0(C,Row2,2)), T2Cells),
+% ERC 0.10 %
+        findall(R-C,(member(R-C,Tmpl),nth0(R,Grid,Row3),nth0(C,Row3,Color77)), TColCells),
+% ERC 0.10 %
+        append(T2Cells,TColCells,AllTC77),
+% ERC 0.10 %
+        findall(R,member(R-_,AllTC77),AllRsT77), findall(C,member(_-C,AllTC77),AllCsT77),
+% ERC 0.10 %
+        min_list(AllRsT77,MinRT77), min_list(AllCsT77,MinCT77),
+% ERC 0.10 %
+        findall(DR-DC,(member(R-C,T2Cells),DR is R-MinRT77,DC is C-MinCT77), T2N0),
+% ERC 0.10 %
+        findall(DR-DC,(member(R-C,TColCells),DR is R-MinRT77,DC is C-MinCT77), TCN0),
+% ERC 0.10 %
+        sort(T2N0,T2N77), sort(TCN0,TCN77),
+% ERC 0.10 %
+        w77_try_rots(T2N77, TCN77, Color77, Holes, OutR, OutC, GIn, GOut)
+% ERC 0.10 %
+    ).
+% ERC 0.10 %
+w77_try_rots(T2, TC, Color, Holes, OutR, OutC, GIn, GOut) :-
+% ERC 0.10 %
+    ( w77_try_place(T2,TC,Color,Holes,OutR,OutC,GIn,GOut) -> true
+% ERC 0.10 %
+    ; w77_rot_norm(T2,TC,T2R1,TCR1),
+% ERC 0.10 %
+      ( w77_try_place(T2R1,TCR1,Color,Holes,OutR,OutC,GIn,GOut) -> true
+% ERC 0.10 %
+      ; w77_rot_norm(T2R1,TCR1,T2R2,TCR2),
+% ERC 0.10 %
+        ( w77_try_place(T2R2,TCR2,Color,Holes,OutR,OutC,GIn,GOut) -> true
+% ERC 0.10 %
+        ; w77_rot_norm(T2R2,TCR2,T2R3,TCR3),
+% ERC 0.10 %
+          ( w77_try_place(T2R3,TCR3,Color,Holes,OutR,OutC,GIn,GOut) -> true
+% ERC 0.10 %
+          ; GOut=GIn
+% ERC 0.10 %
+          )
+% ERC 0.10 %
+        )
+% ERC 0.10 %
+      )
+% ERC 0.10 %
+    ).
+% ERC 0.10 %
+w77_rot_norm(T2, TC, T2N, TCN) :-
+% ERC 0.10 %
+    append(T2,TC,AllIn77),
+% ERC 0.10 %
+    ( AllIn77=[] -> T2N=[], TCN=[] ;
+% ERC 0.10 %
+        findall(DR,member(DR-_,AllIn77),DRsIn77), max_list(DRsIn77,MaxDRn77),
+% ERC 0.10 %
+        maplist([DR-DC,DC-NR77]>>(NR77 is MaxDRn77-DR), T2, T2R0),
+% ERC 0.10 %
+        maplist([DR-DC,DC-NR77]>>(NR77 is MaxDRn77-DR), TC, TCR0),
+% ERC 0.10 %
+        append(T2R0,TCR0,AllR77),
+% ERC 0.10 %
+        findall(R,member(R-_,AllR77),DRsR77), findall(C,member(_-C,AllR77),DCsR77),
+% ERC 0.10 %
+        min_list(DRsR77,MinDRR77), min_list(DCsR77,MinDCR77),
+% ERC 0.10 %
+        findall(DR2-DC2,(member(DR-DC,T2R0),DR2 is DR-MinDRR77,DC2 is DC-MinDCR77), T2N0r),
+% ERC 0.10 %
+        findall(DR2-DC2,(member(DR-DC,TCR0),DR2 is DR-MinDRR77,DC2 is DC-MinDCR77), TCN0r),
+% ERC 0.10 %
+        sort(T2N0r,T2N), sort(TCN0r,TCN)
+% ERC 0.10 %
+    ).
+% ERC 0.10 %
+w77_try_place(T2, TCol, Color, Holes, OutR, OutC, GIn, GOut) :-
+% ERC 0.10 %
+    append(T2,TCol,AllT77p), AllT77p\=[],
+% ERC 0.10 %
+    findall(DR,member(DR-_,AllT77p),DRsp77), max_list(DRsp77,MaxDRp77),
+% ERC 0.10 %
+    findall(DC,member(_-DC,AllT77p),DCsp77), max_list(DCsp77,MaxDCp77),
+% ERC 0.10 %
+    OutR1 is OutR-1, OutC1 is OutC-1,
+% ERC 0.10 %
+    MaxR0p77 is OutR1-MaxDRp77, MaxC0p77 is OutC1-MaxDCp77,
+% ERC 0.10 %
+    between(0,MaxR0p77,R0p77), between(0,MaxC0p77,C0p77),
+% ERC 0.10 %
+    findall(PR-PC,(member(DR-DC,T2),PR is R0p77+DR,PC is C0p77+DC), P2p77),
+% ERC 0.10 %
+    findall(PR-PC,(member(DR-DC,TCol),PR is R0p77+DR,PC is C0p77+DC), PColp77),
+% ERC 0.10 %
+    forall(member(PC2,P2p77), memberchk(PC2,Holes)),
+% ERC 0.10 %
+    \+((member(PCo,PColp77),memberchk(PCo,Holes))),
+% ERC 0.10 %
+    !,
+% ERC 0.10 %
+    foldl([PR-PC0,G,Go]>>(w53_set_cell(G,PR,PC0,Color,Go)), PColp77, GIn, GOut).
+% -----------------------------------------------------------------------
+% Wave 78: assemble_concentric_rings (4290ef0e)
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(assemble_concentric_rings).
+% ERC 0.10 %
+arc_transform(assemble_concentric_rings, Grid, Out) :-
+% ERC 0.10 %
+    findall(V78,(nth0(_,Grid,Row78),nth0(_,Row78,V78),V78\=0), NZVals78),
+% ERC 0.10 %
+    msort(NZVals78, NZS78), sort(NZS78, UVals78),
+% ERC 0.10 %
+    maplist([V78,N78-V78]>>(include(=(V78),NZS78,S78),length(S78,N78)), UVals78, CVCounts78),
+% ERC 0.10 %
+    max_member(_-BG78, CVCounts78),
+% ERC 0.10 %
+    findall(N78-H78-W78-MR78-MC78-Col78,(
+% ERC 0.10 %
+        member(_-Col78, CVCounts78), Col78\=BG78,
+% ERC 0.10 %
+        findall(R-C,(nth0(R,Grid,Row78b),nth0(C,Row78b,Col78)), Cells78),
+% ERC 0.10 %
+        findall(R,member(R-_,Cells78),Rs78), findall(C,member(_-C,Cells78),Cs78),
+% ERC 0.10 %
+        min_list(Rs78,MR78), max_list(Rs78,MxR78),
+% ERC 0.10 %
+        min_list(Cs78,MC78), max_list(Cs78,MxC78),
+% ERC 0.10 %
+        H78 is MxR78-MR78+1, W78 is MxC78-MC78+1, N78 is max(H78,W78)
+% ERC 0.10 %
+    ), RingData78),
+% ERC 0.10 %
+    RingData78\=[],
+% ERC 0.10 %
+    findall(N78x,member(N78x-_-_-_-_-_,RingData78), Ns78), max_list(Ns78,OutSize78),
+% ERC 0.10 %
+    ( member(1-_-_-_-_-SC1col,RingData78) -> CenterCol78=SC1col ;
+% ERC 0.10 %
+      (member(Row78c,Grid), member(0,Row78c)) -> CenterCol78=0 ;
+% ERC 0.10 %
+      CenterCol78=BG78 ),
+% ERC 0.10 %
+    findall(Row78d,(between(1,OutSize78,_),length(Row78d,OutSize78),maplist(=(BG78),Row78d)), BlankG78),
+% ERC 0.10 %
+    findall(N78y-Col78y,(member(_-Col78y,CVCounts78),Col78y\=BG78,member(N78y-_-_-_-_-Col78y,RingData78)), NColList78),
+% ERC 0.10 %
+    msort(NColList78, NColAsc78),
+% ERC 0.10 %
+    reverse(NColAsc78, SortedNC78),
+% ERC 0.10 %
+    foldl([N78f-Col78f, G78, Go78]>>(
+% ERC 0.10 %
+        ( N78f=:=1 -> Go78=G78 ;
+% ERC 0.10 %
+            member(N78f-H78f-W78f-MR78f-MC78f-Col78f, RingData78),
+% ERC 0.10 %
+            findall(R-C,(nth0(R,Grid,Row78e),nth0(C,Row78e,Col78f)), RCells78),
+% ERC 0.10 %
+            w78_map_cells(RCells78, MR78f, MC78f, N78f, H78f, W78f, RingBorder78),
+% ERC 0.10 %
+            w78_complete_ring(RingBorder78, N78f, CompRing78),
+% ERC 0.10 %
+            Off78 is (OutSize78-N78f)//2,
+% ERC 0.10 %
+            foldl([DR-DC,Gin78,Gout78]>>(
+% ERC 0.10 %
+                OutR78 is Off78+DR, OutC78 is Off78+DC,
+% ERC 0.10 %
+                w53_set_cell(Gin78,OutR78,OutC78,Col78f,Gout78)
+% ERC 0.10 %
+            ), CompRing78, G78, Go78)
+% ERC 0.10 %
+        )
+% ERC 0.10 %
+    ), SortedNC78, BlankG78, OutBC78),
+% ERC 0.10 %
+    CtrIdx78 is OutSize78//2,
+% ERC 0.10 %
+    w53_set_cell(OutBC78, CtrIdx78, CtrIdx78, CenterCol78, Out).
+% ERC 0.10 %
+w78_map_cells(Cells, MinR, MinC, N, H, W, RingBorder) :-
+% ERC 0.10 %
+    N1w is N-1, H1w is H-1, W1w is W-1,
+% ERC 0.10 %
+    ( H=:=N, W<N ->
+% ERC 0.10 %
+        findall(DC2,(member(R-C,Cells),DRx is R-MinR,DRx =\= 0,DRx =\= H1w,DC2 is C-MinC), ArmDCs),
+% ERC 0.10 %
+        ( ArmDCs\=[], max_list(ArmDCs,MaxADC),MaxADC=:=W1w -> Rev78=true ; Rev78=false )
+% ERC 0.10 %
+    ;
+% ERC 0.10 %
+        Rev78=false
+% ERC 0.10 %
+    ),
+% ERC 0.10 %
+    findall(RDR-RDC,(
+% ERC 0.10 %
+        member(R-C,Cells),
+% ERC 0.10 %
+        RDR is R-MinR,
+% ERC 0.10 %
+        ( Rev78=true -> RDC is W1w-(C-MinC) ; RDC is C-MinC ),
+% ERC 0.10 %
+        ( RDR=:=0 ; RDR=:=N1w ; RDC=:=0 ; RDC=:=N1w )
+% ERC 0.10 %
+    ), RingBorder0),
+% ERC 0.10 %
+    sort(RingBorder0, RingBorder).
+% ERC 0.10 %
+w78_complete_ring(RingBorder0, N, Complete) :-
+% ERC 0.10 %
+    N1cr is N-1,
+% ERC 0.10 %
+    findall(DR2-DC2,(
+% ERC 0.10 %
+        member(DR-DC, RingBorder0),
+% ERC 0.10 %
+        ( DR2=DR, DC2=DC
+% ERC 0.10 %
+        ; DR2 is N1cr-DR, DC2=DC
+% ERC 0.10 %
+        ; DR2=DR, DC2 is N1cr-DC
+% ERC 0.10 %
+        ; DR2 is N1cr-DR, DC2 is N1cr-DC
+% ERC 0.10 %
+        ),
+% ERC 0.10 %
+        ( DR2=:=0 ; DR2=:=N1cr ; DC2=:=0 ; DC2=:=N1cr )
+% ERC 0.10 %
+    ), AllMirrors78),
+% ERC 0.10 %
+    sort(AllMirrors78, Complete).
+% -----------------------------------------------------------------------
+% Wave 79: reflect_chain_at_markers (b775ac94)
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(reflect_chain_at_markers).
+% ERC 0.10 %
+arc_transform(reflect_chain_at_markers, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR79), Grid=[FR79|_], length(FR79, NC79),
+% ERC 0.10 %
+    findall(R-C,(nth0(R,Grid,Row79a),nth0(C,Row79a,V79a),V79a\=0), NZC79),
+% ERC 0.10 %
+    w75_comps(NZC79, Grid, Comps79),
+% ERC 0.10 %
+    findall(Vg79,(nth0(_,Grid,Row79b),nth0(_,Row79b,Vg79),Vg79\=0), AVals79),
+% ERC 0.10 %
+    msort(AVals79, AVS79),
+% ERC 0.10 %
+    maplist([Comp79,Comp79-Root79]>>(w79_comp_root(Grid,Comp79,AVS79,Root79)), Comps79, CRPairs79),
+% ERC 0.10 %
+    findall(R-C,(nth0(R,Grid,Row79c),nth0(C,Row79c,Vo79),Vo79\=0), Occ79),
+% ERC 0.10 %
+    foldl([Comp79-Root79, G79-SeenC79, Go79-NS79]>>(
+% ERC 0.10 %
+        w79_process_comp(Grid,Comp79,Root79,CRPairs79,Occ79,NR79,NC79,SeenC79,G79,Go79,NS79)
+% ERC 0.10 %
+    ), CRPairs79, Grid-[], Out-_).
+% ERC 0.10 %
+w79_comp_root(Grid, Comp, AVS, Root) :-
+% ERC 0.10 %
+    findall(V,(member(R-C,Comp),nth0(R,Grid,Row),nth0(C,Row,V)), Vals),
+% ERC 0.10 %
+    msort(Vals, VS79r), sort(VS79r, UV79r),
+% ERC 0.10 %
+    maplist([V,N-V]>>(include(=(V),VS79r,S),length(S,N)), UV79r, NVC79),
+% ERC 0.10 %
+    max_member(MaxN79-_, NVC79),
+% ERC 0.10 %
+    include([N-_]>>(N=:=MaxN79), NVC79, Tied79),
+% ERC 0.10 %
+    maplist([_-V,V]>>true, Tied79, TiedCols79),
+% ERC 0.10 %
+    w79_tiebreak(TiedCols79, AVS, Root).
+% ERC 0.10 %
+w79_tiebreak([Single], _, Single) :- !.
+% ERC 0.10 %
+w79_tiebreak(TiedCols, AVS, Root) :-
+% ERC 0.10 %
+    maplist([Vt,Nt-Vt]>>(include(=(Vt),AVS,St),length(St,Nt)), TiedCols, GNC79),
+% ERC 0.10 %
+    max_member(_-Root, GNC79).
+% ERC 0.10 %
+w79_process_comp(Grid, Comp, Root, CRPairs, Occ, NR, NC, SeenC0, GIn, GOut, SeenCOut) :-
+% ERC 0.10 %
+    findall(R-C,(
+% ERC 0.10 %
+        member(Comp2-Root, CRPairs),
+% ERC 0.10 %
+        member(R-C, Comp2),
+% ERC 0.10 %
+        nth0(R,Grid,Row79p), nth0(C,Row79p,Root)
+% ERC 0.10 %
+    ), GR79),
+% ERC 0.10 %
+    findall(R-C-NR2-NC2-NV,(
+% ERC 0.10 %
+        member(R-C,Comp), nth0(R,Grid,RowQ79),nth0(C,RowQ79,Root),
+% ERC 0.10 %
+        member(DRd-DCd, [-1-0,1-0,0-(-1),0-1]),
+% ERC 0.10 %
+        NR2 is R+DRd, NC2 is C+DCd,
+% ERC 0.10 %
+        NR2>=0, NR2<NR, NC2>=0, NC2<NC,
+% ERC 0.10 %
+        member(NR2-NC2, Comp),
+% ERC 0.10 %
+        nth0(NR2,Grid,NRowE79), nth0(NC2,NRowE79,NV), NV\=Root
+% ERC 0.10 %
+    ), EdgesRaw79),
+% ERC 0.10 %
+    sort(EdgesRaw79, Edges79),
+% ERC 0.10 %
+    w79_proc_edges(Grid, GR79, Root, Edges79, Occ, NR, NC, SeenC0, GIn, GOut, SeenCOut).
+% ERC 0.10 %
+w79_proc_edges(_, _, _, [], _, _, _, Seen, G, G, Seen) :- !.
+% ERC 0.10 %
+w79_proc_edges(Grid, GR, Root, [R0e-C0e-NR2-NC2-NV|Rest], Occ, NR, NC, Seen0, G0, G, SeenOut) :-
+% ERC 0.10 %
+    Key79=(NR2-NC2)-NV,
+% ERC 0.10 %
+    ( memberchk(Key79,Seen0) -> Seen1=Seen0, G1=G0
+% ERC 0.10 %
+    ;
+% ERC 0.10 %
+        Seen1=[Key79|Seen0],
+% ERC 0.10 %
+        w79_follow(Grid, GR, R0e-C0e, NR2-NC2, NV, [Root], Occ, NR, NC, G0, G1)
+% ERC 0.10 %
+    ),
+% ERC 0.10 %
+    w79_proc_edges(Grid, GR, Root, Rest, Occ, NR, NC, Seen1, G1, G, SeenOut).
+% ERC 0.10 %
+w79_follow(Grid, Src, SCR-SCC, DCR-DCC, DCol, Used, Occ, NR, NC, GIn, GOut) :-
+% ERC 0.10 %
+    findall(R2-C2,(
+% ERC 0.10 %
+        member(R-C, Src),
+% ERC 0.10 %
+        ( SCR=:=DCR ->
+% ERC 0.10 %
+            C2 is SCC+DCC-C, R2=R,
+% ERC 0.10 %
+            R2>=0, R2<NR, C2>=0, C2<NC,
+% ERC 0.10 %
+            \+memberchk(R2-C2, Occ)
+% ERC 0.10 %
+        ;
+% ERC 0.10 %
+          SCC=:=DCC ->
+% ERC 0.10 %
+            R2 is SCR+DCR-R, C2=C,
+% ERC 0.10 %
+            R2>=0, R2<NR, C2>=0, C2<NC,
+% ERC 0.10 %
+            \+memberchk(R2-C2, Occ)
+% ERC 0.10 %
+        ;
+% ERC 0.10 %
+          fail
+% ERC 0.10 %
+        )
+% ERC 0.10 %
+    ), Reflected79),
+% ERC 0.10 %
+    sort([DCR-DCC|Reflected79], Acc79),
+% ERC 0.10 %
+    foldl([R2-C2,G,Go]>>(w53_set_cell(G,R2,C2,DCol,Go)), Acc79, GIn, GMid79),
+% ERC 0.10 %
+    NewUsed79=[DCol|Used],
+% ERC 0.10 %
+    w79_chain(Grid, Acc79, DCR-DCC, NewUsed79, Occ, NR, NC, GMid79, GOut).
+% ERC 0.10 %
+w79_chain(Grid, Acc, DCR-DCC, Used, Occ, NR, NC, G0, G) :-
+% ERC 0.10 %
+    findall(NR3-NC3-NV3,(
+% ERC 0.10 %
+        member(DRd79-DCd79, [-1-0,1-0,0-(-1),0-1]),
+% ERC 0.10 %
+        NR3 is DCR+DRd79, NC3 is DCC+DCd79,
+% ERC 0.10 %
+        NR3>=0, NR3<NR, NC3>=0, NC3<NC,
+% ERC 0.10 %
+        nth0(NR3,Grid,NRow3), nth0(NC3,NRow3,NV3),
+% ERC 0.10 %
+        NV3\=0, \+memberchk(NV3,Used)
+% ERC 0.10 %
+    ), NextLinks),
+% ERC 0.10 %
+    sort(NextLinks, NextLinksU),
+% ERC 0.10 %
+    foldl([NR3-NC3-NV3,Gin,Gout]>>(
+% ERC 0.10 %
+        w79_follow(Grid,Acc,DCR-DCC,NR3-NC3,NV3,Used,Occ,NR,NC,Gin,Gout)
+% ERC 0.10 %
+    ), NextLinksU, G0, G).
+
