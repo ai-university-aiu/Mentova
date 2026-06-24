@@ -32,12 +32,12 @@
         text-anchor="middle" letter-spacing="6">Mentova</text>
   <!-- Subtitle -->
   <text x="600" y="205" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-        font-size="26" font-weight="300" fill="#6ab4c8"
+        font-size="26" font-weight="300" fill="#ffffff"
         text-anchor="middle" letter-spacing="3">The World's First Glass-Box Synthetic Mind</text>
   <!-- Accent line -->
   <line x1="390" y1="232" x2="810" y2="232" stroke="#00c8aa" stroke-width="1" opacity="0.45"/>
   <!-- Tagline -->
   <text x="600" y="256" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-        font-size="14" font-weight="400" fill="#3a7890"
-        text-anchor="middle" letter-spacing="2">48 Reasoning Types  ·  ARC-AGI-1: 400/400 = 100%  ·  Written in PrologAI</text>
+        font-size="14" font-weight="400" fill="#c0eaf8"
+        text-anchor="middle" letter-spacing="1">48 Reasoning Types · ARC-AGI-1: 400/400 = 100% · Written in PrologAI</text>
 </svg>
