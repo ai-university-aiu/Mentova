@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#071a2e;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0d2d44;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#091f35;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e0f4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#80dff0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="280" fill="url(#bgGrad)" rx="12"/>
+  <!-- Decorative circles - left -->
+  <circle cx="58" cy="58" r="40" fill="none" stroke="#00c8aa" stroke-width="1.2" opacity="0.30"/>
+  <circle cx="58" cy="58" r="24" fill="none" stroke="#00c8aa" stroke-width="0.8" opacity="0.18"/>
+  <!-- Decorative circles - right -->
+  <circle cx="1142" cy="222" r="50" fill="none" stroke="#00b8d4" stroke-width="1.2" opacity="0.25"/>
+  <circle cx="1142" cy="222" r="30" fill="none" stroke="#00b8d4" stroke-width="0.8" opacity="0.15"/>
+  <!-- Subtle dot accents -->
+  <circle cx="118" cy="198" r="2" fill="#00c8aa" opacity="0.22"/>
+  <circle cx="158" cy="198" r="2" fill="#00c8aa" opacity="0.22"/>
+  <circle cx="118" cy="228" r="2" fill="#00c8aa" opacity="0.22"/>
+  <circle cx="158" cy="228" r="2" fill="#00c8aa" opacity="0.22"/>
+  <circle cx="1042" cy="62" r="2" fill="#00b8d4" opacity="0.22"/>
+  <circle cx="1082" cy="62" r="2" fill="#00b8d4" opacity="0.22"/>
+  <circle cx="1042" cy="92" r="2" fill="#00b8d4" opacity="0.22"/>
+  <circle cx="1082" cy="92" r="2" fill="#00b8d4" opacity="0.22"/>
+  <!-- Main title -->
+  <text x="600" y="150" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="100" font-weight="700" fill="url(#textGrad)"
+        text-anchor="middle" letter-spacing="6">Mentova</text>
+  <!-- Subtitle -->
+  <text x="600" y="205" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="26" font-weight="300" fill="#6ab4c8"
+        text-anchor="middle" letter-spacing="3">The World's First Glass-Box Synthetic Mind</text>
+  <!-- Accent line -->
+  <line x1="390" y1="232" x2="810" y2="232" stroke="#00c8aa" stroke-width="1" opacity="0.45"/>
+  <!-- Tagline -->
+  <text x="600" y="256" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="14" font-weight="400" fill="#3a7890"
+        text-anchor="middle" letter-spacing="2">48 Reasoning Types  ·  ARC-AGI-1: 400/400 = 100%  ·  Written in PrologAI</text>
+</svg>
