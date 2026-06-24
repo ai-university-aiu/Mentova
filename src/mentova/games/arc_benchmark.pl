@@ -31305,3 +31305,167 @@ w73_is_submatrix(Large, Small) :-
          nth0(LI, Large, LRow2), nth0(LJ, LRow2, SV))
 % ERC 0.10 %
     ), !.
+% ERC 0.10 %
+% -----------------------------------------------------------------------
+% Wave 74: stamp_same_orient_into_voids (e5062a87)
+% -----------------------------------------------------------------------
+% ERC 0.10 %
+arc_named_rule(stamp_same_orient_into_voids).
+% ERC 0.10 %
+arc_transform(stamp_same_orient_into_voids, Grid, Out) :-
+% ERC 0.10 %
+    length(Grid, NR), Grid = [FirstRow|_], length(FirstRow, NC),
+% ERC 0.10 %
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,2)), Cluster),
+% ERC 0.10 %
+    Cluster \= [],
+% ERC 0.10 %
+    w74_normalize(Cluster, ShapeNorm),
+% ERC 0.10 %
+    w74_interior_offsets(ShapeNorm, InteriorOff),
+% ERC 0.10 %
+    findall(DR, member(DR-_, ShapeNorm), DRsList),
+% ERC 0.10 %
+    findall(DC, member(_-DC, ShapeNorm), DCsList),
+% ERC 0.10 %
+    max_list(DRsList, MaxDR), max_list(DCsList, MaxDC),
+% ERC 0.10 %
+    RMax is NR - 1 - MaxDR, CMax is NC - 1 - MaxDC,
+% ERC 0.10 %
+    msort(Cluster, ClusterS),
+% ERC 0.10 %
+    findall(Placement, (
+% ERC 0.10 %
+        between(0, RMax, R0),
+% ERC 0.10 %
+        between(0, CMax, C0),
+% ERC 0.10 %
+        findall(R-C, (member(DR-DC, ShapeNorm), R is R0+DR, C is C0+DC), Placement),
+% ERC 0.10 %
+        msort(Placement, PlS), PlS \== ClusterS,
+% ERC 0.10 %
+        w74_all_zero(Grid, Placement),
+% ERC 0.10 %
+        w74_interior_ok(Grid, NR, NC, R0, C0, InteriorOff)
+% ERC 0.10 %
+    ), AllPlacements),
+% ERC 0.10 %
+    w74_filter_1d(ShapeNorm, Cluster, AllPlacements, Filtered),
+% ERC 0.10 %
+    Filtered \= [],
+% ERC 0.10 %
+    w74_greedy(Filtered, [], SelCells),
+% ERC 0.10 %
+    SelCells \= [],
+% ERC 0.10 %
+    foldl([R-C, G, Go]>>(w53_set_cell(G, R, C, 2, Go)), SelCells, Grid, Out).
+% ERC 0.10 %
+w74_normalize(Cells, Norm) :-
+% ERC 0.10 %
+    findall(R, member(R-_, Cells), Rs),
+% ERC 0.10 %
+    findall(C, member(_-C, Cells), Cs),
+% ERC 0.10 %
+    min_list(Rs, MinR), min_list(Cs, MinC),
+% ERC 0.10 %
+    findall(DR-DC, (member(R-C, Cells), DR is R-MinR, DC is C-MinC), Norm).
+% ERC 0.10 %
+w74_interior_offsets(ShapeNorm, Interior) :-
+% ERC 0.10 %
+    findall(DR, member(DR-_, ShapeNorm), DRsList2),
+% ERC 0.10 %
+    findall(DC, member(_-DC, ShapeNorm), DCsList2),
+% ERC 0.10 %
+    min_list(DRsList2, MinDR0), max_list(DRsList2, MaxDR0),
+% ERC 0.10 %
+    min_list(DCsList2, MinDC0), max_list(DCsList2, MaxDC0),
+% ERC 0.10 %
+    IBMinR is MinDR0 - 1, IBMaxR is MaxDR0 + 1,
+% ERC 0.10 %
+    IBMinC is MinDC0 - 1, IBMaxC is MaxDC0 + 1,
+% ERC 0.10 %
+    findall(IDR-IDC, (
+% ERC 0.10 %
+        between(IBMinR, IBMaxR, IDR),
+% ERC 0.10 %
+        between(IBMinC, IBMaxC, IDC),
+% ERC 0.10 %
+        \+ member(IDR-IDC, ShapeNorm),
+% ERC 0.10 %
+        N1R is IDR-1, member(N1R-IDC, ShapeNorm),
+% ERC 0.10 %
+        N2R is IDR+1, member(N2R-IDC, ShapeNorm),
+% ERC 0.10 %
+        N1C is IDC-1, member(IDR-N1C, ShapeNorm),
+% ERC 0.10 %
+        N2C is IDC+1, member(IDR-N2C, ShapeNorm)
+% ERC 0.10 %
+    ), Interior).
+% ERC 0.10 %
+w74_all_zero(_, []).
+% ERC 0.10 %
+w74_all_zero(Grid, [R-C|Rest]) :-
+% ERC 0.10 %
+    nth0(R, Grid, Row), nth0(C, Row, 0),
+% ERC 0.10 %
+    w74_all_zero(Grid, Rest).
+% ERC 0.10 %
+w74_interior_ok(_, _, _, _, _, []).
+% ERC 0.10 %
+w74_interior_ok(Grid, NR, NC, R0, C0, [IDR-IDC|Rest]) :-
+% ERC 0.10 %
+    IR is R0+IDR, IC is C0+IDC,
+% ERC 0.10 %
+    IR >= 0, IR < NR, IC >= 0, IC < NC,
+% ERC 0.10 %
+    nth0(IR, Grid, IRow), nth0(IC, IRow, 5),
+% ERC 0.10 %
+    w74_interior_ok(Grid, NR, NC, R0, C0, Rest).
+% ERC 0.10 %
+w74_filter_1d(ShapeNorm, Cluster, Placements, Filtered) :-
+% ERC 0.10 %
+    findall(DR, member(DR-_, ShapeNorm), DRsList3),
+% ERC 0.10 %
+    sort(DRsList3, UDRs),
+% ERC 0.10 %
+    findall(DC, member(_-DC, ShapeNorm), DCsList3),
+% ERC 0.10 %
+    sort(DCsList3, UDCs),
+% ERC 0.10 %
+    (UDRs = [_] ->
+% ERC 0.10 %
+        findall(Rv, member(Rv-_, Cluster), CRvs),
+% ERC 0.10 %
+        sort(CRvs, OrigRows),
+% ERC 0.10 %
+        include([P]>>(forall(member(Rp-_, P), member(Rp, OrigRows))), Placements, Filtered)
+% ERC 0.10 %
+    ; UDCs = [_] ->
+% ERC 0.10 %
+        findall(Cv, member(_-Cv, Cluster), CCvs),
+% ERC 0.10 %
+        sort(CCvs, OrigCols),
+% ERC 0.10 %
+        include([P]>>(forall(member(_-Cp, P), member(Cp, OrigCols))), Placements, Filtered)
+% ERC 0.10 %
+    ; Filtered = Placements
+% ERC 0.10 %
+    ).
+% ERC 0.10 %
+w74_greedy([], Used, Used).
+% ERC 0.10 %
+w74_greedy([P|Rest], Used, Sel) :-
+% ERC 0.10 %
+    intersection(P, Used, Overlap),
+% ERC 0.10 %
+    (Overlap = [] ->
+% ERC 0.10 %
+        append(Used, P, NewUsed),
+% ERC 0.10 %
+        w74_greedy(Rest, NewUsed, Sel)
+% ERC 0.10 %
+    ;
+% ERC 0.10 %
+        w74_greedy(Rest, Used, Sel)
+% ERC 0.10 %
+    ).
