@@ -1,0 +1,65 @@
+Accomplishment 101: Directional Gravity and Settling - The Gravity Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 79th work package: the gravity pack (gv_* predicate family, Layer 60). This pack implements physics-like directional settling of grid cells: cells can fall down, rise up, shift left, or shift right, stopping at the grid boundary or at non-background obstacle cells. Specific colors can be singled out to fall through background cells while being blocked by other colors. These operations model a wide class of visual transformation tasks where objects move under directed forces.
+
+Introduction
+
+Many visual reasoning tasks involve movement: an object falls to the floor, bubbles rise to the surface, debris shifts to one side. The gravity pack gives Mentova the ability to simulate and recognize these movements. A cell "falls" by joining all other non-background values in its column at the bottom, while background fills the vacated space at the top. A specific color can be made to "fall through" background cells while treating all other non-background cells as solid obstacles.
+
+The pack is general-purpose. The four directions (down, up, left, right) cover the primary axes of movement on a grid. Color-specific settling and floating handle the common ARC-AGI pattern of one element type moving while others remain fixed.
+
+Predicates
+
+The gravity pack exports 14 predicates under the gv_* prefix.
+
+Column utilities:
+gv_col_values/3 extracts all values in a given column as a top-to-bottom list.
+gv_set_col/4 replaces a column in a grid with a new list.
+
+Direction operations:
+gv_compact_col/3 and gv_fall_down/3 make all non-background cells sink to the bottom of their column.
+gv_fall_up/3 makes non-background cells rise to the top.
+gv_compact_row/3 and gv_fall_left/3 make non-background cells shift to the left of their row.
+gv_fall_right/3 makes non-background cells shift to the right.
+
+Color-specific settling:
+gv_settle_color/4 makes cells of one specific color fall to the bottom of each column, while non-background non-color cells act as obstacles and stay above. Output column order: [Others] ++ [BGs] ++ [Colors].
+gv_float_color/4 is the mirror: the color rises to the top. Output column order: [Colors] ++ [Others] ++ [BGs].
+gv_stack_down/4 is an alias for gv_settle_color/4.
+gv_stack_up/4 is an alias for gv_float_color/4.
+
+Custom transforms:
+gv_apply_col/4 applies a caller-supplied predicate to each column.
+gv_apply_row/4 applies a caller-supplied predicate to each row.
+
+Implementation
+
+The core implementation uses two internal list primitives: gv_compact_list_bottom_/3 (non-BG to end) and gv_compact_list_top_/3 (non-BG to front). Both partition a list with include/3 and concatenate with append/2. Column-level operations are applied via foldl/4; row-level operations via maplist/3.
+
+The color-specific predicates extend the partition into three categories - Color, Others, and BG - and concatenate in the order that achieves the desired settling behavior. The formula guarantees that the output list has the same length as the input list.
+
+All 29 PLUnit acceptance tests pass. The pack depends only on library(lists) and library(apply).
+
+Significance
+
+The gravity pack closes a critical gap in Mentova's perception and transformation layer. Many ARC-AGI-2 tasks involve objects that fall, float, stack, or settle. With the gravity pack, Mentova can now:
+- Detect that an output is just the input after falling (compare gv_fall_down output to actual output using cp_grids_equal)
+- Apply settling as a post-processing step to candidate outputs
+- Check whether a specific color settled under gravity
+
+Combined with the induction pack (id_* predicates), the gravity pack enables a new class of hypothesis: "the output is the input after color X fell to the bottom."
+
+References
+
+PrologAI_1_Specification_v46.txt, Part 71 (GV-GV-001 through GV-GV-014)
+PrologAI_2_Pseudocode_v39.txt, Part 71
+PrologAI_3_Architecture_v40.txt, PART ARCH-47
+PrologAI_4_Refinement_v94.txt, Part 71 (AC-GV-001 through AC-GV-029)
+PrologAI_5_Completion_v97.txt, Work Package 81
+PrologAI PR #166: feat(packs): PR 81 - gravity pack

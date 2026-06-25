@@ -1,0 +1,16 @@
+Accomplishment 101: Mentova can now apply gravity to grids.
+
+The gravity pack (gv_* predicates, Layer 60) gives Mentova 14 new tools for directional settling:
+
+- gv_fall_down/3: non-background cells sink to the bottom of their column
+- gv_fall_up/3: non-background cells rise to the top
+- gv_fall_left/3, gv_fall_right/3: non-background cells shift to the ends of their row
+- gv_settle_color/4: a specific color falls to the bottom past background cells, while other colors act as obstacles
+- gv_float_color/4: a specific color rises to the top
+- gv_apply_col/4, gv_apply_row/4: custom column and row transforms
+
+Combined with the induction pack added last session, Mentova can now form and test hypotheses like "the output is the input after color X fell to the bottom."
+
+This is Mentova's 101st documented accomplishment and PrologAI's 79th work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
