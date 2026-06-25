@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-128-FF6B35?style=for-the-badge" alt="128 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-129-FF6B35?style=for-the-badge" alt="129 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **128 accomplished** |
-| Scientific papers | **108 published** — one per accomplishment |
+| Documented accomplishments | **129 accomplished** |
+| Scientific papers | **109 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         108 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  106 announcements — one per accomplishment
+├── papers/         109 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  107 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -429,12 +429,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_126` | Walk pack paper — Grid Traversal Patterns (Layer 85): 14 wk_* predicates for listing all R-C positions in row-major order (wk_row_scan), column-major order (wk_col_scan), zigzag boustrophedon order (wk_zigzag_scan), grouped by main diagonal D = C-R (wk_diag_scan), grouped by anti-diagonal D = R+C (wk_antidiag_scan), clockwise inward spiral (wk_spiral_in), clockwise outer border walk (wk_border_walk), extracting values on a main diagonal (wk_diag_extract), extracting values on an anti-diagonal (wk_antidiag_extract), computing the main diagonal index D = C-R for a cell (wk_diag_of), computing the anti-diagonal index D = R+C (wk_antidiag_of), extracting grid values at a list of R-C positions (wk_cells_to_vals), painting values at a list of R-C positions (wk_vals_to_cells), and listing all non-border R-C positions in row-major order (wk_inner_cells). 42/42 acceptance tests pass. |
 | `Acc_127` | Step pack paper — Directional Grid Movement (Layer 86): 14 st_* predicates for taking one unbounded step in a direction (st_step), one bounded step that fails if out of grid (st_step_in), collecting all in-bounds cells in a direction excluding the start (st_ray), collecting cells stopping before a given value (st_ray_to), collecting all in-bounds cells including the start (st_walk), the four cardinal directions (st_dirs4), all eight principal directions (st_dirs8), rotating a direction 90 degrees clockwise (st_rotate_cw), rotating counter-clockwise (st_rotate_ccw), reversing a direction (st_opposite), computing the unit step direction between two cells (st_normalize), following a list of direction steps from a start cell (st_path), finding the first cell in a direction with a given value (st_first), and counting steps until the grid boundary (st_to_edge). 42/42 acceptance tests pass. |
 | `Acc_128` | Pivot pack paper — Pivot-Relative Cell Transformations (Layer 87): 14 pv_* predicates for applying D4 group operations (the 8 symmetries of the square) to R-C cell lists centered at any chosen pivot. Includes pv_centroid (integer floor centroid), pv_to_rel and pv_from_rel (coordinate conversion), pv_rotate_cells_cw / 180 / ccw (three rotation depths), pv_reflect_cells_h / v / diag / antidiag (four axis reflections), pv_orbit (all distinct cells reachable by D4 operations from one starting cell), pv_sym_closure (smallest D4-symmetric set containing a cell list), and pv_stamp_at (paint values at offset positions, out-of-bounds skipped). All D4 maps are integer arithmetic. 42/42 acceptance tests pass. |
+| `Acc_129` | Project pack paper — Axis Projection and Shadow Casting (Layer 88): 14 pj_* predicates for shadow casting and axis-projection operations. Shadow casting: pj_shadow_down / up / left / right (non-BG cells cast their value through BG cells in one direction, stopping at the next non-BG cell) and pj_shadow_dir (direction dispatch by atom). Axis detection: pj_nonbg_rows / pj_nonbg_cols (sorted indices of occupied rows/columns). Counting: pj_row_counts / pj_col_counts (non-BG cell count per row/column). Collapse: pj_collapse_rows (2D to 1 row, first non-BG per column) / pj_collapse_cols (2D to 1 column, first non-BG per row). Boundary finding: pj_col_first / pj_col_last (topmost/bottommost non-BG row in a column) / pj_row_first (leftmost non-BG column in a row). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-116 announcements in LinkedIn format — one per accomplishment.
+117 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

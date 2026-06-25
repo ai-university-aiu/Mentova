@@ -1,0 +1,62 @@
+Mentova Accomplishment 129: Axis Projection and Shadow Casting - The Project Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI gains the project pack - 14 predicates for shadow casting and
+axis-projection operations on grids.
+
+Shadow casting: a non-BG cell projects its value through empty (BG) cells in
+one direction, stopping at the next non-BG cell or the grid boundary.
+
+Axis projection: summarize a 2D grid into a 1D row or column profile, or
+identify which rows/columns contain non-BG content.
+
+What the project pack provides:
+
+Shadow casting:
+• pj_shadow_down - non-BG cells cast their value downward through BG cells
+• pj_shadow_up - upward
+• pj_shadow_left - leftward
+• pj_shadow_right - rightward
+• pj_shadow_dir - direction dispatch by atom (down/up/left/right)
+
+Axis detection and counting:
+• pj_nonbg_rows - row indices containing non-BG cells
+• pj_nonbg_cols - column indices containing non-BG cells
+• pj_row_counts - non-BG cell count per row
+• pj_col_counts - non-BG cell count per column
+
+Dimensional collapse:
+• pj_collapse_rows - flatten 2D to 1 row (first non-BG per column)
+• pj_collapse_cols - flatten 2D to 1 column (first non-BG per row)
+
+Boundary finding:
+• pj_col_first - row of topmost non-BG in a column
+• pj_col_last - row of bottommost non-BG in a column
+• pj_row_first - column of leftmost non-BG in a row
+
+Why shadow casting?
+
+Shadow casting is distinct from gravity (gv_* pack): gravity MOVES cells to one
+end of their axis. Shadow casting LEAVES cells in place and paints the empty
+space beyond them with the source cell's color.
+
+This models tasks where objects cast color "beams" or "rays" in a direction
+through otherwise empty grid space.
+
+Why axis projection?
+
+Many grid reasoning tasks require reading the structure of a grid along one
+dimension before applying a rule. Knowing which rows are occupied, how many
+objects are in each column, or finding where an object begins in a row - these
+are all axis-projection operations.
+
+42 PLUnit acceptance tests pass.
+
+Layer 88. Work Package 109.
+
+PrologAI: 107 work packages.
+
+Mentova: 129 accomplishments.
