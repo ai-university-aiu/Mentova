@@ -1,0 +1,187 @@
+THE SCENE PACK: MENTOVA REASONS ABOUT INDIVIDUAL OBJECTS IN VISUAL SCENES
+MENTOVA ACC_78: ARC-AGI SCENE MODEL AND OBJECT-CENTRIC REASONING ON THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_78
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-24
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Acc_78 adds the scene pack to the PrologAI platform and demonstrates its use through Mentova. The scene pack gives PrologAI the ability to build a structured object inventory from a rectangular color grid, describe each object's properties (color, size, normalized shape, bounding box, centroid), and compute spatial relationships between objects (above, below, left-of, right-of, cells-touching, contained-in, same-shape, same-color). It is implemented as work package PR 58 at Layer 37 of the PrologAI cognitive architecture and exports 24 predicates. All 44 PLUnit acceptance criteria pass. The scene pack depends on the grid pack (PR 56, Layer 35) and is the object-centric reasoning layer required for ARC-AGI-2.
+
+
+INTRODUCTION
+
+The grid pack (PR 56, Acc_76) and the analogy pack (PR 57, Acc_77) established the perceptual and inferential foundation of PrologAI's ARC-AGI solving capability.
+
+The grid pack answers questions about the grid as a whole: what are its dimensions, which colors are present, where are the connected components of each color, and how does one grid transform into another?
+
+The analogy pack answers the question: does there exist a D4 isometry and color substitution map that, applied to the training inputs, produces the training outputs?
+
+But many ARC-AGI-2 tasks require a different kind of reasoning. They ask about individual objects within a grid: which is the largest? which two have the same shape? which object is above the red square? how many blue objects are there?
+
+These questions cannot be answered by the grid pack or the analogy pack. They require an object model: a data structure that names the objects in a scene and records their properties and relationships.
+
+The scene pack provides that object model.
+
+
+THE OBJECT MODEL
+
+An object in the scene pack is an obj(Color, Cells) term. Color is an integer 0-9 representing the object's color. Cells is a sorted list of r(Row, Col) terms representing the cells the object occupies.
+
+A scene is a scene(Rows, Cols, BgColor, Objects) term. Rows and Cols are the grid dimensions. BgColor is the background color (the most frequently occurring color, which in ARC-AGI grids is almost always the filler color 0). Objects is the list of all foreground objects.
+
+This representation is chosen for transparency: an obj(2, [r(1,1), r(1,2), r(2,1)]) is completely self-describing. No lookup tables. No indices. No opaque identifiers.
+
+
+DESIGN
+
+The scene pack is organized into seven functional areas.
+
+Area 1 - Scene construction (sc_bg_color/2, sc_objects/2, sc_grid_to_scene/2).
+
+sc_bg_color/2 identifies the background by finding the most frequently occurring color. It uses findall to collect Count-Color pairs and max_member to select the one with the highest count.
+
+sc_objects/2 extracts all foreground objects by iterating over all non-background colors and calling gd_objects/3 (from the grid pack) on each. The result is a flat list of obj(Color, Cells) terms across all foreground colors.
+
+sc_grid_to_scene/2 combines dimensions, background color, and object list into a scene/4 term.
+
+Area 2 - Object property accessors (sc_obj_color/2, sc_obj_cells/2, sc_obj_size/2, sc_obj_bbox/3, sc_obj_shape/2, sc_obj_centroid/3).
+
+sc_obj_shape/2 normalizes the cell set: it translates the cells so the top-left is at r(0,0) and sorts the result. Two objects have the same shape if and only if their sc_obj_shape results are identical. This is position-independent and color-independent shape comparison.
+
+sc_obj_centroid/3 computes the center of mass: the rounded mean of the row coordinates and the rounded mean of the column coordinates. For a single-cell object, the centroid is exactly that cell. For a multi-cell object, the centroid is the nearest-integer average position.
+
+Area 3 - Cell normalization (sc_normalize_cells/2).
+
+The normalization algorithm: extract the minimum row and minimum column of the cell set; subtract them from each cell's row and column; sort the translated cells. The result is the canonical form of the shape, independent of where in the grid the object sits.
+
+Area 4 - Filtering and sorting (sc_objects_of_color/3, sc_sort_by_size/3, sc_largest/2, sc_smallest/2).
+
+sc_sort_by_size/3 uses keysort on Size-Obj pairs, which gives a stable ascending sort by cell count. sc_largest/2 takes the last element of the ascending sort. sc_smallest/2 takes the first element.
+
+Area 5 - Counting (sc_count/2, sc_count_of_color/3).
+
+Direct length/2 calls on the object list and on the color-filtered sublist.
+
+Area 6 - Spatial relations (sc_above/2, sc_below/2, sc_left_of/2, sc_right_of/2, sc_cells_touching/2, sc_contained_in/2).
+
+The directional relations (above, below, left-of, right-of) compare the top-left corners of bounding boxes. This gives a clean, unambiguous definition: Obj1 is above Obj2 if and only if Obj1's minimum row is strictly less than Obj2's minimum row.
+
+sc_cells_touching/2 checks whether any cell of Obj1 is a 4-connected neighbor of any cell of Obj2 (Manhattan distance exactly 1). A cut after the first witness makes this deterministic. It does not succeed for diagonal neighbors.
+
+sc_contained_in/2 checks that the bounding box of Obj1 is entirely inside the bounding box of Obj2: Obj1's minimum row and column must be at least as large as Obj2's, and Obj1's maximum row and column must be at most as large as Obj2's.
+
+Area 7 - Shape and color comparison (sc_same_shape/2, sc_same_color/2).
+
+sc_same_shape/2 delegates to sc_obj_shape/2 on both objects and tests identity. sc_same_color/2 is a direct pattern match on the color field of the obj term.
+
+
+IMPLEMENTATION NOTE: NAMED PREDICATES OVER YALL LAMBDAS
+
+The scene pack uses named predicates wherever a helper function is passed to maplist or foldl.
+
+In particular, the predicate make_obj/3 is defined as a named predicate:
+
+    make_obj(Color, Cells, obj(Color, Cells)).
+
+and used in collect_color_objects/4:
+
+    maplist(make_obj(Color), CellSets, ColorObjs).
+
+If make_obj were a YALL lambda ([Cells, obj(Color, Cells)]>>true), the Color variable in the lambda body would be unified with the first foreground color encountered by foldl. All subsequent maplist calls for other colors would then attempt to build obj terms with the wrong color, causing incorrect behavior.
+
+This is the same YALL lambda variable-sharing bug documented in the analogy pack (Acc_77, Pseudocode v15). The rule is: any lambda variable that appears in a YALL body but is not a declared input parameter of the lambda is shared across all calls in the enclosing maplist or foldl. Named predicates are free from this issue.
+
+
+MENTOVA DEMONSTRATION
+
+Step 1: Build a scene from a grid.
+
+    ?- G = [[0,0,0,0],
+            [0,1,1,0],
+            [0,1,0,0],
+            [0,0,0,2]],
+       sc_grid_to_scene(G, scene(Rows, Cols, Bg, Objects)),
+       sc_count(Objects, N).
+    Rows = 4, Cols = 4, Bg = 0, N = 2.
+
+Step 2: Identify the largest object.
+
+    ?- G = [[0,1,1,0],[0,1,0,0],[0,0,0,2]],
+       sc_objects(G, Objects),
+       sc_largest(Objects, Big),
+       sc_obj_size(Big, S),
+       sc_obj_color(Big, C).
+    S = 3, C = 1.
+
+Step 3: Find objects with the same shape.
+
+    ?- G = [[1,0,0,2],
+            [1,0,2,0],
+            [0,0,0,0]],
+       sc_objects(G, Objects),
+       member(A, Objects),
+       member(B, Objects),
+       A \= B,
+       sc_same_shape(A, B).
+    A = obj(1, [r(0,0), r(1,0)]),
+    B = obj(2, [r(0,3), r(1,2)]).   % both are vertical 2-cell lines (normalized).
+
+Step 4: Query spatial relations.
+
+    ?- G = [[1,0,0],[0,0,0],[0,0,2]],
+       sc_objects(G, [ObjA, ObjB|_]),
+       sc_above(ObjA, ObjB).
+    true.   % red at r(0,0) is above blue at r(2,2)
+
+Step 5: Count objects of each color.
+
+    ?- G = [[1,0,1],[0,1,0],[2,0,0]],
+       sc_objects(G, Objects),
+       sc_count_of_color(Objects, 1, RedCount),
+       sc_count_of_color(Objects, 2, BlueCount).
+    RedCount = 3, BlueCount = 1.
+
+
+ACCEPTANCE CRITERIA
+
+44 PLUnit tests are defined in packs/scene/test/test_scene.pl. The test groups and their counts are:
+
+scene_bg (3 tests): sc_bg_color/2 on a 4-color grid, a uniform grid, and a single-color grid.
+scene_objects (5 tests): sc_objects/2 count and color verification; sc_objects_of_color/3 counts; empty-grid case.
+scene_scene (3 tests): sc_grid_to_scene/2 dimensions, background, and object count.
+scene_properties (7 tests): sc_obj_size/2, sc_obj_bbox/3, sc_obj_centroid/3, sc_obj_shape/2, sc_obj_color/2, sc_obj_cells/2.
+scene_normalize (3 tests): sc_normalize_cells/2 at origin, with offset, and single cell.
+scene_sort (4 tests): sc_sort_by_size/3 asc, sc_sort_by_size/3 desc, sc_largest/2, sc_smallest/2.
+scene_counting (4 tests): sc_count/2, sc_count_of_color/3 for two colors, empty list.
+scene_spatial (5 tests): sc_above/2, sc_below/2, sc_left_of/2, sc_right_of/2, asymmetry of sc_above.
+scene_touching (4 tests): horizontal touch, vertical touch, gap (not touching), diagonal (not touching).
+scene_containment (2 tests): contained case, not-contained case.
+scene_comparison (4 tests): sc_same_color/2 yes and no, sc_same_shape/2 yes and no.
+
+All 44 pass. No regressions in the grid pack (31/31 tests pass).
+
+
+PLATFORM STATUS
+
+After Acc_78, PrologAI has 55 work packages across 37 layers. The grid pack (Layer 35), analogy pack (Layer 36), and scene pack (Layer 37) form the complete perceptual foundation for ARC-AGI-2 solving: grid perception, transformation inference, and object-centric reasoning. Further packs will build object movement, pattern counting, tiling, and context-dependent dispatch on top of this foundation.
+
+
+REFERENCES
+
+Chollet, F. (2019). On the Measure of Intelligence. arXiv:1911.01547.
+Chollet, F., Knoop, M., et al. (2024). ARC Prize 2024: Technical Report.
+Chollet, F., et al. (2025). ARC-AGI-2 Technical Report.
+PrologAI Specification v23, Part 48 (FR-SC-001 through FR-SC-024). https://github.com/ai-university-aiu/PrologAI
+PrologAI Architecture v17, PART ARCH-24 (scene pack at Layer 37). https://github.com/ai-university-aiu/PrologAI
+PrologAI Refinement v71, AC-SC-001 through AC-SC-038. https://github.com/ai-university-aiu/PrologAI
+Mentova Acc_76 (Grid Pack). https://github.com/ai-university-aiu/Mentova
+Mentova Acc_77 (Analogy Pack). https://github.com/ai-university-aiu/Mentova
+
+
+END OF DOCUMENT - MENTOVA ACC_78
