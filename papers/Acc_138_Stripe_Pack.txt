@@ -1,0 +1,186 @@
+Mentova Accomplishment 138: Uniform Row and Column Stripe Detection and Filling - The Stripe Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 118: the stripe pack, a Layer 97 symbolic reasoning
+module providing 14 predicates for detecting rows and columns where every cell
+holds the same value, listing non-uniform rows and columns, filling individual
+or multiple rows and columns with a color, and computing or filling the
+intersections of row and column index sets. All predicates are deterministic.
+This accomplishment is verified by 42 PLUnit acceptance tests, all passing.
+
+
+1. Motivation
+
+Many visual grid reasoning tasks involve rows or columns that are entirely one
+color. Such rows and columns form natural separators, markers, or structural
+boundaries. Prior packs provide region detection (connect pack), spatial
+analysis (scene pack), and directional filling (gravity pack), but none provides
+dedicated predicates for uniform-row and uniform-column detection. The stripe
+pack fills this gap with a focused set of 14 sr_* predicates.
+
+
+2. Predicate Inventory (14 predicates, sr_* prefix)
+
+2.1 Single-stripe testing
+
+sr_uniform_row(+Grid, +R, -Color)
+
+Succeeds if row R (0-based) has all cells equal to Color. Fails if the row
+contains two or more distinct values.
+
+sr_uniform_col(+Grid, +C, -Color)
+
+Succeeds if column C (0-based) has all cells equal to Color.
+
+Example:
+
+sr_uniform_row([[5,5,5],[1,2,3]], 0, C).
+% C = 5
+
+sr_uniform_row([[5,5,5],[1,2,3]], 1, _).
+% false (row 1 has distinct values)
+
+
+2.2 Uniform index lists
+
+sr_uniform_rows(+Grid, +Color, -Rows)
+
+Rows is the sorted list of row indices where every cell equals Color.
+
+sr_uniform_cols(+Grid, +Color, -Cols)
+
+Cols is the sorted list of column indices where every cell equals Color.
+
+Example:
+
+sr_uniform_rows([[0,0],[1,2],[0,0]], 0, Rs).
+% Rs = [0, 2]
+
+
+2.3 Stripe pair lists
+
+sr_all_stripe_rows(+Grid, -Pairs)
+
+Pairs is the list of R-Color terms for all uniform rows, in row-index order.
+Non-uniform rows are omitted.
+
+sr_all_stripe_cols(+Grid, -Pairs)
+
+Pairs is the list of C-Color terms for all uniform columns, in column-index order.
+
+Example:
+
+sr_all_stripe_rows([[5,5],[1,2],[3,3]], Pairs).
+% Pairs = [0-5, 2-3]
+
+
+2.4 Mixed index lists
+
+sr_mixed_rows(+Grid, -Rows)
+
+Rows is the sorted list of row indices that are NOT uniform (contain at least
+two distinct values).
+
+sr_mixed_cols(+Grid, -Cols)
+
+Cols is the sorted list of column indices that are NOT uniform.
+
+Mixed and uniform index lists are always complementary: every index appears in
+exactly one of the two lists.
+
+
+2.5 Single fill
+
+sr_fill_row(+Grid, +R, +Color, -Result)
+
+Result is Grid with every cell in row R replaced by Color.
+
+sr_fill_col(+Grid, +C, +Color, -Result)
+
+Result is Grid with every cell in column C replaced by Color.
+
+
+2.6 Multi-fill
+
+sr_fill_rows(+Grid, +Rows, +Color, -Result)
+
+Result is Grid with every row index in Rows filled with Color. Uses if-then-
+else for deterministic dispatch; an empty Rows list returns the grid unchanged.
+
+sr_fill_cols(+Grid, +Cols, +Color, -Result)
+
+Result is Grid with every column index in Cols filled with Color.
+
+
+2.7 Row-column intersections
+
+sr_cross_cells(+Grid, +Rows, +Cols, -Cells)
+
+Cells is the list of r(R,C) terms for every pair in the Cartesian product
+of Rows x Cols, in row-major order.
+
+sr_cross_fill(+Grid, +Rows, +Cols, +Color, -Result)
+
+Result is Grid with all cells at Rows x Cols intersections filled with Color.
+Also fills all remaining cells in each listed row and column. Implemented as
+sr_fill_rows followed by sr_fill_cols.
+
+Example:
+
+sr_cross_fill([[1,2],[3,4]], [0], [0], 9, R).
+% R = [[9,9],[9,4]]
+% Row 0 becomes [9,9], then column 0 becomes all 9; cell (1,0) becomes 9.
+
+
+3. Implementation Notes
+
+The internal helper sr_replace_nth_ replaces a list element at a 0-based
+index with a new value. A cut in the base case (N = 0) makes it deterministic.
+sr_fill_row_ and sr_fill_col_ build on sr_replace_nth_: sr_fill_row_ builds an
+all-Color row and replaces the target row using sr_replace_nth_; sr_fill_col_
+maps sr_replace_nth_ over every row to replace the target column cell.
+
+sr_fill_rows and sr_fill_cols use if-then-else rather than multiple clauses to
+avoid choicepoints. sr_stripe_row_pairs_ and sr_stripe_col_pairs_ also use if-
+then-else to conditionally accumulate pairs.
+
+All 14 public predicates and all tests run without PLUnit choicepoint warnings.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary case.
+
+
+5. Relationship to Existing Packs
+
+The fill pack (Layer 55) provides flood-fill and region-fill operations that
+spread from seed cells. The stripe pack does not flood-fill; it fills entire
+rows or columns based on index sets.
+
+The project pack (Layer 88) propagates non-background values into adjacent
+background cells. The stripe pack does not propagate; it replaces entire rows
+or columns unconditionally.
+
+The stripe pack is the first pack to provide uniform-row and uniform-column
+detection predicates, complementary mixed-index lists, and intersection filling.
+
+
+6. Significance
+
+Uniform rows and columns act as structural landmarks in visual grids: grid
+separators, color bands, axis markers, and row-column highlights. The stripe
+pack gives Mentova the vocabulary to detect, describe, and modify these
+structures symbolically.
+
+This is Mentova accomplishment 138. PrologAI now carries 116 work packages.
+
+github.com/ai-university-aiu/PrologAI
