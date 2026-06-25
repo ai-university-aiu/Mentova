@@ -1,0 +1,79 @@
+THE QUANT PACK: MENTOVA COUNTS, GROUPS, AND COMPARES COLLECTIONS OF OBJECTS
+MENTOVA ACC_79: QUANTITATIVE REASONING OVER OBJECT SETS ON THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_79
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-25
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Acc_79 adds the quant pack to the PrologAI platform and demonstrates its use through Mentova. The quant pack provides quantitative reasoning over collections of obj(Color, Cells) terms produced by the scene pack. It answers questions about counts, groupings, frequency distributions, uniformity properties, and multiset comparisons of object sets. It is implemented as work package PR 59 at Layer 38 of the PrologAI cognitive architecture and exports 18 predicates. All 32 PLUnit acceptance criteria pass. The quant pack depends on the scene pack (PR 58, Layer 37) and is the counting and grouping layer required for ARC-AGI-2 tasks that ask "how many?", "which color appears most often?", and "do these two groups have the same shapes?".
+
+
+INTRODUCTION
+
+The scene pack (PR 58, Acc_78) established PrologAI's object model: a structured inventory of all foreground objects in a grid, each described by its color, size, shape, bounding box, centroid, and spatial relationships.
+
+But having a list of objects is not the same as being able to reason quantitatively about that list. Many reasoning tasks require counting, grouping, and comparison:
+
+How many objects have each color? Which color appears most often? Are all objects the same size? Do the objects on the left have the same color distribution as the objects on the right?
+
+The quant pack answers all of these questions.
+
+
+THE QUANT PACK
+
+The quant pack is work package PR 59 at Layer 38 of the PrologAI cognitive architecture. It depends on the scene pack (Layer 37) and indirectly on the grid pack (Layer 35).
+
+The pack exports 18 predicates organized into six functional groups.
+
+Histogram and frequency analysis: qn_histogram/2 returns a Color-Count list for any object collection. qn_most_frequent_color/2 and qn_least_frequent_color/2 identify extremes. qn_max_color_count/2 and qn_min_color_count/2 return the count values directly.
+
+Grouping: qn_group_by_color/2, qn_group_by_size/2, and qn_group_by_shape/2 partition an object list into key-[objects] pairs. These predicates use msort plus group_pairs_by_key to produce a correct grouping for any attribute.
+
+Unique shapes: qn_unique_shapes/2 returns the sorted list of distinct normalized shapes in a collection.
+
+Conditional counting: qn_count_where/3 counts objects satisfying a caller-supplied predicate. The design avoids lambda variables by requiring the caller to supply a named predicate, which ensures fresh binding frames on every call.
+
+Uniformity tests: qn_all_same_color/1, qn_all_same_size/1, and qn_all_same_shape/1 check whether all objects in a list share the same attribute value. The empty list trivially satisfies all uniformity tests.
+
+Multiset matching: qn_colors_match/2, qn_shapes_match/2, and qn_sizes_match/2 compare two object lists for attribute multiset equality. Multiset comparison uses msort on both attribute lists and then structural equality.
+
+Threshold predicates: qn_exactly_n/3 and qn_at_least_n/3 combine qn_count_where with an arithmetic comparison, providing convenient threshold tests.
+
+
+DESIGN PRINCIPLES
+
+Group by key using msort: the grouping predicates collect Key-Object pairs and sort them with msort (not sort) before grouping. msort preserves duplicate keys, which is essential because multiple objects may share the same color, size, or shape. sort would remove duplicates and cause objects to be silently dropped.
+
+Named helper predicates for qn_count_where: the qn_count_where predicate accepts a caller-supplied predicate name and uses include/3 to collect matching objects. The test suite uses named predicates (has_color_1/1, has_size_2/1) rather than lambda expressions. This follows the YALL variable-sharing principle: lambda bodies bind intermediate variables on the first call and fail to rebind on subsequent calls.
+
+The histogram as a foundation: the histogram predicate (qn_histogram/2) is the foundation for all frequency analysis. All frequency predicates (most frequent, least frequent, max count, min count) delegate to qn_histogram, ensuring a single consistent source of truth for color counts.
+
+
+VERIFICATION
+
+32 PLUnit acceptance criteria were written before the implementation and verified after. The test fixture uses five objects with three colors, two sizes, and three shapes, providing enough variety to test all grouping, counting, and comparison predicates. A special case: qn_least_frequent_color is tested with a nondet option because two colors (2 and 3) each appear exactly once, so min_member may return either. The test accepts both valid answers.
+
+All 32 tests pass with no warnings.
+
+
+CONCLUSION
+
+The quant pack brings quantitative reasoning to PrologAI. With the grid, analogy, scene, and quant packs in place, PrologAI can perceive a grid, extract its objects, and answer complex counting and comparison questions about them. This is the foundation for ARC-AGI-2 tasks that hinge on quantity relationships between objects.
+
+The next step is the pattern pack (PR 60), which adds periodic pattern detection and tile-based reasoning.
+
+
+REFERENCES
+
+[1] D. R. Dison, "The Grid Pack: Native ARC-AGI Grid Perception and Manipulation," Mentova Accomplishment Record Acc_76, 2026.
+[2] D. R. Dison, "The Analogy Pack: Structural Analogy and Transformation Inference," Mentova Accomplishment Record Acc_77, 2026.
+[3] D. R. Dison, "The Scene Pack: Mentova Reasons About Individual Objects in Visual Scenes," Mentova Accomplishment Record Acc_78, 2026.
+[4] PrologAI Platform Specification v25, 2026. https://github.com/ai-university-aiu/PrologAI
+
+END OF ACC_79

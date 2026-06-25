@@ -1,0 +1,74 @@
+THE PATTERN PACK: MENTOVA DETECTS AND GENERATES REPEATING SPATIAL STRUCTURES
+MENTOVA ACC_80: PERIODIC PATTERN DETECTION, TILING, AND REPETITION ON THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_80
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-25
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Acc_80 adds the pattern pack to the PrologAI platform and demonstrates its use through Mentova. The pattern pack provides periodic pattern detection (finding the shortest repeating period in a list, row, or column), tile-based grid construction (generating a large grid by repeating a small tile), integer scaling (expanding or collapsing grids by a uniform factor), repetition (copying a grid horizontally or vertically), mirroring (appending a reflected copy to the original), and constructed pattern generation (checkerboard, horizontal stripes, vertical stripes). It is implemented as work package PR 60 at Layer 39 of the PrologAI cognitive architecture and exports 15 predicates. All 43 PLUnit acceptance criteria pass. The pattern pack depends on the grid pack (PR 56, Layer 35) and provides the repetition and scaling layer required for ARC-AGI-2 tasks that involve tiled or scaled visual structures.
+
+
+INTRODUCTION
+
+A significant class of visual reasoning tasks involves periodic structure. Given a small tile, produce a large tiled grid. Given a scaled-up grid, recover the base unit. Given an alternating pattern, identify its period. These tasks are common in ARC-AGI-2 and in spatial reasoning generally.
+
+The pattern pack gives PrologAI the ability to reason about and construct all of these repeating structures. Like all packs above Layer 35, it is named for its general purpose, not for the specific benchmark that motivated it.
+
+
+THE PATTERN PACK
+
+The pattern pack is work package PR 60 at Layer 39. It depends only on the grid pack (Layer 35). Unlike the quant and scene packs, the pattern pack does not depend on the object model: it operates directly on raw grid structures.
+
+The pack exports 15 predicates organized into six functional groups.
+
+Period detection: pt_list_period/2 finds the shortest positive integer P such that every element of a list equals the element P positions behind it. The algorithm generates candidate periods in ascending order with between/3 and cuts after the first valid period, ensuring the result is always the shortest period. pt_row_period/3 and pt_col_period/3 extract a row or column from a grid and delegate to pt_list_period/2.
+
+Tiling: pt_tile_grid/4 fills a Rows x Cols grid by mapping each output cell (R, C) to the tile cell at (R mod TileHeight, C mod TileWidth). pt_extract_tile/4 recovers the base tile by cropping the top-left sub-grid. pt_is_tiling/3 verifies that a grid is a proper tiling of a given tile.
+
+Scaling: pt_scale_up/3 expands each cell to a Factor x Factor block. pt_scale_down/3 collapses each Factor x Factor block to one cell by sampling the top-left representative. Scale-up followed by scale-down with the same factor is the identity transformation.
+
+Repetition: pt_repeat_h/3 concatenates N copies of a grid side by side. pt_repeat_v/3 stacks N copies vertically. Both predicates use append/2 (the two-argument list concatenation form) rather than flatten/2. This distinction is critical: flatten/2 recursively removes all nesting, which would destroy the grid row structure. append/2 performs exactly one level of concatenation, which is the correct semantics for stacking or repeating rows.
+
+Mirroring: pt_mirror_h/2 appends the left-right reflection (gd_reflect_v of the grid) to the right of the original. pt_mirror_v/2 appends the upside-down reflection (gd_reflect_h of the grid) below the original.
+
+Constructed patterns: pt_checkerboard/5 generates a two-color checkerboard by assigning color CA to even-parity cells (where row + column is even) and color CB to odd-parity cells. pt_stripe_h/4 generates horizontal stripes cycling through a color list. pt_stripe_v/4 generates vertical stripes cycling through a color list.
+
+
+DESIGN PRINCIPLES
+
+Period detection by ascending enumeration: the period detection algorithm uses Prolog's backtracking mechanism. between/3 generates candidate periods from 1 upward. list_has_period/2 checks whether a given period is valid by verifying every element with maplist. The cut after the first success ensures the predicate returns the shortest period without exploring larger candidates.
+
+append/2 versus flatten/2 for grid stacking: a grid is a list of rows, and a row is a list of integers. When stacking N copies of a grid, the result should be a list of all rows from all copies. append/2 applied to a list of grids concatenates them at the top level, producing the correct flat list of rows. flatten/2 would go one level deeper and concatenate all the integer elements, producing a flat list of integers instead of a list of rows. This distinction is documented as a design invariant for all future packs that concatenate multi-row structures.
+
+Named predicates throughout: no YALL lambda expressions are used. Every mapping step uses a named helper predicate. This avoids the well-known YALL variable-sharing bug where intermediate variables in a lambda body become bound on the first call and prevent correct rebinding on subsequent calls.
+
+
+VERIFICATION
+
+43 PLUnit acceptance criteria were written before the implementation and verified after. The test suite uses three grid fixtures: a 2x3 tile (for tiling tests), a 3x3 checkerboard tile (for pattern tests), and a 2x2 tile (for scaling and repetition tests). Tests verify correct dimensions, correct cell values at specific positions, round-trip identities, and boundary conditions.
+
+All 43 tests pass with no warnings.
+
+
+CONCLUSION
+
+The pattern pack brings periodic reasoning to PrologAI. Combined with the grid, analogy, scene, and quant packs, PrologAI can now perceive grids, extract objects, reason quantitatively about object sets, and detect or generate repeating spatial structures. This is the perceptual foundation for ARC-AGI-2 tasks that hinge on tiling, scaling, or periodic repetition.
+
+The next planned packs extend this foundation to rule composition (compose pack, PR 61), object motion (motion pack, PR 62), frame detection (frame pack, PR 63), and path finding (path pack, PR 64).
+
+
+REFERENCES
+
+[1] D. R. Dison, "The Grid Pack: Native ARC-AGI Grid Perception and Manipulation," Mentova Accomplishment Record Acc_76, 2026.
+[2] D. R. Dison, "The Analogy Pack: Structural Analogy and Transformation Inference," Mentova Accomplishment Record Acc_77, 2026.
+[3] D. R. Dison, "The Scene Pack: Mentova Reasons About Individual Objects in Visual Scenes," Mentova Accomplishment Record Acc_78, 2026.
+[4] D. R. Dison, "The Quant Pack: Quantitative Reasoning over Object Sets," Mentova Accomplishment Record Acc_79, 2026.
+[5] PrologAI Platform Specification v25, 2026. https://github.com/ai-university-aiu/PrologAI
+
+END OF ACC_80
