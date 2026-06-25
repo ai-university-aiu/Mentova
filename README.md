@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
 | Documented accomplishments | **86 accomplished** |
-| Scientific papers | **87 published** — one per accomplishment |
+| Scientific papers | **86 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,7 +233,7 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         87 scientific papers — one per accomplishment and benchmark milestone
+├── papers/         86 scientific papers — one per accomplishment and benchmark milestone
 ├── announcements/  86 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
