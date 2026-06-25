@@ -1,0 +1,263 @@
+Mentova Accomplishment 148: Convex Hull and Polygon Geometry - The Hull Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 128: the hull pack, a Layer 107 symbolic
+reasoning module providing 14 predicates for computing the convex hull of
+a cell set, testing discrete convexity, measuring polygon area and
+perimeter, finding farthest pairs and centroids, testing rectangularity,
+filling hull regions, and identifying the concavities in a shape. All
+arithmetic is integer-only. All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+A recurring class of visual reasoning problems requires understanding the
+shape of a cell set in terms of its convex envelope: what is the smallest
+convex polygon that contains all the cells? Which cells are "dents" in the
+shape relative to that polygon? Is this shape truly convex, or does it have
+a hole in its outline?
+
+The existing PrologAI pack library provides BFS reachability (spread pack,
+Layer 105), inside/outside classification (enclosure pack, Layer 106), and
+scene object extraction (scene pack, Layer 37). None directly computes the
+convex hull or the polygon geometry derived from it.
+
+The hull pack adds this foundation. Its 14 predicates make convex geometry
+a first-class primitive in PrologAI.
+
+
+2. Predicate Inventory (14 predicates, hu_* prefix)
+
+2.1 Convex Hull Computation
+
+hu_convex_hull(+Cells, -Hull)
+
+Hull is a list of R-C vertex cells forming the smallest convex polygon
+containing all of Cells. Vertices are in clockwise screen order (row
+increasing downward). Collinear points are excluded; only corner vertices
+appear. Uses Andrew's monotone chain algorithm: sort by (column, row),
+build a lower half-hull left-to-right and an upper half-hull right-to-left,
+combine by dropping shared endpoints.
+
+Key algorithmic detail: in screen coordinates (R increases downward) the
+cross product sign is the negative of the standard Cartesian convention.
+The trim condition for building a clockwise hull is Z >= 0 (remove
+counterclockwise or collinear turns); the point-in-hull edge test requires
+Z =< 0 for every edge.
+
+Examples:
+hu_convex_hull([0-0, 0-2, 2-0, 2-2, 1-1], Hull).
+% sort(Hull, S), S = [0-0, 0-2, 2-0, 2-2]  (four corners only)
+
+hu_convex_hull([0-0, 0-1, 0-2], Hull).
+% sort(Hull, S), S = [0-0, 0-2]  (collinear: two endpoints)
+
+hu_convex_hull([1-1], Hull).
+% Hull = [1-1]
+
+
+2.2 Discrete Convexity Test
+
+hu_is_convex(+Cells)
+
+A discrete cell set is convex if and only if it equals the complete set of
+grid cells inside (or on) its convex hull within the bounding box. A fully
+filled 3x3 square is convex; an L-shape is not, because the cell at the
+inner corner is inside the hull but absent from the set.
+
+Examples:
+hu_is_convex([0-0,0-1,0-2,1-0,1-1,1-2,2-0,2-1,2-2]).  % succeeds (3x3 square)
+hu_is_convex([0-0, 1-0, 2-0, 2-1, 2-2]).               % fails (L-shape)
+
+
+2.3 Hull Size and Area
+
+hu_hull_size(+Cells, -N) - N is the count of convex hull vertices.
+
+hu_hull_area2(+Cells, -A2) - A2 is twice the hull polygon area, computed
+with the integer shoelace formula. Returns 0 for degenerate hulls (fewer
+than 3 vertices).
+
+Examples:
+hu_hull_size([0-0, 0-2, 2-0, 2-2, 1-1], N).  % N = 4
+hu_hull_area2([0-0, 0-2, 2-0, 2-2], A2).     % A2 = 8
+
+
+2.4 Point-in-Hull Test
+
+hu_in_hull(+R, +C, +Hull)
+
+Succeed if (R,C) lies inside or on the convex hull. Handles three
+degenerate cases: empty hull (fail), single-vertex hull (R,C must equal
+the vertex), two-vertex hull (R,C must be collinear and within the bounding
+box of the two endpoints). For a proper polygon (3 or more vertices): uses
+the all-edges CW test with hu_all_edges_.
+
+Examples:
+hu_in_hull(1, 1, [0-0, 2-0, 2-2, 0-2]).  % succeeds (center)
+hu_in_hull(2, 1, [0-0, 2-0, 2-2, 0-2]).  % succeeds (boundary)
+hu_in_hull(3, 3, [0-0, 2-0, 2-2, 0-2]).  % fails (outside)
+
+
+2.5 Cells in Hull and Fill
+
+hu_cells_in_hull(+Grid, +Cells, -InHull)
+InHull is the sorted list of all grid cells that lie inside or on the hull.
+Grid determines the enumeration bounds; cell values are ignored.
+
+hu_fill_hull(+Grid, +Cells, +Color, -Out)
+Out is Grid with every cell inside the hull set to Color. Cells outside
+the hull retain their original values.
+
+Examples:
+Grid = [[0,0,0],[0,0,0],[0,0,0]].
+hu_cells_in_hull(Grid, [0-0, 0-2, 2-0, 2-2], InHull).
+% length(InHull, 9)  (all 9 cells)
+
+hu_fill_hull(Grid, [0-0, 0-2, 2-0], 3, Out).
+% Out = [[3,3,3],[3,3,0],[3,0,0]]  (upper-left triangle)
+
+
+2.6 Concavities
+
+hu_concavities(+Grid, +Cells, +Bg, -Missing)
+
+Missing is the sorted list of Bg-valued grid cells that are inside the
+convex hull but absent from Cells - the "dents" in the shape. A full
+convex shape has no concavities. An L-shape has one concavity at the
+inner corner.
+
+Examples:
+Grid = [[0,0,0],[0,0,0],[0,0,0]].
+hu_concavities(Grid, [0-0,1-0,2-0,2-1,2-2], 0, Missing).
+% Missing = [1-1]
+
+
+2.7 Diameter
+
+hu_diameter(+Cells, -P1, -P2, -D2)
+
+P1 and P2 are the pair of cells in Cells with the greatest squared
+Euclidean distance; D2 is that squared distance. Uses O(n^2) enumeration
+with nth0 index ordering to avoid duplicate pairs. Fails if fewer than 2
+cells.
+
+Examples:
+hu_diameter([0-0, 0-2, 2-0, 2-2], _P1, _P2, D2).  % D2 = 8
+
+
+2.8 Hull Bounding Box and Aspect
+
+hu_aspect(+Cells, -H, -W)
+
+H is the row-span (MaxR - MinR) and W is the column-span (MaxC - MinC)
+of the hull bounding box.
+
+Examples:
+hu_aspect([0-0, 0-2, 2-0, 2-2], H, W).  % H=2, W=2
+
+
+2.9 Rectangle Test
+
+hu_is_rect(+Cells)
+
+Succeed if the convex hull has exactly 4 vertices and all four interior
+angles are exactly 90 degrees. The test computes the dot product of each
+pair of adjacent edge vectors; zero dot product = right angle. Works for
+both axis-aligned and tilted rectangles.
+
+Examples:
+hu_is_rect([0-0, 0-3, 2-0, 2-3]).   % succeeds (axis-aligned)
+hu_is_rect([0-1, 1-2, 2-1, 1-0]).   % succeeds (tilted square)
+hu_is_rect([0-0, 0-2, 2-0]).         % fails (triangle)
+
+
+2.10 Perimeter Proxy
+
+hu_hull_perim2(+Cells, -P2)
+
+P2 is the sum of squared edge lengths of the closed hull. This avoids
+floating-point square roots while providing a monotone proxy for the true
+perimeter. Returns 0 for hulls with fewer than 2 vertices.
+
+Examples:
+hu_hull_perim2([0-0, 0-1, 1-0, 1-1], P2).  % P2 = 4
+hu_hull_perim2([0-0, 0-2, 2-0], P2).        % P2 = 16
+
+
+2.11 Centroid
+
+hu_centroid(+Cells, -AvgR, -AvgC)
+
+AvgR and AvgC are the integer floor of the average row and column of the
+hull vertices. The centroid of the vertex polygon gives a reasonable center
+estimate for the shape.
+
+Examples:
+hu_centroid([0-0, 0-2, 2-0, 2-2], AvgR, AvgC).  % AvgR=1, AvgC=1
+hu_centroid([0-1, 1-2, 2-1, 1-0], AvgR, AvgC).  % AvgR=1, AvgC=1 (tilted)
+
+
+2.12 Containment
+
+hu_hull_contains(+Cells, +SubCells)
+
+Succeed if every cell in SubCells lies inside or on the convex hull of
+Cells. Uses forall/2 over member/2 with hu_in_hull for each cell.
+
+Examples:
+hu_hull_contains([0-0, 0-2, 2-0, 2-2], [1-1]).  % succeeds
+hu_hull_contains([0-0, 0-2, 2-0, 2-2], [5-5]).  % fails
+
+
+3. Implementation Notes
+
+Andrew's monotone chain algorithm: sort cells by (column, row), build the
+lower half-hull by walking left-to-right and trimming counterclockwise
+turns, then build the upper half-hull right-to-left. The trim test uses
+hu_cross_(A, B, P, Z) where Z >= 0 triggers trimming. This Z >= 0 condition
+(not Z =< 0) is correct for screen coordinates where R increases downward:
+the screen-coordinate cross product is the negative of the standard
+Cartesian cross product, so the orientation is inverted.
+
+The point-in-hull test for CW hulls uses Z =< 0 for each edge (a point is
+inside the CW hull if it is to the right of or on every edge). For CCW hulls
+the condition would be Z >= 0.
+
+The shoelace formula accumulates terms C_i * R_{i+1} - C_{i+1} * R_i over
+all edges of the closed polygon, then takes the absolute value. All
+arithmetic is integer.
+
+hu_set_cell_ and hu_set_cells_ use nth0/3 with the five-argument unification
+form to rebuild grid rows and the grid itself without mutation.
+
+Imports: library(lists) for member/2, nth0/3, append/3, reverse/2,
+min_list/2, max_list/2, last/2; library(apply) for maplist/3. No PrologAI
+pack is imported; the hull pack is fully self-contained.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no choicepoint warnings. Three tests
+per predicate: primary case, edge/degenerate case, and boundary/failure case.
+
+
+5. Significance
+
+Convex hull geometry is foundational to spatial reasoning. The hull pack
+makes it a first-class primitive in PrologAI. Combined with the enclosure
+pack (Layer 106, inside/outside classification), the spread pack (Layer 105,
+BFS distance maps), the scene pack (Layer 37, object extraction), and the
+cluster pack (Layer 102, proximity grouping), the hull pack completes the
+geometric shape analysis layer that advanced spatial problem solving requires.
+
+This is Mentova accomplishment 148. PrologAI now carries 126 work packages.
+
+github.com/ai-university-aiu/PrologAI
