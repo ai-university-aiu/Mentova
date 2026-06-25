@@ -1,0 +1,65 @@
+Accomplishment 102: Binary Mask Operations and Grid Noise Analysis - The Noise Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 80th work package: the noise pack (ns_* predicate family, Layer 61). This pack provides two complementary capabilities: binary mask operations for selecting and modifying grid cells, and noise analysis for identifying and removing outlier values from predominantly uniform grids. Together they enable a broad class of visual reasoning operations where certain cells must be isolated, filtered, or replaced.
+
+Introduction
+
+Visual reasoning tasks frequently involve two related problems: which cells matter, and which cells are just noise. The noise pack addresses both. Binary masks provide a precise, composable way to specify cell selections. Noise analysis provides a statistical way to identify cells that don't fit the dominant pattern of a grid.
+
+A binary mask is a grid of 0s and 1s. Applying a mask replaces all selected (1) cells with a fill color while leaving unselected (0) cells unchanged. Masks can be inverted, combined with AND and OR, and converted to and from region lists. These operations compose cleanly with the scene, shape, and compare packs.
+
+Noise analysis uses the concept of the "majority color": the most frequently occurring value in a grid. Cells whose color is not the majority are identified as "noise." The pack provides direct denoising (replacing noise cells with the majority color), as well as the more general concept of sparse cells (belonging to rarely-occurring colors) and dense cells (belonging to frequently-occurring colors).
+
+Predicates
+
+The noise pack exports 14 predicates under the ns_* prefix.
+
+Binary mask operations:
+ns_mask_apply/4 replaces cells where the mask is 1 with a fill color.
+ns_mask_invert/3 flips all mask bits (0 to 1 and 1 to 0).
+ns_mask_and/3 computes the pointwise AND of two binary masks.
+ns_mask_or/3 computes the pointwise OR.
+ns_mask_from_color/3 builds a mask from a color criterion: 1 where the grid has the color, 0 elsewhere.
+ns_mask_to_region/2 converts a binary mask to a list of r(R,C) cells.
+ns_region_to_mask/4 converts a region list back to a binary mask.
+
+Noise analysis:
+ns_color_count/3 counts the occurrences of a specific color in a grid.
+ns_majority_color/2 returns the most frequent color.
+ns_noise_cells/3 returns cells whose color differs from the majority.
+ns_denoise/3 replaces all noise cells with the majority color.
+ns_sparse_cells/3 returns cells belonging to colors that occur fewer than N times.
+ns_dense_cells/3 returns cells belonging to colors that occur N or more times.
+ns_isolate_color/3 keeps cells of one specific color and zeros out all others.
+
+Implementation
+
+Binary mask operations use maplist/3 and a cell-level predicate for each operation. The critical ns_mask_apply_row_ predicate applies a cut after the mask=1 case to ensure determinism. The ns_mask_from_color implementation uses =:=/2 for integer equality.
+
+For noise analysis, ns_majority_color flattens the grid, computes counts for each unique color using include/3 and length/2, pairs them as Count-Color, sorts with msort/2, and returns the last (highest count). ns_noise_cells and ns_denoise use maplist/3 over rows. ns_sparse_cells and ns_dense_cells use include/3 with a predicate that looks up the count for each cell's color.
+
+All 33 PLUnit acceptance tests pass. The pack depends only on library(lists) and library(apply), with msort/2 as a built-in.
+
+Significance
+
+The noise pack closes the mask layer of Mentova's grid reasoning toolkit. Combined with the compare pack (cp_diff_cells), the induction pack (id_is_recolor), and the gravity pack (gv_fall_down), the platform can now form and test a broad class of transformation hypotheses:
+- Is the output the input with some cells replaced? (compare + mask)
+- Is the output the input after color X is isolated? (ns_isolate_color + cp_grids_equal)
+- Is the output the input after noise is removed? (ns_denoise + cp_grids_equal)
+
+This is Mentova's 102nd documented accomplishment and PrologAI's 80th work package.
+
+References
+
+PrologAI_1_Specification_v47.txt, Part 72 (NS-NS-001 through NS-NS-014)
+PrologAI_2_Pseudocode_v40.txt, Part 72
+PrologAI_3_Architecture_v41.txt, PART ARCH-48
+PrologAI_4_Refinement_v95.txt, Part 72 (AC-NS-001 through AC-NS-033)
+PrologAI_5_Completion_v98.txt, Work Package 82
+PrologAI PR #167: feat(packs): PR 82 - noise pack
