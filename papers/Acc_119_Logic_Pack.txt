@@ -1,0 +1,100 @@
+Accomplishment 119: Boolean and Mask Grid Operations - The Logic Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 97th work package: the logic pack (lg_* predicate family, Layer 78). This pack provides 14 predicates for boolean and mask operations on grids. It answers the question: given two grids treated as sets of occupied cells, what are their intersection, union, difference, and exclusive-or? And given a grid, what rows and columns contain content?
+
+Introduction
+
+Visual rule induction often requires combining evidence from multiple grids. A training pair might show that the output is the overlap of two input patterns, or the union of a pattern with its reflection, or the cells that appear in one grid but not another. These are boolean set operations applied to grids.
+
+The logic pack gives Mentova the ability to:
+
+  Compute AND, OR, XOR, and NOT of grids treated as boolean masks
+  Find where one grid differs from another (diff)
+  Overlay one grid onto another with background as transparent
+  Create and apply binary presence masks
+  Reduce grids to row or column presence flags
+  Produce cell-wise equality and inequality grids
+
+Predicates
+
+The logic pack exports 14 predicates under the lg_* prefix.
+
+Set operations:
+lg_and/4         intersection: non-Bg in both grids
+lg_or/4          union: non-Bg in either grid (Grid1 priority)
+lg_xor/4         exclusive-or: non-Bg in exactly one grid
+lg_diff/4        difference: non-Bg in Grid1 and absent in Grid2
+
+Unary operations:
+lg_not/4         invert foreground and background
+lg_overlay/4     overlay Top onto Base with transparent background
+
+Mask operations:
+lg_mask_from/4   create binary presence mask from a grid
+lg_mask_apply/4  apply mask to keep grid values only where mask is present
+
+Row and column reduction:
+lg_any_row/3     1 per row if any cell is non-Bg; else 0
+lg_any_col/3     1 per column if any cell is non-Bg; else 0
+lg_all_row/3     1 per row if all cells are non-Bg; else 0
+lg_all_col/3     1 per column if all cells are non-Bg; else 0
+
+Cell-wise boolean:
+lg_eq/3          1 where grids agree; 0 where they differ
+lg_neq/3         1 where grids differ; 0 where they agree
+
+Implementation
+
+All binary operations (lg_and, lg_or, lg_xor, lg_diff, lg_overlay,
+lg_mask_apply, lg_eq, lg_neq) use maplist/4 for paired row iteration and
+maplist/4 for paired cell iteration. Each cell-level predicate carries a
+closure over the Bg parameter via a partially-applied helper predicate.
+
+Row/column presence predicates use member/2 inside a conditional guard:
+  (member(Cell, Row), Cell \== Bg -> Flag = 1 ; Flag = 0)
+This backtracks through the row until a non-Bg cell is found, then commits.
+
+Column predicates enumerate column indices with numlist/3 and use nth0/3
+to extract the cell at each column index from each row.
+
+lg_all_row and lg_all_col use the forall/2 built-in:
+  (forall(member(Cell, Row), Cell \== Bg) -> Flag = 1 ; Flag = 0)
+
+No meta_predicate declarations are needed because all goal arguments are
+instantiated at call time; no higher-order Goal parameters are accepted.
+
+All 42 PLUnit acceptance tests pass (AC-LG-001 through AC-LG-042).
+
+Significance
+
+The logic pack completes the boolean layer of the visual reasoning stack.
+Together with the remap pack (value substitution), the compare pack
+(structural comparison), and the scene pack (object detection), Mentova
+can now perform the full cycle of visual rule learning:
+
+  Detect objects and structure (scene, color, count)
+  Search for patterns (seek, compare)
+  Transform values (remap)
+  Combine grids as sets (logic)
+  Verify outputs (refinement predicates)
+
+The boolean primitives - especially lg_and, lg_xor, and lg_diff - are
+directly applicable to visual tasks that require combining two evidence
+grids to produce a third. The mask predicates enable selective application
+of transformations to specific regions. The row/column flags enable
+structural analysis of which rows and columns contain content.
+
+References
+
+PrologAI_1_Specification_v64.txt, Part 89 (LG-LG-001 through LG-LG-014)
+PrologAI_2_Pseudocode_v57.txt, Part 89
+PrologAI_3_Architecture_v58.txt, PART ARCH-65
+PrologAI_4_Refinement_v112.txt, Part 89 (AC-LG-001 through AC-LG-042)
+PrologAI_5_Completion_v115.txt, Work Package 99
+PrologAI PR #184: feat(packs): PR 99 - logic pack Layer 78

@@ -1,0 +1,22 @@
+Accomplishment 119: The Logic Pack - Boolean and Mask Grid Operations
+
+Mentova's 97th work package is live.
+
+The logic pack adds 14 lg_* predicates for treating grids as boolean masks:
+AND, OR, XOR, NOT, diff, overlay, mask creation and application, row and
+column presence flags, and cell-wise equality grids.
+
+With the logic pack, Mentova can now combine two grids as sets - finding
+where they overlap, where they differ, and where exactly one of them has
+content. These are the boolean primitives that visual rule learning needs
+when the answer is a combination of two input grids.
+
+All 42 acceptance tests pass. The pack is documented in SPARC Specification
+v64 (Part 89, LG-LG-001 through LG-LG-014), Refinement v112, and the
+tutorial Chapter 60.
+
+PrologAI now has 97 work packages and Mentova has 119 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
