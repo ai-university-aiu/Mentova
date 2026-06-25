@@ -1,0 +1,202 @@
+Mentova Accomplishment 147: Inside/Outside Classification - The Enclosure Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 127: the enclosure pack, a Layer 106 symbolic
+reasoning module providing 14 predicates for classifying background cells
+in 2D integer-coordinate grids as exterior (reachable from the grid border
+by 4-connected background steps) or interior (enclosed by non-background
+walls), extracting and filling enclosed regions, partitioning regions into
+connected components, decomposing color regions into boundary and interior
+subsets, and testing spatial surround. All predicates are deterministic.
+This accomplishment is verified by 42 PLUnit acceptance tests.
+
+
+1. Motivation
+
+A recurring class of visual reasoning problems requires distinguishing
+"inside" from "outside" on a 2D grid. Is a particular background cell
+enclosed by a ring of wall cells? How many separate enclosed holes exist?
+Can one reach the grid edge from this cell, or is it trapped?
+
+The existing PrologAI pack library provides BFS reachability (spread pack,
+Layer 105), scene object extraction (scene pack, Layer 37), and connected
+component labeling (label pack, Layer 83). None provides the direct
+inside/outside classification that many grid problems require as a primitive.
+
+The enclosure pack fills this gap with 14 deterministic predicates organized
+around one key algorithm: BFS from all border background cells. Everything
+the BFS reaches is exterior; everything it does not reach is interior.
+
+
+2. Predicate Inventory (14 predicates, en_* prefix)
+
+2.1 Grid Border
+
+en_border_cells(+Grid, -Cells)
+All cells on the four edges of Grid (row 0, last row, col 0, last col)
+in sorted order.
+
+Example:
+en_border_cells([[1,1,1],[1,0,1],[1,1,1]], Cells).
+% Cells = [0-0,0-1,0-2,1-0,1-2,2-0,2-1,2-2]
+
+
+2.2 Exterior and Interior Classification
+
+en_outer_cells(+Grid, +Bg, -Cells)
+All Bg cells reachable from the grid border by 4-connected Bg steps (sorted).
+
+en_inner_cells(+Grid, +Bg, -Cells)
+All Bg cells NOT reachable from the border (enclosed). Sorted list.
+Computed as the set difference of all Bg cells minus exterior Bg cells.
+
+Examples:
+en_outer_cells([[1,1,1],[1,0,1],[1,1,1]], 0, Outer).
+% Outer = []  (no Bg cell touches the border)
+
+en_inner_cells([[1,1,1],[1,0,1],[1,1,1]], 0, Inner).
+% Inner = [1-1]
+
+en_inner_cells([[1,1,1,1],[1,0,0,1],[1,0,0,1],[1,1,1,1]], 0, Inner).
+% Inner = [1-1, 1-2, 2-1, 2-2]
+
+
+2.3 Per-Cell Tests
+
+en_is_inner(+Grid, +R, +C, +Bg)
+en_is_outer(+Grid, +R, +C, +Bg)
+
+Deterministic membership tests. Fail if (R,C) is not a Bg cell or not in
+the respective class.
+
+Example:
+en_is_inner([[1,1,1],[1,0,1],[1,1,1]], 1, 1, 0).  % succeeds
+en_is_outer([[0,1,0]], 0, 0, 0).                   % succeeds
+
+
+2.4 Fill, Count, and Test
+
+en_fill_inner(+Grid, +Bg, +Color, -Out)
+Paint all enclosed Bg cells with Color. Returns Grid unchanged if none exist.
+
+en_inner_count(+Grid, +Bg, -N)
+Count of enclosed Bg cells.
+
+en_has_inner(+Grid, +Bg)
+Succeed if at least one enclosed Bg cell exists.
+
+Examples:
+en_fill_inner([[1,1,1],[1,0,1],[1,1,1]], 0, 2, Out).
+% Out = [[1,1,1],[1,2,1],[1,1,1]]
+
+en_inner_count([[1,1,1,1],[1,0,0,1],[1,0,0,1],[1,1,1,1]], 0, N).  % N=4
+en_has_inner([[1,1,1],[1,0,1],[1,1,1]], 0).                         % succeeds
+
+
+2.5 Connected Components
+
+en_inner_components(+Grid, +Bg, -Comps)
+en_outer_components(+Grid, +Bg, -Comps)
+
+Partition enclosed (or exterior) Bg cells into their 4-connected components.
+Each element of Comps is a list of R-C cells.
+
+Example:
+% Grid with two separate enclosed holes:
+en_inner_components([[1,1,1,1,1],[1,0,1,0,1],[1,1,1,1,1]], 0, Comps).
+% Comps = [[1-1], [1-3]]
+
+
+2.6 Selective Hole Fill
+
+en_fill_hole(+Grid, +Bg, +R, +C, +Color, -Out)
+Fill only the enclosed component containing (R,C) with Color. Fails if (R,C)
+is not an enclosed Bg cell. Useful when a grid has multiple holes and only
+one should be filled.
+
+Example:
+en_fill_hole([[1,1,1,1],[1,0,0,1],[1,0,0,1],[1,1,1,1]], 0, 1, 1, 3, Out).
+% Out = [[1,1,1,1],[1,3,3,1],[1,3,3,1],[1,1,1,1]]
+
+
+2.7 Color Region Boundary and Interior
+
+en_boundary_cells(+Grid, +Color, -Cells)
+All Color cells that lie on the boundary: on the grid edge or adjacent to a
+non-Color cell.
+
+en_interior_cells(+Grid, +Color, -Cells)
+All Color cells strictly interior: with exactly 4 in-bounds Color neighbors.
+
+Examples:
+% Center of 3x3 solid is interior; 8 perimeter cells are boundary:
+en_boundary_cells([[1,1,1],[1,1,1],[1,1,1]], 1, Cells).
+% Cells = [0-0,0-1,0-2,1-0,1-2,2-0,2-1,2-2]
+
+en_interior_cells([[1,1,1],[1,1,1],[1,1,1]], 1, Cells).
+% Cells = [1-1]
+
+
+2.8 Surround Test
+
+en_is_surrounded(+Grid, +R, +C, +WallColor)
+Succeed if every 4-adjacent neighbor of (R,C) is either out of bounds or has
+value WallColor. Provides a pointwise "is this cell boxed in?" test.
+
+Example:
+en_is_surrounded([[1,1,1],[1,0,1],[1,1,1]], 1, 1, 1).  % succeeds
+
+
+3. Implementation Notes
+
+Key algorithm: en_bfs_bg_/7 performs a FIFO BFS through Bg cells. The
+visited list doubles as the BFS accumulator and the final result. Starting
+from all border Bg cells, the BFS marks every reachable Bg cell. The
+inner cells are then computed in a single subtract/3 call.
+
+Connected components use en_comp_bfs_/6: a BFS restricted to a given
+available cell set (Avail), with the visited list again doubling as the
+component result. en_all_comps_/4 iterates subtract/3 to peel components
+off the remaining cell set without repeated work.
+
+en_boundary_cells and en_interior_cells use include/3 with YALL lambdas.
+Free variables in the lambda body (Grid, NR, NC, Color) are captured from
+the enclosing scope; per-cell working variables are fresh for each lambda
+invocation due to YALL's copy_term semantics.
+
+memberchk/2 is used in en_is_inner, en_is_outer, and en_fill_hole instead
+of member/2 to produce deterministic results without residual choicepoints.
+
+Imports: library(lists) for member/2, memberchk/2, nth0/3, append/2,
+append/3, subtract/3; library(apply) for maplist/3, include/3. No PrologAI
+pack is imported; the enclosure pack is fully self-contained.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case (empty result, single-cell grid, non-Bg cell), and a
+boundary condition (no enclosed cells, corner cell, failure case). All tests
+complete with no choicepoint warnings.
+
+
+5. Significance
+
+Inside/outside reasoning is one of the most fundamental spatial tasks in
+visual problem solving. The enclosure pack makes it a first-class primitive
+in the PrologAI symbolic substrate. Combined with the spread pack (Layer 105,
+BFS distance maps), the label pack (Layer 83, connected component labeling),
+the scene pack (Layer 37, object extraction), and the fill pack (Layer 55,
+flood fill), the enclosure pack completes the connectivity and topology
+reasoning layer that advanced grid analysis requires.
+
+This is Mentova accomplishment 147. PrologAI now carries 125 work packages.
+
+github.com/ai-university-aiu/PrologAI
