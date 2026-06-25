@@ -1,0 +1,167 @@
+THE ANALOGY PACK: MENTOVA INFERS TRANSFORMATION RULES FROM EXAMPLES
+MENTOVA ACC_77: ARC-AGI STRUCTURAL ANALOGY AND TRANSFORMATION INFERENCE ON THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_77
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-24
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Acc_77 adds the analogy pack to the PrologAI platform and demonstrates its use through Mentova. The analogy pack gives PrologAI the ability to infer a transformation rule - specifically, a spatial isometry from the D4 dihedral group (8 rigid motions of the square) combined with a color substitution map - that is consistent with all training (input, output) grid pairs, and to apply that rule to a new test input. It is implemented as work package PR 57 at Layer 36 of the PrologAI cognitive architecture and exports 15 predicates. All 21 PLUnit acceptance criteria pass. The analogy pack depends on the grid pack (PR 56, Layer 35, Acc_76) for all grid operations.
+
+
+INTRODUCTION
+
+Seeing the grids is not enough. To solve ARC-AGI, Mentova must reason about how grids relate to one another.
+
+The fundamental question in ARC-AGI is: what did the transformation do? Given an input grid and an output grid, the solver must discover the rule that maps one to the other. Given multiple input-output pairs, the solver must find the single rule that explains all of them. Then it must apply that rule to a test input that was not shown during training.
+
+This is induction: reasoning from specific examples to a general rule, then applying that rule to new cases.
+
+The analogy pack implements the induction step for a well-defined class of rules. A rule in this class is a pair: a spatial isometry from the D4 dihedral group (a rigid motion of the square) plus a color substitution map. The analogy pack can infer the unique such rule consistent with all training pairs, and apply it to produce the predicted output.
+
+This is not a statistical model. There are no weights, no gradients, no training data beyond the puzzle itself. The analogy pack uses logical search: it tries each of the 8 possible isometries in turn, checks whether the isometry is consistent with all training pairs, and succeeds with the first consistent choice. The computation is deterministic, transparent, and auditable.
+
+
+THE D4 DIHEDRAL GROUP
+
+The D4 dihedral group is the symmetry group of the square: the set of all rigid motions that map a square to itself. It has 8 elements.
+
+The 4 rotations: identity (no change), rot90 (90 degrees clockwise), rot180 (180 degrees), rot270 (270 degrees clockwise, equivalently 90 degrees counter-clockwise).
+
+The 4 reflections: ref_h (flip upside-down, reflecting across the horizontal axis), ref_v (flip left-right, reflecting across the vertical axis), ref_d1 (transpose, reflecting across the main diagonal), ref_d2 (reflecting across the anti-diagonal).
+
+These 8 operations are exactly the spatial transformations that appear most frequently in ARC-AGI puzzles. Many ARC-AGI puzzles require the solver to recognize that the output is the input rotated or reflected, perhaps with colors changed.
+
+
+DESIGN
+
+The analogy pack is organized around three functional areas.
+
+Area 1 - Shape reasoning (ay_normalize_shape/2, ay_shape_equal/2, ay_shape_size/2, ay_shape_bbox/3, ay_shape_isometry/3, ay_isometry_candidates/3).
+
+A shape is a list of r(Row, Col) cells. Normalization translates the shape so that its top-left corner is at r(0,0) and then sorts the cell list. Two shapes are equal if their normalized forms are the same. ay_shape_isometry/3 applies one of the 8 D4 isometries to a cell set, returning the normalized transformed cell set. ay_isometry_candidates/3 uses findall to return all 8 (isometry, result) pairs for a given cell set.
+
+Area 2 - Color and object reasoning (ay_infer_color_map/3, ay_match_objects/3, ay_object_offset/3, ay_apply_color_map/3).
+
+ay_infer_color_map/3 takes a transformed grid and the expected output, extracts the non-identity color substitutions (pairs where From is not equal to To), and returns them as a list of From-To pairs. ay_match_objects/3 matches objects between two grids by shape equality. ay_object_offset/3 computes the offset between the top-left corners of two cell sets.
+
+Area 3 - End-to-end rule inference (ay_examples_isometry/3, ay_verify_pair/4, ay_grid_isometry/3, ay_apply_isometry/3, ay_solve_from_examples/3).
+
+ay_examples_isometry/3 is the core predicate. It takes a list of in(Input)-out(Output) training pairs, and returns the isometry and color map that explain all of them. It works as follows: it tries each of the 8 isometries in turn (via member/2 with backtracking); for each isometry, it applies the isometry to the first training input and infers the color map from the result to the first training output; it then verifies that applying the same isometry and color map to every training input produces the corresponding training output. If any pair fails, the predicate backtracks to try the next isometry. If all pairs succeed, the predicate returns the isometry and color map.
+
+ay_solve_from_examples/3 takes the training pairs and a test input, infers the rule using ay_examples_isometry/3, applies the isometry to the test input, applies the color map, and returns the predicted output. This is the complete solver.
+
+
+THE YALL LAMBDA VARIABLE-SHARING PROBLEM
+
+During implementation, a subtle Prolog bug was encountered and resolved. The verification step originally used a YALL (Yet Another Lambda Library) lambda expression inside maplist:
+
+    maplist([In, Out]>>(ay_apply_isometry(In, Iso, TGrid),
+                        ay_apply_color_map(TGrid, ColorMap, Predicted),
+                        gd_equal(Predicted, Out)), InGrids, OutGrids)
+
+YALL lambdas share their intermediate variables across all calls in the maplist. On the first call, TGrid and Predicted are bound to specific terms. On the second call, TGrid and Predicted are still bound from the first call, so the second call must unify with the same terms. If the second pair produces a different intermediate value, the call fails incorrectly.
+
+The fix is to replace the lambda with a named predicate, ay_verify_pair/4:
+
+    ay_verify_pair(Iso, ColorMap, InGrid, OutGrid) :-
+        ay_apply_isometry(InGrid, Iso, TGrid),
+        ay_apply_color_map(TGrid, ColorMap, Predicted),
+        gd_equal(Predicted, OutGrid).
+
+Named predicates create fresh activation frames for each call. TGrid and Predicted are fresh local variables on every call, so there is no sharing across maplist iterations.
+
+This distinction - between YALL lambdas (which share intermediate variable bindings across calls) and named predicates (which do not) - is a non-obvious property of SWI-Prolog that affects any maplist over a lambda with intermediate bindings. It is documented in PrologAI Pseudocode v15, Part 47.
+
+
+IMPLEMENTATION
+
+The analogy pack is implemented in packs/analogy/prolog/analogy.pl as SWI-Prolog module analogy. Every line of code has an ERC (English Readable Code) comment immediately above it. The module imports library(lists), library(apply), and library(grid) (the grid pack, PR 56).
+
+The 15 exported predicates are:
+
+ay_normalize_shape/2: translate cell set to (0,0) top-left, then sort.
+ay_shape_equal/2: equality under normalization.
+ay_shape_size/2: cell count.
+ay_shape_bbox/3: bounding box of a cell set.
+ay_shape_isometry/3: apply one D4 isometry to a cell set.
+ay_isometry_candidates/3: findall over 8 isometries.
+ay_infer_color_map/3: non-identity From-To pairs from two grids.
+ay_match_objects/3: match objects by shape equality.
+ay_object_offset/3: bounding box top-left delta.
+ay_grid_isometry/3: findall over 8 isometries for grids.
+ay_apply_isometry/3: dispatch to gd_rotate* / gd_reflect*.
+ay_apply_color_map/3: delegate to gd_color_map/3.
+ay_examples_isometry/3: infer isometry + color map from training pairs.
+ay_verify_pair/4: named predicate for per-pair verification (avoids YALL sharing bug).
+ay_solve_from_examples/3: end-to-end solver.
+
+
+MENTOVA DEMONSTRATION
+
+Step 1: Infer a rotation rule.
+
+    ?- Pairs = [in([[1,2],[3,4]])-out([[3,1],[4,2]]),
+                in([[5,6],[7,8]])-out([[7,5],[8,6]])],
+       ay_examples_isometry(Pairs, Iso, ColorMap).
+    Iso = rot90, ColorMap = [].
+
+The empty color map confirms no color change is needed. The isometry is rot90.
+
+Step 2: Infer a reflection with color substitution.
+
+    ?- Pairs = [in([[1,2],[3,4]])-out([[4,3],[2,1]])],
+       ay_examples_isometry(Pairs, Iso, ColorMap).
+    Iso = rot180, ColorMap = [].
+
+Step 3: Solve an end-to-end puzzle.
+
+    ?- Pairs = [in([[1,2],[3,4]])-out([[3,1],[4,2]])],
+       TestIn = [[5,6],[7,8]],
+       ay_solve_from_examples(Pairs, TestIn, PredictedOut).
+    PredictedOut = [[7,5],[8,6]].
+
+Step 4: Infer and verify a color substitution rule.
+
+    ?- Pairs = [in([[1,2],[2,1]])-out([[3,4],[4,3]])],
+       ay_examples_isometry(Pairs, Iso, ColorMap).
+    Iso = identity, ColorMap = [1-3, 2-4].
+
+
+ACCEPTANCE CRITERIA
+
+21 PLUnit tests are defined in packs/analogy/test/test_analogy.pl. The test groups and their counts are:
+
+analogy_normalize (2 tests): ay_normalize_shape/2 on simple and pre-normalized shapes.
+analogy_isometry (4 tests): ay_shape_isometry/3 for rot90, ref_h, identity, and ref_v.
+analogy_color_map (3 tests): ay_infer_color_map/3 for identity case, substitution, and mixed.
+analogy_match (2 tests): ay_match_objects/3 on matched and unmatched objects.
+analogy_grid_iso (3 tests): ay_grid_isometry/3, ay_apply_isometry/3 for rot90 and ref_h.
+analogy_solve (7 tests): ay_examples_isometry/3 and ay_solve_from_examples/3 for identity, rot90, rot180, ref_h, color-only, and multi-pair verification.
+
+All 21 pass. No regressions in existing packs. The grid pack tests (31 tests) also pass.
+
+
+PLATFORM STATUS
+
+After Acc_77, PrologAI has 54 work packages across 36 layers. The grid pack (Layer 35) and analogy pack (Layer 36) form the perceptual and inferential foundation of PrologAI's ARC-AGI solving capability. The analogy pack handles the class of ARC-AGI puzzles solvable by a single D4 isometry plus color substitution. Further packs will extend the solver to additional rule classes, with each pack built on the grid and analogy foundations.
+
+
+REFERENCES
+
+Chollet, F. (2019). On the Measure of Intelligence. arXiv:1911.01547.
+Chollet, F., Knoop, M., et al. (2024). ARC Prize 2024: Technical Report.
+Chollet, F., et al. (2025). ARC-AGI-2 Technical Report.
+PrologAI Specification v22, Part 47 (FR-AY-001 through FR-AY-015). https://github.com/ai-university-aiu/PrologAI
+PrologAI Pseudocode v15, Part 47 (YALL lambda variable-sharing problem documented). https://github.com/ai-university-aiu/PrologAI
+PrologAI Architecture v16, PART ARCH-23 (analogy pack at Layer 36). https://github.com/ai-university-aiu/PrologAI
+PrologAI Refinement v70, AC-AY-001 through AC-AY-021. https://github.com/ai-university-aiu/PrologAI
+Mentova Acc_76 (Grid Pack). https://github.com/ai-university-aiu/Mentova
+
+
+END OF DOCUMENT - MENTOVA ACC_77

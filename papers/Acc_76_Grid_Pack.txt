@@ -1,0 +1,146 @@
+THE GRID PACK: MENTOVA PERCEIVES AND MANIPULATES VISUAL GRIDS
+MENTOVA ACC_76: ARC-AGI GRID PERCEPTION AND MANIPULATION ON THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_76
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-24
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Acc_76 adds the grid pack to the PrologAI platform and demonstrates its use through Mentova. The grid pack gives PrologAI native, glass-box perception and manipulation of the rectangular color grids used in the Abstraction and Reasoning Corpus for Artificial General Intelligence (ARC-AGI) benchmark. It is implemented as work package PR 56 at Layer 35 of the PrologAI cognitive architecture and exports 26 predicates covering grid dimensions, zero-based cell access, color analysis, 4-connected object extraction, bounding box computation, seven spatial transformations (rotate 90, 180, and 270 degrees; reflect across horizontal axis, vertical axis, main diagonal, and anti-diagonal), translation, cropping, overlay compositing, difference detection, symmetry detection, flood fill, uniform grid construction, and single-cell mutation. All 31 PLUnit acceptance criteria pass.
+
+
+INTRODUCTION
+
+The Abstraction and Reasoning Corpus for Artificial General Intelligence (ARC-AGI) benchmark, created by Francois Chollet, is designed to measure fluid intelligence in both humans and machines. Each ARC-AGI puzzle presents a few (input, output) grid pairs as training examples. The solver must discover the transformation rule and apply it to a novel input. Grids are rectangular arrays of colored cells; colors are integers 0 through 9; 0 is black.
+
+ARC-AGI-2, released in 2025, raises the difficulty substantially. It tests compositional generalization: the ability to recognize that a new puzzle requires combining known operations in a new way. Solving it requires not just pattern matching but genuine rule induction from sparse examples.
+
+Before any rule can be induced, the solver needs perception. It must be able to see what is in a grid: which colors are present, where the objects are, how they are arranged, and how one grid relates to another. Perception that is not glass-box cannot be reasoned about; it cannot be composed with logical inference; it cannot be explained.
+
+The grid pack provides that perception layer for PrologAI. Every operation is a pure Prolog predicate. Every intermediate result is an inspectable Prolog term. The entire computation is transparent.
+
+This is not an embedding or a neural feature map. It is a deterministic, auditable, logical foundation. The grid pack is the perceptual layer that PrologAI's ARC-AGI solving capability is built upon.
+
+
+DESIGN
+
+The grid pack uses a single canonical representation: a grid is a Prolog list of rows, and each row is a list of color integers. All indices are zero-based. This representation is chosen for maximum compatibility with SWI-Prolog's built-in list predicates and for transparency: a grid [[1,0],[0,1]] is self-describing.
+
+The 26 exported predicates are organized into eight functional groups.
+
+Group 1 - Dimensions (gd_size/3). Returns the number of rows and columns.
+
+Group 2 - Cell access (gd_cell/4, gd_row/3, gd_col/3). Zero-based access to individual cells, complete rows, and complete columns.
+
+Group 3 - Color analysis (gd_colors/2, gd_color_count/3, gd_color_map/3). The sorted unique set of colors present; the count of cells of a given color; and color substitution via a list of From-To pairs. Colors absent from the substitution map pass through unchanged, which matters when a puzzle changes some colors but preserves others.
+
+Group 4 - Object extraction (gd_objects/3, gd_connected/3, gd_bounding_box/3). Four-connected component extraction via breadth-first search (BFS). Given a grid and a target color, gd_objects/3 returns a list of cell sets (each cell set is a list of r(Row, Col) terms). gd_connected/3 is an alias. gd_bounding_box/3 computes the smallest axis-aligned rectangle containing a given cell set.
+
+Group 5 - Spatial transformations (gd_rotate90/2, gd_rotate180/2, gd_rotate270/2, gd_reflect_h/2, gd_reflect_v/2, gd_reflect_d1/2, gd_reflect_d2/2). The seven non-identity elements of the D4 dihedral group (the symmetry group of the square). These are the exact operations needed to solve ARC-AGI puzzles that involve rigid motions.
+
+Group 6 - Composition operations (gd_translate/5, gd_crop/6, gd_overlay/5). Translation by a row and column delta with configurable background fill; extraction of a rectangular sub-grid; and compositing a patch onto a base grid at a given offset. In gd_overlay/5, patch cells with color 0 are treated as transparent, which lets a foreground object be placed without erasing the background.
+
+Group 7 - Comparison (gd_diff/3, gd_equal/2). gd_diff/3 returns a list of r(Row, Col, OldColor, NewColor) terms for every cell that differs between two grids. gd_equal/2 succeeds when two grids are structurally identical.
+
+Group 8 - Construction and mutation (gd_make/4, gd_set_cell/5, gd_fill/5). gd_make/4 creates a uniform grid filled with a single color. gd_set_cell/5 is a functional update that sets one cell without modifying the original. gd_fill/5 flood-fills a 4-connected region.
+
+
+IMPLEMENTATION
+
+The grid pack is implemented in packs/grid/prolog/grid.pl as SWI-Prolog module grid. Every line of code has an ERC (English Readable Code) comment immediately above it. The module imports library(lists) for list operations and library(apply) for maplist and foldl.
+
+Key implementation decisions:
+
+Object extraction uses BFS to guarantee completeness and termination. A visited set is maintained as an accumulator and threaded through the BFS frontier. The visited set uses the r(Row, Col) cell representation so that the same data structure serves both the frontier and the result.
+
+The spatial transformations follow the standard linear algebra formulas. For a grid with Rows rows and Cols columns, rotating 90 degrees clockwise maps cell (R, C) to cell (C, Rows-1-R) in the new grid. The numlist/3 calls that generate the row and column indices are computed after the new dimensions are known, which ensures instantiation is correct.
+
+The overlay operation distinguishes 0 (transparent) from non-zero (opaque). This is the ARC-AGI convention: color 0 is the background.
+
+Symmetry detection (gd_symmetry/2) applies each of the four possible reflection axes (h, v, d1, d2) and checks whether the transformed grid equals the original. Only square grids can have d1 or d2 symmetry.
+
+All 26 predicates are pure: no side effects, no global state.
+
+
+MENTOVA DEMONSTRATION
+
+The following queries demonstrate the grid pack capability as used by Mentova.
+
+Step 1: Perceive a grid.
+
+    ?- G = [[1,1,0],[1,0,0],[0,0,0]],
+       gd_size(G, Rows, Cols),
+       gd_colors(G, Colors),
+       gd_color_count(G, 1, Count).
+    Rows = 3, Cols = 3, Colors = [0,1], Count = 3.
+
+Step 2: Extract objects.
+
+    ?- G = [[1,1,0],[1,0,0],[0,0,1]],
+       gd_objects(G, 1, Objects),
+       length(Objects, N).
+    Objects = [[r(0,0),r(0,1),r(1,0)], [r(2,2)]], N = 2.
+
+Step 3: Find the bounding box of each object.
+
+    ?- G = [[1,1,0],[1,0,0],[0,0,1]],
+       gd_objects(G, 1, [Obj1|_]),
+       gd_bounding_box(Obj1, TL, BR).
+    TL = r(0,0), BR = r(1,1).
+
+Step 4: Apply a rotation.
+
+    ?- G = [[1,2,3],[4,5,6]],
+       gd_rotate90(G, G2).
+    G2 = [[4,1],[5,2],[6,3]].
+
+Step 5: Detect symmetry.
+
+    ?- G = [[1,2,1],[3,4,3],[1,2,1]],
+       gd_symmetry(G, Axes).
+    Axes = [h,v].
+
+Step 6: Compute a difference.
+
+    ?- gd_diff([[1,0],[0,0]], [[1,0],[0,2]], Diffs).
+    Diffs = [r(1,1,0,2)].
+
+
+ACCEPTANCE CRITERIA
+
+31 PLUnit tests are defined in packs/grid/test/test_grid.pl. The test groups and their counts are:
+
+grid_size (3 tests): gd_size/3 on rectangular, 1-by-1, and single-row grids.
+grid_color (6 tests): gd_colors/2, gd_color_count/3, and gd_color_map/3.
+grid_objects (3 tests): gd_objects/3 on a known 2-component grid, a grid with no objects of the target color, and a 1-cell object.
+grid_rotate (4 tests): gd_rotate90/2, gd_rotate180/2, gd_rotate270/2 on 2-by-3 and square grids.
+grid_reflect (4 tests): gd_reflect_h/2, gd_reflect_v/2, gd_reflect_d1/2, gd_reflect_d2/2.
+grid_transform (6 tests): gd_translate/5, gd_crop/6, gd_overlay/5, gd_diff/3, gd_equal/2, and gd_make/4 + gd_set_cell/5.
+grid_compare (2 tests): gd_equal/2 on equal and unequal grids.
+grid_symmetry (2 tests): gd_symmetry/2 on a symmetric and an asymmetric grid.
+grid_fill (1 test): gd_fill/5 on a connected region.
+
+All 31 pass. No regressions in existing packs.
+
+
+PLATFORM STATUS
+
+After Acc_76, PrologAI has 53 work packages across 35 layers. The grid pack is the perceptual foundation for ARC-AGI solving. It will be used by the analogy pack (PR 57, Layer 36, Acc_77) and all future ARC-AGI solving packs.
+
+
+REFERENCES
+
+Chollet, F. (2019). On the Measure of Intelligence. arXiv:1911.01547.
+Chollet, F., Knoop, M., et al. (2024). ARC Prize 2024: Technical Report.
+Chollet, F., et al. (2025). ARC-AGI-2 Technical Report.
+PrologAI Specification v22, Part 46 (FR-GD-001 through FR-GD-025). https://github.com/ai-university-aiu/PrologAI
+PrologAI Architecture v16, PART ARCH-22 (grid pack at Layer 35). https://github.com/ai-university-aiu/PrologAI
+PrologAI Refinement v70, AC-GD-001 through AC-GD-031. https://github.com/ai-university-aiu/PrologAI
+
+
+END OF DOCUMENT - MENTOVA ACC_76

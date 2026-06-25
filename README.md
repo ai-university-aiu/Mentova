@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-75-FF6B35?style=for-the-badge" alt="75 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-77-FF6B35?style=for-the-badge" alt="77 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **75 accomplished** |
-| Scientific papers | **75 published** — one per accomplishment |
+| Documented accomplishments | **77 accomplished** |
+| Scientific papers | **77 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,10 +233,10 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         78 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  75 announcements — one per accomplishment
+├── papers/         80 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  77 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
-├── demos/          20 demonstration scripts — one per major capability track
+├── demos/          25 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
 ```
 
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-78 scientific papers, one per accomplished milestone.
+80 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -377,12 +377,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_49` – `Acc_66` | Practical track papers — multi-agent protocols, Piagetian assessment, tutorials, ARC-AGI-1 benchmark runs, lattice cryptography, four-protocol integration |
 | `Acc_67` – `Acc_72` | Growth path papers — Piagetian 8/8 ladder, ARC-AGI-1 100%, composite rule search, demonstration plan completion |
 | `Acc_73` – `Acc_75` | Silicon-and-code substrate papers — ephemera (short-lived programs), agency (ORAO loop), refinery (evaluator-optimizer) |
+| `Acc_76` – `Acc_77` | ARC-AGI-2 perceptual foundation papers — grid pack (26 predicates for grid perception and manipulation), analogy pack (15 predicates for D4 isometry plus color-map rule inference) |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-75 announcements in LinkedIn format — one per accomplishment.
+77 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
@@ -395,7 +396,7 @@ Each announcement is paired with its scientific paper and written after the evid
 
 ### Demos — demos/
 
-23 demonstration scripts — one per major capability track.
+25 demonstration scripts — one per major capability track.
 
 Each demo is runnable end-to-end.
 
@@ -424,6 +425,8 @@ Each demo is runnable end-to-end.
 | `ephemera_demo.pl` | Ephemera pack: write and run short-lived programs (Acc_73) |
 | `agency_demo.pl` | Agency pack: formal ORAO goal-pursuit loop (Acc_74) |
 | `refinery_demo.pl` | Refinery pack: evaluator-optimizer quality layer (Acc_75) |
+| `grid_demo.pl` | Grid pack: ARC-AGI grid perception and manipulation — 26 predicates (Acc_76) |
+| `analogy_demo.pl` | Analogy pack: D4 isometry plus color-map rule inference from training pairs (Acc_77) |
 
 ### Tools — tools/
 
