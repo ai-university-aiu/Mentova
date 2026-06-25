@@ -1,0 +1,46 @@
+Accomplishment 95: Mentova can now count what it sees.
+
+The new count pack gives PrologAI fourteen predicates for counting cells,
+colors, and regions in grids.
+
+How many cells are this color? Which color appears most? Which appears least?
+How many rows contain this color? How many columns?
+How many distinct values are in this row? In this column?
+How many cells do these two grids share? How many differ?
+What color is this region? How many regions of each color are there?
+
+Every answer is an exact integer.
+
+No approximation. No statistical sampling. No neural estimation.
+
+Here is a concrete example.
+
+A 5x5 grid has 25 cells. The histogram shows: color 0 appears 15 times,
+color 1 appears 7 times, color 2 appears 3 times.
+
+cn_max_color returns 0 (the dominant color).
+
+cn_min_color returns 2 (the rarest color).
+
+cn_color_rows(Grid, 2, N) returns the number of rows that contain at least
+one color-2 cell.
+
+cn_equal_cells(InputGrid, OutputGrid, N) tells you how many cells survived
+unchanged from input to output.
+
+These predicates do not assume anything about what the numbers mean.
+
+They just count.
+
+The interpretation - what the count signifies for the current reasoning task -
+belongs to the rule that calls these predicates.
+
+That is how glass-box cognition works: each predicate does one thing clearly,
+and rules compose them.
+
+The count pack is Layer 54, work package 75 in the PrologAI platform.
+
+49 tests. All pass.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
