@@ -1,0 +1,94 @@
+Accomplishment 126: Grid Traversal Patterns - The Walk Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 104th work package: the walk pack (wk_* predicate family, Layer 85). This pack provides 14 predicates for systematic grid traversal and cell manipulation: row-major scan, column-major scan, zigzag scan, diagonal scan, anti-diagonal scan, clockwise inward spiral, clockwise border walk, diagonal value extraction, anti-diagonal value extraction, diagonal index computation, anti-diagonal index computation, value extraction at position lists, value painting at position lists, and inner-cell listing.
+
+Introduction
+
+Grid traversal order determines what a reasoning system sees first. Row-major order mirrors human reading habits. Column-major order reveals vertical stripe patterns. Zigzag (boustrophedon) order is fundamental in image compression. Diagonal and anti-diagonal scans expose stripe patterns invisible to axis-aligned traversal. Spiral order visits the perimeter before the core, which is valuable for reasoning about framing and enclosure. Border-only traversal isolates the outermost ring for perimeter reasoning.
+
+Before the walk pack, PrologAI had no unified toolkit for these traversal patterns. The walk pack fills this gap with 14 general-purpose predicates that cover the most useful traversal orders for visual grid reasoning, plus the supporting utilities for extracting and painting values along any chosen traversal.
+
+Predicates
+
+The walk pack exports 14 predicates under the wk_* prefix.
+
+Scan predicates (return all R-C positions in a chosen order):
+wk_row_scan/2      row-major: row 0 L-to-R, row 1 L-to-R, ...
+wk_col_scan/2      column-major: col 0 top-to-bottom, col 1 top-to-bottom, ...
+wk_zigzag_scan/2   boustrophedon: even rows L-to-R, odd rows R-to-L
+wk_diag_scan/2     grouped by main diagonal D = C - R
+wk_antidiag_scan/2 grouped by anti-diagonal D = R + C
+wk_spiral_in/2     clockwise inward spiral from outermost ring to center
+wk_border_walk/2   clockwise outermost ring only
+
+Extraction predicates:
+wk_diag_extract/3      values on main diagonal D, top-to-bottom
+wk_antidiag_extract/3  values on anti-diagonal D, top-to-bottom
+
+Index predicates:
+wk_diag_of/2      main diagonal index D = C - R for a cell
+wk_antidiag_of/2  anti-diagonal index D = R + C for a cell
+
+Cell manipulation predicates:
+wk_cells_to_vals/3  extract grid values at a list of R-C positions
+wk_vals_to_cells/4  paint values at a list of R-C positions
+wk_inner_cells/2    list all non-border cells in row-major order
+
+Implementation
+
+wk_dims_/3 is a private helper that calls length/2 twice to extract NRows and NCols. All public predicates call it first.
+
+wk_row_scan and wk_col_scan use findall with between/3 in different nesting: R-outer-C-inner for row-major, C-outer-R-inner for column-major.
+
+wk_zigzag_row_/3 is a private helper: it builds the forward cell list for a row and reverses it for odd-indexed rows. wk_zigzag_scan/2 maps this over all row indices with numlist and maplist, then flattens with append/2.
+
+wk_diag_scan and wk_antidiag_scan enumerate diagonal indices with numlist, compute the row range for each via max/2 and min/2, build the row list with numlist, then compute C from R and D with maplist lambdas. Results are flattened with append/2.
+
+wk_ring_cells_/5 is a private helper implementing one clockwise ring. It uses findall with between/3 for the top row (left-to-right), right column (top-to-bottom excluding top-right corner), bottom row (collected left-to-right then reversed), and left column (collected top-to-bottom then reversed). Single-row and single-column degenerate cases are handled by NR > 1 and NC > 1 guards.
+
+wk_spiral_in_/5 is a private recursive predicate: it calls wk_ring_cells_ to peel the outermost ring, recurses with R0+1, C0+1, NR-2, NC-2, then appends ring and inner. Base cases NR =< 0 and NC =< 0 each carry a cut.
+
+wk_border_walk/2 calls wk_ring_cells_(0, 0, NR, NC, Cells) without recursion.
+
+wk_diag_extract and wk_antidiag_extract compute the row range for the given diagonal index, then maplist over the row indices to extract values with nth0/3.
+
+wk_set_cell_/5 is a private helper that uses length/2 and append/3 twice to split and reassemble the row and grid at the target position.
+
+wk_vals_to_cells/4 is a two-clause recursive predicate. The base clause carries a cut to prevent choicepoints. The step clause calls wk_set_cell_ then recurses.
+
+wk_inner_cells/2 computes NR2 = NR-2 and NC2 = NC-2 before the if-then-else so both variables remain bound in the else branch; only the arithmetic comparisons are in the condition.
+
+All 42 PLUnit acceptance tests pass (AC-WK-001 through AC-WK-042).
+
+Significance
+
+The walk pack gives Mentova a complete traversal toolkit:
+
+  wk_row_scan and wk_col_scan are the building blocks for sequential grid access.
+  wk_zigzag_scan covers the classic boustrophedon pattern used in compression.
+  wk_diag_scan and wk_antidiag_scan expose diagonal stripe structure.
+  wk_spiral_in visits outer context before inner content.
+  wk_border_walk isolates the perimeter for border-reasoning tasks.
+  wk_diag_extract and wk_antidiag_extract support diagonal value analysis.
+  wk_diag_of and wk_antidiag_of answer "which diagonal is this cell on?"
+  wk_cells_to_vals and wk_vals_to_cells enable read-modify-write over any order.
+  wk_inner_cells efficiently enumerates the non-border region.
+
+With the walk pack in place, Mentova can read and write grid cells in any
+traversal order that a visual pattern requires, combining scanning with the
+morph, label, trace, and scene packs for comprehensive perceptual analysis.
+
+References
+
+PrologAI_1_Specification_v71.txt, Part 96 (WK-WK-001 through WK-WK-014)
+PrologAI_2_Pseudocode_v64.txt, Part 96
+PrologAI_3_Architecture_v65.txt, PART ARCH-72
+PrologAI_4_Refinement_v119.txt, Part 96 (AC-WK-001 through AC-WK-042)
+PrologAI_5_Completion_v122.txt, Work Package 106
+PrologAI PR #191: feat(packs): PR 106 - walk pack Layer 85
