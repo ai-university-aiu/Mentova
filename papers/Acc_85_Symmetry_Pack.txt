@@ -1,0 +1,107 @@
+Accomplishment 85 - Symmetry Pack: Grid Symmetry Testing, Canonical Orientation, and Orbit Generation
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+ABSTRACT
+
+We introduce the symmetry pack, work package PR 65 of the PrologAI symbolic cognitive substrate. The symmetry pack provides 12 sy_* predicates at Layer 44 for testing D4 symmetry properties of grids, computing symmetry groups, enumerating orbits under rotations and reflections, finding canonical representatives, and measuring symmetry order. The D4 group - the dihedral group of the square - has 8 elements: four rotations (0, 90, 180, 270 degrees) and four reflections (horizontal, vertical, main diagonal, anti-diagonal). The symmetry pack makes all of these operations first-class predicates in PrologAI.
+
+
+1. INTRODUCTION
+
+Symmetry is a fundamental property of visual patterns. Many visual inductive reasoning tasks have solutions that exploit symmetry: the input grid has a reflection axis, the output is the canonical (lexicographically smallest) orientation, two objects are equivalent because one is a rotation of the other. Without explicit symmetry predicates, recognizing these properties requires constructing the transforms manually and comparing. The symmetry pack eliminates this boilerplate by naming each symmetry test directly.
+
+
+2. THE D4 GROUP
+
+The dihedral group D4 has 8 elements acting on square (and rectangular) grids. The grid pack (Layer 34) implements all eight:
+
+  gd_rotate90     - 90-degree clockwise rotation
+  gd_rotate180    - 180-degree rotation
+  gd_rotate270    - 270-degree clockwise rotation
+  gd_reflect_h    - flip upside-down
+  gd_reflect_v    - flip left-right
+  gd_reflect_d1   - transpose (main diagonal reflection)
+  gd_reflect_d2   - anti-diagonal reflection
+  identity        - no change
+
+The symmetry pack combines these into higher-level predicates that test properties, enumerate orbits, and compute canonical forms.
+
+Note: for non-square grids, the 90-degree rotation and diagonal reflections change the grid dimensions (a 3x5 becomes 5x3 under rotation). The individual symmetry tests that require square grids (sy_is_rot90, sy_is_diagonal, sy_is_antidiagonal) include an explicit check that Rows =:= Cols.
+
+
+3. PREDICATE CATALOG
+
+Individual tests:
+  sy_is_hsymmetric(+Grid)   - Grid = gd_reflect_v(Grid)
+  sy_is_vsymmetric(+Grid)   - Grid = gd_reflect_h(Grid)
+  sy_is_rot180(+Grid)       - Grid = gd_rotate180(Grid)
+  sy_is_rot90(+Grid)        - Grid = gd_rotate90(Grid), square only
+  sy_is_diagonal(+Grid)     - Grid = gd_reflect_d1(Grid), square only
+  sy_is_antidiagonal(+Grid) - Grid = gd_reflect_d2(Grid), square only
+
+Group:
+  sy_group(+Grid, -Group)   - list of symmetry atoms that hold:
+                              h, v, rot180, rot90, diag, antidiag
+
+Orbit:
+  sy_rotations(+Grid, -Rotations) - distinct grids under 0/90/180/270 rotation
+  sy_orbit(+Grid, -Orbit)         - full dihedral orbit (max 8 elements)
+
+Canonical form:
+  sy_canonical(+Grid, -Canon)   - lex-min element of orbit
+  sy_equivalent(+GridA, +GridB) - same canonical form (same orbit)
+  sy_order(+Grid, -N)           - 8 / orbit_size; range 1 to 8
+
+
+4. ORBIT SIZE AND SYMMETRY ORDER
+
+The orbit size (number of distinct grids in sy_orbit) is related to the symmetry order by Burnside's lemma (Burnside's lemma: |orbit| * |stabilizer| = |group|, where the group has 8 elements for D4). The stabilizer is the set of transforms that map Grid to itself - its size is the symmetry order.
+
+  Orbit = 1: order = 8 (all 8 transforms stabilize the grid; fully symmetric)
+  Orbit = 2: order = 4
+  Orbit = 4: order = 2
+  Orbit = 8: order = 1 (no non-trivial symmetry; fully asymmetric)
+
+This relationship makes sy_order derivable from sy_orbit, which is the implementation strategy: compute the orbit, then divide 8 by its length.
+
+
+5. CANONICAL FORMS
+
+sy_canonical uses Prolog's standard @< term ordering to find the lexicographically smallest grid in the orbit. Two grids that look different but are related by a rotation or reflection will have the same canonical form. This enables Mentova to group visual objects by shape without enumerating all orientations manually.
+
+The canonical form predicate is the basis for sy_equivalent, which simply checks that two grids have the same canonical form.
+
+
+6. IMPLEMENTATION NOTES
+
+sy_unique_grids_/2 removes duplicates from a list of grids using gd_equal/2. It is implemented as a recursive filter: the first grid is kept; all subsequent grids equal to it are removed; then recurse. This is O(N^2) in the worst case, but since N <= 8 (orbit bound), it is always fast.
+
+sy_orbit computes the orbit by taking sy_rotations(Grid) and sy_rotations(gd_reflect_v(Grid)) and removing duplicates from the union. This covers all 8 D4 elements.
+
+
+7. TEST COVERAGE
+
+The symmetry pack ships with 36 PLUnit tests in packs/symmetry/test/test_symmetry.pl. Tests cover all 12 predicates using six fixtures: a horizontally symmetric 3x3 grid, a vertically symmetric 3x3, a 180-symmetric 3x3, a fully symmetric 3x3 (framed), an asymmetric 3x3, a main-diagonal symmetric 3x3, and a uniform 2x2.
+
+
+8. SIGNIFICANCE
+
+The symmetry pack closes the loop on shape equivalence: Mentova can now decide whether two visual objects are "the same shape in different orientations." This is a foundational capability for visual inductive reasoning tasks where the transformation rule is rotation or reflection - which are among the most common patterns.
+
+Combined with the path pack (connected components) and the frame pack (bordered structures), the symmetry pack completes PrologAI's core spatial intelligence layer: connectivity, borders, and symmetry.
+
+The symmetry pack is the 63rd work package in PrologAI and Mentova's 85th documented accomplishment.
+
+
+REFERENCES
+
+PrologAI Specification Part 55 (docs/PrologAI_1_Specification_v30.txt)
+PrologAI Pseudocode Part 55 (docs/PrologAI_2_Pseudocode_v23.txt)
+PrologAI Architecture PART ARCH-31 (docs/PrologAI_3_Architecture_v24.txt)
+PrologAI Refinement Part 55 (docs/PrologAI_4_Refinement_v78.txt)
+PrologAI Completion PR 65 (docs/PrologAI_5_Completion_v81.txt)
+PrologAI Tutorial Chapter 26 (docs/tutorial/Ch26_Symmetry.txt)

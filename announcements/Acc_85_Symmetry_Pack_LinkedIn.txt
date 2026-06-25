@@ -1,0 +1,35 @@
+Accomplishment 85 - Mentova now recognizes symmetry and computes canonical shapes.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 63 work packages.
+
+The new symmetry pack gives Mentova the D4 symmetry group as first-class predicates.
+
+sy_is_hsymmetric, sy_is_vsymmetric, sy_is_rot180 - three reflection and rotation tests.
+
+sy_is_rot90, sy_is_diagonal, sy_is_antidiagonal - three more for square grids.
+
+sy_group - returns the complete list of symmetry atoms that hold for a grid.
+
+sy_orbit - all distinct orientations of a grid under 8 possible transforms.
+
+sy_canonical - the lexicographically smallest orientation; the same for all rotations and reflections of the same shape.
+
+sy_equivalent - tells you if two grids are the same shape in different orientations.
+
+sy_order - tells you how symmetric a grid is: 1 (none) to 8 (fully symmetric).
+
+This matters because:
+
+Two L-shaped objects that are rotated 90 degrees are the same shape. Now Mentova knows that.
+
+A checkerboard pattern is fully symmetric. Now Mentova can prove that in one call.
+
+Finding the canonical form of a shape is a prerequisite for shape-based induction. Now Mentova has it.
+
+The symmetry pack is the 63rd work package in PrologAI and Mentova's 85th accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/
