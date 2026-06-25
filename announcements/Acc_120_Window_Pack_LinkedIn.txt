@@ -1,0 +1,22 @@
+Accomplishment 120: The Window Pack - Sliding Window and Neighborhood Operations
+
+Mentova's 98th work package is live.
+
+The window pack adds 14 wn_* predicates for neighborhood operations: 4-connected
+and 8-connected neighbor enumeration, neighbor counting, sub-grid extraction,
+sliding windows, grid padding, local maxima and minima detection, halo
+computation, convolution, and spatial distance operations.
+
+These are the primitives that make local spatial reasoning possible. With the
+window pack, Mentova can find which cells border a region, detect structural
+peaks, slide a template across a grid, and measure spatial distances.
+
+All 42 acceptance tests pass. The pack is documented in SPARC Specification
+v65 (Part 90, WN-WN-001 through WN-WN-014), Refinement v113, and the
+tutorial Chapter 61.
+
+PrologAI now has 98 work packages and Mentova has 120 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

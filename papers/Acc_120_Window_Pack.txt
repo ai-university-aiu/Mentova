@@ -1,0 +1,91 @@
+Accomplishment 120: Sliding Window and Neighborhood Operations - The Window Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 98th work package: the window pack (wn_* predicate family, Layer 79). This pack provides 14 predicates for neighborhood enumeration, sub-grid extraction, sliding windows, grid padding, local extrema detection, halo computation, convolution, and spatial distance operations.
+
+Introduction
+
+Spatial reasoning at the cell level requires access to a cell's immediate neighborhood. Whether detecting edges (cells adjacent to a value), identifying peaks (local maxima), applying a filter (convolution), or finding all cells within a given distance, these operations share a common foundation: enumerate the spatial neighborhood of each cell.
+
+The window pack centralizes this neighborhood-access layer in PrologAI. It provides the building blocks that higher-level packs use to reason about local spatial structure.
+
+Predicates
+
+The window pack exports 14 predicates under the wn_* prefix.
+
+Neighborhood enumeration:
+wn_neighbors4/4    list R2-C2-Val triples for 4-connected in-bounds neighbors
+wn_neighbors8/4    list R2-C2-Val triples for 8-connected in-bounds neighbors
+wn_count4/5        count of 4-connected neighbors equal to a target value
+wn_count8/5        count of 8-connected neighbors equal to a target value
+
+Window operations:
+wn_extract/6       extract an H x W sub-grid starting at (R0,C0)
+wn_slide/4         enumerate all valid H x W windows as R0-C0-Sub triples
+wn_pad/4           pad all sides with N layers of a padding value
+
+Local operations:
+wn_local_max4/3    true if cell is >= all in-bounds 4-connected neighbors
+wn_local_min4/3    true if cell is =< all in-bounds 4-connected neighbors
+wn_halo4/3         cells adjacent to a target value but not equal to it
+wn_convolve/3      integer convolution with a kernel
+
+Spatial:
+wn_center/3        floor-center coordinates of a grid
+wn_manhattan/5     Manhattan (L1) distance between two positions
+wn_cells_at_dist/5 in-bounds cells at exactly Manhattan distance D
+
+Implementation
+
+wn_neighbors4 and wn_neighbors8 enumerate direction offsets using member/2
+inside findall. Bounds are checked with =< comparisons against precomputed
+NRowsM1 and NColsM1. The 4 directions are: up (-1,0), down (1,0), left (0,-1),
+right (0,1). The 8 directions add the four diagonals.
+
+wn_count4 and wn_count8 call the corresponding neighbor predicate, then use
+include/3 with a lambda to filter by value, then length/2 to count.
+
+wn_extract builds each sub-row by mapping column offsets through nth0/3. The
+predicate uses numlist/3 to enumerate row and column offsets, then maplist/3
+to assemble each row.
+
+wn_halo4 uses sort/2 to deduplicate: a halo cell adjacent to multiple Val cells
+would otherwise appear multiple times in findall output.
+
+wn_convolve delegates to wn_extract for window extraction and uses wn_dot_ for
+element-wise products. wn_dot_ uses maplist/4 for row-wise products and foldl/4
+for summation. Output dimensions: (NRows - KH + 1) x (NCols - KW + 1).
+
+wn_pad builds padding rows using findall with between/3, then assembles them
+with append/3. When N = 0, findall produces empty lists and the grid passes
+through unchanged.
+
+All 42 PLUnit acceptance tests pass (AC-WN-001 through AC-WN-042).
+
+Significance
+
+The window pack completes the spatial-access layer. With neighborhood access,
+Mentova can now:
+
+  Find which cells border a region (wn_halo4)
+  Detect structural features by local comparison (wn_local_max4, wn_local_min4)
+  Slide a pattern over a grid to find matching positions (wn_slide + seek)
+  Apply weighted filters (wn_convolve)
+  Measure spatial distances (wn_manhattan, wn_cells_at_dist)
+
+These primitives support object boundary detection, feature extraction, and
+spatial analysis needed for reasoning about visual structure in any domain.
+
+References
+
+PrologAI_1_Specification_v65.txt, Part 90 (WN-WN-001 through WN-WN-014)
+PrologAI_2_Pseudocode_v58.txt, Part 90
+PrologAI_3_Architecture_v59.txt, PART ARCH-66
+PrologAI_4_Refinement_v113.txt, Part 90 (AC-WN-001 through AC-WN-042)
+PrologAI_5_Completion_v116.txt, Work Package 100
+PrologAI PR #185: feat(packs): PR 100 - window pack Layer 79
