@@ -1,0 +1,95 @@
+Accomplishment 123: Path Tracing, Rays, and Grid Boundaries - The Trace Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 101st work package: the trace pack (tr_* predicate family, Layer 82). This pack provides 14 predicates for detecting contiguous runs in rows and columns, casting directional rays, enumerating cells along lines, reading and painting values along paths, identifying boundary cells, and computing midpoints between positions.
+
+Introduction
+
+Reasoning about spatial structure requires more than knowing where cells are - it requires being able to follow paths, detect segments, trace boundaries, and cast lines of sight. A task might require: find the first obstacle in a given direction; identify all cells on the border of an object; count how many contiguous segments appear in a row; paint a diagonal path.
+
+Before the trace pack, these operations required building ad hoc loops from lower-level predicates. The trace pack gives Mentova a coherent vocabulary for linear spatial reasoning.
+
+Predicates
+
+The trace pack exports 14 predicates under the tr_* prefix.
+
+Run detection:
+tr_runs_row/3    contiguous non-background runs in a row
+tr_spans_h/3     per-row run lists for the whole grid
+tr_spans_v/3     per-column run lists
+
+Ray casting:
+tr_ray_h/6       horizontal ray: first non-background cell in a row direction
+tr_ray_v/6       vertical ray: first non-background cell in a column direction
+
+Line enumeration:
+tr_line_h/4      list of R-C pairs along a horizontal line
+tr_line_v/4      list of R-C pairs along a vertical line
+
+Path operations:
+tr_path_vals/3   extract grid values at each position in a list
+tr_draw_path/4   paint a value at each position in a list
+
+Boundary operations:
+tr_bbox_border/5  border cells of a bounding rectangle
+tr_perimeter/3    non-background cells touching background or on grid edge
+tr_outline/3      background cells touching non-background cells
+tr_edge_cells/2   all cells on the grid boundary
+
+Position arithmetic:
+tr_midpoint/3     floor midpoint of two R-C positions
+
+Implementation
+
+tr_runs_row uses findall with three conditions: a start condition (cell is
+non-background and the previous cell is background or this is the first
+column), an end condition (cell is non-background and the next cell is
+background or this is the last column), and a forall to verify all cells
+between start and end are non-background. This gives exactly one pair per
+contiguous run.
+
+tr_ray_h and tr_ray_v build a candidate list in ascending order (or
+descending via reverse/2 for negative direction) using numlist/3, then
+use member/2 with a cut to commit to the first non-background hit.
+
+tr_line_h and tr_line_v build the index sequence with numlist/3, reversing
+for negative direction, then map each index to an R-C pair via a lambda
+closure that captures the fixed coordinate.
+
+tr_draw_path uses a private tr_set_cell_ helper (maplist/4 over row/column
+indices) folded over the list of positions.
+
+tr_bbox_border, tr_perimeter, and tr_outline all use findall with sort to
+deduplicate results that can qualify via multiple conditions or neighbors.
+
+All 42 PLUnit acceptance tests pass (AC-TR-001 through AC-TR-042).
+
+Significance
+
+The trace pack gives Mentova linear spatial reasoning primitives that are
+essential for a broad class of visual tasks:
+
+  Run detection identifies the segments within each row and column.
+  Rays find the nearest obstacle in a direction.
+  Lines enumerate the cells along a straight path.
+  Path drawing paints values along computed routes.
+  Perimeter and outline find the boundaries of objects and their halos.
+  Edge cells identify the frame of a grid.
+
+Combined with the fill pack (flood-fill), connect pack (connectivity), and
+scene pack (object inventory), the trace pack completes the foundation for
+structural reasoning about what is where in a grid.
+
+References
+
+PrologAI_1_Specification_v68.txt, Part 93 (TR-TR-001 through TR-TR-014)
+PrologAI_2_Pseudocode_v61.txt, Part 93
+PrologAI_3_Architecture_v62.txt, PART ARCH-69
+PrologAI_4_Refinement_v116.txt, Part 93 (AC-TR-001 through AC-TR-042)
+PrologAI_5_Completion_v119.txt, Work Package 103
+PrologAI PR #188: feat(packs): PR 103 - trace pack Layer 82
