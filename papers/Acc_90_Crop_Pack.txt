@@ -1,0 +1,100 @@
+Accomplishment 90: Crop Pack - Subgrid Extraction, Padding, Splitting, and Embedding
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI now includes the crop pack (module crop, prefix cr_), a set of 14
+predicates for rectangular subgrid operations: bounding box detection, content-
+aware cropping, padding, border removal, horizontal and vertical splitting, row
+and column band extraction, stitching, subgrid embedding, center extraction, and
+quadrant splitting. The crop pack is the 68th work package in PrologAI and
+Mentova's 90th accomplishment.
+
+Introduction
+
+Almost every visual reasoning task involves boundaries. Where does the content
+start and end? Which region of the grid contains the relevant information? How
+do we extract it cleanly so that downstream reasoning operates only on what
+matters?
+
+The crop pack is the answer: a complete set of predicates for finding, cutting,
+and reconstructing rectangular regions of grids. Before this pack, isolating
+the content of a grid or extracting a quadrant required inline list manipulation
+scattered through every solver. Now cr_crop_content, cr_split_h, and
+cr_quadrants are named operations that can be called in one step.
+
+Design
+
+The crop pack requires only the grid pack. All predicates work on lists-of-lists
+of integer color values, the native grid representation throughout PrologAI. All
+indices are 0-indexed and consistent with the conventions of the grid, scene,
+path, and analogy packs.
+
+All predicates are deterministic. Splitting predicates fail gracefully on
+out-of-range inputs rather than throwing errors.
+
+Bounding Box and Content Cropping
+
+cr_bbox/3 finds the tight bounding box of all cells that differ from a given
+background color. It returns bbox(MinR, MinC, MaxR, MaxC) and fails if every
+cell equals the background.
+
+cr_crop_bbox/6 extracts the rectangular subgrid at inclusive row/col bounds.
+cr_crop_content/3 combines both: it finds the content bounding box and crops
+to it in one step, stripping all background borders from all four sides.
+
+Padding and Border Removal
+
+cr_pad/4 adds a uniform N-cell border of a given color around the entire grid.
+cr_strip_border/3 removes N rows and columns from every side. These two
+predicates are exact inverses: cr_strip_border(cr_pad(G,C,N),N) = G.
+
+Splitting
+
+cr_split_h/4 divides a grid into top and bottom parts at row R. The top part
+has R rows and the bottom part has the rest. cr_split_v/4 divides into left
+and right parts at column C.
+
+cr_rows/4 and cr_cols/4 provide the more general case: extracting any
+contiguous band of rows or columns by 0-indexed From (inclusive) and To
+(exclusive) bounds.
+
+Joining and Embedding
+
+cr_stitch_h/3 and cr_stitch_v/3 join two grids side by side or top to bottom.
+They are the inverses of cr_split_h and cr_split_v, making it possible to
+decompose a grid into parts, transform each part independently, and reassemble
+the result.
+
+cr_embed/5 places a subgrid at any row/column offset inside a base grid,
+overwriting the cells at those positions. This is the fundamental operation for
+constructing output grids by assembling parts.
+
+Center and Quadrants
+
+cr_center/4 extracts the centered Rows x Cols subgrid from a larger grid.
+The offset is computed as (GridHeight - Rows) // 2 and (GridWidth - Cols) // 2.
+
+cr_quadrants/5 splits a grid into four equal (or near-equal) quadrants at the
+midpoint row and column. This is the primary decomposition operation for tasks
+that exhibit four-fold structure.
+
+Acceptance
+
+49 PLUnit tests across 14 test groups all pass with no warnings.
+
+Integration criteria IC-CR-001 (no load warnings) and IC-CR-002 (all 49
+tests pass) are confirmed.
+
+Conclusion
+
+The crop pack gives Mentova the ability to isolate, decompose, and reconstruct
+any rectangular region of any grid. Combined with the grid, color, shape,
+relation, path, symmetry, pattern, scene, sequence, and frame packs, Mentova
+can now: find objects (scene, path), describe them (color, shape, relation),
+understand their structure (symmetry, pattern, sequence), extract and isolate
+them (crop), and reconstruct output grids by embedding transformed parts back
+into a base (crop). The perceptual foundation is now complete.
+
+END OF ACCOMPLISHMENT 90
