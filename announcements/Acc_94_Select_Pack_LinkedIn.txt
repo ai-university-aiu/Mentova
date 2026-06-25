@@ -1,0 +1,44 @@
+Accomplishment 94: Mentova can now choose which objects matter.
+
+The new select pack gives PrologAI fourteen predicates for filtering and
+selecting cell regions from a list.
+
+Largest. Smallest. Sorted by size. Filtered by exact size.
+Touching the border. Interior only. Above a row. Below a row.
+Left of a column. Right of a column. Uniquely sized.
+
+Before this pack, Mentova could detect all regions in a scene.
+
+After this pack, Mentova can focus: ignore the small noise, work with the
+large objects; ignore the border objects, work with the interior ones; find
+the one object whose size appears nowhere else.
+
+Here is a concrete example.
+
+A grid has five connected regions: four of size 3 and one of size 7.
+
+sl_largest finds the size-7 region immediately.
+
+sl_unique_area finds the size-7 region because its area (7) appears only once.
+
+sl_filter_area_max with Max=3 returns the four size-3 regions.
+
+sl_filter_border filters to only those touching the grid edge.
+
+Each of these is a named, verifiable predicate.
+
+None of them require training data.
+
+None of them use neural weights.
+
+All of them are inspectable: you can read the Prolog clause and understand
+exactly what rule is being applied.
+
+This is what glass-box cognition looks like at the perceptual level.
+
+The select pack is Layer 53, work package 74 in the PrologAI platform.
+
+59 tests. All pass.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

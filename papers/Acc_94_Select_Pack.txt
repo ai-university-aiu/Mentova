@@ -1,0 +1,159 @@
+Accomplishment 94: Select Pack - Selection and Filtering of Cell Regions
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains a new work package - the select pack (module select, sl_* prefix,
+Layer 53) - that gives Mentova fourteen deterministic predicates for filtering
+and selecting cell regions from a list based on spatial position, cell count,
+and uniqueness properties.
+
+This pack provides the vocabulary for describing which objects matter in a visual
+scene: the largest, the smallest, those touching the edge, those above a dividing
+line, those with a size that appears only once.
+
+
+1. Background
+
+Before the select pack, Mentova could detect all connected-component regions in
+a grid (via the grid pack), measure their properties (via the measure pack), and
+apply transformations to them (via the transform pack).
+
+But it had no general predicates for choosing which regions to work with from a
+list.
+
+To reason about a visual scene, a cognitive system must be able to focus its
+attention: "ignore the small noise regions, work with the large ones", or "the
+object touching the border is the answer", or "find the oddly-sized one".
+
+The select pack provides exactly this filtering vocabulary.
+
+
+2. The Fourteen Predicates
+
+2.1 Extremal Selection
+
+sl_largest/2 returns the region with the maximum cell count.
+
+When multiple regions share the maximum, the first in the list is returned.
+
+sl_smallest/2 returns the region with the minimum cell count by the same rule.
+
+These two predicates implement the common pattern: "identify the dominant object"
+and "identify the smallest detail".
+
+
+2.2 Sorting
+
+sl_sort_by_area/2 produces a new list of the same regions sorted by cell count
+ascending.
+
+Regions with equal cell counts retain their relative order (stable sort via
+keysort).
+
+
+2.3 Area Filtering
+
+sl_filter_area/3 keeps only regions with exactly N cells.
+
+sl_filter_area_min/3 keeps regions with at least Min cells.
+
+sl_filter_area_max/3 keeps regions with at most Max cells.
+
+Together these three predicates span the full range of area-based filtering.
+
+
+2.4 Border Filtering
+
+sl_touches_border/3 tests whether any cell of a region lies on the grid border:
+row 0, row Rows-1, col 0, or col Cols-1.
+
+sl_filter_border/4 keeps regions that touch the border.
+
+sl_filter_interior/4 keeps regions that do not touch the border.
+
+Border filtering is important in visual reasoning because objects at the edge
+of a grid often play a different role than objects in the interior.
+
+
+2.5 Directional Filtering
+
+sl_above_row/3 keeps regions where every cell has row index strictly less than
+the given row bound.
+
+sl_below_row/3 keeps regions where every cell has row index at or above the
+given row bound.
+
+sl_left_of_col/3 and sl_right_of_col/3 provide the same filtering for columns.
+
+These four predicates enable spatial partitioning: dividing a scene into top
+and bottom halves, or left and right halves, then working with each separately.
+
+
+2.6 Unique Area Selection
+
+sl_unique_area/2 returns the sub-list of regions whose cell count appears exactly
+once in the full input list.
+
+If two regions have the same cell count, neither is returned.
+
+This implements the common reasoning pattern: "find the object that is different
+from all the others in size."
+
+
+3. Implementation Notes
+
+sl_touches_border uses a cut after the first border cell is found, avoiding
+redundant iteration through the region when the answer is already known.
+
+sl_above_row and its directional companions use negation-as-failure: a region
+passes if and only if no cell violates the constraint.
+
+sl_unique_area computes the full area list first, then checks each region's area
+against that list using include/3 from library(apply).
+
+
+4. Tests
+
+The pack ships 59 PLUnit tests across 14 suites (one per predicate).
+
+Tests cover empty lists, single-region lists, mixed lists with varying areas,
+border and interior regions in 5x5 grids, and directional filtering cases.
+
+All 59 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+• Specification v39, Part 64: functional requirements for all fourteen predicates
+• Pseudocode v32, Part 64: algorithmic pseudocode for each predicate
+• Architecture v33, PART ARCH-40: module position and design notes
+• Refinement v87, Part 64: acceptance criteria AC-SL-001 through AC-SL-059
+• Completion v90: PR 74 release checklist
+
+
+6. Significance
+
+With the select pack, Mentova can answer questions like:
+
+"Which object is the largest in this scene?"
+
+"Which objects touch the edge of the grid?"
+
+"Which objects are entirely in the top half?"
+
+"Which object has a size that no other object shares?"
+
+These are the questions that direct visual attention toward the objects that
+matter for a given reasoning task.
+
+The select pack is the thirty-fifth tutorial chapter and the seventy-third work
+package in the PrologAI platform.
+
+
+END OF PAPER
