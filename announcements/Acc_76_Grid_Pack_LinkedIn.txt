@@ -1,0 +1,47 @@
+MENTOVA ACC_76: THE GRID PACK - VISUAL PERCEPTION FOR ARC-AGI
+
+Mentova can now see.
+
+Not in a metaphorical sense. In the literal, glass-box, every-step-auditable sense.
+
+The grid pack (PR 56, Layer 35 of the PrologAI cognitive architecture) gives Mentova native perception of rectangular color grids - the visual substrate of the ARC-AGI benchmark.
+
+ARC-AGI is the benchmark designed by Francois Chollet to test genuine fluid intelligence. Each puzzle shows a few input-output grid pairs. The solver must find the transformation rule and apply it to a new input. ARC-AGI-2 (2025) raises the bar to compositional generalization.
+
+Before Mentova can reason about a transformation, it must perceive the grids.
+
+The grid pack provides that perception. 26 predicates. All pure Prolog. All glass-box.
+
+What Mentova can now do:
+
+gd_size/3 - query grid dimensions.
+
+gd_cell/4, gd_row/3, gd_col/3 - access cells, rows, columns by zero-based index.
+
+gd_colors/2, gd_color_count/3, gd_color_map/3 - analyze and transform colors.
+
+gd_objects/3, gd_connected/3, gd_bounding_box/3 - extract 4-connected objects and find their bounding boxes.
+
+gd_rotate90/2, gd_rotate180/2, gd_rotate270/2 - rotate grids clockwise.
+
+gd_reflect_h/2, gd_reflect_v/2, gd_reflect_d1/2, gd_reflect_d2/2 - reflect across all four axes of the D4 dihedral group (the symmetry group of the square).
+
+gd_translate/5, gd_crop/6, gd_overlay/5 - move, extract, and composite grids.
+
+gd_diff/3, gd_equal/2 - compare grids and find exactly what changed.
+
+gd_symmetry/2 - detect which symmetry axes a grid has.
+
+gd_fill/5, gd_make/4, gd_set_cell/5 - construct and mutate grids.
+
+31 PLUnit tests. All pass.
+
+This is not a neural feature extractor. There is no black box here. Every operation is a named Prolog predicate that can be called, inspected, traced, and reasoned about.
+
+The grid pack is the perceptual foundation. The next step is inference.
+
+PrologAI: 53 work packages, 35 layers, glass-box all the way down.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #ARC_AGI #SymbolicAI #LogicProgramming #GlassBox #PerceptualReasoning #SyntheticMind #AIU #Prolog

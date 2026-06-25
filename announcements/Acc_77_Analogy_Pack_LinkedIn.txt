@@ -1,0 +1,43 @@
+MENTOVA ACC_77: THE ANALOGY PACK - INFERRING TRANSFORMATION RULES FROM EXAMPLES
+
+Mentova can now reason from examples to rules.
+
+The analogy pack (PR 57, Layer 36 of the PrologAI cognitive architecture) gives Mentova the ability to infer the transformation rule that explains a set of (input, output) grid pairs and apply it to a new input. No neural network. No statistical model. Pure logical induction.
+
+This is the core skill that ARC-AGI tests.
+
+The rule class: a spatial isometry from the D4 dihedral group (the 8 rigid motions of the square: identity, rotate 90, rotate 180, rotate 270, reflect horizontal, reflect vertical, reflect main diagonal, reflect anti-diagonal) combined with a color substitution map.
+
+The inference algorithm: logical search. Try each of the 8 isometries. For the first training pair, apply the isometry and infer the color map. Check every other training pair. If all pairs are consistent, return the rule. Otherwise, backtrack and try the next isometry.
+
+The result: ay_solve_from_examples/3.
+
+    ?- Pairs = [in([[1,2],[3,4]])-out([[3,1],[4,2]]),
+                in([[5,6],[7,8]])-out([[7,5],[8,6]])],
+       TestIn = [[9,0],[1,2]],
+       ay_solve_from_examples(Pairs, TestIn, Predicted).
+    Predicted = [[1,9],[2,0]].
+
+Two training pairs. One test input. One predicted output. No training. No gradients. No black box.
+
+The analogy pack also surfaced a subtle Prolog bug worth documenting.
+
+YALL (Yet Another Lambda Library) lambdas inside maplist share their intermediate variable bindings across all calls in the maplist. If you write:
+
+    maplist([In, Out]>>(transform(In, Iso, T), verify(T, Out)), Ins, Outs)
+
+the variable T is bound on the first call and stays bound for all subsequent calls. This silently causes the second pair to unify T with whatever the first pair produced.
+
+The fix is a named predicate. Named predicates create fresh activation frames with fresh local variables on every call.
+
+This distinction is non-obvious and not prominently documented. It is now in PrologAI Pseudocode v15 so future developers do not encounter it as a mystery.
+
+21 PLUnit tests. All pass.
+
+PrologAI now has 54 work packages and 36 layers. The grid pack (Acc_76) sees the grids. The analogy pack (Acc_77) reasons about how they relate.
+
+The substrate for ARC-AGI-2 is being built, one glass-box layer at a time.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #ARC_AGI #SymbolicAI #LogicProgramming #GlassBox #RuleInduction #Analogy #SyntheticMind #AIU #Prolog
