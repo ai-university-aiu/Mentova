@@ -1,0 +1,177 @@
+Acc_132: Grid Assembly, Concatenation, and Composition - The Assemble Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains the assemble pack (as_* predicate family, Layer 91, Work
+Package 112), a 14-predicate module for building, joining, scaling, framing,
+and compositing grids. The pack fills a genuine gap: while existing packs
+manipulate a single grid in various ways, assembling larger grids from multiple
+smaller pieces required a dedicated layer.
+
+42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+ARC-AGI-2 visual reasoning frequently requires building an output grid from
+multiple input pieces. Common operations include:
+
+Placing two grids side by side. Stacking grids vertically. Assembling a 2D
+mosaic of different sub-grids. Downscaling a large grid to reveal its
+underlying structure. Adding a colored frame around a pattern. Centering a
+small pattern in a larger canvas. Reflecting a pattern and joining it to itself
+to create bilateral symmetry. Interleaving rows or columns from two grids.
+Pasting one grid into another at a specific position. Conditionally overwriting
+cells using a mask.
+
+The tile pack (Layer 81) repeats the SAME tile multiple times. It does not
+join different grids. The assemble pack joins lists of DIFFERENT grids.
+
+The seek pack (Layer 76) has sk_upscale/3 which expands each cell to a K x K
+block. The assemble pack adds as_downscale/3 which performs the inverse: each
+K x K block is reduced to one cell by majority vote.
+
+The grid pack (Layer 44) has gd_overlay/5 which places non-background cells
+from a patch over a base. The assemble pack adds as_paste/5 which
+unconditionally overwrites all cells in the target region.
+
+
+2. Predicate Inventory
+
+The 14 predicates fall into seven groups.
+
+
+2.1 Multi-Grid Joining
+
+as_hcat(Grids, Combined) horizontally joins a list of same-height grids into
+one wide grid. as_vcat(Grids, Combined) vertically stacks a list of
+same-width grids. as_grid_of(Matrix, Combined) assembles a 2D list-of-lists
+of grids: it applies as_hcat to each row then as_vcat to the resulting strips.
+
+
+2.2 Scaling and Resizing
+
+as_downscale(Grid, K, Small) reduces each K x K non-overlapping block to one
+cell. The cell value is the most common value in the block (majority vote).
+This is the complement of sk_upscale from the seek pack.
+
+as_crop_to(Grid, NR, NC, Bg, Result) crops or pads Grid to exactly NR rows
+and NC columns. Cells beyond Grid are filled with Bg; cells beyond the target
+size are discarded.
+
+
+2.3 Framing and Centering
+
+as_border(Grid, W, Color, Framed) surrounds Grid on all four sides with a
+W-cell wide frame of Color.
+
+as_center_in(Grid, NR, NC, Bg, Result) embeds Grid at the integer floor center
+of an NR x NC canvas filled with Bg. The offset is ((NR - GNR) // 2,
+(NC - GNC) // 2).
+
+
+2.4 Quadrant Extraction
+
+as_quarter(Grid, Q, Sub) extracts one of four named quadrants: tl (top-left),
+tr (top-right), bl (bottom-left), or br (bottom-right). The boundary is at
+floor(NR/2) for rows and floor(NC/2) for columns.
+
+
+2.5 Mirror Concatenation
+
+as_flip_h_cat(Grid, Combined) concatenates Grid with its own left-right mirror
+(each row reversed), producing a grid with twice the column count.
+
+as_flip_v_cat(Grid, Combined) stacks Grid with its own top-bottom mirror (row
+list reversed), producing a grid with twice the row count.
+
+
+2.6 Interleaving
+
+as_zip_h(G1, G2, Combined) interleaves columns from two same-size grids. In
+each row, values alternate between G1 and G2 column-by-column.
+
+as_zip_v(G1, G2, Combined) interleaves rows from two same-size grids.
+
+
+2.7 Paste and Mask
+
+as_paste(Base, Sub, SR, SC, Result) unconditionally pastes Sub into Base at
+offset (SR, SC). All cells of Sub within Base bounds are overwritten. This
+differs from gd_overlay which treats background as transparent.
+
+as_mask_fill(Grid, Mask, Fill, Result) replaces Grid cells with Fill wherever
+the corresponding Mask cell is non-zero.
+
+
+3. Implementation Notes
+
+The pack is self-contained. It imports only standard library predicates:
+nth0/3, numlist/3, append/2, append/3, reverse/2, last/2 from library(lists)
+and maplist/2, maplist/3, maplist/4, include/3 from library(apply). No PrologAI
+pack is imported.
+
+The ERC (English Readable Code) convention is followed throughout.
+
+Internal helpers: as_make_row_ builds uniform rows; as_make_grid_ builds
+uniform grids; as_zip_lists_ interleaves two lists element-by-element;
+as_crop_ extracts a sub-grid by bounds; as_qbounds_ computes quadrant row
+and column boundaries; as_paste_row_ overwrites one row from a sub-row;
+as_majority_ finds the most common value in a list.
+
+
+4. Integration with the Pack Stack
+
+The assemble pack is Layer 91, above the order pack (Layer 90).
+
+Build a symmetric pattern from a motif using mirror-concatenation:
+
+as_flip_h_cat(Motif, WideHalf), as_flip_v_cat(WideHalf, FullSymmetric).
+
+Assemble four differently-colored quadrant grids into a single output:
+
+as_grid_of([[TL, TR], [BL, BR]], Output).
+
+Downscale a large grid to extract the encoded rule:
+
+as_downscale(LargeGrid, K, RuleGrid).
+
+Add a distinctive border to a completed pattern:
+
+as_border(Pattern, 1, 0, Framed).
+
+Interleave two complementary grids column by column:
+
+as_zip_h(GridA, GridB, Interleaved).
+
+
+5. SPARC Documentation
+
+Work Package 112 is documented in:
+
+Specification Part 102 (AS-AS-001 through AS-AS-014).
+
+Pseudocode Part 102.
+
+Architecture Part ARCH-78 positioning the assemble pack at Layer 91 and
+documenting its distinction from the tile, seek, grid, window, and sym packs.
+
+Refinement acceptance criteria AC-AS-001 through AC-AS-042.
+
+Completion Work Package 112.
+
+
+6. Conclusion
+
+The assemble pack gives PrologAI a complete set of grid construction and
+composition primitives. Joining, stacking, mosaicking, scaling, framing,
+centering, extracting, mirroring, interleaving, pasting, masking, and
+crop-or-padding are now available as clean symbolic predicates.
+
+PrologAI now carries 110 work packages and 132 Mentova accomplishments.
