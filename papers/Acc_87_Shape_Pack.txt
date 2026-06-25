@@ -1,0 +1,102 @@
+Accomplishment 87: Shape Pack - Normalized Shape Extraction and D4 Orbit Reasoning
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI now includes the shape pack (module shape, prefix sh_), a set of
+14 predicates for working with normalized cell patterns extracted from
+grids. A shape is a sorted list of r(R,C) cells translated so that the
+minimum row and minimum column are both 0. The pack provides creation,
+comparison, spatial transformation (rotation, reflection), D4 orbit
+enumeration, canonical form computation, and grid placement for shapes.
+The shape pack is the 65th work package in PrologAI and Mentova's 87th
+accomplishment.
+
+Introduction
+
+The grid pack gives Mentova raw cell access. The color pack gives it color
+as a first-class concept. The shape pack gives it the concept of a spatial
+pattern independent of position and color.
+
+This distinction is fundamental. A T-shaped cluster of cells is the same
+T-shape whether it appears in the top-left corner of a grid or the
+bottom-right. It is the same T-shape whether its cells are colored red or
+blue. Position and color are properties of a placed instance of a shape.
+The shape itself is the abstract pattern.
+
+By normalizing cell sets to the origin, the shape pack creates a
+representation where two instances of the same pattern always produce the
+same data structure. This enables reliable equality testing, pattern
+matching, and induction.
+
+Design
+
+A shape is a sorted list of r(R,C) cells satisfying two invariants:
+(1) min(R) = 0 and min(C) = 0, so the shape touches the origin.
+(2) The list is sorted in standard Prolog term order, so two identical
+patterns always produce identical lists regardless of the order in which
+cells were discovered.
+
+Normalization is performed by sh_from_cells/2, which subtracts the minimum
+row and column from all cells and then sorts. This is O(N log N) for N cells.
+
+sh_from_grid/3 combines findall over grid cells with sh_from_cells, giving
+a direct path from a grid and a color to a normalized shape.
+
+Spatial Transformations
+
+The shape pack implements all four generators needed to produce the D4
+(dihedral group of the square) orbit:
+
+sh_rotate90/2 applies the 90-degree clockwise rotation r(R,C) -> r(C, MaxR-R)
+and renormalizes.
+
+sh_reflect_h/2 applies the horizontal (left-right) flip r(R,C) -> r(R, MaxC-C)
+and renormalizes.
+
+sh_reflect_v/2 applies the vertical (top-bottom) flip r(R,C) -> r(MaxR-R, C)
+and renormalizes.
+
+sh_translate/4 applies a (DR, DC) offset without renormalizing - this is the
+operation needed to place a normalized shape at a specific grid position.
+
+D4 Orbit and Canonical Form
+
+sh_orbit/2 computes all distinct D4 orientations of a shape. It generates
+4 rotations of the shape and 4 rotations of its horizontal reflection, then
+removes duplicates. The result has 1 element (fully symmetric), 2 elements
+(symmetric under 180-degree rotation but not reflection), 4 elements
+(one axis of symmetry), or 8 elements (asymmetric).
+
+sh_canonical/2 returns the lex-min element of the orbit. Two shapes have
+the same canonical form if and only if they are D4-equivalent.
+
+sh_equivalent/2 tests D4 equivalence via canonical form comparison. This
+is the key predicate for shape-based induction: if two grids contain the
+same shape type in different orientations, sh_equivalent confirms this.
+
+Grid Placement
+
+sh_to_grid/6 places a shape on a grid at a given (DR, DC) offset with a
+given color. Combined with sh_translate, sh_rotate90, and sh_reflect_h, this
+enables composing the full ARC-AGI-2 placement pipeline: extract a shape,
+find the right orientation, compute the placement offset, paint.
+
+Acceptance
+
+42 PLUnit tests across 14 test groups all pass with no warnings.
+
+Integration criteria IC-SH-001 (no load warnings) and IC-SH-002 (all 42
+tests pass) are confirmed.
+
+Conclusion
+
+The shape pack closes the gap between raw cell access (grid pack) and
+abstract pattern reasoning. Together with the color, symmetry, path, and
+frame packs, Mentova now has a complete first-order vocabulary for grid
+perception: what cells are there, what color they are, how they are
+connected, whether they form borders, and what abstract patterns they
+represent. The next packs build compositional reasoning on this vocabulary.
+
+END OF ACCOMPLISHMENT 87
