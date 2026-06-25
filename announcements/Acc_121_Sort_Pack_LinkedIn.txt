@@ -1,0 +1,23 @@
+Accomplishment 121: The Sort Pack - Sorting, Ranking, and Ordering
+
+Mentova's 99th work package is live.
+
+The sort pack adds 14 so_* predicates for ordering operations on grids:
+row and column sums, value counting per row and column, ascending and
+descending sort of rows and columns by value frequency, finding the row or
+column with the most or fewest of a value, listing values in sorted order,
+and ranking a cell's value among all distinct values in the grid.
+
+These primitives answer the ordering questions that visual reasoning requires:
+which row is densest? sort the columns so the emptiest come first. where does
+this cell's value rank?
+
+All 42 acceptance tests pass. The pack is documented in SPARC Specification
+v66 (Part 91, SO-SO-001 through SO-SO-014), Refinement v114, and tutorial
+Chapter 62.
+
+PrologAI now has 99 work packages and Mentova has 121 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
