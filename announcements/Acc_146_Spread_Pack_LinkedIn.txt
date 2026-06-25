@@ -1,0 +1,43 @@
+Mentova Accomplishment 146: BFS Spreading and Distance Maps - The Spread Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the spread pack (Layer 105, Work
+Package 126).
+
+Distance-based reasoning is everywhere in grid problem solving. How far is this
+object from that one? Which cells are within 3 steps of the red region? Can I
+reach the exit? What does the nearest-neighbor map look like? The spread pack
+answers all of these with a BFS vocabulary built directly into the symbolic
+substrate.
+
+14 predicates (sd_* prefix), all deterministic:
+
+- sd_dist_map - single-source BFS distance map: all reachable cells with
+  their shortest-path distances
+- sd_dist_multi - multi-source BFS: minimum distance from any seed to every
+  reachable cell
+- sd_reachable - all background cells reachable from a source (sorted list)
+- sd_path_dist - BFS shortest path distance between two specific cells
+- sd_path_exists - reachability test; fails cleanly when blocked
+- sd_ring - all cells at exactly BFS distance D (the "ring" at radius D)
+- sd_zone - all cells within BFS distance MaxD (the "disk" of radius MaxD)
+- sd_dist_to_set - minimum distance from source to any cell in a target set
+- sd_farthest - the farthest reachable cell by BFS distance
+- sd_expand_once - one BFS level expansion (low-level building block)
+- sd_spread_color - spread a color outward through background cells up to
+  MaxD steps
+- sd_max_dist - maximum BFS distance to any reachable cell
+- sd_fill_dist - overlay BFS distances as cell values in the grid
+- sd_voronoi - Voronoi assignment of cells to the nearest seed (1-based index,
+  ties broken by lower seed index)
+
+42 PLUnit acceptance tests pass with no choicepoint warnings.
+
+This is Mentova accomplishment 146. PrologAI now carries 124 work packages.
+
+github.com/ai-university-aiu/PrologAI
