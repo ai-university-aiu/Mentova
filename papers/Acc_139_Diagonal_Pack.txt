@@ -1,0 +1,199 @@
+Mentova Accomplishment 139: Diagonal Line Extraction and Filling - The Diagonal Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 119: the diagonal pack, a Layer 98 symbolic reasoning
+module providing 14 predicates for extracting cell values along diagonals and
+anti-diagonals of 2D grids, filling individual diagonals with a color, computing
+the diagonal and anti-diagonal membership index of any cell, and testing whether
+a diagonal is uniform. All predicates are deterministic. This accomplishment is
+verified by 42 PLUnit acceptance tests, all passing.
+
+
+1. Motivation
+
+Diagonal lines appear in many visual reasoning tasks: symmetry axes, X patterns,
+diagonal gradients, checkerboard color sequences. Prior packs provide row and
+column operations (stripe pack), region analysis (connect, label packs), and
+directional movement (step, walk packs), but none provides dedicated diagonal
+and anti-diagonal predicates. The diagonal pack fills this gap with 14 dg_*
+predicates.
+
+Two definitions underlie all 14 predicates:
+
+Diagonal: a set of cells sharing a constant C minus R value (same column-minus-row
+offset). Cells where C minus R equals 0 form the main diagonal.
+
+Anti-diagonal: a set of cells sharing a constant R plus C value (same row-plus-
+column sum). The main anti-diagonal passes through the top-right corner (row 0,
+column NC minus 1) and has sum NC minus 1.
+
+
+2. Predicate Inventory (14 predicates, dg_* prefix)
+
+2.1 Value extraction
+
+dg_main_diag(+Grid, -Diag)
+
+Values on the main diagonal (cells where C equals R), from top-left to bottom-
+right. For non-square grids, Diag has min(NR, NC) elements.
+
+dg_anti_diag(+Grid, -Diag)
+
+Values on the main anti-diagonal (R plus C equals NC minus 1), listed in
+increasing R order.
+
+dg_nth_diag(+Grid, +N, -Diag)
+
+Values on the N-th diagonal where C minus R equals N. N equals 0 is the main
+diagonal; positive N is above and to the right; negative N is below.
+
+dg_nth_anti_diag(+Grid, +N, -Diag)
+
+Values on the N-th anti-diagonal where R plus C equals N.
+
+Example:
+
+dg_main_diag([[1,2,3],[4,5,6],[7,8,9]], D).
+% D = [1,5,9]
+
+dg_anti_diag([[1,2,3],[4,5,6],[7,8,9]], D).
+% D = [3,5,7]
+
+dg_nth_diag([[1,2,3],[4,5,6],[7,8,9]], 1, D).
+% D = [2,6]  (cells (0,1) and (1,2) where C-R=1)
+
+
+2.2 Complete enumeration
+
+dg_all_diags(+Grid, -Diags)
+
+List of all diagonals in offset order from -(NR-1) to NC-1. Each element is
+the list of values on one diagonal.
+
+dg_all_anti_diags(+Grid, -ADiags)
+
+List of all anti-diagonals in sum order from 0 to NR+NC-2.
+
+
+2.3 Diagonal filling
+
+dg_fill_main(+Grid, +Color, -Result)
+
+Result is Grid with every cell on the main diagonal set to Color.
+
+dg_fill_anti(+Grid, +Color, -Result)
+
+Result is Grid with every cell on the main anti-diagonal set to Color.
+
+dg_fill_nth_diag(+Grid, +N, +Color, -Result)
+
+Result is Grid with every cell on the N-th diagonal set to Color.
+
+dg_fill_nth_anti_diag(+Grid, +N, +Color, -Result)
+
+Result is Grid with every cell on the N-th anti-diagonal set to Color.
+
+Example:
+
+dg_fill_main([[1,2,3],[4,5,6],[7,8,9]], 0, R).
+% R = [[0,2,3],[4,0,6],[7,8,0]]
+
+dg_fill_anti([[1,2,3],[4,5,6],[7,8,9]], 0, R).
+% R = [[1,2,0],[4,0,6],[0,8,9]]
+
+
+2.4 Cell membership index
+
+dg_cell_diag(+R, +C, -N)
+
+N = C minus R. The diagonal index of cell (R,C).
+
+dg_cell_anti_diag(+R, +C, -N)
+
+N = R plus C. The anti-diagonal index of cell (R,C).
+
+Example:
+
+dg_cell_diag(1, 3, N).
+% N = 2  (cell is on superdiagonal 2)
+
+dg_cell_anti_diag(2, 3, N).
+% N = 5  (cell is on anti-diagonal 5)
+
+
+2.5 Uniformity testing
+
+dg_uniform_diag(+Grid, +N, -Color)
+
+Succeed if the N-th diagonal has all cells equal to Color.
+
+dg_uniform_anti_diag(+Grid, +N, -Color)
+
+Succeed if the N-th anti-diagonal has all cells equal to Color.
+
+Example:
+
+dg_uniform_diag([[5,1],[2,5]], 0, C).
+% C = 5  (main diagonal is [5,5])
+
+
+3. Implementation Notes
+
+The implementation uses three internal helpers to achieve determinism:
+
+dg_replace_nth_list_ replaces a list element at a given index using a cut on
+the base case (N = 0) to prevent backtracking.
+
+dg_replace_cell_ wraps dg_replace_nth_list_ for two-dimensional access, adding
+a cut after nth0 to prevent backtracking into the list lookup.
+
+dg_fill_cells_ iterates over a list of R-C coordinate pairs using if-then-else
+to deterministically handle the empty-list base case.
+
+The cell collection predicates dg_diag_cells_ and dg_anti_diag_cells_ use
+numlist/3 and include/3 to enumerate only valid (in-bounds) coordinates for
+each diagonal or anti-diagonal.
+
+The main anti-diagonal formula is Sum = NC - 1, which passes through the top-
+right corner (row 0, column NC-1). This is distinct from the sum NR+NC-2 (which
+points to the bottom-right corner for non-square grids).
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary case. All tests complete with no choicepoint
+warnings.
+
+
+5. Relationship to Existing Packs
+
+The stripe pack (Layer 97) detects and fills uniform rows and columns. The
+diagonal pack provides the analogous capability for diagonal and anti-diagonal
+lines.
+
+The symmetry pack tests overall grid symmetry (flip/rotate). The diagonal pack
+provides the primitive operations needed to test or enforce diagonal symmetry:
+extract a diagonal, test it for uniformity, or fill it.
+
+The fill pack (Layer 55) flood-fills from a seed cell. The diagonal pack fills
+a specific geometric line (a diagonal) unconditionally.
+
+
+6. Significance
+
+Diagonals are fundamental geometric primitives in grid-based visual reasoning.
+Symmetry axes, X patterns, diagonal color sequences, checkerboard structures,
+and oblique boundaries all involve diagonal relationships. The diagonal pack
+gives Mentova the vocabulary to extract, test, and modify these structures.
+
+This is Mentova accomplishment 139. PrologAI now carries 117 work packages.
+
+github.com/ai-university-aiu/PrologAI
