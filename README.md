@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-72-FF6B35?style=for-the-badge" alt="72 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-75-FF6B35?style=for-the-badge" alt="75 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **72 accomplished** |
-| Scientific papers | **72 published** — one per accomplishment |
+| Documented accomplishments | **75 accomplished** |
+| Scientific papers | **75 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         75 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  73 announcements — one per accomplishment
+├── papers/         78 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  75 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          20 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-75 scientific papers, one per accomplished milestone.
+78 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -376,12 +376,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_01` – `Acc_48` | One paper per reasoning rung — from the first transparent deduction to the completed moral reasoning module |
 | `Acc_49` – `Acc_66` | Practical track papers — multi-agent protocols, Piagetian assessment, tutorials, ARC-AGI-1 benchmark runs, lattice cryptography, four-protocol integration |
 | `Acc_67` – `Acc_72` | Growth path papers — Piagetian 8/8 ladder, ARC-AGI-1 100%, composite rule search, demonstration plan completion |
+| `Acc_73` – `Acc_75` | Silicon-and-code substrate papers — ephemera (short-lived programs), agency (ORAO loop), refinery (evaluator-optimizer) |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-73 announcements in LinkedIn format — one per accomplishment.
+75 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
@@ -394,7 +395,7 @@ Each announcement is paired with its scientific paper and written after the evid
 
 ### Demos — demos/
 
-20 demonstration scripts — one per major capability track.
+23 demonstration scripts — one per major capability track.
 
 Each demo is runnable end-to-end.
 
@@ -420,6 +421,9 @@ Each demo is runnable end-to-end.
 | `honest_success_criteria_demo.pl` | Honest capability self-assessment |
 | `part10_compliance_demo.pl` | Part 10 compliance verification |
 | `part10_compliance_extended.pl` | Extended compliance with Acc_66 |
+| `ephemera_demo.pl` | Ephemera pack: write and run short-lived programs (Acc_73) |
+| `agency_demo.pl` | Agency pack: formal ORAO goal-pursuit loop (Acc_74) |
+| `refinery_demo.pl` | Refinery pack: evaluator-optimizer quality layer (Acc_75) |
 
 ### Tools — tools/
 
