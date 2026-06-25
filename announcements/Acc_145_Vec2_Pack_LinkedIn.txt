@@ -1,0 +1,38 @@
+Mentova Accomplishment 145: Vector Arithmetic - The Vec2 Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the vec2 pack (Layer 104, Work
+Package 125).
+
+Vector arithmetic is the connective tissue of spatial reasoning. To move
+objects, compare displacements, rotate directions, check if two arrows are
+parallel, or translate a whole shape by an offset, you need a clean 2D vector
+vocabulary. The vec2 pack provides it.
+
+14 predicates (vv_* prefix), all pure arithmetic, no grid required:
+
+- vv_offset - displacement vector from (R1,C1) to (R2,C2): (R2-R1, C2-C1)
+- vv_add - apply a displacement vector to a point
+- vv_scale - scale a vector by an integer factor
+- vv_neg - negate a vector to reverse its direction
+- vv_len_sq - squared Euclidean length (integer, no square root)
+- vv_manhattan - L1 magnitude: sum of absolute components
+- vv_chebyshev - L-infinity magnitude: maximum absolute component
+- vv_rot90_cw - rotate 90 degrees clockwise (RDR=DC, RDC=-DR)
+- vv_rot90_ccw - rotate 90 degrees counter-clockwise (RDR=-DC, RDC=DR)
+- vv_rot180 - rotate 180 degrees (negate both components)
+- vv_dot - dot product: positive for same direction, zero for orthogonal
+- vv_cross - 2D cross product z-component: positive if V2 is CCW from V1
+- vv_parallel - test parallelism by asserting zero cross product
+- vv_translate_region - translate a list of R-C cells by a displacement
+
+42 PLUnit acceptance tests pass with no choicepoint warnings.
+
+This is Mentova accomplishment 145. PrologAI now carries 123 work packages.
+
+github.com/ai-university-aiu/PrologAI
