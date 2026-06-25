@@ -1,0 +1,41 @@
+Accomplishment 91 - Mentova can now composite, mask, and combine grids by layering rules.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 69 work packages.
+
+The new overlay pack gives Mentova a complete vocabulary for combining grids at the cell level.
+
+ov_over and ov_blend - place grid B on top of A; background cells in B are transparent.
+
+ov_or and ov_and - pointwise bitwise OR and AND of two grids.
+
+ov_xor - non-background where exactly one grid is non-background; background where both or neither.
+
+ov_diff - A's value where A and B differ; background where they agree.
+
+ov_intersect - A's value where A equals B; background where they differ.
+
+ov_mask - keep A's value where a mask is non-background; background elsewhere.
+
+ov_mask_inv - keep A's value where the mask equals background. Complement of ov_mask.
+
+ov_priority - first non-background value at each position across a list of grids.
+
+ov_replace - replace every occurrence of one color with another.
+
+ov_fill_bg - replace all background cells with a fill color.
+
+ov_max and ov_min - pointwise maximum and minimum of two grids.
+
+This matters because:
+
+Constructing output grids almost always requires combining layers. A background grid. A mask marking which cells change. A pattern providing the new values.
+
+ov_over, ov_mask, ov_priority - these are now named first-class predicates. Not inline list manipulation. Named operations that compose with the entire cognitive stack.
+
+The overlay pack is the 69th work package in PrologAI and Mentova's 91st accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/

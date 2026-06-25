@@ -1,0 +1,117 @@
+Accomplishment 91: Overlay Pack - Grid Combination by Layering, Logic, Masking, and Priority Merge
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI now includes the overlay pack (module overlay, prefix ov_), a set of
+14 predicates for combining two or more grids at the cell level. The pack
+provides transparent overlay, bitwise logical operations, difference and
+intersection, masking, priority merge across a list of grids, color replacement,
+background fill, and pointwise extrema. The overlay pack is the 69th work
+package in PrologAI and Mentova's 91st accomplishment.
+
+Introduction
+
+Constructing output grids for visual reasoning tasks almost always requires
+combining information from multiple sources. The input grid contains background
+context. A derived mask marks which cells should change. A pattern template
+provides the new values. The output is the result of compositing these layers
+according to a rule.
+
+Before the overlay pack, all such operations required inline list manipulation
+written fresh for each solver. Now ov_over, ov_mask, ov_diff, and ov_priority
+are first-class named predicates that can be composed and combined with the rest
+of the cognitive stack.
+
+Design
+
+The overlay pack requires only the grid pack. All predicates operate on lists-
+of-lists of integer color values. All operations are pointwise: each cell of
+the result depends only on the corresponding cells of the inputs, never on
+neighboring cells.
+
+All predicates are deterministic. They succeed or fail; they do not produce
+multiple solutions.
+
+Transparent Overlay
+
+ov_over/4 is the most fundamental compositing operation. Given grids A and B
+and a background color BG, it produces a result where each cell is B's value
+if B's value differs from BG, and A's value otherwise. BG acts as the
+transparency key: BG cells in B are treated as transparent windows through
+which A shows.
+
+ov_blend/4 is a named alias for ov_over, provided for readability in contexts
+where the operation is conceptually a blend rather than a strict overlay.
+
+Bitwise Operations
+
+ov_or/3 and ov_and/3 compute the pointwise bitwise OR and AND of two integer
+grids. These are the natural operations for ARC color values treated as bit
+flags. ov_or is useful for merging two sparse patterns - a cell is lit if
+either pattern lit it. ov_and is useful for finding the intersection of two
+patterns where both must agree.
+
+XOR and Difference
+
+ov_xor/4 extends the exclusive-or concept to grids with a background color.
+A cell in the result is non-background when exactly one of the two input cells
+is non-background, and background otherwise. This isolates the cells where the
+two grids disagree about presence.
+
+ov_diff/4 is similar but not symmetric: it keeps A's value where A and B
+differ, and background where they agree. Together with ov_intersect/4 (which
+keeps A's value where A and B agree), these two predicates provide a complete
+decomposition: every cell of A belongs to exactly one of the two predicates'
+outputs.
+
+Masking
+
+ov_mask/4 and ov_mask_inv/4 provide the fundamental masking operations. A mask
+is any grid of the same size where non-background cells mark the region of
+interest. ov_mask keeps the original grid's value inside the mask; ov_mask_inv
+keeps it outside. Together they partition the grid into two disjoint parts
+whose bitwise OR is the original.
+
+Priority Merge
+
+ov_priority/3 generalizes ov_over to any number of grids. Given a list of
+same-size grids and a background color, it returns the first non-background
+value at each position scanning the list in order. The first grid has the
+highest priority. This is the right tool for combining multiple sparse grids
+where each may contribute non-background values at different positions.
+
+Color Replacement
+
+ov_replace/4 replaces every occurrence of one color value with another. This
+is the fundamental color-mapping operation for tasks that require repainting
+objects. ov_fill_bg/4 is the specialized version for replacing background
+cells, which is the most common use case when constructing output grids with
+a new fill color.
+
+Pointwise Extrema
+
+ov_max/3 and ov_min/3 compute the pointwise maximum and minimum of two grids.
+For ARC color values (integers 0-9), these correspond to taking the darker or
+lighter of the two colors at each position.
+
+Acceptance
+
+38 PLUnit tests across 14 test groups all pass with no warnings.
+
+Integration criteria IC-OV-001 (no load warnings) and IC-OV-002 (all 38
+tests pass) are confirmed.
+
+Conclusion
+
+The overlay pack provides the vocabulary for constructing output grids from
+component layers. Any task that can be described as: start with a base grid,
+apply a mask, overlay a pattern, replace a color, or take the first non-
+background value across several candidate grids is now directly expressible
+with the predicates in this pack. The overlay pack is the final piece of the
+grid manipulation layer: with grid, crop, overlay, and the perceptual packs
+(color, shape, scene, symmetry, pattern, path, relation), Mentova now has a
+complete toolkit for understanding, decomposing, and constructing grids.
+
+END OF ACCOMPLISHMENT 91
