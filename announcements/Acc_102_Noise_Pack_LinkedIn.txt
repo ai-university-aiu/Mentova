@@ -1,0 +1,23 @@
+Accomplishment 102: Mentova now has binary mask operations and grid noise analysis.
+
+The noise pack (ns_* predicates, Layer 61) gives Mentova 14 new tools:
+
+Binary masks:
+- ns_mask_apply/4: replace masked cells with a fill color
+- ns_mask_from_color/3: build a mask from a color criterion
+- ns_mask_invert/3, ns_mask_and/3, ns_mask_or/3: compose masks
+- ns_mask_to_region/2, ns_region_to_mask/4: bridge masks and region lists
+
+Noise analysis:
+- ns_majority_color/2: find the dominant color
+- ns_noise_cells/3: find cells that don't match the majority
+- ns_denoise/3: replace noise with the majority color
+- ns_sparse_cells/3: find cells belonging to rare colors
+- ns_dense_cells/3: find cells belonging to common colors
+- ns_isolate_color/3: keep one color, zero out everything else
+
+With this pack, Mentova can now form hypotheses like "the output is the input with noise removed" and verify them against real ARC-AGI grid pairs.
+
+This is Mentova's 102nd documented accomplishment and PrologAI's 80th work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
