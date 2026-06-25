@@ -1,0 +1,242 @@
+Mentova Accomplishment 140: Arithmetic Progression and Periodic Recurrence Detection - The Recur Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 120: the recur pack, a Layer 99 symbolic reasoning
+module providing 14 predicates for detecting arithmetic progressions and
+repeating cycles in lists of any values, continuing detected patterns by any
+number of additional terms, indexing into an infinite cyclic repetition, and
+computing element-wise differences. All predicates are deterministic. This
+accomplishment is verified by 42 PLUnit acceptance tests, all passing.
+
+
+1. Motivation
+
+Pattern continuation is one of the most common operations in visual reasoning.
+Given several examples where outputs follow a rule that extends a sequence - a
+color series that counts up by two, a repeating stripe of three colors, a
+difference table where all gaps are equal - a solving system must detect the
+pattern type, extract the parameters, and produce the next terms.
+
+Prior packs provide structural sequence operations (the existing sequence pack
+at Layer 48: sq_range, sq_chunk, sq_zip, sq_transpose). The recur pack provides
+a different capability: pattern detection and continuation. It detects whether
+a list is arithmetic (constant first difference) or periodic (exact repetition
+of a shorter unit), and extends either type by any number of terms.
+
+
+2. Predicate Inventory (14 predicates, rc_* prefix)
+
+2.1 Arithmetic sequence generation and detection
+
+rc_arith(+Start, +Step, +N, -Seq)
+
+Generate a list of N terms: [Start, Start+Step, ..., Start+(N-1)*Step].
+
+rc_arith_step(+Seq, -Step)
+
+Extract the common difference from an arithmetic sequence. Fails if fewer than
+2 elements or if differences are not all equal.
+
+rc_is_arith(+Seq, -Step)
+
+Named alias for rc_arith_step; reads as a test predicate at the call site.
+
+Example:
+
+rc_arith(1, 3, 4, Seq).
+% Seq = [1, 4, 7, 10]
+
+rc_arith_step([2, 5, 8, 11], Step).
+% Step = 3
+
+rc_is_arith([7, 7, 7], Step).
+% Step = 0    (constant sequence: step is zero)
+
+
+2.2 Periodic sequence generation and detection
+
+rc_repeat(+Unit, +N, -Seq)
+
+Generate Seq by repeating Unit exactly N times end-to-end.
+
+rc_period(+Seq, -Unit)
+
+Find the minimal repeating unit of Seq. Unit is the shortest list such that
+repeating it an integer number of times exactly reconstructs Seq.
+
+rc_is_periodic(+Seq, -Unit)
+
+Named alias for rc_period.
+
+Example:
+
+rc_repeat([a, b], 3, Seq).
+% Seq = [a, b, a, b, a, b]
+
+rc_period([1, 2, 3, 1, 2, 3], Unit).
+% Unit = [1, 2, 3]
+
+rc_period([x, x, x, x], Unit).
+% Unit = [x]    (constant: period 1)
+
+
+2.3 Sequence continuation
+
+rc_next_arith(+Seq, +N, -Next)
+
+Compute the next N terms of an arithmetic sequence Seq. Detects the step from
+Seq, continues from the last element. Next has exactly N elements.
+
+rc_next_repeat(+Seq, +N, -Next)
+
+Compute the next N terms of a periodic sequence Seq. Finds the minimal period,
+determines the current offset into the period, and cycles from that offset.
+Next has exactly N elements.
+
+Example:
+
+rc_next_arith([1, 3, 5], 3, Next).
+% Next = [7, 9, 11]
+
+rc_next_repeat([a, b, c, a, b, c], 4, Next).
+% Next = [a, b, c, a]
+
+
+2.4 Extension predicates
+
+rc_extend_arith(+Seq, +N, -Extended, -Step)
+
+Extended is Seq with N more arithmetic terms appended. Step is the detected
+common difference.
+
+rc_extend_repeat(+Seq, +N, -Extended, -Unit)
+
+Extended is Seq with N more periodic terms appended. Unit is the minimal period.
+
+Example:
+
+rc_extend_arith([2, 4, 6], 3, Extended, Step).
+% Extended = [2, 4, 6, 8, 10, 12], Step = 2
+
+rc_extend_repeat([1, 2, 1, 2], 4, Extended, Unit).
+% Extended = [1, 2, 1, 2, 1, 2, 1, 2], Unit = [1, 2]
+
+
+2.5 Cycle indexing
+
+rc_cycle_nth(+Unit, +N, -V)
+
+Return the N-th element (1-based) of the infinite cyclic repetition of Unit.
+Uses modular arithmetic: index = (N-1) mod length(Unit).
+
+Example:
+
+rc_cycle_nth([a, b, c], 7, V).
+% V = a    (position 7: (7-1) mod 3 = 0)
+
+
+2.6 Pair-wise combination
+
+rc_zip_with(+List1, +List2, :Goal, -Result)
+
+Apply a 3-argument goal Goal(A, B, C) to each corresponding pair (A from List1,
+B from List2) to produce C in Result.
+
+Example:
+
+rc_zip_with([1, 2, 3], [10, 20, 30], [A,B,C]>>(C is A + B), Result).
+% Result = [11, 22, 33]
+
+
+2.7 Difference predicates
+
+rc_diff_list(+Seq, -Diffs)
+
+Compute consecutive element-wise differences. Diffs has one fewer element than
+Seq. Diffs[i] = Seq[i+1] - Seq[i].
+
+rc_const_diffs(+Seq, -Step)
+
+Succeed if all consecutive differences in Seq are equal to Step. Equivalent
+to rc_is_arith but named for use in difference-analysis contexts.
+
+Example:
+
+rc_diff_list([1, 3, 6, 10], Diffs).
+% Diffs = [2, 3, 4]    (variable differences)
+
+rc_const_diffs([5, 8, 11, 14], Step).
+% Step = 3
+
+rc_const_diffs([1, 2, 4, 8], _).
+% false    (differences [1, 2, 4] are not all equal)
+
+
+3. Implementation Notes
+
+The implementation achieves determinism through three strategies:
+
+rc_check_step_ verifies that all consecutive differences equal the first
+difference, using a cut on the single-element base case to prevent a
+choicepoint at the end of the list.
+
+rc_period uses between/3 (built-in, not imported) to iterate candidate period
+lengths P. A cut after the first successful reconstruction returns the minimal
+period without exploring longer alternatives.
+
+rc_diff_list uses a cut on its single-element base case to prevent a
+choicepoint when the list has exactly one element.
+
+The two-clause structure of rc_zip_with (empty-list base case and non-empty
+recursive case) is inherently deterministic because the two clause heads
+([] vs [_|_]) are mutually exclusive.
+
+Built-ins used without import: length/2, between/3.
+Imported from library(lists): nth0/3, numlist/3, append/2, append/3.
+Imported from library(apply): maplist/2, maplist/3.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary case. All tests complete with no choicepoint
+warnings.
+
+
+5. Relationship to Existing Packs
+
+The sequence pack (Layer 48, sq_* prefix) provides list-utility operations:
+integer range generation, chunking, zip, unzip, cumulative sums, slicing,
+transposition, and basic period detection (sq_period/2). The recur pack extends
+the period-detection capability with continuation predicates (rc_next_arith,
+rc_next_repeat), extension predicates (rc_extend_arith, rc_extend_repeat), and
+arithmetic tools (rc_arith, rc_arith_step, rc_diff_list) not present in the
+existing sequence pack.
+
+The pattern pack (Layer 56, pt_* prefix) detects tiling periods for 2D grids.
+The recur pack detects periods in 1D lists.
+
+The diff pack (Layer 89, df_* prefix) computes differences between two grids.
+The recur pack computes differences within a single numeric sequence.
+
+
+6. Significance
+
+Arithmetic and periodic patterns appear in nearly every ARC-AGI task where a
+rule must be generalized from a short sequence of examples. A color that counts
+up by one, a stripe pattern that repeats every three cells, a gradient where
+each row adds two to the previous - all are instances of arithmetic or periodic
+recurrence. The recur pack gives Mentova a named, tested vocabulary for these
+patterns that can be composed with grid, scene, and object-reasoning packs to
+solve broad classes of visual tasks.
+
+This is Mentova accomplishment 140. PrologAI now carries 118 work packages.
+
+github.com/ai-university-aiu/PrologAI
