@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-121-FF6B35?style=for-the-badge" alt="121 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-122-FF6B35?style=for-the-badge" alt="122 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **121 accomplished** |
-| Scientific papers | **101 published** — one per accomplishment |
+| Documented accomplishments | **122 accomplished** |
+| Scientific papers | **102 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         101 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  99 announcements — one per accomplishment
+├── papers/         102 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  100 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -422,12 +422,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_119` | Logic pack paper — Boolean and Mask Grid Operations (Layer 78): 14 lg_* predicates for boolean intersection of grids keeping values where both are non-background (lg_and), union returning first grid's value on ties (lg_or), exclusive-or returning a value only where exactly one grid is non-background (lg_xor), inverting foreground and background (lg_not), set-difference keeping cells present in the first grid but absent in the second (lg_diff), overlaying one grid onto another with background as transparent (lg_overlay), applying a mask to keep grid values only where the mask is non-background (lg_mask_apply), creating a binary presence mask from a grid (lg_mask_from), per-row presence flags (lg_any_row), per-column presence flags (lg_any_col), per-row fullness flags (lg_all_row), per-column fullness flags (lg_all_col), cell-wise equality to 0/1 grid (lg_eq), and cell-wise inequality (lg_neq). 42/42 acceptance tests pass. |
 | `Acc_120` | Window pack paper — Sliding Window and Neighborhood Operations (Layer 79): 14 wn_* predicates for listing 4-connected neighbor R2-C2-Val triples (wn_neighbors4), listing 8-connected neighbor triples (wn_neighbors8), counting 4-connected neighbors equal to a value (wn_count4), counting 8-connected neighbors equal to a value (wn_count8), extracting an H x W sub-grid (wn_extract), enumerating all sliding windows as R0-C0-Sub triples (wn_slide), padding all sides with N layers (wn_pad), local 4-connected maximum test (wn_local_max4), local 4-connected minimum test (wn_local_min4), cells adjacent to a target value but not equal to it (wn_halo4), integer convolution (wn_convolve), floor-center coordinates (wn_center), Manhattan distance (wn_manhattan), and in-bounds cells at exactly Manhattan distance D (wn_cells_at_dist). 42/42 acceptance tests pass. |
 | `Acc_121` | Sort pack paper — Sorting, Ranking, and Ordering (Layer 80): 14 so_* predicates for per-row integer sums (so_row_sums), per-column integer sums (so_col_sums), count of a value per row (so_row_count), count of a value per column (so_col_count), sorting rows ascending by value count (so_sort_rows_asc), sorting rows descending (so_sort_rows_desc), sorting columns ascending (so_sort_cols_asc), sorting columns descending (so_sort_cols_desc), row index with highest count (so_max_row), row index with lowest count (so_min_row), column index with highest count (so_max_col), column index with lowest count (so_min_col), all values sorted ascending with duplicates (so_sorted_vals), and 1-based rank of a cell value among distinct grid values (so_cell_rank). 42/42 acceptance tests pass. |
+| `Acc_122` | Tile pack paper — Tiling, Stamping, and Period Detection (Layer 81): 14 ti_* predicates for repeating a tile N times horizontally (ti_tile_h), repeating a tile N times vertically (ti_tile_v), tiling a motif into NR rows of NC copies (ti_tile), splitting a grid into horizontal TH-row bands (ti_split_rows), splitting into vertical TW-col stripes (ti_split_cols), splitting into a list-of-tile-rows (ti_split), reassembling tiles back into one grid (ti_flatten_tiles), overlaying a motif at position (R, C) (ti_stamp), stamping a motif at multiple positions (ti_stamp_all), extracting the tile at tile-position (TR, TC) (ti_extract_tile), checking if a grid is an exact tiling of one motif (ti_is_tiling), finding the smallest horizontal period in columns (ti_find_period_h), finding the smallest vertical period in rows (ti_find_period_v), and generating an H x W checkerboard (ti_checkerboard). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-109 announcements in LinkedIn format — one per accomplishment.
+110 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
