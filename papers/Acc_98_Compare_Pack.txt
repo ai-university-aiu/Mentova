@@ -1,0 +1,166 @@
+Accomplishment 98: Compare Pack - Grid and Region Difference Detection
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains a new work package - the compare pack (module compare,
+cp_* prefix, Layer 57) - that gives Mentova fourteen deterministic
+predicates for comparing two grids or two cell regions.
+
+This pack answers the differential questions that visual reasoning
+requires: what changed, what stayed the same, where was a color gained
+or lost, and how similar are these two grids?
+
+
+1. Background
+
+Visual reasoning frequently requires comparing an input grid to an
+output grid to understand the transformation rule.
+
+Before the compare pack, Mentova could count how many cells differ
+(using cn_diff_cells from the count pack), but it could not name which
+cells differ, extract the color shift pairs, or reason about which
+specific color was added or removed.
+
+The compare pack fills this gap with a complete vocabulary for
+differential analysis of two grids.
+
+
+2. The Fourteen Predicates
+
+2.1 Difference and Agreement
+
+cp_diff_cells/3 returns the list of r(R,C) cells where two grids have
+different values.
+
+cp_same_cells/3 returns the list of cells where they agree.
+
+Together these two predicates partition the full cell set.
+
+
+2.2 Color Gain and Loss
+
+cp_added_color/4 returns cells where a specified color appeared in Grid2
+but was absent in Grid1.
+
+cp_removed_color/4 returns cells where a specified color was present in
+Grid1 but absent in Grid2.
+
+
+2.3 Change Direction
+
+cp_changed_to/4 returns cells whose value changed to a specified color.
+
+cp_changed_from/4 returns cells whose value changed from a specified color.
+
+These predicates are semantically equivalent to cp_added_color and
+cp_removed_color, but use change-direction vocabulary natural for rule
+inference: "which cells changed to red?"
+
+
+2.4 Difference Map
+
+cp_diff_map/3 produces a grid of the same dimensions where each cell is
+1 if the values differ, or 0 if they are equal.
+
+This gives a visual representation of the transformation as a binary mask.
+
+
+2.5 Similarity Score
+
+cp_similarity/3 returns the number of equal cells and the total cell count
+as an integer pair EqCount-Total.
+
+The result is exact. No floating-point approximation.
+
+
+2.6 Region Set Operations
+
+cp_region_diff/3 computes the set difference of two cell regions.
+
+cp_region_intersect/3 computes the intersection.
+
+cp_region_union/3 computes the union with no duplicate cells.
+
+cp_region_equal/2 tests order-independent equality of two cell regions.
+
+
+2.7 Grid Equality
+
+cp_grids_equal/2 tests whether two grids are structurally identical.
+
+
+2.8 Color Shift Pairs
+
+cp_color_shift/3 returns a list of OldColor-NewColor pairs, one for each
+cell where the value changed.
+
+This directly encodes the color transformation as a list of substitution
+pairs, which is the natural input for rule inference.
+
+
+3. Implementation Notes
+
+The core implementation uses a shared cp_all_positions_ predicate that
+enumerates all r(R,C) in row-major order, followed by include/3 with a
+variety of filter predicates.
+
+cp_diff_cells, cp_same_cells, cp_added_color, cp_removed_color,
+cp_changed_to, cp_changed_from all follow this include-over-positions
+pattern with different filter predicates.
+
+cp_diff_map uses maplist over row pairs with a per-column 0/1 flag mapping.
+
+cp_region_diff, cp_region_intersect, and cp_region_union delegate to
+subtract/3, intersection/3, and union/3 from library(lists).
+
+cp_color_shift is a two-step process: find all diff cells, then maplist
+over them to extract Old-New value pairs.
+
+
+4. Tests
+
+The pack ships 40 PLUnit tests across 14 suites (one per predicate).
+
+Tests cover identical grids, single-cell changes, full-row changes,
+all-cells-different cases, color presence/absence, and region set operations.
+
+All 40 tests pass under SWI-Prolog with no warnings.
+
+
+5. SPARC Documentation
+
+• Specification v43, Part 68: functional requirements for all fourteen predicates
+• Pseudocode v36, Part 68: algorithmic pseudocode for each predicate
+• Architecture v37, PART ARCH-44: module position and design notes
+• Refinement v91, Part 68: acceptance criteria AC-CP-001 through AC-CP-040
+• Completion v94: PR 78 release checklist
+
+
+6. Significance
+
+With the compare pack, Mentova can analyze the difference between any two
+grids with the precision required for rule inference.
+
+"Which cells changed?" cp_diff_cells answers this.
+
+"What color was gained?" cp_added_color answers this.
+
+"What did the transformation do to each cell?" cp_color_shift answers this.
+
+"How similar are input and output?" cp_similarity answers this with
+exact integers, not approximations.
+
+These are the operations that a rule-induction system must perform when it
+compares input-output examples to hypothesize a transformation rule.
+
+The compare pack is the thirty-ninth tutorial chapter and the seventy-sixth
+work package in the PrologAI platform.
+
+
+END OF PAPER

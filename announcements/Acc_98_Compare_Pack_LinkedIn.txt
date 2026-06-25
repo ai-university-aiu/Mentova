@@ -1,0 +1,46 @@
+Accomplishment 98: Mentova can now tell exactly what changed between two grids.
+
+The new compare pack gives PrologAI fourteen predicates for differential
+analysis of two grids.
+
+Which cells are different? Which cells are the same?
+Where did color 2 appear that wasn't there before?
+Where did color 1 disappear?
+Which cells changed to red? Which cells changed from blue?
+How similar are these two grids - exactly, in integers?
+What is the complete list of color substitutions that occurred?
+
+Every answer is deterministic. Every answer is exact.
+
+Here is a concrete example.
+
+An ARC-AGI-2 task presents an input and output grid.
+The rule hypothesis: certain cells changed color.
+Verify and characterize the change.
+
+cp_diff_cells(Input, Output, Diffs).
+% Diffs = [r(1,1), r(2,2), r(3,3)]  <- only the diagonal changed
+
+cp_color_shift(Input, Output, Pairs).
+% Pairs = [0-5, 0-5, 0-5]  <- each changed cell went from 0 to 5
+
+Two predicate calls. The transformation is fully characterized.
+
+Here is the key insight: rule induction requires comparison.
+
+You cannot infer "the diagonal is filled with color 5" without first
+observing that exactly the diagonal cells changed, and that they all
+changed from 0 to 5.
+
+The compare pack makes that observation glass-box and deterministic.
+
+No gradient descent. No attention mechanism. No statistical model.
+
+Just predicate logic, applied precisely.
+
+The compare pack is Layer 57, work package 78 in the PrologAI platform.
+
+40 tests. All pass.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
