@@ -1,0 +1,39 @@
+Mentova Accomplishment 147: Inside/Outside Classification - The Enclosure Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the enclosure pack (Layer 106, Work
+Package 127).
+
+One of the most fundamental spatial questions in grid reasoning is: is this
+cell inside or outside? The enclosure pack answers it directly with a
+BFS-based inside/outside classifier: background cells reachable from the
+grid border are "exterior"; background cells with no path to the border are
+"interior" (enclosed by walls).
+
+14 predicates (en_* prefix), all deterministic:
+
+- en_border_cells - all cells on the four grid edges
+- en_outer_cells - background cells reachable from the border (exterior)
+- en_inner_cells - background cells enclosed by walls (interior)
+- en_is_inner - test if a specific cell is enclosed
+- en_is_outer - test if a specific cell is exterior
+- en_fill_inner - paint all enclosed background cells with a color
+- en_inner_count - count enclosed background cells
+- en_has_inner - test if any enclosed background cell exists
+- en_inner_components - 4-connected components of enclosed background cells
+- en_outer_components - 4-connected components of exterior background cells
+- en_fill_hole - fill one specific enclosed component at a given cell
+- en_boundary_cells - Color cells on the boundary of a color region
+- en_interior_cells - Color cells strictly interior to a color region
+- en_is_surrounded - test if all orthogonal neighbors are a given wall color
+
+42 PLUnit acceptance tests pass with no choicepoint warnings.
+
+This is Mentova accomplishment 147. PrologAI now carries 125 work packages.
+
+github.com/ai-university-aiu/PrologAI
