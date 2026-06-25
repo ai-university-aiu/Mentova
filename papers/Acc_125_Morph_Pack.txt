@@ -1,0 +1,114 @@
+Accomplishment 125: Morphological Grid Operations - The Morph Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 103rd work package: the morph pack (mo_* predicate family, Layer 84). This pack provides 14 predicates for morphological grid operations: dilation, erosion, compound operations (open, close, smooth), boundary and interior extraction, value-fixed dilation, BFS region growing, L1 distance computation, dilation ring extraction, and hole filling.
+
+Introduction
+
+Morphological operations are among the most fundamental tools in grid-based visual reasoning. They answer questions such as: what is the shape of an object's boundary? what region can be reached from a given point through background cells? how far is each interior cell from the nearest boundary? what would happen if an object expanded or contracted by N steps?
+
+Before the morph pack, Mentova had no unified toolkit for these spatial extent operations. The morph pack fills this gap with 14 general-purpose predicates that cover the full morphological toolchain, from single-step dilation and erosion to multi-step compound operations and topological hole detection.
+
+Predicates
+
+The morph pack exports 14 predicates under the mo_* prefix.
+
+Primitive operations:
+mo_dilate/3        expand all non-Bg regions by one 4-connected step
+mo_erode/3         shrink all non-Bg regions by one 4-connected step
+
+Repeated operations:
+mo_dilate_n/4      dilate exactly N times (N=0 returns input unchanged)
+mo_erode_n/4       erode exactly N times (N=0 returns input unchanged)
+
+Compound operations:
+mo_open/3          morphological opening: erode then dilate
+mo_close/3         morphological closing: dilate then erode
+mo_smooth/3        morphological smoothing: open then close
+
+Boundary and interior:
+mo_boundary/3      keep only perimeter non-Bg cells
+mo_interior/3      keep only non-perimeter non-Bg cells
+mo_dilate_val/4    dilate using a fixed fill value
+
+Region operations:
+mo_grow_from/5     BFS flood from seeds into connected background territory
+mo_dist_to_bg/3    L1 Manhattan distance from each non-Bg cell to nearest Bg
+mo_ring/4          cells added at exactly the Nth dilation step
+mo_fill_holes/4    fill enclosed background regions not reachable from border
+
+Implementation
+
+mo_dilate and mo_erode are the primitive one-step operations. Both use
+maplist/4 with a row-index and column-index lambda pattern: numlist generates
+RI and CI coordinates, which are threaded into the lambda so each cell can
+test its 4-neighbors using nth0 with coordinate arithmetic. The direction
+order [-1-0, 1-0, 0-(-1), 0-1] (up, down, left, right) is fixed and
+determines which neighbor's value is copied when multiple are available.
+
+mo_dilate_n and mo_erode_n fold N applications of the primitive using foldl
+over numlist(1, N, Steps). N=0 is handled by a first clause with a cut.
+
+mo_open, mo_close, and mo_smooth are simple compositions: two and three
+predicate calls chained in sequence.
+
+mo_boundary tests each non-Bg cell for the perimeter condition using Prolog's
+disjunction inside a maplist lambda: on-edge (row or column at grid bounds) or
+has a Bg 4-neighbor in bounds. mo_interior calls mo_boundary then keeps cells
+that are non-Bg in the original but Bg in the boundary grid.
+
+mo_bfs_bg_ is a shared BFS helper that expands through Bg cells only, stopping
+at non-Bg boundaries. It mirrors the BFS pattern from the label pack's lb_bfs_
+but in the opposite direction. Each step uses findall to collect in-bounds Bg
+4-neighbors not in Visited, deduplicates with sort, extends both Visited and
+Queue, and recurses until the queue is empty.
+
+mo_grow_from uses mo_bfs_bg_: it collects Bg cells adjacent to Seeds as the
+initial frontier, then calls BFS to reach all connected Bg territory, then
+marks all reached cells with Val using memberchk/2.
+
+mo_dist_to_bg collects all Bg cell positions with findall, then for each
+non-Bg cell computes the minimum L1 distance using findall + min_member/2.
+
+mo_ring calls mo_dilate_n twice (N steps and N-1 steps) and marks cells in
+the N-step result that are absent from the (N-1)-step result. For N=0, it
+returns an all-Bg grid using maplist/3.
+
+mo_fill_holes collects border Bg cells as seeds, calls mo_bfs_bg_ to reach
+all exterior Bg cells, then marks remaining (interior) Bg cells with FillVal.
+
+All 42 PLUnit acceptance tests pass (AC-MO-001 through AC-MO-042).
+
+Significance
+
+The morph pack gives Mentova a complete morphological toolkit for grid reasoning:
+
+  mo_dilate and mo_erode are the building blocks for all spatial extent reasoning.
+  mo_open removes noise without restructuring objects.
+  mo_close connects nearby regions across small gaps.
+  mo_smooth combines both effects for clean, well-formed objects.
+  mo_boundary enables object outline detection and perimeter measurement.
+  mo_interior identifies the deep core of objects, away from edges.
+  mo_dilate_val marks border zones with a uniform marker value.
+  mo_grow_from is the general region-connectivity tool for seed-based analysis.
+  mo_dist_to_bg enables depth-from-boundary analysis and shape characterization.
+  mo_ring creates nested shells for concentric pattern analysis.
+  mo_fill_holes detects and fills enclosed cavities in object shapes.
+
+With the morph pack in place, Mentova can analyze not just what objects are
+present, but how their spatial extent, topology, and connectivity structure
+relate to the background and to each other.
+
+References
+
+PrologAI_1_Specification_v70.txt, Part 95 (MO-MO-001 through MO-MO-014)
+PrologAI_2_Pseudocode_v63.txt, Part 95
+PrologAI_3_Architecture_v64.txt, PART ARCH-71
+PrologAI_4_Refinement_v118.txt, Part 95 (AC-MO-001 through AC-MO-042)
+PrologAI_5_Completion_v121.txt, Work Package 105
+PrologAI PR #190: feat(packs): PR 105 - morph pack Layer 84

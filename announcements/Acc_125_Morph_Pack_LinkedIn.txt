@@ -1,0 +1,31 @@
+Accomplishment 125: The Morph Pack - Morphological Grid Operations
+
+Mentova's 103rd work package is live.
+
+The morph pack adds 14 mo_* predicates for morphological grid operations:
+expanding all non-background regions by one 4-connected step with the
+neighbor's color (mo_dilate), shrinking regions by one step (mo_erode),
+applying dilation or erosion N times (mo_dilate_n, mo_erode_n), morphological
+open/close/smooth compound operations, extracting only perimeter cells
+(mo_boundary) or only interior cells (mo_interior), dilating with a fixed
+fill value (mo_dilate_val), BFS flooding from seed cells into background
+territory (mo_grow_from), computing the L1 Manhattan distance from each
+foreground cell to the nearest background cell (mo_dist_to_bg), extracting
+the shell of cells added at exactly the Nth dilation step (mo_ring), and
+filling all enclosed background regions not reachable from the grid border
+(mo_fill_holes).
+
+These primitives give Mentova a complete morphological toolkit: it can
+expand and contract objects, detect their boundaries, measure how deep
+interior cells lie from the surface, grow regions outward from seeds,
+and identify holes enclosed within object boundaries.
+
+All 42 acceptance tests pass. The pack is documented in SPARC Specification
+v70 (Part 95, MO-MO-001 through MO-MO-014), Refinement v118, and tutorial
+Chapter 66.
+
+PrologAI now has 103 work packages and Mentova has 125 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
