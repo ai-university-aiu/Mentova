@@ -1,0 +1,39 @@
+Mentova Accomplishment 141: Straight-Line Segment Detection and Drawing - The Line Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the line pack (Layer 100, Work
+Package 121).
+
+Visual reasoning tasks constantly involve straight lines. A rule draws a line
+from a specific point to the grid edge. A symmetry check tests whether three
+cells are collinear. A pattern is defined by the diagonal connecting two corners.
+A gap query asks what cells lie strictly between two aligned points. The line
+pack provides all of these as named, tested, composable predicates.
+
+14 predicates (li_* prefix):
+
+- li_hline - cells on a horizontal segment from (R,C1) to (R,C2)
+- li_vline - cells on a vertical segment from (R1,C) to (R2,C)
+- li_diag_seg - cells on a 45-degree diagonal between two points
+- li_draw_h - draw a horizontal line onto a grid
+- li_draw_v - draw a vertical line onto a grid
+- li_draw_diag - draw a 45-degree diagonal onto a grid
+- li_same_row - test if two cells share a row
+- li_same_col - test if two cells share a column
+- li_same_diag - test if two cells share a diagonal (C - R constant)
+- li_same_anti - test if two cells share an anti-diagonal (R + C constant)
+- li_collinear - test if three cells are collinear
+- li_endpoints - first and last cells of a segment list
+- li_gap - cells strictly between two aligned points excluding endpoints
+- li_line_type - classify a segment as horizontal, vertical, diagonal, anti_diagonal, or point
+
+42 PLUnit acceptance tests pass with no choicepoint warnings.
+
+This is Mentova accomplishment 141. PrologAI now carries 119 work packages.
+
+github.com/ai-university-aiu/PrologAI
