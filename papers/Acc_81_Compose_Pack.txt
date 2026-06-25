@@ -1,0 +1,103 @@
+Accomplishment 81 - Compose Pack: Sequential Rule Pipelines and Transformation Composition
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+ABSTRACT
+
+We introduce the compose pack, work package PR 61 of the PrologAI symbolic cognitive substrate. The compose pack provides 13 higher-order combinators (cp_* predicates) at Layer 40 for building grid transformation pipelines entirely from smaller rules. A pipeline is a first-class Prolog term; pipelines can be chained, branched, repeated, folded, and composed without any procedural scaffolding. The compose pack enables Mentova to express complex visual reasoning strategies as concise declarative programs over grids.
+
+
+1. INTRODUCTION
+
+Grid transformation tasks - given input, produce output according to a pattern inferred from examples - are the core challenge of visual inductive reasoning. Solving such tasks requires more than isolated predicates; it requires the ability to combine predicates into structured programs. The compose pack gives PrologAI a meta-level language for expressing such combinations. A transformation rule is any callable term of arity N that, augmented with two more arguments (Grid, Grid2), produces a valid goal. This cp_apply/3 meta-call interface is the foundation on which all other compose predicates are built.
+
+
+2. DESIGN PRINCIPLES
+
+Three principles guided the compose pack design.
+
+First, rules are terms, not atoms. Any partial callable - for example mv_gravity_down(0) or pt_scale_up(2) - is a valid rule. The compose predicates call meta_call(Goal, Grid, Grid2) by appending Grid and Grid2 to the term. This is the standard SWI-Prolog =.. / call mechanism applied uniformly.
+
+Second, composition is structural, not procedural. cp_pipe/3 applies two rules in sequence; cp_pipe_n/4 applies a single rule N times; cp_branch/5 dispatches on a boolean condition; cp_repeat/4 applies a rule until a fixed count; cp_until/4 applies until a predicate is satisfied; cp_fixed_point/3 applies until the grid stabilizes. None of these require loops or mutable state.
+
+Third, row and column structure is preserved. cp_map_rows/3 applies a row-level rule to every row independently; cp_map_cols/3 applies a column-level rule to every column independently. cp_zip/4 combines two grids cell-by-cell using a pairwise rule. cp_fold/4 folds a list of grids into one via an accumulating rule.
+
+
+3. PREDICATE CATALOG
+
+cp_apply(+Rule, +Grid, -Grid2)
+Applies Rule to Grid, producing Grid2 by calling call(Rule, Grid, Grid2).
+
+cp_identity(+Grid, -Grid2)
+Returns Grid2 = Grid. The no-op rule; useful as a default branch in cp_branch.
+
+cp_const(+Value, +Grid, -Grid2)
+Returns Grid2 = Value regardless of Grid. Useful for constant-output rules.
+
+cp_pipe(+Rule1, +Rule2, +Grid, -Grid2)
+Applies Rule1 then Rule2 sequentially: cp_apply(Rule1, Grid, Mid), cp_apply(Rule2, Mid, Grid2).
+
+cp_pipe_n(+Rule, +N, +Grid, -Grid2)
+Applies Rule N times in sequence. When N = 0, Grid2 = Grid.
+
+cp_branch(+Cond, +ThenRule, +ElseRule, +Grid, -Grid2)
+Evaluates call(Cond, Grid); if true, applies ThenRule; otherwise applies ElseRule.
+
+cp_repeat(+Rule, +N, +Grid, -Grid2)
+Synonym for cp_pipe_n. Applies Rule N times.
+
+cp_until(+Rule, +StopPred, +Grid, -Grid2)
+Applies Rule repeatedly until call(StopPred, Grid2) succeeds.
+
+cp_fixed_point(+Rule, +Grid, -Grid2)
+Applies Rule repeatedly until the grid stabilizes (gd_equal(Grid2, Grid) is true).
+
+cp_map_rows(+RowRule, +Grid, -Grid2)
+Applies RowRule to each row independently using maplist/3.
+
+cp_map_cols(+ColRule, +Grid, -Grid2)
+Transposes the grid, applies ColRule to each (now-row) column, transposes back.
+
+cp_zip(+ZipRule, +Grid1, +Grid2, -Grid3)
+Combines Grid1 and Grid2 row-by-row, then cell-by-cell, using ZipRule.
+
+cp_fold(+FoldRule, +Grids, +Init, -Result)
+Left-fold over Grids: starts with Init, applies FoldRule(Acc, Grid, Acc2) for each Grid.
+
+
+4. IMPLEMENTATION NOTES
+
+All predicates depend only on the grid pack (library(grid)). The compose pack adds no new data structures. The cp_apply meta-call uses SWI-Prolog's call/N with append-arg semantics, which is safe because the arity is determined at call time from the structure of the Rule term.
+
+cp_map_cols transposes via gd_transpose from the grid pack, applies the column rule to each transposed row, then transposes back. This keeps the column-rule interface identical to the row-rule interface - a ColRule is a predicate on lists.
+
+cp_zip uses maplist/4 for pairwise row combination, then maplist/4 again for pairwise cell combination within each row pair.
+
+cp_fold uses foldl/4 from library(apply). The FoldRule must accept (Acc, Grid, Acc2) where Acc and Acc2 are grids.
+
+cp_fixed_point guards against infinite loops by checking gd_equal before each recursive step.
+
+
+5. TEST COVERAGE
+
+The compose pack ships with 33 PLUnit tests in packs/compose/test/test_compose.pl. Tests cover: apply, identity, const, pipe, pipe_n, branch, repeat, until, fixed_point, map_rows, map_cols, zip, and fold. Tests that use gd_overlay (which leaves choicepoints) are marked nondet.
+
+
+6. SIGNIFICANCE
+
+The compose pack closes a critical gap in PrologAI: until this pack, every transformation had to be expressed as a monolithic predicate. Now any transformation - however complex - can be constructed from primitive rules using a small vocabulary of combinators. Mentova can use cp_pipe to chain color-replacement with scaling, cp_branch to select between two strategies based on grid content, and cp_fixed_point to converge to a stable configuration. This is the symbolic analog of a neural network's forward pass, but interpretable, verifiable, and extensible.
+
+The compose pack is the 59th work package in PrologAI and Mentova's 81st documented accomplishment.
+
+
+REFERENCES
+
+PrologAI Specification Part 51 (docs/PrologAI_1_Specification_v26.txt)
+PrologAI Pseudocode Part 51 (docs/PrologAI_2_Pseudocode_v19.txt)
+PrologAI Architecture PART ARCH-27 (docs/PrologAI_3_Architecture_v20.txt)
+PrologAI Refinement Part 51 (docs/PrologAI_4_Refinement_v74.txt)
+PrologAI Completion PR 61 (docs/PrologAI_5_Completion_v77.txt)
+PrologAI Tutorial Chapter 22 (docs/tutorial/Ch22_Compose.txt)
