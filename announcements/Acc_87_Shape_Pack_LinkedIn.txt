@@ -1,0 +1,41 @@
+Accomplishment 87 - Mentova now reasons about shapes independent of position and color.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 65 work packages.
+
+The new shape pack gives Mentova the concept of a spatial pattern separated from where it is and what color it is.
+
+sh_from_cells - normalize any list of grid cells to a canonical position-independent shape.
+
+sh_from_grid - extract all cells of a given color from a grid and immediately normalize.
+
+sh_area and sh_bounding_size - how many cells and what bounding box.
+
+sh_contains_cell and sh_equal - membership and identity.
+
+sh_rotate90, sh_reflect_h, sh_reflect_v - the three generators of the D4 dihedral group on a shape.
+
+sh_orbit - all distinct orientations of a shape under D4 (1 to 8 elements).
+
+sh_canonical - the lex-min D4 orientation; the fingerprint of a shape class.
+
+sh_equivalent - two shapes are equivalent if they belong to the same D4 orbit.
+
+sh_translate and sh_to_grid - place a shape at any offset with any color.
+
+This matters because:
+
+An L-shape and its rotation are the same shape. Now Mentova can prove that with one call.
+
+Two different colors in the same grid might encode the same shape. Now Mentova can detect that.
+
+Finding the orientation of a pattern that matches a target is now a loop over sh_orbit. No special cases.
+
+The grid pack gives cells. The color pack gives palette. The shape pack gives patterns. These three together are the perceptual foundation.
+
+The shape pack is the 65th work package in PrologAI and Mentova's 87th accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/
