@@ -1,0 +1,20 @@
+Accomplishment 107: Mentova gains rule-based grid cell rewriting - color maps, region paint, mask, overlay, stamp, diff, normalize, invert, and conditional recolor.
+
+The rewrite pack (rw_* predicates, Layer 66) gives Mentova 14 new tools for transforming the color values of visual grids:
+
+- rw_map_color/3: apply a substitution map (list of Old-New color pairs) to every cell
+- rw_replace_color/4, rw_swap_colors/4: one-color and two-color rewriting shortcuts
+- rw_set_region/4, rw_fill_rect/7, rw_set_border/3: paint a region, rectangle, or outermost ring
+- rw_mask_apply/5: use a binary mask to select which cells receive a fill color
+- rw_overlay/4: composite two grids - non-background cells of Grid2 overwrite Grid1
+- rw_stamp/5: paste a patch grid at a given offset
+- rw_diff_apply/3: apply a list of r(R,C)-Color cell edits
+- rw_normalize/3: renumber distinct non-background colors to 1, 2, 3, ...
+- rw_invert_colors/3, rw_remap_bg/4: complement colors or change background
+- rw_conditional/5: per-cell conditional recolor based on a goal predicate
+
+Combined with the connect pack (find objects), the morph pack (reshape objects), and the induction pack (detect patterns), the rewrite pack closes the loop: Mentova can now perceive structure, understand transformation patterns, and actively rewrite grids according to learned rules.
+
+This is Mentova's 107th documented accomplishment and PrologAI's 85th work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

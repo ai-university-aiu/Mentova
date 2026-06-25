@@ -1,0 +1,68 @@
+Accomplishment 107: Rule-Based Grid Cell Rewriting - The Rewrite Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 85th work package: the rewrite pack (rw_* predicate family, Layer 66). This pack provides 14 predicates for rule-based transformation of grid cell values: color substitution maps, region painting, binary masking, overlay composition, patch stamping, diff-list application, color normalization, color inversion, background remapping, border painting, rectangle fill, and conditional per-cell recoloring. Together with the lookup, connect, and morph packs from recent waves, the rewrite pack completes Mentova's ability to not only perceive the structure of visual grids but to actively transform them according to learned rules.
+
+Introduction
+
+After the connect pack finds objects and the morph pack reshapes them, the natural next question is: how should the color values themselves change? Many visual reasoning tasks require not spatial transformation but value transformation: every red cell becomes blue, every enclosed region gets filled with a new color, cells matching a condition get one value while all others get another.
+
+The rewrite pack answers this question. It operates at the cell-value level, transforming the content of a grid according to declarative rules rather than spatial relationships. This makes it the algebraic complement to the morphological (shape) operations of the morph pack.
+
+Predicates
+
+The rewrite pack exports 14 predicates under the rw_* prefix.
+
+Color substitution:
+rw_map_color/3 applies a list of OldColor-NewColor pairs to every cell. Cells not in the map are left unchanged.
+rw_replace_color/4 replaces every cell equal to Old with New. It is a single-entry specialization of rw_map_color.
+rw_swap_colors/4 exchanges ColorA and ColorB throughout the grid simultaneously.
+
+Region and rectangle painting:
+rw_set_region/4 sets every cell in a given list of r(R,C) coordinates to a target color.
+rw_fill_rect/7 fills an axis-aligned rectangle defined by (R1,C1)..(R2,C2) with a color.
+rw_set_border/3 paints every cell on the outermost ring (row 0, last row, column 0, last column) to a color.
+
+Masking and overlay:
+rw_mask_apply/5 accepts a binary mask grid and a mask value. Where the mask equals the mask value, the corresponding output cell gets a fill color; elsewhere the original value is kept.
+rw_overlay/4 composites two grids using a background key: non-background cells of Grid2 overwrite Grid1, while background cells of Grid2 reveal Grid1.
+
+Patch and diff operations:
+rw_stamp/5 pastes a smaller patch grid into a larger grid at a given top-left offset. Cells that fall outside the target grid are silently ignored.
+rw_diff_apply/3 applies a list of r(R,C)-Color pairs as individual cell edits. Out-of-bounds entries are silently ignored.
+
+Color normalization and inversion:
+rw_normalize/3 scans the grid in row-major order, collects distinct non-background colors in first-appearance order, and maps them to 1, 2, 3, ... Background cells are left unchanged.
+rw_invert_colors/3 replaces each cell value V with MaxColor - V.
+rw_remap_bg/4 replaces all cells equal to OldBG with NewBG. It is a specialization of rw_replace_color for background remapping.
+
+Conditional recoloring:
+rw_conditional/5 accepts a 3-argument Goal predicate called as Goal(R, C, V) for each cell. If Goal succeeds, the cell gets ColorTrue; otherwise ColorFalse. A meta_predicate declaration ensures the Goal closure is properly module-qualified.
+
+Implementation
+
+The rw_map_color predicate is the core primitive. It applies maplist/3 at both row and cell levels, delegating to rw_map_cell_ which performs a member-based lookup in the substitution map.
+
+rw_set_region, rw_set_border, rw_fill_rect, and rw_stamp all work through a common pipeline: they build a Diff list of r(R,C)-Color pairs and then call rw_diff_apply. The rw_diff_apply predicate rebuilds the grid via nested findall over row and column index ranges, replacing any cell that matches a Diff entry with the new color and keeping the original otherwise.
+
+rw_conditional rebuilds the grid similarly but calls the Goal closure for each cell using call/4 rather than a list lookup.
+
+All 43 PLUnit acceptance tests pass.
+
+Significance
+
+The rewrite pack makes Mentova's visual reasoning complete at the cell-value level. It can now: find objects (connect), reshape them (morph), detect patterns between grids (induction), and actively rewrite grid content according to rules (rewrite). The combination of these four packs covers the majority of transformation types in structured visual reasoning tasks.
+
+References
+
+PrologAI_1_Specification_v52.txt, Part 77 (RW-RW-001 through RW-RW-014)
+PrologAI_2_Pseudocode_v45.txt, Part 77
+PrologAI_3_Architecture_v46.txt, PART ARCH-53
+PrologAI_4_Refinement_v100.txt, Part 77 (AC-RW-001 through AC-RW-043)
+PrologAI_5_Completion_v103.txt, Work Package 87
+PrologAI PR #172: feat(packs): PR 87 - rewrite pack
