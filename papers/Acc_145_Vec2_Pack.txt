@@ -1,0 +1,164 @@
+Mentova Accomplishment 145: Vector Arithmetic - The Vec2 Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 125: the vec2 pack, a Layer 104 symbolic
+reasoning module providing 14 predicates for 2D integer vector arithmetic and
+geometry. Vectors are represented as (DR, DC) row-column displacement pairs.
+The pack covers offset computation, addition, scaling, negation, three
+magnitude norms (squared Euclidean, Manhattan, Chebyshev), rotation by
+multiples of 90 degrees (clockwise, counter-clockwise, and 180), dot product,
+2D cross product, parallelism testing, and region translation. All predicates
+are pure arithmetic requiring no grid. All predicates are deterministic. This
+accomplishment is verified by 42 PLUnit acceptance tests.
+
+
+1. Motivation
+
+Spatial reasoning constantly involves vector displacement: "the object moved
+2 rows down and 3 columns right", "this pattern repeats with offset (0,4)",
+"rotate the arrow direction 90 degrees clockwise." Answering these questions
+requires a composable vector vocabulary.
+
+The step pack (Layer 86) provides direction stepping. The cluster pack (Layer
+102) provides distance measurement between cells. The ray pack (Layer 103)
+provides directional ray casting. None provides the general vector arithmetic
+needed to compose, rotate, scale, and compare displacement vectors symbolically.
+
+The vec2 pack fills this gap with 14 deterministic predicates.
+
+
+2. Predicate Inventory (14 predicates, vv_* prefix)
+
+2.1 Fundamental operations
+
+vv_offset(+R1, +C1, +R2, +C2, -DR, -DC)
+The displacement vector from (R1,C1) to (R2,C2). DR=R2-R1, DC=C2-C1.
+
+vv_add(+R, +C, +DR, +DC, -NR, -NC)
+Apply vector (DR,DC) to point (R,C). NR=R+DR, NC=C+DC.
+
+vv_scale(+DR, +DC, +K, -SDR, -SDC)
+Scale vector by integer K. SDR=K*DR, SDC=K*DC.
+
+vv_neg(+DR, +DC, -NDR, -NDC)
+Negate: NDR=-DR, NDC=-DC.
+
+Examples:
+
+vv_offset(0, 0, 3, 4, DR, DC).   % DR=3, DC=4
+vv_add(1, 1, 2, 3, NR, NC).      % NR=3, NC=4
+vv_scale(1, 2, 3, SDR, SDC).     % SDR=3, SDC=6
+vv_neg(3, -4, NDR, NDC).         % NDR=-3, NDC=4
+
+
+2.2 Magnitude norms
+
+vv_len_sq(+DR, +DC, -LSq)
+Squared Euclidean: LSq = DR^2 + DC^2. Integer arithmetic, no square root.
+
+vv_manhattan(+DR, +DC, -M)
+L1 magnitude: M = |DR| + |DC|.
+
+vv_chebyshev(+DR, +DC, -D)
+L-infinity magnitude: D = max(|DR|, |DC|).
+
+Examples:
+
+vv_len_sq(3, 4, LSq).     % LSq=25
+vv_manhattan(3, 4, M).    % M=7
+vv_chebyshev(3, 4, D).    % D=4
+
+
+2.3 Rotations
+
+vv_rot90_cw(+DR, +DC, -RDR, -RDC)
+90 degrees clockwise: RDR=DC, RDC=-DR.
+
+vv_rot90_ccw(+DR, +DC, -RDR, -RDC)
+90 degrees counter-clockwise: RDR=-DC, RDC=DR.
+
+vv_rot180(+DR, +DC, -RDR, -RDC)
+180 degrees: RDR=-DR, RDC=-DC.
+
+The clockwise rotation in row-column coordinates (row axis pointing downward)
+maps right to down, down to left, left to up, and up to right.
+
+Examples:
+
+vv_rot90_cw(0, 1, RDR, RDC).   % right -> down: RDR=1, RDC=0
+vv_rot90_cw(1, 0, RDR, RDC).   % down -> left: RDR=0, RDC=-1
+
+
+2.4 Inner product and orientation
+
+vv_dot(+DR1, +DC1, +DR2, +DC2, -D)
+D = DR1*DR2 + DC1*DC2.
+Positive: same direction; zero: orthogonal; negative: opposite.
+
+vv_cross(+DR1, +DC1, +DR2, +DC2, -C)
+C = DR1*DC2 - DC1*DR2.
+Positive: V2 is CCW from V1; negative: CW; zero: parallel.
+
+vv_parallel(+DR1, +DC1, +DR2, +DC2)
+Succeed when vv_cross = 0.
+
+Examples:
+
+vv_dot(1, 0, 0, 1, D).       % D=0 (orthogonal)
+vv_cross(1, 0, 0, 1, C).     % C=1 (V2 is CCW from V1)
+vv_parallel(1, 2, 3, 6).     % succeeds
+
+
+2.5 Region translation
+
+vv_translate_region(+Cells, +DR, +DC, -NewCells)
+Translate a list of R-C cells by (DR,DC). Preserves order.
+
+Example:
+
+vv_translate_region([0-0, 0-1, 1-0], 2, 3, NewCells).
+% NewCells = [2-3, 2-4, 3-3]
+
+
+3. Implementation Notes
+
+All 14 predicates use is/2 arithmetic or direct unification. The implementation
+is a single clause per predicate (except vv_parallel, which calls vv_cross).
+No recursion is needed; the only list operation is in vv_translate_region, which
+uses maplist/3 with the helper vv_translate_cell_/4.
+
+The internal helper vv_translate_cell_/4 is partially applied via the module
+call mechanism when passed to maplist/3. This is the only import from
+library(apply); no library(lists) import is needed.
+
+No PrologAI pack is imported. The vec2 pack is fully self-contained.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary condition (zero vector, same cell, negative
+components). All tests complete with no choicepoint warnings.
+
+
+5. Significance
+
+Vector arithmetic is the connective tissue of spatial reasoning: to compare
+displacements, compose transformations, test alignment, and translate objects,
+every symbolic reasoner needs a clean vector vocabulary. The vec2 pack provides
+this vocabulary as a set of pure, composable, deterministic predicates.
+
+Combined with the ray pack (Layer 103), cluster pack (Layer 102), and step pack
+(Layer 86), the vec2 pack completes the directional and geometric reasoning
+foundation needed for advanced ARC-AGI-2 visual reasoning.
+
+This is Mentova accomplishment 145. PrologAI now carries 123 work packages.
+
+github.com/ai-university-aiu/PrologAI
