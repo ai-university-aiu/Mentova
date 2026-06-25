@@ -1,0 +1,85 @@
+Accomplishment 116: Spatial Symmetry - The Sym Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 94th work package: the sym pack (sy_* predicate family, Layer 75). This pack provides 14 predicates for spatial symmetry transforms and symmetry testing. All 8 elements of the dihedral group D4 (the symmetry group of a square) are represented: the 6 distinct transforms plus 4 symmetry detection predicates covering horizontal, vertical, and rotational symmetry. The pack also provides symmetrization operations and full orbit computation.
+
+Introduction
+
+Symmetry is a fundamental structural property of visual reasoning. Many reasoning tasks contain grids that are symmetric: a pattern that looks the same when flipped horizontally, when rotated 180 degrees, or under a combination of transforms. The sym pack gives Mentova the ability to:
+
+  Detect symmetry: does this grid have horizontal, vertical, or rotational symmetry?
+  Apply transforms: what does this grid look like rotated 90 degrees clockwise?
+  Symmetrize: given an asymmetric grid, what is the nearest horizontally symmetric grid?
+  Compute orbit: what are all distinct spatial variants of this grid?
+
+These operations are useful for any task involving spatial reasoning, not only for pattern recognition in visual puzzles.
+
+Predicates
+
+The sym pack exports 14 predicates under the sy_* prefix.
+
+Spatial transforms:
+sy_reflect_h/2     reflect left-right (each row reversed)
+sy_reflect_v/2     reflect top-bottom (row order reversed)
+sy_transpose/2     reflect across main diagonal (rows become columns)
+sy_rotate90/2      rotate 90 degrees clockwise
+sy_rotate180/2     rotate 180 degrees
+sy_rotate270/2     rotate 270 degrees clockwise (= 90 counter-clockwise)
+
+Symmetry tests:
+sy_has_h_symm/1    grid equals its horizontal reflection
+sy_has_v_symm/1    grid equals its vertical reflection
+sy_has_rot2_symm/1 grid invariant under 180-degree rotation
+sy_has_rot4_symm/1 grid invariant under 90-degree rotation
+
+Symmetry discovery and enforcement:
+sy_symmetries/2    list all symmetry names present (h, v, rot2, rot4)
+sy_make_h_symm/2   make horizontally symmetric by mirroring left half
+sy_make_v_symm/2   make vertically symmetric by mirroring top half
+sy_d4_orbit/2      compute all distinct D4 group transforms
+
+Implementation
+
+All rotations are defined compositionally from the three basic operations:
+  rotate90  = transpose then reflect_h
+  rotate180 = reflect_v then reflect_h
+  rotate270 = reflect_h then transpose
+
+The anti-diagonal reflection (the 8th D4 element, used in sy_d4_orbit) is
+computed as rotate90 then reflect_v.
+
+Symmetry tests use structural unification: sy_has_h_symm(G) succeeds when
+sy_reflect_h(G, G) succeeds, that is, when G unifies with its own reflection.
+
+sy_make_h_symm and sy_make_v_symm use if-then-else to handle the center
+element in odd-dimension cases without choicepoints.
+
+sy_d4_orbit uses sort/2 to deduplicate the 8 candidate transforms.
+For an all-same-color grid, all 8 transforms are identical and the orbit
+contains only 1 element. For a generic asymmetric grid, up to 8 elements appear.
+
+All 43 PLUnit acceptance tests pass (AC-SY-001 through AC-SY-043).
+
+Significance
+
+The sym pack completes the spatial perception layer. Combined with the grid,
+transform, connect, morph, scene, and other perception packs, Mentova can now:
+
+- Detect whether a grid exhibits structural symmetry
+- Find all spatial variants of a pattern
+- Symmetrize a partial observation
+- Compare two grids modulo spatial transformation (by comparing their orbits)
+
+References
+
+PrologAI_1_Specification_v61.txt, Part 86 (SY-SY-001 through SY-SY-014)
+PrologAI_2_Pseudocode_v54.txt, Part 86
+PrologAI_3_Architecture_v55.txt, PART ARCH-62
+PrologAI_4_Refinement_v109.txt, Part 86 (AC-SY-001 through AC-SY-043)
+PrologAI_5_Completion_v112.txt, Work Package 96
+PrologAI PR #181: feat(packs): PR 96 - sym pack
