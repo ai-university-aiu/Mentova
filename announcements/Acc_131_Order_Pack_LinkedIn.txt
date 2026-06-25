@@ -1,0 +1,51 @@
+Mentova Accomplishment 131: Object Spatial Ordering and Ranking
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the order pack (Layer 90, Work
+Package 111).
+
+When a visual reasoning system extracts objects from a grid, the next
+question is often a spatial one. Which object is topmost? Which one is in
+reading order first? Which object is nearest to this marker position?
+
+The order pack answers those questions with 14 clean predicates
+(od_* prefix) for sorting, selecting, and ranking obj(Color, Cells) terms
+by their centroid position.
+
+The centroid is the integer floor average of all cell coordinates in the
+object. It is the natural spatial anchor for ordering.
+
+The 14 predicates:
+
+• od_centroid - compute centroid row and column
+• od_sort_row - sort objects topmost to bottommost
+• od_sort_col - sort objects leftmost to rightmost
+• od_reading_order - sort by row first, then column (reading order)
+• od_sort_color - sort objects by color value
+• od_topmost - select the topmost object
+• od_bottommost - select the bottommost object
+• od_leftmost - select the leftmost object
+• od_rightmost - select the rightmost object
+• od_nth_row - select the Nth object in row order
+• od_nth_col - select the Nth object in column order
+• od_nearest - select the object nearest to a reference position
+• od_farthest - select the object farthest from a reference position
+• od_rank_row - get the 1-based rank of a specific object in row order
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass.
+
+The pack integrates naturally with the obj pack (Layer 69) which extracts
+objects, the scene pack (Layer 37) which describes spatial relationships,
+and the diff pack (Layer 89) which finds changed cells across grid pairs.
+
+This is Mentova accomplishment 131. PrologAI now carries 109 work packages.
+
+ARC-AGI-2 (Abstract and Reasoning Corpus for Artificial General Intelligence)
+visual reasoning continues to advance.
+
+github.com/ai-university-aiu/PrologAI
