@@ -1,0 +1,165 @@
+Acc_131: Object Spatial Ordering and Ranking - The Order Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains the order pack (od_* predicate family, Layer 90, Work
+Package 111), a 14-predicate module for spatial ordering, ranking, and
+selection of objects from the obj(Color, Cells) term representation.
+
+The pack provides centroid computation, four sorting predicates, four
+extremal selection predicates, index-based access, proximity-based
+selection, and rank computation.
+
+42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Once a solver has extracted a list of objects from a grid using the obj
+pack, a frequent next step is to determine their spatial relationships: which
+object is topmost, which is rightmost, how they sort from left to right, or
+which object is nearest to a specific grid position.
+
+The obj pack (Layer 69) provides obj_sort_size/3 for sorting by area, and
+obj_largest/3 and obj_smallest/3 for size-based selection. But spatial
+ordering by centroid position (row, column, reading order) is not provided.
+
+The select pack (Layer 53) filters cell regions by area and border contact
+but does not sort or rank objects by position.
+
+The order pack fills this gap by providing a complete set of centroid-based
+spatial ordering operations for obj() terms.
+
+A centroid is the arithmetic mean of all coordinates in an object's cell list,
+rounded down to an integer. Objects scattered across a grid can be ranked
+naturally by their centroids: which is topmost, which is in reading order,
+which is nearest to a marker cell.
+
+
+2. Predicate Inventory
+
+The 14 predicates fall into four groups.
+
+
+2.1 Centroid Computation
+
+od_centroid(Obj, CR, CC) computes the integer floor centroid of an
+obj(Color, Cells) term. CR = floor(sum of all R values / N), CC = floor(sum
+of all C values / N), where N is the number of cells. This is the foundation
+used by all other predicates. It uses foldl/4 to accumulate row and column
+sums, then integer division.
+
+
+2.2 Full-List Sorting
+
+od_sort_row(Objs, Sorted) sorts objects from topmost to bottommost. It keys
+each object by its centroid row, applies keysort, and strips keys.
+
+od_sort_col(Objs, Sorted) sorts from leftmost to rightmost by centroid column.
+
+od_reading_order(Objs, Sorted) sorts by centroid row first, then by centroid
+column for objects on the same row. This is implemented using a compound
+(R-C) key: Prolog's standard term order compares R-C terms by R first, then
+by C when R values are equal.
+
+od_sort_color(Objs, Sorted) sorts by color value ascending.
+
+
+2.3 Extremal Selection
+
+od_topmost(Objs, TopObj), od_bottommost(Objs, BotObj), od_leftmost(Objs,
+LeftObj), and od_rightmost(Objs, RightObj) return the single object at an
+extreme position. These are implemented as the first or last element of the
+corresponding sorted list.
+
+
+2.4 Index and Proximity Access
+
+od_nth_row(Objs, N, Obj) retrieves the N-th object in row-ascending order.
+N is 1-indexed.
+
+od_nth_col(Objs, N, Obj) retrieves the N-th object in column-ascending order.
+
+od_nearest(Objs, R, C, NearObj) selects the object whose centroid has the
+minimum Manhattan distance to the grid position (R, C). Manhattan distance
+between centroid (CR, CC) and reference (R, C) is |CR - R| + |CC - C|.
+
+od_farthest(Objs, R, C, FarObj) selects the object with maximum Manhattan
+distance to (R, C).
+
+od_rank_row(Objs, TargetObj, Rank) computes the 1-based position of a
+specific object within the row-ascending ordering.
+
+
+3. Implementation Notes
+
+All sorting uses keysort, which is stable. Objects with equal sort keys
+retain their relative order from the input list.
+
+The module imports member/2, nth0/3, and last/2 from library(lists) and
+maplist/3 and foldl/4 from library(apply). No PrologAI pack is imported as
+a dependency. The od_centroid predicate implements its own centroid
+computation over r(R, C) cell lists.
+
+The ERC (English Readable Code) convention is followed: one % comment
+immediately above each line of Prolog code.
+
+Four internal helpers are defined: od_sum_rc_ (foldl accumulator), od_strip_
+(key stripping for simple keys), od_strip2_ (key stripping for (R-C)-Value
+compound-key pairs), and od_rank_find_ (recursive 1-based position search).
+
+
+4. Integration with the Pack Stack
+
+The order pack is Layer 90, above the diff pack (Layer 89).
+
+Typical usage with the obj pack:
+
+Extract all objects from a grid, then sort them in reading order for
+sequential rule application:
+
+obj_all(Grid, AllObjs), od_reading_order(AllObjs, Ordered).
+
+Find the topmost object of a specific color:
+
+obj_inventory(Grid, Color, ColorObjs), od_topmost(ColorObjs, Top).
+
+Find which object is nearest to a known marker cell:
+
+obj_all(Grid, AllObjs), od_nearest(AllObjs, MarkerR, MarkerC, Near).
+
+Compute the 1-based rank of an object to apply a rank-dependent rule:
+
+obj_all(Grid, AllObjs), od_rank_row(AllObjs, TargetObj, Rank).
+
+
+5. SPARC Documentation
+
+Work Package 111 is documented in:
+
+Specification Part 101 (OD-OD-001 through OD-OD-014).
+
+Pseudocode Part 101.
+
+Architecture Part ARCH-77 positioning the order pack at Layer 90.
+
+Refinement acceptance criteria AC-OD-001 through AC-OD-042.
+
+Completion Work Package 111.
+
+
+6. Conclusion
+
+The order pack gives PrologAI a systematic way to impose spatial order on
+extracted objects. Sorting by row, column, or reading order enables rules
+that process objects sequentially in a natural visual order. Extremal
+selection finds the boundary objects. Index access retrieves specific
+objects by rank. Proximity selection finds objects relative to marker cells.
+
+PrologAI now carries 109 work packages and 131 Mentova accomplishments.
