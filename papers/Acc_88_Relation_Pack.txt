@@ -1,0 +1,96 @@
+Accomplishment 88: Relation Pack - Spatial Relations Between Cell Regions
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI now includes the relation pack (module relation, prefix rl_), a set
+of 14 predicates for spatial relationships between cell regions. A region is
+any list of r(R,C) cells. The pack provides positional ordering (above, below,
+left, right), 4-connected adjacency, minimum Manhattan distance, bounding box
+containment, set relations (overlap, disjoint), row and column alignment,
+integer centroid computation, centroid offset, and cardinal direction. The
+relation pack is the 66th work package in PrologAI and Mentova's 88th
+accomplishment.
+
+Introduction
+
+Having a vocabulary for the properties of individual regions is not enough.
+Visual reasoning requires understanding the spatial relationships between
+regions - and between objects in the world in general.
+
+Is object A above object B? Are they touching? How far apart are they? In
+which direction would you travel to get from one to the other? These are the
+questions that humans answer effortlessly when looking at an image, and they
+are exactly the questions that ARC-AGI-2 tasks often require to be answered
+before a transformation rule can be formulated.
+
+The relation pack provides these as first-class predicates, each composable
+with the other packs in the cognitive stack.
+
+Design
+
+The fundamental input to every relation predicate is a region: a list of
+r(R,C) cells. This is intentionally the same representation as a shape
+(before normalization) and the same representation as the cell sets returned
+by pf_flood_fill and gd_objects. The relation pack connects seamlessly to
+every other pack that works with cell lists.
+
+All predicates are deterministic (they succeed or fail; they do not produce
+multiple solutions) because spatial relations are truth values, not
+generators.
+
+Positional Ordering
+
+rl_above/2 tests whether every row of A is strictly less than every row of B.
+rl_below/2 is the converse. rl_left_of/2 and rl_right_of/2 test the same
+condition on columns. These predicates are strict: if any cell of A shares a
+row (or column) with B, rl_above fails.
+
+Adjacency and Distance
+
+rl_adjacent/2 tests whether any cell of A has a 4-connected neighbor in B.
+This is the standard ARC adjacency: orthogonal, not diagonal.
+
+rl_distance/3 returns the minimum Manhattan distance between any pair of
+cells from A and B. When the regions overlap, the distance is 0.
+
+Containment and Set Relations
+
+rl_contained_bbox/2 tests whether the bounding box of A is entirely within
+the bounding box of B. This is weaker than cell-level containment but faster
+and sufficient for many reasoning tasks.
+
+rl_overlap/2 and rl_disjoint/2 test for shared and non-shared cells respectively.
+
+Row and Column Alignment
+
+rl_same_row/2 and rl_same_col/2 test whether two regions share at least one
+row or column index. These predicates capture grid-level alignment that is
+independent of whether the regions actually share cells.
+
+Centroid, Offset, and Direction
+
+rl_centroid/3 computes the integer (floor division) average row and column of
+a region. rl_offset/4 computes the centroid-to-centroid offset between two
+regions. rl_direction/3 converts that offset to a cardinal direction (above,
+below, left, or right) by finding the dominant axis.
+
+Acceptance
+
+41 PLUnit tests across 14 test groups all pass with no warnings.
+
+Integration criteria IC-RL-001 (no load warnings) and IC-RL-002 (all 41
+tests pass) are confirmed.
+
+Conclusion
+
+The relation pack gives Mentova a complete first-order vocabulary for spatial
+relationships. Combined with the path pack (connectivity), shape pack
+(pattern identity), color pack (palette), and frame pack (borders), Mentova
+can now describe the spatial layout of any grid at the level of: what objects
+are present, what color and shape they have, how they are connected, what
+border they form, and how they relate to each other in space. This vocabulary
+is the foundation for composing transformation rules.
+
+END OF ACCOMPLISHMENT 88

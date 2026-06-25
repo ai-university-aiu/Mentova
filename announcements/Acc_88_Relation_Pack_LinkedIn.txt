@@ -1,0 +1,41 @@
+Accomplishment 88 - Mentova now understands spatial relationships between regions.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 66 work packages.
+
+The new relation pack gives Mentova the vocabulary to describe how regions relate to each other in space.
+
+rl_above and rl_below - is one region entirely above or below another?
+
+rl_left_of and rl_right_of - is one region entirely to the left or right?
+
+rl_adjacent - do the two regions touch (4-connected)?
+
+rl_distance - what is the minimum Manhattan distance between them?
+
+rl_contained_bbox - is the bounding box of one region inside the other?
+
+rl_overlap and rl_disjoint - do they share cells, or not?
+
+rl_same_row and rl_same_col - do they share a grid row or column?
+
+rl_centroid - what is the integer center of a region?
+
+rl_offset - what is the centroid-to-centroid offset between two regions?
+
+rl_direction - in which direction (above/below/left/right) would you travel from one to the other?
+
+This matters because:
+
+ARC-AGI-2 tasks frequently require understanding relative positions before a transformation rule can be written. Now Mentova has the vocabulary.
+
+Spatial descriptions like "object A is above and left of object B" can now be computed and composed with the rest of the cognitive stack.
+
+The relation pack works with any list of r(R,C) cells - compatible with pf_flood_fill, sh_from_grid, gd_objects, and every other pack in the stack.
+
+The relation pack is the 66th work package in PrologAI and Mentova's 88th accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/
