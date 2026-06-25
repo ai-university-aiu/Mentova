@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-108-FF6B35?style=for-the-badge" alt="108 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-109-FF6B35?style=for-the-badge" alt="109 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **106 accomplished** |
-| Scientific papers | **91 published** — one per accomplishment |
+| Documented accomplishments | **109 accomplished** |
+| Scientific papers | **92 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         91 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  91 announcements — one per accomplishment
+├── papers/         92 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  92 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -409,12 +409,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_106` | Morph pack paper — Morphological Grid Operations (Layer 65): 14 mo_* predicates for 4-connected and 8-connected dilation (mo_dilate4, mo_dilate8), erosion (mo_erode4, mo_erode8), repeated operations (mo_dilate4_n, mo_erode4_n), morphological open (mo_open4), morphological close (mo_close4), inner boundary cells (mo_boundary4, mo_boundary8), outer one-cell ring (mo_ring4), filling enclosed background holes (mo_fill_holes4), grid padding (mo_pad), and unpadding (mo_unpad). |
 | `Acc_107` | Rewrite pack paper — Rule-Based Grid Cell Rewriting (Layer 66): 14 rw_* predicates for color substitution maps (rw_map_color), single-color replacement (rw_replace_color), two-color swap (rw_swap_colors), region painting (rw_set_region), binary mask application (rw_mask_apply), grid overlay (rw_overlay), patch stamping (rw_stamp), diff-list cell edits (rw_diff_apply), color normalization (rw_normalize), color inversion (rw_invert_colors), background remapping (rw_remap_bg), border painting (rw_set_border), rectangle fill (rw_fill_rect), and conditional per-cell recoloring (rw_conditional). |
 | `Acc_108` | Run pack paper — Run-Length Encoding of Grid Sequences (Layer 67): 14 rn_* predicates for encoding a flat list to Value-Count pairs (rn_encode), decoding back to a flat list (rn_decode), encoding a single grid row (rn_row_encode) or column (rn_col_encode), encoding all rows (rn_grid_rows) or all columns (rn_grid_cols), total element count (rn_length), positional lookup (rn_at), longest run of a given value (rn_max_run), distinct run count (rn_count_runs), uniformity test (rn_uniform), background trimming (rn_trim), sequence repetition with boundary merging (rn_repeat), and 0-indexed position enumeration (rn_positions). |
+| `Acc_109` | Arith pack paper — Cell-Wise Arithmetic on Grids (Layer 68): 14 ar_* predicates for cell-wise addition (ar_cell_add), subtraction (ar_cell_sub), multiplication (ar_cell_mul), modulo by scalar (ar_cell_mod), scalar addition (ar_scalar_add), scalar multiplication (ar_scalar_mul), row sum (ar_row_sum), column sum (ar_col_sum), all row sums (ar_row_sums), all column sums (ar_col_sums), grid-wide maximum (ar_cell_max), grid-wide minimum (ar_cell_min), value clamping (ar_cell_clamp), and cell-wise absolute difference (ar_cell_abs_diff). |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-99 announcements in LinkedIn format — one per accomplishment.
+100 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

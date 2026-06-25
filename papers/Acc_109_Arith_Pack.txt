@@ -1,0 +1,79 @@
+Accomplishment 109: Cell-Wise Arithmetic on Grids - The Arith Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 87th work package: the arith pack (ar_* predicate family, Layer 68). This pack provides 14 predicates for cell-wise arithmetic operations on list-of-lists grids. It covers cell-wise addition, subtraction, and multiplication of two grids of identical dimensions; cell-wise modulo with a scalar; scalar addition and multiplication; row and column sums; grid-wide maximum and minimum; value clamping to a range; and cell-wise absolute difference. These operations form a numerical reasoning layer that complements the symbolic pattern and structural analysis capabilities already in the platform.
+
+Introduction
+
+Visual reasoning tasks frequently require arithmetic over grid cells. A grid might encode measurements, counts, distances, or color intensities that must be combined, compared, or normalized. Without arithmetic primitives, every such operation requires ad-hoc code.
+
+The arith pack makes these operations first-class predicates:
+
+- ar_cell_add and ar_cell_sub let Mentova compute how a grid changed between two states, cell by cell.
+- ar_cell_mul is the Hadamard product of two grids, useful for applying a binary mask as a scaling operation.
+- ar_cell_mod supports cyclic reasoning over integer sequences.
+- ar_scalar_add and ar_scalar_mul shift and scale entire grids in a single call.
+- ar_row_sum and ar_col_sum measure the weight of each row or column.
+- ar_cell_max and ar_cell_min find the extremes of a grid without explicit iteration.
+- ar_cell_clamp normalizes values to a legal range, a common post-processing step.
+- ar_cell_abs_diff measures how different two grids are, cell by cell, without sign.
+
+Predicates
+
+The arith pack exports 14 predicates under the ar_* prefix.
+
+Binary grid operations:
+ar_cell_add/3     cell-wise addition of two grids
+ar_cell_sub/3     cell-wise subtraction of two grids
+ar_cell_mul/3     cell-wise multiplication (Hadamard product) of two grids
+ar_cell_abs_diff/3  cell-wise absolute difference of two grids
+
+Scalar operations:
+ar_cell_mod/3     apply modulo N to every cell
+ar_scalar_add/3   add a scalar to every cell
+ar_scalar_mul/3   multiply every cell by a scalar
+ar_cell_clamp/4   clamp every cell to a range [Lo, Hi]
+
+Row and column sums:
+ar_row_sum/3      sum of all cells in one row (0-indexed)
+ar_col_sum/3      sum of all cells in one column (0-indexed)
+ar_row_sums/2     list of row sums for every row
+ar_col_sums/2     list of column sums for every column
+
+Grid-wide extremes:
+ar_cell_max/2     maximum cell value across the entire grid
+ar_cell_min/2     minimum cell value across the entire grid
+
+Implementation
+
+Binary grid operations use maplist/4 over row pairs, then maplist/4 over cell pairs. This avoids explicit indexing and is concise.
+
+Scalar operations (ar_cell_mod, ar_scalar_add, ar_scalar_mul, ar_cell_clamp) use maplist(maplist(F)), threading the scalar via partial application.
+
+ar_col_sums builds a column-index list via numlist/3 and maps ar_col_sum/3 over it. ar_col_sum extracts a column via maplist(nth0(C), Grid, Col).
+
+ar_cell_max and ar_cell_min flatten the grid with append/2 and delegate to max_list/2 and min_list/2.
+
+ar_cell_clamp uses a three-way if-then-else for determinism (no choicepoints).
+
+All 39 PLUnit acceptance tests pass (AC-AR-001 through AC-AR-039).
+
+Significance
+
+The arith pack gives Mentova a complete numerical arithmetic layer over grids. Combined with the existing compare pack (which finds changed and unchanged cells) and the rewrite pack (which applies color edits), Mentova can now implement a full numerical reasoning pipeline: measure the absolute difference between input and output grids, identify the largest change, clamp values to a valid color range, and normalize the result.
+
+Row and column sums serve as structural signatures. When two grids have identical row sums and column sums, they have the same weight distribution even if individual cells differ. This is a fast structural equivalence check useful for filtering candidate transformations.
+
+References
+
+PrologAI_1_Specification_v54.txt, Part 79 (AR-AR-001 through AR-AR-014)
+PrologAI_2_Pseudocode_v47.txt, Part 79
+PrologAI_3_Architecture_v48.txt, PART ARCH-55
+PrologAI_4_Refinement_v102.txt, Part 79 (AC-AR-001 through AC-AR-039)
+PrologAI_5_Completion_v105.txt, Work Package 89
+PrologAI PR #174: feat(packs): PR 89 - arith pack

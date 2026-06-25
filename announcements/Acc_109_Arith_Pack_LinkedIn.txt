@@ -1,0 +1,18 @@
+Accomplishment 109: Mentova gains cell-wise arithmetic on grids - a 14-predicate numerical reasoning layer for adding, subtracting, multiplying, summing, and clamping grid values.
+
+The arith pack (ar_* predicates, Layer 68) gives Mentova 14 new tools for arithmetic over list-of-lists grids:
+
+- ar_cell_add/3, ar_cell_sub/3, ar_cell_mul/3: cell-wise binary grid operations
+- ar_cell_abs_diff/3: cell-wise absolute difference (always non-negative)
+- ar_cell_mod/3: apply modulo N to every cell
+- ar_scalar_add/3, ar_scalar_mul/3: shift or scale every cell by a constant
+- ar_cell_clamp/4: clamp every cell to a range [Lo, Hi]
+- ar_row_sum/3, ar_col_sum/3: sum one row or column
+- ar_row_sums/2, ar_col_sums/2: sum every row or every column
+- ar_cell_max/2, ar_cell_min/2: grid-wide maximum and minimum
+
+With arithmetic, Mentova can now measure how much a grid changed between two states, normalize values to a valid color range, compare grids by their row and column weight distributions, and apply scaling as part of a visual reasoning pipeline.
+
+This is Mentova's 109th documented accomplishment and PrologAI's 87th work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
