@@ -1,0 +1,94 @@
+Accomplishment 117: Spatial Pattern Search - The Seek Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 95th work package: the seek pack (sk_* predicate family, Layer 76). This pack provides 14 predicates for spatial pattern search, sub-grid matching, template matching, D4 transform discovery, and grid scaling. It answers the question: where does this pattern appear, how well does it fit, and what spatial relationship connects two grids?
+
+Introduction
+
+Perceptual grounding requires more than detecting features in isolation. To reason about spatial structure, a cognitive system must be able to find where a pattern occurs, how many times it occurs, whether it fits exactly or approximately, and what spatial transform (rotation, reflection, scaling) connects one grid to another. These are the general-purpose search operations that bridge perception and rule induction.
+
+The seek pack gives Mentova the ability to:
+
+  Find all positions where a value or sub-pattern appears
+  Count and locate instances of a pattern in a larger grid
+  Score how well a template fits at each position
+  Discover which of the 8 D4 spatial transforms maps one grid to another
+  Detect and apply integer scale factors between grids
+
+Predicates
+
+The seek pack exports 14 predicates under the sk_* prefix.
+
+Position finding:
+sk_positions/3      find all (R,C) pairs where Grid has a given value
+sk_rows_with/3      find row indices containing a value
+sk_cols_with/3      find column indices containing a value
+sk_border_cells/2   list all border cell positions
+sk_interior_cells/2 list all interior (non-border) cell positions
+
+Sub-pattern search:
+sk_fits/4           test exact sub-grid match at (R0,C0)
+sk_find_sub/4       enumerate positions where sub-grid fits (nondeterministic)
+sk_all_subs/3       collect all fitting positions as a list
+sk_count_sub/3      count occurrences of a sub-grid
+
+Template matching:
+sk_match_count/5    count matching cells at a given placement
+sk_best_fit/4       find the position with maximum match count
+
+Transform discovery:
+sk_find_d4/3        find D4 transform name (identity through anti_diag) mapping G1 to G2
+sk_upscale/3        upscale: each cell becomes a Factor x Factor block
+sk_find_scale/3     find integer scale factor between two grids
+
+Implementation
+
+sk_positions uses nested nth0 enumeration inside findall. Both the row index
+and column index are unbound in the findall goal, allowing SWI-Prolog's
+nth0 enumeration to discover all matching positions.
+
+sk_border_cells uses once/1 inside findall to prevent corner cells from
+appearing multiple times. A cell at (0,0) satisfies both R=0 and C=0, so
+without once/1 it would be collected twice.
+
+sk_find_d4 uses once/1 to commit to the first D4 match. The 8 D4 elements
+are tried in declaration order: identity, reflect_h, reflect_v, transpose,
+rotate90, rotate180, rotate270, anti_diag. D4 transforms are implemented
+directly without importing the sym pack, using maplist(reverse,...) for
+reflect_h and reverse/2 for reflect_v.
+
+sk_upscale tiles each cell Factor times horizontally (using findall with
+member + between), then tiles each row Factor times vertically (using a
+recursive helper with findall + append).
+
+sk_best_fit scores all valid positions with sk_match_count and picks the
+maximum using max_member/2.
+
+All 49 PLUnit acceptance tests pass (AC-SK-001 through AC-SK-049).
+
+Significance
+
+The seek pack completes the search foundation. Combined with the score, induct,
+hyp, and sym packs, Mentova can now:
+
+- Find where a pattern occurs in a grid
+- Discover which spatial transform relates two grids
+- Score how well a template fits at each position
+- Detect scale relationships between grids
+
+These capabilities are essential for visual rule discovery in any domain
+involving spatial structure, not only for pattern recognition challenges.
+
+References
+
+PrologAI_1_Specification_v62.txt, Part 87 (SK-SK-001 through SK-SK-014)
+PrologAI_2_Pseudocode_v55.txt, Part 87
+PrologAI_3_Architecture_v56.txt, PART ARCH-63
+PrologAI_4_Refinement_v110.txt, Part 87 (AC-SK-001 through AC-SK-049)
+PrologAI_5_Completion_v113.txt, Work Package 97
+PrologAI PR #182: feat(packs): PR 97 - seek pack Layer 76

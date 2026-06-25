@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-116-FF6B35?style=for-the-badge" alt="116 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-117-FF6B35?style=for-the-badge" alt="117 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **116 accomplished** |
-| Scientific papers | **96 published** — one per accomplishment |
+| Documented accomplishments | **117 accomplished** |
+| Scientific papers | **97 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,7 +233,7 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         96 scientific papers — one per accomplishment and benchmark milestone
+├── papers/         97 scientific papers — one per accomplishment and benchmark milestone
 ├── announcements/  95 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
@@ -417,12 +417,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_114` | Induct pack paper — Observing What Changed (Layer 73): 14 in_* predicates for computing cell-level change triples (in_delta), testing identity rules (in_constant), inferring consistent color substitution maps for one pair (in_color_map), intersecting maps across all pairs (in_color_map_pairs), computing row and column size change (in_size_change), verifying consistent size change across all pairs (in_size_change_pairs), building union color palettes (in_color_palette), separating input and output color sets across all pairs (in_palette_pairs), listing invariant cells (in_invariant_cells), listing changed cells (in_changed_cells), verifying consistent cell-change pattern across all pairs (in_consistent_delta), finding the background color by frequency (in_bg_color), verifying consistent background across all pairs (in_bg_color_pairs), and intersecting two color maps (in_common_keys). Observation layer for rule induction. |
 | `Acc_115` | Hyp pack paper — Applying the Hypothesis (Layer 74): 14 hy_* predicates for applying a color substitution map with identity fallback for unmapped colors (hy_color_sub), the identity no-op hypothesis (hy_identity), partial-application alias for color substitution (hy_from_map), pixel accuracy test for one training pair (hy_test), mean accuracy over all pairs (hy_test_all), exact-match test for one pair (hy_verify), exact-match test for all pairs (hy_verify_all), selecting the best hypothesis from a list (hy_select), ranking hypotheses by mean accuracy descending (hy_rank), alias for color substitution (hy_apply_map), sequential two-map color substitution (hy_compose), inverting a color substitution map (hy_invert_map), color lookup with identity fallback (hy_map_lookup), and describing a hypothesis as a human-readable atom (hy_describe). Closes the observation-hypothesis-test loop for color substitution rules. |
 | `Acc_116` | Sym pack paper — Spatial Symmetry Transforms and Testing (Layer 75): 14 sy_* predicates covering the D4 dihedral group transforms (sy_reflect_h, sy_reflect_v, sy_transpose, sy_rotate90, sy_rotate180, sy_rotate270), symmetry detection (sy_has_h_symm, sy_has_v_symm, sy_has_rot2_symm, sy_has_rot4_symm), symmetry discovery (sy_symmetries), symmetrization (sy_make_h_symm, sy_make_v_symm), and full D4 orbit computation (sy_d4_orbit). All 8 elements of the dihedral group D4 covered. 43/43 acceptance tests pass. |
+| `Acc_117` | Seek pack paper — Spatial Pattern Search and Transform Discovery (Layer 76): 14 sk_* predicates for finding all positions of a value (sk_positions), finding rows/columns containing a value (sk_rows_with, sk_cols_with), listing border and interior cell positions (sk_border_cells, sk_interior_cells), exact sub-grid match test (sk_fits), enumerating and collecting sub-grid positions (sk_find_sub, sk_all_subs), counting occurrences (sk_count_sub), counting matching cells at a position (sk_match_count), finding the best-fitting position (sk_best_fit), discovering the D4 transform mapping one grid to another (sk_find_d4), upscaling each cell to a Factor x Factor block (sk_upscale), and finding the integer scale factor between two grids (sk_find_scale). 49/49 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-104 announcements in LinkedIn format — one per accomplishment.
+105 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

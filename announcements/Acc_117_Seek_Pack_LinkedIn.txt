@@ -1,0 +1,34 @@
+Accomplishment 117: The Seek Pack - Finding Patterns in Space
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Mentova just gained its 95th work package: the seek pack.
+
+14 sk_* predicates for spatial pattern search:
+
+  sk_positions    - find all positions of a value in a grid
+  sk_rows_with    - find rows containing a value
+  sk_cols_with    - find columns containing a value
+  sk_border_cells - list all border cell positions
+  sk_interior_cells - list interior cell positions
+  sk_fits         - exact sub-grid match test
+  sk_find_sub     - enumerate positions where sub-grid fits
+  sk_all_subs     - collect all fitting positions
+  sk_count_sub    - count occurrences of a sub-grid
+  sk_match_count  - count matching cells at a position
+  sk_best_fit     - find the best-matching position
+  sk_find_d4      - discover which D4 transform maps G1 to G2
+  sk_upscale      - upscale each cell to a Factor x Factor block
+  sk_find_scale   - find integer scale factor between grids
+
+The D4 transform discovery predicate checks all 8 spatial transforms
+(identity, 3 rotations, 2 reflections, transpose, anti-diagonal) and
+returns the name of the first one that maps Grid1 to Grid2.
+
+49/49 acceptance tests pass. General-purpose naming. Pure Prolog. Glass-box.
+
+PrologAI PR #182. Mentova Acc_117.
+
+#PrologAI #Mentova #SymbolicAI #PatternRecognition #SpatialReasoning #AIU
