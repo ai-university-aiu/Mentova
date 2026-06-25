@@ -1,0 +1,44 @@
+Mentova Accomplishment 138: Uniform Row and Column Stripe Detection and Filling - The Stripe Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the stripe pack (Layer 97, Work
+Package 118).
+
+Many visual reasoning tasks involve rows or columns that are entirely one color.
+Such stripes can be grid separators, axis markers, color bands, or structural
+boundaries. The stripe pack provides all the predicates needed to detect, query,
+and fill these structures symbolically.
+
+14 predicates (sr_* prefix):
+
+- sr_uniform_row - test whether row R has all cells equal to Color
+- sr_uniform_col - test whether column C has all cells equal to Color
+- sr_uniform_rows - sorted row indices uniformly equal to a given Color
+- sr_uniform_cols - sorted column indices uniformly equal to a given Color
+- sr_all_stripe_rows - R-Color pairs for all uniform rows in index order
+- sr_all_stripe_cols - C-Color pairs for all uniform columns in index order
+- sr_mixed_rows - sorted row indices that are NOT uniform
+- sr_mixed_cols - sorted column indices that are NOT uniform
+- sr_fill_row - fill row R with Color
+- sr_fill_col - fill column C with Color
+- sr_fill_rows - fill a list of row indices with Color
+- sr_fill_cols - fill a list of column indices with Color
+- sr_cross_cells - r(R,C) Cartesian product of two index lists
+- sr_cross_fill - fill all cells at row-column intersections with Color
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass with no choicepoint
+warnings.
+
+The implementation uses a deterministic sr_replace_nth_ helper with a cut at
+its base case, ensuring that all fill operations are fully determinate. Stripe
+and mixed index lists are always complementary: every row or column index
+appears in exactly one of the two result lists.
+
+This is Mentova accomplishment 138. PrologAI now carries 116 work packages.
+
+github.com/ai-university-aiu/PrologAI
