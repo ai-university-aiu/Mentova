@@ -1,0 +1,42 @@
+Mentova Accomplishment 136: Directional Gravity and Cell Sliding - The Gravity Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the gravity pack (Layer 95, Work
+Package 116).
+
+Many visual reasoning tasks involve physics-like behavior: objects fall to the
+bottom, pieces slide to one side, or colors settle into containers. The gravity
+pack provides all of these operations symbolically, without any simulation loop.
+
+14 predicates (gv_* prefix):
+
+• gv_pack_row_left - compact all non-Bg values to the left end of a row
+• gv_pack_row_right - compact all non-Bg values to the right end of a row
+• gv_pack_col_up - compact all non-Bg values to the top of a column list
+• gv_pack_col_down - compact all non-Bg values to the bottom of a column list
+• gv_fall_left - all non-Bg cells slide left within their row
+• gv_fall_right - all non-Bg cells slide right within their row
+• gv_fall_down - all non-Bg cells fall downward within their column
+• gv_fall_up - all non-Bg cells rise upward within their column
+• gv_fall_dir - direction dispatch: down / up / left / right
+• gv_fall_color_left - only Color slides left; other non-Bg cells are walls
+• gv_fall_color_right - only Color slides right; other non-Bg cells are walls
+• gv_fall_color_down - only Color falls down; other non-Bg cells are walls
+• gv_fall_color_up - only Color rises up; other non-Bg cells are walls
+• gv_fall_color_dir - color-specific direction dispatch
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass.
+
+The color-specific predicates treat other non-Bg cells as immovable walls that
+divide each row or column into independent segments. Color cells can only slide
+within the segment they start in. This models containers, obstacles, and
+partitioned spaces.
+
+This is Mentova accomplishment 136. PrologAI now carries 114 work packages.
+
+github.com/ai-university-aiu/PrologAI
