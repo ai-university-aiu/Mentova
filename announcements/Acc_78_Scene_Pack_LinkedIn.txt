@@ -1,0 +1,49 @@
+MENTOVA ACC_78: THE SCENE PACK - OBJECT-CENTRIC REASONING FOR ARC-AGI-2
+
+Mentova now sees objects, not just grids.
+
+The scene pack (PR 58, Layer 37) gives Mentova a structured inventory of every object in a visual scene. Not a neural feature map. Not an embedding vector. A named, inspectable Prolog term.
+
+    obj(2, [r(1,1), r(1,2), r(2,1)])
+
+That is a blue L-shaped object. Three cells. Bounding box: r(1,1) to r(2,2). Normalized shape: [r(0,0), r(0,1), r(1,0)]. Centroid: r(1,1).
+
+Every property is computable. Every computation is readable.
+
+What the scene pack gives Mentova:
+
+sc_bg_color/2 - identify the background color (most frequent color in the grid).
+
+sc_objects/2 - extract all foreground objects: one obj(Color, Cells) per 4-connected component per color.
+
+sc_grid_to_scene/2 - build a complete scene(Rows, Cols, BgColor, Objects) model.
+
+sc_obj_shape/2 - normalized cell set: position-independent shape representation. Two objects have the same shape if and only if their normalized forms are identical.
+
+sc_cells_touching/2 - are any cells of two objects 4-connected neighbors?
+
+sc_contained_in/2 - is one object's bounding box inside another's?
+
+sc_above/2, sc_below/2, sc_left_of/2, sc_right_of/2 - spatial ordering by bounding box.
+
+sc_same_shape/2 - shape identity under normalization.
+
+sc_largest/2, sc_smallest/2, sc_sort_by_size/3 - size ordering.
+
+sc_count/2, sc_count_of_color/3 - counting.
+
+44 PLUnit tests. All pass.
+
+Why this matters for ARC-AGI-2:
+
+Many ARC-AGI-2 tasks are not about transforming a grid. They are about reasoning over the objects in a grid: "find the two objects with the same shape", "move the largest object to the left of the smallest", "which object is inside the frame?"
+
+The grid pack (Acc_76) perceives the grid. The analogy pack (Acc_77) infers whole-grid transformation rules. The scene pack (Acc_78) reasons about individual objects.
+
+Three layers. Three packs. One glass-box substrate.
+
+PrologAI: 55 work packages, 37 layers, built bottom-up, one named predicate at a time.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #ARC_AGI #SymbolicAI #LogicProgramming #GlassBox #ObjectCentric #SceneReasoning #SyntheticMind #AIU #Prolog
