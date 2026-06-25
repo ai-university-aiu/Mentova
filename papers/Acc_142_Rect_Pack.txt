@@ -1,0 +1,196 @@
+Mentova Accomplishment 142: Rectangle Detection and Drawing - The Rect Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 122: the rect pack, a Layer 101 symbolic reasoning
+module providing 14 predicates for axis-aligned rectangle operations in 2D
+integer-coordinate grids. The pack enumerates the cells of solid rectangles,
+frames, and interiors; draws each region type into a grid; tests containment;
+computes bounding boxes; lists corner cells; verifies that a rectangle is
+uniformly filled or framed; tests whether two rectangles share any cell; and
+scales a rectangle by an integer factor from its top-left corner. All predicates
+are deterministic. This accomplishment is verified by 42 PLUnit acceptance tests,
+all passing with no choicepoint warnings.
+
+
+1. Motivation
+
+Rectangles are the structural backbone of visual reasoning. Objects in grid
+puzzles are almost always rectangular. Borders, regions, and bounding boxes are
+rectangular. A system that can enumerate the cells of a rectangle, draw it, test
+what lies inside it, and measure it has a fundamental advantage when solving any
+task that involves rectangular structure.
+
+The scene pack (Layer 37) provides bounding boxes as one of many object
+properties. The fill pack (Layer 55) fills regions by connectivity. The assemble
+pack (Layer 91) crops, frames, and concatenates grids. The rect pack is
+orthogonal to all of these: it focuses exclusively on the geometric and drawing
+primitives of axis-aligned rectangles as first-class objects.
+
+
+2. Predicate Inventory (14 predicates, rt_* prefix)
+
+2.1 Cell enumeration
+
+rt_cells(+R1, +C1, +R2, +C2, -Cells)
+
+All cells in the solid rectangle from (R1,C1) to (R2,C2) in row-major order.
+
+rt_border(+R1, +C1, +R2, +C2, -Cells)
+
+Frame cells only: top row, bottom row, inner left column, inner right column.
+Returned sorted in row-major order. For a 1x1 rectangle, the single cell is the
+entire border.
+
+rt_interior(+R1, +C1, +R2, +C2, -Cells)
+
+Interior cells only: those strictly inside the frame. Returns [] for rectangles
+thinner than 3 rows or 3 columns.
+
+Examples:
+
+rt_cells(0, 0, 2, 2, Cells).
+% Cells = [0-0,0-1,0-2,1-0,1-1,1-2,2-0,2-1,2-2]
+
+rt_border(0, 0, 2, 2, Border).
+% Border = [0-0,0-1,0-2,1-0,1-2,2-0,2-1,2-2]
+
+rt_interior(0, 0, 2, 2, Interior).
+% Interior = [1-1]
+
+rt_interior(0, 0, 1, 1, Interior).
+% Interior = []
+
+
+2.2 Grid drawing
+
+rt_draw(+Grid, +R1, +C1, +R2, +C2, +Color, -Result)
+
+Fill the solid rectangle with Color.
+
+rt_draw_border(+Grid, +R1, +C1, +R2, +C2, +Color, -Result)
+
+Draw the frame only.
+
+rt_draw_interior(+Grid, +R1, +C1, +R2, +C2, +Color, -Result)
+
+Fill the interior only. If no interior, Result = Grid unchanged.
+
+Examples:
+
+rt_draw_border([[0,0,0],[0,0,0],[0,0,0]], 0, 0, 2, 2, 1, Result).
+% Result = [[1,1,1],[1,0,1],[1,1,1]]
+
+rt_draw_interior([[1,1,1],[1,0,1],[1,1,1]], 0, 0, 2, 2, 9, Result).
+% Result = [[1,1,1],[1,9,1],[1,1,1]]
+
+
+2.3 Geometric queries
+
+rt_area(+R1, +C1, +R2, +C2, -Area)
+
+Number of cells: (R2 - R1 + 1) * (C2 - C1 + 1).
+
+rt_contains(+R1, +C1, +R2, +C2, +R, +C)
+
+Succeed if (R,C) lies within the rectangle. Inclusive on all four sides.
+
+rt_corners(+R1, +C1, +R2, +C2, -Corners)
+
+List of four corner cells: [top-left, top-right, bottom-left, bottom-right].
+
+Example:
+
+rt_area(0, 0, 1, 3, Area).   % Area = 8
+rt_contains(0, 0, 2, 2, 1, 1).   % true
+rt_corners(0, 0, 2, 3, Cs).   % Cs = [0-0, 0-3, 2-0, 2-3]
+
+
+2.4 Bounding box
+
+rt_bbox(+Cells, -MinR, -MinC, -MaxR, -MaxC)
+
+Bounding box of any non-empty list of R-C cells. Works on any cell list, not
+just rectangular ones.
+
+Example:
+
+rt_bbox([0-0, 1-2, 3-1], MinR, MinC, MaxR, MaxC).
+% MinR=0, MinC=0, MaxR=3, MaxC=2
+
+
+2.5 Color tests
+
+rt_is_solid(+Grid, +R1, +C1, +R2, +C2, -Color)
+
+Succeed if every cell in the rectangle has the same value Color.
+
+rt_is_frame(+Grid, +R1, +C1, +R2, +C2, -Color)
+
+Succeed if every border cell has the same value Color.
+
+Examples:
+
+rt_is_solid([[5,5,5],[5,5,5],[5,5,5]], 0, 0, 2, 2, Color).   % Color = 5
+rt_is_frame([[1,1,1],[1,0,1],[1,1,1]], 0, 0, 2, 2, Color).   % Color = 1
+
+
+2.6 Overlap and scaling
+
+rt_overlap(+R1a, +C1a, +R2a, +C2a, +R1b, +C1b, +R2b, +C2b)
+
+Succeed if two rectangles share at least one cell (interval arithmetic test).
+
+rt_scale(+R1, +C1, +R2, +C2, +Factor, -R2New, -C2New)
+
+Scale from the top-left corner: R2New = R1 + (R2-R1)*Factor,
+C2New = C1 + (C2-C1)*Factor.
+
+Examples:
+
+rt_overlap(0, 0, 2, 2, 1, 1, 3, 3).   % true
+rt_scale(0, 0, 2, 2, 2, R2, C2).   % R2 = 4, C2 = 4
+
+
+3. Implementation Notes
+
+Determinism is maintained through four strategies. rt_cells uses maplist/4 with
+a unification lambda [C, RC]>>(RC = R-C) rather than [C, R-C]>>true. rt_border
+uses if-then-else guards for each side of the frame. rt_fill_cells_ uses if-then-
+else for the empty vs. non-empty cases. rt_replace_nth_ and rt_set_cell_ carry
+cuts on their base cases.
+
+rt_bbox uses lambdas [RC, R]>>(RC = R-_) and [RC, C]>>(RC = _-C) to extract
+row and column indices separately; the _ in a lambda body creates a fresh
+anonymous variable each call, making the unification deterministic.
+
+Built-ins used without import: sort/2, forall/2, length/2.
+Imported from library(lists): nth0/3, numlist/3, append/2, append/3, member/2,
+min_list/2, max_list/2.
+Imported from library(apply): maplist/2, maplist/3, maplist/4.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary case. All tests complete with no choicepoint
+warnings.
+
+
+5. Significance
+
+Rectangles appear in virtually every visual reasoning task: as objects, borders,
+regions, and bounding structures. The rect pack gives Mentova a clean, composable
+set of named predicates for the full rectangle lifecycle. Because the pack imports
+no PrologAI packs, it can serve as a foundation for higher-layer reasoning without
+introducing circular dependencies.
+
+This is Mentova accomplishment 142. PrologAI now carries 120 work packages.
+
+github.com/ai-university-aiu/PrologAI

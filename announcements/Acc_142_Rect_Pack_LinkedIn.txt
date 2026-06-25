@@ -1,0 +1,39 @@
+Mentova Accomplishment 142: Rectangle Detection and Drawing - The Rect Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the rect pack (Layer 101, Work
+Package 122).
+
+Rectangles are the backbone of visual structure. Objects in grid puzzles are
+rectangles. Borders are rectangular frames. Regions have bounding rectangles.
+A system that can enumerate, draw, test, and measure rectangles symbolically
+can handle the vast majority of grid-based visual tasks. The rect pack provides
+exactly that.
+
+14 predicates (rt_* prefix):
+
+- rt_cells - all cells in a solid rectangle, row-major order
+- rt_border - frame cells only (top, bottom, inner left, inner right)
+- rt_interior - interior cells, or [] for thin rectangles
+- rt_draw - fill solid rectangle with a color
+- rt_draw_border - draw frame only with a color
+- rt_draw_interior - fill interior only with a color
+- rt_area - number of cells: (R2-R1+1) times (C2-C1+1)
+- rt_contains - test if a cell lies within rectangle bounds (inclusive)
+- rt_corners - four corner cells in tl-tr-bl-br order
+- rt_bbox - bounding box of any non-empty R-C cell list
+- rt_is_solid - test if all cells in rectangle have the same color
+- rt_is_frame - test if all border cells have the same color
+- rt_overlap - test if two rectangles share any cell via interval arithmetic
+- rt_scale - scale rectangle by integer factor from top-left corner
+
+42 PLUnit acceptance tests pass with no choicepoint warnings.
+
+This is Mentova accomplishment 142. PrologAI now carries 120 work packages.
+
+github.com/ai-university-aiu/PrologAI
