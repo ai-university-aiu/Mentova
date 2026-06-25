@@ -1,0 +1,90 @@
+Accomplishment 124: Connected Component Labeling - The Label Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 102nd work package: the label pack (lb_* predicate family, Layer 83). This pack provides 14 predicates for assigning unique integer labels to connected components, querying region properties, filtering by size, recoloring components, and extracting individual regions from a grid.
+
+Introduction
+
+A key capacity in visual reasoning is the ability to treat each connected group of cells as a distinct, identifiable object. Before the label pack, Mentova could detect connectivity (connect pack) and count objects (scene pack), but lacked a unified way to assign stable identifiers to each component and then query, filter, or transform them by those identifiers.
+
+The label pack fills this gap. Once a grid is labeled, every operation - finding the largest object, removing noise, measuring shapes, coloring by identity, or extracting a single object for further analysis - becomes a simple predicate call.
+
+Predicates
+
+The label pack exports 14 predicates under the lb_* prefix.
+
+Core labeling:
+lb_label/3         assign unique integer labels to connected components
+lb_components/3    list of R-C cell lists, one per component
+lb_count/3         count of distinct connected components
+
+Per-component queries:
+lb_size_of/3       cell count of a specific label value
+lb_sizes_all/3     sorted Label-Size pairs for all labels present
+lb_cells_of/3      sorted list of R-C cells carrying a specific label
+lb_bbox_of/4       bounding box corners (TopLeft, BottomRight) of a label
+lb_neighbors_of/4  sorted foreground labels 4-adjacent to a given label
+
+Grid transformations:
+lb_fill_label/4    replace all cells of a label with a given value
+lb_keep_largest/3  keep only the largest component; others become background
+lb_remove_small/4  remove components with fewer than MinSize cells
+lb_color_labels/4  color each label by cycling through a palette
+lb_merge_two/4     merge two labels: all L2 cells become L1
+lb_select_label/4  extract one component from the original grid (zeros elsewhere)
+
+Implementation
+
+lb_label drives a breadth-first flood-fill (lb_bfs_) from sorted non-background
+cells. BFS tracks a Visited list and a Queue; each step finds unvisited non-background
+4-neighbors via findall, deduplicates with sort, and appends to both lists. When
+the queue is empty, the Visited list is the full component.
+
+lb_partition_components_ iterates over all non-background cells: for each
+unvisited seed, it runs BFS to find its component, uses subtract/3 to remove
+those cells from the remaining list, assigns the next integer label, and recurses.
+
+lb_label builds a flat R-C-Label lookup list from the resulting label pairs and
+constructs LabelGrid row by row. All other predicates are built on top of
+lb_label and lb_cells_of, making the architecture simple and composable.
+
+lb_keep_largest and lb_remove_small both call lb_label internally, compute sizes
+via lb_sizes_all, and rebuild the original grid preserving only the qualifying
+components. The all-background edge case in lb_keep_largest is handled explicitly
+by returning the input grid when no components are found.
+
+lb_neighbors_of includes a Bg parameter to exclude background from the neighbor
+list, returning only foreground label identifiers. This is important in practice:
+most callers want to know which other objects are adjacent, not whether a component
+touches background.
+
+All 42 PLUnit acceptance tests pass (AC-LB-001 through AC-LB-042).
+
+Significance
+
+The label pack gives Mentova a complete object identity layer for grid reasoning:
+
+  lb_label is the core: it converts a raw grid into an indexed map of objects.
+  lb_count and lb_sizes_all provide a census of objects and their scales.
+  lb_bbox_of and lb_cells_of support shape analysis and spatial queries.
+  lb_neighbors_of supports relational reasoning between objects.
+  lb_keep_largest and lb_remove_small are the primary noise-removal tools.
+  lb_color_labels supports visualization and output generation.
+  lb_select_label enables per-object processing pipelines.
+
+With the label pack in place, Mentova can analyze any visual scene at the level
+of individual named objects, not just raw cell values.
+
+References
+
+PrologAI_1_Specification_v69.txt, Part 94 (LB-LB-001 through LB-LB-014)
+PrologAI_2_Pseudocode_v62.txt, Part 94
+PrologAI_3_Architecture_v63.txt, PART ARCH-70
+PrologAI_4_Refinement_v117.txt, Part 94 (AC-LB-001 through AC-LB-042)
+PrologAI_5_Completion_v120.txt, Work Package 104
+PrologAI PR #189: feat(packs): PR 104 - label pack Layer 83

@@ -1,0 +1,26 @@
+Accomplishment 124: The Label Pack - Connected Component Labeling
+
+Mentova's 102nd work package is live.
+
+The label pack adds 14 lb_* predicates for connected component labeling and
+region queries: assigning unique integer labels to 4-connected components,
+returning component cell lists, counting components, measuring component sizes,
+listing cells of a specific label, finding bounding box corners, identifying
+adjacent foreground labels, replacing a label with a value, keeping only the
+largest component, removing small components, coloring each component from a
+cycling palette, merging two labels into one, and extracting one component from
+the original grid.
+
+These primitives give Mentova a complete object identity layer: once a grid is
+labeled, every object has a stable integer name, and any analysis - size,
+location, neighbors, appearance - becomes a simple predicate call.
+
+All 42 acceptance tests pass. The pack is documented in SPARC Specification
+v69 (Part 94, LB-LB-001 through LB-LB-014), Refinement v117, and tutorial
+Chapter 65.
+
+PrologAI now has 102 work packages and Mentova has 124 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
