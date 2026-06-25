@@ -1,0 +1,44 @@
+Mentova Accomplishment 135: Row and Column Permutation - The Permute Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the permute pack (Layer 94, Work
+Package 115).
+
+Many visual reasoning tasks involve rearranging the rows or columns of a grid:
+sorting them, shifting them cyclically, swapping two of them, or discovering
+which reordering maps one grid to another. The permute pack provides all of
+these operations in one place.
+
+14 predicates (pm_* prefix):
+
+• pm_permute_rows - reorder all rows by an explicit index list
+• pm_permute_cols - reorder all columns by an explicit index list
+• pm_swap_rows - exchange exactly two rows
+• pm_swap_cols - exchange exactly two columns
+• pm_cycle_rows - move the last N rows to the front (cyclic shift)
+• pm_cycle_cols - move the last N columns to the left (cyclic shift)
+• pm_find_row_perm - discover the permutation that maps Grid1 rows to Grid2 rows
+• pm_find_col_perm - discover the permutation that maps Grid1 cols to Grid2 cols
+• pm_sort_rows - sort all rows in ascending lexicographic order
+• pm_sort_cols - sort all columns in ascending lexicographic order
+• pm_insert_row - insert a complete row before a given position
+• pm_delete_row - remove the row at a given position
+• pm_insert_col - insert a column of values before a given position
+• pm_delete_col - remove the column at a given position from every row
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass.
+
+The flip pack (Layer 20) mirrors in fixed directions only. The rotate pack
+(Layer 21) turns by 90-degree increments only. The permute pack is the first
+pack to support arbitrary index permutations, cyclic shifting, permutation
+discovery, and structural row/column editing. These are complementary
+capabilities.
+
+This is Mentova accomplishment 135. PrologAI now carries 113 work packages.
+
+github.com/ai-university-aiu/PrologAI
