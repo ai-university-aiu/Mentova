@@ -1,0 +1,97 @@
+Accomplishment 86: Color Pack - Palette Reasoning and Color Manipulation
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI now includes the color pack (module color, prefix cl_), a set of
+14 predicates for palette-level reasoning and color manipulation on grids.
+The pack provides Mentova with the ability to inspect, classify, and
+transform grids at the level of color - a foundational capability for any
+visual reasoning system. The color pack is the 64th work package in
+PrologAI and Mentova's 86th accomplishment.
+
+Introduction
+
+Grid-based visual puzzles - and visual reasoning problems in general - are
+fundamentally about color. A pattern is a pattern because of which cells
+share colors. A transformation is a transformation because it changes,
+swaps, or remaps colors in a systematic way. Before any system can reason
+about visual structure, it must be able to reason about color.
+
+The color pack gives Mentova exactly that: a complete vocabulary for color
+at the palette level. Not individual cell access (that is the grid pack's
+job), but color as a first-class concept across a whole grid.
+
+Predicates
+
+The color pack exports 14 predicates organized into four groups.
+
+Palette inspection:
+
+cl_palette/2 returns the sorted list of distinct colors used in a grid.
+
+cl_count/3 counts how many cells have a specific color.
+
+cl_histogram/2 returns a list of Color-Count pairs for every palette color,
+sorted by color value.
+
+cl_same_palette/2 tests whether two grids use exactly the same set of
+colors.
+
+cl_is_mono/1 tests whether a grid contains exactly one distinct color.
+
+cl_color_count/2 returns the number of distinct colors.
+
+cl_has_color/2 tests whether a specific color appears anywhere in a grid.
+
+Dominant and rarest color:
+
+cl_dominant/2 returns the most frequently occurring color.
+
+cl_rarest/2 returns the least frequently occurring color.
+
+Color replacement and remapping:
+
+cl_replace/4 replaces every occurrence of one color with another.
+
+cl_remap/3 applies a mapping (a list of OldColor-NewColor pairs) to a grid;
+colors not in the mapping are unchanged.
+
+cl_swap/4 swaps two colors simultaneously: cells of ColorA become ColorB
+and vice versa.
+
+Color filtering:
+
+cl_isolate/4 keeps only cells of a given color and replaces all others with
+a background color.
+
+cl_remove/4 removes all cells of a given color by replacing them with a
+background color.
+
+Design
+
+The color pack is pure functional: every predicate computes a value from
+its inputs and produces no side effects. It sits in Layer 45 and depends
+only on the grid pack (Layer 34). No other pack dependency is introduced.
+
+All color operations are implemented via maplist over rows and cells, giving
+O(R * C) time complexity for single-pass operations. Palette extraction uses
+findall followed by sort, giving O(R * C * log(R * C)) for uniqueness.
+
+Acceptance
+
+33 PLUnit tests across 14 test groups all pass with no warnings.
+
+Integration criteria IC-CL-001 (no load warnings) and IC-CL-002 (all 33
+tests pass) are confirmed.
+
+Conclusion
+
+The color pack completes a key layer in the visual reasoning stack: grids
+can now be classified, compared, and transformed at the palette level.
+Together with the grid, frame, path, and symmetry packs, Mentova now has a
+rich perceptual vocabulary covering structure, connectivity, borders, and
+color. The next packs build higher-order reasoning on this foundation.
+
+END OF ACCOMPLISHMENT 86
