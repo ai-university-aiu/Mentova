@@ -1,0 +1,39 @@
+Mentova Accomplishment 140: Arithmetic Progression and Periodic Recurrence Detection - The Recur Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the recur pack (Layer 99, Work
+Package 120).
+
+Pattern continuation is fundamental to visual reasoning. A color sequence that
+counts up by two. A stripe that repeats every three cells. A difference table
+where all gaps are equal. To solve these patterns, a system must detect the type,
+extract the parameters, and produce the next terms. The recur pack does exactly
+that.
+
+14 predicates (rc_* prefix):
+
+- rc_arith - generate an N-term arithmetic sequence from Start with Step
+- rc_arith_step - extract the common difference of an arithmetic sequence
+- rc_is_arith - test if a sequence is arithmetic; return the step
+- rc_repeat - repeat a unit list N times end-to-end
+- rc_period - find the minimal repeating unit of a sequence
+- rc_is_periodic - test if a sequence is an exact integer-multiple repetition
+- rc_next_arith - compute the next N terms of an arithmetic sequence
+- rc_next_repeat - compute the next N terms of a periodic sequence
+- rc_extend_arith - extend an arithmetic sequence by N terms; return step
+- rc_extend_repeat - extend a periodic sequence by N terms; return unit
+- rc_cycle_nth - the N-th element (1-based) of an infinite cyclic repetition
+- rc_zip_with - pair-wise application of a 3-argument goal over two lists
+- rc_diff_list - consecutive element-wise differences of a numeric list
+- rc_const_diffs - test if all consecutive differences are equal; return step
+
+42 PLUnit acceptance tests pass with no choicepoint warnings.
+
+This is Mentova accomplishment 140. PrologAI now carries 118 work packages.
+
+github.com/ai-university-aiu/PrologAI
