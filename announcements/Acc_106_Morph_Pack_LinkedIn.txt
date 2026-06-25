@@ -1,0 +1,20 @@
+Accomplishment 106: Mentova gains morphological operations - expand, shrink, outline, and fill visual objects.
+
+The morph pack (mo_* predicates, Layer 65) gives Mentova 14 new shape-transformation tools:
+
+- mo_dilate4/4, mo_dilate8/4: expand a color region by one step (4 or 8 directions)
+- mo_erode4/4, mo_erode8/4: shrink a color region
+- mo_dilate4_n/5, mo_erode4_n/5: repeat N times
+- mo_open4/4: erode then dilate (removes isolated pixels and protrusions)
+- mo_close4/4: dilate then erode (fills small gaps)
+- mo_boundary4/3, mo_boundary8/3: inner contour of a color region
+- mo_ring4/4: outer one-cell frame around a color region
+- mo_fill_holes4/4: fill background cells enclosed inside a closed shape
+- mo_pad/3: add a one-cell border around the grid
+- mo_unpad/2: remove the outermost ring
+
+Together with last week's connect pack (object detection), the morph pack completes the shape reasoning layer: Mentova can now find objects, extract their structure, and transform their shape.
+
+This is Mentova's 106th documented accomplishment and PrologAI's 84th work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
