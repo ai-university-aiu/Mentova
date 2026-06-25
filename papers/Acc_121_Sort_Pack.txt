@@ -1,0 +1,95 @@
+Accomplishment 121: Sorting, Ranking, and Ordering - The Sort Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 99th work package: the sort pack (so_* predicate family, Layer 80). This pack provides 14 predicates for sorting rows and columns by value frequency, computing row and column sums and counts, finding extremal rows and columns, and ranking cell values within a grid.
+
+Introduction
+
+Visual reasoning frequently requires ordering. A task might require: arrange rows so the densest comes first; find which column has the most of a given color; determine where a cell's value ranks among all values in the grid. These ordering operations are distinct from value substitution (remap pack) and boolean combination (logic pack) - they require comparing aggregate properties of rows and columns.
+
+The sort pack gives Mentova the ability to:
+
+  Compute row and column sums and value counts
+  Sort rows or columns ascending or descending by value frequency
+  Identify the row or column with the most or fewest occurrences of a value
+  List all cell values in sorted order
+  Determine the rank of any cell value among distinct grid values
+
+Predicates
+
+The sort pack exports 14 predicates under the so_* prefix.
+
+Aggregation:
+so_row_sums/2     per-row integer sums
+so_col_sums/2     per-column integer sums
+so_row_count/3    count of a specific value per row
+so_col_count/3    count of a specific value per column
+
+Row sorting:
+so_sort_rows_asc/3   sort rows ascending by count of a value
+so_sort_rows_desc/3  sort rows descending by count of a value
+
+Column sorting:
+so_sort_cols_asc/3   sort columns ascending by count of a value
+so_sort_cols_desc/3  sort columns descending by count of a value
+
+Extrema:
+so_max_row/3     row index with highest count of a value
+so_min_row/3     row index with lowest count of a value
+so_max_col/3     column index with highest count of a value
+so_min_col/3     column index with lowest count of a value
+
+Ranking:
+so_sorted_vals/2  all cell values sorted ascending (duplicates preserved)
+so_cell_rank/4    1-based rank of a cell value among distinct grid values
+
+Implementation
+
+so_sort_rows_asc uses msort with Count-RowIndex keys: msort is stable and
+sorts ascending by the first element of the key. Stable sorting ensures that
+rows with the same count preserve their original relative order.
+
+so_sort_rows_desc uses negated counts as keys: NegCount-RowIndex where
+NegCount = -Count. Rows with more Val cells have more negative NegCount and
+sort first under ascending msort. This is more correct than reversing the
+ascending result, which would reverse tie-breaking.
+
+so_sort_cols_asc and so_sort_cols_desc use the pattern:
+transpose, sort rows, transpose back. This delegates column sorting to the
+row-sorting predicates, avoiding duplicate implementation.
+
+so_col_sums and so_col_count similarly transpose and apply the row predicates.
+
+so_cell_rank sorts all cell values to get the distinct palette, then uses
+nth1/3 to find the 1-based position of the cell value. A cut commits to the
+first solution and prevents choicepoint accumulation.
+
+All 42 PLUnit acceptance tests pass (AC-SO-001 through AC-SO-042).
+
+Significance
+
+The sort pack completes the ordering layer. With the logic pack (boolean
+operations), remap pack (value substitution), compare pack (structural
+comparison), and now the sort pack (ordering), Mentova can reason about:
+
+  What is the most frequent color in each row? (so_row_count + sort)
+  Which row has the densest content? (so_max_row)
+  Arrange the grid so rows go from empty to full? (so_sort_rows_asc)
+  What rank does this cell have? (so_cell_rank)
+
+These ordering operations are directly applicable to visual tasks that require
+structured comparison of spatial arrangements.
+
+References
+
+PrologAI_1_Specification_v66.txt, Part 91 (SO-SO-001 through SO-SO-014)
+PrologAI_2_Pseudocode_v59.txt, Part 91
+PrologAI_3_Architecture_v60.txt, PART ARCH-67
+PrologAI_4_Refinement_v114.txt, Part 91 (AC-SO-001 through AC-SO-042)
+PrologAI_5_Completion_v117.txt, Work Package 101
+PrologAI PR #186: feat(packs): PR 101 - sort pack Layer 80
