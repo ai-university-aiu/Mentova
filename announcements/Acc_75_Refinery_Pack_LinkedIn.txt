@@ -1,0 +1,49 @@
+ACCOMPLISHMENT: Acc_75 - Mentova Now Critiques and Improves Its Own Outputs
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+PrologAI can now evaluate whether its own outputs are good enough, identify exactly what is wrong, drive structured improvement until quality criteria are satisfied, and record lessons from past failures.
+
+This is Acc_75: the refinery pack.
+
+The insight behind the refinery pack is straightforward. The first answer is not always the best answer. A system that can only produce one candidate per query has no recourse when that candidate is wrong or incomplete. A system that can score its own outputs, receive precise feedback on what failed, and improve until a quality bar is met is qualitatively different.
+
+The refinery pack (PR 55) adds eight predicates:
+
+    rn_critique/4       Examine an output against named criteria; return a list of failures.
+    rn_score/3          Score an output as a float in [0.0, 1.0] (fraction of criteria passing).
+    rn_improve/5        Apply one round of improvement using critique feedback; repeat up to MaxIter.
+    rn_optimize/5       Full evaluator-optimizer loop: generate, evaluate, improve, stop at quality bar.
+    rn_explore_paths/4  Explore N reasoning paths, score each, return ranked results.
+    rn_learn/3          Store a lesson from a failure (problem type, failure pattern, lesson).
+    rn_recall/2         Retrieve all lessons for a given problem type.
+    rn_forget/1         Clear all lessons for a given problem type.
+
+Criteria are named Prolog terms: criterion(Name, TestGoal). The critique is a named list of exactly what failed: found_issue(Name, fail). No black boxes. Glass-box quality assessment.
+
+The demo shows five things working live in Mentova:
+
+1. rn_critique/4 returns [] for [a,b,c] (both criteria pass) and [found_issue(non_empty,fail)] for [] (non_empty fails).
+2. rn_score/3 returns 1.0 for [a,b], 0.5 for [a,b,c,d,e,f] (only short fails), 0.0 for [] (both fail).
+3. rn_improve/5 transforms [] (failing) into [improved_item] (passing) in one round.
+4. rn_optimize/5 stops on the first iteration when the generator immediately scores above the quality bar.
+5. rn_learn/3 stores a lesson, rn_recall/2 retrieves it, rn_forget/1 clears it, second recall returns [].
+
+All five acceptance criteria pass.
+
+This completes the three-pack silicon-and-code substrate layer:
+
+Acc_73 (ephemera): write code, run it, observe the output.
+Acc_74 (agency): pursue a goal over bounded steps with a formal ORAO loop.
+Acc_75 (refinery): evaluate whether the output is good enough; improve if not; learn from failures.
+
+Together the three packs give PrologAI the ability to write code, run it, pursue goals with it, and ensure that what it produces meets stated quality criteria before presenting it. This is the full capability stack for self-improving, goal-directed, quality-gated symbolic reasoning on the PrologAI platform.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+
+This is Acc_75.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+ORCID: 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

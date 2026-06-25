@@ -1,0 +1,167 @@
+THE REFINERY PACK: MENTOVA CRITIQUES AND IMPROVES ITS OWN OUTPUTS
+MENTOVA ACC_75: EVALUATOR-OPTIMIZER AND METACOGNITIVE QUALITY LAYER ON THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_75
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-24
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Acc_75 adds the refinery pack to the PrologAI platform and demonstrates its use through Mentova. The refinery pack gives PrologAI the ability to evaluate its own outputs against a declarative list of quality criteria, score them on a 0.0-to-1.0 scale, apply structured improvement feedback through critique-and-improve loops, run full evaluator-optimizer cycles that iterate until a quality bar is met, explore multiple reasoning paths and rank them by score, and maintain a persistent lesson database from past failures. The pack is implemented as work package PR 55 at Layer 34 of the PrologAI cognitive architecture and exports eight predicates: rn_critique/4, rn_score/3, rn_improve/5, rn_optimize/5, rn_explore_paths/4, rn_learn/3, rn_recall/2, and rn_forget/1. All five Mentova acceptance criteria pass.
+
+
+INTRODUCTION
+
+The first answer is often not the best answer.
+
+This is as true for symbolic reasoning systems as it is for human problem-solving. A system that can only produce one candidate per query has no recourse when that candidate is wrong, incomplete, or suboptimal. A system that can evaluate its own outputs, identify what is wrong, and drive improvement until the output meets a stated quality bar is qualitatively more capable - even when it produces the same first answer.
+
+The evaluator-optimizer pattern (Anthropic Agentic AI Design Patterns, Part 5.5) makes this observation precise: split the work into two roles. One role generates candidates. Another role evaluates them. The evaluator feeds its critique back to the generator, which produces a better candidate. The loop continues until the evaluator is satisfied or a budget is exhausted.
+
+The refinery pack implements this pattern as the quality layer of PrologAI. It is the metacognitive infrastructure: the part of the platform that stands outside the current answer and asks whether it is good enough.
+
+The pack takes a silicon-and-code substrate approach: instead of deriving metacognitive self-improvement from a neuroscience model of reflection, it implements the proven software engineering pattern directly. The pattern is: declare criteria, run them against the output, score the output, generate feedback, drive improvement, record lessons. This is what code review, continuous integration, and test-driven development do for software quality. The refinery pack does the same thing for PrologAI's outputs.
+
+
+DESIGN
+
+The refinery pack is organized around four functional areas.
+
+Area 1 - Quality assessment (rn_critique/4, rn_score/3).
+
+A criterion is a term criterion(Name, TestGoal) where TestGoal is called with the output under examination. The criterion passes if TestGoal succeeds and fails if it raises an exception or fails within a time budget (MaxSteps seconds).
+
+rn_critique/4 runs all criteria against an output and returns a critique: a list of found_issue(Name, fail) terms for each criterion that fails. An empty critique means the output passes all criteria. A non-empty critique is a precise, named list of exactly what is wrong.
+
+rn_score/3 computes the fraction of criteria that pass as a float in the range 0.0 to 1.0. A score of 1.0 means all criteria pass. A score of 0.0 means none pass. Partial scores indicate partial compliance.
+
+Area 2 - Improvement loops (rn_improve/5).
+
+rn_improve/5 takes an output, a criteria list, an ImproverGoal, and a MaxIter budget. It critiques the output; if the critique is empty, it returns the output unchanged. If the critique is non-empty, it calls ImproverGoal with the current output and critique to produce a better candidate, then re-critiques. It continues until the critique is empty or MaxIter rounds are exhausted. The ImproverGoal is called as call(ImproverGoal, Output, Critique, Improved).
+
+Area 3 - Evaluator-optimizer and path exploration (rn_optimize/5, rn_explore_paths/4).
+
+rn_optimize/5 runs a full evaluator-optimizer loop. The caller supplies a GeneratorGoal (called to produce a candidate) and an EvaluatorGoal (called to score it). The loop continues until the score meets or exceeds QualityBar, or MaxIter iterations are exhausted. The best-scoring candidate is returned. Every attempt is logged to rn_attempt_log/4 for post-hoc inspection.
+
+rn_explore_paths/4 implements multi-path reasoning: the Tree of Thoughts pattern. The caller supplies an ExplorerGoal that is called with a problem and a path ID (1 to N). The pack explores all N paths, scores each, and returns them as a list of ranked_path(PathId, Score, Output) terms sorted by score descending. The caller can then choose the best path, combine insights from multiple paths, or identify where different paths diverge.
+
+Area 4 - Lesson database (rn_learn/3, rn_recall/2, rn_forget/1).
+
+The lesson database is a small persistent knowledge base. rn_learn/3 stores a lesson: a problem type, the failure pattern that triggered the lesson, and the lesson itself. rn_recall/2 retrieves all lessons for a given problem type as a list of lesson(Pattern, Lesson) terms. rn_forget/1 clears all lessons for a given problem type. This facility allows PrologAI to accumulate experience across optimization runs: if a particular generator strategy fails, a lesson is stored so that the next optimization run on the same problem type can start with that knowledge.
+
+
+IMPLEMENTATION
+
+pack refinery is implemented in packs/refinery/prolog/refinery.pl (PrologAI PR 55, 311 lines with ERC comments on every physical line). The pack imports aggregate_all/3 from library(aggregate) and list predicates from library(lists). It does not depend on any other PrologAI pack, though it can be combined with the ephemera pack (PR 53) for time-bounded criterion evaluation and with the agency pack (PR 54) for quality-gated agentic loops.
+
+Architecture placement: Layer 34 (evaluator-optimizer and quality layer), PART ARCH-21 of the PrologAI Architecture document.
+
+SPARC volumes updated: Specification v18 to v19 (Part 45 added), Pseudocode v11 to v12, Architecture v12 to v13 (ARCH-21 added), Refinement v66 to v67 (AC-RN-001 through AC-RN-010 added), Completion v69 to v70.
+
+Criteria are declared using YALL lambda notation ([O]>>(Goal)) for module portability. This is required because criteria are passed as terms and called across module boundaries; plain atom goals would be resolved in the refinery module where the predicate is not defined.
+
+
+DEMONSTRATION
+
+The Mentova demo (demos/refinery_demo.pl) exercises five acceptance criteria.
+
+AC-ACC75-001: rn_critique/4 is called with a criteria list containing two criteria: non_empty (the output must not be an empty list) and short (the output must have fewer than five elements). Critiquing [a, b, c] returns an empty critique because both criteria pass. Critiquing [] returns a critique containing found_issue(non_empty, fail) because the empty list fails the non_empty criterion. The demo verifies both directions.
+
+AC-ACC75-002: rn_score/3 is called on three different outputs. [a, b] passes both criteria and scores 1.0. [a, b, c, d, e, f] passes non_empty but fails short (six elements) and scores 0.5. [] fails both non_empty and has_x (the output must contain the atom x) and scores 0.0. All three expected scores are confirmed.
+
+AC-ACC75-003: rn_improve/5 is called with an empty list (which fails the non_empty criterion) and an ImproverGoal that replaces any output with [improved_item]. After one round, rn_improve/5 returns [improved_item]. The improved output passes the non_empty criterion. The demo confirms the improved output is non-empty.
+
+AC-ACC75-004: rn_optimize/5 is called with a generator that always produces the atom optimized_result and an evaluator that always assigns score 1.0. The quality bar is 0.9. Because the generator's first candidate already exceeds the quality bar, the loop stops immediately and returns optimized_result. The demo confirms the returned best equals optimized_result.
+
+AC-ACC75-005: rn_learn/3 stores a lesson with problem type list_sorting, failure pattern output_was_empty, and lesson use_non_empty_generator. rn_recall/2 retrieves lessons for list_sorting and confirms the entry lesson(output_was_empty, use_non_empty_generator) is present. rn_forget/1 clears all lessons for list_sorting. A second call to rn_recall/2 confirms the lesson list is now empty.
+
+
+RESULTS
+
+All five acceptance criteria pass.
+
+Output:
+
+    === Mentova Acc_75: Refinery Pack Demonstration ===
+
+    AC-ACC75-001: PASS  empty critique for [a,b,c]; non_empty issue for []
+    AC-ACC75-002: PASS  scores: 1.0, 0.5, 0.0 as expected
+    AC-ACC75-003: PASS  improved [] to [improved_item]; passes all criteria
+    AC-ACC75-004: PASS  rn_optimize stopped at bar; best = optimized_result
+    AC-ACC75-005: PASS  lesson stored, recalled, and cleared correctly
+
+    === All five criteria pass. Acc_75 complete. ===
+
+
+SIGNIFICANCE
+
+The refinery pack completes the three-pack silicon-and-code substrate layer (PRs 53, 54, 55) and together these three packs give PrologAI the ability to reason, act, and improve.
+
+Before Acc_75, PrologAI could write code and run it (Acc_73) and pursue goals over bounded steps (Acc_74). But there was no facility for the platform to evaluate whether its own outputs were good enough, or to drive systematic improvement when they were not.
+
+After Acc_75, PrologAI has a complete quality loop. The system can declare what "good enough" means (criteria), measure how close it is (score), identify precisely what is wrong (critique), apply structured improvement until the criteria are satisfied (improve), run full generator-evaluator cycles with a quality gate (optimize), explore multiple approaches and pick the best (explore_paths), and accumulate lessons from failures so future runs start better informed (learn/recall/forget).
+
+This matters for three reasons beyond the previous two packs.
+
+First, the refinery pack makes quality declarative and inspectable. Criteria are named Prolog terms stored as data. A human reviewer can read the criteria list and immediately understand what standard the output is being held to. The critique is a named list of exactly what failed. No opacity, no black-box quality scores. Glass-box quality assessment.
+
+Second, the refinery pack makes improvement systematic rather than ad hoc. Without it, improving a bad output requires human inspection and manual intervention. With it, improvement is a predicate call: give the output, the criteria, and an improver strategy, and get back a better output. The improvement process is auditable through the attempt log.
+
+Third, the refinery pack enables metacognitive learning. The lesson database is the mechanism by which experience accumulates. A system that stores nothing from past failures must rediscover the same failure modes in every new session. A system with a lesson database brings prior knowledge to each new problem. This is the foundation for the kind of progressive improvement that distinguishes expert systems from novice ones.
+
+The three packs together - ephemera, agency, refinery - form a coherent capability stack. Ephemera provides the execution substrate (write code, run it, observe). Agency provides the goal-pursuit loop (pursue a goal over bounded steps, detect failure modes, escalate to human oversight). Refinery provides the quality gate (evaluate whether the output is good enough, drive improvement, learn from failures). A system built on all three can pursue a goal, use code execution as a tool, and ensure that what it produces meets stated quality criteria before presenting it.
+
+This is the full capability stack for self-improving, goal-directed, quality-gated symbolic reasoning on the PrologAI platform.
+
+
+ACCEPTANCE CRITERIA
+
+AC-ACC75-001: rn_critique/4 returns [] for a passing output and [found_issue(non_empty, fail)] for an empty output. PASS.
+
+AC-ACC75-002: rn_score/3 returns 1.0 for all-pass, 0.5 for one-of-two pass, and 0.0 for all-fail. PASS.
+
+AC-ACC75-003: rn_improve/5 transforms a failing empty list into [improved_item] that passes the non_empty criterion. PASS.
+
+AC-ACC75-004: rn_optimize/5 stops on the first iteration when the generator immediately satisfies the quality bar; returns the expected candidate. PASS.
+
+AC-ACC75-005: rn_learn/3 stores a lesson; rn_recall/2 retrieves it; rn_forget/1 clears it; second recall returns []. PASS.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/PrologAI.git
+    git clone https://github.com/ai-university-aiu/Mentova.git
+
+    cd Mentova
+    swipl \
+      -p library=/path/to/PrologAI/packs/ephemera/prolog \
+      -p library=/path/to/PrologAI/packs/agency/prolog \
+      -p library=/path/to/PrologAI/packs/refinery/prolog \
+      -l demos/refinery_demo.pl \
+      -g run_refinery_demo \
+      -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+PrologAI PR 55: pack refinery (Layer 34). https://github.com/ai-university-aiu/PrologAI
+
+Anthropic. Agentic AI Design Patterns, Part 5.5 (Evaluator-Optimizer Pattern). 2024-2025.
+
+Anthropic. Agentic AI Principles, Part 3.3 (Self-correction and Reflection). 2024-2025.
+
+Mentova Accomplishment Records:
+Acc_73 - Ephemera Pack: Mentova writes and executes short-lived programs.
+Acc_74 - Agency Pack: Mentova pursues goals with a formal agentic loop.
+
+Yao, S., Yu, D., Zhao, J., Shafran, I., Griffiths, T., Cao, Y., and Narasimhan, K. Tree of Thoughts: Deliberate Problem Solving with Large Language Models. Advances in Neural Information Processing Systems 36, 2023. (Inspiration for rn_explore_paths/4.)
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
