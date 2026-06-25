@@ -1,0 +1,43 @@
+Accomplishment 96: Mentova can now paint what it reasons about.
+
+The new fill pack gives PrologAI fourteen predicates for placing colors
+into grids with precision.
+
+Fill a region. Fill a rectangle. Fill a row or column. Fill specific cells.
+Fill the grid border. Fill only the boundary of a region. Fill only the interior.
+Create a solid-color grid from scratch. Create a checkerboard from scratch.
+Draw a horizontal line. Draw a vertical line. Fill the main diagonal.
+Overlay a subgrid with transparency.
+
+Every operation is deterministic. Every operation is exact.
+
+Here is a concrete example.
+
+A grid has a region - a connected set of cells forming an irregular shape.
+The rule says: color the boundary of the region red; keep the interior blue.
+
+fl_outline_region(Grid, Region, red, G1),
+fl_fill_interior(G1, Region, blue, Result).
+
+Two predicates. Two lines. The output is produced.
+
+Here is another.
+
+A rule says: overlay this 3x3 stamp pattern at position (5, 7) in the base
+grid. Treat color 0 as transparent - only paint the non-zero cells.
+
+fl_stamp(BaseGrid, StampPattern, 5, 7, 0, Result).
+
+One predicate. The base grid is unchanged where the stamp is zero.
+Only the non-zero stamp cells are applied.
+
+This is what it means to reason about visual construction: not to describe
+what should happen, but to execute it deterministically, step by step,
+with glass-box predicates that can be read, audited, and understood.
+
+The fill pack is Layer 55, work package 76 in the PrologAI platform.
+
+46 tests. All pass.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
