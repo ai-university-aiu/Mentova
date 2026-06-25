@@ -1,0 +1,35 @@
+Mentova Accomplishment 148: Convex Hull and Polygon Geometry
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI now computes convex hulls.
+
+Work Package 128 - the hull pack - gives the symbolic substrate its first
+polygon geometry layer: 14 deterministic predicates, all integer arithmetic,
+no floating-point.
+
+The core predicate is hu_convex_hull: given a set of grid cells, it returns
+the minimal convex polygon enclosing them - computed with Andrew's monotone
+chain algorithm adapted for screen coordinates where row increases downward.
+
+From that foundation, 13 derived predicates reason about the polygon:
+
+- hu_is_convex: a cell set is convex if it equals every cell inside its hull
+- hu_hull_area2: twice the polygon area via the integer shoelace formula
+- hu_in_hull: point-in-polygon test with degenerate case handling
+- hu_fill_hull: paint the hull interior with a color
+- hu_concavities: find the background cells inside the hull but absent from the shape - the dents
+- hu_diameter: the farthest pair of cells by squared Euclidean distance
+- hu_is_rect: test for a rectangular hull at any angle (dot product = 0 for each corner)
+- hu_hull_contains: every cell in a sub-set lies inside the hull of another set
+- hu_centroid, hu_aspect, hu_hull_size, hu_hull_perim2: shape measurements
+
+42 PLUnit tests pass. 0 floating-point operations.
+
+PrologAI: 126 work packages. Mentova: 148 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #ConvexHull #GeometricReasoning #SWIProlog #AGI
