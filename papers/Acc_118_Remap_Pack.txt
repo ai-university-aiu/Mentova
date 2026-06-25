@@ -1,0 +1,108 @@
+Accomplishment 118: Color Remapping and Palette Manipulation - The Remap Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 96th work package: the remap pack (rm_* predicate family, Layer 77). This pack provides 14 predicates for color remapping, palette manipulation, and grid recoloring. It answers the question: once a rule has been discovered, how does a cognitive system apply a learned color transformation to a grid?
+
+Introduction
+
+Pattern recognition in visual reasoning requires two complementary capabilities. The first is discovery: find the rule that maps inputs to outputs. The second is application: apply that rule to a new input. The remap pack provides the application layer.
+
+Where the induct pack discovers regularities and the seek pack finds where patterns occur, the remap pack transforms the values in a grid according to a learned mapping. It is the bridge between rule discovery and rule application.
+
+The remap pack gives Mentova the ability to:
+
+  Replace, swap, or map colors according to a learned substitution
+  Build, invert, and compose color maps
+  Normalize palette values to canonical form
+  Shift and clamp numeric values
+  Binarize grids and apply conditional recoloring
+  Extract and manipulate palettes
+
+Predicates
+
+The remap pack exports 14 predicates under the rm_* prefix.
+
+Single-value operations:
+rm_replace/4      replace every occurrence of one value with another
+rm_swap/4         swap two values throughout a grid
+
+Map-based recoloring:
+rm_apply_map/3    apply a substitution map (identity for unmapped cells)
+rm_apply_map_to/4 apply a map only to cells matching a specific value
+rm_invert_map/2   invert a map by swapping keys and values
+rm_compose_maps/3 compose two maps: apply first then second
+
+Palette operations:
+rm_normalize/2    normalize distinct values to 1-based consecutive integers
+rm_palette/2      extract the sorted palette of distinct values
+rm_reindex/3      reindex a grid using a caller-supplied palette
+
+Numeric operations:
+rm_shift/3        add an integer offset to every cell value
+rm_clamp/4        clamp every cell value to a range
+
+Conditional and binary operations:
+rm_conditional/4  recolor cells satisfying a predicate goal
+rm_binarize/4     binarize to foreground/background
+rm_remap_bg/4     replace the background color with a new value
+
+Implementation
+
+rm_replace and rm_swap use maplist-based row and cell iteration. Each cell is
+compared with == (term unification) rather than =:= to support non-numeric
+values such as atoms.
+
+rm_apply_map uses member/2 lookup in the map list. The first matching pair
+wins; unmapped cells pass through unchanged. rm_apply_map_to adds a guard:
+the map is only consulted for cells that match the target value.
+
+rm_invert_map uses a DCG-style lambda: maplist([K-V, V-K]>>true, Map, Inverted).
+This swaps each pair without explicitly naming intermediate variables.
+
+rm_compose_maps builds the composed map by iterating Map1 entries and looking
+up each value V1 in Map2. If V1 is absent from Map2, the identity (V2 = V1)
+is used, preserving Map1's output for unmapped destinations.
+
+rm_normalize collects all cell values with findall, sorts them to get the
+distinct palette, then builds a 1-based index map with rm_build_index_map_.
+The smallest value maps to 1, the next to 2, and so on.
+
+rm_conditional declares :- meta_predicate rm_conditional(1, +, +, -) because
+the Goal argument is called at runtime via call/2. SWI-Prolog requires this
+declaration for module-exported meta-predicates.
+
+rm_remap_bg delegates to rm_replace, since remapping the background is
+identical to replacing one value with another throughout the grid.
+
+All 38 PLUnit acceptance tests pass (AC-RM-001 through AC-RM-038).
+
+Significance
+
+The remap pack completes the value-transformation layer. Together with the
+seek pack (where does a pattern occur?) and the scene and compare packs
+(what objects and relations exist?), Mentova can now close the loop from
+observation to transformation:
+
+  Observe structure with scene, color, count, fill, and pattern packs
+  Search for patterns with seek and compare packs
+  Transform values with remap pack
+  Verify outputs with refinement predicates
+
+This positions Mentova to learn and apply color transformation rules in any
+visual domain - not only for pattern recognition benchmarks, but for any
+task that involves discovering and applying a mapping from input colors to
+output colors.
+
+References
+
+PrologAI_1_Specification_v63.txt, Part 88 (RM-RM-001 through RM-RM-014)
+PrologAI_2_Pseudocode_v56.txt, Part 88
+PrologAI_3_Architecture_v57.txt, PART ARCH-64
+PrologAI_4_Refinement_v111.txt, Part 88 (AC-RM-001 through AC-RM-038)
+PrologAI_5_Completion_v114.txt, Work Package 98
+PrologAI PR #183: feat(packs): PR 98 - remap pack Layer 77

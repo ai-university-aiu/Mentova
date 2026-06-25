@@ -1,0 +1,23 @@
+Accomplishment 118: The Remap Pack - Color Remapping and Palette Manipulation
+
+Mentova's 96th work package is live.
+
+The remap pack adds 14 rm_* predicates for value transformation in grids:
+replacing, swapping, and mapping colors according to learned substitutions;
+normalizing palettes; shifting and clamping numeric values; and binarizing
+grids to foreground and background.
+
+This closes the loop from rule discovery to rule application. Where the seek
+pack answers "where does this pattern occur?" and the induct pack answers
+"what rule applies here?", the remap pack answers "how do I apply the rule
+to produce the output?"
+
+All 38 acceptance tests pass. The pack is documented in SPARC Specification
+v63 (Part 88, RM-RM-001 through RM-RM-014), Refinement v111, and the
+tutorial Chapter 59.
+
+PrologAI now has 96 work packages and Mentova has 118 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
