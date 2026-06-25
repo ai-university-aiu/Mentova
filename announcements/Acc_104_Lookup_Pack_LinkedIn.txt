@@ -1,0 +1,21 @@
+Accomplishment 104: Mentova gains association list operations and grid index maps.
+
+The lookup pack (lk_* predicates, Layer 63) gives Mentova 14 new data tools:
+
+- lk_get/3: key lookup in a Key-Value association list
+- lk_put/4: add or replace a key-value pair
+- lk_keys/2, lk_values/2: extract all keys or values
+- lk_has_key/2: deterministic membership test
+- lk_delete/3: remove a key-value pair
+- lk_map_values/3: transform all values with a predicate
+- lk_from_pairs/2: build a map from Key-Value pairs
+- lk_grid_row/3, lk_grid_col/3, lk_grid_cell/4: named grid access
+- lk_color_positions/3: Color to positions index map
+- lk_position_color/3: position to Color index map
+- lk_invert/2: swap all Key-Value pairs
+
+The color index maps - lk_color_positions and lk_position_color - are the bridge between a raw grid and the symbolic structures higher-level reasoning packs need. Every pack that reasons about which cells share a property uses these maps.
+
+This is Mentova's 104th documented accomplishment and PrologAI's 82nd work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

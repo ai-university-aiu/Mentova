@@ -1,0 +1,69 @@
+Accomplishment 104: Association List Operations and Grid Index Maps - The Lookup Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 82nd work package: the lookup pack (lk_* predicate family, Layer 63). This pack provides 14 predicates for association list operations and grid index map construction. Association lists are Key-Value pair lists, the natural data structure for symbolic maps in Prolog. The lookup pack gives higher-level reasoning packs a named, testable, composable API for map operations and grid random-access lookups, replacing ad-hoc member/2 searches and nth0 chains.
+
+Introduction
+
+Grid reasoning produces many intermediate data structures that need to be stored, retrieved, and transformed. A system that finds a connected component needs to store which cells it contains. A system comparing two grids needs to record what changed where. A system analyzing color relationships needs to map from colors to positions and back. All of these require associative lookup: given a key, find a value.
+
+Prolog's natural associative structure is the Key-Value pair list: a list of terms of the form Key-Value (using the infix minus functor). The lookup pack makes this structure first-class in PrologAI by naming, testing, and documenting a complete set of operations over it.
+
+The pack also adds grid-level index maps: lk_color_positions builds a Color-to-positions map for all non-background cells, and lk_position_color builds the reverse map. These index maps are the bridge between a raw grid and the symbolic structures that higher-level packs reason about.
+
+Predicates
+
+The lookup pack exports 14 predicates under the lk_* prefix.
+
+Association list operations:
+lk_get/3 finds the first value for a key by linear search with a cut.
+lk_put/4 adds a new key-value pair or replaces the value for an existing key.
+lk_keys/2 extracts all keys from a map, preserving order.
+lk_values/2 extracts all values from a map, preserving order.
+lk_has_key/2 tests key membership deterministically.
+lk_delete/3 removes the first occurrence of a key.
+lk_map_values/3 applies a 2-arity predicate to all values, keeping keys. Requires a meta_predicate declaration so that predicates from other modules are called with correct module qualification.
+lk_from_pairs/2 is an identity predicate that documents the intent of treating a list of Key-Value pairs as a named map.
+lk_invert/2 swaps all Key-Value pairs to Value-Key.
+
+Grid access:
+lk_grid_row/3 returns a named row from a grid.
+lk_grid_col/3 returns a named column from a grid.
+lk_grid_cell/4 returns the value at a (row, column) position.
+
+Grid index maps:
+lk_color_positions/3 collects all non-background cells and groups them by color, producing a Color->[r(R,C)...] map.
+lk_position_color/3 collects all non-background cells as a r(R,C)->Color map.
+
+Implementation
+
+All association list operations use recursive list traversal. Deterministic cases use cuts (lk_get finds the first match; lk_put and lk_delete short-circuit on the matching head). lk_map_values uses maplist/3 with a helper predicate and requires a :- meta_predicate declaration to ensure that predicates passed as arguments from outside the lookup module are called with the correct module qualifier - a standard SWI-Prolog pattern for higher-order predicates.
+
+lk_color_positions and lk_position_color both use findall/3 to collect (Color, r(R,C)) or (r(R,C), Color) pairs by iterating over all row and column indices via numlist/3 and member/2. lk_color_positions then groups pairs by color using lk_group_by_key_, which calls sort/2 for unique keys and findall for value lists.
+
+All 30 PLUnit acceptance tests pass with no warnings.
+
+Significance
+
+The lookup pack closes a gap in PrologAI's data layer. With this pack, Mentova can:
+
+- Store and retrieve any symbolic association by key
+- Build Color-to-positions and Position-to-Color index maps from any grid
+- Transform value lists (e.g., scale positions, remap colors) functionally
+- Access any row, column, or cell in a grid by named predicate
+
+These operations are building blocks for the remaining ARC-AGI-2 reasoning packs. The color-to-positions index in particular is used by almost every pack that reasons about which cells share a property.
+
+References
+
+PrologAI_1_Specification_v49.txt, Part 74 (LK-LK-001 through LK-LK-014)
+PrologAI_2_Pseudocode_v42.txt, Part 74
+PrologAI_3_Architecture_v43.txt, PART ARCH-50
+PrologAI_4_Refinement_v97.txt, Part 74 (AC-LK-001 through AC-LK-030)
+PrologAI_5_Completion_v100.txt, Work Package 84
+PrologAI PR #169: feat(packs): PR 84 - lookup pack
