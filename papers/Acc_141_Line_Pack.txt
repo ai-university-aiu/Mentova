@@ -1,0 +1,248 @@
+Mentova Accomplishment 141: Straight-Line Segment Detection and Drawing - The Line Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 121: the line pack, a Layer 100 symbolic reasoning
+module providing 14 predicates for straight-line segment operations in 2D
+integer-coordinate grids. The pack enumerates cells on horizontal, vertical, and
+45-degree diagonal segments; draws those segments into grids; tests whether two
+cells share a row, column, diagonal, or anti-diagonal; tests whether three cells
+are collinear; extracts segment endpoints; queries the interior gap between two
+aligned points; and classifies any segment by its orientation. All predicates are
+deterministic. This accomplishment is verified by 42 PLUnit acceptance tests, all
+passing with no choicepoint warnings.
+
+
+1. Motivation
+
+Visual reasoning tasks frequently require working with straight lines. A rule may
+draw a line from a specific point to the edge of the grid. A pattern may be
+defined by the diagonal connecting two corners. An object may be described by the
+cells along its horizontal span. A symmetry test may check whether a set of
+points is collinear. To handle these cases precisely and symbolically, PrologAI
+needs a dedicated vocabulary for straight-line geometry on integer grids.
+
+The scene pack (Layer 37) provides spatial relations between objects. The neighbor
+pack (Layer 66) handles adjacency. The diagonal pack (Layer 98) extracts diagonal
+cell values. The line pack adds the missing capability: explicit enumeration and
+drawing of arbitrary straight segments, and tests of linear alignment between
+cells.
+
+
+2. Predicate Inventory (14 predicates, li_* prefix)
+
+2.1 Segment cell enumeration
+
+li_hline(+R, +C1, +C2, -Cells)
+
+List all R-C cells on the horizontal segment at row R from column C1 to column
+C2. Cells are ordered from min(C1,C2) to max(C1,C2). Both endpoints are included.
+
+li_vline(+C, +R1, +R2, -Cells)
+
+List all R-C cells on the vertical segment at column C from row R1 to row R2.
+Cells are ordered from min(R1,R2) to max(R1,R2). Both endpoints are included.
+
+li_diag_seg(+R1, +C1, +R2, +C2, -Cells)
+
+List cells on the 45-degree diagonal from (R1,C1) to (R2,C2). Requires
+abs(R2-R1) = abs(C2-C1). Cells are in walk order from start to end.
+
+Examples:
+
+li_hline(1, 0, 3, Cells).
+% Cells = [1-0, 1-1, 1-2, 1-3]
+
+li_vline(2, 0, 3, Cells).
+% Cells = [0-2, 1-2, 2-2, 3-2]
+
+li_diag_seg(0, 0, 2, 2, Cells).
+% Cells = [0-0, 1-1, 2-2]
+
+li_diag_seg(2, 0, 0, 2, Cells).
+% Cells = [2-0, 1-1, 0-2]
+
+
+2.2 Grid drawing
+
+li_draw_h(+Grid, +R, +C1, +C2, +Color, -Result)
+
+Return Grid with all cells on the horizontal segment from (R,C1) to (R,C2)
+set to Color.
+
+li_draw_v(+Grid, +C, +R1, +R2, +Color, -Result)
+
+Return Grid with all cells on the vertical segment from (R1,C) to (R2,C)
+set to Color.
+
+li_draw_diag(+Grid, +R1, +C1, +R2, +C2, +Color, -Result)
+
+Return Grid with all cells on the 45-degree diagonal from (R1,C1) to (R2,C2)
+set to Color.
+
+Examples:
+
+li_draw_h([[0,0,0],[0,0,0],[0,0,0]], 1, 0, 2, 5, Result).
+% Result = [[0,0,0],[5,5,5],[0,0,0]]
+
+li_draw_diag([[0,0,0],[0,0,0],[0,0,0]], 0, 0, 2, 2, 1, Result).
+% Result = [[1,0,0],[0,1,0],[0,0,1]]
+
+
+2.3 Alignment tests
+
+li_same_row(+R1, +C1, +R2, +C2)
+
+Succeed if R1 =:= R2.
+
+li_same_col(+R1, +C1, +R2, +C2)
+
+Succeed if C1 =:= C2.
+
+li_same_diag(+R1, +C1, +R2, +C2)
+
+Succeed if C1 - R1 =:= C2 - R2. Both cells lie on the same diagonal.
+
+li_same_anti(+R1, +C1, +R2, +C2)
+
+Succeed if R1 + C1 =:= R2 + C2. Both cells lie on the same anti-diagonal.
+
+Examples:
+
+li_same_diag(0, 0, 2, 2).     % true  (C-R = 0 for both)
+li_same_anti(0, 4, 2, 2).     % true  (R+C = 4 for both)
+li_same_row(1, 3, 2, 3).      % false (different rows)
+
+
+2.4 Collinearity
+
+li_collinear(+R1, +C1, +R2, +C2, +R3, +C3)
+
+Succeed if three cells are collinear: all three share a row, a column, a
+diagonal (C-R constant), or an anti-diagonal (R+C constant).
+
+Examples:
+
+li_collinear(2, 0, 2, 3, 2, 7).     % true (same row 2)
+li_collinear(0, 0, 1, 1, 3, 3).     % true (same diagonal C-R=0)
+li_collinear(0, 0, 1, 2, 2, 2).     % false
+
+
+2.5 Endpoint extraction
+
+li_endpoints(+Cells, -First, -Last)
+
+Extract the first and last R-C pairs from a non-empty cell list.
+
+Examples:
+
+li_endpoints([0-0, 1-1, 2-2], First, Last).
+% First = 0-0, Last = 2-2
+
+li_endpoints([3-5], First, Last).
+% First = 3-5, Last = 3-5
+
+
+2.6 Interior gap
+
+li_gap(+R1, +C1, +R2, +C2, -Gap)
+
+Return cells strictly between two aligned points on the same row, column,
+diagonal, or anti-diagonal. Both endpoints are excluded. If the cells are
+adjacent, Gap = [].
+
+Examples:
+
+li_gap(1, 0, 1, 4, Gap).
+% Gap = [1-1, 1-2, 1-3]
+
+li_gap(0, 0, 0, 1, Gap).
+% Gap = []
+
+
+2.7 Segment type classification
+
+li_line_type(+R1, +C1, +R2, +C2, -Type)
+
+Classify the segment from (R1,C1) to (R2,C2). Type is one of: point, horizontal,
+vertical, diagonal, anti_diagonal, or other.
+
+Examples:
+
+li_line_type(2, 0, 2, 5, Type).   % Type = horizontal
+li_line_type(0, 3, 4, 3, Type).   % Type = vertical
+li_line_type(0, 0, 3, 3, Type).   % Type = diagonal
+li_line_type(4, 4, 4, 4, Type).   % Type = point
+
+
+3. Implementation Notes
+
+Determinism is the key implementation challenge because visual reasoning requires
+that each query produce exactly one answer without backtracking overhead.
+
+Three strategies are used:
+
+Unification lambdas. The enumeration predicates li_hline and li_vline use
+maplist/3 with lambdas of the form [X, RC]>>(RC = R-X) rather than [X, R-X]>>true.
+The body RC = R-X commits the result through explicit unification, preventing
+the false choicepoint that arises when the lambda body is a truth value.
+
+If-then-else instead of two-clause recursion. li_diag_walk_ and li_fill_cells_
+use if-then-else to distinguish the base case from the recursive step. Two-clause
+recursion leaves a choicepoint after the base clause matches because Prolog cannot
+verify statically that the recursive clause cannot also fire.
+
+If-then-else chains for multi-way dispatch. li_collinear and li_line_type use
+chains of the form (Cond1 -> Action1 ; Cond2 -> Action2 ; ...) rather than
+separate clauses. The -> operator commits to the first matching arm.
+
+Internal helper predicates li_replace_nth_ and li_last_ each carry a cut on
+their base case for the same reason: to prevent a choicepoint after the list
+is exhausted.
+
+Built-ins used without import: length/2.
+Imported from library(lists): nth0/3, numlist/3, append/2.
+Imported from library(apply): maplist/2, maplist/3.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary case. All tests complete with no choicepoint
+warnings.
+
+
+5. Relationship to Existing Packs
+
+The diagonal pack (Layer 98, dg_* prefix) extracts values along named diagonals
+and fills them with a color. The line pack generalizes this to arbitrary 45-degree
+segments between two specific endpoints, and adds horizontal and vertical drawing,
+alignment tests, collinearity, gap queries, and type classification.
+
+The neighbor pack (Layer 66, nb_* prefix) checks adjacency between specific cells.
+The line pack checks alignment over an entire line rather than just the immediate
+neighborhood.
+
+The scene pack (Layer 37, sc_* prefix) provides spatial relations between objects
+such as above, below, left-of, right-of, touching, contained-in. The line pack
+provides the underlying geometric primitives those relations depend on.
+
+
+6. Significance
+
+Straight-line segments appear in visual reasoning whenever a rule involves drawing
+across a grid, testing alignment, identifying collinear points, or measuring the
+distance between two aligned cells. The line pack gives Mentova a clean, tested
+symbolic vocabulary for these operations. Because all 14 predicates are
+deterministic and import-clean, they compose without side-effects with the rest of
+the PrologAI substrate.
+
+This is Mentova accomplishment 141. PrologAI now carries 119 work packages.
+
+github.com/ai-university-aiu/PrologAI
