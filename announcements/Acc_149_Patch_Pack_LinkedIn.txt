@@ -1,0 +1,31 @@
+Mentova Accomplishment 149: Sub-Grid Extraction and Template Matching
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now find patterns within patterns.
+
+Work Package 129 - the patch pack - adds template matching to the symbolic substrate: given a small rectangle of values, find every position where it occurs inside a larger grid. 14 predicates, 0 floating-point, 42/42 tests.
+
+The core predicate is pa_match: non-deterministic, backtracks over all positions where the extracted sub-grid unifies with the template. Prolog's structural unification does the cell comparison with no explicit loop.
+
+From that foundation, 13 derived predicates handle the full workflow:
+
+- pa_match_all / pa_match_count - collect or count all matches
+- pa_match_bg - wildcard matching: background cells in the template match any value
+- pa_slides - enumerate all overlapping H x W windows with positions
+- pa_unique_patches - distinct sub-patterns in the grid
+- pa_most_common_patch - the most frequently occurring sub-pattern and its count
+- pa_diff - cells where two same-size patches differ
+- pa_is_uniform - test if a patch is all one color
+- pa_flip_h / pa_flip_v - horizontal and vertical flip
+- pa_rot90 - 90-degree clockwise rotation (H x W → W x H)
+
+Template matching bridges perception and rule synthesis: find where the pattern is, then reason about what that placement means.
+
+PrologAI: 127 work packages. Mentova: 149 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #TemplateMatching #ComputerVision #PatternRecognition #SWIProlog #AGI
