@@ -1,0 +1,170 @@
+Accomplishment 97: Pattern Pack - Detecting Repeating Structure in Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains a new work package - the pattern pack (module pattern,
+pt_* prefix, Layer 56) - that gives Mentova fourteen deterministic
+predicates for detecting repeating structure in grids.
+
+This pack answers the structural question: does this grid tile from a
+smaller unit, and if so, what is that unit and where does it appear?
+
+
+1. Background
+
+Before the pattern pack, Mentova could fill, transform, select, count,
+and measure cells and regions in grids.
+
+But it had no vocabulary for the structural question of repetition.
+
+Visual reasoning tasks frequently present grids that are tilings: a small
+pattern repeated horizontally, vertically, or in both dimensions to fill
+a larger canvas.
+
+A cognitive system that can detect this structure can infer rules of the
+form "tile this 2x2 unit to produce the output" or "find this motif in
+the grid and count how many times it appears."
+
+The pattern pack provides exactly this structural vocabulary.
+
+
+2. The Fourteen Predicates
+
+2.1 Period Detection
+
+pt_row_period/2 finds the smallest tiling period of a row list.
+
+A list [0, 1, 0, 1] has period 2 because it repeats every 2 values.
+
+pt_col_period/3 finds the smallest tiling period of a specific column
+in a grid.
+
+
+2.2 Grid-Level Periods
+
+pt_grid_period_h/2 finds the smallest column period shared by every row
+in a grid - the horizontal tiling period.
+
+pt_grid_period_v/2 finds the smallest row period - the vertical tiling
+period.
+
+A grid whose every row has period 2 has horizontal period 2.
+
+A grid whose every column alternates between two values has vertical
+period 2.
+
+
+2.3 Tile Unit Extraction
+
+pt_tile_unit_h/2 extracts the minimal horizontal tile: the leftmost P
+columns of the grid, where P is the horizontal period.
+
+pt_tile_unit_v/2 extracts the minimal vertical tile: the topmost P rows.
+
+pt_tile_unit/2 extracts the minimal 2D tile: PH columns wide and PV rows
+tall.
+
+For a checkerboard grid, the 2D tile is [[0,1],[1,0]].
+
+
+2.4 Tiling Test
+
+pt_is_tiling/2 tests whether a grid is an exact tiling of a given tile.
+
+It checks that every cell (R, C) in the grid equals
+Tile[R mod TH][C mod TW], where TH and TW are the tile dimensions.
+
+
+2.5 Tile Finding and Counting
+
+pt_find_tile/3 returns all r(R,C) top-left positions where a tile matches
+a grid. Overlapping matches are included.
+
+pt_count_tile/3 counts these positions.
+
+
+2.6 Subgrid Extraction
+
+pt_extract_tile/5 extracts an H-row by W-column subgrid starting at a
+specified top-left position r(R,C).
+
+
+2.7 Row and Column Diversity
+
+pt_unique_rows/2 counts the number of distinct rows.
+
+pt_unique_cols/2 counts the number of distinct columns.
+
+pt_has_uniform_rows/1 tests whether every row is identical.
+
+A grid where every row is the same horizontal stripe has uniform rows.
+
+
+3. Implementation Notes
+
+Period detection uses the standard between/3-and-cut approach: try
+candidates from 1 upward and return the first that satisfies
+period_ok_/2. The period_ok_ predicate uses negation-as-failure over
+the index set: a period P is valid if there is no index i where
+List[i] != List[i mod P].
+
+pt_is_tiling uses the same negation-as-failure pattern: it fails if
+any cell violates the tiling invariant.
+
+pt_find_tile uses findall over all valid top-left positions in the
+grid's row-column range, delegating per-cell comparison to a helper.
+
+pt_has_uniform_rows uses sort/2: if all rows are identical, sort
+produces a singleton list.
+
+
+4. Tests
+
+The pack ships 43 PLUnit tests across 14 suites (one per predicate).
+
+Tests cover period-1 uniform sequences, period-2 alternating sequences,
+period-3 sequences, checkerboard grids, tiled grids, irregular grids,
+empty match lists, exact tiling, and subgrid extraction.
+
+All 43 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+• Specification v42, Part 67: functional requirements for all fourteen predicates
+• Pseudocode v35, Part 67: algorithmic pseudocode for each predicate
+• Architecture v36, PART ARCH-43: module position and design notes
+• Refinement v90, Part 67: acceptance criteria AC-PT-001 through AC-PT-043
+• Completion v93: PR 77 release checklist
+
+
+6. Significance
+
+With the pattern pack, Mentova can reason about structural repetition.
+
+"Is this grid a tiling of a smaller unit?" pt_is_tiling answers this.
+
+"What is the repeating unit?" pt_tile_unit answers this.
+
+"How many times does this motif appear?" pt_count_tile answers this.
+
+"Where exactly does it appear?" pt_find_tile answers this.
+
+Pattern detection is one of the most fundamental capabilities in visual
+reasoning. Many transformation rules are of the form: find the repeating
+unit, change something about it, and tile the result.
+
+The pattern pack makes these operations available as named, deterministic,
+glass-box predicates.
+
+The pattern pack is the thirty-eighth tutorial chapter and the
+seventy-fifth work package in the PrologAI platform.
+
+
+END OF PAPER
