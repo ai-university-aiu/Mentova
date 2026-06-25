@@ -1,0 +1,35 @@
+Accomplishment 113: The Score Pack - Hypothesis Selection is Now First-Class
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Mentova just gained its 91st work package: the score pack.
+
+14 sc_* predicates for measuring how well a candidate grid matches an expected output:
+
+  sc_accuracy     - pixel accuracy as a float (0.0 to 1.0)
+  sc_color_recall - fraction of target-color cells correctly produced
+  sc_color_precision - fraction of produced cells that are correct
+  sc_color_f1     - harmonic mean of recall and precision
+  sc_pairs_score  - mean accuracy over all training pairs
+  sc_pairs_perfect - did we solve every training pair exactly?
+  sc_rank         - sort candidates best-first
+  sc_best         - pick the winner
+  sc_threshold    - keep only candidates above a minimum accuracy
+
+This completes the four-pack ARC-AGI-2 foundation layer:
+
+  Obj pack     - extract objects from grids
+  Pipeline pack - thread grids through named steps
+  Context pack  - store and look up symbol tables
+  Score pack    - evaluate and select the best hypothesis
+
+The compositional loop is now complete:
+extract -> symbolize -> apply -> score -> repeat if needed.
+
+39/39 acceptance tests pass. Pure Prolog. Glass-box. No neural weights.
+
+PrologAI PR #178. Mentova Acc_113.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #AIU
