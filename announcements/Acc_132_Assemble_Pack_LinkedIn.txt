@@ -1,0 +1,42 @@
+Mentova Accomplishment 132: Grid Assembly, Concatenation, and Composition
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the assemble pack (Layer 91, Work
+Package 112).
+
+Existing packs know how to manipulate a single grid. The assemble pack knows
+how to BUILD a larger grid from multiple pieces.
+
+14 predicates (as_* prefix):
+
+• as_hcat - join a list of grids side by side (different grids, not the same tile repeated)
+• as_vcat - stack a list of grids vertically
+• as_grid_of - assemble a 2D matrix of grids into one combined grid
+• as_downscale - reduce each K x K block to one cell by majority vote (inverse of seek pack's upscale)
+• as_border - surround a grid with a W-cell wide colored frame
+• as_center_in - embed a grid at the floor center of a larger canvas
+• as_quarter - extract one named quadrant (tl, tr, bl, br)
+• as_flip_h_cat - concatenate a grid with its own left-right mirror
+• as_flip_v_cat - stack a grid with its own top-bottom mirror
+• as_zip_h - interleave columns from two same-size grids
+• as_zip_v - interleave rows from two same-size grids
+• as_paste - unconditionally paste a sub-grid at a given position
+• as_mask_fill - replace cells wherever a mask grid is non-zero
+• as_crop_to - crop or pad a grid to an exact target size
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass.
+
+These capabilities directly support the kinds of spatial construction tasks
+that appear in ARC-AGI-2 (Abstract and Reasoning Corpus for Artificial
+General Intelligence - Year 2): building symmetric patterns from halves,
+assembling tiled outputs from distinct sub-grids, extracting and repositioning
+quadrants, creating bordered patterns, and combining two grids by interleaving.
+
+This is Mentova accomplishment 132. PrologAI now carries 110 work packages.
+
+github.com/ai-university-aiu/PrologAI

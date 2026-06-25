@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-131-FF6B35?style=for-the-badge" alt="131 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-132-FF6B35?style=for-the-badge" alt="132 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **131 accomplished** |
-| Scientific papers | **111 published** — one per accomplishment |
+| Documented accomplishments | **132 accomplished** |
+| Scientific papers | **112 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         111 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  119 announcements — one per accomplishment
+├── papers/         112 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  120 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -432,12 +432,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_129` | Project pack paper — Axis Projection and Shadow Casting (Layer 88): 14 pj_* predicates for shadow casting and axis-projection operations. Shadow casting: pj_shadow_down / up / left / right (non-BG cells cast their value through BG cells in one direction, stopping at the next non-BG cell) and pj_shadow_dir (direction dispatch by atom). Axis detection: pj_nonbg_rows / pj_nonbg_cols (sorted indices of occupied rows/columns). Counting: pj_row_counts / pj_col_counts (non-BG cell count per row/column). Collapse: pj_collapse_rows (2D to 1 row, first non-BG per column) / pj_collapse_cols (2D to 1 column, first non-BG per row). Boundary finding: pj_col_first / pj_col_last (topmost/bottommost non-BG row in a column) / pj_row_first (leftmost non-BG column in a row). 42/42 acceptance tests pass. |
 | `Acc_130` | Diff pack paper — Multi-Pair Grid Difference Analysis (Layer 89): 14 df_* predicates for single-pair cell diff and multi-pair contrastive analysis. Single-pair analysis: df_cell_diff (all changed cells as diff(R,C,OldV,NewV) terms), df_added (cells that went BG to non-BG), df_removed (cells that went non-BG to BG), df_recolored (cells that stayed non-BG but changed color), df_stable (cells with unchanged value), df_palette_change (colors added to or lost from the palette). Multi-pair analysis: df_common_diffs (cells changed in EVERY pair), df_common_stable (cells stable in EVERY pair), df_always_added (cells added in EVERY pair), df_always_removed (cells removed in EVERY pair). Manipulation: df_total_changes, df_apply_diffs, df_invert_diffs, df_filter_diffs. 42/42 acceptance tests pass. |
 | `Acc_131` | Order pack paper — Object Spatial Ordering and Ranking (Layer 90): 14 od_* predicates for centroid-based spatial ordering of obj(Color, Cells) terms. Centroid: od_centroid (integer floor mean of all cell coordinates). Sorting: od_sort_row (topmost to bottommost), od_sort_col (leftmost to rightmost), od_reading_order (row first then column), od_sort_color (by color value). Extremal selection: od_topmost, od_bottommost, od_leftmost, od_rightmost. Index access: od_nth_row (Nth in row order), od_nth_col (Nth in column order). Proximity: od_nearest (minimum Manhattan distance centroid), od_farthest (maximum Manhattan distance centroid). Ranking: od_rank_row (1-based position in row-ascending order). 42/42 acceptance tests pass. |
+| `Acc_132` | Assemble pack paper — Grid Assembly, Concatenation, and Composition (Layer 91): 14 as_* predicates for joining, scaling, framing, and compositing grids. Joining: as_hcat (horizontal concatenation of a list of different grids), as_vcat (vertical stacking), as_grid_of (2D matrix of grids). Scaling: as_downscale (K x K blocks to single cells by majority vote), as_crop_to (crop or pad to exact target size). Framing: as_border (W-cell colored frame), as_center_in (embed at integer floor center of a canvas). Quadrant: as_quarter (extract tl/tr/bl/br). Mirror-concat: as_flip_h_cat (grid and its left-right mirror side by side), as_flip_v_cat (grid and its top-bottom mirror stacked). Interleave: as_zip_h (interleave columns), as_zip_v (interleave rows). Compositing: as_paste (unconditional paste), as_mask_fill (replace cells where mask is non-zero). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-119 announcements in LinkedIn format — one per accomplishment.
+120 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
