@@ -1,0 +1,74 @@
+Accomplishment 111: Sequential Step Dispatch and Compositional Reasoning - The Pipeline Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 89th work package: the pipeline pack (pl_* predicate family, Layer 70). This pack is the compositional layer required for ARC-AGI-2 reasoning. ARC-AGI-2 tasks frequently require two or more named rules applied in a specific sequence, where the output of rule N is the input to rule N+1. The pipeline pack provides this capability through a step-dispatch mechanism: named steps are registered as 3-argument handler callables, and pl_run/3 threads any value through an ordered list of steps using foldl. The pack also provides 9 general-purpose list utilities: map, filter, fold, zip, unzip, take, drop, and partition.
+
+Introduction
+
+The ARC-AGI-2 Next Steps roadmap identifies sequential state machines as the most important new reasoning category required for ARC-AGI-2. The roadmap proposed:
+
+arc2_pipeline(TaskId, [Rule1, Rule2, ..., RuleN], Input, Output) :-
+    foldl(arc2_apply_rule, [Rule1,...,RuleN], Input, Output).
+
+The pipeline pack implements exactly this pattern, generalized beyond ARC-AGI-2 to any named-step computation. The step dispatch mechanism supports:
+
+- Named atomic steps (e.g., normalize, double, rotate)
+- Parameterized compound steps (e.g., fill_color(3), scale(2))
+- Local per-call registries that override global dynamic handlers
+- Graceful passthrough for unknown step names (no crash, grid unchanged)
+
+This architecture allows any multi-step ARC-AGI-2 rule to be expressed as a named step list and applied uniformly by pl_run/3.
+
+Predicates
+
+The pipeline pack exports 14 predicates under the pl_* prefix.
+
+Step dispatch:
+pl_run/3           thread an input through a sequence of named steps
+pl_step/4          apply one step with optional local registry
+pl_register/2      assert a step handler under a given name
+pl_registered/2    query which handler is registered for a name
+pl_unregister/1    retract the handler for a given name
+
+List utilities:
+pl_map/3           apply a 2-argument goal to every element; collect results
+pl_filter/3        keep only elements satisfying a 1-argument goal
+pl_fold/4          fold a 3-argument goal over a list with an accumulator
+pl_zip/3           pair corresponding elements from two lists
+pl_unzip/3         split a list of pairs into two parallel lists
+pl_take/3          take the first N elements of a list
+pl_drop/3          drop the first N elements of a list
+pl_partition/4     split a list into satisfied and rejected elements
+
+Implementation
+
+The step-dispatch core uses a dynamic fact pl_handler_(Name, Goal) maintained by pl_register/2 and pl_unregister/1. The step name is extracted from the functor of the step term (or the atom itself for atomic steps). This allows compound terms like scale(2) to carry parameters without requiring a separate parameter-passing mechanism.
+
+pl_step/4 checks a local Name-Goal pair list first, then the dynamic facts, then defaults to passthrough. The local registry allows per-call override without modifying the global handler table.
+
+pl_run/3 uses foldl/4 from library(apply) to thread the input through all steps. This is a direct implementation of the arc2_pipeline pattern from the roadmap.
+
+pl_filter and pl_partition use findall for determinism, avoiding choicepoints that would arise from recursive two-clause definitions where the Goal meta-argument defeats first-argument indexing.
+
+All 39 PLUnit acceptance tests pass (AC-PL-001 through AC-PL-039).
+
+Significance
+
+The pipeline pack gives Mentova the ability to express and execute multi-step reasoning chains as first-class Prolog data. A list of step names can be induced from training pairs, stored as a hypothesis, and applied to test inputs with a single pl_run/3 call. This is the execution substrate for ARC-AGI-2 compositional rules.
+
+Combined with the obj pack (object inventory), the arith pack (cell-wise arithmetic), the rewrite pack (color substitution), and the transform pack (rotation and reflection), Mentova now has all the components needed for the first ARC-AGI-2 wave: identify objects, apply a sequence of transforms to each, and verify the result against training pairs.
+
+References
+
+PrologAI_1_Specification_v56.txt, Part 81 (PL-PL-001 through PL-PL-014)
+PrologAI_2_Pseudocode_v49.txt, Part 81
+PrologAI_3_Architecture_v50.txt, PART ARCH-57
+PrologAI_4_Refinement_v104.txt, Part 81 (AC-PL-001 through AC-PL-039)
+PrologAI_5_Completion_v107.txt, Work Package 91
+PrologAI PR #176: feat(packs): PR 91 - pipeline pack
+Mentova/data/arc_agi_2/ARC-AGI-2_Next_Steps.txt, Section 3.1 and Section 5.3
