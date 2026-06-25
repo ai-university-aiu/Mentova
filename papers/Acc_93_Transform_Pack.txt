@@ -1,0 +1,191 @@
+Accomplishment 93: Transform Pack - Grid-Level Spatial and Color Transformations
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains a new work package - the transform pack (module transform,
+tr_* prefix, Layer 52) - that gives Mentova fourteen deterministic predicates
+for applying spatial and color transformations to entire grids.
+
+This pack covers scaling, tiling, transposition, reflection, rotation,
+translation, color-map substitution, and mask-based composition.
+
+Every predicate produces a unique answer for valid inputs and fails cleanly for
+invalid ones.
+
+
+1. Background
+
+Before the transform pack, Mentova could detect and measure spatial structure
+in grids (via the grid and measure packs) and could apply D4 isometries to
+normalized shape representations (via the analogy pack).
+
+But it lacked predicates for directly transforming entire grids: making them
+larger by repetition, making them smaller by sampling, shifting their content,
+or remapping their colors at the grid level.
+
+The transform pack closes this gap.
+
+It provides the vocabulary for describing the kinds of transformations that
+appear in visual pattern problems: "this input was scaled up by 3", "the colors
+were swapped", "the grid was shifted right by 2 cells", "a mask was applied to
+combine two patterns".
+
+
+2. The Fourteen Predicates
+
+2.1 Scaling
+
+tr_scale_up/3 expands each cell into a Factor x Factor block.
+
+A 2x2 grid scaled up by 3 becomes a 6x6 grid where each original cell occupies
+a 3x3 region.
+
+tr_scale_down/3 subsamples the grid by keeping every Factor-th row and column
+(0-indexed, positions divisible by Factor).
+
+A 4x4 grid scaled down by 2 becomes a 2x2 grid containing the four corner
+elements.
+
+
+2.2 Tiling
+
+tr_tile_h/3 repeats each row N times horizontally, widening the grid.
+
+tr_tile_v/3 repeats the entire grid N times vertically, heightening it.
+
+tr_tile/3 tiles in both directions simultaneously.
+
+Tiling is a common transformation in visual puzzles where a small pattern is
+used to fill a larger canvas.
+
+
+2.3 Transposition
+
+tr_transpose/2 swaps rows and columns.
+
+The cell at row R, column C becomes the cell at row C, column R.
+
+A 2x3 grid becomes a 3x2 grid.
+
+
+2.4 Reflections
+
+tr_flip_h/2 reverses each row, producing a left-right mirror of the grid.
+
+tr_flip_v/2 reverses the row list, producing a top-bottom mirror.
+
+Both operations are involutions: applying them twice returns the original grid.
+
+
+2.5 Rotations
+
+tr_rot90/2 rotates the grid 90 degrees clockwise.
+
+It is implemented as tr_transpose followed by tr_flip_h, which composes two
+already-verified primitives without requiring a separate index formula.
+
+tr_rot180/2 rotates 180 degrees by composing tr_flip_v and tr_flip_h.
+
+Four applications of tr_rot90 return to the original grid.
+
+
+2.6 Shifting
+
+tr_shift/5 translates grid content by DR rows and DC columns.
+
+A cell at position (R, C) in the result receives the value of the source grid
+at position (R minus DR, C minus DC) if that position is in bounds.
+
+If the source position is out of bounds, the Fill value is used.
+
+DR and DC may be negative for upward or leftward shifts.
+
+This predicate is important for alignment tasks where a pattern must be placed
+at a specific offset within a larger canvas.
+
+
+2.7 Color Mapping
+
+tr_apply_map/3 applies a list of From-To pairs to every cell.
+
+Values not present in the map are left unchanged.
+
+tr_replace_color/4 is a convenience predicate for single-color substitution.
+
+It is equivalent to tr_apply_map with a single-entry map.
+
+
+2.8 Masking
+
+tr_mask_grid/4 uses a same-size Mask grid to select values.
+
+Where a Mask cell equals 0 (the convention for transparent), the result cell
+is the Fill value.
+
+Where a Mask cell is non-zero (opaque), the result cell keeps the Grid value.
+
+This predicate enables composition of two patterns using a binary selection mask.
+
+
+3. Implementation Notes
+
+tr_transpose uses a recursive heads-tails decomposition that avoids index
+arithmetic and works correctly on non-square grids.
+
+tr_scale_down uses include/3 from library(apply) to filter row and column
+indices by divisibility, which is more readable than explicit list construction.
+
+All predicates are deterministic.
+
+Cuts are placed in tr_pick_cols_ and tr_down_row_ to prevent spurious choice
+points from index enumeration.
+
+
+4. Tests
+
+The pack ships 57 PLUnit tests organized into 14 suites (one per predicate).
+
+Test cases cover identity cases (Factor=1, N=1, zero shift), boundary cases
+(1x1 grids, large shifts that map everything to Fill), and composition cases
+(four rotations return to original, two flips return to original).
+
+All 57 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+The transform pack is documented across five SPARC volumes:
+
+• Specification v38, Part 63: functional requirements for all fourteen predicates
+• Pseudocode v31, Part 63: step-by-step reasoning for each algorithm
+• Architecture v32, PART ARCH-39: module placement and design notes
+• Refinement v86, Part 63: acceptance criteria AC-TR-001 through AC-TR-057
+• Completion v89: PR 73 release checklist
+
+
+6. Significance
+
+With the transform pack, Mentova can now describe transformations at the level
+that visual pattern reasoning requires.
+
+"Scale up by 3" is now a named, verifiable predicate.
+
+"Shift right by 2 with black fill" is now a named, verifiable predicate.
+
+"Apply a color swap" is now a named, verifiable predicate.
+
+These are not abstract capabilities - they are the specific operations that
+appear in visual pattern problems, now expressed as deterministic Prolog
+predicates that can be composed, inspected, and inverted.
+
+The transform pack is the thirty-fourth tutorial chapter and the seventy-second
+work package in the PrologAI platform.
+
+
+END OF PAPER

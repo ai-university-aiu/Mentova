@@ -1,0 +1,38 @@
+Accomplishment 93: Mentova can now transform what it sees.
+
+The new transform pack gives PrologAI fourteen predicates for applying spatial
+and color transformations to entire grids.
+
+Scale up. Scale down. Tile horizontally. Tile vertically. Transpose.
+Flip left-right. Flip top-bottom. Rotate 90 degrees. Rotate 180 degrees.
+Shift with fill. Apply a color map. Replace a color. Apply a mask.
+
+Every result is deterministic.
+
+No floating-point errors. No pixel rounding. Pure symbolic transformation.
+
+Here is what that means in practice:
+
+A grid scaled up by 3 produces a result where each original cell becomes a 3x3
+block. If cell (1, 2) was color 5, every cell in the 3x3 block at (3..5, 6..8)
+of the output is also color 5.
+
+A grid shifted right by 2 with fill color 0 slides every column 2 positions to
+the right. The leftmost 2 columns are filled with 0. The rightmost 2 columns of
+the original are lost.
+
+A color map [0-9, 1-0] swaps color 0 and color 1 everywhere in the grid.
+
+These are the building blocks of visual transformation rules.
+
+Once you can name them, you can combine them.
+
+Once you can combine them, you can solve problems that require multi-step
+transformation pipelines.
+
+The transform pack is Layer 52, work package 73 in the PrologAI platform.
+
+57 tests. All pass.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
