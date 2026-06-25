@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
 | Documented accomplishments | **86 accomplished** |
-| Scientific papers | **85 published** — one per accomplishment |
+| Scientific papers | **87 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
