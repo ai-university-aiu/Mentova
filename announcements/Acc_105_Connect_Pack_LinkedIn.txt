@@ -1,0 +1,19 @@
+Accomplishment 105: Mentova can now find connected objects, identify enclosed regions, and classify cells as interior or border.
+
+The connect pack (cc_* predicates, Layer 64) gives Mentova 14 new object-detection tools:
+
+- cc_flood4/4, cc_flood8/4: flood fill in 4-connected and 8-connected mode
+- cc_components4/3, cc_components8/3: list all connected regions of a color
+- cc_count4/3, cc_count8/3: number of connected regions
+- cc_sizes4/3, cc_sizes8/3: sorted list of component sizes
+- cc_largest4/3, cc_largest8/3: the largest connected region
+- cc_smallest4/3: the smallest connected region
+- cc_border_cells/3: cells on the boundary of a region
+- cc_interior_cells/3: cells completely surrounded within a region
+- cc_enclosed/3: background cells inside a closed shape
+
+cc_enclosed implements the classic "flood from the border" algorithm: flood fill background from all grid-edge cells, then return any background cells that were not reached. This identifies the fill targets inside closed shapes.
+
+This is Mentova's 105th documented accomplishment and PrologAI's 83rd work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
