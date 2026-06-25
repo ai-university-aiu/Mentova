@@ -1,0 +1,178 @@
+Accomplishment 96: Fill Pack - Painting Colors into Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains a new work package - the fill pack (module fill, fl_* prefix,
+Layer 55) - that gives Mentova fourteen deterministic predicates for painting
+colors into grids.
+
+This pack answers the constructive question that visual reasoning requires:
+not what is in the grid, but what should be placed there.
+
+
+1. Background
+
+Before the fill pack, Mentova could perceive grids, extract regions, measure
+geometric properties, count colors, apply transformations, and select regions
+by size and position.
+
+But it had no vocabulary for the constructive side of visual reasoning.
+
+Visual reasoning is not only perceptual. It is also productive.
+
+A cognitive system must not only read what is in a grid - it must produce what
+should be in a grid.
+
+The fill pack provides exactly this productive vocabulary.
+
+
+2. The Fourteen Predicates
+
+2.1 Region and Bounding Box Filling
+
+fl_fill_region/4 fills every r(R,C) cell in a region list with a specified color,
+returning the updated grid.
+
+fl_fill_bbox/4 fills all cells within a rectangular bounding box specified as
+bbox(R1,C1,R2,C2) with a color.
+
+These are the two most fundamental filling operations: cell-list filling and
+rectangle filling.
+
+
+2.2 Row, Column, and Cell Filling
+
+fl_fill_row/4 replaces every cell in a specified row with a color.
+
+fl_fill_col/4 replaces every cell in a specified column with a color.
+
+fl_fill_cells/4 fills an explicit list of r(R,C) cells with a color. This is
+semantically identical to fl_fill_region but communicates intent when the caller
+holds a specific target list rather than a region.
+
+
+2.3 Border Filling
+
+fl_fill_border/3 fills the four outermost rows and columns of the grid with a
+color.
+
+This is implemented by chaining fl_fill_row(0), fl_fill_row(MaxR),
+fl_fill_col(0), fl_fill_col(MaxC) sequentially, which is clearer than a
+membership test and avoids corner-cell special cases.
+
+
+2.4 Region Boundary and Interior
+
+fl_outline_region/4 fills only the boundary cells of a region - cells that
+have at least one 4-connected neighbor outside the region.
+
+fl_fill_interior/4 fills only the interior cells - cells whose four orthogonal
+neighbors are all within the region.
+
+These two predicates together give a complete account of the topological
+structure of a region from a filling perspective.
+
+
+2.5 Grid Creation
+
+fl_solid_rect/4 creates a brand-new grid of specified dimensions filled entirely
+with one color. This is not a modification of an existing grid; it is a fresh
+creation.
+
+fl_checkerboard/5 creates a new grid where cells alternate between two colors
+based on whether (R + C) is even or odd.
+
+
+2.6 Line Segments
+
+fl_draw_hline/6 fills a horizontal segment of a row from column C1 to C2.
+
+fl_draw_vline/6 fills a vertical segment of a column from row R1 to R2.
+
+Both are thin wrappers around fl_fill_bbox, provided because a caller reasoning
+about lines should name what it is doing.
+
+
+2.7 Diagonal Filling
+
+fl_fill_main_diag/3 fills the main diagonal - all cells r(I,I) for valid I.
+
+
+2.8 Stamp Overlay
+
+fl_stamp/6 overlays a subgrid (the stamp) onto a base grid at a specified
+row-column offset. Stamp cells equal to a specified background color are
+transparent: the corresponding base cell is kept. Stamp cells with any other
+value replace the base cell.
+
+This implements a general-purpose pattern stamp that can be used to place any
+subgrid shape onto any position in a larger grid without disturbing the parts
+of the base that the stamp does not cover.
+
+
+3. Implementation Notes
+
+fl_fill_region uses a maplist over row indices and column indices, testing each
+cell for region membership with member(r(R,C), Region). The cut in
+fl_fill_region_cell_ stops backtracking once a match is found.
+
+fl_fill_border chains four fill operations sequentially. Corner cells are
+painted by the first row operation and then overwritten again by the first
+column operation - this is harmless and simpler than a single-pass test.
+
+fl_outline_region and fl_fill_interior use a shared predicate
+fl_all_neighbors_in_ that tests via negation as failure: a cell's neighbors
+are all in the region if there is no neighbor outside it.
+
+fl_stamp handles the out-of-bounds case by computing StampR and StampC
+from the base grid position minus the stamp origin, and taking the base
+value unchanged when those coordinates are outside the stamp dimensions.
+
+
+4. Tests
+
+The pack ships 46 PLUnit tests across 14 suites (one per predicate).
+
+Tests cover empty regions, full grids, partial fills, single-cell cases,
+corner cases, and stamp transparency.
+
+All 46 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+• Specification v41, Part 66: functional requirements for all fourteen predicates
+• Pseudocode v34, Part 66: algorithmic pseudocode for each predicate
+• Architecture v35, PART ARCH-42: module position and design notes
+• Refinement v89, Part 66: acceptance criteria AC-FL-001 through AC-FL-046
+• Completion v92: PR 76 release checklist
+
+
+6. Significance
+
+With the fill pack, Mentova gains the productive side of visual reasoning.
+
+Perception asks: what is here? Fill asks: what should be here?
+
+"Color the region boundary red." fl_outline_region answers this.
+
+"Place a checkerboard pattern in this area." fl_checkerboard plus fl_stamp answers this.
+
+"Draw a border around the grid." fl_fill_border answers this.
+
+"Overlay this shape at this position, keeping the background." fl_stamp answers this.
+
+These operations are not cosmetic. They are the operations that a visual reasoning
+system performs when it constructs an output grid from an inferred rule.
+
+The fill pack is the thirty-seventh tutorial chapter and the seventy-fourth work
+package in the PrologAI platform.
+
+
+END OF PAPER
