@@ -1,0 +1,44 @@
+Mentova Accomplishment 139: Diagonal Line Extraction and Filling - The Diagonal Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the diagonal pack (Layer 98, Work
+Package 119).
+
+Diagonals appear in X patterns, symmetry axes, checkerboard structures, and
+many other visual reasoning tasks. The diagonal pack provides all the primitives
+needed to extract, fill, and test diagonal and anti-diagonal lines in any 2D
+grid.
+
+14 predicates (dg_* prefix):
+
+- dg_main_diag - values on the main diagonal (C == R)
+- dg_anti_diag - values on the main anti-diagonal (R+C = NC-1)
+- dg_nth_diag - values on the N-th diagonal (C-R = N)
+- dg_nth_anti_diag - values on the N-th anti-diagonal (R+C = N)
+- dg_all_diags - all diagonals sorted by offset
+- dg_all_anti_diags - all anti-diagonals sorted by sum
+- dg_fill_main - fill main diagonal with Color
+- dg_fill_anti - fill main anti-diagonal with Color
+- dg_fill_nth_diag - fill the N-th diagonal with Color
+- dg_fill_nth_anti_diag - fill the N-th anti-diagonal with Color
+- dg_cell_diag - diagonal index of (R,C): N = C-R
+- dg_cell_anti_diag - anti-diagonal index of (R,C): N = R+C
+- dg_uniform_diag - test whether the N-th diagonal is all Color
+- dg_uniform_anti_diag - test whether the N-th anti-diagonal is all Color
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass with no choicepoint
+warnings.
+
+The implementation uses a deterministic cell-replacement helper with a cut on
+its base case, plus if-then-else in the iterative fill predicate. This ensures
+all 14 public predicates are fully determinate regardless of grid size or
+diagonal offset.
+
+This is Mentova accomplishment 139. PrologAI now carries 117 work packages.
+
+github.com/ai-university-aiu/PrologAI
