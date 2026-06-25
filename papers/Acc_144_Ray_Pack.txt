@@ -1,0 +1,272 @@
+Mentova Accomplishment 144: Directional Perception - The Ray Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 124: the ray pack, a Layer 103 symbolic
+reasoning module providing 14 predicates for casting directional rays through
+2D integer-coordinate grids. The pack supports bounds checking, cell
+enumeration in a direction, first-obstacle detection, clear-path collection,
+distance measurement to obstacles and edges, clearance testing, coordinate
+projection, named direction mapping, direction reflection across horizontal
+and vertical axes, line-of-sight testing, interior-cell enumeration on line
+segments, and simultaneous four-direction casting. All predicates are
+deterministic. This accomplishment is verified by 42 PLUnit acceptance tests.
+
+
+1. Motivation
+
+Grid-based visual reasoning requires a directional perception layer. Questions
+like "what is the first colored cell to the right of this object?", "can A see
+B?", "how many steps to the wall from here?", and "what does this cell face
+in all four directions?" are fundamental to solving puzzles that involve
+projection, visibility, and directional structure.
+
+The step pack (Layer 86) provides single-step movement and direction
+utilities. The trace pack (Layer 82) provides horizontal and vertical run
+analysis. Neither provides a general-purpose ray API with obstacle detection,
+line-of-sight tests, reflection, and distance queries in one composable unit.
+The ray pack fills this gap.
+
+
+2. Predicate Inventory (14 predicates, ry_* prefix)
+
+2.1 Bounds checking
+
+ry_in_bounds(+Grid, +R, +C)
+
+Succeed if (R,C) is within the 0-based row and column bounds of Grid. The
+test is: 0 =< R < NR and 0 =< C < NC.
+
+Example:
+
+Grid = [[0,0,0],[0,0,0],[0,0,0]],
+ry_in_bounds(Grid, 1, 2).   % succeeds
+\+ ry_in_bounds(Grid, 3, 0).   % fails (row 3 is OOB)
+
+
+2.2 Cell enumeration in a direction
+
+ry_cells_in_dir(+Grid, +R, +C, +DR, +DC, -Cells)
+
+All in-bounds cells starting one step beyond (R,C) in direction (DR,DC),
+listed in step order. The origin cell is not included.
+
+Example:
+
+ry_cells_in_dir(Grid, 0, 0, 0, 1, Cells).   % going right from (0,0)
+% Cells = [0-1, 0-2]   (in a 3-column grid)
+
+
+2.3 First obstacle detection
+
+ry_first_hit(+Grid, +R, +C, +DR, +DC, +Bg, -Hit)
+
+The first cell in direction (DR,DC) from (R,C) whose value is not Bg. Fails
+if no such cell exists before the grid boundary.
+
+Example:
+
+Grid = [[0,0,1],[0,0,0],[0,0,0]],
+ry_first_hit(Grid, 0, 0, 0, 1, 0, Hit).
+% Hit = 0-2
+
+
+2.4 Clear path
+
+ry_cast_clear(+Grid, +R, +C, +DR, +DC, +Bg, -Clear)
+
+The maximal prefix of cells in direction (DR,DC) that all have value Bg.
+The obstacle cell is not included.
+
+Example:
+
+Grid = [[0,0,1]],
+ry_cast_clear(Grid, 0, 0, 0, 1, 0, Clear).
+% Clear = [0-1]
+
+
+2.5 Distance to obstacle
+
+ry_distance_to_hit(+Grid, +R, +C, +DR, +DC, +Bg, -D)
+
+Number of steps from (R,C) to the first non-Bg cell. D=1 means the adjacent
+cell is the obstacle. Fails if the direction is clear to the boundary.
+
+Example:
+
+Grid = [[0,0,0,1]],
+ry_distance_to_hit(Grid, 0, 0, 0, 1, 0, D).
+% D = 3
+
+
+2.6 Distance to edge
+
+ry_distance_to_edge(+Grid, +R, +C, +DR, +DC, -D)
+
+Number of in-bounds steps available before the ray leaves the grid. Returns
+0 if the next step is already out of bounds.
+
+Example:
+
+ry_distance_to_edge(Grid, 0, 0, 0, 1, D).   % 3x3 grid
+% D = 2   (columns 1 and 2 remain)
+
+
+2.7 Clearance test
+
+ry_is_clear(+Grid, +R, +C, +DR, +DC, +Bg)
+
+Succeed if all cells in direction (DR,DC) until the boundary are Bg.
+Trivially succeeds if there are no cells in that direction.
+
+Example:
+
+ry_is_clear([[0,0,0]], 0, 0, 0, 1, 0).   % succeeds
+\+ ry_is_clear([[0,1,0]], 0, 0, 0, 1, 0).   % fails
+
+
+2.8 Coordinate projection
+
+ry_project(+Grid, +R, +C, +DR, +DC, +N, -NewR, -NewC)
+
+Coordinates exactly N steps from (R,C) in direction (DR,DC). Fails if out
+of bounds.
+
+Example:
+
+ry_project(Grid, 0, 0, 0, 1, 2, NR, NC).
+% NR = 0, NC = 2
+
+
+2.9 Named directions
+
+ry_dir_to_delta(+Dir, -DR, -DC)
+
+Map a direction name to a unit step pair.
+
+up (−1,0), down (1,0), left (0,−1), right (0,1),
+ul (−1,−1), ur (−1,1), dl (1,−1), dr (1,1)
+
+Example:
+
+ry_dir_to_delta(dr, DR, DC).   % DR=1, DC=1
+
+
+2.10 Direction reflection
+
+ry_reflect_h(+DR, +DC, -RDR, -RDC)
+
+Reflect across a horizontal axis: RDR = -DR, RDC = DC. A ray bouncing off
+a ceiling or floor.
+
+ry_reflect_v(+DR, +DC, -RDR, -RDC)
+
+Reflect across a vertical axis: RDR = DR, RDC = -DC. A ray bouncing off a
+left or right wall.
+
+Examples:
+
+ry_reflect_h(-1, 0, RDR, RDC).   % upward ray hits ceiling
+% RDR=1, RDC=0   (now going down)
+
+ry_reflect_v(0, 1, RDR, RDC).   % rightward ray hits right wall
+% RDR=0, RDC=-1   (now going left)
+
+
+2.11 Line-of-sight test
+
+ry_los(+Grid, +R1, +C1, +R2, +C2, +Bg)
+
+Succeed if all cells strictly between (R1,C1) and (R2,C2) on the same line
+have value Bg. The two cells must share a row, column, diagonal (C-R
+constant), or anti-diagonal (R+C constant).
+
+Examples:
+
+ry_los([[0,0,0]], 0, 0, 0, 2, 0).   % succeeds: (0,1) is 0
+\+ ry_los([[0,1,0]], 0, 0, 0, 2, 0).   % fails: (0,1) is 1
+
+
+2.12 Interior cells on a segment
+
+ry_los_cells(+Grid, +R1, +C1, +R2, +C2, -Cells)
+
+Cells strictly between (R1,C1) and (R2,C2) on the same line, endpoints
+excluded.
+
+Examples:
+
+ry_los_cells(_, 0, 0, 0, 3, Cells).   % horizontal
+% Cells = [0-1, 0-2]
+
+ry_los_cells(_, 0, 0, 3, 3, Cells).   % diagonal
+% Cells = [1-1, 2-2]
+
+
+2.13 Four-direction simultaneous cast
+
+ry_cast_all_4(+Grid, +R, +C, +Bg, -Hits)
+
+Cast rays from (R,C) in all 4 compass directions. Returns a list of 4 terms:
+[up-Ru, down-Rd, left-Rl, right-Rr]. Each result is the first obstacle cell
+or the atom none if the direction is clear to the boundary.
+
+Example:
+
+Grid = [[0,0,0],[1,0,1],[0,0,0]],
+ry_cast_all_4(Grid, 1, 1, 0, Hits).
+% Hits = [up-none, down-none, left-(1-0), right-(1-2)]
+
+
+3. Implementation Notes
+
+All recursive walkers (ry_cells_in_dir_, ry_first_hit_, ry_take_while_bg_,
+ry_dist_hit_, ry_diag_walk_) use if-then-else for determinism. No two-clause
+recursion that would leave open choicepoints.
+
+ry_dir_to_delta uses a single if-then-else chain so the predicate is
+deterministic when Dir is ground.
+
+ry_cast_one_ uses a soft-cut (if-then-else with ry_first_hit) to handle the
+no-obstacle case cleanly without explicit failure.
+
+ry_los_cells handles three alignment cases (horizontal, vertical, diagonal)
+with nested if-then-else. The Grid argument is accepted for interface
+consistency but not accessed during computation: ry_los_cells/6 begins with
+an anonymous first argument.
+
+Imported from library(lists): nth0/3, numlist/3, member/2.
+Imported from library(apply): maplist/3.
+Built-ins used without import: length/2, forall/2.
+No PrologAI pack is imported.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary condition. All tests complete with no
+choicepoint warnings.
+
+
+5. Significance
+
+Directional perception is the ability to ask "what is in front of me?" as a
+computational primitive. The ray pack gives Mentova this capability in a
+clean, deterministic, and composable form. Line-of-sight, obstacle detection,
+projection, and reflection are building blocks for many higher-level spatial
+reasoning patterns: finding what a cell can see, computing shadows, detecting
+walls, and navigating mazes.
+
+Combined with the line pack (Layer 100), rect pack (Layer 101), and cluster
+pack (Layer 102), the ray pack completes a quartet of geometric reasoning
+layers that equip Mentova with a full spatial perception vocabulary.
+
+This is Mentova accomplishment 144. PrologAI now carries 122 work packages.
+
+github.com/ai-university-aiu/PrologAI
