@@ -1,0 +1,83 @@
+Accomplishment 110: Object-Level Grid Reasoning - The Obj Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 88th work package: the obj pack (obj_* predicate family, Layer 69). This pack elevates grid reasoning from the cell level to the object level. An object is a 4-connected region of same-color cells, represented as obj(Color, SortedCells). The pack provides 14 predicates covering object construction, property extraction (color, cells, size, bounding box, integer centroid, normalized shape), inventory extraction (all objects of one color or all non-zero colors from a grid), counting, largest and smallest selection, cell-to-object lookup, and size sorting. The obj pack is the foundational object layer needed for ARC-AGI-2 reasoning, which requires tracking multiple distinct objects, their spatial relationships, and their individual transformations.
+
+Introduction
+
+The most important structural difference between ARC-AGI-1 and ARC-AGI-2 is compositionality. ARC-AGI-2 tasks frequently involve multiple objects that must be individually identified, classified, compared, and transformed. Without an object layer, every predicate in the primitive library must scan the full grid to find the cells it needs. With an object layer, the grid is scanned once at the start of a rule application, and all subsequent operations work directly with compact, named object terms.
+
+The obj pack solves this by providing:
+
+- obj_inventory/3: extract all 4-connected objects of a given color in one call
+- obj_all/2: extract all objects of all non-zero colors simultaneously
+- obj_shape/2: compute a translation-independent shape (normalized cell offsets) for object matching
+- obj_largest/3, obj_smallest/3: select objects by size without iterating manually
+- obj_sort_size/3: sort objects by size for ordered processing
+
+These tools directly address the ARC-AGI-2 challenge documented in the Next Steps roadmap: precompute object inventories to avoid O(N squared) repeated grid scans.
+
+Predicates
+
+The obj pack exports 14 predicates under the obj_* prefix.
+
+Construction and access:
+obj_from_cells/3   construct an obj term from a color and cell list
+obj_color/2        extract the color of an object
+obj_cells/2        extract the sorted cell list of an object
+
+Properties:
+obj_size/2         number of cells
+obj_bbox/5         axis-aligned bounding box (MinR, MinC, MaxR, MaxC)
+obj_center/3       integer centroid (floor of mean row and column)
+obj_shape/2        normalized cell offsets from (MinR, MinC) - translation invariant
+
+Inventory:
+obj_inventory/3    all 4-connected objects of one color in a grid
+obj_all/2          all objects of all non-zero colors
+
+Selection and ordering:
+obj_count/3        count of objects of one color
+obj_largest/3      largest object (most cells) of one color
+obj_smallest/3     smallest object (fewest cells) of one color
+obj_at_cell/3      find which object contains a given cell
+obj_sort_size/3    sort object list by size (asc or desc)
+
+Implementation
+
+Objects are represented as obj(Color, SortedCells) terms where SortedCells is the msort of the r(R,C) cell list. This canonical form means two objects with identical cells always compare equal regardless of the order they were discovered.
+
+obj_inventory delegates to cc_components4/3 from the connect pack, then wraps each component in an obj term. This reuses the existing flood-fill infrastructure and keeps the obj pack focused on the object-reasoning layer.
+
+obj_all uses findall to collect all cell values from the grid (deterministic, no choicepoints from append/2), then sort/2 to deduplicate, then maplist over the colors. A second findall flattens the per-color object lists.
+
+obj_shape subtracts the bounding box top-left corner (MinR, MinC) from every cell, producing a translation-independent shape. Two objects at different grid positions have the same obj_shape result iff they have the same geometric form.
+
+All 40 PLUnit acceptance tests pass (AC-OB-001 through AC-OB-040).
+
+Significance
+
+The obj pack bridges the gap between raw grid operations (rewrite, arith, compare packs) and high-level visual reasoning (shape matching, object tracking, rule dispatch). With the obj pack, Mentova can now:
+
+- Extract all distinct objects from a grid in one call and reason about them as named entities
+- Compare objects by shape, size, color, position, or centroid without grid scanning
+- Identify the context marker object in an ARC-AGI-2 task by color or position
+- Sort objects by size to find the largest or smallest for rule application
+- Look up which object a changed cell belongs to after a transformation
+
+This object-level reasoning layer is the primary new capability needed for ARC-AGI-2 wave 1.
+
+References
+
+PrologAI_1_Specification_v55.txt, Part 80 (OB-OB-001 through OB-OB-014)
+PrologAI_2_Pseudocode_v48.txt, Part 80
+PrologAI_3_Architecture_v49.txt, PART ARCH-56
+PrologAI_4_Refinement_v103.txt, Part 80 (AC-OB-001 through AC-OB-040)
+PrologAI_5_Completion_v106.txt, Work Package 90
+PrologAI PR #175: feat(packs): PR 90 - obj pack
+Mentova/data/arc_agi_2/ARC-AGI-2_Next_Steps.txt, Section 6.4
