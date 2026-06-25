@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-133-FF6B35?style=for-the-badge" alt="133 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-134-FF6B35?style=for-the-badge" alt="134 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **133 accomplished** |
-| Scientific papers | **113 published** — one per accomplishment |
+| Documented accomplishments | **134 accomplished** |
+| Scientific papers | **114 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         113 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  121 announcements — one per accomplishment
+├── papers/         114 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  122 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -433,13 +433,14 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_130` | Diff pack paper — Multi-Pair Grid Difference Analysis (Layer 89): 14 df_* predicates for single-pair cell diff and multi-pair contrastive analysis. Single-pair analysis: df_cell_diff (all changed cells as diff(R,C,OldV,NewV) terms), df_added (cells that went BG to non-BG), df_removed (cells that went non-BG to BG), df_recolored (cells that stayed non-BG but changed color), df_stable (cells with unchanged value), df_palette_change (colors added to or lost from the palette). Multi-pair analysis: df_common_diffs (cells changed in EVERY pair), df_common_stable (cells stable in EVERY pair), df_always_added (cells added in EVERY pair), df_always_removed (cells removed in EVERY pair). Manipulation: df_total_changes, df_apply_diffs, df_invert_diffs, df_filter_diffs. 42/42 acceptance tests pass. |
 | `Acc_131` | Order pack paper — Object Spatial Ordering and Ranking (Layer 90): 14 od_* predicates for centroid-based spatial ordering of obj(Color, Cells) terms. Centroid: od_centroid (integer floor mean of all cell coordinates). Sorting: od_sort_row (topmost to bottommost), od_sort_col (leftmost to rightmost), od_reading_order (row first then column), od_sort_color (by color value). Extremal selection: od_topmost, od_bottommost, od_leftmost, od_rightmost. Index access: od_nth_row (Nth in row order), od_nth_col (Nth in column order). Proximity: od_nearest (minimum Manhattan distance centroid), od_farthest (maximum Manhattan distance centroid). Ranking: od_rank_row (1-based position in row-ascending order). 42/42 acceptance tests pass. |
 | `Acc_132` | Assemble pack paper — Grid Assembly, Concatenation, and Composition (Layer 91): 14 as_* predicates for joining, scaling, framing, and compositing grids. Joining: as_hcat (horizontal concatenation of a list of different grids), as_vcat (vertical stacking), as_grid_of (2D matrix of grids). Scaling: as_downscale (K x K blocks to single cells by majority vote), as_crop_to (crop or pad to exact target size). Framing: as_border (W-cell colored frame), as_center_in (embed at integer floor center of a canvas). Quadrant: as_quarter (extract tl/tr/bl/br). Mirror-concat: as_flip_h_cat (grid and its left-right mirror side by side), as_flip_v_cat (grid and its top-bottom mirror stacked). Interleave: as_zip_h (interleave columns), as_zip_v (interleave rows). Compositing: as_paste (unconditional paste), as_mask_fill (replace cells where mask is non-zero). 42/42 acceptance tests pass. |
+| `Acc_134` | Neighbor pack paper — Cell Neighborhood Analysis (Layer 93): 14 nb_* predicates for cell-level local neighborhood analysis. Raw access: nb_4neighbors (nb(Row,Col,Val) list of valid 4-connected neighbors), nb_8neighbors (valid 8-connected neighbors including diagonals). Classification: nb_is_boundary (non-Bg cell with at least one Bg or OOB 4-neighbor), nb_is_interior (non-Bg cell with all 4-neighbors in-bounds and non-Bg), nb_boundary_cells (sorted R-C pairs of all boundary cells), nb_interior_cells (sorted R-C pairs of all interior cells). Value analysis: nb_count_same (4-neighbors with same color), nb_count_diff (4-neighbors with different color), nb_adjacent_colors (sorted distinct colors among 4-neighbors). Contour and contact: nb_contour (sorted R-C pairs of Color cells touching non-Color or boundary), nb_color_touches (succeed if ColorA 4-adjacent to ColorB anywhere), nb_touching_pairs (sorted (R1-C1)-(R2-C2) adjacency pairs). Grid modification: nb_flood_fill (4-connected flood fill returning modified grid), nb_dilate (expand Color region by one 4-connected layer into Bg). 42/42 acceptance tests pass. |
 | `Acc_133` | Region pack paper — Grid Region Extraction by Separator Lines (Layer 92): 14 rg_* predicates for content-driven grid division at separator rows and columns. Separator detection: rg_is_sep_row (every cell in a row equals Sep), rg_is_sep_col (every cell in a column equals Sep), rg_sep_rows (sorted list of all separator row indices), rg_sep_cols (sorted list of all separator column indices). Span computation: rg_spans_h (R0-R1 inclusive spans of non-separator horizontal sections), rg_spans_v (C0-C1 spans of vertical sections). Grid splitting: rg_cut_h (list of sub-grids split at separator rows), rg_cut_v (list of sub-grids split at separator columns). Section matrix: rg_sections (2D list-of-lists of all sections), rg_section_h (N-th horizontal section, 1-indexed), rg_section_v (N-th vertical section). Counting: rg_count_h, rg_count_v. Region query: rg_region (sub-grid of the section containing cell (R,C), fails if (R,C) is a separator). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-121 announcements in LinkedIn format — one per accomplishment.
+122 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
