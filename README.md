@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-118-FF6B35?style=for-the-badge" alt="118 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-119-FF6B35?style=for-the-badge" alt="119 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **118 accomplished** |
-| Scientific papers | **98 published** — one per accomplishment |
+| Documented accomplishments | **119 accomplished** |
+| Scientific papers | **99 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         98 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  96 announcements — one per accomplishment
+├── papers/         99 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  97 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -419,12 +419,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_116` | Sym pack paper — Spatial Symmetry Transforms and Testing (Layer 75): 14 sy_* predicates covering the D4 dihedral group transforms (sy_reflect_h, sy_reflect_v, sy_transpose, sy_rotate90, sy_rotate180, sy_rotate270), symmetry detection (sy_has_h_symm, sy_has_v_symm, sy_has_rot2_symm, sy_has_rot4_symm), symmetry discovery (sy_symmetries), symmetrization (sy_make_h_symm, sy_make_v_symm), and full D4 orbit computation (sy_d4_orbit). All 8 elements of the dihedral group D4 covered. 43/43 acceptance tests pass. |
 | `Acc_117` | Seek pack paper — Spatial Pattern Search and Transform Discovery (Layer 76): 14 sk_* predicates for finding all positions of a value (sk_positions), finding rows/columns containing a value (sk_rows_with, sk_cols_with), listing border and interior cell positions (sk_border_cells, sk_interior_cells), exact sub-grid match test (sk_fits), enumerating and collecting sub-grid positions (sk_find_sub, sk_all_subs), counting occurrences (sk_count_sub), counting matching cells at a position (sk_match_count), finding the best-fitting position (sk_best_fit), discovering the D4 transform mapping one grid to another (sk_find_d4), upscaling each cell to a Factor x Factor block (sk_upscale), and finding the integer scale factor between two grids (sk_find_scale). 49/49 acceptance tests pass. |
 | `Acc_118` | Remap pack paper — Color Remapping and Palette Manipulation (Layer 77): 14 rm_* predicates for replacing one value with another (rm_replace), swapping two values (rm_swap), applying a color substitution map with identity fallback (rm_apply_map), applying a map only to cells matching a specific value (rm_apply_map_to), inverting a map by swapping keys and values (rm_invert_map), composing two maps by chaining lookups (rm_compose_maps), normalizing distinct values to 1-based consecutive integers (rm_normalize), shifting all cell values by an offset (rm_shift), clamping all cell values to a range (rm_clamp), recoloring cells satisfying a predicate goal (rm_conditional), binarizing a grid to foreground/background (rm_binarize), remapping the background color (rm_remap_bg), extracting the sorted palette of distinct values (rm_palette), and reindexing a grid using a supplied palette (rm_reindex). 38/38 acceptance tests pass. |
+| `Acc_119` | Logic pack paper — Boolean and Mask Grid Operations (Layer 78): 14 lg_* predicates for boolean intersection of grids keeping values where both are non-background (lg_and), union returning first grid's value on ties (lg_or), exclusive-or returning a value only where exactly one grid is non-background (lg_xor), inverting foreground and background (lg_not), set-difference keeping cells present in the first grid but absent in the second (lg_diff), overlaying one grid onto another with background as transparent (lg_overlay), applying a mask to keep grid values only where the mask is non-background (lg_mask_apply), creating a binary presence mask from a grid (lg_mask_from), per-row presence flags (lg_any_row), per-column presence flags (lg_any_col), per-row fullness flags (lg_all_row), per-column fullness flags (lg_all_col), cell-wise equality to 0/1 grid (lg_eq), and cell-wise inequality (lg_neq). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-106 announcements in LinkedIn format — one per accomplishment.
+107 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
