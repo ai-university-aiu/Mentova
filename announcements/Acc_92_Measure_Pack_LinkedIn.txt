@@ -1,0 +1,34 @@
+Accomplishment 92: Mentova can now measure what it sees.
+
+The new measure pack gives PrologAI fourteen geometric predicates for describing
+cell regions and grids with mathematical precision.
+
+Area. Bounding box. Perimeter. Diameter. Extent ratio. Aspect ratio.
+Row span. Column span. Centroid. Radius. Interior count. Border count.
+Color count.
+
+Every result is a deterministic integer. No floating-point approximation.
+No machine-learning guesswork. Pure symbolic geometry.
+
+Here is what that looks like in practice:
+
+A 3x3 filled square has area 9, perimeter 12, one interior cell, and eight
+border cells.
+
+A horizontal bar of three cells has aspect ratio 3:1, diameter 2, and a centroid
+at its middle cell.
+
+An L-shape with three cells has extent 3/4 - it fills three of the four cells
+in its bounding box.
+
+These are the kinds of measurements that let a cognitive system describe what
+it is looking at before it tries to reason about it.
+
+You cannot compare two shapes if you cannot first describe each shape.
+
+The measure pack is Layer 51, work package 72 in the PrologAI platform.
+
+57 tests. All pass.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

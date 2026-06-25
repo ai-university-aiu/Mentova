@@ -1,0 +1,214 @@
+Accomplishment 92: Measure Pack - Geometric Region Metrics for Cognitive Perception
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains a new work package - the measure pack (module measure, ms_* prefix,
+Layer 51) - that gives Mentova the ability to compute fourteen geometric properties
+of cell regions and grids in a single deterministic pass.
+
+This document describes what the pack provides, why each predicate matters for
+symbolic cognition and perceptual reasoning, and how Mentova uses these measurements
+to understand spatial structure.
+
+
+1. Background
+
+A region in PrologAI is a list of r(R,C) cells.
+
+A grid is a list-of-lists of integer color values.
+
+Before the measure pack, Mentova could detect regions (via the connected-component
+pack) and label their colors (via the grid pack), but it had no vocabulary for
+describing how big a region is, how elongated it is, or how many cells sit on
+its surface versus its interior.
+
+The measure pack closes this gap.
+
+
+2. The Fourteen Predicates
+
+2.1 Area
+
+ms_area/2 counts the cells in a region.
+
+This is the simplest and most fundamental quantity.
+
+Area is the denominator for every ratio-based measurement that follows.
+
+
+2.2 Bounding Box
+
+ms_bbox/2 returns the smallest axis-aligned rectangle that contains every cell
+in the region, expressed as bbox(MinRow, MinCol, MaxRow, MaxCol).
+
+ms_bbox_size/3 extracts the width (number of columns) and height (number of rows)
+of that rectangle as two separate integers.
+
+
+2.3 Perimeter
+
+ms_perimeter/2 counts every exposed 4-connected edge face.
+
+For each cell in the region, the predicate checks how many of its four cardinal
+neighbors (up, down, left, right) are not in the region.
+
+The total count is the perimeter.
+
+A single isolated cell has perimeter 4.
+
+A 2x2 filled square has perimeter 8 (each cell contributes 2 exposed faces).
+
+
+2.4 Diameter
+
+ms_diameter/2 returns the maximum Manhattan distance - |dR| + |dC| - between any
+two cells in the region.
+
+This measures how "spread out" the region is along cardinal directions.
+
+
+2.5 Extent
+
+ms_extent/3 returns the area-to-bounding-box ratio as two integers N (area) and
+D (bounding box area, equal to width times height).
+
+A filled rectangle has N = D (extent ratio 1).
+
+An L-shape has N < D (the bounding box contains empty corners).
+
+This ratio reveals how compactly the region fills its bounding box.
+
+
+2.6 Aspect
+
+ms_aspect/3 returns the aspect ratio of the bounding box as N/D where N is the
+larger of width and height and D is the smaller.
+
+A square region has N = D.
+
+A thin horizontal line has N >> D.
+
+Aspect is useful for distinguishing horizontal bars from vertical bars from blobs.
+
+
+2.7 Row Span and Column Span
+
+ms_row_span/2 counts the number of distinct row indices occupied by the region.
+
+ms_col_span/2 counts the number of distinct column indices occupied by the region.
+
+These two counts need not equal the bounding box height and width if the region
+has gaps (non-contiguous rows or columns).
+
+
+2.8 Centroid
+
+ms_centroid/3 computes the integer floor average of the row coordinates and the
+integer floor average of the column coordinates.
+
+This gives the approximate center of mass of the region.
+
+All arithmetic uses integer division, so the result is always a valid cell coordinate.
+
+
+2.9 Radius
+
+ms_radius/2 finds the maximum Chebyshev distance from the centroid to any cell
+in the region.
+
+The Chebyshev distance between two cells is max(|dR|, |dC|), the L-infinity norm.
+
+Radius measures how far the most distant cell lies from the center, under the
+eight-directional distance metric.
+
+
+2.10 Interior Count
+
+ms_interior_count/2 counts cells whose four cardinal neighbors are all inside
+the region.
+
+These are the "core" cells - cells that have no direct contact with the background.
+
+A 3x3 filled square has exactly one interior cell: the center.
+
+
+2.11 Border Count
+
+ms_border_count/2 counts cells with at least one cardinal neighbor outside
+the region.
+
+Border count and interior count always sum to the area.
+
+
+2.12 Color Count
+
+ms_color_count/2 counts the number of distinct integer values present anywhere
+in a grid.
+
+This predicate operates on a full grid (list-of-lists), not a region.
+
+It tells Mentova how many different colors appear in the current scene.
+
+
+3. Implementation Notes
+
+All fourteen predicates are deterministic: each produces exactly one answer for
+valid inputs and fails cleanly for empty or invalid inputs.
+
+The pack uses only built-in SWI-Prolog predicates plus library(lists) and
+library(apply).
+
+ms_unique_/2 is a private helper that removes consecutive duplicates from a sorted
+list, providing the set-of-values operation without importing library(aggregate).
+
+ms_has_all_neighbors_/2 uses negation-as-failure: a cell is interior if and only
+if there is no 4-neighbor that is absent from the region.
+
+
+4. Tests
+
+The pack ships 57 PLUnit tests organized into 14 test suites - one per predicate.
+
+Every test covers a named geometric shape (single cell, horizontal line, vertical
+line, L-shape, 2x2 square, 3x3 square).
+
+All 57 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+The measure pack is documented across five SPARC volumes:
+
+• Specification v37, Part 62: functional requirements for all fourteen predicates
+• Pseudocode v30, Part 62: step-by-step reasoning for each algorithm
+• Architecture v31, PART ARCH-38: module placement, dependencies, and interface
+• Refinement v85, Part 62: acceptance criteria AC-MS-001 through AC-MS-057
+• Completion v88: PR 72 release checklist
+
+
+6. Significance
+
+With the measure pack, Mentova can now answer questions like:
+
+"How large is this region?"
+
+"Is it wider than it is tall?"
+
+"Does it have a hollow interior, or is it solid?"
+
+"How many colors appear in this grid?"
+
+These are foundational perceptual questions that any vision-capable cognitive
+system must answer before it can reason about transformations, patterns, or rules.
+
+The measure pack is the thirty-third tutorial chapter and the seventy-first work
+package in the PrologAI platform.
+
+
+END OF PAPER
