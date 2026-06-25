@@ -1,0 +1,21 @@
+Accomplishment 110: Mentova gains object-level grid reasoning - a 14-predicate layer for identifying, analyzing, and comparing distinct connected regions in a grid.
+
+The obj pack (obj_* predicates, Layer 69) lifts Mentova's reasoning from individual cells to named objects:
+
+- obj_from_cells/3: construct an object term obj(Color, Cells) from a color and cell list
+- obj_color/2, obj_cells/2, obj_size/2: access color, cells, and cell count
+- obj_bbox/5: axis-aligned bounding box (MinR, MinC, MaxR, MaxC)
+- obj_center/3: integer centroid (floor of mean row and column)
+- obj_shape/2: translation-independent normalized offsets - two objects match if they have the same shape regardless of position
+- obj_inventory/3: extract all 4-connected objects of one color from a grid
+- obj_all/2: extract all objects of all non-zero colors in one call
+- obj_count/3: count objects of a given color
+- obj_largest/3, obj_smallest/3: select by size
+- obj_at_cell/3: find which object contains a given cell
+- obj_sort_size/3: sort objects by size ascending or descending
+
+With the obj pack, Mentova can precompute the object inventory once, then reason about each object individually - identifying context markers, matching shapes, and selecting targets without rescanning the entire grid.
+
+This is Mentova's 110th documented accomplishment and PrologAI's 88th work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
