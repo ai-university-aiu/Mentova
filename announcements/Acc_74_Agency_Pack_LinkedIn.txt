@@ -1,0 +1,52 @@
+ACCOMPLISHMENT: Acc_74 - Mentova Now Pursues Goals with a Formal Agentic Loop
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+PrologAI can now pursue a goal over many steps, track every thought and action, detect when it is stuck, and safely ask for human help.
+
+This is Acc_74: the agency pack.
+
+Before Acc_74, PrologAI reasoned in response to queries. A query arrived, predicates were called, an answer was returned. The loop was the Prolog interpreter's own query-answer cycle. There was no facility for the system to pursue a goal over time while managing a budget, recording a trace, and detecting failure modes.
+
+After Acc_74, the loop is inside the platform.
+
+The agency pack (PR 54) adds thirteen predicates organized around a formal Observe-Reason-Act-Observe execution loop:
+
+    ag_loop_create/3       Allocate a loop with a goal and a step budget.
+    ag_loop_run/3          Run the loop to completion.
+    ag_loop_step/3         Execute one step of the loop.
+    ag_loop_done/1         Check whether the loop has reached a terminal state.
+    ag_loop_outcome/2      Retrieve the final outcome.
+    ag_loop_trace/2        Retrieve the complete ordered trace of all steps.
+    ag_push_subgoal/2      Add a subgoal to the top of the goal stack.
+    ag_pop_subgoal/2       Remove the completed top subgoal.
+    ag_budget_remaining/2  Query the remaining step budget.
+    ag_budget_decrement/1  Decrement the budget by one step.
+    ag_detect_loop/2       Return true if the last two thought-action pairs are identical.
+    ag_escalate/2          Mark the loop escalated(Reason) and transition to terminal.
+    ag_step_record/4       Record a thought, action, and observation for one step.
+
+Seven action types are supported: action_eval, action_shell, action_push_goal, action_push_goals, action_mark_done, action_escalate, action_pop_goal.
+
+The demo shows five things working live in Mentova:
+
+1. Two ag_loop_create calls produce distinct loop IDs; initial budget = 10.
+2. ag_budget_decrement reduces budget from 5 to 4 in a single call.
+3. Three ag_step_record calls are retrieved as a complete ordered trace.
+4. ag_detect_loop returns true after the same thought-action pair appears twice in a row.
+5. ag_escalate transitions the loop to escalated(cannot_proceed_without_credentials); ag_loop_done confirms terminal state.
+
+All five acceptance criteria pass.
+
+The agency pack is architecturally clean: it provides the loop infrastructure but does not decide what to do. The caller supplies a ReasonGoal predicate that is called at each step. Any reasoning strategy - symbolic rule lookup, probabilistic inference, another agentic loop, a call to an external AI service - can be plugged in without changing the loop infrastructure.
+
+This is the second of three silicon-and-code packs. The ephemera pack (Acc_73) gives PrologAI the ability to write and run code. The agency pack (Acc_74) gives it the ability to pursue goals with a bounded, observable loop. The refinery pack (Acc_75) will give it the ability to critique its own outputs and improve them until they meet a quality bar.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+
+This is Acc_74.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+ORCID: 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

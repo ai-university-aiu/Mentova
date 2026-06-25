@@ -1,0 +1,148 @@
+THE AGENCY PACK: MENTOVA PURSUES GOALS WITH A FORMAL AGENTIC LOOP
+MENTOVA ACC_74: OBSERVE-REASON-ACT-OBSERVE ON THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_74
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-24
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Acc_74 adds the agency pack to the PrologAI platform and demonstrates its use through Mentova. The agency pack gives PrologAI a formal, observable, and bounded Observe-Reason-Act-Observe (ORAO) execution loop for goal pursuit. Rather than ad hoc chains of Prolog predicates, goal pursuit now takes place as a tracked, auditable sequence of steps with a step budget, a goal stack, a trace log, loop detection, and a safe escalation path to human oversight. The pack is implemented as work package PR 54 at Layer 33 of the PrologAI cognitive architecture and exports thirteen predicates. All five Mentova acceptance criteria pass.
+
+
+INTRODUCTION
+
+A recurring theme in agentic AI engineering is that the loop matters as much as the reasoning.
+
+A system that can reason brilliantly but cannot manage its own execution will spin endlessly, exhaust resources, repeat the same failing action, or produce no observable record of what it did. A system with a well-designed loop can do none of these things: the budget stops infinite loops, the goal stack organizes decomposed work, the trace log records every thought and action, loop detection catches cycles, and escalation requests human help when needed.
+
+The ReAct pattern (Yao et al., 2023) and its successors show that interleaving reasoning and action within a structured loop produces substantially better results than either reasoning alone or acting without recording observations. The key insight is not the specific reasoning strategy but the loop discipline: observe, reason, act, observe again, repeat.
+
+PrologAI has had reasoning capabilities since its earliest work packages. Acc_74 adds the loop.
+
+The agency pack takes a silicon-and-code substrate approach: it implements the loop structure as proven agentic AI engineering, not as a simulation of biological cognition. The loop lifecycle, budget accounting, goal stack management, loop detection algorithm, and escalation protocol are all direct implementations of engineering patterns from the Agentic AI Design Patterns reference document.
+
+
+DESIGN
+
+The agency pack is organized around three structural elements.
+
+Element 1 - The loop state. Each loop is identified by a unique atom (ag_loop_1, ag_loop_2, etc.) allocated by ag_loop_create/3. Four dynamic facts track the loop: ag_loop_meta/4 (goal, budget, status), ag_goal_stack/2 (ordered subgoal list), ag_step_counter/2 (steps taken so far), and ag_escalation/2 (escalation records). The status field takes one of four values: running (active), done(Result) (completed normally), escalated(Reason) (escalation requested), or budget_exhausted (step budget used up).
+
+Element 2 - The reasoning interface. The agency pack does not decide what to do. That is the caller's responsibility. The caller supplies a ReasonGoal predicate that is called at each step as call(ReasonGoal, LoopId, CurrentGoal, Thought, Action). Thought is any Prolog term representing the reasoning behind the decision. Action is one of seven action types (see below). This open interface allows any reasoning strategy - symbolic rule lookup, probabilistic inference, a neural oracle, another agentic loop - to be plugged into the loop without changing the loop infrastructure.
+
+Element 3 - The action dispatch layer. ag_act/3 dispatches each action type to the appropriate handler and returns an observation: action_eval(GoalTerm) calls ep_eval/3 from the ephemera pack; action_shell(Argv, Timeout) calls ep_shell/3; action_push_goal(Subgoal) and action_push_goals(Subgoals) extend the goal stack; action_mark_done(Result) transitions the loop to done(Result); action_escalate(Reason) calls ag_escalate/2; action_pop_goal removes the completed top subgoal.
+
+Loop detection (ag_detect_loop/2) collects all thought-action pairs recorded so far and checks whether the last two pairs are identical. Identical consecutive pairs indicate a stuck loop: the system is reasoning identically and acting identically with no progress.
+
+The escalation path (ag_escalate/2) is the safety valve. When the reasoner determines it cannot proceed without human input, it chooses action_escalate(Reason). The agency pack records the reason in ag_escalation/2 and transitions the loop to the escalated(Reason) terminal state. The loop then halts and the caller can inspect the full trace and the escalation record.
+
+
+IMPLEMENTATION
+
+pack agency is implemented in packs/agency/prolog/agency.pl (PrologAI PR 54, 362 lines with ERC comments on every physical line). The pack imports ep_eval/3 and ep_shell/3 from pack ephemera (PR 53). It has no other PrologAI pack dependency.
+
+Architecture placement: Layer 33 (agentic execution loop), PART ARCH-20 of the PrologAI Architecture document.
+
+SPARC volumes updated: Specification v17 to v18 (Part 44 added), Pseudocode v10 to v11, Architecture v11 to v12 (ARCH-20 added), Refinement v65 to v66 (AC-AG-001 through AC-AG-010 added), Completion v68 to v69.
+
+
+DEMONSTRATION
+
+The Mentova demo (demos/agency_demo.pl) exercises five acceptance criteria.
+
+AC-ACC74-001: Two calls to ag_loop_create produce two loops with distinct identifiers (ag_loop_1 and ag_loop_2), confirming the allocator is monotone and unique. The initial budget of 10 is confirmed via ag_budget_remaining/2.
+
+AC-ACC74-002: After ag_loop_create with budget 5 and one call to ag_budget_decrement/1, ag_budget_remaining/2 returns 4. The budget decrements by exactly one per call, as required.
+
+AC-ACC74-003: Three manual calls to ag_step_record/4 store three trace entries - each with a natural-language thought, an action term, and an observation - and ag_loop_trace/2 retrieves all three. The trace is the complete, ordered record of what the loop did and why.
+
+AC-ACC74-004: Two consecutive ag_step_record/4 calls with the same thought ('I will try the same thing again') and the same action (action_eval(true)) result in ag_detect_loop/2 returning true. The loop detection algorithm finds the repeated pair and signals that the loop is stuck.
+
+AC-ACC74-005: ag_escalate/2 with reason cannot_proceed_without_credentials transitions the loop to the terminal state. ag_loop_done/1 succeeds (confirming the loop is terminal) and ag_loop_outcome/2 returns escalated(cannot_proceed_without_credentials) (confirming the reason is stored correctly).
+
+
+RESULTS
+
+All five acceptance criteria pass.
+
+Output:
+
+    === Mentova Acc_74: Agency Pack Demonstration ===
+
+    AC-ACC74-001: PASS  ag_loop_1 and ag_loop_2 are distinct; budget = 10
+    AC-ACC74-002: PASS  budget decremented from 5 to 4
+    AC-ACC74-003: PASS  trace has 3 steps; thoughts, actions, observations all recorded
+    AC-ACC74-004: PASS  ag_detect_loop correctly identified repeated thought-action pair
+    AC-ACC74-005: PASS  loop halted safely; outcome = escalated(cannot_proceed_without_credentials)
+
+    === All five criteria pass. Acc_74 complete. ===
+
+
+SIGNIFICANCE
+
+The agency pack adds a second qualitatively new mode of operation to PrologAI, building on the ephemera pack from Acc_73.
+
+Before Acc_74, PrologAI reasoned in response to queries. A query arrived, reasoning predicates were called, an answer was returned. The loop was the SWI-Prolog query-answer cycle. There was no facility for the platform to pursue a goal over multiple steps while tracking what it had done and managing a budget.
+
+After Acc_74, PrologAI can pursue a goal over many steps. The loop is now inside the platform. Every step is recorded. The budget prevents runaway loops. Loop detection catches cycles. Escalation provides a safe exit. The trace is a complete, inspectable record of everything that happened.
+
+This matters for three reasons.
+
+First, it makes PrologAI's goal-pursuit observable. A trace is not just a log; it is a proof that the system did what it claims to have done, in the order it claims to have done it, with the thoughts it claims to have had. The glass-box property that characterizes PrologAI's reasoning extends to its execution loop.
+
+Second, it makes PrologAI's goal-pursuit bounded. A step budget is a commitment: the system will use at most this many resources. When the budget is exhausted, the loop halts cleanly rather than running indefinitely. This is a fundamental safety property.
+
+Third, it separates loop infrastructure from domain reasoning. The agency pack does not decide what to do; that is the caller's job. Any reasoning strategy can be plugged in as a ReasonGoal. The same loop infrastructure works for symbolic rule lookup, probabilistic inference, database queries, or calls to external AI services. This separation is the clean architecture principle applied to agentic execution.
+
+The agency pack is also the foundation for more sophisticated orchestration patterns: orchestrator-worker loops (where one agency loop manages several sub-loops), planning-then-execution (where a planning pack generates the goal stack and agency executes it), and self-improving loops (where the refinery pack, added in Acc_75, critiques the trace and drives improvement).
+
+
+ACCEPTANCE CRITERIA
+
+AC-ACC74-001: Two ag_loop_create calls produce distinct loop IDs; initial budget equals the specified value. PASS.
+
+AC-ACC74-002: ag_budget_decrement/1 reduces the budget by exactly one. PASS.
+
+AC-ACC74-003: ag_loop_trace/2 returns all steps recorded by ag_step_record/4, including thought, action, and observation for each. PASS.
+
+AC-ACC74-004: ag_detect_loop/2 returns true when the last two thought-action pairs in the trace are identical. PASS.
+
+AC-ACC74-005: ag_escalate/2 marks the loop done with escalated(Reason); ag_loop_done/1 and ag_loop_outcome/2 both confirm the terminal state. PASS.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/PrologAI.git
+    git clone https://github.com/ai-university-aiu/Mentova.git
+
+    cd Mentova
+    swipl \
+      -p library=/path/to/PrologAI/packs/ephemera/prolog \
+      -p library=/path/to/PrologAI/packs/agency/prolog \
+      -l demos/agency_demo.pl \
+      -g run_agency_demo \
+      -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+PrologAI PR 54: pack agency (Layer 33). https://github.com/ai-university-aiu/PrologAI
+
+Yao, S., Zhao, J., Yu, D., Du, N., Shafran, I., Narasimhan, K., and Cao, Y. ReAct: Synergizing Reasoning and Acting in Language Models. International Conference on Learning Representations (ICLR), 2023.
+
+Mentova Accomplishment Records:
+Acc_73 - Ephemera Pack: Mentova writes and executes short-lived programs.
+Acc_75 - Refinery Pack: Mentova critiques and improves its own outputs.
+
+Agentic AI Design Patterns - ReAct loop, loop detection, escalation, bounded autonomy.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
