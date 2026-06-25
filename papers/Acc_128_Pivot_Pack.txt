@@ -1,0 +1,214 @@
+Acc_128: Pivot-Relative Cell Transformations - The Pivot Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains the pivot pack (pv_* predicate family, Layer 87, Work Package 108),
+a 14-predicate module for applying D4 group operations to lists of R-C cell
+coordinates centered at any chosen pivot position.
+
+The pack provides centroid computation, coordinate conversion between absolute and
+pivot-relative frames, three rotation depths (90 CW, 180, 90 CCW), four axis
+reflections (horizontal, vertical, diagonal, anti-diagonal), orbit computation,
+D4 symmetry closure, and grid stamping.
+
+42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Spatial reasoning over discrete grids frequently requires rotating or reflecting
+a set of object cells around an anchor point - not an entire grid, but a localized
+patch.
+
+The existing sym pack (sy_* predicates) applies D4 isometries to a whole grid
+matrix.
+
+The pivot pack fills the complementary need: operating on a list of cell positions
+relative to an arbitrary pivot, enabling per-object transformations, symmetry
+detection, and shape enumeration without constructing intermediate full-grid
+representations.
+
+
+2. D4 Group Background
+
+The D4 group is the group of symmetries of the square.
+
+It has 8 elements: the identity, three rotations (90 CW, 180, 90 CCW), and four
+reflections (horizontal axis, vertical axis, main diagonal, anti-diagonal).
+
+When cells are expressed as offsets (DR, DC) from a pivot, each D4 operation is a
+simple 2x2 integer linear map:
+
+90 CW:         (DR, DC) -> (DC, -DR)
+180:           (DR, DC) -> (-DR, -DC)
+90 CCW:        (DR, DC) -> (-DC, DR)
+Reflect H:     (DR, DC) -> (DR, -DC)     (flip left-right)
+Reflect V:     (DR, DC) -> (-DR, DC)     (flip top-bottom)
+Reflect Diag:  (DR, DC) -> (DC, DR)      (swap row and column offsets)
+Reflect Anti:  (DR, DC) -> (-DC, -DR)    (negate and swap)
+
+All maps are integer-valued, so no floating-point arithmetic is needed.
+
+
+3. Predicate Inventory
+
+The 14 predicates of the pivot pack cover four functional areas.
+
+
+3.1 Centroid and Coordinate Conversion
+
+pv_centroid(Cells, PR-PC) computes the integer floor centroid of a list of R-C
+cells using foldl to sum rows and columns, then divides by count with integer
+division.
+
+pv_to_rel(PR-PC, R-C, DR-DC) converts an absolute cell to its offset from the
+pivot.
+
+pv_from_rel(PR-PC, DR-DC, R-C) is the inverse: given an offset, recover the
+absolute cell.
+
+These three predicates establish the coordinate change that underpins all other
+operations.
+
+
+3.2 Rotation
+
+pv_rotate_cell_cw(Pivot, Cell, Cell2) rotates one cell 90 degrees clockwise around
+Pivot using the formula new_R = PR + DC, new_C = PC - DR.
+
+pv_rotate_cells_cw(Pivot, Cells, Cells2) applies the rotation to every cell in a
+list via maplist/3.
+
+pv_rotate_cells_180(Pivot, Cells, Cells2) rotates 180 degrees: new_R = 2*PR - R,
+new_C = 2*PC - C.
+
+pv_rotate_cells_ccw(Pivot, Cells, Cells2) rotates 90 degrees counter-clockwise:
+new_R = PR - DC, new_C = PC + DR.
+
+
+3.3 Reflection
+
+Four predicates provide the four symmetry axes through the pivot.
+
+pv_reflect_cells_h(Pivot, Cells, Cells2) reflects left-right (horizontal axis):
+column offset negated, row unchanged.
+
+pv_reflect_cells_v(Pivot, Cells, Cells2) reflects top-bottom (vertical axis):
+row offset negated, column unchanged.
+
+pv_reflect_cells_diag(Pivot, Cells, Cells2) reflects across the main diagonal:
+row and column offsets swapped.
+
+pv_reflect_cells_antidiag(Pivot, Cells, Cells2) reflects across the anti-diagonal:
+offsets negated and swapped.
+
+Each reflection helper uses prefix underscore to mark unused components of the pivot
+pair, avoiding singleton variable warnings: _PR-PC for horizontal reflection,
+PR-_PC for vertical reflection.
+
+
+3.4 Orbit, Symmetry Closure, and Stamping
+
+pv_orbit(Pivot, Cell, Orbit) computes all distinct cells reachable by applying the
+full D4 group to Cell around Pivot.
+
+It applies all 8 symmetry operations and collects results with sort/2 to remove
+duplicates.
+
+For a general cell the orbit has 8 elements.
+
+For cells on a symmetry axis through the pivot the orbit is smaller: a cell directly
+above the pivot has a 4-element orbit (cardinal neighbors), a cell on the diagonal
+has a 4-element orbit, and the pivot itself has a 1-element orbit.
+
+pv_sym_closure(Pivot, Cells, Closure) computes the D4 symmetry closure of a cell
+list: the smallest D4-symmetric set containing all input cells.
+
+It takes the orbit of every input cell and unions the results with sort/2.
+
+pv_stamp_at(Grid, Offsets, Val, Pivot, Result) paints a value at each absolute cell
+computed by adding each DR-DC offset to the pivot position.
+
+Out-of-bounds offsets are silently skipped, leaving the grid unchanged for those
+positions.
+
+The implementation uses a recursive helper pv_set_cell_/5 that decomposes the grid
+list with append/3 to reach the target row and column.
+
+
+4. Representative Test Cases
+
+The 42 acceptance tests cover 3 cases per predicate.
+
+The centroid of a 2x2 block [0-0, 0-1, 1-0, 1-1] is 0-0 under integer floor
+division.
+
+Rotating [1-2] 90 CW around pivot 2-2 yields 2-3 (a cell above the pivot moves to
+the right of the pivot).
+
+The orbit of 2-2 around itself is [2-2] (a single-element orbit).
+
+Stamping offset 0-(-1) from pivot 0-0 into a 2x2 grid targets column -1, which is
+out of bounds, so the grid is returned unchanged.
+
+The D4 symmetry closure of a single cardinal neighbor [1-0] around 0-0 produces the
+four cardinal neighbors [(-1)-0, 0-(-1), 0-1, 1-0].
+
+
+5. Integration with the PrologAI Pack Stack
+
+The pivot pack is Layer 87 in the PrologAI cognitive substrate.
+
+It is independent of other packs (requires([]) in pack.pl) and operates purely on
+R-C pair lists and Prolog lists.
+
+Typical integration patterns include:
+
+Using pv_centroid with the obj pack (oj_* predicates) to locate the natural rotation
+center of an object extracted from a grid.
+
+Using pv_rotate_cells_cw and pv_stamp_at together to rotate an object and paint its
+rotated form back into a grid without constructing an intermediate full-grid copy.
+
+Using pv_sym_closure with the scene pack (sc_* predicates) to test whether a
+detected object's cell pattern is D4-symmetric around its own centroid.
+
+Combining pv_orbit with the compare pack (cp_* predicates) to enumerate all
+rotationally and reflectionally equivalent forms of a shape for invariant matching.
+
+
+6. SPARC Documentation
+
+Work Package 108 is documented in:
+
+Specification Part 98 (PV-PV-001 through PV-PV-014) describing each predicate's
+contract.
+
+Pseudocode Part 98 providing step-by-step reasoning for pv_centroid, pv_orbit,
+pv_sym_closure, and pv_stamp_at.
+
+Architecture Part ARCH-74 positioning the pivot pack within the Layer 87 slot of
+the cognitive substrate.
+
+Refinement acceptance criteria AC-PV-001 through AC-PV-042 (42 tests, 3 per
+predicate).
+
+Completion Work Package 108 logging the pack as delivered and merged.
+
+
+7. Conclusion
+
+The pivot pack gives PrologAI a clean, integer-arithmetic implementation of the
+full D4 symmetry group operating on localized cell sets.
+
+It fills a gap between whole-grid isometry (sym pack) and per-cell movement (step
+pack), enabling object-level rotation and reflection reasoning over any region of a
+grid without constructing intermediate matrix representations.
+
+PrologAI now carries 106 work packages and 128 Mentova accomplishments.

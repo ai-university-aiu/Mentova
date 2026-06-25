@@ -1,0 +1,46 @@
+Mentova Accomplishment 128: Pivot-Relative Cell Transformations - The Pivot Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI gains the pivot pack - 14 predicates for applying D4 symmetry operations
+to cell lists centered at any chosen pivot position.
+
+The D4 group is the full set of symmetries of a square: identity, three rotations
+(90 CW, 180, 90 CCW), and four reflections (horizontal, vertical, diagonal,
+anti-diagonal).
+
+The pivot pack applies all 8 of these operations to lists of grid cells, with any
+cell as the rotation/reflection center.
+
+What the pivot pack provides:
+
+• pv_centroid - integer floor centroid of a cell list
+• pv_to_rel / pv_from_rel - convert between absolute and pivot-relative coordinates
+• pv_rotate_cells_cw / 180 / ccw - rotate a cell list 90 CW, 180, or 90 CCW
+• pv_reflect_cells_h / v / diag / antidiag - reflect across 4 symmetry axes
+• pv_orbit - all distinct cells reachable by D4 operations from one starting cell
+• pv_sym_closure - smallest D4-symmetric set containing a given cell list
+• pv_stamp_at - paint values at offset positions in a grid (out-of-bounds skipped)
+
+Why it matters:
+
+The sym pack applies isometries to a full grid matrix.
+
+The step pack traces paths and rays from a cell in a direction.
+
+The pivot pack fills the space between them: it rotates or reflects a localized
+object - a list of cell positions - around an arbitrary anchor point, without
+touching the rest of the grid.
+
+This enables per-object symmetry testing, shape enumeration across all D4
+equivalents, and stamping rotated object copies back into a grid.
+
+42 PLUnit acceptance tests pass.
+
+All 8 D4 operations are integer arithmetic only - no floating-point.
+
+PrologAI: 106 work packages.
+
+Mentova: 128 accomplishments.
