@@ -1,0 +1,170 @@
+Accomplishment 99: Spatial Pack - Directional and Positional Reasoning
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains a new work package - the spatial pack (module spatial,
+sp_* prefix, Layer 58) - that gives Mentova fourteen deterministic
+predicates for spatial reasoning about cell positions and regions.
+
+This pack answers the directional questions that visual reasoning
+requires: where is this relative to that, how far apart are they,
+what surrounds them, and which is closest?
+
+
+1. Background
+
+Visual reasoning is inherently spatial. Objects have positions. Those
+positions have relationships. Rules exploit those relationships.
+
+Before the spatial pack, Mentova could measure the size of a region and
+detect patterns across a grid, but it could not easily ask:
+
+"Is this cell north of that one?"
+"What cells are within Manhattan distance 2?"
+"Which object in this list is closest to the reference point?"
+
+The spatial pack provides exactly this vocabulary.
+
+
+2. The Fourteen Predicates
+
+2.1 Direction
+
+sp_direction/3 gives the cardinal direction from one cell to another:
+north, south, east, west, northeast, northwest, southeast, southwest,
+or same (for identical cells).
+
+This covers all nine compass positions.
+
+
+2.2 Distance Metrics
+
+sp_distance_manhattan/3 computes the Manhattan (L1) distance:
+|R2 - R1| + |C2 - C1|.
+
+This is the number of horizontal and vertical steps needed.
+
+sp_distance_chebyshev/3 computes the Chebyshev (L-infinity) distance:
+max(|R2 - R1|, |C2 - C1|).
+
+This is the number of king-moves needed when diagonal moves are allowed.
+
+
+2.3 Neighbor Enumeration
+
+sp_neighbors4/3 returns all 4-connected in-bounds neighbors of a cell
+in a grid of given dimensions.
+
+sp_neighbors8/3 returns all 8-connected in-bounds neighbors.
+
+Both predicates generate all candidates then filter to in-bounds cells,
+so corner and edge cells automatically receive fewer neighbors.
+
+
+2.4 Adjacency Tests
+
+sp_adjacent4/2 tests whether two cells have Manhattan distance exactly 1.
+
+sp_adjacent8/2 tests whether two cells have Chebyshev distance exactly 1.
+
+
+2.5 Containment Tests
+
+sp_bbox_contains/2 tests whether a cell is inside a bounding box
+(inclusive on all edges).
+
+sp_in_region/2 tests whether a cell is a member of a region list.
+It is deterministic: a cut suppresses the choicepoint that member/2
+would otherwise leave.
+
+
+2.6 Band Filtering
+
+sp_row_between/4 filters a region to cells whose row index is between
+MinR and MaxR inclusive.
+
+sp_col_between/4 filters a region to cells whose column index is between
+MinC and MaxC inclusive.
+
+These predicates are useful for reasoning about horizontal and vertical
+stripes within a larger region.
+
+
+2.7 Nearest and Farthest Cells
+
+sp_closest/3 returns the cell in a region with the smallest Manhattan
+distance from a reference cell. On ties, the first cell in the list wins.
+
+sp_farthest/3 returns the cell with the largest Manhattan distance.
+
+
+2.8 Integer Centroid
+
+sp_centroid/3 computes the integer centroid of a region: the sum of row
+indices divided by count (truncated), and the same for column indices.
+
+
+3. Implementation Notes
+
+sp_direction dispatches on the signs of (R2-R1) and (C2-C1) using a
+cascade of clauses with cuts. Nine cases cover all compass directions.
+
+sp_neighbors4 and sp_neighbors8 generate all candidates as a fixed-size
+list then use include/3 with sp_in_bounds_ to filter, which is the
+include-over-candidates pattern used throughout the platform.
+
+sp_in_region uses member/2 with a cut. Without the cut, testing
+sp_in_region in a test would leave a choicepoint and trigger a warning.
+
+sp_closest and sp_farthest use maplist to compute all distances, then
+min_list/max_list to find the extremum, then nth0 with a cut to retrieve
+the corresponding cell.
+
+
+4. Tests
+
+The pack ships 49 PLUnit tests across 14 suites (one per predicate).
+
+Tests cover all nine compass directions, in-bounds corner/edge/center
+neighbors, distance calculations, adjacency tests, bbox boundary cases,
+band filtering, nearest/farthest tie-breaking, and centroid truncation.
+
+All 49 tests pass under SWI-Prolog with no warnings.
+
+
+5. SPARC Documentation
+
+• Specification v44, Part 69: functional requirements for all fourteen predicates
+• Pseudocode v37, Part 69: algorithmic pseudocode for each predicate
+• Architecture v38, PART ARCH-45: module position and design notes
+• Refinement v92, Part 69: acceptance criteria AC-SP-001 through AC-SP-049
+• Completion v95: PR 79 release checklist
+
+
+6. Significance
+
+With the spatial pack, Mentova can reason about where things are.
+
+"Is this object above or below that object?" sp_direction answers this.
+
+"How many moves separate these two cells?" sp_distance_manhattan answers this.
+
+"What cells are immediately adjacent to this cell?" sp_neighbors4 answers this.
+
+"Which of these objects is closest to the reference point?"
+sp_closest answers this.
+
+These are the spatial relationships that a visual reasoning system needs
+when it reasons about tasks involving position, proximity, and direction.
+
+The spatial pack is the fortieth tutorial chapter and the seventy-seventh
+work package in the PrologAI platform.
+
+
+END OF PAPER

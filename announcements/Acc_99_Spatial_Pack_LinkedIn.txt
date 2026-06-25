@@ -1,0 +1,44 @@
+Accomplishment 99: Mentova can now reason about where things are.
+
+The new spatial pack gives PrologAI fourteen predicates for directional
+and positional reasoning.
+
+Is this cell north, south, east, or west of that one?
+Exactly which of the nine compass directions separates them?
+How many Manhattan steps apart?
+How many Chebyshev king-moves apart?
+What are the 4-connected neighbors within grid bounds?
+What are the 8-connected neighbors?
+Are these two cells adjacent?
+Is this cell inside this bounding box?
+Which cells in this region fall between row 2 and row 5?
+Which cell in this list is closest to the reference point?
+Which is farthest?
+What is the integer centroid of this region?
+
+Every answer is deterministic. Every answer is exact.
+
+Here is a concrete example.
+
+An ARC-AGI-2 task shows two objects. The rule: the smaller object
+moves toward the larger object by one step.
+
+Step 1: Find the direction.
+
+sp_direction(SmallCenter, LargeCenter, Dir).
+% Dir = northeast
+
+Step 2: Find the adjacent neighbor in that direction.
+
+sp_neighbors8(SmallCell, Rows-Cols, Neighbors),
+member(Neighbor, Neighbors),
+sp_direction(SmallCell, Neighbor, northeast).
+
+The object moves one step northeast. Deterministic. Glass-box.
+
+The spatial pack is Layer 58, work package 79 in the PrologAI platform.
+
+49 tests. All pass.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
