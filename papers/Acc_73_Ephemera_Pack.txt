@@ -1,0 +1,147 @@
+THE EPHEMERA PACK: MENTOVA WRITES AND EXECUTES SHORT-LIVED PROGRAMS
+MENTOVA ACC_73: EPHEMERAL CODE SYNTHESIS AND EXECUTION ON THE PROLOGAI PLATFORM
+
+Accomplishment Record Acc_73
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+Date: 2026-06-24
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+
+ABSTRACT
+
+Acc_73 adds the ephemera pack to the PrologAI platform and demonstrates its use through Mentova. The ephemera pack gives PrologAI the ability to compose short-lived programs - called ephemera - in Prolog, Python, or Bash, execute them with a wall-clock timeout, capture their standard output and error streams, and log execution traces. This capability mirrors a strategy used by skilled human programmers and AI coding agents: write a small throwaway program to probe an unknown, test a hypothesis, transform data, or automate a mechanical step; run it; read the result; discard the program. The pack is implemented as work package PR 53 at Layer 32 of the PrologAI cognitive architecture and provides eight predicates: ep_eval/3, ep_scratch/4, ep_shell/3, ep_ephemeral/4, ep_iterate/5, ep_trace_record/4, ep_trace_get/2, and ep_next_trace_id/1. All five Mentova acceptance criteria pass.
+
+
+INTRODUCTION
+
+PrologAI has grown over 53 work packages from a symbolic reasoning kernel to a full cognitive platform. The platform reasons deductively, abductively, probabilistically, emotionally, and across a dozen other modalities. It holds knowledge in the Lattice, forms mental images in mindscapes, pursues goals with the global workspace, and scores 400 out of 400 on the ARC-AGI-1 benchmark by pure induction.
+
+One capability that has been absent is the ability to write and run a small program when the problem calls for it.
+
+Consider how a skilled programmer approaches an unknown: they do not only reason about the problem in the abstract. They open a terminal, write three lines of Python, run them, look at the output, and use that output to inform the next step. They write ephemera constantly. The programs are tiny, focused, and disposable.
+
+Acc_73 introduces this same strategy into PrologAI. The ephemera pack is the substrate-native version of what AI coding agents like Claude Code do when they write temporary scripts to test hypotheses. PrologAI can now do the same.
+
+The pack takes a silicon-and-code substrate approach: instead of deriving this capability from a neuroscience analogy, it implements the proven software engineering pattern directly. The pattern is: write code, run it in an isolated subprocess with a timeout, capture the output, delete the file.
+
+
+DESIGN
+
+The ephemera pack is organized around three levels of abstraction:
+
+Level 1 - Goal evaluation (ep_eval/3): Evaluate a Prolog goal term directly within the running interpreter, enforcing a wall-clock timeout via call_with_time_limit/2. Returns success, fail, timeout, or error(Exception). Variable bindings in the goal term are preserved on success.
+
+Level 2 - Shell execution (ep_shell/3): Run any command as a subprocess, using library(process) to launch it with pipes for standard output and standard error, wait for it to exit, and return shell_result(ExitCode, Stdout, Stderr).
+
+Level 3 - Script execution (ep_ephemeral/4): Write source code to a temporary file, invoke the appropriate interpreter (swipl for Prolog, python3 for Python, bash for Bash), capture output via ep_shell/3, then delete the temporary file unconditionally. The temporary file is deleted on both success and failure, so failed or timed-out ephemera do not accumulate on the filesystem.
+
+Above these three levels sits ep_scratch/4 (evaluate Prolog source written as an atom, with variable binding recovery), ep_iterate/5 (a synthesize-execute-check iteration cycle), and the trace logging predicates.
+
+The iteration cycle (ep_iterate/5) is the most compositional predicate. The caller supplies three goals: a synthesizer that proposes code, an executor that runs it, and a checker that decides whether the result is acceptable. The predicate calls them in sequence, up to a step budget. If the checker never accepts, it returns the last code and result. This is the building block for code-generation loops where PrologAI tries one approach, checks the result, and tries again.
+
+
+IMPLEMENTATION
+
+pack ephemera is implemented in packs/ephemera/prolog/ephemera.pl (PrologAI PR 53, 369 lines with ERC comments on every physical line). The pack has no dependency on any other PrologAI pack. It is the foundation that the agency pack (PR 54, Layer 33) and the refinery pack (PR 55, Layer 34) build on.
+
+A bug was discovered and fixed during Mentova testing: the initial implementation used tmp_file_name/2 to generate temporary file paths. This predicate is not available in all SWI-Prolog installations. The correct portable predicate is tmp_file/2, which was substituted in PrologAI PR 139. All ten ephemera unit tests continue to pass after the fix.
+
+Architecture placement: Layer 32 (ephemeral code synthesis and execution), PART ARCH-19 of the PrologAI Architecture document.
+
+SPARC volumes updated: Specification v16 to v17 (Part 43 added), Pseudocode v9 to v10, Architecture v10 to v11 (ARCH-19 added), Refinement v64 to v65 (AC-EP-001 through AC-EP-010 added), Completion v67 to v68.
+
+
+DEMONSTRATION
+
+The Mentova demo (demos/ephemera_demo.pl) exercises five acceptance criteria.
+
+AC-ACC73-001: ep_eval(true, 5, R) returns R = success. The simplest possible use: evaluate a trivially true goal. This verifies that goal evaluation, the timeout mechanism, and the result classification all function correctly.
+
+AC-ACC73-002: ep_eval((X is 6 * 7), 5, R) returns R = success and binds X = 42. This verifies that variable bindings in the goal term survive the ep_eval/3 call and are available to the caller.
+
+AC-ACC73-003: ep_shell(['echo', 'hello_from_mentova'], 10, shell_result(0, Out, _)) captures the string hello_from_mentova in Out. This verifies subprocess creation, pipe capture, and exit code reporting.
+
+AC-ACC73-004: ep_ephemeral(python, 'print(2**10)', 10, shell_result(0, Out, _)) captures 1024 in Out. This verifies the full script execution pipeline: source atom to temporary file, Python interpreter invocation, output capture, and file deletion.
+
+AC-ACC73-005: ep_next_trace_id/1 allocates a fresh trace ID, ep_trace_record/4 stores two entries, ep_trace_get/2 retrieves them, and the count is exactly 2. This verifies the trace logging round-trip.
+
+
+RESULTS
+
+All five acceptance criteria pass.
+
+Output:
+
+    === Mentova Acc_73: Ephemera Pack Demonstration ===
+
+    AC-ACC73-001: PASS  ep_eval(true, 5, success)
+    AC-ACC73-002: PASS  ep_eval((X is 6*7), 5, success), X = 42
+    AC-ACC73-003: PASS  ep_shell echo -> exit 0, out contains hello_from_mentova
+    AC-ACC73-004: PASS  ep_ephemeral python 2**10 -> exit 0, out starts with 1024
+    AC-ACC73-005: PASS  trace ep_trace_1 has 2 entries
+
+    === All five criteria pass. Acc_73 complete. ===
+
+
+SIGNIFICANCE
+
+The ephemera pack adds a qualitatively new mode of operation to PrologAI. Until Acc_73, PrologAI could reason about code - it could learn rules, apply transforms, compose predicates - but it could not run a piece of code as a program and use the output as an observation.
+
+With Acc_73, PrologAI can:
+
+- Ask "what does this computation actually produce?" by running it (ep_eval/3, ep_ephemeral/4).
+- Invoke any system tool that exposes a command-line interface (ep_shell/3).
+- Write a Python snippet to perform a numerical computation, call a library, process a file, or interact with a remote service, and then use the result in further symbolic reasoning.
+- Build iterative code-generation loops that synthesize, test, and refine code until a checker accepts the result (ep_iterate/5).
+- Record and replay the sequence of ephemeron executions as a trace (ep_trace_record/4, ep_trace_get/2).
+
+This is the same capability that makes AI coding agents effective at software tasks: they do not only reason; they also run things and observe. PrologAI now has this capability as a first-class pack.
+
+The ephemera pack is also the foundation for the agency pack (Acc_74) and the refinery pack (Acc_75). Agency uses ep_eval/3 and ep_shell/3 as two of its seven action types. Refinery can use ep_eval/3 to evaluate criterion TestGoals within a bounded time.
+
+
+ACCEPTANCE CRITERIA
+
+AC-ACC73-001: ep_eval(true, 5, R) returns success. PASS.
+
+AC-ACC73-002: ep_eval((X is 6 * 7), 5, R) binds X = 42 and returns success. PASS.
+
+AC-ACC73-003: ep_shell(['echo', 'hello_from_mentova'], 10, shell_result(0, Out, _)) captures hello_from_mentova in Out. PASS.
+
+AC-ACC73-004: ep_ephemeral(python, 'print(2**10)', 10, shell_result(0, Out, _)) captures 1024 in Out. PASS.
+
+AC-ACC73-005: ep_next_trace_id/1 allocates a unique ID, ep_trace_record/4 stores two entries for that ID, ep_trace_get/2 retrieves them, length is 2. PASS.
+
+
+REPRODUCIBILITY
+
+    git clone https://github.com/ai-university-aiu/PrologAI.git
+    git clone https://github.com/ai-university-aiu/Mentova.git
+
+    cd Mentova
+    swipl \
+      -p library=/path/to/PrologAI/packs/ephemera/prolog \
+      -l demos/ephemera_demo.pl \
+      -g run_ephemera_demo \
+      -t halt
+
+
+REFERENCES
+
+PrologAI SPARC Volumes 1-6. https://github.com/ai-university-aiu/PrologAI
+
+PrologAI PR 53: pack ephemera (Layer 32). https://github.com/ai-university-aiu/PrologAI
+
+PrologAI PR 139: fix tmp_file_name -> tmp_file for portability. https://github.com/ai-university-aiu/PrologAI
+
+Mentova Accomplishment Records:
+Acc_74 - Agency Pack: Mentova pursues goals with a formal agentic loop.
+Acc_75 - Refinery Pack: Mentova critiques and improves its own outputs.
+
+Agentic AI Design Patterns - Ephemeral program execution as a tool-use strategy.
+
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

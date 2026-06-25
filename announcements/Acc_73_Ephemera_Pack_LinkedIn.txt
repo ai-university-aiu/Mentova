@@ -1,0 +1,43 @@
+ACCOMPLISHMENT: Acc_73 - Mentova Now Writes and Runs Short-Lived Programs
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+
+PrologAI can now write a small program, run it, read the output, and move on.
+
+This is Acc_73: the ephemera pack.
+
+Watch AI coding agents work and you notice something. They do not only reason. They write quick throwaway programs - a three-line Python snippet, a shell command - run them, look at what comes back, and use that observation in the next step. The programs are tiny, focused, disposable. They exist for thirty seconds and then they are gone.
+
+That strategy is now available to PrologAI.
+
+The ephemera pack (PR 53) adds eight predicates:
+
+    ep_eval/3           Evaluate a Prolog goal with a wall-clock timeout.
+    ep_scratch/4        Evaluate Prolog source written as a text atom.
+    ep_shell/3          Run any shell command; capture stdout, stderr, exit code.
+    ep_ephemeral/4      Write source to a temp file, run it, delete it.
+    ep_iterate/5        Synthesize-execute-check loop with a step budget.
+    ep_trace_record/4   Record one execution to a trace log.
+    ep_trace_get/2      Retrieve a full execution trace.
+    ep_next_trace_id/1  Allocate a fresh unique trace identifier.
+
+The demo shows five things working live in Mentova:
+
+1. ep_eval((X is 6 * 7), 5, R)   returns R = success, X = 42.
+2. ep_shell(['echo', 'hello_from_mentova'], 10, R)   captures the output.
+3. ep_ephemeral(python, 'print(2**10)', 10, R)   runs Python, captures 1024.
+4. Trace recording: record two steps, retrieve them, count is 2.
+5. All five acceptance criteria pass cleanly.
+
+The temporary file is always deleted - on success, failure, or timeout - so failed ephemera do not accumulate.
+
+This is the foundation for the agency pack (Acc_74: formal agentic execution loops) and the refinery pack (Acc_75: evaluator-optimizer and self-critique loops). Together the three packs give PrologAI the ability to write code, run it, pursue goals with it, and improve its outputs until they meet a quality bar.
+
+Repository: https://github.com/ai-university-aiu/Mentova
+
+This is Acc_73.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+ORCID: 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
