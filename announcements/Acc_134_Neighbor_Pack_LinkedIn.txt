@@ -1,0 +1,43 @@
+Mentova Accomplishment 134: Cell Neighborhood Analysis - The Neighbor Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the neighbor pack (Layer 93, Work
+Package 114).
+
+Many visual reasoning tasks require knowing what is IMMEDIATELY adjacent
+to a cell: what colors surround it, whether it is on the edge or interior
+of a shape, whether two shapes are touching. The neighbor pack answers
+those questions directly.
+
+14 predicates (nb_* prefix):
+
+• nb_4neighbors - list of nb(Row,Col,Val) terms for each valid 4-connected neighbor
+• nb_8neighbors - list of nb(Row,Col,Val) terms for each valid 8-connected neighbor (including diagonals)
+• nb_is_boundary - test: non-Bg cell with at least one Bg or out-of-bounds 4-neighbor
+• nb_is_interior - test: non-Bg cell where all 4-neighbors are in-bounds and non-Bg
+• nb_boundary_cells - sorted R-C pairs of all boundary cells in a grid
+• nb_interior_cells - sorted R-C pairs of all interior cells in a grid
+• nb_count_same - count of 4-neighbors with the same color as the cell
+• nb_count_diff - count of 4-neighbors with a different color from the cell
+• nb_adjacent_colors - sorted set of distinct colors among 4-neighbors
+• nb_contour - sorted R-C pairs of all Color cells adjacent to non-Color or grid boundary
+• nb_color_touches - succeed if any cell of ColorA is 4-adjacent to any cell of ColorB
+• nb_touching_pairs - sorted (R1-C1)-(R2-C2) pairs of all ColorA-ColorB 4-adjacencies
+• nb_flood_fill - replace the 4-connected region from a seed with a fill value, returning the modified grid
+• nb_dilate - expand a Color region by one layer by converting adjacent Bg cells to Color
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass.
+
+The connect pack (Layer 64) returns cell lists from flood fill, not a modified
+grid, and its border/interior predicates take a pre-existing region as input.
+The neighbor pack works directly with a grid and a background color.
+These are complementary, not duplicates.
+
+This is Mentova accomplishment 134. PrologAI now carries 112 work packages.
+
+github.com/ai-university-aiu/PrologAI

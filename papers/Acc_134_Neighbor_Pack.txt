@@ -1,0 +1,180 @@
+Acc_134: Cell Neighborhood Analysis - The Neighbor Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains the neighbor pack (nb_* predicate family, Layer 93, Work
+Package 114), a 14-predicate module for cell-level local neighborhood
+analysis. The pack provides raw 4-connected and 8-connected neighbor
+access, boundary and interior classification relative to a background
+color, neighbor value counting, color contact detection, grid-modifying
+flood fill, and single-step dilation.
+
+42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Many visual reasoning tasks require analyzing what is immediately adjacent
+to a cell: what colors surround it, whether it is on the edge or interior
+of a shape, whether two shapes are touching. Existing packs work at higher
+levels of abstraction:
+
+The connect pack (Layer 64) computes connected components across many hops.
+Its flood fill returns a list of cells in the region, not a modified grid.
+Its border and interior predicates take an existing region as input, not a
+background color applied globally.
+
+The trace pack (Layer 82) provides outline operations on a specific region
+passed as a list and edge cells relative to the grid boundary.
+
+The scene pack (Layer 37) and obj pack (Layer 69) reason about whole
+obj(Color, Cells) objects, not about individual cells and their neighbors.
+
+None of these answer the question: "what is immediately next to THIS CELL,
+and what does that imply about its role in the grid?"
+
+The neighbor pack fills this gap with direct, cell-level predicates.
+
+
+2. Predicate Inventory
+
+The 14 predicates fall into five groups.
+
+
+2.1 Raw Neighbor Access
+
+nb_4neighbors(Grid, R, C, Neighbors) returns a list of nb(Row,Col,Val)
+terms for each valid 4-connected neighbor. Directions are checked in order:
+up, down, left, right. Out-of-bounds directions are omitted. Corner cells
+have 2 neighbors, edge cells have 3, interior cells have 4.
+
+nb_8neighbors(Grid, R, C, Neighbors) returns up to 8 neighbors covering
+all diagonals as well.
+
+
+2.2 Boundary and Interior Classification
+
+nb_is_boundary(Grid, R, C, Bg) succeeds if cell (R,C) is non-Bg and has
+at least one 4-neighbor that is either out of bounds or has value Bg. Cut
+after the first qualifying neighbor makes the predicate deterministic.
+
+nb_is_interior(Grid, R, C, Bg) succeeds if cell (R,C) is non-Bg and none
+of its 4-neighbors is out of bounds or has value Bg.
+
+nb_boundary_cells(Grid, Bg, Cells) collects all boundary cells as sorted
+R-C pairs. nb_interior_cells collects all interior cells.
+
+
+2.3 Neighbor Value Analysis
+
+nb_count_same(Grid, R, C, N) counts 4-neighbors with the same color value
+as (R,C). nb_count_diff counts 4-neighbors with a different color value.
+
+nb_adjacent_colors(Grid, R, C, Colors) returns the sorted set of distinct
+values found among the 4-neighbors.
+
+
+2.4 Contour and Color Contact
+
+nb_contour(Grid, Color, Cells) finds all cells of Color that are adjacent to
+something different (a different color or the grid boundary). This is the
+visible outline of the Color region.
+
+nb_color_touches(Grid, ColorA, ColorB) succeeds if any ColorA cell is
+4-adjacent to any ColorB cell anywhere in Grid. Uses cut for determinism.
+
+nb_touching_pairs(Grid, ColorA, ColorB, Pairs) enumerates all such
+4-adjacency pairs as (R1-C1)-(R2-C2) terms.
+
+
+2.5 Grid-Modifying Operations
+
+nb_flood_fill(Grid, R, C, FillVal, Result) replaces the 4-connected region
+containing (R,C) with FillVal, returning the modified grid. Unlike the connect
+pack's cc_flood4 (which returns a list of cells), this returns a modified
+grid. The filled value itself acts as a visited marker, so no separate
+visited set is required.
+
+nb_dilate(Grid, Bg, Color, Result) expands the Color region by one cell in
+all 4-connected directions, replacing adjacent Bg cells with Color.
+Non-Bg, non-Color cells are unchanged.
+
+
+3. Implementation Notes
+
+The pack imports only nth0/3 and nth0/4 from library(lists), and member/2
+from library(lists). No other libraries or PrologAI packs are imported.
+The built-ins findall/3, sort/2, length/2, and between/3 are used but
+not imported.
+
+The ERC (English Readable Code) convention is followed throughout.
+
+The internal helper nb_set_cell_ uses the four-argument form of nth0/4 in
+SWI-Prolog to replace a specific cell without rebuilding the full grid
+manually. The helper nb_set_cells_ applies nb_set_cell_ to a list of R-C
+pairs for bulk replacement.
+
+The flood fill algorithm uses a worklist (list-based queue). Because
+already-filled cells have been changed from SeedVal to FillVal, they
+are automatically skipped when dequeued without needing an explicit
+visited set.
+
+
+4. Integration with the Pack Stack
+
+The neighbor pack is Layer 93, above the region pack (Layer 92).
+
+Classify every non-Bg cell as boundary or interior:
+
+nb_boundary_cells(Grid, 0, Boundary),
+nb_interior_cells(Grid, 0, Interior).
+
+Find shapes that are touching and report the contact:
+
+nb_touching_pairs(Grid, 1, 2, Pairs).
+
+Fill an enclosed region (background flood fill from an interior point):
+
+nb_flood_fill(Grid, R, C, 7, Filled).
+
+Detect whether a color forms a closed ring (all cells are boundary, none
+interior):
+
+nb_interior_cells(Grid, 0, []) meaning no cell of the non-Bg region is
+surrounded on all four sides by non-Bg cells.
+
+Dilate a seed cell iteratively to grow a region:
+
+nb_dilate(Grid0, 0, 1, Grid1), nb_dilate(Grid1, 0, 1, Grid2).
+
+
+5. SPARC Documentation
+
+Work Package 114 is documented in:
+
+Specification Part 104 (NB-NB-001 through NB-NB-014).
+
+Pseudocode Part 104.
+
+Architecture Part ARCH-80 positioning the neighbor pack at Layer 93 and
+distinguishing it from the connect, trace, scene, and obj packs.
+
+Refinement acceptance criteria AC-NB-001 through AC-NB-042.
+
+Completion Work Package 114.
+
+
+6. Conclusion
+
+The neighbor pack gives PrologAI precise cell-level local reasoning. Raw
+neighbor access, boundary and interior classification, neighbor value
+counting, color contact queries, grid-modifying flood fill, and dilation
+are now available as clean symbolic predicates.
+
+PrologAI now carries 112 work packages and 134 Mentova accomplishments.
