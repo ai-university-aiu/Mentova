@@ -1,0 +1,41 @@
+Accomplishment 90 - Mentova can now find, cut, and reconstruct any region of any grid.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 68 work packages.
+
+The new crop pack gives Mentova a complete vocabulary for rectangular subgrid operations.
+
+cr_bbox - find the tight bounding box of all non-background content.
+
+cr_crop_bbox - extract any rectangular subgrid by inclusive row/col bounds.
+
+cr_crop_content - crop a grid to its content in one step (no background borders).
+
+cr_pad - add a uniform N-cell color border on all four sides.
+
+cr_strip_border - remove N rows/cols from every side. Inverse of cr_pad.
+
+cr_split_h and cr_split_v - split a grid horizontally or vertically at a given row or column.
+
+cr_rows and cr_cols - extract any contiguous row or column band.
+
+cr_stitch_h and cr_stitch_v - join two grids side by side or top to bottom. Inverses of the split predicates.
+
+cr_embed - place a subgrid at any (row, col) position inside a base grid.
+
+cr_center - extract the centered N x M subgrid from a larger grid.
+
+cr_quadrants - split into four quadrants at the midpoint row and column.
+
+This matters because:
+
+Most visual reasoning tasks involve boundaries. Where does the content start? Which region matters? How do we extract it cleanly?
+
+cr_crop_content strips background borders in one predicate call. cr_quadrants decomposes four-fold structure in one call. cr_embed assembles the output grid from transformed parts.
+
+The crop pack is the 68th work package in PrologAI and Mentova's 90th accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/
