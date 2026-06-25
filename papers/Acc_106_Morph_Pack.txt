@@ -1,0 +1,73 @@
+Accomplishment 106: Morphological Grid Operations - The Morph Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 84th work package: the morph pack (mo_* predicate family, Layer 65). This pack provides 14 predicates implementing morphological operations on grid color channels: dilation, erosion, opening, closing, boundary extraction, ring extraction, hole filling, and grid padding/unpadding. Morphological operations transform the shape of a colored region rather than its content, making them the natural tool for tasks that require expanding, shrinking, outlining, or cleaning up visual objects.
+
+Introduction
+
+After the connect pack identifies objects in a grid, the next question is often: how should this object be transformed? Many visual reasoning tasks require shape transformations that go beyond color substitution:
+
+- "Expand this object by one cell in every direction" (dilation)
+- "Remove the single isolated pixels" (opening)
+- "Fill the hole inside this closed shape" (close or fill_holes)
+- "Draw an outline one cell outside this object" (ring)
+- "Get just the border of this object" (boundary)
+
+These are the operations of mathematical morphology, a classical discipline in image processing. The morph pack implements them symbolically in Prolog, operating on PrologAI's list-of-lists grid format.
+
+Predicates
+
+The morph pack exports 14 predicates under the mo_* prefix.
+
+Dilation and erosion:
+mo_dilate4/4 expands a Color region by one step in 4 cardinal directions.
+mo_dilate8/4 expands using 8-connected adjacency (includes diagonals).
+mo_erode4/4 shrinks a Color region: cells with any out-of-bounds or non-Color 4-neighbor become BG.
+mo_erode8/4 shrinks using 8-connected erosion.
+mo_dilate4_n/5 and mo_erode4_n/5 apply their respective operations N times.
+
+Opening and closing:
+mo_open4/4 is erode followed by dilate. It removes small protrusions and isolated pixels.
+mo_close4/4 is dilate followed by erode. It fills small gaps within a region.
+
+Boundary and ring:
+mo_boundary4/3 returns Color cells that are not fully surrounded by Color in 4 directions (the inner contour).
+mo_boundary8/3 does the same using 8-connectivity.
+mo_ring4/4 returns BG cells that are 4-adjacent to at least one Color cell (the outer one-cell frame).
+
+Structural:
+mo_fill_holes4/4 fills BG cells enclosed inside Color: floods BG from all grid-border BG cells, then fills any BG cells not reached.
+mo_pad/3 adds a one-cell border of a chosen color around the entire grid.
+mo_unpad/2 removes the outermost ring from all four sides.
+
+Implementation
+
+All grid-level operations use a rebuild-from-scratch pattern: for each (R,C) in the output grid, a cell predicate computes the output color based on the current grid values. This is implemented via mo_rebuild_/5, which uses findall over row and column index lists.
+
+The per-cell predicates (mo_dilate4_cell_, mo_erode4_cell_, etc.) use two helper predicates:
+- mo_has_color4_/6: true if any in-bounds 4-neighbor has Color (uses cut for determinism)
+- mo_all4_color_/6: true if all in-bounds 4-neighbors have Color; OOB neighbors count as not-Color and cause failure
+
+forall/2, a SWI-Prolog built-in, is used in mo_all4_color_ and mo_all8_color_ to check all neighbors simultaneously.
+
+mo_fill_holes4 uses an internal DFS flood fill (mo_flood_bg_) rather than depending on the connect pack, keeping the morph pack self-contained.
+
+All 26 PLUnit acceptance tests pass with no warnings.
+
+Significance
+
+The morph pack gives Mentova the ability to transform the shapes of visual objects. Combined with the connect pack, Mentova can now: identify objects, extract their boundaries, expand or contract them, fill enclosed holes, and clean up noisy patterns. These operations cover a large fraction of the spatial transformation tasks in ARC-AGI-2.
+
+References
+
+PrologAI_1_Specification_v51.txt, Part 76 (MO-MO-001 through MO-MO-014)
+PrologAI_2_Pseudocode_v44.txt, Part 76
+PrologAI_3_Architecture_v45.txt, PART ARCH-52
+PrologAI_4_Refinement_v99.txt, Part 76 (AC-MO-001 through AC-MO-026)
+PrologAI_5_Completion_v102.txt, Work Package 86
+PrologAI PR #171: feat(packs): PR 86 - morph pack
