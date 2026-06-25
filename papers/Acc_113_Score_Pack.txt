@@ -1,0 +1,92 @@
+Accomplishment 113: Scoring and Hypothesis Selection - The Score Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 91st work package: the score pack (sc_* predicate family, Layer 72). This pack provides 14 predicates for measuring how well a candidate grid matches an expected output grid. Combined with the obj pack (object extraction), the pipeline pack (step dispatch), and the context pack (symbol tables), the score pack completes the hypothesis-selection substrate required for compositional ARC-AGI-2 reasoning. A rule generates candidate grids; the score pack ranks them and selects the best one.
+
+Introduction
+
+In compositional reasoning, a rule is a hypothesis. Given a training input, the hypothesis generates a candidate output grid. The system must then evaluate: how close is the candidate to the expected output? If multiple rules or multiple parameterizations are tried, which produces the best result? The score pack answers these questions with a clean, composable API.
+
+The primary metric is pixel accuracy: what fraction of cells match between the candidate grid and the expected output? This is the standard ARC-AGI evaluation metric. A perfect score (1.0) means the candidate is an exact match. The score pack also provides per-color recall, precision, and F1 for finer-grained analysis of color-specific errors.
+
+Predicates
+
+The score pack exports 14 predicates under the sc_* prefix.
+
+Basic measurement:
+sc_exact/2        structural grid equality test
+sc_cell_match/3   count cells where two grids agree
+sc_cell_total/2   total cell count (Rows * Cols)
+sc_accuracy/3     pixel accuracy as a float in [0.0, 1.0]
+
+Per-color metrics:
+sc_color_recall/4    fraction of target-color cells correctly produced
+sc_color_precision/4 fraction of produced target-color cells that are correct
+sc_color_f1/4        harmonic mean of recall and precision
+
+Training pair evaluation:
+sc_pair_score/3    apply a rule to one Input-Expected pair and measure accuracy
+sc_pairs_score/3   mean accuracy over a list of Input-Expected pairs
+sc_perfect/3       test whether a rule solves one pair exactly
+sc_pairs_perfect/2 test whether a rule solves all pairs exactly
+
+Hypothesis selection:
+sc_rank/3      rank candidate grids by accuracy descending (best first)
+sc_best/3      pick the highest-accuracy candidate
+sc_threshold/4 filter candidates by minimum accuracy
+
+Implementation
+
+sc_accuracy uses float(Match) / float(Total) to guarantee float output. Without
+this conversion, integer division (4/4 = 1 instead of 1.0) would break sc_rank,
+which pattern-matches on Acc-Grid pairs where Acc is expected to be a float.
+
+sc_count_matches_, sc_count_color_, and sc_count_tp_ are recursive helpers
+using if-then-else for determinism. They operate on flat lists produced by
+append/2 from the grid rows.
+
+sc_rank uses msort (built-in) followed by reverse/2 for stable descending order.
+
+sc_threshold uses findall for determinism; no choicepoints remain.
+
+sc_mean_ uses foldl from library(apply) to accumulate the sum over accuracy values.
+
+sc_pairs_perfect uses forall/2 (built-in) to test all pairs without choicepoints.
+
+All 39 PLUnit acceptance tests pass (AC-SC-001 through AC-SC-039).
+
+Significance
+
+The score pack completes the four-pack ARC-AGI-2 foundation layer:
+
+1. Obj pack: extract objects and their properties from grids
+2. Pipeline pack: thread a grid through a named sequence of steps
+3. Context pack: store and look up symbol tables and step parameters
+4. Score pack: evaluate candidates, rank hypotheses, select the best solution
+
+With all four packs in place, Mentova can execute the full compositional
+reasoning loop for ARC-AGI-2 tasks:
+
+  Step 1: Extract objects from training input (obj_all)
+  Step 2: Build a symbol table mapping object colors to operations (ctx_from_pairs)
+  Step 3: Apply the operation pipeline to the test input (pl_run with ctx_dispatch)
+  Step 4: Evaluate the candidate against the test expected output (sc_accuracy)
+  Step 5: If not perfect, update the hypothesis and repeat
+
+This is the complete arc2_solve pattern documented in the ARC-AGI-2 Next Steps
+roadmap, now available as first-class predicates across four packs.
+
+References
+
+PrologAI_1_Specification_v58.txt, Part 83 (SC-SC-001 through SC-SC-014)
+PrologAI_2_Pseudocode_v51.txt, Part 83
+PrologAI_3_Architecture_v52.txt, PART ARCH-59
+PrologAI_4_Refinement_v106.txt, Part 83 (AC-SC-001 through AC-SC-039)
+PrologAI_5_Completion_v109.txt, Work Package 93
+PrologAI PR #178: feat(packs): PR 93 - score pack
+Mentova/data/arc_agi_2/ARC-AGI-2_Next_Steps.txt, Section 3.3, Section 5.6
