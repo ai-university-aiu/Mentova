@@ -1,0 +1,35 @@
+Accomplishment 84 - Mentova now navigates grids, counts connected regions, and finds shortest paths.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 62 work packages.
+
+The new path pack gives Mentova spatial connectivity reasoning.
+
+pf_flood_fill finds all cells of a given color reachable from a seed.
+
+pf_components finds every connected group of a color in the grid.
+
+pf_largest_component picks the biggest one.
+
+pf_is_connected tests whether all cells of a color form one region.
+
+pf_shortest_path finds the BFS shortest route from start to goal, avoiding walls.
+
+pf_reachable finds everywhere you can go from a seed without crossing walls.
+
+These are classic graph traversal algorithms - BFS and connected components - applied to grid-based visual reasoning.
+
+Now Mentova can answer:
+How many separate blue regions are there?
+Which red blob is largest?
+Can I get from cell A to cell B without crossing black walls?
+What is the bounding box of the leftmost object?
+
+These questions come up constantly in visual inductive reasoning. Now they have named, composable, inspectable answers in pure symbolic Prolog.
+
+The path pack is the 62nd work package in PrologAI and Mentova's 84th accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/

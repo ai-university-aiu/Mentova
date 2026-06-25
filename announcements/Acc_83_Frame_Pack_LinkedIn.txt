@@ -1,0 +1,31 @@
+Accomplishment 83 - Mentova now recognizes rectangular borders and frames.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 61 work packages.
+
+The new frame pack gives Mentova the concept of a bordered structure.
+
+A frame is a uniform-color outer ring surrounding an interior region.
+
+fr_border_color gives you the border's color.
+
+fr_inner strips the border and returns the interior.
+
+fr_ring_count tells you how many concentric rings a grid has.
+
+fr_bounding_box finds the outermost ring of a given color anywhere in the grid.
+
+fr_is_nested detects two-layer nesting: outer ring of one color, second ring of another.
+
+fr_make_framed builds a bordered grid from scratch. fr_add_border wraps an existing grid.
+
+This matters because bordered structures appear constantly in visual reasoning tasks: colored rectangles with distinct interiors, nested containers, frames within frames.
+
+Now Mentova can detect, measure, generate, and reason about them as named concepts - not just as patterns discovered by ad-hoc loops.
+
+The frame pack is the 61st work package in PrologAI and Mentova's 83rd accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/
