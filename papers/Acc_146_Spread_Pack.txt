@@ -1,0 +1,196 @@
+Mentova Accomplishment 146: BFS Spreading and Distance Maps - The Spread Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 126: the spread pack, a Layer 105 symbolic
+reasoning module providing 14 predicates for Breadth-First Search (BFS)
+spreading, distance map computation, reachability queries, ring and zone
+filtering, Voronoi-style cell assignment, color spreading, distance overlay,
+and single-step BFS expansion on 2D integer-coordinate grids with a background
+color. The BFS traverses only cells whose value equals the specified background
+color; cells with any other value act as walls. All predicates are deterministic.
+This accomplishment is verified by 42 PLUnit acceptance tests.
+
+
+1. Motivation
+
+Spatial reasoning in grid environments constantly requires distance-based
+queries: "can I reach this cell?", "which cells are within N steps?", "what is
+the shortest path between two objects?", "which object is closest to a given
+point?" The existing PrologAI pack library provides path finding (path pack,
+Layer 43), connected-component labeling (label pack, Layer 83), and scene
+object extraction (scene pack, Layer 37). None provides the general-purpose
+BFS distance map needed to answer these distance-based queries across arbitrary
+grid regions.
+
+The spread pack fills this gap with 14 deterministic predicates covering the
+full spectrum of BFS-based distance and reachability reasoning.
+
+
+2. Predicate Inventory (14 predicates, sd_* prefix)
+
+2.1 Distance Maps
+
+sd_dist_map(+Grid, +R, +C, +Bg, -DistMap)
+Single-source BFS from (R,C) through Bg cells. DistMap is a list of Cell-D
+pairs giving BFS distance D from (R,C) to every reachable Bg cell. Returns []
+if the source is not Bg.
+
+sd_dist_multi(+Grid, +Seeds, +Bg, -DistMap)
+Multi-source BFS from all Seed cells simultaneously. DistMap gives minimum BFS
+distance from any seed to every reachable Bg cell. Non-Bg seeds are filtered.
+
+Examples:
+
+sd_dist_map([[0,0,0]], 0, 0, 0, DM), sort(DM, S).
+% S = [(0-0)-0, (0-1)-1, (0-2)-2]
+
+sd_dist_multi([[0,0,0,0]], [0-0, 0-3], 0, DM), sort(DM, S).
+% S = [(0-0)-0, (0-1)-1, (0-2)-1, (0-3)-0]
+
+
+2.2 Reachability
+
+sd_reachable(+Grid, +R, +C, +Bg, -Cells)
+All Bg cells reachable from (R,C); sorted list.
+
+sd_path_dist(+Grid, +R1, +C1, +R2, +C2, +Bg, -D)
+BFS shortest path distance between two specific cells. Fails if unreachable.
+
+sd_path_exists(+Grid, +R1, +C1, +R2, +C2, +Bg)
+Reachability test. Deterministic; fails when no path exists.
+
+Examples:
+
+sd_reachable([[0,0,0],[0,1,0],[0,0,0]], 0, 0, 0, Cells).
+% Cells = [0-0, 0-1, 0-2, 1-0, 1-2, 2-0, 2-1, 2-2]
+
+sd_path_dist([[0,0,0]], 0, 0, 0, 2, 0, D).   % D = 2
+sd_path_dist([[0,1,0]], 0, 0, 0, 2, 0, _).   % fails
+
+
+2.3 Ring and Zone Filtering
+
+sd_ring(+Grid, +R, +C, +Bg, +D, -Cells)
+All Bg cells at exactly BFS distance D; sorted list.
+
+sd_zone(+Grid, +R, +C, +Bg, +MaxD, -Cells)
+All Bg cells within BFS distance MaxD; sorted list.
+
+Examples:
+
+sd_ring([[0,0,0],[0,0,0],[0,0,0]], 1, 1, 0, 1, Cells).
+% Cells = [0-1, 1-0, 1-2, 2-1]   (orthogonal ring around center)
+
+sd_zone([[0,0,0]], 0, 0, 0, 1, Cells).
+% Cells = [0-0, 0-1]
+
+
+2.4 Target and Extremal Queries
+
+sd_dist_to_set(+Grid, +R, +C, +Targets, +Bg, -D)
+Minimum BFS distance from source to any cell in Targets. Fails if unreachable.
+
+sd_farthest(+Grid, +R, +C, +Bg, -Cell)
+The farthest reachable Bg cell by BFS distance.
+
+sd_max_dist(+Grid, +R, +C, +Bg, -MaxD)
+The maximum BFS distance to any reachable Bg cell.
+
+Examples:
+
+sd_dist_to_set([[0,0,0,0]], 0, 0, [0-2, 0-3], 0, D).   % D = 2
+sd_farthest([[0,0,0,0]], 0, 1, 0, Cell).                 % Cell = 0-3
+sd_max_dist([[0,0,0,0]], 0, 0, 0, MaxD).                 % MaxD = 3
+
+
+2.5 Low-Level Expansion
+
+sd_expand_once(+Grid, +Frontier, +Visited, +Bg, -NextFrontier)
+One BFS level expansion. Returns the sorted, deduplicated set of unvisited Bg
+4-neighbors of any cell in Frontier.
+
+Example:
+
+sd_expand_once([[0,0],[0,0]], [0-0], [0-0], 0, Next).
+% Next = [0-1, 1-0]
+
+
+2.6 Color Spreading and Overlay
+
+sd_spread_color(+Grid, +Color, +Bg, +MaxD, -Out)
+Spread Color cells outward through Bg cells up to MaxD BFS steps. Bg cells
+within MaxD of any Color cell become Color in the output.
+
+sd_fill_dist(+Grid, +R, +C, +Bg, -Out)
+Overlay BFS distances onto the grid. Reachable Bg cells get their BFS distance
+as their value; all other cells are unchanged.
+
+Examples:
+
+sd_spread_color([[1,0,0,0]], 1, 0, 2, Out).   % Out = [[1,1,1,0]]
+sd_fill_dist([[0,0,0]], 0, 0, 0, Out).         % Out = [[0,1,2]]
+
+
+2.7 Voronoi Assignment
+
+sd_voronoi(+Grid, +Seeds, +Bg, -Assignment)
+Voronoi assignment of Bg cells to the nearest seed by BFS distance. Seeds are
+assigned 1-based indices after filtering non-Bg seeds. Assignment is a list of
+Cell-SeedIdx pairs. Ties broken by lower seed index (FIFO BFS queue order).
+
+Example:
+
+sd_voronoi([[0,0,0]], [0-0, 0-2], 0, A), sort(A, S).
+% S = [(0-0)-1, (0-1)-1, (0-2)-2]
+% Middle cell is equidistant; seed 1 (lower index) wins.
+
+
+3. Implementation Notes
+
+The pack uses a list-based FIFO BFS queue. Each queue entry is a compound
+term bfs1(Cell, D) for single-source BFS or bfs2(Cell, D, SeedIdx) for
+Voronoi BFS. The visited set is a Prolog list; membership testing is O(n) but
+sufficient for ARC-AGI-2 grid sizes.
+
+A key design point in sd_spread_color: Color seed cells are non-Bg by
+definition, so the BFS is seeded directly without filtering by Bg value. The
+D > 0 filter in the result excludes the Color seeds themselves from the set of
+cells to be painted.
+
+All BFS traversal uses 4-connectivity (orthogonal adjacency only). The BFS
+never traverses walls (non-Bg cells). Cell coordinates are represented as R-C
+pairs (row-column, 0-based integer indexing).
+
+Imports: library(lists) for member/2, nth0/3, numlist/3, append/2, append/3,
+max_list/2, min_list/2; library(apply) for maplist/3, maplist/4, include/3. No
+PrologAI pack is imported; the spread pack is fully self-contained.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case (isolated cell, single-cell grid, blocked path), and a
+boundary condition (empty frontier, MaxD=0, tie-breaking). All tests complete
+with no choicepoint warnings.
+
+
+5. Significance
+
+Distance-based reasoning is fundamental to grid problem solving. The spread
+pack provides the BFS vocabulary that underlies nearly every spatial query
+type: connectivity, shortest paths, proximity, spreading, and coverage. Combined
+with the scene pack (Layer 37), compare pack (Layer 57), grid pack (Layer 57),
+analogy pack (Layer 57), ray pack (Layer 103), and vec2 pack (Layer 104), the
+spread pack completes the spatial reasoning foundation needed for advanced
+ARC-AGI-2 visual reasoning.
+
+This is Mentova accomplishment 146. PrologAI now carries 124 work packages.
+
+github.com/ai-university-aiu/PrologAI
