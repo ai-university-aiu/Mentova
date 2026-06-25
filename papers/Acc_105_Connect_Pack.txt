@@ -1,0 +1,75 @@
+Accomplishment 105: Flood Fill and Connected Component Analysis - The Connect Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 83rd work package: the connect pack (cc_* predicate family, Layer 64). This pack provides 14 predicates for flood fill, connected component analysis, and region topology classification. The connect pack answers the most fundamental object-level question in visual reasoning: which cells form a single connected object?
+
+Introduction
+
+Visual grid reasoning begins with objects. An object is a maximal group of same-color cells that are all reachable from each other by adjacent steps. Before a system can reason about what objects do, transform, or relate to each other, it must first identify them.
+
+Flood fill is the classical algorithm for this task: start from a seed cell, expand to all neighbors with the same color, repeat until no new cells are reached. The result is one connected component. The connect pack implements flood fill as a DFS (depth-first search) with a stack and a visited accumulator, using a pluggable neighbor function to support both 4-connected (cardinal directions only) and 8-connected (including diagonals) modes.
+
+The connect pack also answers topological questions about regions. A border cell is one with a neighbor outside the region (or at the grid boundary). An interior cell is one where all four cardinal neighbors are within the region. The cc_enclosed predicate identifies background cells that are completely surrounded by non-background cells - the "fill targets" inside closed shapes. It implements this by flood-filling the background from all grid-edge cells and returning any background cell that was not reached.
+
+Predicates
+
+The connect pack exports 14 predicates under the cc_* prefix.
+
+Flood fill:
+cc_flood4/4 returns all cells 4-connected to a seed cell that share its color.
+cc_flood8/4 returns all cells 8-connected to a seed cell that share its color.
+
+Connected components:
+cc_components4/3 returns the list of all 4-connected same-color regions.
+cc_components8/3 returns the list of all 8-connected same-color regions.
+cc_count4/3 and cc_count8/3 count the number of components.
+cc_sizes4/3 and cc_sizes8/3 return sorted lists of component sizes.
+cc_largest4/3 and cc_largest8/3 return the largest component.
+cc_smallest4/3 returns the smallest component.
+
+Topology:
+cc_border_cells/3 returns cells in a region adjacent to non-region or boundary.
+cc_interior_cells/3 returns cells with all four cardinal neighbors in the region.
+cc_enclosed/3 returns background cells enclosed inside a closed shape.
+
+Implementation
+
+The core algorithm is cc_dfs_/8, a recursive DFS with:
+- A stack (list used as LIFO queue)
+- A visited accumulator (list of seen cells)
+- A neighbor function argument (cc_neighbors4_ or cc_neighbors8_)
+
+Each step: if the top cell is already visited, skip it. If it is in bounds and has the correct color, expand its neighbors onto the stack and add it to visited. Otherwise skip.
+
+cc_components4 iteratively extracts components: find all cells of the target color, flood fill from the first, remove those cells from the pool, repeat.
+
+cc_interior_cells requires all four neighbors to be both in-bounds AND in the region. Grid-edge cells are never interior because they always have at least one out-of-bounds neighbor.
+
+cc_enclosed finds border BG cells, floods from all of them simultaneously (accumulating one shared visited set), then returns BG cells not in the visited set.
+
+All 33 PLUnit acceptance tests pass with no warnings.
+
+Significance
+
+The connect pack closes the object-detection gap. Mentova can now:
+
+- Identify all distinct objects in a grid
+- Find the largest, smallest, or all components of any color
+- Classify cells as border or interior
+- Find cells enclosed inside closed shapes
+
+These operations are prerequisites for dozens of visual reasoning patterns. Object-count tasks, fill-the-outline tasks, largest-blob tasks, and enclosed-region tasks all require the connect pack as their first step.
+
+References
+
+PrologAI_1_Specification_v50.txt, Part 75 (CC-CC-001 through CC-CC-014)
+PrologAI_2_Pseudocode_v43.txt, Part 75
+PrologAI_3_Architecture_v44.txt, PART ARCH-51
+PrologAI_4_Refinement_v98.txt, Part 75 (AC-CC-001 through AC-CC-033)
+PrologAI_5_Completion_v101.txt, Work Package 85
+PrologAI PR #170: feat(packs): PR 85 - connect pack
