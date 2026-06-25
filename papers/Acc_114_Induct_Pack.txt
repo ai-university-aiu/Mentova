@@ -1,0 +1,104 @@
+Accomplishment 114: Observing What Changed - The Induct Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 92nd work package: the induct pack (in_* predicate family, Layer 73). This pack provides 14 predicates for extracting the structure of change from input-output grid pairs. Before a system can hypothesize a rule, it must observe the evidence: what cells changed, what color substitutions occurred, whether the grid dimensions changed, what the background color is, and whether those patterns are consistent across all training pairs. The induct pack is the observation layer that transforms raw training pairs into structured evidence for rule generation.
+
+Introduction
+
+Rule induction in ARC-AGI begins with observation. Given a set of training pairs, each consisting of an input grid and the corresponding output grid, the system must answer fundamental questions:
+
+  What changed? - Which cells have different colors in Output versus Input?
+  How did colors change? - Does color 1 always become color 5?
+  Did the grid grow or shrink? - Are all pairs the same size change?
+  What is the background? - Which color fills most of the grid?
+  Are the patterns consistent? - Do all training pairs show the same rule?
+
+The induct pack answers each of these questions with a dedicated predicate family. The observations it produces become the inputs to hypothesis generation.
+
+Predicates
+
+The induct pack exports 14 predicates under the in_* prefix.
+
+Cell-level change:
+in_delta/3             list of r(R,C)-OldColor-NewColor triples for changed cells
+in_constant/2          test whether Output is identical to Input (identity rule)
+in_changed_cells/3     list of r(R,C) positions that differ
+in_invariant_cells/3   list of r(R,C) positions that are the same
+
+Color analysis:
+in_color_map/3         OldColor-NewColor map for one pair (fails on conflict)
+in_color_map_pairs/2   intersected color map across all training pairs
+in_color_palette/3     union color set for one pair
+in_palette_pairs/3     separate input and output color sets across all pairs
+in_common_keys/3       shared entries in two color maps
+
+Size analysis:
+in_size_change/4       DRows and DCols for one pair
+in_size_change_pairs/3 consistent size change across all pairs or fail
+
+Background analysis:
+in_bg_color/2          most frequent color in one grid
+in_bg_color_pairs/2    consistent background across all pairs or fail
+
+Cross-pair consistency:
+in_consistent_delta/2  same cell-change pattern across all pairs or fail
+
+Implementation
+
+in_delta uses findall for determinism, iterating over row and column indices
+via nth0/3 and filtering cells where Old != New.
+
+in_color_map uses sort to deduplicate raw pairs, then in_check_consistent_map_
+to verify no color maps to two different outputs. This predicate fails cleanly
+on conflict rather than succeeding with a partial map, because a conflicting
+map indicates the rule is not a pure color substitution.
+
+in_color_map_pairs uses foldl over in_intersect_map_, which applies
+intersection/3 to reduce the accumulated map at each step. The base clause
+handles the empty list directly, returning the empty map.
+
+in_bg_color builds a list of Count-Color pairs using findall, then calls
+max_member/2 from library(lists) to find the most frequent color. In case
+of a tie, max_member picks the largest color value.
+
+All predicates that check cross-pair consistency (in_consistent_delta,
+in_size_change_pairs, in_bg_color_pairs) use forall/2 to test the remainder
+of the list against the value extracted from the first pair.
+
+All 35 PLUnit acceptance tests pass (AC-IN-001 through AC-IN-035).
+
+Significance
+
+The induct pack completes the ARC-AGI-2 reasoning substrate. Working with
+the other foundation packs:
+
+  Grid pack:     represent and navigate grids
+  Obj pack:      extract objects and their properties
+  Pipeline pack: apply sequences of named operations
+  Context pack:  store and look up symbol tables
+  Score pack:    evaluate candidates and select the best hypothesis
+  Induct pack:   observe training pairs and extract rule evidence
+
+The full reasoning loop for ARC-AGI-2 is now supported:
+
+  Step 1: Observe all training pairs (induct pack)
+  Step 2: Extract objects from input grids (obj pack)
+  Step 3: Build a symbol table mapping colors to operations (context pack)
+  Step 4: Apply the operation pipeline to the test input (pipeline pack)
+  Step 5: Evaluate the candidate against expected output (score pack)
+  Step 6: If not solved, update the hypothesis and repeat
+
+References
+
+PrologAI_1_Specification_v59.txt, Part 84 (IN-IN-001 through IN-IN-014)
+PrologAI_2_Pseudocode_v52.txt, Part 84
+PrologAI_3_Architecture_v53.txt, PART ARCH-60
+PrologAI_4_Refinement_v107.txt, Part 84 (AC-IN-001 through AC-IN-035)
+PrologAI_5_Completion_v110.txt, Work Package 94
+PrologAI PR #179: feat(packs): PR 94 - induct pack
+Mentova/data/arc_agi_2/ARC-AGI-2_Next_Steps.txt, Section 3.4, Section 5.7

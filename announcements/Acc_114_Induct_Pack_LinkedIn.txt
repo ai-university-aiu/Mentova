@@ -1,0 +1,30 @@
+Accomplishment 114: The Induct Pack - Observing What Changed
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Mentova just gained its 92nd work package: the induct pack.
+
+14 in_* predicates for extracting the structure of change from training pairs:
+
+  in_delta           - which cells changed and how (Old->New triples)
+  in_color_map       - what color substitution rule applies (fails on conflict)
+  in_color_map_pairs - the substitution consistent across ALL training pairs
+  in_size_change     - did the grid grow or shrink?
+  in_consistent_delta - is the same pattern in every training pair?
+  in_bg_color        - what is the background color?
+  in_invariant_cells - what stayed the same?
+
+Before a system can hypothesize a rule, it must observe the evidence.
+
+This is the observation layer for ARC-AGI-2 rule induction.
+
+The full reasoning loop is now supported:
+observe -> extract objects -> build symbol table -> apply -> score -> repeat
+
+35/35 acceptance tests pass. Pure Prolog. Glass-box.
+
+PrologAI PR #179. Mentova Acc_114.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #RuleInduction #AIU

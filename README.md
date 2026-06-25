@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-113-FF6B35?style=for-the-badge" alt="113 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-114-FF6B35?style=for-the-badge" alt="114 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,7 +98,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **113 accomplished** |
+| Documented accomplishments | **114 accomplished** |
 | Scientific papers | **95 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
@@ -414,6 +414,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_111` | Pipeline pack paper — Sequential Step Dispatch and Compositional Reasoning (Layer 70): 14 pl_* predicates for registering named step handlers (pl_register), querying handlers (pl_registered), removing handlers (pl_unregister), applying one step with local registry (pl_step), threading an input through a sequence of steps (pl_run), mapping over a list (pl_map), filtering a list (pl_filter), folding with an accumulator (pl_fold), zipping two lists (pl_zip), unzipping pairs (pl_unzip), taking (pl_take) and dropping (pl_drop) elements, and partitioning a list (pl_partition). |
 | `Acc_112` | Context pack paper — Context Maps for Symbol Table Learning (Layer 71): 14 ctx_* predicates for adding or replacing key-value bindings (ctx_put), retrieving values (ctx_get), testing presence (ctx_has), deleting entries (ctx_delete), extracting keys (ctx_keys) and values (ctx_values), counting entries (ctx_size), building from pairs (ctx_from_pairs), converting to pairs (ctx_to_pairs), merging two maps with override (ctx_merge), dispatching a goal by key with fallback (ctx_dispatch), selecting by priority key list (ctx_select), transforming values (ctx_map_values), and filtering by key predicate (ctx_filter_keys). |
 | `Acc_113` | Score pack paper — Scoring and Hypothesis Selection (Layer 72): 14 sc_* predicates for structural grid equality (sc_exact), counting matching cells (sc_cell_match), total cell count (sc_cell_total), pixel accuracy as a float in [0.0, 1.0] (sc_accuracy), per-color recall (sc_color_recall), per-color precision (sc_color_precision), per-color F1 score (sc_color_f1), applying a rule to one training pair and measuring accuracy (sc_pair_score), mean accuracy over a list of pairs (sc_pairs_score), exact-match test for one pair (sc_perfect), all-pairs exact-match test (sc_pairs_perfect), ranking candidates by accuracy descending (sc_rank), picking the best candidate (sc_best), and filtering by minimum accuracy threshold (sc_threshold). Completes the four-pack ARC-AGI-2 foundation layer. |
+| `Acc_114` | Induct pack paper — Observing What Changed (Layer 73): 14 in_* predicates for computing cell-level change triples (in_delta), testing identity rules (in_constant), inferring consistent color substitution maps for one pair (in_color_map), intersecting maps across all pairs (in_color_map_pairs), computing row and column size change (in_size_change), verifying consistent size change across all pairs (in_size_change_pairs), building union color palettes (in_color_palette), separating input and output color sets across all pairs (in_palette_pairs), listing invariant cells (in_invariant_cells), listing changed cells (in_changed_cells), verifying consistent cell-change pattern across all pairs (in_consistent_delta), finding the background color by frequency (in_bg_color), verifying consistent background across all pairs (in_bg_color_pairs), and intersecting two color maps (in_common_keys). Observation layer for rule induction. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
