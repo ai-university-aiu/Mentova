@@ -1,0 +1,23 @@
+MENTOVA ACC_79: PROLOGAI NOW COUNTS, GROUPS, AND COMPARES COLLECTIONS OF OBJECTS
+
+I am pleased to announce Acc_79 on the Mentova platform: the quant pack, work package PR 59 at Layer 38 of the PrologAI cognitive architecture.
+
+The quant pack provides quantitative reasoning over collections of objects. Given a list of obj(Color, Cells) terms from the scene pack, the quant pack can answer:
+
+- How many objects have each color? (qn_histogram/2)
+- Which color appears most often? (qn_most_frequent_color/2)
+- Group all objects by color, size, or shape. (qn_group_by_color/2, qn_group_by_size/2, qn_group_by_shape/2)
+- Are all objects the same size? (qn_all_same_size/1)
+- Do these two groups have the same color distribution? (qn_colors_match/2)
+- Count objects satisfying a condition. (qn_count_where/3)
+- Are there exactly N blue objects? (qn_exactly_n/3)
+
+18 predicates. 32/32 tests pass. Zero warnings.
+
+The pack builds on the scene pack (Acc_78), which builds on the grid pack (Acc_76). The perceptual stack is growing: grid -> analogy -> scene -> quant.
+
+Accomplishment record: https://github.com/ai-university-aiu/Mentova
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #ARCAGI

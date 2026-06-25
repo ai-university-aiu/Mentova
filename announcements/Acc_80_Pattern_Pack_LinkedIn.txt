@@ -1,0 +1,23 @@
+MENTOVA ACC_80: PROLOGAI NOW DETECTS AND GENERATES REPEATING SPATIAL PATTERNS
+
+I am pleased to announce Acc_80 on the Mentova platform: the pattern pack, work package PR 60 at Layer 39 of the PrologAI cognitive architecture.
+
+The pattern pack gives PrologAI the ability to reason about periodic spatial structures:
+
+- Detect the shortest repeating period of a list, row, or column. (pt_list_period/2, pt_row_period/3, pt_col_period/3)
+- Fill a large grid by tiling a small base tile. (pt_tile_grid/4)
+- Verify that a grid is a proper tiling of a given tile. (pt_is_tiling/3)
+- Scale a grid up (expand each cell to a NxN block) or down (collapse each NxN block to one cell). (pt_scale_up/3, pt_scale_down/3)
+- Repeat a grid N times horizontally or vertically. (pt_repeat_h/3, pt_repeat_v/3)
+- Mirror a grid left-right or top-bottom. (pt_mirror_h/2, pt_mirror_v/2)
+- Generate checkerboard, horizontal stripe, and vertical stripe patterns. (pt_checkerboard/5, pt_stripe_h/4, pt_stripe_v/4)
+
+15 predicates. 43/43 tests pass. Zero warnings.
+
+The pack is named for its general purpose, not for any specific benchmark. Scale-up and scale-down, tiling and period detection, are fundamental spatial reasoning operations that appear across many domains.
+
+Accomplishment record: https://github.com/ai-university-aiu/Mentova
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #ARCAGI
