@@ -1,0 +1,23 @@
+Accomplishment 111: Mentova gains sequential step dispatch - the compositional layer that lets any value be threaded through a named sequence of rules, one step at a time.
+
+The pipeline pack (pl_* predicates, Layer 70) provides the execution substrate for ARC-AGI-2 multi-step reasoning:
+
+Step dispatch:
+- pl_register/2: assert a named step handler (Goal(StepTerm, In, Out))
+- pl_registered/2, pl_unregister/1: query and remove handlers
+- pl_step/4: apply one step with an optional local registry for per-call override
+- pl_run/3: thread an input through a list of named steps in sequence
+
+List utilities:
+- pl_map/3: apply a 2-argument goal to every element
+- pl_filter/3: keep only elements satisfying a 1-argument goal
+- pl_fold/4: fold a 3-argument goal with an accumulator
+- pl_zip/3, pl_unzip/3: pair and unpair parallel lists
+- pl_take/3, pl_drop/3: take or drop the first N elements
+- pl_partition/4: split a list into satisfied and rejected elements
+
+With the pipeline pack, a multi-step ARC-AGI-2 rule like [normalize, scale(2), rotate_90] is just a Prolog list, and pl_run/3 executes it with one call. Compound step terms like scale(2) carry parameters directly - the handler reads them from the step term.
+
+This is Mentova's 111th documented accomplishment and PrologAI's 89th work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
