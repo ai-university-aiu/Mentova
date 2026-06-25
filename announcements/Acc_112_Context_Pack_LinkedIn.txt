@@ -1,0 +1,29 @@
+Accomplishment 112: Mentova gains context maps - the symbol table data structure for ARC-AGI-2 in-context symbol definition, where training pairs teach what each color means and the context map stores that learned meaning.
+
+The context pack (ctx_* predicates, Layer 71) provides 14 predicates for Key-Value context maps with unique keys:
+
+Core operations:
+- ctx_put/4, ctx_get/3, ctx_has/2, ctx_delete/3: add, retrieve, test, remove entries
+
+Extraction:
+- ctx_keys/2, ctx_values/2, ctx_size/2: access keys, values, and count
+
+Construction:
+- ctx_from_pairs/2: build from a pair list (last binding wins for duplicate keys)
+- ctx_to_pairs/2, ctx_merge/3: convert or merge two maps (Map2 overrides Map1)
+
+Dispatch:
+- ctx_dispatch/4: call the goal associated with a key; fall back to a default if absent
+- ctx_select/4: return the value for the first present key in a priority list
+
+Transformation:
+- ctx_map_values/3: transform all values via a goal
+- ctx_filter_keys/3: keep only entries satisfying a key predicate
+
+A typical ARC-AGI-2 symbol table looks like: [1-rotate_90, 2-flip_h, 3-noop].
+ctx_dispatch(SymbolTable, Color, noop, Grid) selects and applies the right operation.
+ctx_merge/3 combines partial symbol tables from multiple training pairs.
+
+This is Mentova's 112th documented accomplishment and PrologAI's 90th work package.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

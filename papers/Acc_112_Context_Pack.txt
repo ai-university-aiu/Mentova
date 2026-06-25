@@ -1,0 +1,87 @@
+Accomplishment 112: Context Maps for Symbol Table Learning - The Context Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 90th work package: the context pack (ctx_* predicate family, Layer 71). This pack provides 14 predicates for building, querying, and transforming context maps. A context map is an ordered list of unique Key-Value pairs. Context maps serve as the in-memory state carrier for ARC-AGI-2 reasoning: they store color-to-operation bindings, task-specific symbol tables, step parameters, and any named data that a multi-step pipeline needs to share between steps. The context pack directly addresses the symbol table learning requirement identified in the ARC-AGI-2 Next Steps roadmap: given training pairs, build a table mapping symbol identifiers (colors, objects) to operations, then look up those operations when processing the test input.
+
+Introduction
+
+ARC-AGI-2 introduces a reasoning challenge that ARC-AGI-1 did not require: in-context symbol definition. In these tasks, the training pairs define the meaning of symbols on the fly. A specific color in the input might mean "rotate 90 degrees clockwise" in one task and "reflect horizontally" in another. The solver must read the training pairs to learn what each symbol means, build a symbol table, then look up the symbol table when processing the test input.
+
+The context pack provides the data structure for this:
+
+  ctx_from_pairs([1-rotate_90, 2-flip_h, 3-noop], SymbolTable)
+
+This creates a symbol table mapping color 1 to rotate_90, color 2 to flip_h, and color 3 to noop. The pipeline pack can then dispatch by color:
+
+  ctx_dispatch(SymbolTable, Color, noop, Grid)
+
+The context pack also supports contrastive analysis across training pairs via ctx_merge/3, which merges two partial symbol tables with override semantics. When the symbol table from pair 1 and the symbol table from pair 2 are merged, the result reflects what is consistent across both pairs.
+
+Predicates
+
+The context pack exports 14 predicates under the ctx_* prefix.
+
+Core map operations:
+ctx_put/4        add or replace a key-value binding
+ctx_get/3        retrieve a value by key; fails if absent
+ctx_has/2        test key presence
+ctx_delete/3     remove a key; succeeds even if absent
+
+Extraction:
+ctx_keys/2       list of all keys
+ctx_values/2     list of all values
+ctx_size/2       number of entries
+
+Construction and conversion:
+ctx_from_pairs/2 build from a Key-Value pair list; last binding wins
+ctx_to_pairs/2   convert to a pair list (identity)
+ctx_merge/3      merge two maps; Map2 overrides Map1
+
+Dispatch and selection:
+ctx_dispatch/4   call the goal associated with a key; fallback if absent
+ctx_select/4     value for the first present key in a priority list
+
+Transformation:
+ctx_map_values/3 transform all values via a goal
+ctx_filter_keys/3 keep only entries satisfying a key predicate
+
+Implementation
+
+A context map is a Prolog list [K1-V1, K2-V2, ...] with unique keys.
+ctx_put removes any existing binding for the key before prepending the new one.
+ctx_get uses clause-head pattern matching with a cut for deterministic first-match semantics.
+ctx_delete uses if-then-else to avoid choicepoints when scanning.
+ctx_select uses a cut in the base case to commit when the key list is exhausted.
+ctx_filter_keys uses findall for determinism.
+ctx_merge is implemented as a fold of ctx_put over Map2 entries onto Map1.
+
+All 41 PLUnit acceptance tests pass (AC-CT-001 through AC-CT-041).
+
+Significance
+
+The context pack completes the ARC-AGI-2 foundation layer. Combined with:
+- The obj pack (extract objects and their properties)
+- The pipeline pack (thread a grid through named steps)
+- The context pack (store and look up symbol tables and step parameters)
+
+Mentova now has the three building blocks needed for ARC-AGI-2 compositional reasoning:
+1. Extract object inventory from training input grids
+2. Build a symbol table mapping object colors to operations
+3. Look up the operation for each object color and apply it in a pipeline
+
+This is the full arc2_pipeline pattern documented in the Next Steps roadmap, now available as first-class predicates.
+
+References
+
+PrologAI_1_Specification_v57.txt, Part 82 (CT-CT-001 through CT-CT-014)
+PrologAI_2_Pseudocode_v50.txt, Part 82
+PrologAI_3_Architecture_v51.txt, PART ARCH-58
+PrologAI_4_Refinement_v105.txt, Part 82 (AC-CT-001 through AC-CT-041)
+PrologAI_5_Completion_v108.txt, Work Package 92
+PrologAI PR #177: feat(packs): PR 92 - context pack
+Mentova/data/arc_agi_2/ARC-AGI-2_Next_Steps.txt, Section 3.2, Section 5.5
