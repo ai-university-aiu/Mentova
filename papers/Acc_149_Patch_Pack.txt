@@ -1,0 +1,181 @@
+Mentova Accomplishment 149: Sub-Grid Extraction and Template Matching - The Patch Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 129: the patch pack, a Layer 108 symbolic
+reasoning module providing 14 predicates for extracting rectangular sub-grids
+(patches), performing template matching (finding where a small pattern occurs
+in a larger grid), enumerating sliding window sub-patches, discovering
+distinct sub-patterns, finding the most frequent sub-pattern, comparing
+patches, testing uniformity, and applying 2D geometric operations. All 42
+PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+A fundamental operation in visual pattern recognition is template matching:
+given a small pattern (a "template" or "patch"), find every position where
+it occurs within a larger grid. This is needed for:
+
+- Detecting whether a motif appears in a scene
+- Counting occurrences of a specific sub-pattern
+- Finding repeated structures
+- Locating "anchor" cells that identify positions for larger transformations
+
+The existing PrologAI pack library provides scene-level object extraction
+(scene pack, Layer 37), shape matching at the normalized-shape level (shape
+pack, Layer 46), and sliding window operations (window pack, Layer 79). None
+provides direct rectangle-level template matching on raw integer grids with
+optional wildcard positions.
+
+The patch pack fills this gap with 14 predicates organized around the central
+operation of sub-grid extraction (pa_extract) and its application to
+template matching (pa_match).
+
+
+2. Predicate Inventory (14 predicates, pa_* prefix)
+
+2.1 Extraction and Dimensions
+
+pa_extract(+Grid, +R0, +C0, +H, +W, -Patch)
+Patch is the H x W sub-grid of Grid starting at row R0, column C0 (both
+0-based). Uses a helper pa_take_cols_ that splits each row at the correct
+column offset using append/3 with a length/2 constraint.
+
+pa_dims(+Patch, -H, -W)
+H and W are the row count and column count of Patch. An empty patch gives
+H=0, W=0. Used internally and externally to verify patch sizes.
+
+Examples:
+Grid = [[1,2,3],[4,5,6],[7,8,9]].
+pa_extract(Grid, 0, 0, 2, 2, P).  % P = [[1,2],[4,5]]
+pa_extract(Grid, 1, 1, 1, 1, P).  % P = [[5]]
+pa_dims([[1,2,3],[4,5,6]], H, W).  % H=2, W=3
+
+
+2.2 Template Matching
+
+pa_match(+Grid, +Patch, -R0, -C0)
+Non-deterministically enumerate all top-left positions (R0, C0) where Patch
+occurs exactly in Grid. Uses between/3 to enumerate candidate positions and
+structural unification of the extracted sub-grid against Patch. Backtracks
+over all matches; use once/1 for the first match.
+
+pa_match_all(+Grid, +Patch, -Positions)
+pa_match_count(+Grid, +Patch, -N)
+Deterministic wrappers via findall/3 over pa_match.
+
+Examples:
+Grid = [[1,1,1],[1,1,1],[1,1,1]].
+pa_match_all(Grid, [[1,1],[1,1]], Pos).
+% length(Pos, 4)
+
+pa_match_count(Grid, [[1,1],[1,1]], N).
+% N = 4
+
+
+2.3 Wildcard Matching
+
+pa_match_bg(+Grid, +Patch, +Bg, -Positions)
+Bg-valued cells in Patch match any cell in Grid (wildcard). Non-Bg cells
+must match exactly. Implemented by pa_cell_bg_match_ which checks each cell
+pair: if PV =:= Bg, succeed; else require PV =:= SV.
+
+Example:
+Grid = [[1,2,3],[4,5,6],[7,8,9]].
+pa_match_bg(Grid, [[0,2],[0,5]], 0, Pos).
+% Pos = [0-0]  (the 0s match any value; 2 must equal grid(0,1)=2 and 5 must equal grid(1,1)=5)
+
+
+2.4 Sliding Window Enumeration
+
+pa_slides(+Grid, +H, +W, -Patches)
+All (NR-H+1)*(NC-W+1) overlapping patches as R0-C0-Patch triples.
+
+pa_unique_patches(+Grid, +H, +W, -Unique)
+Sorted list of distinct patches (sort/2 removes duplicates by structural equality).
+
+pa_most_common_patch(+Grid, +H, +W, -Patch, -Count)
+Most frequent patch and count. Algorithm: msort all patches (preserves
+duplicates, groups equal patches adjacent), then pa_count_groups_ builds
+Count-Patch pairs, then msort finds the maximum.
+
+Examples:
+pa_slides([[1,2,3],[4,5,6],[7,8,9]], 2, 2, P). % length(P, 4)
+pa_unique_patches([[0,1],[1,0]], 1, 1, U).       % length(U, 2)
+
+
+2.5 Patch Comparison
+
+pa_diff(+PatchA, +PatchB, -Cells)
+Cells is the sorted list of R-C pairs where the two patches differ. Computed
+by enumerating all (R,C) positions with between/3 and comparing cell values
+with =\= (arithmetic inequality for integers).
+
+Examples:
+pa_diff([[1,2],[3,4]], [[1,2],[3,9]], C).  % C = [1-1]
+pa_diff([[1,1]], [[1,1]], C).               % C = []
+
+
+2.6 Uniformity
+
+pa_is_uniform(+Patch, -Color)
+Succeed if all cells equal Color. Binds Color to the first cell's value
+then uses forall/member/=:= to verify the remainder.
+
+
+2.7 Geometric Operations
+
+pa_flip_h(+Patch, -Flipped) - maplist(reverse, Patch, Flipped) reverses each row.
+pa_flip_v(+Patch, -Flipped) - reverse(Patch, Flipped) reverses the row list.
+pa_rot90(+Patch, -Rotated) - CW rotation: Rotated(r', c') = Patch(H-1-c', r').
+  For H x W input, output is W x H.
+
+Examples:
+pa_flip_h([[1,2,3]], F).         % F = [[3,2,1]]
+pa_flip_v([[1,2],[3,4]], F).     % F = [[3,4],[1,2]]
+pa_rot90([[1,2,3],[4,5,6]], R).  % R = [[4,1],[5,2],[6,3]]
+
+
+3. Implementation Notes
+
+The template matching algorithm exploits Prolog's structural unification:
+pa_extract produces a list of lists and the Patch argument is unified
+against it. No explicit cell-by-cell comparison loop is needed for the
+exact-match case; the unification itself performs the comparison.
+
+For wildcard matching, a separate cell-by-cell traversal (pa_cell_bg_match_)
+is needed because wildcards cannot be unified away.
+
+pa_most_common_patch uses a two-step algorithm: msort (O(N log N)) groups
+equal patches, then pa_count_groups_ scans the sorted list in O(N) to
+produce Count-Patch pairs, then a final msort and last/2 find the maximum.
+
+Imports: library(lists) for member/2, nth0/3, append/3, reverse/2, last/2;
+library(apply) for maplist/3.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no choicepoint warnings. Three tests per
+predicate cover the primary case, an edge case, and a boundary/failure case.
+The pa_match tests use once/1 to prevent choicepoint warnings from the
+intentionally non-deterministic predicate.
+
+
+5. Significance
+
+Template matching is one of the most fundamental operations in visual pattern
+recognition. The patch pack makes it a first-class primitive in PrologAI,
+enabling the detection and counting of repeated motifs, the identification of
+structural regularities across a grid, and the comparison of local patterns.
+
+This is Mentova accomplishment 149. PrologAI now carries 127 work packages.
+
+github.com/ai-university-aiu/PrologAI
