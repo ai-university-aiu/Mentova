@@ -1,0 +1,95 @@
+Accomplishment 115: Applying the Hypothesis - The Hyp Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 93rd work package: the hyp pack (hy_* predicate family, Layer 74). This pack provides 14 predicates for applying, testing, and selecting rule hypotheses. A hypothesis is a 2-argument callable that transforms an input grid into a candidate output grid. The hyp pack completes the rule induction stack: the induct pack observes what changed; the hyp pack applies those observations as hypotheses and evaluates them against training pairs.
+
+Introduction
+
+In compositional rule learning, observation is only the first step. Once the induct pack has extracted the structure of change - which colors substituted for which others, how the grid size changed, what the background is - the system must formulate and test a hypothesis. A hypothesis is a candidate rule: "apply color substitution map [1-5, 2-6]." The hyp pack applies that rule to each training input and measures how well the result matches the expected output.
+
+The hypothesis test cycle is the core of ARC-AGI-2 reasoning:
+
+  Step 1: Observe training pairs (induct pack)
+  Step 2: Formulate a hypothesis (color map, size transform, or other rule)
+  Step 3: Apply the hypothesis to each training input (hy_color_sub)
+  Step 4: Measure accuracy against training expected outputs (hy_test_all)
+  Step 5: If perfect (hy_verify_all), apply to test input and submit
+  Step 6: If not perfect, refine the hypothesis and repeat
+
+Predicates
+
+The hyp pack exports 14 predicates under the hy_* prefix.
+
+Hypothesis application:
+hy_color_sub/3    apply a color substitution map; identity fallback for unmapped colors
+hy_identity/2     return the grid unchanged (no-op hypothesis)
+hy_from_map/3     alias for hy_color_sub, usable as a partial-application goal
+hy_apply_map/3    second alias for hy_color_sub
+
+Testing:
+hy_test/4         test one hypothesis on one pair; return pixel accuracy as float
+hy_test_all/4     test on all pairs; return mean accuracy and per-pair list
+hy_verify/3       exact-match test for one pair
+hy_verify_all/2   exact-match test for all pairs (ARC-AGI pass criterion)
+
+Selection:
+hy_select/3       pick the best hypothesis from a list by mean accuracy
+hy_rank/3         rank all hypotheses by mean accuracy descending
+
+Map utilities:
+hy_compose/4      apply two maps sequentially (chained color substitution)
+hy_invert_map/2   swap keys and values (reverse the substitution)
+hy_map_lookup/3   look up a color with identity fallback
+hy_describe/2     describe a hypothesis as a human-readable atom
+
+Implementation
+
+hy_color_sub uses maplist twice (rows then cells) with an if-then-else lookup
+helper. This avoids choicepoints from member/2 on the map.
+
+hy_test uses findall-based cell counting for determinism and float(Match) /
+float(Total) to guarantee float output. Without the float conversion, integer
+division (4/4 = 1 not 1.0) would break hy_rank's sorting on Acc-Goal pairs.
+
+hy_verify_all uses forall/2 (built-in) to test all pairs without choicepoints.
+
+hy_select and hy_rank have no meta_predicate declarations on their output
+argument. During development, declaring the output as a goal arity in
+meta_predicate caused SWI-Prolog to module-qualify the returned hypothesis
+functor (e.g., turning hy_identity into plunit_hy_select:hy_identity), which
+broke unification in callers. The lesson: meta_predicate declarations belong
+only on arguments that are called as goals, never on output arguments.
+
+hy_describe uses cuts in the first two clauses to prevent the catch-all
+third clause from leaving a choicepoint after the atom or compound cases match.
+
+All 30 PLUnit acceptance tests pass (AC-HY-001 through AC-HY-030).
+
+Significance
+
+The hyp pack, combined with the induct pack, closes the observation-hypothesis-
+test loop. The system can now:
+
+1. Observe: in_color_map_pairs extracts the color substitution from training pairs
+2. Hypothesize: hy_from_map([1-5]) builds the hypothesis callable
+3. Test: hy_test_all measures mean accuracy across training pairs
+4. Verify: hy_verify_all confirms the hypothesis solves all training pairs
+5. Apply: the verified hypothesis is applied to the test input and submitted
+
+This is a complete rule-induction-and-application pipeline for color substitution
+rules, which represent a large class of ARC-AGI-2 tasks.
+
+References
+
+PrologAI_1_Specification_v60.txt, Part 85 (HY-HY-001 through HY-HY-014)
+PrologAI_2_Pseudocode_v53.txt, Part 85
+PrologAI_3_Architecture_v54.txt, PART ARCH-61
+PrologAI_4_Refinement_v108.txt, Part 85 (AC-HY-001 through AC-HY-030)
+PrologAI_5_Completion_v111.txt, Work Package 95
+PrologAI PR #180: feat(packs): PR 95 - hyp pack
+Mentova/data/arc_agi_2/ARC-AGI-2_Next_Steps.txt, Section 3.5, Section 5.8

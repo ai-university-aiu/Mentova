@@ -1,0 +1,34 @@
+Accomplishment 115: The Hyp Pack - Applying the Hypothesis
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Mentova just gained its 93rd work package: the hyp pack.
+
+14 hy_* predicates for applying, testing, and selecting rule hypotheses:
+
+  hy_color_sub      - apply a color substitution map (identity fallback)
+  hy_identity       - no-op hypothesis
+  hy_test_all       - mean pixel accuracy over all training pairs
+  hy_verify_all     - did we solve every training pair exactly?
+  hy_rank           - rank hypotheses by accuracy
+  hy_select         - pick the winner
+  hy_compose        - chain two color maps
+  hy_invert_map     - reverse the substitution
+
+The observation-hypothesis-test loop is now complete:
+
+1. Observe: in_color_map_pairs extracts the color rule from training pairs
+2. Hypothesize: hy_from_map([1-5]) builds the callable
+3. Test: hy_test_all measures mean accuracy
+4. Verify: hy_verify_all confirms all pairs solved
+5. Apply: submit the answer
+
+This is a full induction pipeline for color substitution rules.
+
+30/30 acceptance tests pass. Pure Prolog. Glass-box. No neural weights.
+
+PrologAI PR #180. Mentova Acc_115.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #RuleInduction #AIU
