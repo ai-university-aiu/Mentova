@@ -1,0 +1,54 @@
+Mentova Accomplishment 130: Multi-Pair Grid Difference Analysis - The Diff Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI gains the diff pack - 14 predicates for analyzing what changes
+between grids, both within a single training pair and across all training
+pairs at once.
+
+What the diff pack provides:
+
+Single-pair cell analysis:
+• df_cell_diff - all changed cells as diff(R,C,OldValue,NewValue) terms
+• df_added - cells that went from background to non-background
+• df_removed - cells that went from non-background to background
+• df_recolored - cells that stayed non-background but changed color
+• df_stable - cells whose value did not change
+• df_palette_change - colors added to or lost from the palette
+
+Multi-pair contrastive analysis:
+• df_common_diffs - cells that changed in EVERY training pair
+• df_common_stable - cells that were stable in EVERY training pair
+• df_always_added - cells added (BG to non-BG) in EVERY pair
+• df_always_removed - cells removed (non-BG to BG) in EVERY pair
+
+Diff manipulation:
+• df_total_changes - total count of changed cells
+• df_apply_diffs - apply a diff list to a grid
+• df_invert_diffs - reverse each diff to reconstruct the original
+• df_filter_diffs - keep only diffs matching a goal
+
+Why multi-pair contrastive analysis?
+
+Rule induction from grid tasks requires understanding what is INVARIANT
+across all training examples.
+
+df_common_diffs finds cells that changed in every pair - these are almost
+certainly the transformation targets.
+
+df_common_stable finds cells that never changed in any pair - these are
+likely the background structure the rule leaves untouched.
+
+This cross-pair intersection analysis is the symbolic equivalent of what
+human puzzle solvers do when they compare multiple examples before forming
+their hypothesis.
+
+42 PLUnit acceptance tests pass.
+
+Layer 89. Work Package 110.
+
+PrologAI: 108 work packages.
+
+Mentova: 130 accomplishments.

@@ -1,0 +1,203 @@
+Acc_130: Multi-Pair Grid Difference Analysis - The Diff Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains the diff pack (df_* predicate family, Layer 89, Work Package 110),
+a 14-predicate module for multi-pair grid difference analysis.
+
+The pack provides six single-pair cell-level predicates, four multi-pair
+cross-pair intersection predicates, and four diff manipulation predicates.
+
+42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Rule induction for grid reasoning tasks requires comparing input and output
+grids to find what changed and what stayed the same.
+
+Two families of operations are needed.
+
+Family 1 - Single-pair cell analysis.
+
+When comparing one input grid to one output grid, a solver needs to know:
+which cells changed value, which were added from background, which were
+removed to background, which stayed non-background but changed color, which
+remained identical, and which colors appeared or disappeared entirely.
+
+Existing packs (induction id_*, compare cp_*, count cn_*) provide partial
+coverage of this need at the level of cell counts and color lists.
+
+The diff pack unifies these operations under a single coherent predicate
+family and introduces the diff(R, C, V1, V2) term as a first-class
+representation of a cell change.
+
+Family 2 - Multi-pair contrastive analysis.
+
+When multiple training pairs are available, the most powerful form of rule
+induction is contrastive analysis: finding the patterns that hold across
+every pair.
+
+If cell (R, C) changed in every training pair, that cell is almost certainly
+part of the transformation target.
+
+If cell (R, C) was stable in every pair, that cell is almost certainly part
+of the background structure the rule leaves untouched.
+
+No existing PrologAI pack provides this multi-pair intersection capability.
+
+The diff pack fills this gap with df_common_diffs, df_common_stable,
+df_always_added, and df_always_removed.
+
+
+2. Predicate Inventory
+
+The 14 predicates of the diff pack fall into three families.
+
+
+2.1 Single-Pair Cell Analysis
+
+df_cell_diff(Grid1, Grid2, Diffs) returns a list of diff(R, C, V1, V2) terms,
+one for each cell position where Grid1[R][C] = V1, Grid2[R][C] = V2, and
+V1 != V2. Cells are enumerated in row-major order. Diffs is empty if the
+grids are identical.
+
+df_added(Grid1, Grid2, BG, Cells) returns a list of R-C pairs where Grid1
+holds BG and Grid2 holds a non-BG value. These are cells newly painted in.
+
+df_removed(Grid1, Grid2, BG, Cells) returns a list of R-C pairs where Grid1
+holds a non-BG value and Grid2 holds BG. These are cells erased to background.
+
+df_recolored(Grid1, Grid2, BG, Triples) returns a list of R-C-Old-New terms
+for cells that kept non-BG status but changed their specific color. These
+are pure recoloring events with no BG transition.
+
+df_stable(Grid1, Grid2, Cells) returns a list of R-C pairs where the cell
+value is identical in both grids. These are the non-changing cells.
+
+df_palette_change(Grid1, Grid2, Added, Lost) returns the sorted list of
+colors that appear in Grid2 but not Grid1 (Added) and the sorted list of
+colors that appear in Grid1 but not Grid2 (Lost).
+
+
+2.2 Multi-Pair Contrastive Analysis
+
+All four predicates in this family accept a list of In-Out terms, where
+each In-Out pairs an input grid with its corresponding output grid.
+
+df_common_diffs(Pairs, CommonCells) computes, for each pair, the set of
+R-C positions that differ between In and Out. Then it takes the intersection
+of all these sets. CommonCells contains only positions that changed in every
+single pair. Returns empty list for empty Pairs.
+
+df_common_stable(Pairs, CommonCells) computes, for each pair, the set of
+R-C positions with identical values in In and Out. Then it intersects all
+these sets. CommonCells contains positions that were stable in every pair.
+Returns empty list for empty Pairs.
+
+df_always_added(Pairs, BG, CommonCells) computes, for each pair, the set
+of cells added (BG to non-BG). Then it intersects all these sets.
+CommonCells contains positions that were added in every pair.
+
+df_always_removed(Pairs, BG, CommonCells) computes, for each pair, the set
+of cells removed (non-BG to BG). Then it intersects these sets.
+CommonCells contains positions that were removed in every pair.
+
+The internal helper df_intersect_all_ performs the list-of-sets intersection
+using library(lists) intersection/3 repeatedly.
+
+
+2.3 Diff Manipulation
+
+df_total_changes(Grid1, Grid2, N) calls df_cell_diff and returns the count
+of changed cells. N = 0 when the grids are identical.
+
+df_apply_diffs(Grid, Diffs, Grid2) applies each diff(R, C, _, V2) in Diffs
+to Grid in order, setting Grid[R][C] = V2 for each one. The internal helper
+df_set_cell_ uses append/3 decomposition to perform single-cell replacement.
+The fold is performed with foldl/4 from library(apply).
+
+df_invert_diffs(Diffs, Inverse) maps each diff(R, C, V1, V2) to
+diff(R, C, V2, V1). Applying the inverse to the output grid recovers the
+input grid.
+
+df_filter_diffs(Diffs, Goal, Filtered) keeps only diff terms for which
+call(Goal, Diff) succeeds. Goal is a 1-argument callable.
+
+
+3. Implementation Notes
+
+All cell enumeration uses findall with between/3 for row and column indices.
+The dual nth0(R, Grid, Row) then nth0(C, Row, V) pattern is used throughout
+to access cell values.
+
+The module imports member/2, nth0/3, append/3, subtract/3, and intersection/3
+from library(lists), and maplist/3, include/3, and foldl/4 from library(apply).
+
+No PrologAI pack is used as a dependency. The diff pack is self-contained.
+
+The ERC (English Readable Code) convention is followed: one % comment
+immediately above each line of Prolog code.
+
+
+4. Integration with the Pack Stack
+
+The diff pack is Layer 89, above the project pack (Layer 88).
+
+Typical usage patterns:
+
+Use df_common_stable with multiple training pairs to find the background
+structure: cells that never change and may be part of a fixed frame or
+template the rule leaves untouched.
+
+Use df_always_added together with the scene pack to locate cells that are
+always painted in across all training pairs, then infer the color and shape
+of the invariant newly-added object.
+
+Use df_cell_diff then df_invert_diffs then df_apply_diffs to reconstruct
+the input from the output: compute the forward diff, invert it, and apply
+to the output to recover the input.
+
+Use df_palette_change across pairs to identify colors that always appear
+in transformations versus colors that are stable and serve as backgrounds
+or structural markers.
+
+Use df_common_diffs to narrow the hypothesis space: if the same set of
+cells changes in every training pair, the rule almost certainly targets
+exactly those cells.
+
+
+5. SPARC Documentation
+
+Work Package 110 is documented in:
+
+Specification Part 100 (DF-DF-001 through DF-DF-014) giving the signature
+and contract for each predicate.
+
+Pseudocode Part 100 providing step-by-step reasoning for the contrastive
+intersection algorithm and each of the 14 predicates.
+
+Architecture Part ARCH-76 positioning the diff pack at Layer 89.
+
+Refinement acceptance criteria AC-DF-001 through AC-DF-042 (42 tests, 3 per
+predicate).
+
+Completion Work Package 110 logging the pack as delivered and merged.
+
+
+6. Conclusion
+
+The diff pack gives PrologAI a systematic vocabulary for describing what
+changes between grids. Single-pair analysis decomposes changes into added,
+removed, recolored, and stable cells. Multi-pair contrastive analysis finds
+the intersection of these change sets across all training pairs, enabling
+the solver to identify which aspects of the transformation are invariant
+and which are task-specific.
+
+PrologAI now carries 108 work packages and 130 Mentova accomplishments.
