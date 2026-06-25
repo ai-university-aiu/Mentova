@@ -1,0 +1,32 @@
+Accomplishment 126: The Walk Pack - Grid Traversal Patterns
+
+Mentova's 104th work package is live.
+
+The walk pack adds 14 wk_* predicates for systematic grid traversal: listing
+all R-C positions in row-major order (wk_row_scan), column-major order
+(wk_col_scan), zigzag boustrophedon order alternating direction on each row
+(wk_zigzag_scan), grouped by main diagonal D = C minus R (wk_diag_scan),
+grouped by anti-diagonal D = R + C (wk_antidiag_scan), clockwise inward
+spiral from outer ring to center (wk_spiral_in), and clockwise outer border
+walk (wk_border_walk); extracting values on a specific main diagonal
+(wk_diag_extract) or anti-diagonal (wk_antidiag_extract); computing the
+diagonal index for a cell (wk_diag_of) or anti-diagonal index (wk_antidiag_of);
+extracting grid values at a list of positions (wk_cells_to_vals); painting
+values at a list of positions (wk_vals_to_cells); and listing all non-border
+cells in row-major order (wk_inner_cells).
+
+Traversal order is the first choice in grid reasoning. Row-major shows the
+reading order; diagonals expose stripe patterns; spirals visit context before
+content; border walks isolate perimeter structure. The walk pack gives Mentova
+a complete traversal toolkit, combining naturally with the morph, label, trace,
+and scene packs for full perceptual analysis.
+
+All 42 acceptance tests pass. The pack is documented in SPARC Specification
+v71 (Part 96, WK-WK-001 through WK-WK-014), Refinement v119, and tutorial
+Chapter 67.
+
+PrologAI now has 104 work packages and Mentova has 126 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
