@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-96-FF6B35?style=for-the-badge" alt="96 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-97-FF6B35?style=for-the-badge" alt="97 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,7 +98,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **96 accomplished** |
+| Documented accomplishments | **97 accomplished** |
 | Scientific papers | **91 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
@@ -397,12 +397,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_94` | Select pack paper — Selection and Filtering of Cell Regions by Spatial and Size Properties (Layer 53): 14 sl_* predicates for largest, smallest, area-sorted list, area filters (exact, min, max), border test, border/interior filters, directional filters (above row, below row, left of col, right of col), and unique-area selection |
 | `Acc_95` | Count pack paper — Counting Cells, Colors, and Regions in Grids (Layer 54): 14 cn_* predicates for single-color cell count, color histogram, most/least frequent colors, row/column color presence, row/column value diversity, total cell count, grid comparison counts, region color lookup, per-color region tally, and flat-list value count |
 | `Acc_96` | Fill pack paper — Pattern-Based Region and Grid Filling (Layer 55): 14 fl_* predicates for region filling, bounding box filling, row/column/cell filling, border filling, region boundary and interior filling, solid-color grid creation, checkerboard grid creation, horizontal and vertical line drawing, main diagonal filling, and transparent subgrid stamp overlay |
+| `Acc_97` | Pattern pack paper — Pattern Detection, Tiling Period, and Motif Extraction (Layer 56): 14 pt_* predicates for row and column period detection, horizontal and vertical grid tiling period, minimal horizontal/vertical/2D tile extraction, exact tiling test, tile match position finding and counting, H x W subgrid extraction, distinct row and column counting, and uniform-row test |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-96 announcements in LinkedIn format — one per accomplishment.
+97 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

@@ -1,0 +1,48 @@
+Accomplishment 97: Mentova can now detect repeating structure in grids.
+
+The new pattern pack gives PrologAI fourteen predicates for finding
+the tiling period of rows, columns, and entire grids.
+
+What is the smallest unit that, tiled repeatedly, produces this grid?
+Where exactly does this motif appear in this grid?
+How many times?
+Is this grid an exact tiling of this tile?
+How many distinct rows are in this grid?
+Are all rows identical?
+
+Every answer is deterministic.
+
+Here is a concrete example.
+
+A grid is presented. The task rule is: this grid is a tiling.
+Find the tile unit and verify.
+
+G = [[0,1,0,1],[1,0,1,0],[0,1,0,1],[1,0,1,0]].
+
+pt_tile_unit(G, Tile).
+% Tile = [[0,1],[1,0]]
+
+pt_is_tiling(G, [[0,1],[1,0]]).
+% true
+
+Two predicates. The rule is confirmed.
+
+Here is another.
+
+A rule says: find all positions in this grid where the 2x2 pattern
+[[5,5],[5,5]] appears.
+
+pt_find_tile(Grid, [[5,5],[5,5]], Positions).
+
+Positions is the exact list of r(R,C) top-left corners.
+No search. No approximation. No probability.
+
+This is what it means to detect patterns: not to guess, but to verify
+and enumerate with deterministic symbolic reasoning.
+
+The pattern pack is Layer 56, work package 77 in the PrologAI platform.
+
+43 tests. All pass.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
