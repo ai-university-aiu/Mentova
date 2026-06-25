@@ -1,0 +1,172 @@
+Accomplishment 95: Count Pack - Counting Cells, Colors, and Regions in Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains a new work package - the count pack (module count, cn_* prefix,
+Layer 54) - that gives Mentova fourteen deterministic predicates for counting
+cells, colors, and regions in grids and region lists.
+
+This pack answers the quantitative questions that visual reasoning requires:
+how many cells have this color, which color dominates, how many rows contain
+a specific color, how similar are two grids.
+
+
+1. Background
+
+Before the count pack, Mentova could measure geometric properties of regions
+(via the measure pack), select regions by size and position (via the select pack),
+and apply transformations to grids (via the transform pack).
+
+But it had no vocabulary for answering quantitative questions about color
+distributions within grids.
+
+How many cells are blue? Which color appears most often? How many rows contain
+at least one red cell? How many cells differ between the input and the output?
+
+These are the questions that a cognitive system must answer when reasoning about
+visual patterns based on quantity rather than shape.
+
+The count pack provides exactly this vocabulary.
+
+
+2. The Fourteen Predicates
+
+2.1 Single-Color Counting
+
+cn_color_count/3 counts cells equal to a specific color across the entire grid.
+
+cn_by_value/3 counts occurrences of a specific value in any flat list.
+
+These are the most fundamental counting operations.
+
+
+2.2 Color Histograms
+
+cn_histogram/3 produces two parallel lists: the distinct color values present in
+the grid and their corresponding cell counts, sorted by color value ascending.
+
+This gives a complete frequency profile of the grid in one call.
+
+
+2.3 Extremal Colors
+
+cn_max_color/2 returns the color with the highest cell count.
+
+cn_min_color/2 returns the color with the lowest cell count.
+
+When multiple colors tie, both predicates return the color with the lowest
+integer value.
+
+
+2.4 Row and Column Color Presence
+
+cn_color_rows/3 counts rows that contain a specific color at least once.
+
+cn_color_cols/3 counts columns that contain a specific color at least once.
+
+These predicates answer questions like "in how many rows does the target
+color appear?" which is useful for understanding how broadly a color is
+distributed across a grid.
+
+
+2.5 Value Diversity
+
+cn_row_distinct/3 counts the number of distinct values in a specific row.
+
+cn_col_distinct/3 counts the number of distinct values in a specific column.
+
+A row with all identical values has distinct count 1.
+
+A row with all different values has distinct count equal to its length.
+
+
+2.6 Grid Size
+
+cn_grid_total/2 returns the total number of cells in a grid (Rows times Cols).
+
+
+2.7 Grid Comparison
+
+cn_equal_cells/3 counts positions where two same-size grids have identical values.
+
+cn_diff_cells/3 counts positions where they differ.
+
+These two predicates together give a complete account of how similar or different
+two grids are.
+
+
+2.8 Region Colors and Tallies
+
+cn_region_color/3 returns the color of a region by looking up the grid value at
+the region's first cell.
+
+In a connected component (as produced by gd_connected), all cells share one color,
+so the first cell's color is the region's color.
+
+cn_regions_per_color/3 processes a list of regions and produces a tally of how
+many regions have each color.
+
+This is useful for answering "how many red objects and how many blue objects are
+there in this grid?"
+
+
+3. Implementation Notes
+
+cn_histogram uses a run-length encoding approach on the msorted flat grid to
+group identical values without requiring library(aggregate) or a separate
+grouping step.
+
+cn_regions_per_color uses foldl/4 with an accumulator tally, updating the count
+for each color as regions are processed.
+
+cn_equal_cells uses a per-cell 1/0 comparison flag mapped over both grids and
+summed with sum_list/2.
+
+
+4. Tests
+
+The pack ships 49 PLUnit tests across 14 suites (one per predicate).
+
+Tests cover zero-count cases, uniform grids, mixed grids, grid comparison, and
+region color extraction.
+
+All 49 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+• Specification v40, Part 65: functional requirements for all fourteen predicates
+• Pseudocode v33, Part 65: algorithmic pseudocode for each predicate
+• Architecture v34, PART ARCH-41: module position and design notes
+• Refinement v88, Part 65: acceptance criteria AC-CN-001 through AC-CN-049
+• Completion v91: PR 75 release checklist
+
+
+6. Significance
+
+With the count pack, Mentova can answer the quantitative questions that visual
+reasoning requires.
+
+"Which color dominates this grid?" cn_max_color answers this.
+
+"How different is the output from the input?" cn_diff_cells answers this.
+
+"How many objects of each color are there?" cn_regions_per_color answers this.
+
+These answers are not approximate. They are exact integer counts computed by
+deterministic Prolog predicates.
+
+This is what it means to reason about quantity: not to estimate or hallucinate,
+but to count.
+
+The count pack is the thirty-sixth tutorial chapter and the seventy-fourth work
+package in the PrologAI platform.
+
+
+END OF PAPER
