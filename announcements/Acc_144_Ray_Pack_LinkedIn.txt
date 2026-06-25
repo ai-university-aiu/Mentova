@@ -1,0 +1,38 @@
+Mentova Accomplishment 144: Directional Perception - The Ray Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the ray pack (Layer 103, Work
+Package 124).
+
+Directional perception is the ability to ask "what is in front of me?" as a
+deterministic symbolic operation. The ray pack answers this question for any
+direction in a 2D grid: it casts a ray, finds the first obstacle, measures
+the distance, tests line-of-sight, and reflects off boundaries.
+
+14 predicates (ry_* prefix):
+
+- ry_in_bounds - test whether a cell is within 0-based grid bounds
+- ry_cells_in_dir - enumerate all in-bounds cells in a direction from an origin
+- ry_first_hit - first cell in a direction whose value differs from background
+- ry_cast_clear - background cells before the first obstacle in a direction
+- ry_distance_to_hit - step count to the first non-background cell
+- ry_distance_to_edge - step count to the grid boundary in a direction
+- ry_is_clear - test that every cell in a direction is background
+- ry_project - coordinates N steps from an origin in a direction
+- ry_dir_to_delta - map up/down/left/right/ul/ur/dl/dr to unit step pairs
+- ry_reflect_h - reflect direction across horizontal axis (row component negates)
+- ry_reflect_v - reflect direction across vertical axis (column component negates)
+- ry_los - line-of-sight test: all interior cells on a line segment are background
+- ry_los_cells - enumerate interior cells strictly between two aligned cells
+- ry_cast_all_4 - cast rays in all 4 compass directions; return Dir-Hit pairs
+
+42 PLUnit acceptance tests pass with no choicepoint warnings.
+
+This is Mentova accomplishment 144. PrologAI now carries 122 work packages.
+
+github.com/ai-university-aiu/PrologAI
