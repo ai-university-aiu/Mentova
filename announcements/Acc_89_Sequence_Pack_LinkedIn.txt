@@ -1,0 +1,47 @@
+Accomplishment 89 - Mentova now reasons about sequences, arithmetic progressions, and repeating structure.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 67 work packages.
+
+The new sequence pack gives Mentova a complete vocabulary for reasoning about lists, arithmetic progressions, and periodic structure.
+
+sq_range - generate an integer list from Lo to Hi.
+
+sq_delta - first differences between consecutive elements.
+
+sq_is_arithmetic - does every consecutive pair have the same difference?
+
+sq_common_diff - what is the common difference?
+
+sq_extend_arith - append N more terms to an arithmetic sequence.
+
+sq_chunk - divide a list into N-element sublists (fails if not divisible).
+
+sq_zip and sq_unzip - pair and unpair parallel lists.
+
+sq_cumsum - cumulative prefix sums.
+
+sq_slice - extract a sublist by 0-indexed From/To positions.
+
+sq_flatten1 - one-level flatten (concatenate sublists).
+
+sq_transpose - transpose a rectangular list-of-lists.
+
+sq_period - find the smallest repeating unit of a list.
+
+sq_is_periodic - does the list have a proper period shorter than itself?
+
+This matters because:
+
+Many visual reasoning tasks involve sequences: a row of color values, the sizes of objects across examples, the color assignments along a path.
+
+sq_is_arithmetic catches progressions. sq_is_periodic catches repeating motifs. sq_transpose lets any row-wise operation apply to columns instead.
+
+These are named predicates that compose with the rest of the stack - grid, color, shape, relation, path, symmetry, pattern, and scene.
+
+The sequence pack is the 67th work package in PrologAI and Mentova's 89th accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/

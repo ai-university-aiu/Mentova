@@ -1,0 +1,129 @@
+Accomplishment 89: Sequence Pack - Arithmetic Sequences, List Structure, and Period Detection
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI now includes the sequence pack (module sequence, prefix sq_), a set
+of 14 predicates for arithmetic sequence analysis, list structure operations,
+and period detection. The pack provides integer range generation, first
+differences, arithmetic sequence testing and extension, list chunking, zip
+and unzip, cumulative prefix sums, 0-indexed slicing, one-level flattening,
+matrix transposition, and detection of repeating structure in lists. The
+sequence pack is the 67th work package in PrologAI and Mentova's 89th
+accomplishment.
+
+Introduction
+
+Many visual reasoning tasks that require understanding repetition, structure,
+and progression involve sequences. A row of an ARC grid is a sequence of
+color values. The sizes of objects across examples may form an arithmetic
+sequence. The color assignments along a path may be periodic. The columns of
+a grid are a transposition of its rows.
+
+The sequence pack gives Mentova a first-class vocabulary for reasoning about
+all of these patterns. Rather than reaching for list manipulation as raw
+plumbing inside every solver, predicates like sq_is_arithmetic, sq_period,
+and sq_transpose become named concepts that can be applied, combined, and
+composed with the rest of the cognitive stack.
+
+Design
+
+The sequence pack has no dependencies on other PrologAI packs. Every predicate
+operates on plain Prolog lists of terms or numbers. This makes the pack
+composable with every other pack in the stack: a list of r(R,C) cells, a list
+of color integers from gd_row, a list of object sizes from sc_area - all can
+be passed directly to sq_delta or sq_is_arithmetic without any format
+conversion.
+
+All predicates are deterministic except where noted. The period predicates
+(sq_period, sq_is_periodic) are deterministic by design: sq_period finds the
+unique smallest period by iterating from length 1 upward and stopping at the
+first valid match.
+
+Integer Ranges
+
+sq_range/3 generates the consecutive list [Lo, Lo+1, ..., Hi]. This is a
+thin wrapper around SWI-Prolog's numlist/3, extended to return the empty list
+when Lo > Hi rather than throwing an error.
+
+First Differences and Arithmetic Sequences
+
+sq_delta/2 computes first differences: for a list of N elements, it returns
+a list of N-1 values where each value is the difference between consecutive
+elements. This is the foundation for arithmetic sequence detection.
+
+sq_is_arithmetic/1 tests whether all first differences are equal. Empty and
+single-element lists are trivially arithmetic.
+
+sq_common_diff/2 extracts the common difference of an arithmetic sequence and
+fails if the list is not arithmetic.
+
+sq_extend_arith/3 appends N additional terms to an arithmetic sequence,
+continuing the same common difference.
+
+List Structure Operations
+
+sq_chunk/3 groups a list into consecutive sublists of exactly N elements. It
+fails gracefully when the list length is not divisible by N, which is the
+correct behavior for a predicate that represents a structural constraint.
+
+sq_zip/3 and sq_unzip/3 convert between two parallel lists and a single list
+of A-B pairs. These are useful for combining paired observations (for example,
+a list of input colors paired with their output colors in a color substitution
+map) into a single structure that can be reasoned about as a unit.
+
+sq_cumsum/2 computes prefix sums. The value at index i is the sum of elements
+0 through i. This is useful for counting how many objects fit within a given
+spatial budget, or for computing the total area covered by a sequence of
+objects.
+
+sq_slice/4 extracts a contiguous sublist by 0-indexed From (inclusive) and To
+(exclusive) positions. This is the standard Python-style slice interface.
+
+sq_flatten1/2 performs one level of flattening - it concatenates a list of
+sublists into a single flat list. It is equivalent to append/2 but named for
+its semantic role.
+
+sq_transpose/2 transposes a rectangular list-of-lists, turning rows into
+columns and columns into rows. This is essential when a reasoning operation
+needs to apply a row-wise predicate to columns, or vice versa.
+
+Period Detection
+
+sq_period/2 finds the smallest repeating unit of a list. Every non-empty list
+has at least the trivial period consisting of the list itself. For a list like
+[1,2,1,2,1,2], the smallest period is [1,2].
+
+sq_is_periodic/1 tests for a proper period - one that is strictly shorter than
+the list itself. This predicate succeeds for [1,2,1,2] (period [1,2]) and for
+[5,5,5,5] (period [5]), but fails for [1,2,3] (whose smallest period is
+[1,2,3] itself, not shorter).
+
+Period detection is a key tool for visual tasks where the transformation rule
+involves repeating a motif: a color sequence that tiles a row, a shape that
+tiles a column, or a rule that repeats with a fixed cycle length.
+
+Acceptance
+
+54 PLUnit tests across 14 test groups all pass with no warnings.
+
+Integration criteria IC-SQ-001 (no load warnings) and IC-SQ-002 (all 54
+tests pass) are confirmed.
+
+Conclusion
+
+The sequence pack closes a gap in the cognitive vocabulary. Before this pack,
+detecting that a list of values is arithmetic, or that a grid row is periodic,
+required inline arithmetic in every solver that needed it. Now sq_is_arithmetic
+and sq_is_periodic are named predicates that can be called, composed, and
+tested independently.
+
+Together with the grid, color, shape, relation, path, symmetry, pattern, and
+scene packs, the sequence pack completes the perceptual layer of Mentova's
+reasoning stack. The platform can now describe what is in a grid, how objects
+relate to each other in space, what structural and color patterns are present,
+and what sequential and periodic structure appears in rows, columns, and object
+sequences.
+
+END OF ACCOMPLISHMENT 89
