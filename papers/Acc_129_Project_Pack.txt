@@ -1,0 +1,192 @@
+Acc_129: Axis Projection and Shadow Casting - The Project Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains the project pack (pj_* predicate family, Layer 88, Work Package 109),
+a 14-predicate module for shadow casting and axis-projection operations on grids.
+
+The pack provides four directional shadow casters, a direction dispatch predicate,
+occupied row and column detection, per-row and per-column non-BG cell counts,
+two dimensional-collapse predicates, and three boundary-finding predicates.
+
+42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Two families of operations appear frequently in grid reasoning tasks that are not
+covered by existing PrologAI packs:
+
+Family 1 - Shadow casting.
+
+Shadow casting models the physical process of a non-background (BG) cell
+projecting its value through empty space (BG cells) in one direction, stopping
+when it hits another non-BG cell or the grid boundary.
+
+The gravity pack (gv_*) moves cells to one end of their column or row and is
+designed for simulating gravity.
+
+Shadow casting is complementary: it leaves cells in place and PAINTS the BG cells
+beyond them with the source cell's value. No cell moves.
+
+Family 2 - Axis projection.
+
+Axis projection summarizes a 2D grid along one dimension: which rows/columns
+contain non-BG cells, how many, and what the first non-BG value is per axis.
+
+These operations are used when a rule involves "reading" the column or row
+structure of a grid - for example, counting objects per row, finding where
+objects start or end, or collapsing a grid to a 1D profile.
+
+
+2. Predicate Inventory
+
+The 14 predicates of the project pack fall into four functional areas.
+
+
+2.1 Shadow Casting
+
+pj_shadow_down(Grid, BG, Grid2) operates column by column. In each column, it
+scans from row 0 to the last row. When a non-BG value V is encountered, V
+becomes the current shadow. Every subsequent BG cell in the same column is
+replaced with V. When another non-BG cell is encountered, it becomes the new
+shadow. BG cells above the first non-BG cell in each column are left as BG.
+
+pj_shadow_up operates bottom to top within each column. It reverses each column
+list, applies the same forward scan, then reverses the result back.
+
+pj_shadow_left operates row by row. In each row, it scans from right to left.
+This is implemented by reversing the row, applying the forward scan, then
+reversing back.
+
+pj_shadow_right operates row by row, left to right. This is a direct forward
+scan of each row.
+
+pj_shadow_dir dispatches to any of the four shadow predicates by a direction
+atom: down, up, left, or right.
+
+The core algorithm is pj_prop_fwd_: a single-pass linear scan that propagates
+the most recently seen non-BG value through BG cells. Its time complexity is
+O(N) where N is the number of cells being processed. All five shadow predicates
+are therefore O(NR * NC) where NR and NC are the grid dimensions.
+
+
+2.2 Occupied Axis Detection
+
+pj_nonbg_rows(Grid, BG, Rows) returns the sorted list of row indices containing
+at least one non-BG cell.
+
+pj_nonbg_cols(Grid, BG, Cols) returns the sorted list of column indices
+containing at least one non-BG cell.
+
+Both predicates use findall with once/member to detect occupancy without
+generating duplicate index entries.
+
+
+2.3 Cell Counting and Dimensional Collapse
+
+pj_row_counts(Grid, BG, Counts) maps maplist with a counting helper over all
+rows, producing a parallel list of non-BG cell counts.
+
+pj_col_counts(Grid, BG, Counts) extracts each column and counts its non-BG
+cells, producing a parallel list with one count per column.
+
+pj_collapse_rows(Grid, BG, Row) reduces a 2D grid to a single row by scanning
+each column top to bottom and keeping the first non-BG value found. If a column
+is entirely BG, its position in the result row is BG.
+
+pj_collapse_cols(Grid, BG, Col) reduces to a single column by scanning each
+row left to right and keeping the first non-BG value found.
+
+
+2.4 Boundary Finding
+
+pj_col_first(Grid, Col, BG, R) finds the row index of the topmost non-BG cell
+in column Col. It uses between/3 in ascending order with a cut after the first
+match. Fails if the column contains no non-BG cell.
+
+pj_col_last(Grid, Col, BG, R) collects all row indices of non-BG cells in the
+column using findall, then returns the last element with last/2. Fails if the
+column contains no non-BG cell.
+
+pj_row_first(Grid, Row, BG, C) finds the column index of the leftmost non-BG
+cell in row Row. It uses between/3 in ascending order with a cut. Fails if the
+row contains no non-BG cell.
+
+
+3. Implementation Notes
+
+All four shadow predicates share pj_prop_fwd_ as their inner engine. Column
+operations use pj_extract_col_ (maplist with nth0) and pj_set_col_ (sequential
+row decomposition with append) to read and write columns. Row operations work
+directly on the grid's row lists.
+
+The ERC (English Readable Code) convention is followed: one % comment
+immediately above each line of Prolog code.
+
+No built-in predicates are imported from libraries. The predicates sort/2,
+length/2, between/3, and forall/2 are used as built-ins. The predicates
+member/2, nth0/3, numlist/3, append/3, reverse/2, and last/2 are imported from
+library(lists). The predicates maplist/3, foldl/4, and include/3 are imported
+from library(apply).
+
+No other PrologAI pack is used as a dependency. The project pack is self-
+contained.
+
+
+4. Integration with the Pack Stack
+
+The project pack is Layer 88, sitting above the pivot pack (Layer 87).
+
+Typical usage combinations:
+
+pj_shadow_down followed by pj_collapse_rows to see the "shadow profile" of
+objects cast onto a single bottom row.
+
+pj_nonbg_cols and pj_nonbg_rows together to identify the bounding band of
+occupied content, which is less expensive than computing the full bounding box
+with cr_bbox when only the occupied axes matter.
+
+pj_col_first and pj_col_last together to compute the occupied height of each
+column, equivalent to gv_pile_height but without applying gravity.
+
+pj_row_counts and pj_col_counts to produce a 1D count profile for comparing
+grid structures across training examples when inducting spatial rules.
+
+pj_collapse_rows followed by pj_shadow_right to propagate object colors
+horizontally across an entire row, creating a "floor projection" effect.
+
+
+5. SPARC Documentation
+
+Work Package 109 is documented in:
+
+Specification Part 99 (PJ-PJ-001 through PJ-PJ-014) giving the signature and
+contract for each predicate.
+
+Pseudocode Part 99 providing step-by-step reasoning for the shadow scan
+algorithm and each of the 14 predicates.
+
+Architecture Part ARCH-75 positioning the project pack at Layer 88.
+
+Refinement acceptance criteria AC-PJ-001 through AC-PJ-042 (42 tests, 3 per
+predicate).
+
+Completion Work Package 109 logging the pack as delivered and merged.
+
+
+6. Conclusion
+
+The project pack adds shadow casting and axis-projection capabilities to
+PrologAI's grid reasoning substrate. Shadow casting enables tasks where non-BG
+cells must propagate their identity through empty space in a specified direction.
+Axis projection enables tasks where the structure of a grid must be summarized
+along rows or columns before a rule can be applied.
+
+PrologAI now carries 107 work packages and 129 Mentova accomplishments.
