@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-126-FF6B35?style=for-the-badge" alt="126 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-127-FF6B35?style=for-the-badge" alt="127 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **126 accomplished** |
-| Scientific papers | **106 published** — one per accomplishment |
+| Documented accomplishments | **127 accomplished** |
+| Scientific papers | **107 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         106 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  104 announcements — one per accomplishment
+├── papers/         107 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  105 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -427,12 +427,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_124` | Label pack paper — Connected Component Labeling and Region Queries (Layer 83): 14 lb_* predicates for assigning unique integer labels to 4-connected components (lb_label), returning component cell lists (lb_components), counting components (lb_count), returning the cell count of a label (lb_size_of), sorted Label-Size pairs for all labels (lb_sizes_all), cells of a specific label (lb_cells_of), bounding box corners of a label region (lb_bbox_of), foreground labels 4-adjacent to a label (lb_neighbors_of), replacing all cells of a label with a value (lb_fill_label), keeping only the largest component (lb_keep_largest), removing components below a size threshold (lb_remove_small), coloring each label from a cycling palette (lb_color_labels), merging two labels into one (lb_merge_two), and extracting one component from the original grid (lb_select_label). 42/42 acceptance tests pass. |
 | `Acc_125` | Morph pack paper — Morphological Grid Operations (Layer 84): 14 mo_* predicates for expanding all non-background regions by one 4-connected step copying the neighbor's color (mo_dilate), shrinking regions by one step (mo_erode), N-step dilation (mo_dilate_n), N-step erosion (mo_erode_n), morphological open (mo_open), morphological close (mo_close), morphological smooth (mo_smooth), extracting only perimeter non-background cells (mo_boundary), extracting only interior non-background cells (mo_interior), dilating with a fixed fill value (mo_dilate_val), BFS flooding from seeds into background territory (mo_grow_from), L1 Manhattan distance from each non-background cell to the nearest background cell (mo_dist_to_bg), cells added at exactly the Nth dilation step (mo_ring), and filling enclosed background regions (mo_fill_holes). 42/42 acceptance tests pass. |
 | `Acc_126` | Walk pack paper — Grid Traversal Patterns (Layer 85): 14 wk_* predicates for listing all R-C positions in row-major order (wk_row_scan), column-major order (wk_col_scan), zigzag boustrophedon order (wk_zigzag_scan), grouped by main diagonal D = C-R (wk_diag_scan), grouped by anti-diagonal D = R+C (wk_antidiag_scan), clockwise inward spiral (wk_spiral_in), clockwise outer border walk (wk_border_walk), extracting values on a main diagonal (wk_diag_extract), extracting values on an anti-diagonal (wk_antidiag_extract), computing the main diagonal index D = C-R for a cell (wk_diag_of), computing the anti-diagonal index D = R+C (wk_antidiag_of), extracting grid values at a list of R-C positions (wk_cells_to_vals), painting values at a list of R-C positions (wk_vals_to_cells), and listing all non-border R-C positions in row-major order (wk_inner_cells). 42/42 acceptance tests pass. |
+| `Acc_127` | Step pack paper — Directional Grid Movement (Layer 86): 14 st_* predicates for taking one unbounded step in a direction (st_step), one bounded step that fails if out of grid (st_step_in), collecting all in-bounds cells in a direction excluding the start (st_ray), collecting cells stopping before a given value (st_ray_to), collecting all in-bounds cells including the start (st_walk), the four cardinal directions (st_dirs4), all eight principal directions (st_dirs8), rotating a direction 90 degrees clockwise (st_rotate_cw), rotating counter-clockwise (st_rotate_ccw), reversing a direction (st_opposite), computing the unit step direction between two cells (st_normalize), following a list of direction steps from a start cell (st_path), finding the first cell in a direction with a given value (st_first), and counting steps until the grid boundary (st_to_edge). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-114 announcements in LinkedIn format — one per accomplishment.
+115 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

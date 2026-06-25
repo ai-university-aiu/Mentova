@@ -1,0 +1,94 @@
+Accomplishment 127: Directional Grid Movement - The Step Pack
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+Mentova's cognitive substrate gains its 105th work package: the step pack (st_* predicate family, Layer 86). This pack provides 14 predicates for 8-directional grid movement, direction arithmetic, ray casting, path following, and edge distance computation. Predicates include: one unbounded step, one bounded step, full directional ray, value-stopping ray, walk including start, four cardinal directions, eight principal directions, clockwise and counter-clockwise rotation, direction reversal, unit-step normalization, path following from a direction list, first-value finding, and boundary distance counting.
+
+Introduction
+
+Grid-based visual reasoning depends fundamentally on the ability to move in a direction. From a given cell, a reasoning system may need to know what cells lie ahead in a given direction, where a boundary is, which cell first carries a specific value, or how to follow a sequence of turns. Before the step pack, PrologAI had axis-aligned ray predicates in the trace pack (tr_ray_h, tr_ray_v) but no general 8-directional movement layer and no direction arithmetic.
+
+The step pack fills this gap. It introduces a coherent st_* predicate family whose names, signatures, and behaviors are consistent with each other and with the broader PrologAI predicate convention: R-C pairs for cell positions, DR-DC pairs for directions, and Grid as the first argument whenever bounds checking is needed.
+
+Predicates
+
+The step pack exports 14 predicates under the st_* prefix.
+
+Movement predicates:
+st_step/3       one step in a direction, no bounds check
+st_step_in/4    one step in a direction, fails if out of bounds
+st_ray/4        all in-bounds cells in a direction (excludes start)
+st_ray_to/5     ray stopping before a cell with a given value
+st_walk/4       all in-bounds cells including the start
+
+Direction constants:
+st_dirs4/1      the four cardinal directions
+st_dirs8/1      the eight principal directions (cardinals + diagonals)
+
+Direction arithmetic:
+st_rotate_cw/2    90-degree clockwise rotation
+st_rotate_ccw/2   90-degree counter-clockwise rotation
+st_opposite/2     reversal (negation of both components)
+st_normalize/3    unit step direction between two cells
+
+Path and search predicates:
+st_path/3       follow a list of directions from a start cell
+st_first/5      first cell in a direction with a given value
+st_to_edge/4    number of steps until the grid boundary
+
+Implementation
+
+st_dims_/3 is a private helper measuring grid rows and columns with length/2.
+
+st_step/3 performs a single is/2 computation for each component. No library calls are needed.
+
+st_step_in/4 calls st_dims_ then uses between/3 for bounds checking on both computed coordinates.
+
+st_ray/4 uses a private accumulator predicate st_ray_acc_/6 that prepends each new cell to an accumulator list, then reverse/2 is called once at the end. This gives O(N) performance rather than the O(N^2) of repeated append.
+
+st_ray_to/5 similarly uses st_ray_to_acc_/8 which reads the cell value with nth0/3 at each step and stops when the value matches the stop argument.
+
+st_walk/4 simply calls st_ray/4 and prepends the start cell.
+
+st_dirs4/1 and st_dirs8/1 are deterministic constant predicates. No library imports are needed.
+
+st_rotate_cw/2 applies (DR,DC) -> (DC,-DR). This is verified for all four cardinals: up(-1,0)->right(0,1), right(0,1)->down(1,0), down(1,0)->left(0,-1), left(0,-1)->up(-1,0). st_rotate_ccw/2 applies (DR,DC) -> (-DC,DR). st_opposite/2 negates both components.
+
+st_normalize/3 uses explicit if-then-else chains for sign computation instead of the sign/1 built-in, which returns floats. Integer direction components are required for compatibility with the rest of the predicate family.
+
+st_path/3 uses a private accumulator predicate st_path_acc_/4. The base clause carries a cut to prevent a spurious choicepoint when the direction list is empty.
+
+st_first/5 and st_to_edge/4 use step-by-step recursion. st_first/5 fails gracefully if the target value is never found before the boundary.
+
+All 42 PLUnit acceptance tests pass (AC-ST-001 through AC-ST-042).
+
+Significance
+
+The step pack gives Mentova a complete directional movement toolkit that complements the existing perceptual packs:
+
+  st_step/3 is the atomic building block for all directional reasoning.
+  st_step_in/4 prevents out-of-bounds access in bounded contexts.
+  st_ray/4 and st_ray_to/5 support line-of-sight reasoning and beam casting.
+  st_walk/4 gives the full path including the origin cell.
+  st_dirs4 and st_dirs8 standardize the direction lists used in neighbor enumeration.
+  st_rotate_cw/2 and st_rotate_ccw/2 enable turning: follow a spiral, turn a corner.
+  st_opposite/2 enables backtracking: reverse a beam to find its source.
+  st_normalize/3 converts any two cells into a direction without distance information.
+  st_path/3 enables complex trajectories from compact direction sequences.
+  st_first/5 finds structural features (walls, objects, boundaries) in a direction.
+  st_to_edge/4 answers whether a cell is near an edge and by how much.
+
+Combined with the walk pack (wk_*) for full-grid traversal, the trace pack (tr_*) for axis-aligned rays, the window pack (wn_*) for local neighborhoods, and the scene pack (sc_*) for object-centric spatial relations, the step pack completes Mentova's spatial perception layer.
+
+References
+
+PrologAI_1_Specification_v72.txt, Part 97 (ST-ST-001 through ST-ST-014)
+PrologAI_2_Pseudocode_v65.txt, Part 97
+PrologAI_3_Architecture_v66.txt, PART ARCH-73
+PrologAI_4_Refinement_v120.txt, Part 97 (AC-ST-001 through AC-ST-042)
+PrologAI_5_Completion_v123.txt, Work Package 107
+PrologAI PR #192: feat(packs): PR 107 - step pack Layer 86

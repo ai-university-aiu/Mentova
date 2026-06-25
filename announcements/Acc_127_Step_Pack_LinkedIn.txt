@@ -1,0 +1,32 @@
+Accomplishment 127: The Step Pack - Directional Grid Movement
+
+Mentova's 105th work package is live.
+
+The step pack adds 14 st_* predicates for directional grid navigation: taking
+one unbounded step in any direction (st_step), one bounded step that fails if
+out of the grid (st_step_in), casting a ray to collect all in-bounds cells in
+a direction excluding the start (st_ray), stopping a ray before a given value
+(st_ray_to), walking in a direction including the start cell (st_walk), the
+four cardinal directions (st_dirs4), all eight principal directions including
+diagonals (st_dirs8), rotating a direction 90 degrees clockwise (st_rotate_cw)
+or counter-clockwise (st_rotate_ccw), reversing a direction (st_opposite),
+computing the unit step direction between two cells (st_normalize), following
+a list of turns from a starting position (st_path), finding the first cell
+in a direction with a given value (st_first), and counting the steps remaining
+to the grid boundary (st_to_edge).
+
+Direction is the first lens of spatial reasoning. Before the step pack, Mentova
+had axis-aligned rays in the trace pack - but no general 8-directional movement,
+no direction arithmetic, and no path following. The step pack closes that gap
+and integrates cleanly with the walk, trace, window, and scene packs for
+comprehensive spatial perception.
+
+All 42 acceptance tests pass. The pack is documented in SPARC Specification
+v72 (Part 97, ST-ST-001 through ST-ST-014), Refinement v120, and tutorial
+Chapter 68.
+
+PrologAI now has 105 work packages and Mentova has 127 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
