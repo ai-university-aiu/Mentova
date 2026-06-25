@@ -1,0 +1,26 @@
+Accomplishment 123: The Trace Pack - Path Tracing, Rays, and Grid Boundaries
+
+Mentova's 101st work package is live.
+
+The trace pack adds 14 tr_* predicates for linear spatial reasoning: finding
+contiguous non-background runs in a row, per-row and per-column span summaries,
+casting horizontal and vertical rays to find the first obstacle in a direction,
+enumerating cells along horizontal and vertical lines, extracting values along
+a list of positions, painting values along a path, listing border cells of a
+bounding rectangle, identifying non-background cells on object perimeters,
+finding background cells adjacent to objects (the halo), listing all cells on
+the grid boundary, and computing floor midpoints between positions.
+
+These primitives answer the direction questions that visual reasoning requires:
+what is the first obstacle to the right? list all cells on this line. find the
+boundary of this object.
+
+All 42 acceptance tests pass. The pack is documented in SPARC Specification
+v68 (Part 93, TR-TR-001 through TR-TR-014), Refinement v116, and tutorial
+Chapter 64.
+
+PrologAI now has 101 work packages and Mentova has 123 confirmed accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
