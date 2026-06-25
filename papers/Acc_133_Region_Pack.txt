@@ -1,0 +1,166 @@
+Acc_133: Grid Region Extraction by Separator Lines - The Region Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains the region pack (rg_* predicate family, Layer 92, Work
+Package 113), a 14-predicate module for content-driven grid division. The
+pack finds rows and columns where every cell equals a designated separator
+value, computes non-separator section spans, splits the grid along those
+separators, assembles a 2D matrix of all sections, and extracts the
+specific section containing any given cell coordinate.
+
+42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+A frequent pattern in visual reasoning tasks is a grid subdivided by
+separator lines - rows or columns where every cell holds a uniform
+separator value such as 0. Each panel between separators contains an
+independent sub-pattern. Solving such a task requires:
+
+Finding which rows and columns are separators.
+
+Computing the bounded rectangular regions between separators.
+
+Extracting those regions as independent sub-grids.
+
+Identifying which region a specific cell belongs to.
+
+Querying whether the layout is a 2-by-2 panel, a 3-by-3 panel, and so on.
+
+The crop pack (Layer 45) splits at a fixed index specified by the caller.
+The tile pack (Layer 81) splits into equal bands of uniform size. Neither
+locates separators by content. The region pack fills that gap: it examines
+the grid content itself to discover the separator structure.
+
+
+2. Predicate Inventory
+
+The 14 predicates fall into five groups.
+
+
+2.1 Separator Detection
+
+rg_is_sep_row(Grid, R, Sep) succeeds when every cell in row R equals Sep.
+
+rg_is_sep_col(Grid, C, Sep) succeeds when every cell in column C equals Sep.
+
+rg_sep_rows(Grid, Sep, IdxList) returns a sorted list of all separator row
+indices. rg_sep_cols(Grid, Sep, IdxList) returns all separator column indices.
+
+
+2.2 Span Computation
+
+rg_spans_h(Grid, Sep, Spans) returns a list of R0-R1 inclusive row-index
+pairs for the non-separator horizontal sections. rg_spans_v(Grid, Sep, Spans)
+returns C0-C1 column-index pairs for the non-separator vertical sections.
+
+The internal helper rg_spans_from_seps_/4 builds spans recursively from a
+sorted separator index list, tracking the next candidate section start.
+
+
+2.3 Grid Splitting
+
+rg_cut_h(Grid, Sep, Parts) splits the grid at its separator rows. Parts is a
+list of sub-grids with separator rows excluded. rg_cut_v(Grid, Sep, Parts)
+splits at separator columns.
+
+When there are no separators, the single sub-grid in Parts is the whole grid.
+When a separator appears at the start or end, the empty-region case is
+handled gracefully: only non-empty spans produce sub-grids.
+
+
+2.4 Section Matrix and Retrieval
+
+rg_sections(Grid, Sep, Matrix) assembles a 2D list: Matrix[I][J] is the
+sub-grid at horizontal section I and vertical section J.
+
+rg_section_h(Grid, Sep, N, Section) retrieves the N-th horizontal section
+(1-indexed). rg_section_v(Grid, Sep, N, Section) retrieves the N-th vertical
+section.
+
+rg_count_h(Grid, Sep, N) returns the total number of horizontal sections.
+rg_count_v(Grid, Sep, N) returns the total number of vertical sections.
+
+
+2.5 Region Query
+
+rg_region(Grid, Sep, R, C, Region) extracts the sub-grid of the section
+containing cell (R, C). It fails if (R, C) is itself a separator position.
+This is the highest-level predicate: given a cell coordinate, answer the
+question "which panel does this cell belong to, and what does that panel
+contain?"
+
+
+3. Implementation Notes
+
+The pack imports only standard library predicates: nth0/3 and numlist/3
+from library(lists); maplist/2, maplist/3, and include/3 from library(apply).
+No PrologAI pack is imported. length/2, between/3, and forall/2 are built-in
+and not imported.
+
+The ERC (English Readable Code) convention is followed throughout: every line
+of code carries a % comment immediately above it.
+
+Internal helpers:
+rg_spans_from_seps_/4 - recursive span building from sorted separator list.
+rg_find_span_/3 - linear search for the span that contains a given index.
+rg_extract_subgrid_/6 - extract rows R0..R1, columns C0..C1 from a grid.
+
+
+4. Integration with the Pack Stack
+
+The region pack is Layer 92, immediately above the assemble pack (Layer 91).
+
+Identify the layout of a divided grid:
+
+rg_count_h(Grid, 0, NH), rg_count_v(Grid, 0, NV).
+
+Extract all panels and process each independently:
+
+rg_sections(Grid, 0, Matrix),
+maplist(maplist([Sub, Result]>>(transform(Sub, Result))), Matrix, Processed).
+
+Identify the section containing a particular point and analyze its objects:
+
+rg_region(Grid, 0, R, C, Region),
+sc_objects(Region, 0, Objs).
+
+Retrieve the first horizontal section and downscale it:
+
+rg_section_h(Grid, 0, 1, Section),
+as_downscale(Section, 2, Small).
+
+
+5. SPARC Documentation
+
+Work Package 113 is documented in:
+
+Specification Part 103 (RG-RG-001 through RG-RG-014).
+
+Pseudocode Part 103.
+
+Architecture Part ARCH-79 positioning the region pack at Layer 92 and
+documenting its relationship to the crop and tile packs.
+
+Refinement acceptance criteria AC-RG-001 through AC-RG-042.
+
+Completion Work Package 113.
+
+
+6. Conclusion
+
+The region pack gives PrologAI the ability to interpret a grid as a
+multi-panel layout defined by content-based separator lines. Finding
+separators, computing section spans, splitting the grid, assembling a
+section matrix, counting sections, and extracting any section by coordinate
+are now available as clean symbolic predicates.
+
+PrologAI now carries 111 work packages and 133 Mentova accomplishments.

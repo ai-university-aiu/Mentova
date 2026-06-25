@@ -1,0 +1,42 @@
+Mentova Accomplishment 133: Grid Region Extraction by Separator Lines
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the region pack (Layer 92, Work
+Package 113).
+
+A lot of visual reasoning tasks use grids with separator lines - rows or
+columns where every cell holds the same separator value. The grid is divided
+into rectangular panels. The region pack finds those separators and extracts
+the panels.
+
+14 predicates (rg_* prefix):
+
+• rg_is_sep_row - succeed if every cell in a row equals the separator value
+• rg_is_sep_col - succeed if every cell in a column equals the separator value
+• rg_sep_rows - sorted list of all separator row indices
+• rg_sep_cols - sorted list of all separator column indices
+• rg_spans_h - R0-R1 inclusive spans of non-separator horizontal sections
+• rg_spans_v - C0-C1 inclusive spans of non-separator vertical sections
+• rg_cut_h - split grid at separator rows into list of sub-grids (separators excluded)
+• rg_cut_v - split grid at separator columns into list of sub-grids
+• rg_sections - 2D list-of-lists of all sections (row-sections x col-sections)
+• rg_section_h - N-th horizontal section (1-indexed)
+• rg_section_v - N-th vertical section (1-indexed)
+• rg_count_h - count of horizontal sections
+• rg_count_v - count of vertical sections
+• rg_region - sub-grid of the section containing a given cell coordinate
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass.
+
+The crop pack (Layer 45) splits at a fixed index. The tile pack (Layer 81)
+splits into equal bands. The region pack splits at CONTENT-defined separator
+lines. These are complementary capabilities, not duplicates.
+
+This is Mentova accomplishment 133. PrologAI now carries 111 work packages.
+
+github.com/ai-university-aiu/PrologAI
