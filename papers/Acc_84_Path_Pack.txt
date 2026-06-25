@@ -1,0 +1,80 @@
+Accomplishment 84 - Path Pack: Path-Finding, Flood Fill, Connectivity, and Reachability in Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+ABSTRACT
+
+We introduce the path pack, work package PR 64 of the PrologAI symbolic cognitive substrate. The path pack provides 13 pf_* predicates at Layer 43 for 4-connected navigation, flood fill, connected component analysis, BFS (Breadth-First Search) shortest path finding, reachability testing, and region bounding box computation. The path pack enables Mentova to reason about spatial connectivity - which cells belong together, how to navigate from one cell to another, and how to count or select connected groups of cells.
+
+
+1. INTRODUCTION
+
+Connectivity is a foundational spatial concept. Many visual reasoning tasks require knowing which cells form a connected group, how many separate groups exist, which group is largest, or whether a path exists between two points. These questions are difficult to express with individual grid predicates; they require graph-traversal algorithms. The path pack encapsulates these algorithms in named, declarative predicates that compose with the rest of the PrologAI spatial layer.
+
+The path pack depends only on the grid pack (Layer 34). It introduces no new data structures beyond the r(R,C) cell term already established by the grid and scene packs.
+
+
+2. FOUR-CONNECTIVITY
+
+All predicates in the path pack use 4-connectivity: movement is possible in the four orthogonal directions (up, down, left, right); diagonal movement is not included. This is the standard connectivity model for grid-based reasoning and matches the connectivity implied by 4-neighbor enumeration.
+
+pf_neighbors(+Grid, +r(R,C), -Neighbors) enumerates the valid 4-connected neighbors within the grid boundary. It computes all four candidate positions, then filters to those within bounds.
+
+
+3. FLOOD FILL
+
+pf_flood_fill(+Grid, +Seed, +Color, -Region) is the foundation of the pack. It uses BFS to collect all cells reachable from Seed by 4-connectivity where every cell has Color. The result is a sorted list of r(R,C) terms. BFS guarantees that all reachable cells are found without revisiting any cell.
+
+The implementation uses include/3 from library(apply) to filter candidate neighbors at each BFS step, keeping only unvisited cells with the right color.
+
+
+4. CONNECTED COMPONENT ANALYSIS
+
+pf_components(+Grid, +Color, -Components) finds all connected components of Color by iterating flood fill: pick the first unvisited Color cell, flood fill it, subtract the result from the remaining cells, and repeat. The result is a list of cell lists.
+
+pf_component_count, pf_component_size, and pf_largest_component are derived from pf_components. pf_largest_component uses a left fold over the component list, keeping the longest component at each step.
+
+pf_is_connected(+Grid, +Color) succeeds if pf_component_count returns 0 or 1.
+
+
+5. BFS SHORTEST PATH
+
+pf_shortest_path(+Grid, +Start, +Goal, +Wall, -Path) implements BFS path-finding. Unlike flood fill (which collects cells by color), path-finding avoids Wall-colored cells and allows passage through cells of any other color. The frontier is a list of partial paths in reverse order (most recent cell first), enabling efficient path extension without copying.
+
+When the Goal cell is found at the head of a frontier path, the path is reversed and returned. The BFS ordering guarantees this is the shortest path.
+
+pf_path_length returns the number of steps (edges), which is one less than the number of cells in the path. pf_path_exists is the test-only form.
+
+
+6. REACHABILITY
+
+pf_reachable(+Grid, +Seed, +Wall, -Cells) differs from pf_flood_fill in that it collects all cells reachable from Seed without crossing Wall-colored cells, regardless of the cells' colors. This corresponds to treating the grid as a graph where Wall is an obstacle and every non-Wall cell is passable.
+
+pf_fill_bbox(+Grid, +Seed, +Color, -R0, -C0, -R1, -C1) computes the bounding box of a flood-filled region by taking min/max of the row and column indices in the Region list.
+
+
+7. TEST COVERAGE
+
+The path pack ships with 37 PLUnit tests in packs/path/test/test_path.pl. Tests cover all 13 predicates using five fixtures: a two-region grid (two separate 4-cell open regions separated by walls), a 5x5 maze, a 3x3 uniform grid, a two-blob grid (two color-3 components), and a bounding-box fixture. Tests that leave choicepoints are marked nondet.
+
+
+8. SIGNIFICANCE
+
+The path pack brings graph-theoretic spatial reasoning to PrologAI. Mentova can now answer questions that require traversal: How many separate red regions are there? Which blue blob is largest? Can I get from cell A to cell B without crossing walls? What is the bounding box of the leftmost object?
+
+These capabilities directly support visual inductive reasoning tasks that involve counting, selecting, comparing, and navigating connected regions. Combined with the flood fill and frame packs, the path pack completes the foundational layer of grid-based spatial reasoning in PrologAI.
+
+The path pack is the 62nd work package in PrologAI and Mentova's 84th documented accomplishment.
+
+
+REFERENCES
+
+PrologAI Specification Part 54 (docs/PrologAI_1_Specification_v29.txt)
+PrologAI Pseudocode Part 54 (docs/PrologAI_2_Pseudocode_v22.txt)
+PrologAI Architecture PART ARCH-30 (docs/PrologAI_3_Architecture_v23.txt)
+PrologAI Refinement Part 54 (docs/PrologAI_4_Refinement_v77.txt)
+PrologAI Completion PR 64 (docs/PrologAI_5_Completion_v80.txt)
+PrologAI Tutorial Chapter 25 (docs/tutorial/Ch25_Path.txt)

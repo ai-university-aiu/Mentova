@@ -1,0 +1,88 @@
+Accomplishment 83 - Frame Pack: Rectangular Border Detection, Interior Extraction, and Frame Generation
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+ABSTRACT
+
+We introduce the frame pack, work package PR 63 of the PrologAI symbolic cognitive substrate. The frame pack provides 14 fr_* predicates at Layer 42 for detecting rectangular borders (rings) in grids, extracting their interiors, generating framed and nested-frame grids, testing sub-region borders, finding bounding boxes, and counting concentric ring depth. A frame is a uniform-color outer ring surrounding an interior region. The frame pack enables Mentova to recognize bordered structures - a pervasive pattern in visual inductive reasoning tasks.
+
+
+1. INTRODUCTION
+
+Many visual reasoning tasks involve grids where a rectangular border surrounds an interior content region. The border and interior may have different colors; they may be nested in multiple concentric layers; the border may be present only in part of a larger grid. The frame pack provides dedicated predicates for all of these patterns. Unlike ad-hoc approaches that check borders by iterating over cells, the frame pack encapsulates the border concept in named, testable predicates with clear preconditions.
+
+
+2. CORE DESIGN
+
+The frame pack has a simple dependency graph: it uses only the grid pack (Layer 34). No scene, motion, path, or pattern pack is required. This keeps the pack lightweight and composable.
+
+A "border" is the single-cell outer ring of a grid: row 0, the last row, column 0, and the last column. Corner cells appear once. A "uniform border" means every cell in the outer ring has the same color. A "frame" is a uniform outer border around an interior of a different (or possibly the same) color.
+
+
+3. PREDICATE CATALOG
+
+Border detection:
+  fr_border_cells(+Grid, -Pairs): collect all r(R,C)-Color pairs on the outer ring.
+  fr_border_color(+Grid, -Color): succeed if the outer ring is uniformly Color.
+  fr_has_border(+Grid, -Color): alias for fr_border_color.
+
+Interior:
+  fr_inner(+Grid, -Inner): remove the outer border; fail if Grid < 3x3.
+  fr_interior_uniform(+Grid): succeed if the interior (fr_inner) is all one color.
+  fr_interior_color(+Grid, -Color): get the uniform interior color.
+
+Generation:
+  fr_make_framed(+Rows, +Cols, +FrameColor, +FillColor, -Grid): build from scratch.
+  fr_add_border(+Grid, +Thickness, +Color, -Grid2): wrap a grid with a new border.
+
+Sub-region testing:
+  fr_region_has_border(+Grid, +R0, +C0, +R1, +C1, -Color): uniform ring in sub-rectangle.
+  fr_region_border_color(+Grid, +R0, +C0, +R1, +C1, -Color): equivalent.
+
+Search:
+  fr_bounding_box(+Grid, +FrameColor, -R0, -C0, -R1, -C1): find the outermost ring.
+
+Nesting:
+  fr_is_nested(+Grid, -ColorA, -ColorB): outer ring = ColorA, second ring = ColorB.
+  fr_ring_count(+Grid, -N): count concentric rings that have an extractable interior.
+
+
+4. RING COUNT SEMANTICS
+
+The fr_ring_count predicate counts rings where fr_inner succeeds - meaning the ring has a proper interior (at least 3 rows and 3 columns). A 2x2 grid has no interior (fr_inner fails), so its ring count is 0. A 3x3 framed grid has one ring (outer border, interior = 1x1). A 5x5 nested frame has two rings. A 7x7 triple-nested frame has three rings.
+
+This definition is intentionally conservative: it counts rings that have meaningful structure, not rings that are trivially the entire grid.
+
+
+5. IMPLEMENTATION NOTES
+
+The key internal predicate is fr_ring_positions_(R0, C0, Rows, Cols, Positions), which enumerates the outer ring positions of a sub-rectangle without duplicating corners. The top row is enumerated left-to-right (including corners); the bottom row (if distinct) is enumerated left-to-right; the left column (inner rows only, excluding corners) and right column (inner rows only) complete the ring.
+
+fr_bounding_box uses a shrinking search: start from the full grid boundary and shrink inward until a sub-rectangle whose outer ring matches FrameColor is found. This finds the outermost occurrence of FrameColor as a ring, not just any occurrence.
+
+fr_add_border builds a new larger grid and paints the original content at offset (Thickness, Thickness). The gd_make/gd_set_cell chain from the grid pack provides the atomic painting operations.
+
+
+6. TEST COVERAGE
+
+The frame pack ships with 38 PLUnit tests in packs/frame/test/test_frame.pl, covering all 13 predicates across five grid fixtures: framed_4x4 (border=1, interior=2), framed_5x5 (border=3, interior=0), framed_3x3 (border=5, interior=7), nonuniform_4x4 (mixed border), nested_5x5 (rings 1 and 2), triple_7x7 (rings 1, 2, 3), plain_3x3 (all zeros), and framed_4x6 (non-square).
+
+
+7. SIGNIFICANCE
+
+The frame pack makes bordered structure a named, reusable concept in PrologAI. Rather than writing ad-hoc loops to check whether a grid has a uniform outer border, Mentova can call fr_has_border. Rather than manually stripping the border to examine the interior, Mentova can call fr_inner. The ring count predicate condenses complex nested structure into a single integer - the kind of symbolic summary that enables concise rules for visual induction.
+
+The frame pack is the 61st work package in PrologAI and Mentova's 83rd documented accomplishment.
+
+
+REFERENCES
+
+PrologAI Specification Part 53 (docs/PrologAI_1_Specification_v28.txt)
+PrologAI Pseudocode Part 53 (docs/PrologAI_2_Pseudocode_v21.txt)
+PrologAI Architecture PART ARCH-29 (docs/PrologAI_3_Architecture_v22.txt)
+PrologAI Refinement Part 53 (docs/PrologAI_4_Refinement_v76.txt)
+PrologAI Completion PR 63 (docs/PrologAI_5_Completion_v79.txt)
+PrologAI Tutorial Chapter 24 (docs/tutorial/Ch24_Frame.txt)
