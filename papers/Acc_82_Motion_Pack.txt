@@ -1,0 +1,101 @@
+Accomplishment 82 - Motion Pack: Spatial Movement, Gravity, and Distance for Grid-Based Reasoning
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+ABSTRACT
+
+We introduce the motion pack, work package PR 62 of the PrologAI symbolic cognitive substrate. The motion pack provides 13 predicates (mv_* prefix) at Layer 41 for simulating gravity, translating objects, computing proximity, and navigating spatial structure in grids and scenes. The motion pack completes the foundational spatial reasoning layer of PrologAI by adding the dimension of time - or more precisely, the dimension of sequential change. It enables Mentova to reason about where things go when forces or displacements act on them.
+
+
+1. INTRODUCTION
+
+Visual reasoning tasks frequently involve objects in motion - cells falling under gravity, objects sliding to one side, groups of cells shifting by a fixed offset. The motion pack encapsulates this reasoning in 13 first-class predicates that compose cleanly with the grid pack (Layer 34), scene pack (Layer 38), and compose pack (Layer 40). Every predicate is pure: given input, it deterministically produces output with no side effects.
+
+The central design choice is to separate movement at the grid level from movement at the scene level. Grid-level predicates (mv_gravity_*, mv_shift_grid, mv_slide_col, mv_slide_row) work on raw pixel grids and have no concept of objects. Scene-level predicates (mv_obj_translate, mv_scene_translate, mv_scene_to_grid, mv_scene_gravity) work on structured scene terms where objects are named groups of cells. The two levels are bridged by mv_scene_gravity, which crosses from scene to grid and back.
+
+
+2. GRAVITY PREDICATES
+
+Gravity is the most common motion pattern in visual reasoning benchmarks. The motion pack models gravity as a per-column (or per-row) sorting process: separate foreground cells from background cells, then concatenate background first (for downward gravity) and foreground second. This is implemented with SWI-Prolog's include/3 predicate and foldl/4 over column indices.
+
+mv_gravity_down(+Bg, +Grid, -Grid2)
+All foreground cells fall to the bottom of their columns. Columns are processed independently.
+
+mv_gravity_up(+Bg, +Grid, -Grid2)
+All foreground cells rise to the top of their columns.
+
+mv_gravity_left(+Bg, +Grid, -Grid2)
+All foreground cells slide to the left of their rows.
+
+mv_gravity_right(+Bg, +Grid, -Grid2)
+All foreground cells slide to the right of their rows.
+
+The symmetry of these four predicates is deliberate. Each is implemented with the same include/append structure on the appropriate axis. The only variation is whether background padding goes before or after the foreground block.
+
+
+3. DIRECTIONAL SLIDING
+
+mv_slide_col(+Bg, +Dir, +Grid, -Grid2) and mv_slide_row(+Bg, +Dir, +Grid, -Grid2) accept an explicit direction atom (down, up, left, right) and delegate to the corresponding gravity predicate. These are convenience predicates for use in compose pack pipelines where the direction is a variable.
+
+
+4. GRID TRANSLATION
+
+mv_shift_grid(+Bg, +DR, +DC, +Grid, -Grid2) delegates to gd_translate/5 from the grid pack. It shifts all cells by the integer offset (DR, DC). Cells displaced outside the grid boundary are lost; incoming boundary positions are filled with Bg.
+
+
+5. SCENE OPERATIONS
+
+The scene pack (Layer 38) models a grid as a collection of colored objects. Each object is an obj(Color, Cells) term where Cells is a sorted list of r(R, C) terms.
+
+mv_obj_translate(+DR, +DC, +Obj, -Obj2) shifts every cell in an object by (DR, DC) using maplist/3. The color is preserved. The resulting cells are sorted with msort/2 (a SWI-Prolog built-in, not imported from library(lists)).
+
+mv_scene_translate(+DR, +DC, +Scene, -Scene2) applies mv_obj_translate to every object in the scene using maplist/3. Scene dimensions and background color are preserved.
+
+mv_scene_to_grid(+Scene, -Grid) renders a scene to a pixel grid. It begins with a uniform background grid (gd_make/4), then folds over the object list, painting each object's cells with their color via gd_set_cell/5.
+
+mv_scene_gravity(+Scene, -Scene2) applies downward gravity to a scene via a three-step round-trip: (1) mv_scene_to_grid renders the scene to a grid; (2) mv_gravity_down applies column-wise gravity; (3) sc_grid_to_scene re-parses the result into a scene. This round-trip approach is correct and simple, but it merges same-color objects that fall into contact, since the intermediate grid loses object identity.
+
+
+6. DISTANCE AND PROXIMITY
+
+mv_distance(+CellA, +CellB, -D) computes the Manhattan distance (taxicab metric: |R1-R2| + |C1-C2|) between two r(R, C) terms. The result is always a non-negative integer.
+
+mv_closest_cell(+Cells, +Ref, -Closest) finds the cell in Cells with minimum Manhattan distance to Ref. It is implemented as a left fold with a closer_cell/4 helper that replaces the running minimum whenever a strictly closer cell is found. On ties, the cell earlier in the list is returned.
+
+
+7. INTEGRATION WITH COMPOSE PACK
+
+Because mv_gravity_down takes (Bg, Grid, Grid2), the partial term mv_gravity_down(0) is a valid rule for cp_apply from the compose pack. This allows motion predicates to be embedded in pipelines without any wrapper:
+
+  cp_pipe(mv_shift_grid(0,0,1), mv_gravity_down(0), Grid, Grid2)
+
+This pipeline shifts the grid right by one column, then applies downward gravity. The cp_fixed_point predicate from the compose pack can apply mv_scene_gravity repeatedly until the scene stabilizes.
+
+
+8. TEST COVERAGE
+
+The motion pack ships with 33 PLUnit tests in packs/motion/test/test_motion.pl. Tests cover all 13 predicates. Tests that involve gd_set_cell or similar predicates that leave choicepoints are marked with the nondet option.
+
+The gravity round-trip design for mv_scene_gravity required careful fixture selection in tests: the scene_two_objs fixture was chosen so that after gravity, the two objects do not merge (they have different colors), making the result deterministic and easy to verify.
+
+
+9. SIGNIFICANCE
+
+The motion pack completes a natural progression: grid pack (raw pixel operations), scene pack (structured object extraction), analogy pack (isometry and color mapping), quantitative pack (counting and comparison), pattern pack (periodicity and tiling), compose pack (pipeline composition), motion pack (spatial change over time). These seven packs together form a self-sufficient symbolic visual reasoning substrate.
+
+Mentova can now describe the full dynamics of a visual scene: what objects are present, how many, in what spatial arrangement, and what happens to them when gravity, displacement, or directional forces are applied. This is spatial reasoning at the level of physical intuition - a foundational requirement for any system that aspires to general visual intelligence.
+
+The motion pack is the 60th work package in PrologAI and Mentova's 82nd documented accomplishment.
+
+
+REFERENCES
+
+PrologAI Specification Part 52 (docs/PrologAI_1_Specification_v27.txt)
+PrologAI Pseudocode Part 52 (docs/PrologAI_2_Pseudocode_v20.txt)
+PrologAI Architecture PART ARCH-28 (docs/PrologAI_3_Architecture_v21.txt)
+PrologAI Refinement Part 52 (docs/PrologAI_4_Refinement_v75.txt)
+PrologAI Completion PR 62 (docs/PrologAI_5_Completion_v78.txt)
+PrologAI Tutorial Chapter 23 (docs/tutorial/Ch23_Motion.txt)

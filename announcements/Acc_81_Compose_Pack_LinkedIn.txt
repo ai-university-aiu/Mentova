@@ -1,0 +1,29 @@
+Accomplishment 81 - Mentova now composes transformation rules into pipelines.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 59 work packages.
+
+The new compose pack gives Mentova a meta-language for grid transformation.
+
+Instead of writing a new predicate every time two operations need to be chained together, Mentova can now express the combination directly as a term - and apply it to any grid.
+
+cp_pipe(Rule1, Rule2, Grid, Grid2) applies two rules in sequence.
+
+cp_branch(Cond, ThenRule, ElseRule, Grid, Grid2) dispatches on grid content.
+
+cp_fixed_point(Rule, Grid, Grid2) applies a rule until the grid stops changing.
+
+cp_map_rows and cp_map_cols apply row-level or column-level rules to every row or column independently.
+
+cp_fold reduces a list of grids to one using an accumulating rule.
+
+This is 13 combinators total - and they compose with every other pack.
+
+A motion predicate is a valid compose rule. A pattern predicate is a valid compose rule. A grid operation is a valid compose rule. The boundary between packs disappears at the pipeline level.
+
+The compose pack is the 59th work package in PrologAI and Mentova's 81st accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/

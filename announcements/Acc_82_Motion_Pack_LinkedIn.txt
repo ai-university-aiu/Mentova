@@ -1,0 +1,29 @@
+Accomplishment 82 - Mentova now understands gravity and spatial movement.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 60 work packages.
+
+The new motion pack gives Mentova the ability to reason about where things go.
+
+mv_gravity_down, mv_gravity_up, mv_gravity_left, mv_gravity_right - four gravity directions, each applied column-by-column or row-by-row.
+
+mv_shift_grid - translate every cell in a grid by a (row, column) offset.
+
+mv_scene_gravity - apply gravity to a scene of named objects, via a render-simulate-reparse cycle.
+
+mv_distance - Manhattan distance between any two grid cells.
+
+mv_closest_cell - nearest cell in a list to a reference point.
+
+These 13 predicates complete the spatial reasoning layer: grid structure, object extraction, similarity measurement, counting, pattern detection, pipeline composition, and now motion.
+
+Mentova can now describe a full visual scene - objects present, counts, spatial arrangement - and simulate what happens when gravity or displacement acts on it.
+
+That is spatial intuition as a symbolic, verifiable, inspectable computation.
+
+The motion pack is the 60th work package in PrologAI and Mentova's 82nd accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/
