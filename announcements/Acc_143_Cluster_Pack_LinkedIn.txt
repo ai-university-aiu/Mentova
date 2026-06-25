@@ -1,0 +1,38 @@
+Mentova Accomplishment 143: Spatial Proximity and Grouping - The Cluster Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the cluster pack (Layer 102, Work
+Package 123).
+
+Visual reasoning constantly involves spatial relationships: which object is
+closest to the marker, what is the center of mass of this group of cells, which
+two objects are farthest apart, which cells share a color. The cluster pack
+provides symbolic, deterministic answers to all of these questions.
+
+14 predicates (cl_* prefix):
+
+- cl_chebyshev - Chebyshev L-infinity distance max of absolute row and col diffs
+- cl_manhattan - Manhattan L-1 distance sum of absolute diffs
+- cl_euclidean_sq - squared Euclidean distance for integer comparison
+- cl_within - filter cells within a Chebyshev radius of a query point
+- cl_nearest - cell in a set minimizing Chebyshev distance to a point
+- cl_farthest - cell in a set maximizing Chebyshev distance to a point
+- cl_center - integer centroid (round of mean row and column)
+- cl_diameter - maximum pairwise Chebyshev distance within a cell set
+- cl_spread - bounding box row and column spans
+- cl_group_by_color - group cells by their grid color into parallel lists
+- cl_sort_by_dist - sort cells by ascending Chebyshev distance to a point
+- cl_nearest_pair - pair of cells with minimum pairwise Chebyshev distance
+- cl_farthest_pair - pair of cells with maximum pairwise distance
+- cl_cells_in_band - filter cells within a row-column band
+
+42 PLUnit acceptance tests pass with no choicepoint warnings.
+
+This is Mentova accomplishment 143. PrologAI now carries 121 work packages.
+
+github.com/ai-university-aiu/PrologAI

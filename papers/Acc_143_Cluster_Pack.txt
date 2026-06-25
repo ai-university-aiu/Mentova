@@ -1,0 +1,195 @@
+Mentova Accomplishment 143: Spatial Proximity and Grouping - The Cluster Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 123: the cluster pack, a Layer 102 symbolic
+reasoning module providing 14 predicates for spatial proximity and grouping
+operations over sets of R-C cells in 2D integer-coordinate grids. The pack
+computes three distance metrics (Chebyshev, Manhattan, and squared Euclidean),
+filters cells by proximity radius, finds the nearest and farthest cells to a
+query point, computes the integer centroid and bounding box spread, groups cells
+by their grid color, sorts cells by distance, finds the closest and farthest pair
+of cells, and filters by a row-column band. All predicates are deterministic.
+This accomplishment is verified by 42 PLUnit acceptance tests.
+
+
+1. Motivation
+
+Visual reasoning tasks frequently require measuring and comparing the spatial
+arrangement of cells. Questions like "which object is closest to the marker?",
+"what is the center of the red cluster?", "which two cells are farthest apart?",
+and "which cells share this color?" arise in virtually every task that involves
+more than one object or region.
+
+The scene pack (Layer 37) provides pairwise spatial relations (above, below,
+left-of, right-of) between objects. The neighbor pack (Layer 93) handles
+4-connected and 8-connected adjacency. Neither provides quantitative distance
+measurement or set-level aggregates like centroid and diameter. The cluster pack
+fills this gap with a clean, composable set of named predicates.
+
+
+2. Predicate Inventory (14 predicates, cl_* prefix)
+
+2.1 Distance metrics
+
+cl_chebyshev(+R1, +C1, +R2, +C2, -D)
+
+Chebyshev (L-infinity) distance: D = max(|R2-R1|, |C2-C1|). This is the number
+of king moves on a chessboard and treats diagonal steps as equal cost to
+horizontal or vertical steps.
+
+cl_manhattan(+R1, +C1, +R2, +C2, -D)
+
+Manhattan (L-1) distance: D = |R2-R1| + |C2-C1|. The minimum number of
+4-connected steps.
+
+cl_euclidean_sq(+R1, +C1, +R2, +C2, -DSq)
+
+Squared Euclidean distance: DSq = (R2-R1)^2 + (C2-C1)^2. Integer arithmetic
+avoids the square root while still supporting distance comparisons.
+
+Examples:
+
+cl_chebyshev(0, 0, 2, 3, D).   % D = 3
+cl_manhattan(0, 0, 2, 3, D).   % D = 5
+cl_euclidean_sq(0, 0, 3, 4, D).   % D = 25
+
+
+2.2 Proximity filtering
+
+cl_within(+R, +C, +D, +Cells, -Near)
+
+Filter Cells to those within Chebyshev distance D of (R,C).
+
+Example:
+
+cl_within(2, 2, 1, [1-1,2-2,2-3,4-4], Near).
+% Near = [1-1,2-2,2-3]
+
+
+2.3 Nearest and farthest queries
+
+cl_nearest(+R, +C, +Cells, -Nearest)
+cl_farthest(+R, +C, +Cells, -Farthest)
+
+Find the cell in Cells with the minimum or maximum Chebyshev distance to (R,C).
+Ties resolved by first occurrence.
+
+Examples:
+
+cl_nearest(0, 0, [3-3,1-1,5-5], Nearest).   % Nearest = 1-1
+cl_farthest(0, 0, [1-1,3-3,2-2], Farthest).   % Farthest = 3-3
+
+
+2.4 Set aggregates
+
+cl_center(+Cells, -CR, -CC)
+
+Integer centroid: CR = round(mean row), CC = round(mean column).
+
+cl_diameter(+Cells, -D)
+
+Maximum pairwise Chebyshev distance within the set. Returns 0 for a singleton.
+
+cl_spread(+Cells, -DR, -DC)
+
+Bounding box dimensions: DR = max_row - min_row; DC = max_col - min_col.
+
+Examples:
+
+cl_center([0-0,0-2,2-0,2-2], CR, CC).   % CR = 1, CC = 1
+cl_diameter([0-0,0-4,3-0,3-4], D).   % D = 4
+cl_spread([0-0,2-4], DR, DC).   % DR = 2, DC = 4
+
+
+2.5 Color grouping
+
+cl_group_by_color(+Grid, +Cells, -Colors, -Groups)
+
+Group cells by their value in Grid. Colors is a sorted list of distinct values;
+Groups[i] is the sublist of Cells with value Colors[i].
+
+Example:
+
+Grid = [[1,2],[1,1]],
+cl_group_by_color(Grid, [0-0,0-1,1-0,1-1], Colors, Groups).
+% Colors = [1,2], Groups = [[0-0,1-0,1-1],[0-1]]
+
+
+2.6 Distance sorting
+
+cl_sort_by_dist(+R, +C, +Cells, -Sorted)
+
+Sort cells by ascending Chebyshev distance to (R,C). Stable keysort preserves
+relative order for equal distances.
+
+Example:
+
+cl_sort_by_dist(0, 0, [3-3,1-1,2-2], Sorted).
+% Sorted = [1-1,2-2,3-3]
+
+
+2.7 Pair extremes
+
+cl_nearest_pair(+Cells, -Cell1, -Cell2)
+cl_farthest_pair(+Cells, -Cell1, -Cell2)
+
+Find the pair of cells with the minimum or maximum pairwise Chebyshev distance.
+
+Examples:
+
+cl_nearest_pair([0-0,0-1,5-5], C1, C2).   % C1 = 0-0, C2 = 0-1
+cl_farthest_pair([0-0,0-1,5-5], C1, C2).   % C1 = 0-0, C2 = 5-5
+
+
+2.8 Band filtering
+
+cl_cells_in_band(+R1, +R2, +C1, +C2, +Cells, -Band)
+
+Filter cells whose row is in [R1,R2] and column is in [C1,C2].
+
+
+3. Implementation Notes
+
+All foldover predicates (cl_nearest_helper_, cl_farthest_helper_, cl_min_pair_,
+cl_max_pair_) use if-then-else for determinism and cuts on base cases.
+
+The internal cl_all_pairs_ helper enumerates all unordered pairs from a list.
+Base cases (empty list and singleton) are cut to prevent choicepoints. Pair
+destructuring uses (PR1-PC1)-(PR2-PC2) because cells are stored as R-C pairs
+and a cell-pair is a pair of pairs.
+
+keysort/2 (built-in, stable) is used for distance sorting to preserve relative
+order among equidistant cells.
+
+Built-ins used without import: sort/2, keysort/2, length/2.
+Imported from library(lists): nth0/3, member/2, max_list/2, min_list/2,
+sum_list/2, append/2, append/3.
+Imported from library(apply): maplist/2, maplist/3, include/3.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary case. All tests complete with no choicepoint
+warnings.
+
+
+5. Significance
+
+Spatial proximity is a fundamental dimension of visual reasoning. The ability
+to measure distances, find the nearest object, compute centroids, group by color,
+and detect the closest or farthest pair gives Mentova a quantitative geometric
+vocabulary that complements the qualitative spatial relations already available
+in the scene, neighbor, and connect packs. All predicates are deterministic and
+pure, composing cleanly with the rest of the substrate.
+
+This is Mentova accomplishment 143. PrologAI now carries 121 work packages.
+
+github.com/ai-university-aiu/PrologAI
