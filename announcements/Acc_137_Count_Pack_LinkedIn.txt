@@ -1,0 +1,44 @@
+Mentova Accomplishment 137: Value Counting and Frequency Analysis - The Count Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+PrologAI has a new cognitive capability: the count pack (Layer 96, Work
+Package 117).
+
+Understanding how values are distributed in a grid is fundamental to visual
+reasoning. Which color appears most often? Do two grids agree? How many rows
+contain a specific value? The count pack answers all of these with a unified
+set of 14 predicates that work on raw integer grids using structural equality,
+so they handle integers, atoms, and any other value type equally.
+
+14 predicates (cn_* prefix):
+
+- cn_by_value - count occurrences of a value in a flat list
+- cn_color_count - count a value across all cells of a 2D grid
+- cn_histogram - frequency histogram: parallel sorted Colors and Counts lists
+- cn_max_color - most frequently occurring value
+- cn_min_color - least frequently occurring value
+- cn_color_rows - number of rows containing a given value
+- cn_color_cols - number of columns containing a given value
+- cn_row_distinct - number of distinct values in one row
+- cn_col_distinct - number of distinct values in one column
+- cn_grid_total - total cell count (rows times columns)
+- cn_equal_cells - cells where two grids agree
+- cn_diff_cells - cells where two grids differ
+- cn_region_color - color of the first cell of a region (r(R,C) term list)
+- cn_regions_per_color - Color-Count tally for a list of regions
+
+42 PLUnit (Prolog Unit Testing) acceptance tests pass.
+
+The histogram uses run-length encoding on an msort-ed flat list, avoiding
+redundant sorting passes. The region tally uses an association-list accumulator
+with select/3 to update existing counts or add new ones, so it works for any
+color type without sorting.
+
+This is Mentova accomplishment 137. PrologAI now carries 115 work packages.
+
+github.com/ai-university-aiu/PrologAI
