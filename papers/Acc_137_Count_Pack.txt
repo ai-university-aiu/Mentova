@@ -1,0 +1,204 @@
+Mentova Accomplishment 137: Value Counting and Frequency Analysis - The Count Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 117: the count pack, a Layer 96 symbolic reasoning
+module providing 14 predicates for counting cell values, computing frequency
+histograms, comparing two grids cell-by-cell, and tallying region colors. All
+operations use structural equality so they work with integers, atoms, or any
+other value type. This accomplishment is verified by 42 PLUnit acceptance tests,
+all passing.
+
+
+1. Motivation
+
+Many visual reasoning tasks require understanding the distribution of values in a
+grid: which color appears most often, whether two grids agree, how many rows
+contain a particular value. Prior packs provide region detection (connect pack),
+object extraction (scene pack), and directional cell-sliding (gravity pack), but
+none provides dedicated frequency-counting predicates. The count pack fills this
+gap with a unified set of 14 cn_* predicates.
+
+
+2. Predicate Inventory (14 predicates, cn_* prefix)
+
+2.1 Single-value and grid-wide counting
+
+cn_by_value(+List, +V, -N)
+
+Count occurrences of value V in a flat list. Uses include/3 with =(V) as the
+filter goal. Works for any value type via unification.
+
+cn_color_count(+Grid, +Color, -N)
+
+Count occurrences of Color across all cells of a 2D grid. Flattens all rows
+to a single list with append/2 and delegates to cn_by_value.
+
+Example:
+
+cn_color_count([[0,1,0],[1,0,1],[0,1,0]], 0, N).
+% N = 5
+
+
+2.2 Frequency histograms
+
+cn_histogram(+Grid, -Colors, -Counts)
+
+Build a frequency histogram of all cell values. Returns two parallel lists:
+Colors (sorted distinct values) and Counts (their occurrence counts). Uses
+msort/2 to sort all values preserving duplicates, then run-length encoding
+to group equal adjacent values.
+
+Example:
+
+cn_histogram([[0,0,0],[0,1,0],[0,0,0]], Colors, Counts).
+% Colors = [0, 1], Counts = [8, 1]
+
+
+2.3 Frequency extremes
+
+cn_max_color(+Grid, -Color)
+
+Return the value appearing most often. When tied, returns the value that
+sorts first (lowest integer or first atom alphabetically).
+
+cn_min_color(+Grid, -Color)
+
+Return the value appearing least often. When tied, returns the value that
+sorts first.
+
+
+2.4 Row and column presence
+
+cn_color_rows(+Grid, +Color, -N)
+
+Count the number of rows that contain at least one cell equal to Color.
+
+cn_color_cols(+Grid, +Color, -N)
+
+Count the number of columns that contain at least one cell equal to Color.
+
+
+2.5 Distinct value counts
+
+cn_row_distinct(+Grid, +R, -N)
+
+Count the number of distinct values in row R (0-based). Uses sort/2 to
+deduplicate.
+
+cn_col_distinct(+Grid, +C, -N)
+
+Count the number of distinct values in column C (0-based).
+
+
+2.6 Total cell count
+
+cn_grid_total(+Grid, -N)
+
+Return the total number of cells (rows times columns).
+
+
+2.7 Grid comparison
+
+cn_equal_cells(+Grid1, +Grid2, -N)
+
+Count cells where both grids have the same value. Produces per-cell flags
+(1 for equal, 0 for different), then sums. Both grids must have identical
+dimensions.
+
+cn_diff_cells(+Grid1, +Grid2, -N)
+
+Count cells where the grids have different values. Computed as total cells
+minus equal cells.
+
+Example:
+
+cn_equal_cells([[1,2],[3,4]], [[1,9],[3,4]], N).
+% N = 3
+
+cn_diff_cells([[1,2],[3,4]], [[1,9],[3,4]], N).
+% N = 1
+
+
+2.8 Region color and tally
+
+cn_region_color(+Grid, +Region, -Color)
+
+Return the color of a region by looking up the grid value at the first cell
+of the region. Region is a list of r(R,C) coordinate terms, as produced by
+the connect pack.
+
+cn_regions_per_color(+Grid, +Regions, -Pairs)
+
+Build a Color-Count tally for a list of regions. Determines the color of each
+region via cn_region_color, then folds over the color list with an association-
+list accumulator to produce Color-N pairs. A region with two sub-regions of the
+same color contributes 2 to that color's count.
+
+Example:
+
+Regions = [[r(0,0)], [r(1,0)], [r(2,0)]],
+cn_regions_per_color([[0,1],[0,2],[1,1]], Regions, Pairs).
+% Pairs = [1-1, 0-2] (order depends on traversal)
+
+
+3. Implementation Notes
+
+The histogram uses an internal cn_count_runs_ helper that converts a
+msort-ed list into Val-Count pairs by run-length encoding. This approach
+avoids redundant sorting passes: one msort call produces all runs, and
+cn_split_pairs_ unzips them into the parallel Colors and Counts lists.
+
+The cn_equal_cells predicate builds per-cell flags via cn_compare_cell_
+(returns 1 when equal, 0 otherwise), collects them per row via
+cn_compare_row_, and sums the flat flag list with sum_list/2.
+
+The cn_regions_per_color tally uses select/3 from library(lists) to find
+and update an existing entry or prepend a new one. This avoids sorting or
+hashing and works for any color value type.
+
+All comparisons use structural equality (==/2 and \==/2) which works for
+any cell value type, including integers, atoms, and compound terms.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate cover the primary
+case, an edge case, and a boundary case.
+
+
+5. Relationship to Existing Packs
+
+The scene pack (Layer 37) extracts objects from a grid and provides basic
+color counts within a scene context.
+
+The quant pack (Layer 38) provides histogram and frequency analysis over
+object collections (obj(Color, Cells) terms).
+
+The color pack (Layer 45) provides palette extraction and color counting
+at the grid level using the cl_* prefix.
+
+The count pack (Layer 96) is the most complete grid-level frequency analysis
+module: it works on raw integer grids, covers histograms, comparisons, row
+and column presence, distinct value counts, total cell counts, and region
+color tallying. It complements the scene and quant packs by operating at
+the raw grid level rather than the object level.
+
+
+6. Significance
+
+Frequency counting and value distribution are fundamental to a wide class of
+visual reasoning tasks: identifying the background color, finding the rarest
+foreground color, counting how many objects of each type exist, comparing how
+similar two grids are. The count pack provides these operations in a unified,
+type-agnostic interface that works for any grid content.
+
+This is Mentova accomplishment 137. PrologAI now carries 115 work packages.
+
+github.com/ai-university-aiu/PrologAI
