@@ -1,0 +1,41 @@
+Accomplishment 86 - Mentova now reasons about color at the palette level.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just crossed 64 work packages.
+
+The new color pack gives Mentova color as a first-class concept across an entire grid.
+
+cl_palette - the sorted list of distinct colors in a grid.
+
+cl_count - how many cells have a given color.
+
+cl_histogram - a Color-Count pair for every palette color.
+
+cl_dominant and cl_rarest - the most and least frequent colors.
+
+cl_replace and cl_remap - replace one color or apply a full color mapping.
+
+cl_swap - swap two colors simultaneously.
+
+cl_isolate and cl_remove - filter a grid down to one color or remove a color entirely.
+
+cl_same_palette - test whether two grids use the same set of colors.
+
+cl_is_mono and cl_color_count - single-color test and palette size.
+
+This matters because:
+
+Two grids that look different may have the same palette - now Mentova can prove that in one call.
+
+Finding the rarest color is a common step in visual induction - now Mentova has it as a primitive.
+
+Swapping two colors is a common transformation rule - now Mentova can represent and apply it directly.
+
+Color is the foundation. Everything else - shapes, borders, paths, symmetry - is color arranged in space.
+
+The color pack is the 64th work package in PrologAI and Mentova's 86th accomplishment.
+
+Building PrologAI in public.
+
+linkedin.com/in/d-r-dison/
