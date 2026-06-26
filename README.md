@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-206-FF6B35?style=for-the-badge" alt="206 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-207-FF6B35?style=for-the-badge" alt="207 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **206 accomplished** |
-| Scientific papers | **206 published** — one per accomplishment |
+| Documented accomplishments | **207 accomplished** |
+| Scientific papers | **207 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         206 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  154 announcements — one per accomplishment
+├── papers/         207 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  155 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-206 scientific papers, one per accomplished milestone.
+207 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -467,12 +467,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_204` | Objxf pack paper — Spatial and Color Transformations for obj(Color, Cells) Terms (Layer 163, ox_* prefix): 14 ox_* predicates. Bounding box: ox_bbox (min/max row/col via findall+min_list/max_list), ox_size (H=R1-R0+1, W=C1-C0+1). Translation: ox_translate (add DR,DC to all cells), ox_to_origin (translate by -R0,-C0), ox_recolor (replace Color field only). Rotations use bounding-box-local coords Lr=R-R0, Lc=C-C0: ox_rot90 (r->r(R0+Lc, C0+(H-1)-Lr)), ox_rot180 (r->r(R0+R1-R, C0+C1-C)), ox_rot270 (r->r(R0+(W-1)-Lc, C0+Lr)). Reflections: ox_reflect_h (rows mirrored), ox_reflect_v (cols mirrored). Set algebra: ox_merge (append+sort union), ox_diff (\\+ member), ox_intersect (member). Scale-up: ox_scale_up (each cell -> Factor x Factor block via between/3). 60/60 PLUnit tests pass. |
 | `Acc_205` | Shrink pack paper — Grid Downscaling and Block Decomposition (Layer 164, dn_* prefix): 14 dn_* predicates. Inverse of ox_scale_up. Block structure: dn_block_dims (BI=H//N, BJ=W//N), dn_block_cells (r(R,C) pairs for block I,J via between/3; no grid needed). Block color: dn_block_color (sort to [Color] for uniqueness; fails if mixed), dn_block_majority (dn_count_/3 helper + msort + last/2; never fails). Blocky test: dn_is_blocky (forall over all I-J pairs). Shrinking: dn_shrink (majority vote per block), dn_shrink_strict (unique color per block; fails if any block mixed). Scale search: dn_find_scale (between 2..H with divisibility check + dn_is_blocky; cut on first match). Object downscaling: dn_obj_shrink (R//N, C//N integer division; sort removes duplicates), dn_scale_factor (between 2..30; normalize both to origin via dn_norm_cells_; compare; cut). Classification: dn_uniform_blocks, dn_mixed_blocks. Extraction: dn_block_grid (NxN sub-grid), dn_block_val (flat value list row-major). Prefix dn_* chosen to avoid collision with seek pack sk_*. 52/52 PLUnit tests pass. |
 | `Acc_206` | Objmorph pack paper — Morphological Operations on obj(Color, Cells) Terms (Layer 165, om_* prefix): 14 om_* predicates for binary morphology directly on obj terms without a grid. Neighborhood: om_neighbors4 (4 orthogonal neighbors; always returns 4 cells), om_neighbors8 (8 neighbors including diagonals; always returns 8 cells). Boundary/interior under 4-connectivity: om_boundary4 (\+ forall(member(N,Nbrs),member(N,S))), om_interior4 (forall(member(N,Nbrs),member(N,S))). Boundary/interior under 8-connectivity: om_boundary8, om_interior8 (same pattern, stricter). Single-step dilation: om_dilate4 (findall neighbor lists + append + sort union), om_dilate8 (same with 8-neighbors). Single-step erosion: om_erode4 delegates to om_interior4; om_erode8 delegates to om_interior8. Iterated: om_dilate4_n (N=0 identity; recurse with N-1), om_erode4_n (same). Compound: om_open4 (erode4 then dilate4; removes thin protrusions), om_close4 (dilate4 then erode4; fills small gaps). 46/46 PLUnit tests pass. |
+| `Acc_207` | Voronoi pack paper — Nearest-Color Painting and Voronoi Partitioning (Layer 166, vn_* prefix): 14 vn_* predicates for nearest-color painting and Voronoi partitioning of 2D grids. Source queries: vn_non_bg_cells (findall positions where value != Bg; sorted), vn_non_bg_colors (findall+sort non-Bg values). Nearest: vn_nearest_dist (findall Manhattan distances to non-Bg cells; min_list), vn_nearest_color (findall D-V pairs; sort; take first). Painting: vn_paint_bg (V \= Bg -> keep; else vn_nearest_color). Distance transform: vn_dist_map (0 for non-Bg; pre-collect non-Bg cells; min Manhattan for Bg). Voronoi regions: vn_region_cells (findall Bg cells where nearest color = Color), vn_regions (one Color-Cells pair per non-Bg color). Distance queries: vn_max_dist (findall Bg distances; max_list), vn_at_dist (findall where dist=D), vn_within_dist (findall where dist=<D). Medial axis: vn_medial (findall Bg cells where sort of tied-nearest colors has 2+ elements). Expansion: vn_expand1 (Bg cells 4-adjacent to Color via helper with cut), vn_expand_n (Bg cells within Manhattan distance N of any Color cell; N=0 returns []). 49/49 PLUnit tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-154 announcements in LinkedIn format — one per accomplishment.
+155 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

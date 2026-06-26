@@ -1,0 +1,211 @@
+Accomplishment 207: Nearest-Color Painting and Voronoi Partitioning (Voronoi Pack, vn_*, Layer 166)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a voronoi pack (14 vn_* predicates, Layer 166) for nearest-color
+painting and Voronoi partitioning of 2D grids. Given a grid containing non-background
+colored cells and background cells (identified by a caller-supplied Bg value), the
+pack finds the nearest non-background color to any cell by Manhattan distance,
+paints all background cells with their nearest color, computes the full distance
+transform, partitions background cells into per-color Voronoi regions, detects
+equidistant medial-axis cells, and expands color regions by N steps into the
+background.
+
+49 of 49 PLUnit tests pass.
+
+This work package is PrologAI WP 187, merged as PR 272 on 2026-06-26.
+
+1. Motivation
+
+A very common visual reasoning pattern is: "paint each background cell with the
+color of the nearest non-background object." This single operation appears in
+dozens of visual reasoning tasks and has no compact representation in PrologAI
+before this pack.
+
+Before the voronoi pack, solving this required:
+1. Collecting all non-background cells manually
+2. Computing Manhattan distances to every non-background cell for each background cell
+3. Finding the minimum distance per background cell
+4. Replacing each background cell value
+
+The voronoi pack reduces this to:
+
+    vn_paint_bg(Grid, Bg, Painted).
+
+2. Core Concepts
+
+2.1 Background vs. Non-Background
+
+All predicates take a Bg parameter (any atom or integer) that identifies the
+"empty" or "background" value. Cells equal to Bg are the "domain" of operations.
+Cells not equal to Bg are the "sources" from which distances are measured.
+
+2.2 Voronoi Partitioning
+
+The mathematical Voronoi diagram partitions space so that each region contains all
+points nearer to one source than to any other source. In the discrete 2D grid
+setting, with Manhattan distance:
+
+- Each non-background color defines one source set (all cells of that color)
+- Each background cell belongs to the region of the nearest color
+- Ties (equidistant background cells) go to a consistently defined tiebreaker
+
+The medial axis is the set of background cells where the tie occurs - equidistant
+from two or more distinct colors.
+
+2.3 Distance Transform
+
+The distance transform replaces each background cell with its distance to the
+nearest non-background cell. Non-background cells get distance 0. This produces
+a "depth map" of the background: cells close to the boundary have small values,
+cells far inside the background have large values. The maximum of the distance
+transform over all background cells is the "inner radius" of the background region.
+
+2.4 Color Expansion
+
+The expansion predicates model the inverse of distance: rather than asking "which
+color is nearest to this background cell," they ask "which background cells can be
+reached from this color within N steps?" vn_expand1 finds background cells
+4-adjacent to a color region. vn_expand_n finds background cells within Manhattan
+distance N of any cell of the specified color.
+
+3. Predicate Descriptions
+
+3.1 Source Queries
+
+vn_non_bg_cells(+Grid, +Bg, -Cells): findall r(R,C) where Grid[R][C] != Bg.
+Result is sorted for canonical order.
+
+vn_non_bg_colors(+Grid, +Bg, -Colors): findall values != Bg then sort.
+
+3.2 Nearest Distance and Color
+
+vn_nearest_dist(+Grid, +Bg, +R, +C, -Dist): findall Manhattan distances to all
+non-Bg cells, then min_list. Fails if no non-Bg cells exist.
+
+vn_nearest_color(+Grid, +Bg, +R, +C, -Color): findall D-V pairs where V != Bg,
+sort to get ascending D then take the first color. Ties broken by standard term
+order (alphabetically for atoms, numerically for integers).
+
+3.3 Painting and Distance Transform
+
+vn_paint_bg(+Grid, +Bg, -Painted): for each cell, if value != Bg keep it;
+if value = Bg apply vn_nearest_color. Uses \= for type-agnostic background test.
+
+vn_dist_map(+Grid, +Bg, -DGrid): 0 for non-Bg cells; for Bg cells pre-collect
+non-Bg cells then compute min of Manhattan distances to each.
+
+3.4 Voronoi Regions
+
+vn_region_cells(+Grid, +Bg, +Color, -Cells): findall Bg cells where
+vn_nearest_color returns Color. Sorted for canonical form.
+
+vn_regions(+Grid, +Bg, -Pairs): one Color-[Cells] pair per non-Bg color. Colors
+that exist in the grid but have no background cells in their region appear with
+an empty cell list.
+
+3.5 Distance Queries
+
+vn_max_dist(+Grid, +Bg, -MaxDist): collect distances of all Bg cells then max_list.
+
+vn_at_dist(+Grid, +Bg, +D, -Cells): findall Bg cells with nearest dist = D.
+
+vn_within_dist(+Grid, +Bg, +D, -Cells): findall Bg cells with nearest dist =< D.
+
+3.6 Medial Axis
+
+vn_medial(+Grid, +Bg, -Cells): for each Bg cell, compute minimum distance D.
+Then collect all non-Bg colors at that distance D. If sort of those colors gives
+at least two elements ([_,_|_]), the cell is on the medial axis.
+
+3.7 Expansion
+
+vn_expand1(+Grid, +Bg, +Color, -Cells): pre-collect all Color cells. For each
+Bg cell, check if any Color cell is a 4-connected neighbor (BR=CR, |BC-CC|=1 or
+BC=CC, |BR-CR|=1). This is implemented with a helper predicate with a cut after
+the first match to avoid duplicating the Bg cell for each Color neighbor.
+
+vn_expand_n(+Grid, +Bg, +Color, +N, -Cells): collect all Color cells then findall
+Bg cells where |BR-CR|+|BC-CC| =< N for some Color cell r(CR,CC). N=0 gives []
+because no Bg cell can be at distance 0 from a non-Bg cell. Sort deduplicates.
+
+4. Design Decisions
+
+4.1 Manhattan Distance
+
+Manhattan (L1) distance is the standard for grid-based visual reasoning: it
+counts the minimum number of orthogonal steps. The voronoi pack uses Manhattan
+distance exclusively. Chebyshev (8-connected) and Euclidean variants are available
+in other packs if needed.
+
+4.2 Type-Agnostic Background Test
+
+All predicates use V \= Bg (structural unification test) rather than V =\= Bg
+(numeric arithmetic). This allows Bg to be any atom (like 0, bg, black, 10) or
+integer, making the pack work with any grid value type.
+
+4.3 Pre-collecting Non-Bg Cells
+
+vn_dist_map and vn_expand_n pre-collect the set of non-Bg cells (or Color cells)
+once rather than re-scanning the grid for each query cell. This avoids quadratic
+behavior on large grids.
+
+4.4 Tiebreaking in vn_nearest_color
+
+When two non-Bg cells are equidistant from a background cell, the color that sorts
+first in standard Prolog term order wins. For atoms: alphabetical order (a < b).
+For integers: numeric order (1 < 2). This makes the result deterministic and
+testable. The medial axis predicate specifically identifies the cells where this
+tiebreaking was needed.
+
+5. Examples
+
+Example 1: basic nearest-color painting
+
+    G = [[a,0,0,0,b]],
+    vn_paint_bg(G, 0, P).
+    % P = [[a,a,Color,b,b]] where Color is a or b (tie at center)
+
+Example 2: distance transform
+
+    G = [[0,0,0],[0,1,0],[0,0,0]],
+    vn_dist_map(G, 0, D).
+    % D = [[2,1,2],[1,0,1],[2,1,2]]
+
+Example 3: expanding a color
+
+    G = [[0,0,0],[0,1,0],[0,0,0]],
+    vn_expand1(G, 0, 1, Cells).
+    % Cells = [r(0,1),r(1,0),r(1,2),r(2,1)]
+
+Example 4: medial axis detection
+
+    G = [[a,0,0,0,b]],
+    vn_medial(G, 0, M).
+    % M = [r(0,2)]  % center is equidistant from a and b
+
+6. SPARC Documentation
+
+Specification v152 adds Part 177 (voronoi pack specification).
+
+Pseudocode v145 adds Part 177 (voronoi pack pseudocode).
+
+Architecture v146 adds ARCH-153 (voronoi pack layer placement).
+
+Refinement v200 adds acceptance criteria AC-VN-001 through AC-VN-049.
+
+Completion v203 adds the WP-187 completion record.
+
+7. Conclusion
+
+The voronoi pack gives PrologAI a compact and reusable interface for
+nearest-color painting, distance transforms, and Voronoi partitioning.
+Where before a solver needed dozens of lines to paint background cells
+with the nearest color, it now needs one predicate call. The pack also
+provides the medial axis, distance queries, and color expansion, all as
+single predicates.
+
+This is WP 187, Mentova's 207th accomplishment.
