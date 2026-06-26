@@ -1,0 +1,34 @@
+Accomplishment 233: Systematic Generation of Scene Transformation Rule Candidates (transformgen Pack, tg_*, Layer 192)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a transformgen pack - 14 tg_* predicates that systematically
+enumerate every plausible rule transformation candidate from scene data.
+
+The key idea: instead of guessing the right rule, generate ALL rules
+derivable from the scene within a bounded search space, then filter to
+those consistent with every training example.
+
+tg_recolor_candidates: all recolor(Old,New) for distinct color pairs.
+tg_shift_candidates: all shift(DR,DC) within bounds (48 rules for MaxShift=3).
+tg_color_map_candidate: derive a color_map rule from one training pair.
+tg_from_pairs: union of all generators across all training pairs.
+tg_filter_consistent: the filter step - keep only rules that explain every pair.
+tg_all_scene_candidates: complete enumeration from a single scene.
+
+This closes the coverage gap in the ARC-AGI-2 reasoning stack. Gridsolve
+uses heuristic inference for speed. Transformgen ensures the right rule is
+never missed for cases where heuristics fall short.
+
+42 of 42 unit tests pass.
+
+This is WP 213, Mentova's 233rd accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
