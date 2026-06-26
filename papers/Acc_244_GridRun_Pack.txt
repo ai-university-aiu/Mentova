@@ -1,0 +1,147 @@
+Acc_244: gridrun Pack - Grid Run-Length Encoding and Stripe Analysis (grl_*, Layer 203)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 224 adds the gridrun pack (grl_*, Layer 203): fourteen
+predicates for run-length encoding (RLE) and stripe analysis of raw grids. The
+pack encodes rows and columns as Color-Length run lists, decodes back to flat
+color sequences, tests uniformity, detects horizontally and vertically striped
+grids, returns stripe colors, finds the longest run in a row, and tests for
+strictly alternating two-color patterns. All 55 acceptance tests pass.
+
+
+1. Motivation
+
+Many structured visual patterns exhibit repeated blocks of the same color along
+rows or columns. Run-length encoding compresses each row to a compact summary
+(e.g., [r,r,b,g,g] becomes [r-2, b-1, g-2]) that makes pattern comparison,
+uniformity testing, and stripe detection efficient.
+
+The gridrun pack provides:
+- Row and column RLE encoding and decoding
+- Run counting (number of distinct runs per row)
+- Uniform row/column detection (single run = all one color)
+- Horizontal and vertical stripe detection (every row or column is uniform)
+- Stripe color extraction (list of per-row or per-column colors)
+- Longest-run finding with tie-breaking by term order
+- Strictly alternating two-color pattern detection
+
+
+2. Architecture
+
+Layer 203 sits above gridscale (Layer 202) in the PrologAI dependency chain.
+Uses library(lists) and library(apply) only; no cross-pack dependencies.
+
+Private helpers:
+- grl_dims_/3: grid height and width
+- grl_list_runs_/2: encode a flat list to run-length pairs using tail-recursive accumulator
+- grl_run_acc_/4: recursive accumulator for run building (extends current run or starts new one)
+- grl_col_list_/3: extract column C as a flat list using findall
+
+
+3. Predicates
+
+grl_row_runs/3 - Encode row R of Grid as [Color-Len...]. Each pair is a maximal run.
+
+grl_col_runs/3 - Encode column C as [Color-Len...].
+
+grl_all_row_runs/2 - One run list per row: AllRuns[R] = grl_row_runs(Grid, R).
+
+grl_all_col_runs/2 - One run list per column: AllRuns[C] = grl_col_runs(Grid, C).
+
+grl_decode/2 - Recover flat list from run-length encoding; each Color-Len contributes Len copies of Color.
+
+grl_run_count/3 - Number of runs in row R. Uniform row has count 1; alternating N-cell row has count N.
+
+grl_uniform_row/3 - Succeed if row R has exactly one run returning its Color. Fails on multi-color rows.
+
+grl_uniform_col/3 - Succeed if column C has exactly one run returning its Color.
+
+grl_is_striped_h/1 - Succeed if every row is uniform (horizontal color bands). Uses negation-as-failure.
+
+grl_is_striped_v/1 - Succeed if every column is uniform (vertical color bands).
+
+grl_stripe_colors_h/2 - Colors[R] = color of row R for a horizontally striped grid; fails if any row non-uniform. Length check ensures no missing rows.
+
+grl_stripe_colors_v/2 - Colors[C] = color of column C for a vertically striped grid; fails if any column non-uniform.
+
+grl_max_run/4 - Color and Len of the longest run in row R. Ties broken by standard term order on Color (msort on negative-length keyed pairs puts smallest atom first).
+
+grl_alternating/2 - Succeed if row R: all runs have length 1, exactly 2 distinct colors (list_to_set yields [_,_]), at least 2 runs. Fails for uniform rows, runs > 1, or 3+ colors.
+
+
+4. Example Session
+
+:- use_module(pack(gridrun/prolog/gridrun)).
+
+% Encode row 0:
+?- grl_row_runs([[r,r,b,g,g],[b,b,b,r,r]], 0, R).
+R = [r-2, b-1, g-2].
+
+% Decode:
+?- grl_decode([r-2, b-1, g-2], L).
+L = [r,r,b,g,g].
+
+% Horizontal stripe detection:
+?- grl_is_striped_h([[r,r,r],[b,b,b],[g,g,g]]).
+true.
+
+% Get stripe colors:
+?- grl_stripe_colors_h([[r,r,r],[b,b,b],[g,g,g]], C).
+C = [r,b,g].
+
+% Find longest run:
+?- grl_max_run([[b,b,b,r,r]], 0, C, L).
+C = b, L = 3.
+
+% Alternating test:
+?- grl_alternating([[r,b,r,b,r,b]], 0).
+true.
+
+?- \+ grl_alternating([[r,r,b,b]], 0).
+true.  % fails: runs have length 2, not 1
+
+
+5. Test Coverage
+
+All 55 acceptance criteria (AC-GRL-001 through AC-GRL-055) are exercised in
+packs/gridrun/test/test_gridrun.pl. Tests cover:
+- Row and column RLE encoding (uniform, two-color, all-different, single-cell)
+- All-row and all-column run collection
+- Decode (single run, two runs, alternating, empty, round-trip)
+- Run counting (1, 3, 5 runs)
+- Uniform row/column (success and failure)
+- Striped detection (horizontal, vertical; success and failure)
+- Stripe color extraction (success and failure)
+- Longest run (unique, tied, varied, all-singles)
+- Alternating (success, fail-uniform, fail-long-run, fail-3-colors, two-cell)
+- Combined: encode-decode round-trip, hstripe vs vstripe, both-striped uniform grid
+
+
+6. SPARC Documentation
+
+Work Package 224 is recorded in:
+- Specification v190, Part 214 (WP-224-SPEC-001 through WP-224-SPEC-007)
+- Pseudocode v182, Part 214
+- Architecture v184, ARCH-190
+- Refinement v237, AC-GRL-001 through AC-GRL-055
+- Completion v240, WP-224 record
+
+Tutorial chapter: docs/tutorial/Ch185_GridRun.txt
+Pack reference: docs/Pack_Reference.txt (gridrun entry)
+PrologAI PR: #313 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridrun pack adds run-length encoding and stripe analysis to PrologAI's
+raw-grid toolkit, enabling the cognitive engine to compactly represent and
+compare row/column patterns, detect uniform and striped structures, and
+identify alternating two-color sequences.
+
+PrologAI now comprises 224 work packages and reaches Layer 203 in the Data Layer.
