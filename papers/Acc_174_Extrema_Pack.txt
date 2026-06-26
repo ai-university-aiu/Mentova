@@ -1,0 +1,137 @@
+Accomplishment 174: The 2D Grid Extrema, Local Peaks, and Threshold Filtering Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a 2D grid extrema, local peaks, and threshold filtering pack
+as Work Package 154 (Layer 133).
+
+The pack provides 14 predicates, all carrying the ex_* prefix, for finding
+maximum and minimum values and their positions, detecting local maxima and
+minima, computing row and column argmax/argmin, threshold filtering, range
+computation, and sparse cell enumeration in 2D grids.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently require locating extreme values: where the
+maximum is, which row has the highest total, which cells exceed a threshold.
+
+While previous packs provide aggregate statistics (projection pack) and
+gradient analysis (gradient pack), neither gives the positions of extreme
+values or detects local peaks and valleys.
+
+The extrema pack fills this gap with a focused vocabulary for positional
+extrema in 2D grids.
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+ex_max_val(+Grid, -Val) returns the maximum value across all cells.
+
+ex_min_val(+Grid, -Val) returns the minimum value.
+
+ex_max_cells(+Grid, -Cells) returns the sorted list of R-C positions holding
+the maximum value. All ties are included.
+
+ex_min_cells(+Grid, -Cells) returns positions of the minimum value.
+
+ex_row_argmax(+Grid, -R) returns the 0-based row index with the maximum row
+sum. First row wins on ties.
+
+ex_col_argmax(+Grid, -C) returns the column index with the maximum column sum.
+
+ex_row_argmin(+Grid, -R) returns the row index with the minimum sum.
+
+ex_col_argmin(+Grid, -C) returns the column index with the minimum sum.
+
+ex_local_max4(+Grid, -Cells) returns cells strictly greater than all in-bounds
+4-connected neighbors. Out-of-bounds directions are ignored, so border cells
+can qualify.
+
+ex_local_min4(+Grid, -Cells) returns cells strictly less than all in-bounds
+4-neighbors.
+
+ex_above(+Grid, +Thresh, -Cells) returns positions with value > Thresh.
+
+ex_below(+Grid, +Thresh, -Cells) returns positions with value < Thresh.
+
+ex_range(+Grid, -Range) returns max minus min (0 for a uniform grid).
+
+ex_nonzero(+Grid, -Cells) returns positions with non-zero values.
+
+
+3. Implementation
+
+ex_max_val and ex_min_val use ex_flat_vals_ which collects all cell values
+via findall(V, (member(Row,Grid), member(V,Row)), Vals), then call max_list
+or min_list from library(lists).
+
+ex_max_cells and ex_min_cells call ex_max_val/min_val first, then use a
+findall over between for positional enumeration with nth0 value matching.
+
+ex_row_argmax and ex_col_argmax collect sum-index pairs via findall, then
+use ex_argmax_acc_ which is a recursive accumulator that updates only on
+strict > comparison to preserve first-occurrence tie-breaking.
+ex_row_argmin and ex_col_argmin use the symmetric ex_argmin_acc_ with <.
+
+ex_local_max4 and ex_local_min4 use ex_all_nbr4_lt_ and ex_all_nbr4_gt_
+which compute the four neighbor coordinates (RU, RD, CL, CR), then call
+ex_check_nbr_lt_ or ex_check_nbr_gt_ for each. These helpers use
+if-then-else for bounds checking: out-of-bounds neighbors silently succeed.
+
+ex_above, ex_below, and ex_nonzero follow the same findall + between + nth0
++ arithmetic test pattern.
+
+
+4. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Test grids include a 3x3 grid with values 1-9, a 3x3 mixed grid, a 2x2 grid
+with zeros, a uniform 3x3 grid, and a 3x3 peak grid with value 4 at the center
+and value 1 at all corners.
+
+All 42 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+Specification v119, Part 144 defines all 14 predicates.
+
+Pseudocode v112, Part 144 gives the algorithmic descriptions.
+
+Architecture v113, ARCH-120 records the module placement and design patterns.
+
+Refinement v167 records acceptance criteria AC-EX-001 through AC-EX-042.
+
+Completion v170 records the release evidence for WP 154.
+
+Tutorial Chapter 115 demonstrates all 14 predicates with examples.
+
+
+6. Position in the Cognitive Architecture
+
+The extrema pack is Layer 133 in the PrologAI cognitive stack.
+
+It follows the gradient pack (Layer 132, gr_*) and complements it: where
+the gradient pack measures how values change, the extrema pack finds where
+extreme values are located.
+
+Together with the projection pack (Layer 131) and gradient pack (Layer 132),
+the extrema pack completes a three-layer statistical toolkit for grid-
+reasoning tasks.
+
+PrologAI now carries 154 work packages in the packs/ directory.
+
+
+END
