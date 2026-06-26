@@ -1,0 +1,29 @@
+Mentova Accomplishment 151: Value Frequency Analysis - The Histogram Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now answer "what is the most common color in this grid?" and "what rank does color 3 hold by frequency?"
+
+Work Package 131 - the histogram pack - adds 14 hi_* predicates for value frequency analysis. 42/42 tests.
+
+The core operations:
+
+- hi_freq - sorted V-Count pairs for every distinct value in a list
+- hi_mode / hi_rare - most and least frequent values; deterministic tie-breaking
+- hi_sorted_by_freq - all values ordered by count descending
+- hi_top_n - the N most frequent values
+- hi_rank - 1-based frequency rank (rank 1 = most common)
+- hi_grid_mode / hi_grid_rare - dominant and rarest colors in a 2D grid
+- hi_all_equal - test if every cell has the same value
+
+The tie-breaking is fully specified: for equal-count values, hi_mode returns the smallest and hi_rare returns the largest. hi_sorted_by_freq uses negated-count keysort (stable) to achieve this without explicit comparison.
+
+Count the colors. Find the dominant. Rank the rare. Build the rule.
+
+PrologAI: 129 work packages. Mentova: 151 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #FrequencyAnalysis #ComputerVision #SWIProlog #AGI
