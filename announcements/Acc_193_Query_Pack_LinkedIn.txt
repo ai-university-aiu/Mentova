@@ -1,0 +1,43 @@
+Accomplishment 193: Aggregate Queries over Object Lists
+
+PrologAI now has 173 work packages.
+
+The query pack (qu_*, Layer 152) provides 14 predicates for answering aggregate
+questions about lists of obj(Color, Cells) terms.
+
+Counting:
+• qu_count_by_color/2: sorted Color-N pairs (how many objs per color)
+• qu_count_by_size/2: sorted Size-N pairs (how many objs per cell count)
+• qu_count_by_form/2: sorted Form-N pairs (how many objs per normalized shape)
+
+Extremes:
+• qu_most_frequent_color/2: color with the highest count (smallest on ties)
+• qu_least_frequent_color/2: color with the lowest count (smallest on ties)
+• qu_largest_obj/2: obj with the most cells (first in input on ties)
+• qu_smallest_obj/2: obj with the fewest cells (first in input on ties)
+
+Totals and averages:
+• qu_total_cells/2: total cell count across all objs
+• qu_avg_size/2: floor-average cell count per obj
+
+Uniformity tests:
+• qu_all_same_color/1: all objs share one color
+• qu_all_same_size/1: all objs share one cell count
+• qu_all_same_form/1: all objs share one origin-normalized shape
+
+Enumeration:
+• qu_colors/2: sorted distinct color values
+• qu_sizes/2: sorted distinct cell counts
+
+Form is origin-normalized cell list (exact match, not D4-invariant). Pack is
+self-contained: no D4 imports from the pair pack.
+
+Together with the scene, pair, arrange, and xform packs, PrologAI can now find
+objects, group and match them, reason about position, apply transformations, and
+answer aggregate questions about collections - the full pipeline for visual rule
+inference from input-output examples.
+
+42/42 PLUnit tests pass. PR 258 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
