@@ -1,0 +1,38 @@
+Accomplishment 197: Object Grouping and Partition
+
+PrologAI now has 177 work packages.
+
+The group pack (gp_*, Layer 156) partitions a list of object scene terms into
+named subsets sharing a common property.
+
+Partition modes:
+• gp_by_color/2: group objects by color
+• gp_by_size/2: group objects by cell count
+• gp_by_row/2: group objects by topmost row
+• gp_by_col/2: group objects by leftmost column
+• gp_by_form/2: group objects by origin-normalized shape (translation-invariant)
+
+Group inspection:
+• gp_size_of/2: number of distinct groups
+• gp_flatten/2: collect all objects from all groups in key order
+• gp_largest_group/2: group with the most members (smallest key on ties)
+• gp_smallest_group/2: group with the fewest members
+• gp_singleton_groups/2: groups with exactly one member
+• gp_shared_groups/2: groups with more than one member
+• gp_group_sizes/2: sorted list of distinct group cardinalities
+• gp_all_same_size/1: succeed iff every group has the same cardinality
+• gp_keys/2: sorted list of group keys
+
+Each group is a Key-[Objs] pair. Keys are Prolog terms: color atoms, integers,
+or sorted cell lists for shape keys. Output is sorted ascending by key.
+
+Where the delta pack answers "what changed between two scenes," the group pack
+answers "how is this scene internally organized."
+
+Together with query, sift, xform, pigment, and delta, the group pack completes
+a full color-and-structure reasoning cycle for object scenes.
+
+42/42 PLUnit tests pass. PR 262 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
