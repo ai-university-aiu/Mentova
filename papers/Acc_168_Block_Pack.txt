@@ -1,0 +1,163 @@
+Accomplishment 168: The Rectangular Sub-Grid Block Decomposition Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a rectangular sub-grid block decomposition pack as Work
+Package 148 (Layer 127).
+
+The pack provides 14 predicates, all carrying the bk_* prefix, for
+splitting grids into uniform rectangular blocks and performing block-level
+operations.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently involve recognizing that a grid is
+organized into a regular pattern of rectangular sub-regions, analyzing
+those sub-regions independently, and then combining the results.
+
+The block pack provides the vocabulary for this kind of decomposition.
+
+bk_split_h and bk_split_v divide a grid into horizontal or vertical
+strips of a fixed size.
+
+bk_extract retrieves any rectangular sub-grid by explicit row and column
+bounds.
+
+bk_tile_h and bk_tile_v construct a larger grid by repeating a smaller
+grid in either dimension.
+
+bk_map applies any two-argument transformation to each block in a list,
+enabling uniform processing of all sub-regions.
+
+The analysis predicates (bk_mode_color, bk_border_color, bk_is_solid,
+bk_is_border) support reasoning about the content of each block.
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+bk_extract(+Grid, +R0, +C0, +R1, +C1, -Block) extracts the rectangular
+sub-grid from row R0 through R1 and column C0 through C1, all inclusive
+and zero-indexed.
+
+bk_dims(+Grid, +BH, +BW, -NR, -NC) computes the number of block rows NR
+and block columns NC when dividing a grid into BH-by-BW blocks.
+
+bk_split_h(+Grid, +BH, -Strips) splits Grid into horizontal strips of
+height BH rows each.
+
+bk_split_v(+Grid, +BW, -Strips) splits Grid into vertical strips of
+width BW columns each.
+
+bk_tile_h(+Grid, +N, -Tiled) stacks N copies of Grid top to bottom.
+
+bk_tile_v(+Grid, +N, -Tiled) extends each row N times to the right.
+
+bk_count_h(+Grid, +BH, -N) returns the number of complete horizontal
+strips of height BH.
+
+bk_count_v(+Grid, +BW, -N) returns the number of complete vertical
+strips of width BW.
+
+bk_map(+Blocks, +Goal, -Blocks2) applies a 2-argument predicate Goal to
+each block in the list Blocks.
+
+bk_uniform(+Grid, +R, +C, -V) returns the value V at cell position (R,C)
+in Grid.
+
+bk_mode_color(+Grid, +R0, +C0, -V) returns the most frequent value in
+the 2x2 block starting at (R0, C0). On ties, the lowest value wins.
+
+bk_border_color(+Grid, +R0, +C0, -Bg) returns the most frequent value
+among the in-bounds border cells of the 3x3 neighborhood centered at
+(R0, C0), excluding the center cell.
+
+bk_is_solid(+Grid, +Color, -Bool) returns Bool=1 iff every cell in Grid
+equals Color; Bool=0 otherwise.
+
+bk_is_border(+Grid, +R, +C, -Bool) returns Bool=1 iff cell (R,C) lies
+on the outer border of Grid (first row, last row, first column, or last
+column); Bool=0 otherwise.
+
+
+3. Implementation
+
+bk_extract uses nested findall with between/3 for row iteration and
+nth0/3 for row and cell access.
+
+bk_split_h and bk_split_v use findall over strip indices computed from
+integer division of the grid dimensions.
+
+bk_tile_h uses findall over between(1, N, _) combined with member/2
+to replicate all rows of the grid N times.
+
+bk_tile_v uses maplist/3 with a per-row helper that captures N and
+replicates each cell N times using findall over between(1, N, _).
+
+bk_map delegates directly to maplist/3.
+
+bk_mode_color and bk_border_color share a private helper bk_mode_/2
+that uses include/3 from library(apply) to count occurrences of each
+unique value, max_list/2 to find the highest count, and sort/2 to
+break ties by selecting the lowest-valued winner.
+
+bk_is_solid uses forall/2 with member/2 applied twice to check all
+cells.
+
+bk_is_border uses a disjunctive if-then-else to test the four border
+conditions.
+
+
+4. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Tests cover canonical extraction, corner and slice extraction, exact
+strip splits, tiling factors, block counting, mapping with built-in
+and user predicates, cell access, mode and border color computation,
+solid detection, and border position detection.
+
+All 42 pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+Specification v113, Part 138 defines all 14 predicates.
+
+Pseudocode v106, Part 138 gives the algorithmic descriptions.
+
+Architecture v107, ARCH-114 records the module placement and design
+patterns.
+
+Refinement v161 records acceptance criteria AC-BK-001 through AC-BK-042.
+
+Completion v164 records the release evidence for WP 148.
+
+Tutorial Chapter 109 demonstrates all 14 predicates with examples.
+
+
+6. Position in the Cognitive Architecture
+
+The block pack is Layer 127 in the PrologAI cognitive stack.
+
+It complements the zoom pack (Layer 111, zm_*) which focuses on integer
+scaling, and the bound pack (Layer 116, bd_*) which focuses on bounding
+boxes of specific colors.
+
+The block pack focuses on regular, uniform-size rectangular decomposition
+of entire grids.
+
+PrologAI now carries 148 work packages in the packs/ directory.
+
+
+END
