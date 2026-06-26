@@ -1,0 +1,153 @@
+Mentova Accomplishment 152: Integer-Factor Grid Scaling - The Zoom Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 132: the zoom pack, a Layer 111 symbolic reasoning
+module providing 14 predicates for integer-factor grid scaling. The pack
+upscales each cell to an FxF block, downsamples by sampling or mode, infers
+scale factors between grids, tests scaled equivalence, computes scaled
+dimensions, extracts and splits FxF tiles, finds the dominant color of a tile,
+and tiles a small grid NR x NC times. All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Integer-factor scaling is one of the most common structural transformations in
+visual pattern recognition: a small abstract pattern is "zoomed in" by factor 2,
+3, or 4 to produce the output. Conversely, a large grid may be decoded by
+identifying its underlying small-scale structure.
+
+The zoom pack makes these operations first-class predicates in PrologAI, enabling:
+- Verifying whether two grids are related by a zoom factor
+- Inferring the scale factor from a grid pair
+- Splitting a zoomed grid into its constituent blocks for per-block analysis
+- Downsampling by mode when each block is approximately (not exactly) uniform
+- Constructing tiled grids from a small repeating tile
+
+
+2. Predicate Inventory (14 predicates, zm_* prefix)
+
+2.1 Upscaling
+
+zm_scale_up(+Grid, +F, -Big)
+Each cell in Grid becomes an FxF block of the same color in Big. Implemented
+recursively: scale each row horizontally with zm_scale_up_row, create F
+identical copies, then recurse on the remaining rows.
+
+zm_scale_up_row(+Row, +F, -BigRow)
+Each element is repeated F consecutive times: findall(V, between(1,F,_), Copies)
+creates F copies of V; these are appended to the recursively scaled tail.
+
+Examples:
+zm_scale_up([[1,2],[3,4]], 2, Big).
+% Big = [[1,1,2,2],[1,1,2,2],[3,3,4,4],[3,3,4,4]]
+
+zm_scale_up([[9]], 3, Big).
+% Big = [[9,9,9],[9,9,9],[9,9,9]]
+
+
+2.2 Downsampling
+
+zm_scale_down(+Grid, +F, -Small)
+Samples rows 0, F, 2F, ... and within each, columns 0, F, 2F, ... The
+top-left corner of each FxF block is retained.
+
+zm_scale_down_row(+Row, +F, -SmallRow)
+Retains elements at indices where I mod F = 0.
+
+zm_scale_down_mode(+Grid, +F, -Small)
+For each FxF block, the output cell is the mode (most common value).
+Tie-breaking: largest value wins (msort N-V pairs, last element). Useful when
+blocks are not perfectly uniform.
+
+
+2.3 Scale Factor and Testing
+
+zm_scale_factor(+Small, +Big, -F)
+Infers F from the column width ratio of the first rows: F = W_Big // W_Small.
+Fails if the ratio is not an integer.
+
+zm_is_scaled_up(+Small, +Big, +F)
+Tests exact scaled equivalence by computing zm_scale_up(Small, F) and
+unifying with Big.
+
+
+2.4 Dimension Computation
+
+zm_dims_up(+H, +W, +F, -BH, -BW)  => BH = H*F, BW = W*F.
+zm_dims_down(+H, +W, +F, -SH, -SW) => SH = H//F, SW = W//F.
+
+
+2.5 Block Operations
+
+zm_extract_block(+Grid, +F, +BR, +BC, -Block)
+Extracts the FxF block at 0-based tile position (BR, BC). Row start = BR*F,
+column start = BC*F. Uses zm_take_cols_ (length/2 + append/3) for column
+extraction.
+
+zm_split_blocks(+Grid, +F, -Blocks)
+Flat list of all FxF blocks in row-major order.
+
+zm_blocks_dims(+Grid, +F, -NR, -NC)
+NR = H // F, NC = W // F.
+
+zm_block_color(+Grid, +F, +BR, +BC, -Color)
+Color of a uniform FxF block. Fails for non-uniform blocks.
+
+
+2.6 Tiling
+
+zm_tile_grid(+Tile, +NR, +NC, -Grid)
+First extends each Tile row NC times horizontally (each value repeated NC
+times in that row extension via findall + between + member), then repeats
+the full block row NR times.
+
+Example: zm_tile_grid([[1,2],[3,4]], 2, 2, Grid).
+% Grid = [[1,2,1,2],[3,4,3,4],[1,2,1,2],[3,4,3,4]]
+
+
+3. Implementation Notes
+
+zm_scale_up uses a recursive clause structure rather than a nested findall to
+avoid a row-ordering issue: a simple findall(Row, (member(Row, ScaledRows),
+between(1,F,_)), Big) would interleave copies incorrectly in some Prolog
+implementations because between/3 backtracks through all F values before
+member/2 moves to the next element. The recursive implementation is explicit
+and correct.
+
+zm_scale_down_mode uses a private zm_mode_/2 predicate that computes counts
+via include/3 from library(apply), avoiding a dependency on the histogram pack
+while achieving the same result.
+
+Imports: library(lists) for member/2, nth0/3, append/2, append/3, last/2;
+library(apply) for include/3.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no warnings. Three tests per predicate.
+
+Key correctness tests:
+  zm_scale_up([[9]], 3, Big) => [[9,9,9],[9,9,9],[9,9,9]]
+  zm_block_color([[1,2],[3,4]], 2, 0, 0, _) => fail (non-uniform block)
+  zm_scale_down_mode([[1,1,1,2],[1,1,2,2],...], 2, S) => [[1,...]] (3 ones beat 1 two)
+  zm_tile_grid([[1],[2]], 2, 1, Grid) => [[1],[2],[1],[2]]
+
+
+5. Significance
+
+Integer-factor scaling is a structural primitive that underlies a large class
+of visual transformations. The zoom pack makes the full scaling workflow
+expressible as a composition of predicate calls: zm_scale_factor infers what
+happened, zm_extract_block decomposes the input, zm_block_color identifies the
+small-scale pattern, and zm_scale_up reconstructs a scaled output.
+
+This is Mentova accomplishment 152. PrologAI now carries 130 work packages.
+
+github.com/ai-university-aiu/PrologAI

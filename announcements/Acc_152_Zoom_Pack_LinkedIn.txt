@@ -1,0 +1,29 @@
+Mentova Accomplishment 152: Integer-Factor Grid Scaling - The Zoom Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now zoom in and zoom out.
+
+Work Package 132 - the zoom pack - adds 14 zm_* predicates for integer-factor grid scaling. 42/42 tests.
+
+The core operations:
+
+- zm_scale_up - each cell becomes an FxF block of the same color
+- zm_scale_down - sample every Fth row and column
+- zm_scale_down_mode - downsample using the mode of each block (handles imperfect input)
+- zm_scale_factor - infer the scale factor from a (small, big) grid pair
+- zm_extract_block / zm_split_blocks - access individual FxF tiles from a zoomed grid
+- zm_block_color - the color of a uniform block (fails if not uniform)
+- zm_tile_grid - tile a small pattern NR x NC times
+
+zm_scale_up uses a recursive per-row structure - not nested findall - to ensure correct row ordering: all F copies of row 1 appear before all F copies of row 2.
+
+Zoom in. Zoom out. Extract the tile. Count the colors. Reconstruct the output.
+
+PrologAI: 130 work packages. Mentova: 152 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #GridScaling #SWIProlog #AGI
