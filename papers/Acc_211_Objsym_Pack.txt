@@ -1,0 +1,190 @@
+Accomplishment 211: Object Symmetry Analysis for obj(Color, Cells) Terms (Objsym Pack, os_*, Layer 170)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objsym pack (14 os_* predicates, Layer 170) for
+bounding-box-relative reflection, rotation, and symmetry testing of individual
+obj(Color, Cells) terms. Every transform is computed relative to the object's
+own bounding box center, so no prior normalization is required. The pack
+provides: bounding box extraction, normalization, translation, left-right
+reflection, top-bottom reflection, 180-degree rotation, 90-degree CW rotation,
+four symmetry tests (h, v, rot180, rot90), a has-symmetry test, a symmetry
+list builder, and D4 equivalence checking. Color is ignored in equivalence
+comparisons; only cell positions are compared.
+
+61 of 61 PLUnit tests pass.
+
+This work package is PrologAI WP 191, merged as PR 276 on 2026-06-26.
+
+1. Motivation
+
+The sym and symmetry packs provide symmetry analysis at the grid level (for
+list-of-lists grids). The shape pack provides symmetry at the normalized-shape
+level (cells translated to origin). But for object-centric reasoning, we often
+need to ask: is THIS object (at its actual grid position, with its actual bbox)
+symmetric about ITS OWN center?
+
+Examples from visual reasoning tasks:
+
+- "Which objects are left-right symmetric?" - requires checking each obj
+  individually relative to its own center, not the grid center.
+- "Are these two objects the same shape?" - requires D4 equivalence that
+  ignores position and color.
+- "How many axes of symmetry does each object have?" - requires os_symmetries.
+
+The objsym pack answers all of these at the obj(Color, Cells) level.
+
+2. Core Design
+
+2.1 Bounding Box Arithmetic
+
+All transforms derive from the bounding box (MinR, MinC, MaxR, MaxC):
+
+- reflect_h: new C = MinC + MaxC - C  (mirror about vertical center axis)
+- reflect_v: new R = MinR + MaxR - R  (mirror about horizontal center axis)
+- rotate180: both flips simultaneously
+- rotate90 (CW): new NR = C - MinC, new NC = MaxR - R
+
+The rotate90 formula maps the bbox to origin: the minimum new row is
+min(C - MinC) = 0, and the minimum new col is min(MaxR - R) = 0 (when R =
+MaxR). No additional normalization is needed in most cases, but os_is_rot90
+and os_equivalent apply an extra os_normalize to guarantee position-independent
+comparison.
+
+2.2 Symmetry Tests via msort Comparison
+
+All symmetry tests use the same pattern:
+
+    transform(Obj, Transformed)
+    msort(cells(Obj), S1)
+    msort(cells(Transformed), S2)
+    S1 == S2
+
+This is correct because a set of cells is symmetric iff the set is unchanged
+by the transform. The msort produces canonical order, so == is a sufficient
+test.
+
+2.3 D4 Equivalence
+
+The dihedral group D4 has 8 elements:
+- 4 rotations: identity (0 deg), 90 CW, 180, 270 CW
+- 4 flips: reflect_h (0 deg), reflect_h then 90 CW, reflect_h then 180,
+           reflect_h then 270 CW
+
+os_d4_orbit_ generates all 8 variants by:
+1. Normalize Obj
+2. Apply rotate90 three times to get R1, R2, R3
+3. Apply reflect_h to get F, then rotate90 three times to get F1, F2, F3
+4. Yield each of [N, R1, R2, R3, F, F1, F2, F3] via member/2
+
+os_equivalent(Obj1, Obj2) normalizes Obj1, then iterates D4 orbit of Obj2
+until a matching msorted cell set is found. Color is ignored. Cut on first
+match for efficiency.
+
+3. Predicate Descriptions
+
+3.1 Foundation
+
+os_bbox(+Obj, -MinR, -MinC, -MaxR, -MaxC): collect all row and col indices
+via findall, then min_list/max_list.
+
+os_normalize(+Obj, -NormObj): translate so bbox top-left = r(0,0).
+
+os_translate(+Obj, +DR, +DC, -Moved): add (DR, DC) to all cells.
+
+3.2 Transforms
+
+os_reflect_h: maps r(R,C) -> r(R, MinC+MaxC-C).
+os_reflect_v: maps r(R,C) -> r(MinR+MaxR-R, C).
+os_rotate180: maps r(R,C) -> r(MinR+MaxR-R, MinC+MaxC-C).
+os_rotate90: maps r(R,C) -> r(C-MinC, MaxR-R). CW rotation, origin-anchored.
+
+3.3 Symmetry Tests
+
+os_is_hsymm: reflect_h produces same cell set.
+os_is_vsymm: reflect_v produces same cell set.
+os_is_rot180: rotate180 produces same cell set.
+os_is_rot90: normalized rotate90 produces same normalized cell set.
+os_has_symmetry: disjunction with cut (short-circuit on first passing test).
+os_symmetries: findall over [h, v, rot180, rot90] with case dispatch.
+
+3.4 Equivalence
+
+os_equivalent: D4 orbit comparison ignoring color and position.
+
+4. Examples
+
+Example 1: Plus sign is fully D4 symmetric.
+
+    Plus = obj(p, [r(0,1), r(1,0), r(1,1), r(1,2), r(2,1)]),
+    os_symmetries(Plus, [h, rot180, rot90, v]).  % all four symmetries
+
+Example 2: Z-shape has only rotational symmetry (point symmetry).
+
+    Z = obj(z, [r(0,0), r(0,1), r(1,1), r(1,2)]),
+    os_symmetries(Z, [rot180]).
+
+Example 3: Horizontal bar and vertical bar are D4 equivalent.
+
+    H = obj(h, [r(0,0), r(0,1), r(0,2)]),
+    V = obj(v, [r(0,0), r(1,0), r(2,0)]),
+    os_equivalent(H, V).   % true: one is a 90-degree rotation of the other
+
+Example 4: L-shape has no symmetry.
+
+    L = obj(l, [r(0,0), r(1,0), r(1,1)]),
+    os_has_symmetry(L).   % FAILS
+
+5. Design Decisions
+
+5.1 Bbox-Relative vs. Normalized
+
+The objsym pack operates on objects at their actual grid positions. os_reflect_h
+on an object at rows 3-5, cols 2-6 computes correctly without first translating
+to origin. This contrasts with the shape pack (sh_*) which requires normalization
+to origin before any operation.
+
+5.2 os_is_rot90 Normalizes Twice
+
+os_is_rot90 calls os_normalize before rotating (to get a stable reference), then
+os_normalize again on the rotated result (because the formula may produce cells
+not anchored at r(0,0) if the input was not already normalized). The double
+normalization ensures the comparison is position-independent.
+
+5.3 os_equivalent Ignores Color
+
+Two objects with different colors but same shape should be equivalent. Color is
+a property of the scene context, not the shape. os_equivalent compares only the
+msorted cell sets, making it suitable for "find all objects with this shape"
+queries regardless of color.
+
+5.4 Private os_d4_orbit_ Helper
+
+The D4 orbit generator is a private predicate (not exported). It yields one
+variant at a time via backtracking (member/2 over the 8-element list). This
+integrates cleanly with os_equivalent's generate-and-test loop.
+
+6. SPARC Documentation
+
+Specification v156 adds Part 181 (objsym pack specification).
+
+Pseudocode v149 adds Part 181 (objsym pack pseudocode).
+
+Architecture v150 adds ARCH-157 (objsym pack layer placement).
+
+Refinement v204 adds acceptance criteria AC-OS-001 through AC-OS-061.
+
+Completion v207 adds the WP-191 completion record.
+
+7. Conclusion
+
+The objsym pack gives PrologAI a complete interface for individual-object
+symmetry analysis at the obj(Color, Cells) level. Bounding-box-relative
+transforms, four symmetry tests, a symmetry catalog, and D4 shape equivalence
+cover the symmetry reasoning needed for visual tasks where each object must be
+analyzed on its own terms.
+
+This is WP 191, Mentova's 211th accomplishment.

@@ -1,0 +1,37 @@
+Mentova Accomplishment 211: Object Symmetry Analysis for obj(Color, Cells) Terms
+
+PrologAI now includes an objsym pack (os_*, Layer 170) - 14 predicates for
+bounding-box-relative symmetry analysis of individual objects.
+
+The key insight: every transform is computed relative to the object's OWN
+bounding box center, not the grid center. An object at any position in the
+grid is analyzed correctly without prior normalization.
+
+The pack provides:
+
+- os_bbox: bounding box (min/max row and column)
+- os_normalize: translate so bbox top-left is at r(0,0)
+- os_translate: shift all cells by (DR, DC)
+- os_reflect_h: mirror left-right about vertical center axis
+- os_reflect_v: mirror top-bottom about horizontal center axis
+- os_rotate180: rotate 180 degrees about bbox center
+- os_rotate90: rotate 90 degrees CW, normalized to origin
+- os_is_hsymm: is the object horizontally symmetric?
+- os_is_vsymm: is the object vertically symmetric?
+- os_is_rot180: does the object have 180-degree rotational symmetry?
+- os_is_rot90: does the object have 90-degree rotational symmetry?
+- os_has_symmetry: does any symmetry hold?
+- os_symmetries: list all symmetry atoms [h, v, rot180, rot90] that hold
+- os_equivalent: are two objects the same shape under any D4 orientation?
+
+Example: a plus sign has all four symmetries. A Z-shape has only rot180.
+A horizontal bar and a vertical bar are D4 equivalent (one is a 90-degree
+rotation of the other).
+
+61 tests pass.
+
+This is WP 191, Mentova's 211th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
