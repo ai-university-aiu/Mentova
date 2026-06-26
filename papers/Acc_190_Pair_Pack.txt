@@ -1,0 +1,147 @@
+Accomplishment 190: Object Pairing and D4-Canonical Shape Correspondence
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 170th work package: the pair pack (pr_*, Layer 149).
+
+The pair pack provides 14 predicates for grouping, comparing, and matching
+obj(Color, Cells) terms by color, size, and D4-canonical shape. The central
+contribution is a shape representation invariant under all 8 elements of the
+dihedral group D4: four rotations (0, 90, 180, 270 degrees) and four
+reflections (horizontal, vertical, and two diagonals). A horizontal two-cell
+pair and a vertical two-cell pair are identified as the same shape, enabling
+robust object correspondence across scenes that differ by rotation or reflection.
+
+Introduction
+
+A core challenge in visual reasoning is establishing correspondence between
+objects that appear in different scenes. Two scenes may contain objects with the
+same abstract shape arranged differently: one scene might have a horizontal pair
+of colored cells and another scene might have a vertical pair. A reasoner that
+treats these as different shapes will fail to recognize the correspondence; one
+that reduces them to a common canonical form will succeed immediately.
+
+PrologAI already provides scene analysis through the scene pack (sc_*, Layer 37),
+which produces obj(Color, Cells) terms from grids. The pair pack (pr_*, Layer 149)
+operates directly on these obj terms and provides the additional machinery needed
+to compare, group, and match objects between scenes based on color, size, or shape.
+
+The shape matching capability rests on D4 canonicalization: each shape is
+normalized to the origin (minimum row and column both set to zero), all eight
+D4 symmetric transforms are applied, each result is re-normalized, and the
+lexicographically smallest result under standard Prolog term order is taken as
+the canonical form. This canonical form is invariant to all symmetries in D4.
+
+Design
+
+The pair pack centers on three layers of comparison: color identity, size (cell
+count) identity, and D4-canonical shape identity.
+
+For each comparison type, the pack provides a pairwise predicate, a grouping
+predicate, and a cross-scene matching predicate, giving three consistent APIs.
+
+Color layer:
+• pr_color_eq/2 tests whether two obj terms have the same color value.
+• pr_group_color/2 partitions a list of obj terms into Color-[Obj] groups.
+• pr_match_color/3 produces Color-O1-O2 triples for same-color pairs across two lists.
+
+Size layer:
+• pr_size_eq/2 tests whether two obj terms have the same number of cells.
+• pr_group_size/2 partitions into N-[Obj] groups where N is the cell count.
+• pr_match_size/3 produces N-O1-O2 triples for same-size pairs.
+
+Shape layer:
+• pr_shape_eq/2 tests whether two obj terms have the same D4-canonical shape.
+• pr_group_shape/2 partitions into Shape-[Obj] groups using canonical shapes as keys.
+• pr_match_shape/3 produces Shape-O1-O2 triples for D4-equivalent shape pairs.
+
+Two additional predicates support the "odd one out" reasoning pattern common in
+visual reasoning tasks:
+• pr_unique_color/2 finds the single obj whose color appears exactly once in a list.
+• pr_unique_size/2 finds the single obj whose size appears exactly once.
+
+Object property access:
+• pr_obj_shape/2 computes the D4-canonical shape of an obj term.
+• pr_obj_color/2 extracts the color from an obj term.
+• pr_obj_size/2 extracts the cell count from an obj term.
+
+D4 Canonical Shape
+
+The eight D4 operations on a cell r(R,C) in a shape normalized so min R=0,
+min C=0, H1=max row, W1=max col:
+
+    id   (identity):           (R,C) maps to (R,C)
+    r90  (90 CW):              (R,C) maps to (C, H1-R)
+    r180 (180 degrees):        (R,C) maps to (H1-R, W1-C)
+    r270 (270 CW):             (R,C) maps to (W1-C, R)
+    fh   (horizontal flip):    (R,C) maps to (R, W1-C)
+    fv   (vertical flip):      (R,C) maps to (H1-R, C)
+    fd1  (diagonal transpose): (R,C) maps to (C, R)
+    fd2  (anti-diagonal):      (R,C) maps to (W1-C, H1-R)
+
+For a two-cell horizontal pair at r(0,0) and r(0,1): H1=0, W1=1.
+
+Applying r90: r(0,0) maps to r(0,0); r(0,1) maps to r(1,0).
+After re-normalization (offset to origin): [r(0,0), r(1,0)].
+
+Applying fd1 (diagonal transpose) to the original:
+r(0,0) maps to r(0,0); r(0,1) maps to r(1,0).
+After re-normalization: [r(0,0), r(1,0)].
+
+The id transform gives [r(0,0), r(0,1)], which is lexicographically smaller than
+[r(0,0), r(1,0)]. So the canonical form of both the horizontal pair and the
+vertical pair is [r(0,0), r(0,1)]. They are identified as the same shape.
+
+Implementation
+
+All predicates are implemented in pure SWI-Prolog using findall/3 and sort/2
+(built-ins) plus member/2, min_list/2, and max_list/2 from library(lists).
+
+The two-phase grouping pattern used throughout: collect all key values with
+findall, eliminate duplicates with sort, then for each key collect all matching
+objects with a nested findall. This avoids assert/retract and produces a clean
+sorted key-ordered result.
+
+The pr_min_term_ helper finds the lexicographically smallest element of a list
+under standard Prolog @< term order. A cut on the singleton clause prevents
+choicepoint warnings.
+
+The grouping predicates preserve input order within each group and order groups
+by their key under sort/2 (standard key ordering). Cross-scene match predicates
+return one triple per matching pair in the order the outer findall enumerates
+them.
+
+Verification
+
+42 PLUnit tests cover all 14 predicates (3 tests each):
+• pr_obj_shape/2: single cell, horizontal pair, vertical pair equal to horizontal.
+• pr_shape_eq/2: horizontal-vertical pair match, identical shapes, L-shape and its 90 CW rotation.
+• pr_group_shape/2: horizontal and vertical two-cell objects land in one group.
+• pr_match_shape/3: horizontal pair from one scene matches vertical pair from another.
+
+All 42 tests pass with no warnings.
+
+Library: packs/pair/prolog/pair.pl, Layer 149.
+Tests: packs/pair/test/test_pair.pl, 42/42 pass.
+SPARC: Specification v135, Pseudocode v128, Architecture v129, Refinement v183, Completion v186.
+PrologAI PR: 255, merged 2026-06-26.
+
+Significance
+
+The pair pack closes the gap between scene analysis and scene correspondence.
+The scene pack identifies what objects exist in a grid. The pair pack answers
+"which objects in scene A correspond to which objects in scene B" by matching on
+color, size, or D4-canonical shape.
+
+D4 canonicalization is the key enabling capability: it allows correspondence to be
+established between objects whose spatial orientation differs by any combination of
+rotations and reflections. This is essential for reasoning tasks where the
+transformation of interest is geometric.
+
+With 170 work packages and 190 accomplishments, PrologAI and Mentova continue to
+build the symbolic cognitive substrate for general visual reasoning.
