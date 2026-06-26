@@ -1,0 +1,101 @@
+Accomplishment 238: Grid Parse and Object Extraction (gridparse Pack, gp_*, Layer 197)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains the gridparse pack (Work Package 218, Layer 197): 14 gp_*
+predicates for converting between raw grid format (list-of-lists of color atoms)
+and the obj(Color, Cells) scene representation used by all of PrologAI's scene
+reasoning infrastructure. The pack provides BFS-based 4-connected component
+extraction, background detection, scene rendering, and a verified round-trip
+conversion.
+
+
+Background
+
+ARC-AGI-2 tasks present grids as 2D arrays of colored cells. PrologAI's reasoning
+packs (scene, gridsolve, multicolor, seqinfer, sceneinv) work with obj(Color,
+Cells) terms. The gridparse pack is the essential bridge: it ingests a raw grid
+and produces a scene that all the reasoning packs can process.
+
+The companion gridquery pack (Layer 196) added query operations over raw grids.
+gridparse adds the critical conversion layer: segmentation into objects.
+
+
+The gridparse Pack
+
+Pack prefix: gp_*
+Layer: 197
+Work Package: 218
+
+
+Background Detection
+
+gp_bg_color/2 identifies the most frequent color in the grid using the keyed-msort
+pattern: negative counts as sort keys, msort, take the head. For most ARC tasks,
+the most frequent color is the background. Ties are broken by standard Prolog term
+order (alphabetical for color atoms).
+
+
+Cell Extraction
+
+gp_grid_cells/3 collects all r(R,C) positions of a given color using findall over
+nth0 lookups. The result is in row-major order.
+
+
+4-Connected Component Flood Fill
+
+gp_color_components/3 implements BFS over the cell list without creating a full
+grid matrix. It maintains an Available set (initially all Color cells) and a Queue.
+Starting from the first unvisited cell, it expands to 4-connected neighbors that
+are still in Available, removes them from Available, and extends the Queue. When
+the Queue empties, the current visited set becomes one component, and the remaining
+Available cells seed the next iteration.
+
+This design avoids the need to read grid values during the flood fill since
+Available already contains only Color cells.
+
+
+Grid-to-Scene and Scene-to-Grid Conversion
+
+gp_grid_to_scene/3 calls gp_color_components for each non-background color and
+wraps each component into an obj term. Objects are listed in sorted color order.
+
+gp_scene_to_grid/5 creates a blank grid with gp_grid_from_rows and calls
+gp_paint_scene. gp_paint_obj uses foldl over the cell list, rebuilding one row
+per cell (private helper predicates gp_replace_in_row_ and gp_replace_row_).
+
+
+Round-Trip Guarantee
+
+For a grid with non-overlapping single-color connected regions:
+gp_grid_to_scene followed by gp_scene_to_grid with the same background and
+dimensions reproduces the original grid exactly. Two tests verify this:
+round_trip_ring (3x3 with a center object) and round_trip_blue_square (4x4 with
+a 2x2 object).
+
+
+Test Coverage
+
+43 of 43 acceptance criteria (AC-GP-001 through AC-GP-044, with one merged test)
+pass. Tests cover:
+- Background detection for various distributions
+- Cell extraction including absent colors (empty list)
+- Component counting: 1, 2, and 0 components
+- Round-trip conversion for ring and square grids
+- Object statistics: largest, smallest, by-size ordering
+- Grid construction and painting
+
+SPARC documentation: Spec v183, Pseudo v176, Arch v177, Refinement v231,
+Completion v234. Tutorial: Ch179_GridParse.txt. Pack_Reference updated.
+
+
+Conclusion
+
+The gridparse pack completes the ARC data pipeline: raw grid input goes to
+gp_grid_to_scene for conversion to obj terms, reasoning packs transform the scene,
+and gp_scene_to_grid renders the result. This is Mentova's 238th accomplishment
+and PrologAI's 218th work package.
