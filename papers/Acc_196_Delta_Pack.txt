@@ -1,0 +1,163 @@
+Accomplishment 196: Scene-Level Delta Analysis
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI gains its 176th work package: the delta pack (dl_*, Layer 155).
+
+The delta pack answers the question "what changed?" when comparing two object
+scenes. Given a before-scene S1 and an after-scene S2 (each a list of
+obj(Color, Cells) terms), it computes which objects were added, removed,
+recolored, or left unchanged, and provides numeric metrics and change-type
+classification predicates.
+
+
+Introduction
+
+Multi-step ARC-AGI-2 tasks require understanding what transformation was
+applied to a scene before inducing a general rule. The delta pack makes this
+question answerable in symbolic logic.
+
+In ARC-AGI-1, nearly every task had a single transformation. In ARC-AGI-2,
+tasks frequently require two or more transformations applied in sequence: the
+output of step N is the input to step N+1. To induce such a pipeline, the
+solver must first understand what each individual step does, and the delta pack
+is the tool that answers that question.
+
+The pigment pack (Layer 154) can apply and infer color transformations. But
+to know whether color transformation is even the right hypothesis for a given
+step, you first need to know what kind of change occurred. The delta pack
+classifies the change, so the appropriate inference tool can be selected.
+
+
+Matching Semantics
+
+Object matching uses exact cell-set equality: two objects match iff they have
+the same Cells list under Prolog term unification. An object at position
+[r(0,0), r(0,1)] in S1 matches any object at [r(0,0), r(0,1)] in S2,
+regardless of color. This is the same matching approach used by pg_infer_table
+in the pigment pack, making the two packs semantically consistent.
+
+Under this definition:
+- Added: cell set in S2 not present in S1 at any color (genuinely new position)
+- Removed: cell set in S1 not present in S2 at any color (position disappeared)
+- Recolored: cell set present in both S1 and S2, but with different colors
+- Unchanged: cell set present in both S1 and S2 with the same color
+
+
+Change Decomposition
+
+dl_added/3 uses findall with negation-as-failure: for each object in S2, check
+whether any object in S1 has exactly the same Cells. If not, the object is
+added. The \+ operator (negation as failure) is the right tool here because
+the test is about the absence of a matching cell set.
+
+dl_removed/3 is dl_added with S1 and S2 swapped: objects in S1 whose cell set
+is absent from S2.
+
+dl_matched/3 finds O1-O2 pairs by binding Cells from O1 then unifying into O2.
+When the findall collects obj(C1, Cells)-obj(C2, Cells) pairs, Cells is already
+bound from O1, so O2 = obj(_, Cells) requires O2 to have exactly that cell set.
+
+dl_recolored/3 collects C1-C2 color change pairs for matched objects by
+requiring C1 \= C2. sort/2 deduplicates.
+
+dl_unchanged/3 uses member(O, S1), member(O, S2) with the full obj(Color, Cells)
+term, so both color and cell set must match exactly. This is the strictest test.
+
+
+Color Analysis
+
+dl_color_gain/3 and dl_color_loss/3 compute palette set differences. Each scene's
+colors are collected with findall, deduplicated with sort, then the set difference
+is computed with a second findall using \+ member. These predicates answer: did new
+colors appear? did existing colors disappear?
+
+
+Numeric Metrics
+
+dl_count_diff/3 computes length(S2) - length(S1) directly. Positive means more
+objects; negative means fewer.
+
+dl_size_diff/3 computes total cells in S2 minus total cells in S1. Each object
+contributes length(Cells) to its scene's total, summed via sum_list/2.
+
+
+Change Type Classification
+
+Four deterministic predicates classify the transformation type by checking that
+the appropriate change sets are empty:
+
+dl_is_added_only(S1, S2): removed = [] and recolored = [].
+  Confirms that the transformation only added new objects.
+
+dl_is_removed_only(S1, S2): added = [] and recolored = [].
+  Confirms that the transformation only removed objects.
+
+dl_is_recolor_only(S1, S2): added = [] and removed = [].
+  Confirms that every cell position in S1 still exists in S2;
+  only colors may have changed. This is the correct precondition for
+  applying pg_infer_table to learn the color mapping.
+
+dl_is_stable(S1, S2): added = [] and removed = [] and recolored = [].
+  Confirms the two scenes are identical.
+
+
+Composite Delta
+
+dl_scene_diff/3 computes all four components at once:
+
+dl_scene_diff(S1, S2, delta(Added, Removed, Recolored, Unchanged))
+
+This is the high-level entry point for "what changed?" It returns the complete
+structural account of the transformation in a single delta/4 compound term.
+
+
+Verification
+
+42 PLUnit tests cover all 14 predicates (3 tests each):
+
+dl_added: new object detected, no additions when cells match, all objects added.
+dl_removed: removal detected, no removal when cells match, all removed.
+dl_matched: one pair found, no matches, two pairs found.
+dl_recolored: one change, no change (same color), two changes.
+dl_unchanged: one unchanged, none unchanged, both unchanged.
+dl_color_gain: new color detected, no new colors, two new colors.
+dl_color_loss: lost color detected, no lost colors, two lost colors.
+dl_count_diff: positive, zero, negative.
+dl_size_diff: positive, zero, negative.
+dl_is_added_only: succeeds, fails on removal, fails on recoloring.
+dl_is_removed_only: succeeds, fails on addition, fails on recoloring.
+dl_is_recolor_only: succeeds, fails on addition, fails on removal.
+dl_is_stable: succeeds (same scenes), fails (recolored), succeeds (empty scenes).
+dl_scene_diff: full delta, recolor-only delta, stable delta.
+
+All 42 tests pass with no warnings.
+
+Library: packs/delta/prolog/delta.pl, Layer 155.
+Tests: packs/delta/test/test_delta.pl, 42/42 pass.
+SPARC: Specification v141, Pseudocode v134, Architecture v135, Refinement v189, Completion v192.
+PrologAI PR: 261, merged 2026-06-26.
+
+
+Significance
+
+The delta pack completes the scene-analysis stack. PrologAI can now:
+- Extract objects from a grid (scene pack)
+- Analyze object attributes (query pack, sift pack)
+- Apply bulk color transformations (pigment pack)
+- Infer what color mapping was applied (pg_infer_table)
+- Classify what type of change occurred between two scenes (delta pack)
+
+The change-type classification predicates (dl_is_recolor_only, dl_is_added_only,
+dl_is_removed_only, dl_is_stable) are particularly important for ARC-AGI-2
+reasoning: before attempting to infer a transformation rule, the system can now
+check whether the relevant type of change even occurred in the training pairs.
+
+With 176 work packages and 196 accomplishments, PrologAI and Mentova continue
+building the symbolic cognitive substrate for general visual reasoning.
