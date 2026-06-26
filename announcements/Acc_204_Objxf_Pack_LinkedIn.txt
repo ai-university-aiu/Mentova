@@ -1,0 +1,55 @@
+Accomplishment 204: Spatial and Color Transformations for Object Terms
+
+PrologAI now has 184 work packages.
+
+The objxf pack (ox_*, Layer 163) treats obj(Color, Cells) terms as first-class
+geometric objects. First pack to rotate, reflect, translate, and scale objects
+without needing a grid intermediary.
+
+Bounding box:
+• ox_bbox/5: min/max row and col of an object's cells
+• ox_size/3: height and width of the bounding box
+
+Translation:
+• ox_translate/4: shift all cells by (DR, DC) — negative deltas allowed
+• ox_to_origin/2: normalize so top-left = r(0,0)
+• ox_recolor/3: replace color field only
+
+Rotation (within bounding box; anchor stays fixed):
+• ox_rot90/2: 90 degrees clockwise
+• ox_rot180/2: 180 degrees
+• ox_rot270/2: 270 degrees clockwise (= 90 CCW)
+
+Reflection:
+• ox_reflect_h/2: flip upside-down within bounding box
+• ox_reflect_v/2: flip left-right within bounding box
+
+Cell-set algebra (result has first object's color):
+• ox_merge/3: union (append + sort deduplication)
+• ox_diff/3: cells in Obj1 not in Obj2
+• ox_intersect/3: cells in both objects
+
+Scale up:
+• ox_scale_up/3: each cell -> Factor x Factor block
+  (cell count = original * Factor * Factor)
+
+Key design: rotations use bounding-box-local coordinates:
+Lr = R - R0 (rows below bounding box top)
+Lc = C - C0 (cols right of bounding box left)
+
+90 CW formula: r(R,C) -> r(R0+Lc, C0+(H-1)-Lr)
+This keeps the object anchored at (R0,C0) while rotating correctly.
+
+Key example - double an object's size:
+
+    ox_scale_up(obj(red,[r(1,1)]), 2, R)
+    -> R = obj(red, [r(2,2),r(2,3),r(3,2),r(3,3)])
+    % r(1,1) * factor 2 = 2x2 block at r(2,2)
+
+60/60 PLUnit tests pass. PR 269 merged to PrologAI main.
+
+Together with scene (extraction), sizeop (size ranking), and posop (position
+ranking), objxf completes the core object-centric reasoning suite for ARC-AGI-2.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
