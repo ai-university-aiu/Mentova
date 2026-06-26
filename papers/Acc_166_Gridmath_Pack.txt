@@ -1,0 +1,183 @@
+Accomplishment 166: The Cell-Wise Grid Arithmetic Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a cell-wise grid arithmetic pack as Work Package 146
+(Layer 125).
+
+The pack provides 14 predicates, all carrying the gm_* prefix, for
+applying arithmetic operations to two-dimensional grids at the cell level.
+
+These predicates extend the numseq pack (Layer 124, nr_*) into two
+dimensions: where numseq operates on one-dimensional lists, gridmath
+operates on two-dimensional grids.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Reasoning about grids often requires comparing two grids cell by cell,
+applying a uniform transformation to every cell, or computing global
+statistics over all cell values.
+
+The gridmath pack provides the fundamental vocabulary for these operations.
+
+Cell-wise addition and subtraction reveal how one grid differs from or
+relates to another.
+
+Equality and difference masks highlight exactly which cells agree and
+which diverge.
+
+Scalar operations shift and scale the entire value range of a grid.
+
+Clamping and modulo operations constrain cell values to a range or
+impose cyclic structure.
+
+The sum and product predicates reduce an entire grid to a single number,
+enabling counting, total-value reasoning, and detection of all-zero or
+all-nonzero grids.
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+The five binary predicates operate on two same-sized grids and produce
+a result grid.
+
+gm_add(+GridA, +GridB, -GridC) computes cell-wise sum.
+
+gm_sub(+GridA, +GridB, -GridC) computes cell-wise difference
+GridA minus GridB.
+
+gm_mul(+GridA, +GridB, -GridC) computes cell-wise product.
+
+gm_max(+GridA, +GridB, -GridC) takes the cell-wise maximum.
+
+gm_min(+GridA, +GridB, -GridC) takes the cell-wise minimum.
+
+Three predicates apply a scalar uniformly to every cell.
+
+gm_scale(+Grid, +K, -Grid2) multiplies every cell by K.
+
+gm_offset(+Grid, +D, -Grid2) adds D to every cell.
+
+gm_abs(+Grid, -Grid2) replaces every cell with its absolute value.
+
+Two predicates produce 1/0 boolean masks from two grids.
+
+gm_eq_mask(+GridA, +GridB, -Mask) sets each mask cell to 1 where the
+two grids agree and 0 where they differ.
+
+gm_diff_mask(+GridA, +GridB, -Mask) is the complement: 1 where grids
+differ, 0 where they agree.
+
+Two predicates constrain cell values.
+
+gm_clamp(+Grid, +Lo, +Hi, -Grid2) clamps each cell to the inclusive
+range from Lo to Hi using max(Lo, min(Hi, V)).
+
+gm_modulo(+Grid, +M, -Grid2) applies modulo M to every cell.
+
+Two aggregate predicates reduce a grid to a scalar.
+
+gm_sum(+Grid, -Sum) computes the sum of all cell values.
+
+gm_product(+Grid, -Prod) computes the product of all cell values.
+
+
+3. Implementation
+
+All binary grid-to-grid predicates use a nested maplist pattern.
+
+The outer maplist/4 pairs rows from the two input grids with rows of
+the output grid.
+
+The inner maplist/4 pairs cells within each row.
+
+Named helper predicates (gm_add_, gm_sub_, gm_mul_, gm_max_, gm_min_)
+are used rather than lambda syntax to ensure compatibility across all
+SWI-Prolog versions.
+
+The equality and difference mask predicates use a two-clause cut pattern.
+
+gm_eq_(X, X, 1) :- !.
+gm_eq_(_, _, 0).
+
+This is deterministic and avoids unnecessary choicepoints.
+
+The scalar predicates (gm_scale, gm_offset, gm_clamp, gm_modulo,
+gm_abs) use nested maplist/3 with a row-level helper that captures the
+scalar argument, and a cell-level helper that applies the arithmetic.
+
+The aggregate predicates (gm_sum, gm_product) use findall with member/2
+applied twice to flatten all cells from all rows into a single list,
+then a recursive accumulator to compute the sum or product.
+
+
+4. Common Patterns
+
+Combining gm_sub with gm_abs produces absolute cell-wise differences:
+
+  gm_sub(GridA, GridB, D), gm_abs(D, AbsDiff).
+
+Combining gm_eq_mask with gm_sum counts matching cells:
+
+  gm_eq_mask(GridA, GridB, M), gm_sum(M, Count).
+
+Combining gm_diff_mask with gm_sum counts changed cells, which is
+equivalent to the total number of cells that differ between two grids.
+
+
+5. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Tests cover the canonical two-grid case, an edge case (zeros, ones, or
+identity inputs), and a boundary case (negative results, clamping
+boundaries, all-zero products).
+
+All 42 pass under SWI-Prolog.
+
+
+6. SPARC Documentation
+
+Specification v111, Part 136 defines all 14 predicates.
+
+Pseudocode v104, Part 136 gives the algorithmic descriptions.
+
+Architecture v105, ARCH-112 records the module placement and design
+patterns.
+
+Refinement v159 records acceptance criteria AC-GM-001 through
+AC-GM-042.
+
+Completion v162 records the release evidence for WP 146.
+
+Tutorial Chapter 107 demonstrates all 14 predicates with examples and
+shows common composition patterns including the absolute-difference and
+matching-cell-count idioms.
+
+
+7. Position in the Cognitive Architecture
+
+The gridmath pack is Layer 125 in the PrologAI cognitive stack.
+
+It sits above the numseq pack (Layer 124) which provides one-dimensional
+analogues.
+
+Together, numseq and gridmath form a complete arithmetic vocabulary for
+both 1D slices and 2D grids, enabling the cognitive substrate to reason
+about values, differences, and patterns at multiple levels of structure.
+
+PrologAI now carries 146 work packages in the packs/ directory.
+
+
+END
