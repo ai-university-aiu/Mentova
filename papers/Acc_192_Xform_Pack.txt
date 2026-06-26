@@ -1,0 +1,129 @@
+Accomplishment 192: Object-Level Transformation and Inference
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 172nd work package: the xform pack (xf_*, Layer 151).
+
+The xform pack provides 14 predicates for transforming individual obj(Color, Cells)
+terms and for inferring what transformation connects two obj terms. Applied
+transformations include recoloring, translating, normalizing to origin, and applying
+named D4 symmetry operations. Inference predicates discover cell offsets, detect
+recoloring, compute cell-set differences, count overlaps, find D4 operations, and
+determine scale factors.
+
+Introduction
+
+A reasoning system must be able to both apply and infer transformations. The scene
+pack (Layer 37) produces object representations; the pair pack (Layer 149) groups and
+matches them; the arrange pack (Layer 150) reasons about their positions. But to
+understand what rule was applied in a transformation task, a system must answer:
+"given object A in the input and object B in the output, what happened?"
+
+The xform pack answers this question by providing two groups of predicates: applied
+transformations (which produce new obj terms from existing ones) and inference
+predicates (which extract information about what changed between two obj terms).
+
+Applied Transformations
+
+xf_recolor/3 creates a new obj with a different color, keeping the same cell list.
+Implemented as a single head-unification clause, it has no computational cost.
+
+xf_translate/3 shifts all cells of an obj by a given row-column offset. The result
+is sorted to maintain the canonical cell list representation.
+
+xf_normalize/2 translates an obj to the origin (minimum row = 0, minimum column = 0)
+by computing the bbox top-left and subtracting it from all cell coordinates.
+Normalization is the foundation for all shape-invariant comparisons.
+
+xf_d4/3 applies a named D4 symmetry operation (id, r90, r180, r270, fh, fv, fd1,
+fd2) to the cells of an obj, preserving the object's top-left position. The
+implementation normalizes the input, applies the transform (which produces another
+normalized result on a normalized input - a property established in the pair pack),
+sorts the result, and translates back to the original top-left corner.
+
+Inference Predicates
+
+xf_same_cells/2 tests whether two obj terms have identical sorted cell sets. The
+implementation uses Prolog variable unification to share the Cells argument between
+both terms - if they unify, the cell sets are identical. This has zero computational
+overhead beyond the unification itself.
+
+xf_cell_offset/3 finds the translation vector from one obj to another, succeeding
+only when they have the same normalized shape. After normalizing both objects, it
+requires the normalized cell sets to unify (same shape), then computes the offset as
+the difference of their bbox top-left corners.
+
+xf_is_recolor/2 detects when two obj terms have the same cells but different colors,
+again using shared-variable unification for the cell test and \=/2 for the color test.
+
+Cell-Set Arithmetic
+
+xf_cells_added/3, xf_cells_removed/3, and xf_cells_kept/3 compute set-theoretic
+differences and intersections of two object cell sets. subtract/3 from library(lists)
+handles the set difference predicates. The intersection uses findall with memberchk
+for membership testing.
+
+xf_overlap_count/3 wraps xf_cells_kept with length to count shared cells.
+
+D4 Discovery and Scaling
+
+xf_any_d4/3 finds the first D4 operation Op such that applying Op to Obj1's
+normalized form gives Obj2's normalized form. It tries each of the 8 D4 operations
+in canonical order (id, r90, r180, r270, fh, fv, fd1, fd2) via member, applies the
+operation, sorts the result, and tests for equality with Obj2's normalized form.
+A cut after the first match makes the predicate deterministic.
+
+xf_scale_factor/3 finds an integer N >= 1 such that Obj2 has N times as many cells
+as Obj1. This detects scale relationships without requiring the cells to have any
+particular arrangement, using only the count ratio.
+
+xf_merge/3 merges two same-color obj terms by taking the union of their cell sets.
+Colors must unify to prevent merging objects of different colors. append followed by
+sort handles deduplication of cells that appear in both objects.
+
+Verification
+
+42 PLUnit tests cover all 14 predicates (3 tests each):
+• xf_recolor/3: basic, single cell, same color (identity case).
+• xf_translate/3: rightward, downward, diagonal.
+• xf_normalize/2: already at origin, offset cells, single cell.
+• xf_d4/3: id preserves, r90 converts horizontal to vertical pair, fh mirrors L-shape.
+• xf_same_cells/2: same cells different color, single cell, different cells fail.
+• xf_cell_offset/3: rightward, downward, diagonal.
+• xf_is_recolor/2: basic, single cell, same color fails.
+• xf_cells_added/3: one added, none added, two added.
+• xf_cells_removed/3: one removed, none removed, all removed.
+• xf_cells_kept/3: partial overlap, no overlap, full overlap.
+• xf_overlap_count/3: two shared, zero shared, full overlap count.
+• xf_any_d4/3: identity found immediately, r90 found for h-pair to v-pair, first
+  matching op returned for L-shape (r90 before fv in the candidate list).
+• xf_scale_factor/3: 2x, 1x, non-integer fails.
+• xf_merge/3: disjoint cells, overlapping cells (deduplicated), single cells.
+
+All 42 tests pass with no warnings.
+
+Library: packs/xform/prolog/xform.pl, Layer 151.
+Tests: packs/xform/test/test_xform.pl, 42/42 pass.
+SPARC: Specification v137, Pseudocode v130, Architecture v131, Refinement v185, Completion v188.
+PrologAI PR: 257, merged 2026-06-26.
+
+Significance
+
+The xform pack closes the transformation loop. PrologAI can now:
+- Find objects in a scene (scene pack, Layer 37)
+- Group and match them by color, size, shape (pair pack, Layer 149)
+- Reason about their positions (arrange pack, Layer 150)
+- Apply specific transformations to them (xform pack, Layer 151)
+- Infer what transformation was applied (xform pack, Layer 151)
+
+With these four packs working together, PrologAI can address the core visual
+reasoning pattern: given input scenes and output scenes, what rule maps each
+input to its corresponding output?
+
+With 172 work packages and 192 accomplishments, PrologAI and Mentova continue
+to build the symbolic cognitive substrate for general visual reasoning.

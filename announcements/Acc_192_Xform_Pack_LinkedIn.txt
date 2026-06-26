@@ -1,0 +1,31 @@
+Accomplishment 192: Object-Level Transformation and Inference
+
+PrologAI now has 172 work packages.
+
+The xform pack (xf_*, Layer 151) provides 14 predicates for transforming obj(Color,
+Cells) terms and inferring what transformation connects two obj terms.
+
+Applied transformations:
+• xf_recolor/3: change color, keep cells (single head-unification clause)
+• xf_translate/3: shift all cells by r(DR,DC)
+• xf_normalize/2: translate obj to origin (min row=0, min col=0)
+• xf_d4/3: apply D4 op in-place (normalize, apply, translate back)
+
+Inference:
+• xf_same_cells/2: same cell set by shared-variable unification
+• xf_cell_offset/3: translation vector between two same-shape objs
+• xf_is_recolor/2: same cells, different color
+• xf_cells_added/3, xf_cells_removed/3, xf_cells_kept/3: cell set arithmetic
+• xf_overlap_count/3: number of shared cells
+• xf_any_d4/3: find the D4 op connecting two shapes (cuts after first match)
+• xf_scale_factor/3: integer ratio of cell counts
+• xf_merge/3: union of two same-color obj cell sets
+
+Together with scene, pair, and arrange packs, PrologAI can now find objects,
+compare them, position them, and determine what transformation connected input
+and output - the core of visual rule inference.
+
+42/42 PLUnit tests pass. PR 257 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
