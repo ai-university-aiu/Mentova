@@ -1,0 +1,46 @@
+Mentova Accomplishment 167: The Color Lookup Table and Palette Substitution Pack
+
+PrologAI gains its 147th work package today.
+
+The colormap pack (Layer 126, cm_* prefix) provides 14 predicates for
+mapping, substituting, and analyzing color (value) labels in grids and
+lists.
+
+A "map" is a list of Old-New pairs.
+
+The 14 predicates cover:
+
+Applying a map to a 2D grid with pass-through for unmatched cells
+(cm_apply), or replacing unmatched cells with a default background
+(cm_apply_default).
+
+Applying the inverse map (cm_invert) and composing two maps
+MapAB[k] = MapB[MapA[k]] (cm_compose).
+
+Deriving a map from cell-by-cell correspondences of two grids
+(cm_from_grids), building an identity map (cm_identity), and building
+a map from two parallel lists (cm_remap).
+
+Applying a map to a 1D list (cm_remap_list).
+
+Querying: sorted keys of a map (cm_palette), sorted distinct values in
+a grid (cm_used), key presence test (cm_has_key), and key lookup
+(cm_lookup).
+
+Filtering a map to a key set (cm_restrict) and extending a map with
+default entries for missing palette values (cm_expand).
+
+The canonical usage pattern: cm_from_grids derives a substitution rule
+from input-output example pairs; cm_apply applies it to a new input.
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v112, Pseudocode v105,
+Architecture v106, Refinement v160, Completion v163.
+
+Tutorial Chapter 108 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
