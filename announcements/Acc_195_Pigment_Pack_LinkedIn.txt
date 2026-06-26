@@ -1,0 +1,42 @@
+Accomplishment 195: Bulk Color Operations on Object Scenes
+
+PrologAI now has 175 work packages.
+
+The pigment pack (pg_*, Layer 154) provides scene-level color manipulation for
+lists of obj(Color, Cells) terms.
+
+Uniform/targeted:
+• pg_recolor_all/3: set every obj to a fixed color
+• pg_recolor_one/4: replace one color with another (single pass)
+• pg_swap/4: exchange two colors simultaneously (avoids double-replacement bug)
+
+Color tables ([From-To] pairs):
+• pg_apply_table/3: apply table leniently (unmapped objs keep their color)
+• pg_apply_table_strict/3: apply table strictly (unmapped objs excluded)
+• pg_infer_table/3: infer color mapping from two scenes with matching cell sets
+
+Zip-based:
+• pg_zip_recolor/3: pair each obj with a color from a list (truncates at shorter)
+
+Frequency-targeted:
+• pg_majority_to/3: recolor the most frequent color (smallest on ties)
+• pg_minority_to/3: recolor the least frequent color
+• pg_unique_to/3: recolor the "odd one out" (uniquely-colored objs)
+• pg_shared_to/3: recolor the "background" (shared-color objs)
+
+Table utilities:
+• pg_invert_table/2: swap From-To to To-From
+• pg_table_from/2: sorted From colors
+• pg_consistent/1: no contradictory mappings
+
+pg_swap does a single-pass exchange. Calling pg_recolor_one twice to swap colors
+would interfere (1->2 then 2->1 returns everything to 1). pg_swap handles both
+changes in one findall pass.
+
+Together with query (statistics), sift (filtering), and xform (individual transforms),
+pigment completes the color-reasoning cycle: observe, analyze, transform, learn.
+
+42/42 PLUnit tests pass. PR 260 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

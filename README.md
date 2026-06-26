@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-194-FF6B35?style=for-the-badge" alt="194 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-195-FF6B35?style=for-the-badge" alt="195 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **194 accomplished** |
-| Scientific papers | **194 published** — one per accomplishment |
+| Documented accomplishments | **195 accomplished** |
+| Scientific papers | **195 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         194 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  141 announcements — one per accomplishment
+├── papers/         195 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  142 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-194 scientific papers, one per accomplished milestone.
+195 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -455,12 +455,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_192` | Xform pack paper — Object-Level Transformation and Inference (Layer 151, xf_* prefix): 14 xf_* predicates. Applied: xf_recolor (replace color via head unification; zero cost), xf_translate (shift all cells by r(DR,DC); findall+sort), xf_normalize (translate to origin by subtracting min row/col; findall+sort), xf_d4 (normalize, apply one of 8 D4 ops with H1=max row/W1=max col, sort, translate back to original top-left). Identity: xf_same_cells (shared-variable unification on Cells; structural identity at zero cost), xf_cell_offset (normalize both, require normalized cells to unify meaning same shape, return DR/DC as bbox top-left differences), xf_is_recolor (shared Cells variable + C1 \\= C2). Cell arithmetic: xf_cells_added (subtract(C2,C1)), xf_cells_removed (subtract(C1,C2)), xf_cells_kept (findall+memberchk intersection), xf_overlap_count (length of kept). Inference: xf_any_d4 (member over 8 ops, apply, sort, unify with target; cut after first match for determinism; id tried first so identity found immediately), xf_scale_factor (Len2 mod Len1 =:= 0 then N=Len2//Len1 >= 1), xf_merge (append two cell lists then sort/2 deduplicates; colors must unify). 42/42 acceptance tests pass. |
 | `Acc_193` | Query pack paper — Aggregate Queries over Object Lists (Layer 152, qu_* prefix): 14 qu_* predicates, all deterministic. Counting: qu_count_by_color/2 (sorted Color-N pairs via two-phase findall+sort), qu_count_by_size/2 (sorted Size-N pairs), qu_count_by_form/2 (sorted Form-N pairs where form=origin-normalized cell list, exact structural match not D4-invariant, self-contained without D4 imports). Extremes: qu_most_frequent_color/2 (highest count; smallest color on ties via member+cut on sorted Color-N list), qu_least_frequent_color/2 (lowest count; same tie-breaking), qu_largest_obj/2 (most cells; first in input on ties via findall+member+cut), qu_smallest_obj/2 (fewest cells; same tie-breaking). Totals/averages: qu_total_cells/2 (sum via findall+sum_list), qu_avg_size/2 (floor average via // integer division). Uniformity: qu_all_same_color/1 (findall colors -> sort -> singleton [_]), qu_all_same_size/1 (same pattern on cell counts), qu_all_same_form/1 (same pattern on normalized forms). Enumeration: qu_colors/2 (findall+sort), qu_sizes/2 (findall+sort). 42/42 acceptance tests pass. |
 | `Acc_194` | Sift pack paper — Object List Filtering by Attribute Predicates (Layer 153, si_* prefix): 14 si_* predicates, all using findall with empty result always valid. Color: si_by_color/3 (head-unification pattern), si_not_color/3 (C \= Color), si_color_in/3 (memberchk), si_color_not_in/3 (\+ memberchk). Size: si_by_size/3 (length/2), si_larger_than/3 (S>N), si_smaller_than/3 (S<N). Form: si_by_form/3 (origin-normalized cell list via local si_norm_, exact structural match not D4-invariant, self-contained). Extreme size: si_max_size/2 and si_min_size/2 return ALL tied objects unlike qu_largest_obj which returns only the first; two-phase collect-extreme-then-findall. Color frequency: si_unique_color/2 (color count=1 via two-phase count pattern) and si_shared_color/2 (color count>1). Border: si_on_border/4 (H-by-W grid; border=row 0/H-1/col 0/W-1; member+si_on_border_ helper with four clauses and cuts) and si_off_border/4 (negation-as-failure). 42/42 acceptance tests pass. |
+| `Acc_195` | Pigment pack paper — Bulk Color Operations on Object Scenes (Layer 154, pg_* prefix): 14 pg_* predicates for scene-level color manipulation. Uniform: pg_recolor_all/3 (color in findall output head). Targeted: pg_recolor_one/4 (if-then-else inside findall), pg_swap/4 (nested if-then-else in single pass; avoids double-replacement bug from calling recolor_one twice). Color tables: pg_apply_table/3 (lenient; unmapped objs keep color via memberchk+if-then-else), pg_apply_table_strict/3 (strict; unmapped objs excluded), pg_infer_table/3 (infer mapping by matching same-cell obj pairs then sort/2 deduplicates). Zip: pg_zip_recolor/3 (three-clause recursive with cuts on both base cases; truncates at shorter list). Frequency: pg_majority_to/3 (private pg_count_by_color_ + max_list + member+cut + if-then-else; smallest on ties), pg_minority_to/3 (min_list), pg_unique_to/3 (colors with count=1 via memberchk+if-then-else), pg_shared_to/3 (colors with count>1). Table utilities: pg_invert_table/2 (findall To-From: From-To), pg_table_from/2 (findall+sort), pg_consistent/1 (negation-as-failure over contradiction). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-141 announcements in LinkedIn format — one per accomplishment.
+142 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

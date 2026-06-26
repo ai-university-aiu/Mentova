@@ -1,0 +1,131 @@
+Accomplishment 195: Bulk Color Operations on Object Scenes
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 175th work package: the pigment pack (pg_*, Layer 154).
+
+The pigment pack provides scene-level color manipulation over lists of obj(Color, Cells)
+terms. It covers uniform recoloring, single-color replacement, color swapping, lenient
+and strict color table application, color table inference from example pairs, zip-based
+recoloring, frequency-targeted recoloring (majority/minority/unique/shared), and color
+table utilities (inversion, extraction, consistency testing).
+
+Introduction
+
+The xform pack (Layer 151) operates on individual obj terms. The sift pack (Layer 153)
+filters object lists. But neither provides bulk recoloring operations - applying a color
+change to many objects in a scene simultaneously.
+
+Color manipulation is central to ARC-style visual reasoning. Most ARC tasks involve
+some form of color substitution: objects of one color become another color, a color
+table maps input colors to output colors, or the "odd-colored" object gets highlighted.
+The pigment pack provides all of these operations at the scene level.
+
+Uniform and Targeted Recoloring
+
+pg_recolor_all/3 sets every object's color to a fixed value. Implemented as
+findall(obj(Color, Cells), member(obj(_, Cells), Objs), Out): the color appears
+in the output head term rather than in a conditional.
+
+pg_recolor_one/4 replaces all occurrences of one color with another while keeping
+other objects unchanged. Uses if-then-else inside findall:
+(C =:= From -> obj(To, Cells) ; obj(C, Cells)).
+
+pg_swap/4 exchanges two colors simultaneously using nested if-then-else. This differs
+from calling pg_recolor_one twice, which would interfere: swapping 1 and 2 by first
+changing 1->2 then 2->1 would incorrectly change all originals to 1. pg_swap handles
+both changes in a single pass.
+
+Color Table Operations
+
+A color table is a list of From-To pairs using the -/2 functor (e.g. [1-5, 2-6]).
+
+pg_apply_table/3 (lenient mode) applies a color table but keeps objects whose color
+has no table entry. Models "apply the rule where applicable, keep everything else."
+
+pg_apply_table_strict/3 applies the table and excludes unmapped objects. Models
+"only objects following the rule appear in the output."
+
+pg_infer_table/3 infers the color mapping from two scenes by matching object terms
+with identical cell sets (same position in the grid) and recording the Old-New color
+pair for each match. sort/2 deduplicates pairs. This is the core operation for
+learning "what color mapping was applied in this example?"
+
+Zip-Based Recoloring
+
+pg_zip_recolor/3 pairs each object with the corresponding color from a list. Stops
+when either list ends. Useful for assigning colors in rank order: sort objects by
+some property, then zip with a desired color sequence.
+
+Frequency-Targeted Recoloring
+
+Four predicates target objects based on how frequently their color appears in the scene.
+
+pg_majority_to/3 recolors all objects whose color is the most frequent. If two colors
+tie for maximum count, the smallest color value is treated as the majority (consistent
+with the query pack's qu_most_frequent_color tie-breaking rule).
+
+pg_minority_to/3 recolors all objects whose color is the least frequent. Same
+smallest-on-ties rule.
+
+pg_unique_to/3 recolors objects whose color appears exactly once. This is the
+"odd one out" operation: identify the uniquely-colored object and give it a new color.
+
+pg_shared_to/3 recolors objects whose color appears more than once. The complement
+of pg_unique_to.
+
+All four use a private helper pg_count_by_color_ that encapsulates the two-phase
+findall+sort count pattern. This avoids duplicating the counting logic.
+
+Color Table Utilities
+
+pg_invert_table/2 swaps From-To to To-From in each pair, producing the inverse mapping.
+
+pg_table_from/2 extracts the sorted list of From colors.
+
+pg_consistent/1 tests that no From color maps to two different To colors. Uses
+negation-as-failure: succeeds iff no contradiction exists.
+
+Verification
+
+42 PLUnit tests cover all 14 predicates (3 tests each):
+
+pg_recolor_all: basic, single obj, empty list.
+pg_recolor_one: basic replacement, From absent (scene unchanged), all objs match.
+pg_swap: basic exchange, neither color present (unchanged), only one color present.
+pg_apply_table: all mapped, partial (unmapped kept), identity (unchanged).
+pg_apply_table_strict: excludes unmapped, all mapped and kept, none mapped (empty).
+pg_infer_table: two-pair mapping, identity mapping, single pair.
+pg_zip_recolor: basic pairwise, truncation at shorter list, single pair.
+pg_majority_to: majority recolored, all same (all recolored), tie (smallest wins).
+pg_minority_to: minority recolored, all same (all recolored), tie (smallest wins).
+pg_unique_to: unique color recolored, no unique (scene unchanged), all unique (all recolored).
+pg_shared_to: shared recolored, no shared (unchanged), all shared (all recolored).
+pg_invert_table: two pairs, identity pair, single pair.
+pg_table_from: two colors, unsorted input gives sorted output, single entry.
+pg_consistent: consistent succeeds, contradictory fails, single entry.
+
+All 42 tests pass with no warnings.
+
+Library: packs/pigment/prolog/pigment.pl, Layer 154.
+Tests: packs/pigment/test/test_pigment.pl, 42/42 pass.
+SPARC: Specification v140, Pseudocode v133, Architecture v134, Refinement v188, Completion v191.
+PrologAI PR: 260, merged 2026-06-26.
+
+Significance
+
+The pigment pack completes the color manipulation stack. PrologAI can now:
+- Extract objects from a grid (scene pack)
+- Analyze their colors (query pack, sift pack)
+- Apply bulk color transformations (pigment pack)
+- Infer what color mapping was applied (pg_infer_table)
+
+This is the complete color-reasoning cycle: observe, analyze, transform, learn.
+
+With 175 work packages and 195 accomplishments, PrologAI and Mentova continue to
+build the symbolic cognitive substrate for general visual reasoning.
