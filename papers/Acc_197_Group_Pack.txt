@@ -1,0 +1,171 @@
+Accomplishment 197: Object Grouping and Partition (Group Pack, gp_*, Layer 156)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a group pack (14 gp_* predicates, Layer 156) that partitions a
+list of obj(Color, Cells) terms into named subsets sharing a common property.
+
+Partition modes include: by color, by cell count (size), by topmost row, by
+leftmost column, and by origin-normalized form (shape).
+
+Group inspection predicates report count, membership, largest and smallest
+groups, singleton and shared groups, size distribution, and uniform-size checks.
+
+42 of 42 PLUnit tests pass.
+
+This work package is PrologAI WP 177, merged as PR 262 on 2026-06-26.
+
+1. Motivation
+
+Many reasoning tasks require dividing a scene into subsets and then applying
+different operations to each subset.
+
+Examples include: objects of the same color share a transformation rule, objects
+of the same shape form equivalence classes, objects in the same row belong to
+the same spatial tier.
+
+Before the group pack, PrologAI could query individual object properties (the
+query pack) and filter by them (the sift pack), but had no predicate that
+collected objects into named partitions as a first-class structure.
+
+The group pack fills that gap.
+
+2. Representation
+
+A group is a Key-[Objs] pair.
+
+Key is a Prolog term that names the shared property: a color atom, an integer
+cell count, an integer row or column index, or a sorted list of r(R,C) terms
+representing the origin-normalized form.
+
+A group list is a list of such pairs, sorted ascending by Key, matching the
+output order of sort/2.
+
+This representation is consistent with other packs in PrologAI: keys are
+simple Prolog terms, lists are used throughout, and no extra wrapper functor is
+introduced.
+
+3. Partition Predicates
+
+gp_by_color(+Objs, -Groups) partitions by color.
+
+Two objects are in the same group iff their color atoms are identical under
+Prolog unification.
+
+Groups is a sorted list of Color-[ObjsOfColor] pairs.
+
+gp_by_size(+Objs, -Groups) partitions by cell count.
+
+The key for each object is the integer length of its Cells list.
+
+gp_by_row(+Objs, -Groups) partitions by the minimum row index of the object's
+cells.
+
+The minimum row is the topmost row occupied.
+
+gp_by_col(+Objs, -Groups) partitions by the minimum column index.
+
+The minimum column is the leftmost column occupied.
+
+gp_by_form(+Objs, -Groups) partitions by origin-normalized shape.
+
+The form of an object is computed by the private helper gp_norm_: subtract the
+minimum row from every row index and the minimum column from every column index,
+then sort the result.
+
+Two objects share a form iff their forms are identical under Prolog unification.
+
+4. The gp_norm_ Helper
+
+gp_norm_(+Cells, -Form) translates a cell list to origin by subtracting the
+minimum row and minimum column, then sorts the result.
+
+The algorithm is the same as the qu_norm_ helper in the query pack and the
+si_norm_ helper in the sift pack, but is defined locally so the group pack has
+no inter-pack dependency.
+
+Keeping the helper private also ensures that the gp_* namespace remains clean
+for future predicates.
+
+5. Group Inspection
+
+gp_size_of(+Groups, -N) reports the number of distinct groups.
+
+gp_flatten(+Groups, -Objs) collects every object from every group in key order.
+
+gp_largest_group(+Groups, -Key-Grp) returns the group with the most members.
+
+Ties are broken by smallest key, which is also the first key in the sorted
+group list.
+
+Implementation: build N-Key pairs from group cardinalities, find the maximum
+with max_list/2, use member/2 with a cut to take the first match, then use
+memberchk/2 for the final lookup to avoid leaving a choicepoint.
+
+gp_smallest_group(+Groups, -Key-Grp) is the symmetric predicate using
+min_list/2.
+
+gp_singleton_groups(+Groups, -Singles) returns groups with exactly one member.
+
+gp_shared_groups(+Groups, -Shared) returns groups with more than one member.
+
+gp_group_sizes(+Groups, -Sizes) returns the sorted list of distinct group
+cardinalities.
+
+gp_all_same_size(+Groups) succeeds iff every group has the same cardinality.
+
+The base case for an empty list succeeds with a cut.
+
+The recursive case collects all cardinalities, sorts them, and checks that
+exactly one distinct value remains (the list unifies with [_]).
+
+gp_keys(+Groups, -Keys) returns the sorted list of group keys.
+
+6. Test Coverage
+
+test_group.pl contains 42 PLUnit tests organized into 14 sections, one per
+exported predicate.
+
+Each section tests the base case (empty or singleton input), the normal case,
+and at least one edge case such as ties, multi-cell objects, or form equality
+with different colors.
+
+Total: 42 tests, 42 pass, 0 warnings.
+
+7. Integration with the PrologAI Pack Ecosystem
+
+The group pack extends the color-reasoning cycle established by query (statistics),
+sift (filtering), xform (per-object transforms), pigment (color assignment), and
+delta (scene-level change detection).
+
+Where delta answers "what changed between two scenes," group answers "how is one
+scene internally organized."
+
+Together they give PrologAI the ability to recognize structure within a scene,
+track how that structure evolves, and apply targeted transformations to each
+structural class.
+
+8. SPARC Documentation
+
+Specification v142 adds Part 167 (group pack specification).
+
+Pseudocode v135 adds Part 167 (group pack pseudocode).
+
+Architecture v136 adds ARCH-143 (group pack layer placement).
+
+Refinement v190 adds acceptance criteria AC-GP-001 through AC-GP-042.
+
+Completion v193 adds the WP-177 completion record.
+
+9. Conclusion
+
+The group pack gives PrologAI the concept of a named partition: a way to divide
+a scene into subsets, name each subset by a shared property, and inspect the
+resulting structure.
+
+This is a foundational capability for any reasoning system that needs to
+identify equivalence classes, apply different rules to different classes, or
+count and compare class sizes.
