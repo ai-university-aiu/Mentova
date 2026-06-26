@@ -1,0 +1,49 @@
+Accomplishment 200: Multi-Object Layout Analysis
+
+PrologAI now has 180 work packages.
+
+This is Mentova's 200th accomplishment.
+
+The layout pack (lt_*, Layer 159) analyzes the collective spatial arrangement
+of a list of obj(Color, Cells) terms.
+
+Global bounding box:
+• lt_global_bbox/5: bounding box over ALL cells of all objects combined
+• lt_bbox_area/2: area of that bounding box
+
+Row and column analysis:
+• lt_row_range/3: min and max topmost rows
+• lt_col_range/3: min and max leftmost columns
+• lt_row_count/2: number of distinct topmost rows
+• lt_col_count/2: number of distinct leftmost columns
+
+Line detection:
+• lt_all_same_row/1: all objects share the same topmost row
+• lt_all_same_col/1: all objects share the same leftmost column
+
+Centroid aggregation:
+• lt_centroid_of_all/3: integer-truncated centroid of all object centroids
+
+Grid detection:
+• lt_is_grid/3: objects' centroids form an R x C grid (every combination occupied)
+
+Diagonal detection:
+• lt_is_diagonal_dr/1: R-C constant (downward-right diagonal)
+• lt_is_diagonal_dl/1: R+C constant (downward-left diagonal)
+
+Uniform spacing:
+• lt_gap_h/2: uniform horizontal gap between sorted objects (fails if non-uniform)
+• lt_gap_v/2: uniform vertical gap
+
+Accomplishments 197-200 (group, proximity, link, layout) form a coherent
+foundation for object-scene reasoning: partition, measure, correspond, and
+analyze arrangement.
+
+Mentova reaches 200 accomplishments as a glass-box synthetic mind with 180
+work packages and a complete symbolic reasoning ecosystem for multi-object
+spatial intelligence.
+
+56/56 PLUnit tests pass. PR 265 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
