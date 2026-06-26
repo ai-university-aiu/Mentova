@@ -1,0 +1,30 @@
+Mentova Accomplishment 216: Object Sequence and Progression Analysis (objseq Pack, oq_*, Layer 175)
+
+PrologAI now includes an objseq pack (oq_*, Layer 175) - 14 predicates that
+analyse ordered sequences of obj(Color, Cells) terms for patterns in color,
+size, and spatial position.
+
+The pack provides:
+
+- oq_color_seq: extract the color list in list order
+- oq_size_seq: extract the cell-count list in list order
+- oq_centroid_seq: extract the centroid sequence as r(R,C) terms
+- oq_step_seq: compute consecutive centroid deltas as dr(DR,DC) terms
+- oq_is_growing: test that sizes are strictly increasing
+- oq_is_shrinking: test that sizes are strictly decreasing
+- oq_const_step: verify all centroid steps equal a common (DR,DC)
+- oq_const_row_step: verify all row steps equal a common DR
+- oq_const_col_step: verify all col steps equal a common DC
+- oq_color_period: find the minimal repeating period of the color sequence
+- oq_size_period: find the minimal repeating period of the size sequence
+- oq_collinear: test that all centroids lie on a straight line
+- oq_next_centroid: predict the next centroid by constant-step projection
+- oq_zip_colors: zip two obj lists into C1-C2 color pairs
+
+No cross-pack dependencies. 41 tests pass.
+
+This is WP 196, Mentova's 216th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

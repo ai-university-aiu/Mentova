@@ -1,0 +1,174 @@
+Accomplishment 216: Object Sequence and Progression Analysis (objseq Pack, oq_*, Layer 175)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objseq pack (14 oq_* predicates, Layer 175) that analyses
+ordered sequences of obj(Color, Cells) terms for patterns in color, size, and
+spatial position. The pack detects growing and shrinking size progressions,
+finds the minimal repeating period of color and size sequences, verifies equal
+centroid spacing, tests collinear centroid arrangements, and predicts the next
+position in a regular spatial sequence. It also zips two obj lists into
+color-pair mappings. The pack has no cross-pack dependencies.
+
+41 of 41 PLUnit tests pass.
+
+This work package is PrologAI WP 196, merged as PR 284 on 2026-06-26.
+
+1. Motivation
+
+After WP 195 (canvas) completed the obj-to-grid rendering bridge, the next
+gap in PrologAI's object-level reasoning ecosystem was sequence-order analysis.
+The arrange pack (ag_*) sorts and orders objects and the query pack (qu_*)
+computes aggregate statistics, but neither addresses sequence-order patterns:
+Are sizes growing monotonically? Do colors repeat with a fixed period? Are
+centroids equally spaced? Are they collinear?
+
+These patterns recur throughout grid-based visual reasoning tasks where objects
+are arranged in progressions, cycles, or regular spatial sequences. The objseq
+pack fills this gap with a focused set of 14 predicates.
+
+2. Core Design
+
+2.1 Private Helpers
+
+oq_color_(+Obj, -Color): extract the color atom.
+oq_size_(+Obj, -N): count cells.
+oq_centroid_(+Obj, -r(CR,CC)): floor-average row and column centroid.
+oq_steps_(+Centroids, -Steps): consecutive dr(DR,DC) deltas.
+oq_strictly_inc_(+List): strict monotone increase check.
+oq_strictly_dec_(+List): strict monotone decrease check.
+oq_period_(+List, -P, -Cycle): minimal tiling period via between/3 and a
+  cut after the first solution.
+oq_tiles_(+Cycle, +List): recursive tiling check using append/3.
+oq_cross2d_(+P1, +P2, +P3, -X): 2D cross product for collinearity.
+oq_row_of_(+DR, +Step): unify row component.
+oq_col_of_(+DC, +Step): unify col component.
+
+2.2 Sequence Extraction
+
+oq_color_seq/2, oq_size_seq/2, and oq_centroid_seq/2 are thin wrappers
+over maplist applied to the private single-obj helpers. All three are
+deterministic and produce results in list order.
+
+oq_step_seq/2 computes centroids then passes them to the recursive
+oq_steps_ helper. An empty or single-element list produces an empty step
+list.
+
+2.3 Monotone Tests
+
+oq_is_growing and oq_is_shrinking extract the size sequence then delegate
+to oq_strictly_inc_ and oq_strictly_dec_ respectively. Both trivially
+succeed for 0 or 1 objects.
+
+2.4 Constant Step Analysis
+
+oq_const_step/3 requires at least two objects. It computes the step
+sequence, takes the first step as the reference, then uses maplist with
+unification to verify all remaining steps match. oq_const_row_step and
+oq_const_col_step apply the same pattern to only the row or col component
+of each step using the oq_row_of_ and oq_col_of_ helper predicates.
+
+2.5 Periodic Sequence Detection
+
+oq_period_ tries candidate periods P = 1, 2, ..., N in order. For each
+P, it checks that N mod P = 0, extracts the first P elements as the
+candidate Cycle, and verifies that Cycle tiles the full list using the
+recursive oq_tiles_ predicate. A cut after the first solution ensures the
+minimal period is returned.
+
+2.6 Collinearity
+
+oq_collinear uses the 2D cross-product test: three points P1, P2, P3 are
+collinear if (P2-P1) x (P3-P1) = 0. For N > 2 points, the pack checks
+each point P3 against the baseline defined by the first two centroids.
+One and two centroids are trivially collinear.
+
+2.7 Next Centroid Prediction
+
+oq_next_centroid delegates to oq_const_step for the step, takes the last
+centroid from the sequence, and adds DR and DC. Fails cleanly if
+oq_const_step fails.
+
+2.8 Color Pair Mapping
+
+oq_zip_colors is a simple recursive predicate that pairs the head color of
+each input list and recurses on the tails.
+
+3. Predicate Descriptions
+
+oq_color_seq(+Objs, -Colors): color list in list order.
+oq_size_seq(+Objs, -Sizes): cell-count list in list order.
+oq_centroid_seq(+Objs, -Centroids): centroid sequence as r(R,C) list.
+oq_step_seq(+Objs, -Steps): consecutive centroid deltas as dr(DR,DC) list.
+oq_is_growing(+Objs): sizes strictly increasing.
+oq_is_shrinking(+Objs): sizes strictly decreasing.
+oq_const_step(+Objs, -DR, -DC): all centroid steps equal (DR,DC).
+oq_const_row_step(+Objs, -DR): all row steps equal DR.
+oq_const_col_step(+Objs, -DC): all col steps equal DC.
+oq_color_period(+Objs, -P, -Cycle): minimal color-sequence period.
+oq_size_period(+Objs, -P, -Cycle): minimal size-sequence period.
+oq_collinear(+Objs): all centroids on one line.
+oq_next_centroid(+Objs, -r(NR,NC)): predict next position.
+oq_zip_colors(+Objs1, +Objs2, -Pairs): zip two lists into color pairs.
+
+4. Examples
+
+Example 1: Detect a regular spatial progression and predict the next position.
+
+    Objs = [obj(r,[r(0,0)]), obj(b,[r(0,3)]), obj(g,[r(0,6)])],
+    oq_const_col_step(Objs, DC),   % DC = 3
+    oq_next_centroid(Objs, r(NR,NC)).   % NR=0, NC=9
+
+Example 2: Find the color cycle in a repeating sequence.
+
+    Objs = [obj(r,_), obj(b,_), obj(g,_),
+            obj(r,_), obj(b,_), obj(g,_)],
+    oq_color_period(Objs, P, Cycle).
+    % P = 3, Cycle = [r, b, g]
+
+Example 3: Check that objects grow by one cell each step.
+
+    Objs = [obj(r,[r(0,0)]),
+            obj(b,[r(1,0),r(1,1)]),
+            obj(g,[r(2,0),r(2,1),r(2,2)])],
+    oq_is_growing(Objs),
+    oq_size_period(Objs, P, _).
+    % P = 3 (no shorter period: 1,2,3 are all different)
+
+Example 4: Record the color map between input and output objects.
+
+    In  = [obj(r,[r(0,0)]), obj(b,[r(1,0)])],
+    Out = [obj(y,[r(0,0)]), obj(g,[r(1,0)])],
+    oq_zip_colors(In, Out, Pairs).
+    % Pairs = [r-y, b-g]
+
+5. SPARC Documentation
+
+Specification v161 adds Part 186 (objseq pack specification).
+
+Pseudocode v154 adds Part 186 (objseq pack pseudocode).
+
+Architecture v155 adds ARCH-162 (objseq pack layer placement).
+
+Refinement v209 adds acceptance criteria AC-OQ-001 through AC-OQ-041.
+
+Completion v212 adds the WP-196 completion record.
+
+6. Conclusion
+
+The objseq pack closes the sequence-analysis gap in PrologAI's object-level
+reasoning layer. A reasoner can now extract color, size, and centroid
+sequences in one call; test for monotone size change; find the minimal
+repeating period of a color or size sequence; verify equal centroid spacing
+along either or both axes; test for collinear arrangement; and project the
+next expected position in a regular sequence. Together with the arrange,
+query, layout, and canvas packs, objseq completes a comprehensive object-
+level analysis toolkit.
+
+This is WP 196, Mentova's 216th accomplishment.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
