@@ -1,0 +1,146 @@
+Accomplishment 173: The Row and Column Gradient and Progression Analysis Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a row and column gradient and progression analysis pack as
+Work Package 153 (Layer 132).
+
+The pack provides 14 predicates, all carrying the gr_* prefix, for
+measuring value gradients, monotonicity, range, cumulative sums, and
+second-order differences in 2D grids.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently involve detecting how values change across
+a dimension: whether values increase or decrease, how steeply, whether the
+change is uniform (linear), and whether a pattern is accelerating
+(quadratic).
+
+The gradient pack provides the vocabulary for this class of reasoning.
+
+A gradient is the rate of change of a value across a spatial dimension.
+In a 2D grid, a horizontal gradient measures change from left to right
+across a row. A vertical gradient measures change from top to bottom down
+a column.
+
+Second-order differences detect whether a gradient is itself constant
+(linear progression) or changing (quadratic or higher-order progression).
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+gr_h_diffs(+Grid, -DiffGrid) returns the adjacent differences per row.
+
+gr_v_diffs(+Grid, -DiffGrid) returns the column-wise differences between
+adjacent rows.
+
+gr_h_mono(+Grid, -Flags) classifies each row as 1 (weakly non-decreasing),
+-1 (weakly non-increasing), or 0 (mixed).
+
+gr_v_mono(+Grid, -Flags) classifies each column the same way.
+
+gr_h_range(+Grid, -Ranges) returns max minus min per row.
+
+gr_v_range(+Grid, -Ranges) returns max minus min per column.
+
+gr_h_slope(+Grid, -Slopes) returns the net horizontal change (last minus
+first) per row.
+
+gr_v_slope(+Grid, -Slopes) returns the net vertical change per column.
+
+gr_h_const(+Grid, -Bools) returns 1 if all values in a row are equal.
+
+gr_v_const(+Grid, -Bools) returns 1 if all values in a column are equal.
+
+gr_h_cum(+Grid, -CumGrid) returns the running cumulative sum per row.
+
+gr_v_cum(+Grid, -CumGrid) returns the cumulative sum down each column.
+
+gr_h_second(+Grid, -D2Grid) returns second-order horizontal differences
+(differences of adjacent differences).
+
+gr_v_second(+Grid, -D2Grid) returns second-order vertical differences,
+computed by applying gr_v_diffs twice.
+
+
+3. Implementation
+
+Row predicates use maplist/3 where the operation is a direct list-to-list
+transform (gr_h_diffs, gr_h_mono, gr_h_cum, gr_h_second all use maplist
+with private helpers).
+
+Column predicates share the private helper gr_col_(Grid, C, Col), which
+extracts column C as a list, combined with a findall over between(0, W1, C).
+
+gr_adj_diffs_/2 is the core difference primitive with three clauses: [], [_],
+and [A,B|T]. The [A,B|T] clause recurses with [B|T] for correct overlap
+treatment.
+
+gr_v_diffs_ computes element-wise differences between pairs of adjacent rows
+using gr_pair_diffs_.
+
+gr_mono_ uses if-then-else: check gr_is_nondec_ first (so constant sequences
+return 1), then gr_is_noninc_, else 0.
+
+gr_v_cum_acc_ handles the first row by copying it directly (Prev = []), then
+adds subsequent rows element-wise using gr_row_add_.
+
+gr_h_second delegates to gr_second_diffs_ which calls gr_adj_diffs_ twice.
+gr_v_second calls gr_v_diffs twice.
+
+
+4. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Test grids include a 3x3 increasing grid, a 3x3 row-decreasing grid, a
+3x3 column-decreasing grid, and a 3x3 flat-rows grid. Additional inline
+grids cover second-order quadratic sequences and constancy patterns.
+
+All 42 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+Specification v118, Part 143 defines all 14 predicates.
+
+Pseudocode v111, Part 143 gives the algorithmic descriptions.
+
+Architecture v112, ARCH-119 records the module placement and design
+patterns.
+
+Refinement v166 records acceptance criteria AC-GR-001 through AC-GR-042.
+
+Completion v169 records the release evidence for WP 153.
+
+Tutorial Chapter 114 demonstrates all 14 predicates with examples.
+
+
+6. Position in the Cognitive Architecture
+
+The gradient pack is Layer 132 in the PrologAI cognitive stack.
+
+It follows the projection pack (Layer 131, pj_*) and complements it:
+where the projection pack asks what the aggregate structure of rows and
+columns looks like, the gradient pack asks how values change across those
+dimensions.
+
+The gradient pack is a prerequisite for higher-level reasoning about
+linear and quadratic progressions, monotone sequences, and cumulative
+structure in grid-reasoning tasks.
+
+PrologAI now carries 153 work packages in the packs/ directory.
+
+
+END
