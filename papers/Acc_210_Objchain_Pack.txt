@@ -1,0 +1,183 @@
+Accomplishment 210: Linear Chain Analysis for obj(Color, Cells) Sequences (Objchain Pack, ch_*, Layer 169)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objchain pack (14 ch_* predicates, Layer 169) for detecting
+and traversing linear chains of obj(Color, Cells) terms connected through
+4-adjacency. A chain is a set of objects whose touching graph is a simple path:
+exactly two objects have touch-degree 1 (endpoints), all others have degree 2.
+The pack provides: 4-adjacency testing, degree computation, chain and cycle
+detection, endpoint discovery, linearization, traversal from a specific start,
+indexed access, color sequence extraction, sub-chain extraction, reversal,
+length, path validation, and direction classification.
+
+48 of 48 PLUnit tests pass.
+
+This work package is PrologAI WP 190, merged as PR 275 on 2026-06-26.
+
+1. Motivation
+
+The objcomp pack (WP 188) finds arbitrary connected components of touching
+objects. But many visual reasoning tasks involve objects arranged in a specific
+LINEAR pattern: a row of colored beads, a sequence of steps, an ordered path
+from one corner to another. The objchain pack focuses on this special case.
+
+A chain is distinct from a general connected component because:
+- It has exactly two endpoints (degree-1 objects)
+- It has a natural linear ordering
+- It has a direction (horizontal, vertical, or other)
+- It can be traversed from one end to the other
+- Subsequences (sub-chains) are meaningful
+
+The key operation: given an unordered set of touching objects, determine whether
+they form a chain, and if so, put them in order from one endpoint to the other.
+
+2. Core Design
+
+2.1 Chain Definition
+
+A chain of N objects has:
+- N = 0: trivially a chain (empty)
+- N = 1: trivially a chain (singleton)
+- N = 2: a chain iff the two objects touch
+- N >= 3: a chain iff all touch-degrees are 1 or 2, no degree is 0, exactly
+  two objects have degree 1 (the endpoints)
+
+A cycle differs from a chain in that ALL objects have degree 2 (no endpoints).
+
+2.2 Chain Traversal
+
+ch_walk_ performs a DFS traversal of the chain:
+1. Start at the current object
+2. Find all unvisited touching neighbors
+3. If no neighbors: current is the last object, stop
+4. If exactly one neighbor: continue from that neighbor
+5. If two or more neighbors: fail (this indicates branching, not a chain)
+
+The requirement for exactly one unvisited touching neighbor at each interior step
+ensures that ch_walk_ correctly traverses simple paths and fails on branching
+structures.
+
+2.3 Direction Classification
+
+ch_direction classifies a linearized chain as:
+- h (horizontal): all objects have the same minimum row index
+- v (vertical): all objects have the same minimum column index
+- other: neither (L-shaped paths, diagonal arrangements, etc.)
+
+The classification uses forall/2 to verify uniformity of min-row or min-col.
+
+3. Predicate Descriptions
+
+3.1 Foundation
+
+ch_touches(+Obj1, +Obj2): 4-adjacency check. Same row with |C1-C2|=1, or same
+column with |R1-R2|=1. Cut after first found pair for efficiency.
+
+ch_degree(+Obj, +Objs, -N): count of touching neighbors in Objs (excluding Obj).
+
+3.2 Detection
+
+ch_is_chain(+Objs): tests the path structure via degree constraints.
+
+ch_has_cycle(+Objs): requires N >= 3 and all degrees equal 2. Uses =\= (SWI-Prolog
+arithmetic not-equal) to check that no degree differs from 2.
+
+3.3 Endpoints and Linearization
+
+ch_endpoints(+Objs, -E1, -E2): the two degree-1 objects. Fails if Objs is not
+a chain or is a cycle.
+
+ch_linearize(+Objs, -Ordered): find E1 via ch_endpoints, then ch_walk_ from E1.
+
+ch_from_endpoint(+Objs, +Start, -Ordered): ch_walk_ from a caller-specified
+starting object. Useful when the desired traversal direction is known.
+
+3.4 Access and Sequence
+
+ch_nth(+Ordered, +N, -Obj): 0-based indexed access via nth0/3.
+
+ch_color_seq(+Ordered, -Colors): extract the Color from each obj(Color, Cells).
+
+ch_sub(+Ordered, +I, +J, -Sub): sub-chain from index I to J inclusive, using
+length+append for efficient extraction.
+
+ch_reverse(+Ordered, -Rev): reverse/2 delegate.
+
+ch_length(+Objs, -N): length/2 delegate.
+
+3.5 Validation and Direction
+
+ch_is_linear_path(+Ordered): recursive check that each consecutive pair touches.
+Distinct from ch_is_chain in that it verifies a GIVEN ordered sequence.
+
+ch_direction(+Ordered, -Dir): horizontal, vertical, or other classification
+based on uniformity of minimum row/column across all objects.
+
+4. Design Decisions
+
+4.1 ch_walk_ vs. BFS
+
+A DFS walk (ch_walk_) is used instead of BFS because chains have no ambiguity
+about which direction to go: at each step, there is exactly one unvisited
+touching neighbor. DFS naturally produces the linear order without needing a
+queue.
+
+4.2 =\= vs. \=:=
+
+SWI-Prolog provides =\= as the arithmetic inequality operator (NOT =:=). An
+initial implementation attempted to use \=:= which is not a standard operator
+and produces a syntax error. The correct form is D =\= 2 (meaning "D is not
+arithmetically equal to 2").
+
+4.3 Self-Contained Implementation
+
+ch_touches reimplements the 4-adjacency test rather than calling oc_touches from
+the objcomp pack. This keeps Layer 169 independent of Layer 167 and avoids
+cross-pack coupling. The implementation is minimal (3 lines: member+member+check).
+
+5. Examples
+
+Example 1: chain detection and linearization
+
+    A = obj(a,[r(0,0)]), B = obj(b,[r(0,1)]), C = obj(c,[r(0,2)]),
+    ch_is_chain([A,B,C]).  % true
+    ch_linearize([C,A,B], Ord).  % Ord = [A,B,C] (from endpoint A)
+    ch_direction(Ord, Dir).  % Dir = h (all in row 0)
+
+Example 2: cycle detection
+
+    Square = [obj(a,[r(0,0)]), obj(b,[r(0,1)]), obj(c,[r(1,1)]), obj(d,[r(1,0)])],
+    ch_has_cycle(Square).  % true (degrees: a=2, b=2, c=2, d=2)
+    ch_is_chain(Square).  % false (no degree-1 objects)
+
+Example 3: sub-chain and color sequence
+
+    Chain = [A,B,C,D,E],  % 5-object horizontal chain
+    ch_sub(Chain, 1, 3, Sub).  % Sub = [B,C,D]
+    ch_color_seq(Sub, Colors).  % Colors = [b,c,d]
+
+6. SPARC Documentation
+
+Specification v155 adds Part 180 (objchain pack specification).
+
+Pseudocode v148 adds Part 180 (objchain pack pseudocode).
+
+Architecture v149 adds ARCH-156 (objchain pack layer placement).
+
+Refinement v203 adds acceptance criteria AC-CH-001 through AC-CH-048.
+
+Completion v206 adds the WP-190 completion record.
+
+7. Conclusion
+
+The objchain pack gives PrologAI a clean interface for linear sequences of
+touching objects: detection, linearization, traversal, access, and direction
+classification. This complements objcomp (general components) and objcomp's
+BFS connectivity with a specialized, efficient tool for the common case of
+objects arranged in a path.
+
+This is WP 190, Mentova's 210th accomplishment.
