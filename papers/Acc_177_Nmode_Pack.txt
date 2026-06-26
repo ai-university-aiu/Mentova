@@ -1,0 +1,222 @@
+Accomplishment 177: Neighborhood Mode Filter for 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+PrologAI gains its 157th work package: the nmode pack (nm_*, Layer 136).
+
+The nmode pack provides 14 predicates for computing the mode (the most
+frequent value) of integer lists, grid rows, columns, the entire grid,
+and per-cell 4-connected and 8-connected neighborhoods.
+
+It also detects cells with uniform neighborhoods (all neighbors share
+one value) and cells that are outliers (the cell's own value disagrees
+with the mode of its neighbors).
+
+Introduction
+
+The mode is the value that appears most frequently in a dataset.
+
+In a sequence like [1, 1, 2, 3], the mode is 1 because it appears twice
+while 2 and 3 appear only once.
+
+When values are tied (all appearing the same number of times), the nmode
+pack returns the smallest tied value as a deterministic tie-breaker.
+
+The mode filter is distinct from the mean filter and the median filter.
+
+The mean filter (which computes a weighted average) is sensitive to
+extreme values.
+
+The median filter (md_*, Layer 135) returns the middle value.
+
+The mode filter returns the most common value - it is the only one of the
+three that is guaranteed to return a value that actually appears in the
+input data, making it natural for categorical grid values.
+
+In grid perception tasks, a mode filter smooths patterns while preserving
+the most common local value, making minority values disappear.
+
+Predicates
+
+The 14 public predicates are:
+
+nm_mode(+List, -M)
+
+M is the mode of a non-empty integer list. Ties are broken by returning
+the smallest tied value.
+
+nm_mode_all(+List, -Ms)
+
+Ms is the sorted list of all values that are tied for the highest frequency.
+
+nm_mode_count(+List, -M, -Count)
+
+M is the mode and Count is how many times M appears in List.
+
+nm_row(+Grid, +R, -M)
+
+M is the mode of row R (0-based) of Grid.
+
+nm_col(+Grid, +C, -M)
+
+M is the mode of column C (0-based) of Grid.
+
+nm_row_modes(+Grid, -Ms)
+
+Ms is the list of modes, one per row, in row order.
+
+nm_col_modes(+Grid, -Ms)
+
+Ms is the list of modes, one per column, in column order.
+
+nm_grid(+Grid, -M)
+
+M is the mode of all cell values in Grid.
+
+nm_filter4(+Grid, -OutGrid)
+
+OutGrid is the 4-connected mode filter of Grid: each output cell is the
+mode of the original cell value plus all in-bounds 4-connected neighbor
+values.
+
+nm_filter8(+Grid, -OutGrid)
+
+OutGrid is the 8-connected mode filter of Grid: each output cell is the
+mode of the original cell value plus all in-bounds 8-connected neighbor
+values.
+
+nm_uniform4(+Grid, -Cells)
+
+Cells is the sorted list of R-C positions whose in-bounds 4-connected
+neighbors all share exactly one distinct value.
+
+A corner cell with only two 4-neighbors can still be uniform4 if those
+two neighbors have the same value.
+
+nm_uniform8(+Grid, -Cells)
+
+Cells is the sorted list of R-C positions whose in-bounds 8-connected
+neighbors all share exactly one distinct value.
+
+nm_outlier4(+Grid, -Cells)
+
+Cells is the sorted list of R-C positions whose own value differs from
+the mode of their in-bounds 4-connected neighbors alone (the cell's own
+value is excluded from the mode computation).
+
+nm_outlier8(+Grid, -Cells)
+
+Cells is the sorted list of R-C positions whose own value differs from
+the mode of their in-bounds 8-connected neighbors alone.
+
+Example Results
+
+For the sequential 3x3 grid G = [[1,2,3],[4,5,6],[7,8,9]]:
+
+nm_row_modes returns [1, 4, 7]: the smallest value in each row wins because
+all values in a sequential row are distinct and thus tied.
+
+nm_col_modes returns [1, 2, 3]: the smallest value in each column wins.
+
+nm_filter4 returns [[1,1,2],[1,2,3],[4,5,6]]: each corner and edge cell
+has fewer neighbors, and the smallest tied value dominates.
+
+nm_outlier4 returns all 9 cells: in a grid with all distinct values, every
+cell disagrees with the mode of its neighbors (which is just the smallest
+neighbor, different from the cell itself in a sequential grid).
+
+For the 3x3 checkerboard G = [[1,2,1],[2,1,2],[1,2,1]]:
+
+nm_filter4 returns [[2,1,2],[1,2,1],[2,1,2]]: the filter inverts the
+checkerboard pattern because each cell is surrounded by the opposite value.
+
+nm_filter8 returns [[1,1,1],[1,1,1],[1,1,1]]: with 8-connectivity, the
+center of the board has equal counts of 1 and 2, and the tie-breaker
+(smallest) gives 1 everywhere.
+
+nm_uniform4 returns all 9 cells: in the checkerboard, each cell's 4-connected
+neighbors all have the same value (the opposite of the cell).
+
+nm_uniform8 returns []: with 8-connectivity, neighbors include both 1s and 2s.
+
+nm_outlier8 returns 8 cells (all except the center): the center (1,1)=1
+has 4 neighbors of value 2 and 4 of value 1 - tied, smallest=1, which
+equals the center's own value, so the center is not an outlier.
+
+Implementation
+
+Mode computation proceeds via nm_freq_pairs_/2, which converts an
+msort-sorted list (duplicates preserved) into Value-Count association pairs
+by grouping consecutive equal elements with nm_count_prefix_/4.
+
+A critical implementation detail: nm_count_prefix_/4 has three clauses.
+Clause 1 handles the empty list (Count=0, Rest=[]).
+Clause 2 handles the case where the next element equals the target value.
+Clause 3 handles the case where the next element is different.
+
+When the input list is empty, both clause 1 and clause 3 would match
+(since [] is a valid List). Without a cut in clause 1, SWI-Prolog would
+leave a choice point between them. When nm_mode is called inside findall
+(as in nm_row_modes or nm_filter4), findall would follow that choice point
+and collect duplicate mode values.
+
+The fix is a cut (!) at the end of clause 1:
+  nm_count_prefix_(_, [], 0, []) :- !.
+
+This makes the predicate deterministic on an empty list and eliminates
+the duplicate-solution bug.
+
+The filter predicates (nm_filter4 and nm_filter8) use a triple-nested
+findall: outer for rows, middle for per-cell modes, innermost for neighbor
+values.
+
+nm_uniform4 and nm_uniform8 use sort(NbrVals, [_]) as a one-step test:
+since sort/2 removes duplicates, the result is a singleton list if and
+only if all neighbor values are identical.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates across four test grids:
+G3 (sequential 3x3), G3u (uniform all-ones 3x3), G2 (2x2 small grid),
+and G3b (3x3 checkerboard alternating 1 and 2).
+
+All 42 tests pass.
+
+SPARC Documentation
+
+Specification v122: Part 147, requirements NM-NM-001 through NM-NM-014.
+
+Pseudocode v115: Part 147, pseudocode for all 14 predicates.
+
+Architecture v116: ARCH-123, nmode pack structure and design notes.
+
+Refinement v170: acceptance criteria AC-NM-001 through AC-NM-042.
+
+Completion v173: WP 157 release record including bug description and fix.
+
+Tutorial Chapter 118 added to all tutorial files.
+
+Conclusion
+
+The nmode pack completes the statistical neighborhood triad for PrologAI:
+
+The naggr pack (na_*, Layer 134) provides per-cell aggregate statistics
+over neighborhoods: sum, max, min, mean, range, spread, and difference count.
+
+The median pack (md_*, Layer 135) provides the middle value of neighborhoods
+and lists.
+
+The nmode pack (nm_*, Layer 136) provides the most frequent value of
+neighborhoods and lists, with uniform and outlier detection.
+
+Together, these three packs give PrologAI a complete toolkit for local
+statistical reasoning over 2D grids.
+
+PrologAI now comprises 157 work packages.
+
+Mentova has achieved 177 accomplishments.
