@@ -1,0 +1,200 @@
+Accomplishment 183: Coordinate-Valued Grid Generation for Spatial Reasoning
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+PrologAI gains its 163rd work package: the index pack (ix_*, Layer 142).
+
+The index pack provides 14 predicates that generate special 2D grids whose
+cell values are derived entirely from cell coordinates rather than from data.
+These coordinate grids serve as operands in arithmetic operations, masks for
+row and column selection, and distance fields for spatial analysis.
+
+Introduction
+
+Many grid reasoning tasks require operations that depend on where a cell is,
+not just what value it holds. A transformation might add the row number to
+each cell value. A filter might keep only columns at even positions. A distance
+measure might compute how far each cell lies from a target cell.
+
+Before the index pack, obtaining these effects required building them case by
+case from primitive list operations. The index pack encapsulates the full set
+of coordinate-based grid generation patterns in a single, reusable module.
+
+The gap filled by this pack is different from all existing packs. The arith
+pack performs arithmetic between two value grids. The gridops pack analyzes
+collections of grids. The interleave pack selects rows and columns by stride.
+None of these packs generates a grid from coordinates alone.
+
+The index pack generates that coordinate grid as a first-class object, ready
+to be combined with any value grid via ix_apply.
+
+Predicates
+
+The 14 public predicates are:
+
+ix_row_grid(+H, +W, -Grid)
+
+Grid is H by W; cell(R,C) = R. Row 0 is all zeros; row H-1 is all H-1.
+Useful as a row-position mask or as the row-index operand in ix_apply.
+
+ix_col_grid(+H, +W, -Grid)
+
+Grid is H by W; cell(R,C) = C. Every row is [0, 1, 2, ..., W-1].
+Useful as a column-position mask.
+
+ix_sum_grid(+H, +W, -Grid)
+
+Grid is H by W; cell(R,C) = R+C. Cells on the same top-left to bottom-right
+diagonal share the same value. Useful for diagonal band analysis.
+
+ix_diff_grid(+H, +W, -Grid)
+
+Grid is H by W; cell(R,C) = R-C. Values may be negative. Cells on the same
+bottom-left to top-right diagonal share the same value.
+
+ix_prod_grid(+H, +W, -Grid)
+
+Grid is H by W; cell(R,C) = R*C. Row 0 and column 0 are all zeros. Values
+grow quadratically toward the bottom-right.
+
+ix_manhattan_grid(+H, +W, +R0, +C0, -Grid)
+
+cell(R,C) = |R-R0| + |C-C0|. This is the Manhattan (taxi-cab) distance from
+the reference point (R0,C0) to each cell. The minimum value 0 is at (R0,C0).
+Useful for finding all cells within a given radius of a target.
+
+ix_chebyshev_grid(+H, +W, +R0, +C0, -Grid)
+
+cell(R,C) = max(|R-R0|, |C-C0|). This is the Chebyshev (king-move) distance
+from (R0,C0). Cells at Chebyshev distance K form a hollow square ring around
+(R0,C0). Useful for concentric ring analysis and shell-by-shell iteration.
+
+For a 5 by 5 grid centered at (2,2):
+
+ix_chebyshev_grid(5, 5, 2, 2, G) gives:
+G = [[2,2,2,2,2],
+     [2,1,1,1,2],
+     [2,1,0,1,2],
+     [2,1,1,1,2],
+     [2,2,2,2,2]]
+
+The zero marks the reference cell; ring 1 is the 8-cell neighborhood; ring 2
+is the full outer border.
+
+ix_mod_grid(+H, +W, +N, -Grid)
+
+cell(R,C) = (R+C) mod N. Creates a diagonal stripe pattern. Cells on the
+same diagonal share the same value modulo N. With N=2: a diagonal checkerboard
+where cells alternate 0 and 1 along each diagonal.
+
+ix_row_mod_grid(+H, +W, +N, -Grid)
+
+cell(R,C) = R mod N. Creates horizontal stripe patterns. All cells in the
+same row have the same value. With N=2: rows alternate 0, 1, 0, 1, ...
+
+ix_col_mod_grid(+H, +W, +N, -Grid)
+
+cell(R,C) = C mod N. Creates vertical stripe patterns. All cells in the same
+column have the same value. With N=2: columns alternate 0, 1, 0, 1, ...
+
+ix_mask_rows(+Grid, +Is, +Bg, -Grid2)
+
+Grid2 is Grid with rows whose 0-based index is NOT in Is replaced by all-Bg
+rows. Rows in Is are kept unchanged.
+
+Example: ix_mask_rows([[a,b],[c,d],[e,f]], [0,2], 9, G)
+gives G = [[a,b],[9,9],[e,f]].
+
+ix_mask_cols(+Grid, +Js, +Bg, -Grid2)
+
+Grid2 is Grid with columns whose 0-based index is NOT in Js replaced by Bg.
+Columns in Js are kept unchanged.
+
+ix_apply(+IxGrid, +Op, +Grid, -Out)
+
+Out[R][C] = Grid[R][C] Op IxGrid[R][C].
+Op is one of: add (Grid+Ix), sub (Grid-Ix), mul (Grid*Ix), max_op, min_op.
+
+This predicate connects coordinate grids to value grids. Combining ix_row_grid
+with add adds the row index to each cell's value. Combining ix_col_grid with
+mul scales each cell's value by its column position.
+
+ix_from(+H, +W, +R0, +C0, -Grid)
+
+cell(R,C) = (R-R0)*W + (C-C0). Each cell receives a unique signed linear
+offset from the reference point (R0,C0), using row-major stride W. With
+(R0,C0) = (0,0): the standard linear scan index where cell (R,C) gets value
+R*W+C. Values may be negative when R < R0 or C < C0.
+
+Example Results
+
+ix_row_grid(3, 3, G) gives G = [[0,0,0],[1,1,1],[2,2,2]].
+
+ix_col_grid(3, 3, G) gives G = [[0,1,2],[0,1,2],[0,1,2]].
+
+ix_sum_grid(3, 3, G) gives G = [[0,1,2],[1,2,3],[2,3,4]].
+The main diagonal has constant value 0, 2, 4 (sum steps by 2 along diagonal
+direction) and adjacent diagonals have constant values 1, 3.
+
+ix_diff_grid(3, 3, G) gives G = [[0,-1,-2],[1,0,-1],[2,1,0]].
+All cells on the main diagonal have value 0; upper-right triangle is negative.
+
+ix_chebyshev_grid(3, 3, 1, 1, G) gives G = [[1,1,1],[1,0,1],[1,1,1]].
+The center is 0; all 8 neighbors are at distance 1.
+
+ix_mod_grid(3, 3, 2, G) gives G = [[0,1,0],[1,0,1],[0,1,0]].
+This is the (R+C) mod 2 pattern: a diagonal checkerboard with center value 0.
+
+ix_from(3, 3, 0, 0, G) gives G = [[0,1,2],[3,4,5],[6,7,8]].
+Linear row-major scan indices from the top-left corner.
+
+Implementation
+
+All predicates use nested findall with between/3 (a SWI-Prolog built-in) for
+grid construction. No recursive predicates are used; all grids are built
+declaratively.
+
+ix_row_grid uses findall(R, between(1,W,_), Row) to collect R once per column:
+the anonymous variable in between drives W iterations, collecting R each time.
+
+ix_mask_rows uses findall(Bg, member(_, OrigRow), Row) to create an all-Bg
+replacement row with exactly the same length as OrigRow, without needing to
+know W explicitly.
+
+ix_apply dispatches through a private helper ix_apply_op_/4 that pattern-matches
+on the Op symbol and evaluates the appropriate arithmetic expression.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates. All 42 tests pass.
+
+SPARC Documentation
+
+Specification v128: Part 153, requirements IX-IX-001 through IX-IX-014.
+
+Pseudocode v121: Part 153, pseudocode for all 14 predicates.
+
+Architecture v122: ARCH-129, index pack structure and design notes.
+
+Refinement v176: acceptance criteria AC-IX-001 through AC-IX-042.
+
+Completion v179: WP 163 release record.
+
+Tutorial Chapter 124 added to all tutorial files.
+
+Conclusion
+
+The index pack gives PrologAI a clean, reusable way to generate grids whose
+cell values are pure coordinate functions. These coordinate grids can be
+combined with value grids through ix_apply to implement row-weighted scaling,
+column-based offsets, diagonal stripe filters, and distance-based masks -
+all of which arise naturally in ARC-AGI-2 tasks involving spatial structure.
+
+PrologAI now comprises 163 work packages.
+
+Mentova has achieved 183 accomplishments.
