@@ -1,0 +1,102 @@
+Accomplishment 236: Sequential Rule Inference (seqinfer Pack, sq_*, Layer 195)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains the seqinfer pack (Work Package 216, Layer 195): 14 sq_*
+predicates for finding ordered rule sequences that transform every Before scene
+into its corresponding After scene across all training pairs. This extends the
+single-rule solvers to handle transformations that require two or three
+successive steps.
+
+
+Background
+
+The existing solving pipeline (gridsolve, scenerank) finds the single best rule
+that explains training pairs. Many reasoning tasks require more: first recolor
+all objects, then shift them; first sort by size, then remove the smallest.
+Single-rule search cannot find these composite explanations.
+
+The seqinfer pack addresses this by searching the Cartesian product of candidate
+rule lists for 2-step and 3-step sequences that maximize coverage.
+
+
+The seqinfer Pack
+
+Pack prefix: sq_*
+Layer: 195
+Work Package: 216
+
+
+Self-Contained Dispatch Engine
+
+sq_apply/3 takes a flat list of rule terms and applies them left-to-right. The
+dispatch engine (sq_apply_one_/3) handles 13 rule forms without importing any
+other PrologAI pack:
+
+  identity, recolor(C1,C2), recolor_all(C), shift(DR,DC), to_origin,
+  reflect_h, reflect_v, remove_color(C), keep_color(C),
+  sort_size_desc, sort_size_asc, top_n(N), color_map(Map)
+
+This self-containment means seqinfer can be used independently of sceneapply,
+gridsolve, or any other solver pack.
+
+
+Coverage and Consistency
+
+sq_verify/3 applies a rule sequence and compares the result to After using
+msort-based equality (order-independent). This means that even if the solver
+produces objects in a different order than the reference, the comparison still
+succeeds if the multisets of objects match.
+
+sq_coverage/3 counts the pairs that a sequence correctly explains.
+sq_consistent/2 requires all pairs to be correctly explained.
+
+
+2-Step and 3-Step Search
+
+sq_infer_2step/3 enumerates all ordered pairs (R1, R2) from the candidate list
+and returns the pair with the highest coverage. For a candidate list of 30 rules,
+this is 900 combinations per pair: a manageable search.
+
+sq_infer_3step/3 enumerates triples: O(|Candidates|^3). For 10 candidates this
+is 1000 combinations; for 20 candidates it is 8000. Users should restrict the
+candidate list when using 3-step search.
+
+sq_default_rules/1 provides a standard 30-rule candidate set covering the most
+common single-step transformations.
+
+
+Combined Solver
+
+sq_solve/3 implements a two-phase strategy:
+1. Try 2-step search; if a sequence with full coverage is found, return it.
+2. Otherwise, fall back to the single-step rule with the highest coverage.
+
+This makes sq_solve a practical drop-in solver for tasks where single rules
+may not suffice.
+
+
+Test Coverage
+
+44 of 44 acceptance criteria (AC-SQ-001 through AC-SQ-044) pass. Tests cover:
+- All 13 base rule types via sq_apply
+- 2-step sequence discovery via sq_infer_2step
+- Coverage and consistency predicates
+- Edge cases: empty pairs (vacuous success), color_map with no match (identity),
+  top_n on three objects returning two
+- Sequence ranking and filtering
+
+SPARC documentation: Spec v181, Pseudo v174, Arch v175, Refinement v229,
+Completion v232. Tutorial: Ch177_SeqInfer.txt. Pack_Reference updated.
+
+
+Conclusion
+
+The seqinfer pack extends PrologAI's solving capability from single-rule to
+multi-step rule search. It integrates naturally with sceneinv (to constrain the
+search space) and transformgen (to generate candidate single rules). This is
+Mentova's 236th accomplishment and PrologAI's 216th work package.
