@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-190-FF6B35?style=for-the-badge" alt="190 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-191-FF6B35?style=for-the-badge" alt="191 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **190 accomplished** |
-| Scientific papers | **190 published** — one per accomplishment |
+| Documented accomplishments | **191 accomplished** |
+| Scientific papers | **191 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         190 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  137 announcements — one per accomplishment
+├── papers/         191 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  138 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-190 scientific papers, one per accomplished milestone.
+191 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -451,12 +451,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_188` | Splice pack paper — Row and Column Structural Editing (Layer 147, sp_* prefix): 14 sp_* predicates. Row ops: sp_insert_row (insert before index R; R=H appends), sp_delete_row (delete at R). Column ops: sp_insert_col (constant-value column before C via maplist helper), sp_delete_col (delete column C). Swap: sp_swap_rows and sp_swap_cols (between enumeration with conditional assignment; identity when R1=R2 or C1=C2). Reverse: sp_reverse_rows (reverse/2 on row list), sp_reverse_cols (maplist(reverse)). Rotate: sp_rotate_rows and sp_rotate_cols (cyclic shift by K with K mod H/W; K=H/W returns identity). Replicate: sp_replicate_row and sp_replicate_col (split, build N copies with maplist(=(V)), reassemble; N=0 deletes, N=1 is identity). Select: sp_select_rows and sp_select_cols (findall with member; allows repetition and omission). Central pattern: length(Prefix, K) then append(Prefix, Suffix, List) splits at K without index loops. 42/42 acceptance tests pass. |
 | `Acc_189` | Objop pack paper — Object-Level Grid Manipulation (Layer 148, oo_* prefix): 14 oo_* predicates. Identification: oo_cells_of (sorted R-C pairs for color V via findall+between+nth0+sort), oo_bbox (bounding box via findall+min_list+max_list), oo_count (length of cells list), oo_size (bbox height and width), oo_center (integer floor center of bbox). Value ops: oo_erase (replace V with Bg), oo_repaint (replace V with NewV), oo_swap (exchange V1 and V2 via two-pass sequential set_cells calls). Translation: oo_move (translate by DR/DC; erase originals; clip out-of-bounds), oo_copy (paint at offset; originals remain). Rotation and mirror: oo_rotate90 (90 CW; formula (r,c)->(c,H-1-r) around bbox top-left), oo_rotate180 ((r,c)->(H-1-r,W-1-c)), oo_mirror_h ((r,c)->(r,W-1-c)), oo_mirror_v ((r,c)->(H-1-r,c)). Central helper: oo_set_cells_ (full H-by-W scan via nested findall+memberchk). All predicates accept and return complete grids. 42/42 acceptance tests pass. |
 | `Acc_190` | Pair pack paper — Object Pairing and D4-Canonical Shape Correspondence (Layer 149, pr_* prefix): 14 pr_* predicates. Property access: pr_obj_shape (D4-canonical form: normalize to origin, apply all 8 D4 transforms, re-normalize each, take lex-min under @<), pr_obj_color (color from obj term), pr_obj_size (cell count). Pairwise tests: pr_shape_eq (same D4-canonical shape), pr_color_eq (same color), pr_size_eq (same cell count). Grouping: pr_group_color (Color-[Obj] pairs), pr_group_size (N-[Obj] pairs), pr_group_shape (Shape-[Obj] pairs). Unique: pr_unique_color (obj whose color appears exactly once), pr_unique_size (obj whose size appears exactly once). Cross-scene matching: pr_match_color (Color-O1-O2 triples), pr_match_size (N-O1-O2 triples), pr_match_shape (Shape-O1-O2 triples; horizontal pair in scene 1 matches vertical pair in scene 2). D4 ops: id/r90/r180/r270/fh/fv/fd1/fd2 on r(R,C). All predicates operate on obj(Color, Cells) terms. 42/42 acceptance tests pass. |
+| `Acc_191` | Arrange pack paper — Object Arrangement and Spatial Ordering (Layer 150, ag_* prefix): 14 ag_* predicates. Centroid: ag_centroid (floor-average of cell row/col indices using sum_list//N; single representative point for position), ag_offset (displacement vector from centroid1 to centroid2). Ordering: ag_row_order (CR1 =< CR2), ag_col_order (CC1 =< CC2), ag_row_aligned (same centroid row by unification), ag_col_aligned (same centroid col by unification). Sorting: ag_sort_by_row and ag_sort_by_col use findall+keysort+findall for stable sort preserving relative order of equal-position objects. Gaps: ag_row_gaps and ag_col_gaps collect centroid positions, deduplicate with sort/2, then compute consecutive differences via ag_consec_gaps_ (cut on singleton clause to prevent choicepoint warning). Uniformity: ag_equal_row_gaps and ag_equal_col_gaps (require non-empty gap list then ag_all_equal_). Group: ag_group_bbox (bbox of all cells across all objs using min/max list on findall across all obj cell lists). Nearest: ag_nearest (Manhattan distance to each candidate centroid, keysort to find minimum). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-137 announcements in LinkedIn format — one per accomplishment.
+138 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
