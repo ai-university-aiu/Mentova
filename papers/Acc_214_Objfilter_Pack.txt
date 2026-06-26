@@ -1,0 +1,154 @@
+Accomplishment 214: Object List Filtering and Selection (Objfilter Pack, of_*, Layer 173)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objfilter pack (14 of_* predicates, Layer 173) for filtering,
+selecting, and partitioning lists of obj(Color, Cells) terms. Given a scene (a
+list of objects), the pack narrows it down to objects matching color criteria
+(by_color, not_color), size criteria (exact_size, min_size, max_size), or shape
+criteria (is_rect, is_hline, is_vline, is_single, is_hollow). Two aggregate
+predicates find the largest and smallest objects. A generic meta-predicate
+(of_filter) and a partitioner (of_partition) support custom tests. The pack has
+no cross-pack dependencies.
+
+43 of 43 PLUnit tests pass.
+
+This work package is PrologAI WP 194, merged as PR 281 on 2026-06-26.
+
+1. Motivation
+
+After WP 193 (objrel) provided pairwise object relations and WP 192 (objbound)
+provided single-object shape tests, the remaining gap was efficient filtering
+of a scene (a list of objects) by those very properties.
+
+Existing packs that handle lists of objects:
+- group (gp_*): groups objects by color, size, row, column, or shape
+- pigment (pg_*): recolors objects in a scene
+- scene (sc_*): extracts and queries objects from a grid
+
+None of these answer "give me only the rectangular objects" or "give me all
+objects with at most 4 cells." The objfilter pack fills this gap with focused
+predicates that each return a sublist of the input.
+
+2. Core Design
+
+2.1 Private Helpers
+
+The pack defines 9 private predicates to avoid cross-pack dependencies.
+
+of_size_(Obj, N): length of the cell list.
+
+of_bbox_(Obj, MinR, MinC, MaxR, MaxC): bounding box via findall + min_list
+and max_list.
+
+Shape testers:
+- of_is_rect_(Obj): count = (MaxR-MinR+1)*(MaxC-MinC+1). No holes.
+- of_is_hline_(Obj): MinR = MaxR. All cells share a row.
+- of_is_vline_(Obj): MinC = MaxC. All cells share a column.
+- of_is_single_(Obj): count = 1.
+- of_is_hollow_(Obj): count < (MaxR-MinR+1)*(MaxC-MinC+1). At least one hole.
+
+of_largest_acc_ and of_smallest_acc_: recursive accumulators that compare cell
+counts and return the current best. On ties, the first object in the list wins.
+
+2.2 Filter Pattern
+
+All specific filter predicates use the findall + member pattern:
+
+    of_is_hollow(Objs, Filtered) :-
+        findall(O, (member(O, Objs), of_is_hollow_(O)), Filtered).
+
+This preserves the original list order and returns [] when nothing matches.
+
+2.3 Shape Note
+
+The is_hline and is_vline filters include single-cell objects, because a
+single cell has bbox height = 1 (hline condition) AND bbox width = 1 (vline
+condition). The is_single filter isolates the single-cell case when needed.
+
+The is_hollow filter includes L-shapes and frames but excludes solid bars and
+rectangles that happen to have interior positions (since they fill their bbox).
+
+2.4 Meta-Predicates
+
+of_filter wraps include/3 from library(apply):
+
+    of_filter(Objs, Goal, Filtered) :-
+        include(Goal, Objs, Filtered).
+
+of_partition wraps partition/4 from library(apply):
+
+    of_partition(Objs, Goal, In, Out) :-
+        partition(Goal, Objs, In, Out).
+
+Both are declared with :- meta_predicate so SWI-Prolog handles module context
+correctly for the Goal argument.
+
+3. Predicate Descriptions
+
+of_by_color(+Objs, +Color, -Filtered): objects of Color.
+of_not_color(+Objs, +Color, -Filtered): objects not of Color.
+of_exact_size(+Objs, +N, -Filtered): objects with exactly N cells.
+of_min_size(+Objs, +N, -Filtered): objects with >= N cells.
+of_max_size(+Objs, +N, -Filtered): objects with <= N cells.
+of_is_rect(+Objs, -Filtered): objects filling their bbox.
+of_is_hline(+Objs, -Filtered): single-row objects.
+of_is_vline(+Objs, -Filtered): single-column objects.
+of_is_single(+Objs, -Filtered): single-cell objects.
+of_is_hollow(+Objs, -Filtered): objects with bbox holes.
+of_largest(+Objs, -Obj): maximum-cell object (first on tie).
+of_smallest(+Objs, -Obj): minimum-cell object (first on tie).
+of_filter(+Objs, :Goal, -Filtered): generic inclusion filter.
+of_partition(+Objs, :Goal, -In, -Out): goal-based split.
+
+4. Examples
+
+Example 1: Select objects by shape from a scene.
+
+    Scene = [Dot, Hbar, Vbar, Rect, L, Frame, Big],
+    of_is_hollow(Scene, Hollow),
+    % Hollow = [L, Frame]  (L-shape and 3x3 frame both have holes)
+    of_is_rect(Scene, Rects),
+    % Rects = [Dot, Hbar, Vbar, Rect, Big]  (all fill their bbox)
+    of_largest(Scene, Biggest).
+    % Biggest = Frame  (8 cells; appears before Big in the list)
+
+Example 2: Select small objects of a specific color.
+
+    of_by_color(Scene, red, Reds),   % only red
+    of_max_size(Reds, 3, SmallReds). % red and at most 3 cells
+
+Example 3: Partition by custom test.
+
+    big_enough(Obj) :- length(Cells, N), N >= 4, Obj = obj(_, Cells).
+    of_partition(Scene, big_enough, Big, Small).
+
+5. SPARC Documentation
+
+Specification v159 adds Part 184 (objfilter pack specification).
+
+Pseudocode v152 adds Part 184 (objfilter pack pseudocode).
+
+Architecture v153 adds ARCH-160 (objfilter pack layer placement).
+
+Refinement v207 adds acceptance criteria AC-OF-001 through AC-OF-043.
+
+Completion v210 adds the WP-194 completion record.
+
+6. Conclusion
+
+The objfilter pack gives PrologAI efficient, composable filtering of object
+lists. A reasoner can now narrow a full scene down to the objects it cares about
+with a single predicate call, rather than manually iterating and testing. The
+generic of_filter and of_partition meta-predicates allow arbitrary selection
+criteria to be applied with the same interface. Together with the group pack
+(which groups objects) and the scene pack (which extracts objects from grids),
+objfilter completes a three-layer pipeline: extract -> filter -> group.
+
+This is WP 194, Mentova's 214th accomplishment.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

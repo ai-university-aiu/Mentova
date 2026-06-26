@@ -1,0 +1,31 @@
+Mentova Accomplishment 214: Object List Filtering and Selection (Objfilter Pack, of_*, Layer 173)
+
+PrologAI now includes an objfilter pack (of_*, Layer 173) - 14 predicates for
+filtering and selecting from a list of obj(Color, Cells) terms.
+
+The pack provides:
+
+- of_by_color: objects of a given color
+- of_not_color: objects excluding a given color
+- of_exact_size: objects with exactly N cells
+- of_min_size: objects with >= N cells
+- of_max_size: objects with <= N cells
+- of_is_rect: objects that fill their bounding box (no holes)
+- of_is_hline: objects where all cells lie in a single row
+- of_is_vline: objects where all cells lie in a single column
+- of_is_single: single-cell objects
+- of_is_hollow: objects with at least one hole inside their bounding box
+- of_largest: the object with the most cells (first on ties)
+- of_smallest: the object with the fewest cells (first on ties)
+- of_filter: generic meta-filter using a custom goal
+- of_partition: split a list into matching and non-matching by goal
+
+No cross-pack dependencies. Shape tests are self-contained.
+
+43 tests pass.
+
+This is WP 194, Mentova's 214th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
