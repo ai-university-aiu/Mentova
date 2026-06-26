@@ -1,0 +1,131 @@
+Accomplishment 194: Object List Filtering by Attribute Predicates
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 174th work package: the sift pack (si_*, Layer 153).
+
+The sift pack provides 14 predicates for filtering lists of obj(Color, Cells) terms
+by various predicates: color, size, exact normalized form, size extremes, color
+frequency, and grid border adjacency. All predicates use findall and return the
+subset of objects satisfying the given condition. An empty result list is always
+valid.
+
+Introduction
+
+The query pack (Layer 152) answers aggregate questions about an object collection:
+how many objects are red, what is the most common color, are all objects the same
+size. But it does not select individual objects. The sift pack fills this role.
+
+Where query computes statistics, sift computes subsets. Given a list of objects,
+sift returns only those satisfying a predicate. This is the fundamental "selection"
+or "filter" operation in visual reasoning: identifying which objects in a scene have
+a given property.
+
+Color Filters
+
+si_by_color/3 keeps only obj terms with an exact color match. The implementation
+uses findall with O = obj(Color, _) head-unification: Prolog's pattern matching
+does the filtering with no explicit conditional.
+
+si_not_color/3 keeps all objects whose color differs from the given value, using
+C \= Color inside the findall goal.
+
+si_color_in/3 keeps objects whose color is a member of a provided list, using
+memberchk/2 for efficient non-backtracking membership testing.
+
+si_color_not_in/3 keeps objects whose color is not in the list, using
+\+ memberchk/2.
+
+Size Filters
+
+si_by_size/3 keeps objects with exactly N cells, using length(Cells, N) inside
+findall.
+
+si_larger_than/3 and si_smaller_than/3 keep objects with strictly more or fewer
+than N cells, using arithmetic comparison after computing the cell count.
+
+Form Filter
+
+si_by_form/3 keeps objects whose origin-normalized cell list matches a given Form.
+Normalization translates the cell set to the origin (min row=0, min col=0) and
+sorts. This is an exact structural match, not D4-invariant: a horizontal bar and
+a vertical bar have different forms. A private helper si_norm_ implements the
+normalization locally, making the pack self-contained without importing from the
+pair or xform packs.
+
+Size Extreme Filters
+
+si_max_size/2 and si_min_size/2 return ALL objects tied for the maximum or minimum
+cell count, respectively. This distinguishes them from the query pack's qu_largest_obj
+and qu_smallest_obj, which return only the FIRST tied object via member+cut.
+
+The semantics differ intentionally: qu_largest_obj answers "give me one representative
+largest object"; si_max_size answers "give me all the largest objects." Both behaviors
+are needed in visual reasoning. The sift implementation uses a two-phase approach:
+collect all cell counts, find the extreme, then select all objects at that count.
+
+Color Frequency Filters
+
+si_unique_color/2 and si_shared_color/2 use the two-phase count pattern from the
+query pack: collect all color values, sort for distinct keys, count per key. Then
+they collect colors with count=1 (unique) or count>1 (shared), and filter the
+original object list with memberchk. This identifies the "odd one out" (the object
+with a unique color) and the "background" objects (those with shared colors).
+
+Border Filters
+
+si_on_border/4 and si_off_border/4 require grid dimensions H (height) and W (width).
+The border of an H-by-W grid consists of cells at row=0, row=H-1, col=0, or col=W-1.
+
+A private helper si_on_border_ tests whether a single cell is on the border. It has
+four clauses with cuts: checking R=:=0, R=:=H-1, C=:=0, C=:=W-1 in sequence. The
+cuts make it deterministic.
+
+si_on_border uses findall with member(r(R,C), Cells) and si_on_border_ to collect
+objects having at least one border cell.
+
+si_off_border uses negation-as-failure: \+ (member(r(R,C), Cells), si_on_border_)
+tests that no cell is on the border.
+
+Verification
+
+42 PLUnit tests cover all 14 predicates (3 tests each):
+
+si_by_color: basic filter, no match (empty result), all match.
+si_not_color: basic exclusion, no exclusion needed, all excluded.
+si_by_size: filter by size 1, filter by size 2, no match.
+si_by_form: two objs with same form at different positions, single cell, no match.
+si_larger_than: basic, no match, all qualify.
+si_smaller_than: basic, no match, all qualify.
+si_color_in: basic, no match, all match.
+si_color_not_in: basic, all excluded, no exclusion.
+si_max_size: single winner, tie returns both, single obj.
+si_min_size: two tied minimums returned, tie returns both, single obj.
+si_unique_color: one unique among repeated, all unique, none unique.
+si_shared_color: shared objs returned, none shared, all shared.
+si_on_border: top-row obj, corner obj, interior obj (empty result).
+si_off_border: interior obj kept, all interior, all on border (empty result).
+
+All 42 tests pass with no warnings.
+
+Library: packs/sift/prolog/sift.pl, Layer 153.
+Tests: packs/sift/test/test_sift.pl, 42/42 pass.
+SPARC: Specification v139, Pseudocode v132, Architecture v133, Refinement v187, Completion v190.
+PrologAI PR: 259, merged 2026-06-26.
+
+Significance
+
+The sift pack gives PrologAI the ability to select subsets of objects based on
+attribute predicates. Together with the query pack (aggregate statistics), this
+completes the "analysis of a scene's object list" capability layer:
+
+- query: "what is true of the collection as a whole?"
+- sift: "which objects have this property?"
+
+With 174 work packages and 194 accomplishments, PrologAI and Mentova continue to
+build the symbolic cognitive substrate for general visual reasoning.

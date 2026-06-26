@@ -1,0 +1,45 @@
+Accomplishment 194: Object List Filtering by Attribute Predicates
+
+PrologAI now has 174 work packages.
+
+The sift pack (si_*, Layer 153) provides 14 predicates for filtering obj(Color,
+Cells) lists. All predicates use findall; empty results are always valid.
+
+Color filters:
+• si_by_color/3: keep objs with exact color match
+• si_not_color/3: exclude a color
+• si_color_in/3: keep objs whose color is in a list
+• si_color_not_in/3: keep objs whose color is not in a list
+
+Size filters:
+• si_by_size/3: exact cell count
+• si_larger_than/3: strictly more than N cells
+• si_smaller_than/3: strictly fewer than N cells
+
+Extreme size filters (return ALL tied objects):
+• si_max_size/2: all objs with the maximum cell count
+• si_min_size/2: all objs with the minimum cell count
+
+Form filter:
+• si_by_form/3: origin-normalized cell list (exact match; not D4-invariant)
+
+Color frequency filters:
+• si_unique_color/2: objs whose color appears exactly once
+• si_shared_color/2: objs whose color appears more than once
+
+Grid border filters:
+• si_on_border/4: objs with any cell on the H-by-W grid border
+• si_off_border/4: objs with no border cell
+
+Key distinction: si_max_size and si_min_size return ALL tied objects. The query
+pack's qu_largest_obj and qu_smallest_obj return only the first tied object.
+Both behaviors exist because both are needed: "one representative" vs "all matching."
+
+Together with query (aggregate statistics), this completes the object-list analysis
+layer: query answers "what is true of the collection," sift answers "which objects
+have this property."
+
+42/42 PLUnit tests pass. PR 259 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
