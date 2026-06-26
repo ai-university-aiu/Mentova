@@ -1,0 +1,154 @@
+Accomplishment 170: The Cell Distance and Proximity Computation Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a cell distance and proximity computation pack as Work
+Package 150 (Layer 129).
+
+The pack provides 14 predicates, all carrying the dt_* prefix, for
+computing distances between grid cells, building distance transform grids,
+and performing proximity queries across three distance metrics.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks require answering questions such as: how far is
+this cell from that cell? Which cell of color X is closest to position Y?
+What is the maximum spread of a set of cells?
+
+The distance pack provides a complete vocabulary for this proximity
+reasoning.
+
+Three distance metrics are supported:
+
+Manhattan (L1) distance measures how many horizontal and vertical steps
+separate two cells, counting each step as 1.
+
+Chebyshev (L-infinity) distance counts how many king-moves separate two
+cells, where a diagonal step also counts as 1.
+
+Squared Euclidean distance avoids floating-point square roots by returning
+the squared distance as an integer.
+
+The pack also provides distance transform grids, which assign to every
+cell in a grid its distance to the nearest occurrence of a target value.
+These are essential for gradient-based reasoning about proximity.
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+dt_manhattan(+R1, +C1, +R2, +C2, -D) computes D = |R2-R1| + |C2-C1|.
+
+dt_chebyshev(+R1, +C1, +R2, +C2, -D) computes D = max(|R2-R1|, |C2-C1|).
+
+dt_euclidean_sq(+R1, +C1, +R2, +C2, -DSq) computes (R2-R1)^2 + (C2-C1)^2.
+
+dt_nearest(+Grid, +Val, +R0-C0, -R-C) finds the nearest cell of value Val
+to position R0-C0 by Manhattan distance. On ties, returns the first cell
+in row-major order.
+
+dt_farthest(+Grid, +Val, +R0-C0, -R-C) finds the farthest cell of value Val.
+
+dt_all_at(+Grid, +Val, +R0-C0, +D, -Cells) finds all cells of value Val
+at exactly Manhattan distance D from R0-C0.
+
+dt_within_manhattan(+Grid, +R0, +C0, +D, -Cells) returns all in-bounds
+positions within Manhattan distance D of (R0,C0).
+
+dt_within_chebyshev(+Grid, +R0, +C0, +D, -Cells) returns all in-bounds
+positions within Chebyshev distance D of (R0,C0).
+
+dt_map_manhattan(+Grid, +Val, -MapGrid) produces a same-size grid where
+each cell holds the Manhattan distance to the nearest cell with value Val.
+Returns -1 for cells if Val is absent.
+
+dt_map_chebyshev(+Grid, +Val, -MapGrid) is the Chebyshev variant.
+
+dt_ring_manhattan(+Grid, +R0, +C0, +D, -Cells) returns all in-bounds
+positions at exactly Manhattan distance D, forming a ring shape.
+
+dt_centroid(+Grid, +Val, -R-C) computes the integer floor centroid of all
+cells with value Val.
+
+dt_diameter_manhattan(+Cells, -D1-D2, -Diam) computes the maximum pairwise
+Manhattan distance (diameter) of a set of R-C pairs.
+
+dt_diameter_chebyshev(+Cells, -D1-D2, -Diam) is the Chebyshev variant.
+
+
+3. Implementation
+
+dt_manhattan, dt_chebyshev, and dt_euclidean_sq are pure arithmetic.
+
+dt_nearest and dt_farthest use findall to collect all D-R-C triples for
+Val-cells, then delegate to private min_list_key_ or max_list_key_ helpers.
+These helpers use @< / @> term ordering for single-pass accumulator scans,
+providing row-major tie-breaking without extra key extraction.
+
+dt_map_manhattan and dt_map_chebyshev pre-collect all Val-cell positions once
+with an outer findall, then use nested findall for each cell position with
+min_list/2 from library(lists) to find the minimum distance. An if-then-else
+handles the absent-Val case by returning -1.
+
+dt_centroid collects all Val-cell positions, then uses separate findall calls
+to extract row and column index lists, sums each with the private sumlist_/2
+accumulator helper, and computes integer floor centroids by integer division.
+
+dt_diameter_manhattan and dt_diameter_chebyshev enumerate all unordered pairs
+with A @< B to avoid double-counting, compute the distance for each pair,
+and select the maximum with max_list_key_.
+
+
+4. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Tests cover zero distance, unit distance, diagonal distance, nearest and
+farthest cell selection, radius queries at the center and corner, distance
+transform values at specific positions, ring shapes, centroid of one and
+two cells and uniform grids, and diameter of two and three cell sets.
+
+All 42 pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+Specification v115, Part 140 defines all 14 predicates.
+
+Pseudocode v108, Part 140 gives the algorithmic descriptions.
+
+Architecture v109, ARCH-116 records the module placement and design
+patterns.
+
+Refinement v163 records acceptance criteria AC-DT-001 through AC-DT-042.
+
+Completion v166 records the release evidence for WP 150.
+
+Tutorial Chapter 111 demonstrates all 14 predicates with examples.
+
+
+6. Position in the Cognitive Architecture
+
+The distance pack is Layer 129 in the PrologAI cognitive stack.
+
+It follows the edge pack (Layer 128, ed_*) and complements spatial packs
+such as the spatial pack (Layer 40, sp_*) and the bound pack (Layer 116,
+bd_*) which focus on bounding boxes and regions.
+
+The distance pack provides the raw proximity vocabulary that higher-level
+reasoning about object layout and spatial relationships can consume.
+
+PrologAI now carries 150 work packages in the packs/ directory.
+
+
+END

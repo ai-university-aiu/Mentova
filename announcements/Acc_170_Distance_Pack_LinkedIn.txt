@@ -1,0 +1,51 @@
+Mentova Accomplishment 170: The Cell Distance and Proximity Computation Pack
+
+PrologAI gains its 150th work package today.
+
+The distance pack (Layer 129, dt_* prefix) provides 14 predicates for
+computing distances between grid cells, building distance transform grids,
+and performing proximity queries.
+
+Three distance metrics are supported:
+
+Manhattan (L1): sum of absolute row and column differences.
+Chebyshev (L-infinity): maximum of absolute row and column differences,
+equal to king-move count on a chess board.
+Squared Euclidean: integer squared distance, no floating point.
+
+The 14 predicates cover:
+
+Basic distances: Manhattan (dt_manhattan), Chebyshev (dt_chebyshev),
+and squared Euclidean (dt_euclidean_sq).
+
+Nearest and farthest: nearest cell of a target value by Manhattan
+distance with row-major tie-breaking (dt_nearest); farthest cell
+(dt_farthest).
+
+Cells at distance: all cells of a value at exactly D (dt_all_at);
+all positions within Manhattan radius D (dt_within_manhattan);
+all positions within Chebyshev radius D (dt_within_chebyshev).
+
+Distance transforms: same-size grid where each cell holds its distance
+to the nearest target-value cell, Manhattan variant (dt_map_manhattan)
+and Chebyshev variant (dt_map_chebyshev).
+
+Ring and centroid: positions at exactly D forming a ring shape
+(dt_ring_manhattan); integer floor centroid of a value's cells
+(dt_centroid).
+
+Diameter: maximum pairwise Manhattan distance of a cell set with the
+two farthest cells returned (dt_diameter_manhattan); Chebyshev variant
+(dt_diameter_chebyshev).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v115, Pseudocode v108,
+Architecture v109, Refinement v163, Completion v166.
+
+Tutorial Chapter 111 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
