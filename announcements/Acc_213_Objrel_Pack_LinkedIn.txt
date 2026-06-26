@@ -1,0 +1,31 @@
+Mentova Accomplishment 213: Object Pair Relation Analysis (Objrel Pack, or_*, Layer 172)
+
+PrologAI now includes an objrel pack (or_*, Layer 172) - 14 predicates for
+computing pairwise relationships between two obj(Color, Cells) terms.
+
+Colors are ignored in every predicate. All reasoning uses cell positions only.
+
+The pack provides:
+
+- or_overlap: do the two objects share at least one cell?
+- or_shared_cells: which cells appear in both objects?
+- or_n_shared: how many shared cells?
+- or_touch4: are they 4-adjacent (Manhattan distance 1) without overlapping?
+- or_touch8: are they 8-adjacent (Chebyshev 1, includes diagonal) without overlapping?
+- or_contains: does Obj1's cell set include all of Obj2's cells?
+- or_union_cells: sorted union of both cell sets
+- or_dist: Euclidean distance between centroids (float)
+- or_manhattan: Manhattan distance between centroids
+- or_direction: compass direction from Obj1 to Obj2 (n/s/e/w/ne/nw/se/sw/same)
+- or_aligned_h: do both objects have the same centroid row?
+- or_aligned_v: do both objects have the same centroid column?
+- or_gap_rows: how many empty rows lie between the two bounding boxes?
+- or_gap_cols: how many empty columns lie between the two bounding boxes?
+
+61 tests pass.
+
+This is WP 193, Mentova's 213th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
