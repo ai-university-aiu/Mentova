@@ -1,0 +1,43 @@
+Mentova Accomplishment 169: The Grid Edge Detection and Boundary Analysis Pack
+
+PrologAI gains its 149th work package today.
+
+The edge pack (Layer 128, ed_* prefix) provides 14 predicates for
+detecting boundaries between regions of different values in a 2D grid.
+
+The 14 predicates cover:
+
+Edge collection: horizontal edge R-C positions where adjacent rows
+differ (ed_h_edges), vertical edge positions where adjacent columns
+differ (ed_v_edges), and all edges combined with direction tags
+(ed_all_edges).
+
+Single-position tests: whether a horizontal edge exists at a specific
+position returning Bool=1 or 0 (ed_h_edge), same for vertical edges
+(ed_v_edge), and whether any single cell is a boundary cell (ed_has_edge).
+
+Boundary and interior cells: all cells of a given value that have at
+least one 4-connected neighbor with a different value (ed_boundary_cells),
+all cells on the outer grid perimeter (ed_outer_boundary), and cells
+strictly interior to their uniform region (ed_inner_cells).
+
+Edge statistics and tests: total edge count (ed_edge_count) and the
+smooth-grid test that succeeds iff there are zero edges (ed_is_smooth).
+
+Edge mask: a same-size grid where each cell is 1 if it is a boundary
+cell and a background value otherwise (ed_label_edges).
+
+Corner analysis: 2x2 positions where the four cells are not all equal
+(ed_corners) and the corner count (ed_corner_count).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v114, Pseudocode v107,
+Architecture v108, Refinement v162, Completion v165.
+
+Tutorial Chapter 110 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
