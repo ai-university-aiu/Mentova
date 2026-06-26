@@ -1,0 +1,202 @@
+Accomplishment 204: Spatial and Color Transformations for Object Terms (Objxf Pack, ox_*, Layer 163)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objxf pack (14 ox_* predicates, Layer 163) for spatial and
+color transformations of individual obj(Color, Cells) terms. It is the first
+PrologAI pack to treat obj terms as first-class geometric objects: rotating them,
+reflecting them, translating them, scaling them, and combining them through
+cell-set algebra - all without requiring a grid intermediary.
+
+The pack covers: bounding box queries (ox_bbox, ox_size), translation and
+normalization (ox_translate, ox_to_origin), color replacement (ox_recolor),
+rotations by 90/180/270 degrees clockwise within the bounding box (ox_rot90,
+ox_rot180, ox_rot270), horizontal and vertical reflections (ox_reflect_h,
+ox_reflect_v), cell-set algebra (ox_merge, ox_diff, ox_intersect), and integer
+scale-up (ox_scale_up).
+
+60 of 60 PLUnit tests pass.
+
+This work package is PrologAI WP 184, merged as PR 269 on 2026-06-26.
+
+1. Motivation
+
+ARC-AGI-2 tasks frequently require transforming individual objects: "rotate this
+object 90 degrees", "make this object twice as large", "flip this object
+horizontally and place it next to the original", or "combine the cells of these
+two objects into one."
+
+Before objxf, such operations required:
+1. Converting the obj to a temporary grid (using mv_scene_to_grid or similar).
+2. Applying a grid transformation.
+3. Extracting the result back into an obj.
+
+The objxf pack eliminates this round-trip by operating directly on obj(Color,
+Cells) terms. The formulas work entirely in terms of cell coordinates, not grid
+dimensions, which makes them composable and efficient.
+
+2. Predicate Descriptions
+
+2.1 Bounding Box Queries
+
+ox_bbox(+Obj, -R0, -C0, -R1, -C1) extracts the bounding box. It collects all
+R values and all C values via findall, then applies min_list and max_list.
+
+ox_size(+Obj, -H, -W) computes H = R1 - R0 + 1 and W = C1 - C0 + 1 from the
+bounding box.
+
+2.2 Translation and Normalization
+
+ox_translate(+Obj, +DR, +DC, -Result) adds DR to every row and DC to every
+column. Both may be negative.
+
+ox_to_origin(+Obj, -Result) normalizes the object to the origin by calling
+ox_translate with -R0 and -C0. This is a common preprocessing step before
+shape comparison or canonical form computation.
+
+ox_recolor(+Obj, +NewColor, -Result) replaces only the color field. Cells are
+unchanged.
+
+2.3 Rotation Formulas
+
+All three rotation predicates use bounding-box-local coordinates:
+
+Lr = R - R0  (rows below the top of the bounding box)
+Lc = C - C0  (cols right of the left of the bounding box)
+
+The result is then converted back to absolute coordinates.
+
+For ox_rot90 (90 degrees clockwise):
+r(R, C) -> r(R0 + Lc, C0 + (H-1) - Lr)
+
+Where H = R1 - R0 + 1 is the bounding box height. After rotation, the bounding
+box becomes W x H (height and width swap).
+
+For ox_rot180 (180 degrees):
+r(R, C) -> r(R0 + R1 - R, C0 + C1 - C)
+
+This maps each cell to its diagonally opposite point in the bounding box.
+Bounding box dimensions are unchanged.
+
+For ox_rot270 (270 degrees clockwise = 90 degrees counter-clockwise):
+r(R, C) -> r(R0 + (W-1) - Lc, C0 + Lr)
+
+Where W = C1 - C0 + 1 is the bounding box width. After rotation, the bounding
+box becomes W x H.
+
+All three formulas maintain the anchor (R0, C0) so that the transformed object
+stays in the same grid region as the original.
+
+Composition: ox_rot90 applied twice equals ox_rot180; three times equals ox_rot270.
+
+2.4 Reflection Formulas
+
+ox_reflect_h (flip upside-down):
+r(R, C) -> r(R0 + R1 - R, C)
+
+Rows are mirrored about the horizontal midpoint of the bounding box.
+Column positions are unchanged.
+
+ox_reflect_v (flip left-right):
+r(R, C) -> r(R, C0 + C1 - C)
+
+Columns are mirrored about the vertical midpoint of the bounding box.
+Row positions are unchanged.
+
+Both reflections are involutions: applying them twice gives the original object.
+
+2.5 Cell-Set Algebra
+
+ox_merge(+Obj1, +Obj2, -Result): union of cells. Implementation: append(Cells1,
+Cells2, All), sort(All, Merged). sort/2 deduplicates and orders canonically.
+Result has Obj1's color.
+
+ox_diff(+Obj1, +Obj2, -Result): cells in Obj1 not in Obj2. Implementation:
+findall(r(R,C), (member(r(R,C), Cells1), \+ member(r(R,C), Cells2)), Diff).
+
+ox_intersect(+Obj1, +Obj2, -Result): cells in both Obj1 and Obj2. Implementation:
+findall(r(R,C), (member(r(R,C), Cells1), member(r(R,C), Cells2)), Intersection).
+
+Inclusion-exclusion holds: |merge| = |Obj1.Cells| + |Obj2.Cells| - |intersect|.
+
+2.6 Scale Up
+
+ox_scale_up(+Obj, +Factor, -Result): each cell r(R, C) expands to a Factor x
+Factor block: {r(R*Factor + DR, C*Factor + DC) | DR in [0, Factor-1], DC in
+[0, Factor-1]}. The predicate uses between/3 to generate the offsets. Factor
+must be a positive integer.
+
+After scaling, the cell count equals the original count times Factor squared.
+
+3. Design Decisions
+
+3.1 Bounding-Box-Relative Rotation
+
+A naive rotation that treats r(0,0) as the pivot would move the object away from
+its original grid position if it is not at the origin. By computing all rotations
+relative to the bounding box anchor (R0, C0), objxf rotations stay in place.
+The user can combine ox_translate with ox_rot90 if a different pivot is desired.
+
+3.2 First Object's Color for Set Algebra
+
+All three set algebra predicates (ox_merge, ox_diff, ox_intersect) use Obj1's
+color in the result. This is the "primary object's color wins" convention,
+analogous to how overlay operations in the ov_* pack treat the foreground layer.
+
+3.3 Relationship to the Shape Pack
+
+The shape pack (sh_*) works on normalized shapes: sorted cell lists without a
+Color field, always anchored at origin. sh_rotate90 and sh_reflect_h are
+equivalent to ox_rot90 and ox_reflect_h after ox_to_origin, minus the color.
+
+The objxf pack keeps color and position, making it suitable for in-place
+transformation of objects in a scene.
+
+4. Examples
+
+Rotate an L-shaped object 90 degrees clockwise:
+
+    ?- corner(obj(yellow, [r(0,0),r(0,1),r(1,0)])),
+       ox_rot90(obj(yellow,[r(0,0),r(0,1),r(1,0)]), R).
+    R = obj(yellow, [r(0,1),r(1,1),r(0,0)]).
+    % Sort: [r(0,0),r(0,1),r(1,1)] — the L rotated clockwise.
+
+Scale a single dot to a 3x3 block:
+
+    ?- ox_scale_up(obj(red,[r(2,3)]), 3, R).
+    R = obj(red, [r(6,9),r(6,10),r(6,11),r(7,9),...,r(8,11)]).
+    % 9 cells in a 3x3 block starting at r(6,9).
+
+Subtract one object's cells from another:
+
+    ?- ox_diff(obj(a,[r(0,0),r(0,1),r(1,0)]),
+               obj(b,[r(0,1),r(1,0)]),
+               R).
+    R = obj(a, [r(0,0)]).
+
+5. SPARC Documentation
+
+Specification v149 adds Part 174 (objxf pack specification).
+
+Pseudocode v142 adds Part 174 (objxf pack pseudocode).
+
+Architecture v143 adds ARCH-150 (objxf pack layer placement).
+
+Refinement v197 adds acceptance criteria AC-OX-001 through AC-OX-060.
+
+Completion v200 adds the WP-184 completion record.
+
+6. Conclusion
+
+The objxf pack makes obj terms first-class geometric objects in PrologAI.
+
+Together with the scene pack (WP 58, object extraction), sizeop (WP 182, size
+ranking), and posop (WP 183, position ranking), objxf completes the core object-
+centric reasoning suite. An object can now be extracted, measured, ranked,
+transformed, and combined - all within the symbolic layer, without grid
+intermediaries.
+
+This is WP 184, Mentova's 204th accomplishment.
