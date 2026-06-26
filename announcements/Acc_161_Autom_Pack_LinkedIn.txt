@@ -1,0 +1,29 @@
+Mentova Accomplishment 161: Cellular Automaton Neighborhood Aggregation
+
+PrologAI adds Work Package 141 - the autom pack (Layer 120), a symbolic
+reasoning module for applying neighborhood rules to entire 2D grids in a
+single call.
+
+14 predicates (at_* prefix) covering:
+
+- Neighbor count grids: count of V-valued neighbors per cell (4 or 8 direction)
+- Same-value count grids: how many neighbors share each cell's own value
+- Boolean neighbor grids: 1/0 grids marking any-neighbor or all-neighbor conditions
+- Isolated cell detection: V-valued cells with no same-valued neighbor
+- Birth rules: cells are born when they touch exactly N live neighbors
+- Majority voting: each cell takes the value most common in its neighborhood
+- Conway's Game of Life: one step of B3/S23 with glass-box Prolog logic
+
+42 of 42 PLUnit acceptance tests pass.
+
+The autom pack makes it natural to pipeline operations: compute a neighbor
+count grid with at_count_nbrs_4, threshold it with xs_threshold, then use
+at_birth_4 to grow regions one ring at a time. at_step_gol demonstrates that
+PrologAI can simulate arbitrary cellular automata symbolically.
+
+PrologAI now carries 141 work packages and 161 Mentova accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+github.com/ai-university-aiu/PrologAI
