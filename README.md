@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-228-FF6B35?style=for-the-badge" alt="227 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-229-FF6B35?style=for-the-badge" alt="227 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **228 accomplished** |
-| Scientific papers | **228 published** — one per accomplishment |
+| Documented accomplishments | **229 accomplished** |
+| Scientific papers | **229 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         228 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  228 announcements — one per accomplishment
+├── papers/         229 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  229 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-228 scientific papers, one per accomplished milestone.
+229 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -475,6 +475,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. No cross-pack dependencies; 7 private helpers (dp_centroid_, dp_norm_, dp_pair_delta_, dp_color_pair_, dp_positions_, dp_row_of_, dp_col_of_). Extraction: dp_color_delta (O1/O2 color head unification), dp_pos_delta (centroid subtraction), dp_size_delta (length subtraction). Tests: dp_same_color (head unification), dp_same_form (dp_norm_ + sort + compare), dp_same_pos (centroid equality). Color map: dp_color_map (maplist dp_color_pair_ + sort), dp_apply_color (head unification on C1; fail otherwise), dp_apply_color_map (recursive try-cut), dp_apply_map_all (if-then-else; unchanged on no match). Displacement: dp_const_dr (maplist dp_row_of_), dp_const_dc (maplist dp_col_of_). Cells: dp_common_cells (intersection/3 on sorted positions), dp_cell_diff (subtract/3 twice). 41/41 PLUnit tests pass. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. No cross-pack dependencies; private helpers tc_minrow_, tc_mincol_, tc_maxrow_, tc_maxcol_, tc_bbox_h_, tc_bbox_w_, tc_translate_, tc_place_at_, min_list_r_, min_list_c_, tc_pack_row_acc_, tc_pack_col_acc_, tc_shift_to_row_, tc_shift_to_col_. tc_place_at (bbox top-left placement via translate). tc_recolor_all (recursive color replacement). tc_tile_row (findall+between N copies at C0+I*Step). tc_tile_col (findall+between N copies at R0+I*Step). tc_tile_grid (nested between I/J for NR*NC grid). tc_at_positions (recursive, one copy per r(R,C)). tc_align_top (maplist minrow + min_list global + maplist shift_to_row). tc_align_left (same pattern for cols). tc_pack_row (maplist shift_to_row + pack_row_acc_ cursor). tc_pack_col (maplist shift_to_col + pack_col_acc_ cursor). tc_spread_h (findall+nth0+between; col=C0+I*Step). tc_spread_v (findall+nth0+between; row=R0+I*Step). tc_center (bbox dims + floor//2 offset + place_at_). tc_flip_h (findall r(R,W-1-C)). 41/41 PLUnit tests pass. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. No cross-pack dependencies; private helpers mx_color_, mx_size_, mx_norm_, mx_centroid_, mx_sq_dist_, mx_nearest_in_, mx_greedy_match_, mx_color_delta_, mx_pos_delta_, mx_size_delta_, mx_color_delta_eq_, mx_pos_delta_eq_, mx_size_delta_eq_. Matching: mx_by_color (findall cross-product, color equality), mx_by_size (findall, size equality), mx_by_form (findall, norm equality), mx_by_nearest (mx_greedy_match_: each O1 claims nearest remaining O2 by mx_sq_dist_ + msort). Extraction: mx_unmatched/5 (findall matched, subtract/3). Filtering: mx_filter_changed_color (findall, C1\=C2), mx_filter_same_color (findall, C1=C2). Deltas: mx_color_deltas/mx_pos_deltas/mx_size_deltas (maplist over private delta helpers). Uniformity: mx_all_same_color_delta/mx_all_same_pos_delta/mx_all_same_size_delta (base=[]; step: extract Ref from first, maplist equality check). Zip: mx_zip (recursive, pairs by index). 41/41 PLUnit tests pass. |
+| `Acc_229` | ScenePair pack paper — Holistic Before-After Scene Pair Analysis (Layer 188, ps_* prefix): 14 ps_* predicates analyzing Before+After scene lists as a holistic pair for rule hypothesis ranking. Object identity uses color atom equality + normalized form (translate min-row/col to 0, msort cells; ps_norm_). ps_same_n_objs: length equality. ps_added_objs: findall Over After where ps_match_ fails (color+norm). ps_removed_objs: symmetric. ps_n_added/ps_n_removed: length of result lists. ps_color_set_before/after: findall+msort+ps_dedup_ (remove consecutive duplicates). ps_same_color_set: compare two distinct-color lists. ps_color_delta: ps_color_delta_acc_ recursive positional accumulator; skips unchanged pairs; deduplicates by memberchk; returns [] if lengths differ. ps_is_recolor: same length + subtract(CB,CA)==[Old] + subtract(CA,CB)==[New]. ps_is_recolor_all: After non-empty + distinct_colors(After)==[_SingleColor]. ps_is_shift: same length; first Before object topleft match (color+norm) in After; derive DR/DC; maplist shift; msort verify; cut. ps_is_to_origin: scene_bbox_ MinR/MinC; negate; maplist shift; msort verify. ps_size_preserved: same length + maplist ps_same_size_. 41/41 PLUnit tests pass. |
 | `Acc_228` | CondXf pack paper — Conditional and Selective Scene Transformation (Layer 187, xc_* prefix): 14 xc_* predicates applying transformations to a subset of objects in an obj(Color,Cells) scene list while leaving others unchanged. Complements scenexf (uniform transforms). Color conditions: xc_split_color (findall color==Color; findall color\==Color), xc_recolor_matching (maplist xc_recolor_if_match_: ==/cut helper), xc_shift_color (maplist xc_shift_if_color_: ==/cut + findall R+DR/C+DC), xc_move_color (alias for xc_shift_color), xc_swap_colors (maplist xc_swap_one_: if-then-else C==C1->C2; C==C2->C1; else C). Size conditions: xc_recolor_by_size (maplist xc_recolor_if_size_: length+xc_size_cmp_/cut), xc_split_size (findall satisfying and not-satisfying; xc_size_cmp_ dispatch: gt/lt/eq/ge/le). Rank: xc_largest (-N-Obj keyed msort, take first), xc_smallest (N-Obj keyed msort, take first); xc_recolor_largest/xc_recolor_smallest (maplist xc_recolor_if_obj_: ==/cut). Uniqueness: xc_unique_size (member + findall SameSize + length==1), xc_recolor_unique_size (xc_unique_size + maplist xc_recolor_if_obj_; fails if no unique-size). Merge: xc_merge (append). 41/41 PLUnit tests pass. |
 | `Acc_227` | SceneApply pack paper — Scene-Level Rule Term Evaluation Engine (Layer 186, sa_* prefix): 14 sa_* predicates applying symbolic rule terms to obj(Color,Cells) scene lists. Rule vocabulary: recolor(Old,New) (maplist sa_recolor_atom_ == check), recolor_all(New) (maplist sa_set_color_), color_map(Map) (maplist sa_apply_map_ member if-then-else), shift(DR,DC) (maplist sa_shift_obj_ findall R+DR/C+DC), to_origin (sa_scene_bbox_ + negate + maplist shift), reflect_h(Width) (Width-1-C), reflect_v(Height) (Height-1-R), remove_color (include sa_not_color_), keep_color (include sa_is_color_), sort_size_desc (negated-count msort), sort_size_asc (count msort), sort_pos (r(R,C)-Obj msort), top_n(N) (size-desc + length+append Prefix; fallback), dedup_form (sa_dedup_form_acc_ accumulator). sa_apply_seq: recursive descent. sa_verify/sa_verify_seq: apply + msort compare. sa_verify_all/sa_verify_seq_all: forall over pairs. sa_rule_type: color|spatial|filter|order|dedup. sa_colors_affected: atoms referenced; spatial/order/dedup return []. sa_compose: [Rule1,Rule2]. sa_rule_invertible: recolor, shift, reflect succeed. 46/46 PLUnit tests pass. |
 | `Acc_226` | RuleInfer pack paper — Scene-Level Transformation Rule Inference from Object-List Pairs (Layer 185, ri_* prefix): 14 ri_* predicates for inferring which scene-level transformation was applied to a Before scene to produce an After scene. Pairs expressed as Before-After terms. Inference: ri_infer_recolor (distinct-color set difference [Old] and [New]; count parity check), ri_infer_recolor_all (After has exactly one distinct color), ri_infer_color_map (position-matched objects; ri_infer_color_map_acc_ recursive accumulator; skips unchanged colors), ri_infer_keep_color (After has one color; After length < Before length; count parity), ri_infer_remove_color (single color in subtract(CB,CA)), ri_infer_shift (first-object match by color+norm; candidate DR/DC; scene msort verify; cut for determinism), ri_infer_to_origin (scene_bbox_ MinR/MinC; negate; msort verify). Consistency: ri_consistent_recolor/ri_consistent_color_map/ri_consistent_keep_color/ri_consistent_remove_color/ri_consistent_shift all use forall over pairs with msort comparison. Cross-pair: ri_all_same_n_objs (forall length equality), ri_all_same_colors (forall distinct_colors equality). 41/41 PLUnit tests pass. |
@@ -494,7 +495,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 
 ### Announcements — announcements/
 
-228 announcements in LinkedIn format — one per accomplishment.
+229 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

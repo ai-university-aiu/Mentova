@@ -1,0 +1,33 @@
+Accomplishment 229: Holistic Before-After Scene Pair Analysis (scenepair Pack, ps_*, Layer 188)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a scenepair pack - 14 ps_* predicates that analyze a Before
+and After scene pair holistically, computing observables for rule hypothesis ranking.
+
+Instead of blindly trying every transformation rule, a solver can first ask
+scenepair what kind of change most likely occurred. The pack answers: did the
+object count change? did the color set change? was this a single recolor, a
+recolor-all, a uniform shift, or a shift-to-origin?
+
+Key design: object identity uses color-and-form matching (normalized to origin
+position + sorted cells), not positional index. This makes ps_added_objs and
+ps_removed_objs robust to scene reordering.
+
+ps_color_delta computes Old-New pairs from position-matched pairs, with duplicate
+suppression. ps_is_recolor uses set subtraction on the distinct-color lists.
+ps_is_shift derives a candidate (DR,DC) from the first matched object, then
+verifies the entire scene with msort before cutting.
+
+41 of 41 unit tests pass.
+
+This is WP 209, Mentova's 229th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

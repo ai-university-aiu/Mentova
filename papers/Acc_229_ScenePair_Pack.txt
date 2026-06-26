@@ -1,0 +1,116 @@
+Accomplishment 229: Holistic Before-After Scene Pair Analysis (scenepair Pack, ps_*, Layer 188)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 209th work package: the scenepair pack, a suite of 14 ps_*
+predicates that analyze a Before scene and an After scene as a holistic pair,
+computing scene-level observables useful for transformation rule hypothesis ranking.
+
+
+Motivation
+
+The ruleinfer pack (ri_*) can infer a specific rule from Before-After examples.
+But before invoking a specific inference procedure, it is useful to characterize
+the pair at a high level: did the object count change? did the color set change?
+was this a single recolor, a recolor-all, a uniform shift, or a shift to origin?
+
+The scenepair pack answers these questions. Its predicates serve as a
+first-pass filter that narrows the space of candidate transformation rules
+before detailed inference.
+
+
+Object Identity
+
+A key design choice in this pack is how to determine whether an object in After
+is "the same" as an object in Before. Positional identity (same list index) is
+fragile when the scene is reordered or sorted. The scenepair pack uses
+color-and-form identity: two objects are considered the same if they have the
+same color atom and the same normalized form (translate minimum row and column to
+zero, sort cells). This allows ps_added_objs and ps_removed_objs to detect true
+structural change rather than reordering.
+
+
+Predicates
+
+ps_same_n_objs(+Before, +After): succeed if both scenes have the same object
+count. Foundational check used by most other predicates.
+
+ps_added_objs(+Before, +After, -Added): objects in After with no color-and-form
+match in Before. Uses findall with a ps_match_ check that computes normalized
+form via ps_norm_ (translate to origin, msort cells).
+
+ps_removed_objs(+Before, +After, -Removed): objects in Before with no match in
+After. Symmetric to ps_added_objs.
+
+ps_n_added(+Before, +After, -N): count of added objects.
+ps_n_removed(+Before, +After, -N): count of removed objects.
+
+ps_color_set_before(+Before, -Colors): sorted distinct color atoms in Before.
+Uses findall, msort, and a consecutive-dedup pass (ps_dedup_).
+
+ps_color_set_after(+After, -Colors): same for After.
+
+ps_same_color_set(+Before, +After): succeed if both distinct-color lists are
+identical. Useful to confirm that the transformation preserved the color palette.
+
+ps_color_delta(+Before, +After, -Delta): list of OldColor-NewColor pairs from
+position-matched object pairs. If lengths differ, Delta is []. Duplicate pairs
+are suppressed by checking membership before adding.
+
+ps_is_recolor(+Before, +After): detect single-color substitution (one color
+replaced by exactly one other color). Implemented via set subtraction on the
+distinct-color lists.
+
+ps_is_recolor_all(+Before, +After): detect uniform recolor (all objects in After
+share a single color). Checks that the distinct-color list of After has length 1.
+
+ps_is_shift(+Before, +After, -DR, -DC): detect uniform spatial shift. Derives
+the candidate (DR, DC) from the first Before object by finding a matching object
+in After (same color, same normalized form), then verifies the entire shifted
+scene with msort. A cut after verification makes the predicate deterministic.
+
+ps_is_to_origin(+Before, +After): detect shift-to-origin. Computes the scene
+bounding box of Before, negates the minimum row and column to derive the shift,
+then verifies against After with msort.
+
+ps_size_preserved(+Before, +After): detect that each object's cell count was
+unchanged (position-matched comparison). Fails if lengths differ.
+
+
+Implementation Notes
+
+Normalized form (ps_norm_): translate all cells so the minimum row and column
+are zero, then msort the cells. This correctly identifies objects of the same
+shape regardless of their position on the grid.
+
+Scene bounding box (ps_scene_bbox_): scan all cells of all objects in the scene
+to find min/max row and column.
+
+ps_color_delta_acc_: recursive accumulator over positional pairs. Skips pairs
+where the color is unchanged, and deduplicates by checking membership before
+adding to the accumulator.
+
+No cross-pack dependencies. Uses library(lists) and library(apply).
+
+
+Test Coverage
+
+41 of 41 unit tests pass. Tests cover all predicates, added/removed detection,
+color delta with swapped colors, shift detection for single and multiple objects,
+to_origin for already-at-origin and off-origin cases, and failure cases for
+all detectors.
+
+
+Significance
+
+The scenepair pack provides the observational foundation for rule hypothesis
+ranking. Instead of blindly trying every possible rule, a solver can first ask
+scenepair what kind of transformation most likely occurred, then invoke only the
+relevant inference procedures. This narrows the search space and makes the
+learning loop faster.
+
+This is WP 209, Mentova's 229th accomplishment.
