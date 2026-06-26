@@ -1,0 +1,201 @@
+Accomplishment 180: Value Co-Occurrence and Adjacency Analysis in 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+PrologAI gains its 160th work package: the cooccur pack (co_*, Layer 139).
+
+The cooccur pack provides 14 predicates for collecting ordered horizontal,
+vertical, and diagonal adjacent value pairs in 2D integer grids; counting
+directed and undirected adjacencies; testing universal and empty adjacency;
+detecting isolated cells; enumerating border values; testing shared borders;
+building horizontal transition frequency tables; and finding the most
+frequently co-adjacent value.
+
+Introduction
+
+Two cells in a grid co-occur when they are adjacent. The study of which
+values appear next to which other values - value co-occurrence analysis -
+reveals structural rules about a grid that are invisible from individual
+cell values alone.
+
+Consider a grid where every red cell borders a blue cell. That adjacency
+rule is a global structural property of the grid. It would not appear in
+a color histogram. It would not appear in a spatial extent map. But it
+would appear immediately in a co-occurrence analysis.
+
+ARC-AGI tasks frequently involve such adjacency rules: color A always
+appears at the border between region B and region C; pattern D repeats
+only where value E meets value F; isolated cells of value G must be
+found and relocated.
+
+The cooccur pack provides the primitive operations for all of these
+analyses: enumerate who is next to whom, count how often, test whether
+always or never, find who is isolated, and summarize the most common
+transitions.
+
+Predicates
+
+The 14 public predicates are:
+
+co_h_pairs(+Grid, -Pairs)
+
+Pairs is the list of ordered horizontal adjacent value pairs A-B where A
+is immediately to the left of B within the same row.
+
+co_v_pairs(+Grid, -Pairs)
+
+Pairs is the list of ordered vertical adjacent value pairs A-B where A is
+immediately above B. Enumerated in column-major order.
+
+co_d_pairs_dr(+Grid, -Pairs)
+
+Down-right diagonal pairs: A at (R,C), B at (R+1,C+1).
+
+co_d_pairs_dl(+Grid, -Pairs)
+
+Down-left diagonal pairs: A at (R,C), B at (R+1,C-1).
+
+co_count_h(+Grid, +V1, +V2, -N)
+
+N is the count of directed horizontal V1-V2 adjacent pairs.
+
+co_count_v(+Grid, +V1, +V2, -N)
+
+N is the count of directed vertical V1-V2 adjacent pairs.
+
+co_count_adj4(+Grid, +V1, +V2, -N)
+
+N is the total count of undirected 4-adjacent {V1,V2} pairs. When V1
+equals V2, counts V1-V1 directed pairs. When V1 differs from V2, adds
+the count of V1-V2 and V2-V1 directed pairs from horizontal and vertical
+pair lists.
+
+co_always_adj4(+Grid, +V1, +V2)
+
+Succeeds if every cell with value V1 has at least one 4-adjacent cell
+with value V2.
+
+co_never_adj4(+Grid, +V1, +V2)
+
+Succeeds if no cell with value V1 is 4-adjacent to any cell with value V2.
+
+co_isolated4(+Grid, +V, -Cells)
+
+Cells is the sorted R-C list of positions with value V that have no
+4-adjacent cell with the same value V.
+
+co_border_vals(+Grid, +V, -Vals)
+
+Vals is the sorted list of distinct values W (where W differs from V)
+that appear in at least one 4-adjacent position to a V cell.
+
+co_shared_border(+Grid, +V1, +V2)
+
+Succeeds if some cell with value V1 is 4-adjacent to some cell with
+value V2.
+
+co_row_transitions(+Grid, -Triples)
+
+Triples is the list of A-B-N terms where A-B is a directed horizontal
+adjacent pair appearing N times. Sorted by N descending.
+
+co_most_common_adj4(+Grid, +V, -W)
+
+W is the value most frequently 4-adjacent to V cells. Ties resolved by
+the largest value (msort + last on N-X pairs). Fails if V has no
+4-adjacent cells of any other value.
+
+Example Results
+
+For G = [[1,1,1],[1,2,1],[1,1,1]] (center 2 surrounded by 1s):
+
+co_h_pairs gives [1-1, 1-1, 1-2, 2-1, 1-1, 1-1]: four 1-1 horizontal
+pairs and one 1-2 and one 2-1 pair.
+
+co_count_adj4(G, 1, 2, N) gives N = 4: the four 4-adjacent 1-2 edges
+(left, right, above, below the center).
+
+co_count_adj4(G, 1, 1, N) gives N = 8: eight 4-adjacent 1-1 edges
+among the eight perimeter cells.
+
+co_always_adj4(G, 2, 1) succeeds: the only 2 cell has four 1-neighbors.
+
+co_never_adj4(G, 2, 2) succeeds: only one 2 cell, so no 2-2 adjacency.
+
+co_isolated4(G, 2, C) gives C = [1-1]: the center 2 has no 2-neighbor.
+
+co_isolated4(G, 1, C) gives C = []: all 1 cells touch at least one
+other 1 cell (they are perimeter-connected).
+
+co_border_vals(G, 2, V) gives V = [1]: 2 only borders 1.
+
+co_row_transitions(G, T) gives T = [1-1-4, 2-1-1, 1-2-1]: 1-1 is the
+most common horizontal transition (4 times), followed by 2-1 and 1-2
+(1 time each).
+
+co_most_common_adj4(G, 1, W) gives W = 2: the only other value adjacent
+to 1 cells.
+
+Implementation
+
+co_v_pairs uses a column-major enumeration: for each column C from 0
+to W-1, the recursive co_col_adj_ helper generates all adjacent row
+pairs in that column.
+
+co_count_adj4 works by collecting all horizontal and vertical ordered
+pairs, then counting directed matches. For V1 \= V2, it adds count(V1-V2)
+and count(V2-V1) to get the undirected total. For V1 == V2, directed
+pairs equal undirected pairs.
+
+co_always_adj4 uses double negation via \+co_has_nonadj4_. The helper
+finds a V1 cell with no V2 4-neighbor; if no such cell exists, always
+adj4 succeeds.
+
+co_shared_border uses a deterministic cut after finding the first matching
+pair, avoiding redundant search.
+
+co_row_transitions builds N-A-B triples, sorts them with msort
+(ascending), reverses for descending, then converts to A-B-N format.
+
+co_most_common_adj4 sorts N-X pairs with msort and takes the last element,
+giving the highest-count value, with largest value breaking ties.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates across three test grids:
+G3 (sequential 3x3), G2c (2x2 checkerboard), and G3c (center-2 grid).
+
+All 42 tests pass.
+
+SPARC Documentation
+
+Specification v125: Part 150, requirements CO-CO-001 through CO-CO-014.
+
+Pseudocode v118: Part 150, pseudocode for all 14 predicates.
+
+Architecture v119: ARCH-126, cooccur pack structure and design notes.
+
+Refinement v173: acceptance criteria AC-CO-001 through AC-CO-042.
+
+Completion v176: WP 160 release record.
+
+Tutorial Chapter 121 added to all tutorial files.
+
+Conclusion
+
+The cooccur pack provides the adjacency dimension of grid analysis. Together
+with the scene pack (object inventory and spatial relations), the topology
+pack (connected components), the spread pack (BFS distance), and the morph
+pack (dilation and erosion), PrologAI now has comprehensive coverage of how
+cells relate to each other across multiple spatial scales: point level
+(cooccur), neighborhood level (morph, spread), region level (topology), and
+object level (scene).
+
+PrologAI now comprises 160 work packages.
+
+Mentova has achieved 180 accomplishments.

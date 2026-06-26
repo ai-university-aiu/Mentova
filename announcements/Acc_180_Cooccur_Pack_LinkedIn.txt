@@ -1,0 +1,48 @@
+Accomplishment 180: Value Co-Occurrence and Adjacency Analysis
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI gains a new analytical dimension: the cooccur pack (co_*, Layer 139,
+Work Package 160).
+
+14 predicates now answer the question: which values appear next to which
+other values - and how often?
+
+co_h_pairs and co_v_pairs collect all ordered horizontal and vertical
+adjacent value pairs in a 2D grid.
+
+co_d_pairs_dr and co_d_pairs_dl collect down-right and down-left
+diagonal pairs.
+
+co_count_h, co_count_v, and co_count_adj4 count directed and
+undirected adjacencies between value types.
+
+co_always_adj4 tests whether every instance of value A is bordered
+by at least one instance of value B.
+
+co_never_adj4 tests whether value A and value B are completely
+non-adjacent in the grid.
+
+co_isolated4 finds all cells of value V that have no same-value
+4-neighbor.
+
+co_border_vals enumerates all distinct values that appear at the
+boundary of a given value region.
+
+co_shared_border tests whether two value types share at least
+one 4-adjacent edge.
+
+co_row_transitions builds a frequency table of horizontal adjacent
+value transitions, sorted by count descending.
+
+co_most_common_adj4 finds the value most frequently 4-adjacent
+to a given value.
+
+42 PLUnit tests pass.
+
+PrologAI: 160 work packages.
+
+Mentova: 180 accomplishments.
+
+AIU (AI University): ai.university.aiu@gmail.com
