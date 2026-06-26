@@ -1,0 +1,135 @@
+Accomplishment 219: Object-List Correspondence and Matching (objmatch Pack, mx_*, Layer 178)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objmatch pack (14 mx_* predicates, Layer 178) for finding
+correspondences between two obj(Color, Cells) term lists. The pack provides
+four matching strategies (color, size, normalized form, greedy nearest
+centroid), unmatched-object extraction, color-change filtering, per-pair
+delta computation (color, position, size), uniformity tests on those deltas,
+and a positional zip. The pack has no cross-pack dependencies.
+
+41 of 41 PLUnit tests pass.
+
+This work package is PrologAI WP 199, merged as PR 287 on 2026-06-26.
+
+1. Motivation
+
+A reasoner solving an ARC-type task must determine which input object
+transforms into which output object before it can learn the rule. The objdelta
+pack (WP 197) operates on a single O1-O2 pair. The objmatch pack answers the
+prior question: given a list of input objects and a list of output objects,
+which ones correspond?
+
+2. Core Design
+
+2.1 Matching Strategies
+
+Four strategies are provided, each suitable for different task structures.
+
+mx_by_color: pairs objects sharing the same color. Returns all matching pairs,
+so if two output objects share a color with one input object, both pairs are
+returned. Uses findall over the cross-product.
+
+mx_by_size: pairs objects with the same cell count. Color is ignored. Also
+uses findall over the cross-product.
+
+mx_by_form: pairs objects with the same normalized shape. The normalized shape
+is computed by mx_norm_: translate cells so the bounding box top-left is
+r(0,0), then sort. Color and position are both ignored. Uses findall.
+
+mx_by_nearest: greedy nearest-centroid matching via mx_greedy_match_. Processes
+List1 in order. Each Obj1 claims the nearest remaining Obj2 by squared
+Euclidean centroid distance (via mx_sq_dist_ and mx_nearest_in_ using msort).
+When List2 runs out, remaining Obj1 items are silently skipped.
+
+2.2 Unmatched Objects
+
+mx_unmatched takes the Pairs list and both originals. It collects matched Obj1
+and Obj2 items via findall, then uses subtract/3 to find the leftovers. This
+is a 5-argument predicate: Pairs, List1, List2, Unmatched1, Unmatched2.
+
+2.3 Pair Filtering
+
+mx_filter_changed_color and mx_filter_same_color both use findall to select
+pairs by comparing the two color fields. They are complementary.
+
+2.4 Delta Extraction
+
+Three maplist-based predicates extract per-pair deltas using private helpers:
+mx_color_delta_ (head unification on colors), mx_pos_delta_ (centroid
+subtraction via mx_centroid_), and mx_size_delta_ (length subtraction).
+
+2.5 Uniformity Tests
+
+Three predicates (mx_all_same_color_delta, mx_all_same_pos_delta,
+mx_all_same_size_delta) use the same pattern: extract the reference delta from
+the first pair, then use maplist with a curried equality helper to verify all
+remaining pairs match. The empty list trivially succeeds in the base clause.
+
+2.6 Positional Zip
+
+mx_zip is a direct recursive predicate pairing elements by index, with the
+standard empty-list base case.
+
+3. Predicate Descriptions
+
+mx_by_color(+List1, +List2, -Pairs): match by same color.
+mx_by_size(+List1, +List2, -Pairs): match by same cell count.
+mx_by_form(+List1, +List2, -Pairs): match by same normalized shape.
+mx_by_nearest(+List1, +List2, -Pairs): greedy nearest-centroid matching.
+mx_unmatched(+Pairs, +List1, +List2, -Um1, -Um2): extract unmatched objects.
+mx_filter_changed_color(+Pairs, -Changed): keep pairs where color changed.
+mx_filter_same_color(+Pairs, -Same): keep pairs where color is unchanged.
+mx_color_deltas(+Pairs, -Deltas): c1-c2 color change per pair.
+mx_pos_deltas(+Pairs, -Deltas): dr(DR,DC) centroid displacement per pair.
+mx_size_deltas(+Pairs, -Deltas): N2-N1 size change per pair.
+mx_all_same_color_delta(+Pairs): all pairs share the same color change.
+mx_all_same_pos_delta(+Pairs): all pairs share the same positional delta.
+mx_all_same_size_delta(+Pairs): all pairs share the same size change.
+mx_zip(+List1, +List2, -Pairs): index-wise pairing of two equal-length lists.
+
+4. Example Usage
+
+Example 1: Find which input objects map to which output objects by color.
+
+    Inputs = [obj(r,[r(0,0)]), obj(b,[r(2,0)])],
+    Outputs = [obj(r,[r(0,5)]), obj(b,[r(2,5)])],
+    mx_by_color(Inputs, Outputs, Pairs),
+    mx_pos_deltas(Pairs, Ds),
+    mx_all_same_pos_delta(Pairs).
+    % Ds = [dr(0,5), dr(0,5)] — all objects shifted right by 5
+
+Example 2: Greedy matching + delta uniformity test.
+
+    mx_by_nearest(Inputs, Outputs, Pairs),
+    mx_all_same_color_delta(Pairs).
+    % Succeeds iff every greedy pair has the same color recoloring rule
+
+5. SPARC Documentation
+
+Specification v164 adds Part 189 (objmatch pack specification).
+
+Pseudocode v157 adds Part 189 (objmatch pack pseudocode).
+
+Architecture v158 adds ARCH-165 (objmatch pack layer placement).
+
+Refinement v212 adds acceptance criteria AC-MX-001 through AC-MX-041.
+
+Completion v215 adds the WP-199 completion record.
+
+6. Conclusion
+
+The objmatch pack answers the correspondence question that precedes rule
+extraction: which input object maps to which output object? Together with
+objdelta (which extracts the rule from a single pair) and objcopy (which
+applies the rule to generate new objects), the three packs form a complete
+induction-and-application pipeline at the object level.
+
+This is WP 199, Mentova's 219th accomplishment.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

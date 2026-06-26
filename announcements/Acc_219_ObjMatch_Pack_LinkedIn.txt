@@ -1,0 +1,22 @@
+Accomplishment 219: Object-List Correspondence and Matching (objmatch Pack, mx_*, Layer 178)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has an objmatch pack - 14 mx_* predicates for finding which object in one list corresponds to which object in another.
+
+The pack offers four matching strategies: by shared color, by shared cell count, by shared normalized shape (position- and color-independent), and by greedy nearest centroid. It also extracts unmatched objects, filters pairs by whether the color changed, computes per-pair deltas (color change, position shift, size change), tests whether all pairs have the same delta, and provides a simple positional zip.
+
+41 of 41 unit tests pass.
+
+This pack answers the correspondence question that precedes rule learning: before you can learn "every red object shifts right by 5," you first need to know which input maps to which output. Together with objdelta (which extracts the rule from a single pair) and objcopy (which applies the rule to generate new objects), the objmatch pack completes a full symbolic induction-and-application pipeline at the object level.
+
+This is WP 199, Mentova's 219th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
