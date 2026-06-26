@@ -1,0 +1,201 @@
+Accomplishment 203: Position-Based Sorting, Filtering, and Assignment (Posop Pack, po_*, Layer 162)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a posop pack (14 po_* predicates, Layer 162) that provides
+position-based sorting, filtering, and color assignment for obj(Color, Cells)
+collections. "Position" is the spatial anchor of an object: topmost row
+(minimum row index across all cells) and leftmost col (minimum column index).
+
+The pack covers: position extraction (po_row_of, po_col_of), rank queries in
+three orderings (po_row_rank, po_col_rank, po_reading_rank), color assignment
+in topmost-row, leftmost-col, or reading order (po_assign_by_row, po_assign_by_col,
+po_assign_reading), threshold filtering above/below a row or col (po_above_row,
+po_from_row, po_left_of, po_from_col), and band filtering within a row or col
+range (po_in_row_band, po_in_col_band).
+
+58 of 58 PLUnit tests pass.
+
+This work package is PrologAI WP 183, merged as PR 268 on 2026-06-26.
+
+1. Motivation
+
+A recurring ARC-AGI-2 pattern is: "assign an attribute to objects based on
+their spatial position." For example:
+
+- The topmost object -> color 1; the next-topmost -> color 2; the bottommost -> color 3.
+- All objects above row 5 stay; all objects at or below row 5 are removed.
+- Objects in the left half of the grid become red; objects in the right half become blue.
+- Color objects in reading order (left-to-right, top-to-bottom).
+
+These patterns require predicates that:
+
+1. Extract an object's topmost row and leftmost column.
+2. Sort objects by position in a stable, deterministic way.
+3. Assign attributes (colors) to objects in sorted position order.
+4. Query the position rank of a specific object.
+5. Filter objects by positional threshold or range.
+
+The posop pack fills this gap. It is the spatial complement of the sizeop pack
+(WP 182, sz_*), which provides the same patterns based on cell count rather
+than spatial position.
+
+2. Predicate Descriptions
+
+2.1 po_row_of/2 and po_col_of/2
+
+po_row_of(+Obj, -Row) extracts the topmost row of an object. It collects all
+R values from the r(R,C) cells and returns the minimum.
+
+po_col_of(+Obj, -Col) extracts the leftmost column similarly.
+
+Both use findall/3 to collect the coordinate values and min_list/2 from
+library(lists) to find the minimum.
+
+2.2 Private Sort Helpers
+
+Three private predicates handle position-based sorting:
+
+po_sort_by_row_ sorts Objs by topmost row ascending. Uses Row-Obj keysort pairs;
+keysort/2 is stable so equal rows preserve input order.
+
+po_sort_by_col_ sorts Objs by leftmost col ascending. Same technique, with Col
+as key.
+
+po_sort_reading_ sorts Objs in reading order (ascending row, then ascending col
+within equal rows). Uses the compound key (Row-Col)-Obj with keysort. In
+SWI-Prolog's standard order of terms, the -/2 functor compares its arguments
+left-to-right: if Row1 = Row2, then the comparison falls through to Col1 vs
+Col2. This gives row-first, col-second ordering without a custom comparator.
+
+2.3 Rank Predicates
+
+po_row_rank(+Objs, +Obj, -Rank): rank of Obj in topmost-row-ascending order.
+Delegates to po_sort_by_row_ then nth1/3 (1-based indexing). Ties are broken
+by input order (stable sort).
+
+po_col_rank(+Objs, +Obj, -Rank): rank in leftmost-col-ascending order.
+Delegates to po_sort_by_col_ then nth1/3.
+
+po_reading_rank(+Objs, +Obj, -Rank): rank in reading order (row then col).
+Delegates to po_sort_reading_ then nth1/3.
+
+2.4 Color Assignment
+
+po_assign_by_row(+Objs, +Colors, -Result): sorts Objs by topmost row, then
+zips with Colors using the private po_zip_recolor_/3 helper. The topmost object
+gets Colors[1], the next gets Colors[2], and so on. Truncates at the shorter list.
+
+po_assign_by_col(+Objs, +Colors, -Result): same but sorted by leftmost col.
+
+po_assign_reading(+Objs, +Colors, -Result): same but sorted in reading order.
+
+po_zip_recolor_/3 uses dual base clauses with cuts (empty object list and empty
+color list) to ensure no choicepoints. This is the same pattern used by
+sz_zip_recolor_ in the sizeop pack.
+
+2.5 Threshold Filtering
+
+po_above_row(+Objs, +R, -Filtered): objects with topmost row < R (strictly
+above row R).
+
+po_from_row(+Objs, +R, -Filtered): objects with topmost row >= R (at row R
+or below).
+
+po_left_of(+Objs, +C, -Filtered): objects with leftmost col < C.
+
+po_from_col(+Objs, +C, -Filtered): objects with leftmost col >= C.
+
+Together, po_above_row and po_from_row split the scene at a horizontal boundary.
+po_left_of and po_from_col split it at a vertical boundary.
+
+All four use findall/3 with arithmetic tests against the object's position.
+
+2.6 Band Filtering
+
+po_in_row_band(+Objs, +R1, +R2, -Filtered): objects with topmost row in the
+inclusive range [R1, R2]. Uses findall/3 with Row >= R1, Row =< R2.
+
+po_in_col_band(+Objs, +C1, +C2, -Filtered): objects with leftmost col in
+the inclusive range [C1, C2].
+
+3. Design Decisions
+
+3.1 Compound Key Reading-Order Sort
+
+The reading-order sort uses the compound key (Row-Col) as the keysort/2 key.
+In SWI-Prolog, compound terms are compared by their arguments left-to-right
+when arity and functor name are the same. Since Row-Col uses the -/2 functor,
+keysort first compares Row values, then Col values for equal Rows. This is
+exactly reading order, achieved without a custom comparison predicate.
+
+3.2 Stable Sort Everywhere
+
+All three sort helpers use keysort/2 rather than msort/2 or sort/2. keysort/2
+is the built-in stable ascending sort: objects with equal sort keys retain their
+relative order from the input. This ensures deterministic results even when two
+objects share the same topmost row or leftmost column.
+
+3.3 Complementary to Sizeop
+
+posop (by position) and sizeop (by size, WP 182) are intentionally parallel:
+
+sizeop provides: sz_sort_asc, sz_sort_desc, sz_smallest, sz_largest,
+sz_nth_smallest, sz_nth_largest, sz_rank_of, sz_assign_colors, size filtering.
+
+posop provides: sort by row/col/reading, rank by row/col/reading,
+assign colors by row/col/reading, threshold filtering, band filtering.
+
+The two packs together cover the two most common ARC-AGI-2 attribute-assignment
+criteria: "by how big" and "by where."
+
+4. Examples
+
+Assign colors to objects from top to bottom:
+
+    ?- Objs = [obj(a,[r(3,0)]), obj(b,[r(0,0)]), obj(c,[r(1,0)])],
+       po_assign_by_row(Objs, [top, mid, bot], Result).
+    Result = [obj(top,[r(0,0)]), obj(mid,[r(1,0)]), obj(bot,[r(3,0)])].
+
+Find the reading-order rank of a specific object:
+
+    ?- Objs = [obj(a,[r(0,3)]), obj(b,[r(0,0)]), obj(c,[r(1,0)])],
+       po_reading_rank(Objs, obj(a,[r(0,3)]), Rank).
+    Rank = 2.   % (0,3) comes after (0,0) in reading order.
+
+Filter objects above a dividing row:
+
+    ?- Objs = [obj(a,[r(0,0)]), obj(b,[r(5,0)]), obj(c,[r(2,0)])],
+       po_above_row(Objs, 3, Filtered).
+    Filtered = [obj(a,[r(0,0)]), obj(c,[r(2,0)])].
+
+Select objects in a column band:
+
+    ?- Objs = [obj(a,[r(0,0)]), obj(b,[r(0,5)]), obj(c,[r(0,2)])],
+       po_in_col_band(Objs, 1, 3, Filtered).
+    Filtered = [obj(c,[r(0,2)])].
+
+5. SPARC Documentation
+
+Specification v148 adds Part 173 (posop pack specification).
+
+Pseudocode v141 adds Part 173 (posop pack pseudocode).
+
+Architecture v142 adds ARCH-149 (posop pack layer placement).
+
+Refinement v196 adds acceptance criteria AC-PO-001 through AC-PO-058.
+
+Completion v199 adds the WP-183 completion record.
+
+6. Conclusion
+
+The posop pack closes the gap in position-based reasoning for object collections.
+
+Together with sizeop (WP 182, size-based operations), the two packs cover the
+two most important object-ranking dimensions for ARC-AGI-2: how large an object
+is, and where it sits in the grid.
+
+This is WP 183, Mentova's 203rd accomplishment.

@@ -1,0 +1,52 @@
+Accomplishment 203: Position-Based Sorting, Filtering, and Assignment
+
+PrologAI now has 183 work packages.
+
+The posop pack (po_*, Layer 162) provides position-based operations for
+obj(Color, Cells) collections. "Position" = topmost row and leftmost col
+(minimum row/col index across all cells of the object).
+
+Position extraction:
+• po_row_of/2: topmost row (min row value in Cells)
+• po_col_of/2: leftmost col (min col value in Cells)
+
+Rank queries (1-based; ties break by input order via stable keysort):
+• po_row_rank/3: rank by topmost row ascending (1 = topmost)
+• po_col_rank/3: rank by leftmost col ascending (1 = leftmost)
+• po_reading_rank/3: rank in reading order (row then col)
+
+Color assignment in position order:
+• po_assign_by_row/3: topmost-first assignment
+• po_assign_by_col/3: leftmost-first assignment
+• po_assign_reading/3: reading-order assignment
+
+Threshold filtering (four predicates for row/col above/from):
+• po_above_row/3: objects with topmost row < R
+• po_from_row/3: objects with topmost row >= R
+• po_left_of/3: objects with leftmost col < C
+• po_from_col/3: objects with leftmost col >= C
+
+Band filtering:
+• po_in_row_band/4: topmost row in [R1, R2]
+• po_in_col_band/4: leftmost col in [C1, C2]
+
+Key design: reading-order sort uses compound key (Row-Col) with keysort/2.
+In SWI-Prolog, compound terms compare left-argument-first, giving row-then-col
+order without a custom comparator.
+
+Key example - assign colors top to bottom:
+
+    po_assign_by_row([obj(a,[r(3,0)]), obj(b,[r(0,0)]), obj(c,[r(1,0)])],
+                     [top_color, mid_color, bot_color],
+                     Result)
+    -> Result: obj(b)->top_color (row 0),
+               obj(c)->mid_color (row 1),
+               obj(a)->bot_color (row 3)
+
+58/58 PLUnit tests pass. PR 268 merged to PrologAI main.
+
+posop is the spatial complement of sizeop (Acc_202, size-based). Together they
+cover the two main ARC-AGI-2 attribute-assignment criteria: by size and by position.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
