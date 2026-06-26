@@ -1,0 +1,67 @@
+Accomplishment 205: Grid Downscaling and Block Decomposition
+
+PrologAI now has 185 work packages.
+
+The shrink pack (dn_*, Layer 164) is the inverse of ox_scale_up in objxf.
+Where scale-up expands each cell to an NxN block, the shrink pack collapses
+each NxN block back to a single cell.
+
+Core concept: N-blocky grids
+
+A grid is "N-blocky" if every NxN tile is uniformly colored.
+This is the exact structure produced by scaling up a smaller pattern.
+
+    [[1,1,2,2],        shrink by 2        [[1,2],
+     [1,1,2,2],       ------------>        [3,4]]
+     [3,3,4,4],
+     [3,3,4,4]]
+
+Block inspection:
+• dn_block_dims/4:      H//N rows of blocks, W//N cols
+• dn_block_cells/4:     r(R,C) pairs for block (I,J) — no grid needed
+• dn_block_color/5:     unique color (fails if mixed)
+• dn_block_majority/5:  most frequent color (never fails)
+
+Blocky test and shrinking:
+• dn_is_blocky/2:       succeed if every block is uniform
+• dn_shrink/3:          majority vote per block
+• dn_shrink_strict/3:   unique color per block (fails if any block is mixed)
+• dn_find_scale/2:      find smallest N >= 2 that makes the grid N-blocky
+
+Object downscaling:
+• dn_obj_shrink/3:      divide each cell coord by N; sort removes duplicates
+• dn_scale_factor/3:    find N linking two obj terms (searches N=2..30)
+
+Block classification and extraction:
+• dn_uniform_blocks/3:  I-J pairs for uniform blocks
+• dn_mixed_blocks/3:    I-J pairs for mixed blocks
+• dn_block_grid/5:      NxN sub-grid
+• dn_block_val/5:       flat value list in row-major order
+
+Key example — recover the scale factor automatically:
+
+    dn_find_scale([[r,r,g,g],[r,r,g,g],[b,b,w,w],[b,b,w,w]], N)
+    -> N = 2
+
+    dn_shrink_strict(Grid, 2, S)
+    -> S = [[r,g],[b,w]]
+
+The pack also handles the obj level:
+
+    dn_scale_factor(obj(a,[r(0,0),r(0,1)]),
+                    obj(a,[r(0,0),r(0,1),r(0,2),r(0,3),
+                           r(1,0),r(1,1),r(1,2),r(1,3)]), N)
+    -> N = 2
+
+Note on prefix: dn_* (downscale) was chosen because the seek pack (WP 97)
+already owns sk_*. Using dn_* avoids prefix collision.
+
+52/52 PLUnit tests pass. PR 270 merged to PrologAI main.
+
+Together with scene (extraction), sizeop (size ranking), posop (position
+ranking), and objxf (transforms), the shrink pack closes the scale axis:
+PrologAI can now expand, contract, and reason about scale relationships
+entirely within the symbolic layer.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
