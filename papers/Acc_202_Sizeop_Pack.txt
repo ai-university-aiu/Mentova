@@ -1,0 +1,182 @@
+Accomplishment 202: Size-Based Sorting and Assignment (Sizeop Pack, sz_*, Layer 161)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a sizeop pack (14 sz_* predicates, Layer 161) that provides
+size-based sorting, selection, and attribute assignment for obj(Color, Cells)
+collections. "Size" is the cell count: the length of the Cells list.
+
+The pack covers: size extraction (sz_of), ascending/descending stable sort
+(sz_sort_asc, sz_sort_desc), smallest/largest selection with tie-breaking by
+input order (sz_smallest, sz_largest), rank-indexed access (sz_nth_smallest,
+sz_nth_largest), rank query (sz_rank_of), color assignment in size order
+(sz_assign_colors), exact/above/below size filtering (sz_by_size, sz_above,
+sz_below), distinct size enumeration (sz_unique_sizes), and total cell
+aggregation (sz_total_cells).
+
+60 of 60 PLUnit tests pass.
+
+This work package is PrologAI WP 182, merged as PR 267 on 2026-06-26.
+
+1. Motivation
+
+A recurring ARC-AGI-2 pattern is: "sort objects by size, then assign a
+property (color, label) based on that size order."
+
+For example:
+- Smallest object -> red; medium -> blue; largest -> green.
+- The 2nd-largest object in the input marks the output color.
+- All objects smaller than 3 cells shrink; all larger ones stay.
+
+This pattern requires predicates that:
+1. Compute an object's size (cell count).
+2. Sort an object list by size in a stable, deterministic way.
+3. Assign attributes (colors) to objects in sorted size order.
+4. Query the size rank of a specific object.
+5. Filter objects by size range.
+
+These operations are not available in existing packs. The order pack (od_*)
+sorts by spatial position (row, column), not by size. The query pack (qu_*)
+provides aggregate queries (largest/smallest object) but not the rank-indexed
+access or sorted color assignment needed for compositional rules. The sieving
+pack (si_*) filters by exact size but not by relative rank.
+
+The sizeop pack fills this gap.
+
+2. Predicate Descriptions
+
+2.1 sz_of/2
+
+sz_of(+Obj, -N) extracts the cell count of an obj term. It uses the built-in
+length/2 predicate applied to the Cells field.
+
+2.2 sz_sort_asc/2 and sz_sort_desc/2
+
+sz_sort_asc(+Objs, -Sorted) sorts an object list by size ascending (smallest
+first). Objects with equal size retain their relative order from the input
+(stable sort).
+
+Implementation: build N-Obj keysort pairs (built-in keysort/2 is stable then
+ascending), then strip keys.
+
+sz_sort_desc(+Objs, -Sorted) sorts by size descending (largest first). This
+uses the "negated-key trick": each key N is replaced by Neg is -N before
+keysort. Since keysort sorts ascending by key, larger N (more negative Neg)
+appears first.
+
+2.3 sz_smallest/2 and sz_largest/2
+
+sz_smallest(+Objs, -Obj) returns the first object in input order with the
+minimum cell count. Implementation: collect all sizes via findall, compute
+min_list, then use member+cut to find the first matching object.
+
+sz_largest/2 uses max_list in the same pattern.
+
+2.4 sz_nth_smallest/3 and sz_nth_largest/3
+
+sz_nth_smallest(+Objs, +N, -Obj) returns the Nth object in ascending size
+order. Delegates to sz_sort_asc then nth1/3 (1-based indexing).
+
+sz_nth_largest/3 delegates to sz_sort_desc then nth1/3.
+
+2.5 sz_rank_of/3
+
+sz_rank_of(+Objs, +Obj, -Rank) computes the 1-based position of Obj in the
+ascending size ordering of Objs. Delegates to sz_sort_asc then nth1/3.
+
+When Obj appears at a tied rank, the rank returned matches its position in the
+stable sorted order (input order is preserved for equal sizes).
+
+2.6 sz_assign_colors/3
+
+sz_assign_colors(+Objs, +Colors, -Result) sorts Objs by size ascending, then
+zips with Colors to produce recolored objects. Each obj(OldColor, Cells) at
+position i receives obj(Colors[i], Cells). Truncates at whichever list is
+shorter.
+
+The private helper sz_zip_recolor_/3 uses dual base clauses (cuts on both
+empty-first-list and empty-second-list) to prevent choicepoints.
+
+2.7 sz_by_size/3, sz_above/3, sz_below/3
+
+These filtering predicates use findall with arithmetic tests:
+- sz_by_size: sz_of(O, N) (exact equality)
+- sz_above: sz_of(O, S), S > N (strict greater-than)
+- sz_below: sz_of(O, S), S < N (strict less-than)
+
+All return [] for empty Objs or no-match cases.
+
+2.8 sz_unique_sizes/2 and sz_total_cells/2
+
+sz_unique_sizes(+Objs, -Sizes) collects all cell counts via findall then
+deduplicates and sorts with sort/2.
+
+sz_total_cells(+Objs, -N) collects all cell counts via findall then sums with
+sum_list/2. Returns 0 for empty Objs because sum_list([], 0) holds.
+
+3. Design Decisions
+
+3.1 Stable Sort for Consistent Results
+
+Both sz_sort_asc and sz_sort_desc use the built-in keysort/2, which is stable:
+objects with equal sizes retain their relative input order. This ensures
+sz_rank_of is deterministic even when ties exist.
+
+3.2 Input-Order Tie-Breaking for sz_smallest/sz_largest
+
+sz_smallest and sz_largest return the FIRST object in input order that matches
+the extreme size. This is consistent with the "first-match" convention used by
+other packs (query pack's qu_largest_obj, qu_smallest_obj).
+
+3.3 Negated-Key Trick for Descending Sort
+
+Descending sort uses Neg is -N then keysort ascending. This avoids implementing
+a custom comparison predicate. Since sizes are non-negative integers, their
+negatives are non-positive, and keysort correctly orders them.
+
+4. Examples
+
+Sort objects from largest to smallest and assign labels:
+
+    ?- Objs = [obj(a,[r(0,0)]), obj(b,[r(0,0),r(0,1),r(0,2)]),
+               obj(c,[r(0,0),r(0,1)])],
+       sz_assign_colors(Objs, [small_label, medium_label, large_label], R).
+    R = [obj(small_label,[r(0,0)]),
+         obj(medium_label,[r(0,0),r(0,1)]),
+         obj(large_label,[r(0,0),r(0,1),r(0,2)])].
+
+Find the rank of a specific object:
+
+    ?- Objs = [obj(a,[r(0,0),r(0,1)]), obj(b,[r(0,0)]), obj(c,[r(0,0),r(0,1),r(0,2)])],
+       sz_rank_of(Objs, obj(a,[r(0,0),r(0,1)]), R).
+    R = 2.   % size 2 is rank 2 (after size-1 object b).
+
+Filter to get medium-sized objects:
+
+    ?- sz_above(Objs, 1, Large), sz_below(Large, 3, Medium).
+    Medium = [obj(a,[r(0,0),r(0,1)])].   % only size 2 survives both filters.
+
+5. SPARC Documentation
+
+Specification v147 adds Part 172 (sizeop pack specification).
+
+Pseudocode v140 adds Part 172 (sizeop pack pseudocode).
+
+Architecture v141 adds ARCH-148 (sizeop pack layer placement).
+
+Refinement v195 adds acceptance criteria AC-SZ-001 through AC-SZ-060.
+
+Completion v198 adds the WP-182 completion record.
+
+6. Conclusion
+
+The sizeop pack closes the gap in size-based reasoning for object collections.
+
+Together with weave (WP 181, list structural operations), the two packs form
+a foundation for the two most common ARC-AGI-2 collection-level patterns:
+structural rearrangement (weave) and size-driven attribute assignment (sizeop).
+
+This is WP 182, Mentova's 202nd accomplishment.
