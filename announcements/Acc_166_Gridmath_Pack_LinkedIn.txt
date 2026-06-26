@@ -1,0 +1,40 @@
+Mentova Accomplishment 166: The Cell-Wise Grid Arithmetic Pack
+
+PrologAI gains its 146th work package today.
+
+The gridmath pack (Layer 125, gm_* prefix) provides 14 predicates for
+applying arithmetic operations to two-dimensional grids cell by cell.
+
+These predicates extend the numseq pack (Layer 124, nr_*) into two
+dimensions. Where numseq operates on 1D lists, gridmath operates on 2D
+grids.
+
+The 14 predicates cover:
+
+Five cell-wise binary operations on two same-sized grids: addition,
+subtraction, multiplication, maximum, and minimum (gm_add, gm_sub,
+gm_mul, gm_max, gm_min).
+
+Three scalar transforms: multiply every cell by K, add D to every cell,
+take the absolute value of every cell (gm_scale, gm_offset, gm_abs).
+
+Two comparison masks: a 1/0 mask where 1 marks equal cells, and its
+complement where 1 marks differing cells (gm_eq_mask, gm_diff_mask).
+
+Two value constraints: clamp to a range [Lo, Hi], and modulo M
+(gm_clamp, gm_modulo).
+
+Two aggregates: sum of all cells, product of all cells
+(gm_sum, gm_product).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v111, Pseudocode v104,
+Architecture v105, Refinement v159, Completion v162.
+
+Tutorial Chapter 107 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
