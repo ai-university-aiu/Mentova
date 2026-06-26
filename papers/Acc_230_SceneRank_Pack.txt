@@ -1,0 +1,77 @@
+Accomplishment 230: Rule Hypothesis Ranking for Scene Lists (scenerank Pack, rk_*, Layer 189)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 210th work package: the scenerank pack, a suite of 14 rk_*
+predicates that rank candidate symbolic rule terms by coverage and consistency
+across a list of Before-After scene pair training examples.
+
+
+Motivation
+
+The ruleinfer pack can infer specific rule candidates from individual examples.
+The scenepair pack characterizes what kind of transformation occurred. But in
+a real reasoning task, multiple candidate rules may be plausible. Which one
+actually explains all the training examples? The scenerank pack answers this
+question by computing coverage: how many pairs does each candidate rule
+correctly explain?
+
+
+Coverage
+
+Coverage is computed by applying the rule to each Before scene (using the same
+dispatch vocabulary as sceneapply) and comparing the result to the After scene
+using msort for order-insensitive equality. A pair is "covered" if the rule
+transforms it correctly.
+
+The pack includes: rk_coverage for the count, rk_coverage_pairs for the list
+of covered pairs, rk_rule_score as an alias, rk_coverage_ratio for a Num/Den
+fraction, and rk_n_pairs for the total pair count.
+
+
+Consistency and Filtering
+
+rk_consistent checks that a rule covers every pair. rk_inconsistent_pairs
+finds the failures. rk_all_consistent filters a candidate list to those that
+are fully consistent. rk_filter_min_coverage keeps only rules meeting a minimum
+coverage threshold. rk_perfect_rules keeps rules whose coverage equals the
+total pair count.
+
+
+Ranking and Selection
+
+rk_rank_rules sorts candidates by coverage descending (negated-count msort),
+breaking ties by standard term order. rk_rank_candidates returns Coverage-Rule
+pairs for display. rk_best_rule takes the head of the ranked list.
+rk_top_n_rules returns the top N candidates as Coverage-Rule pairs.
+
+
+Self-Contained Rule Engine
+
+The pack implements its own rk_apply_ predicate with the complete sceneapply
+rule vocabulary: recolor(Old,New), recolor_all(New), color_map(Map), shift(DR,DC),
+to_origin, reflect_h(Width), reflect_v(Height), remove_color(Color),
+keep_color(Color), sort_size_desc, sort_size_asc, top_n(N). This makes scenerank
+independent of sceneapply, avoiding a cross-pack dependency.
+
+
+Test Coverage
+
+41 of 41 unit tests pass. Tests cover all 14 predicates, single and multi-pair
+scenarios, correct and incorrect rules, tie-breaking in ranking, vacuous
+consistency on empty pair lists, and rules beyond the basic recolor vocabulary
+(remove_color, recolor_all).
+
+
+Significance
+
+The scenerank pack is the selection step in the symbolic learning loop. With
+ruleinfer inferring candidates, scenepair characterizing the transformation,
+and scenerank selecting the best rule, PrologAI now has a complete
+infer-characterize-rank-apply pipeline for scene-level symbolic reasoning.
+
+This is WP 210, Mentova's 230th accomplishment.

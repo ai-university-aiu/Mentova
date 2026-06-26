@@ -1,0 +1,35 @@
+Accomplishment 230: Rule Hypothesis Ranking for Scene Lists (scenerank Pack, rk_*, Layer 189)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a scenerank pack - 14 rk_* predicates that rank candidate
+symbolic rule terms by coverage across Before-After scene pair training examples.
+
+Coverage: how many pairs does a given rule correctly explain? rk_coverage counts
+them. rk_coverage_pairs lists them. rk_consistent checks all-or-nothing. The
+pack handles the full sceneapply rule vocabulary (recolor, shift, color_map,
+remove_color, reflect, and more) through a self-contained rk_apply_ engine.
+
+Ranking: rk_rank_rules sorts candidates by coverage descending (negated-count
+msort, tie-broken by term order). rk_best_rule picks the winner.
+rk_rank_candidates returns Coverage-Rule pairs for display.
+rk_top_n_rules returns the top N candidates.
+
+Filtering: rk_all_consistent, rk_filter_min_coverage, rk_perfect_rules
+(coverage == pair count) all use include/3 with encapsulated helper predicates.
+
+With ruleinfer inferring candidates and scenerank selecting the best one,
+PrologAI now has a complete infer-rank-apply pipeline.
+
+41 of 41 unit tests pass.
+
+This is WP 210, Mentova's 230th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
