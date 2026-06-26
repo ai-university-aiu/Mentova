@@ -1,0 +1,47 @@
+Accomplishment 187: Concentric Ring Analysis for 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI gains its 167th work package: the border pack (br_*, Layer 146).
+
+14 predicates for concentric ring analysis of 2D grids.
+
+The ring depth formula: min(R, H-1-R, C, W-1-C). Ring 0 is the outermost border.
+Ring 1 is the next layer inward. Ring N is N steps from the outer edge.
+
+br_ring_cells: list of R-C pairs in ring N in row-major order.
+br_ring_vals: grid values at ring N.
+br_ring_color: uniform color of ring N; fails if non-uniform.
+br_is_uniform_ring: succeed if ring N has a single color.
+
+br_add_border: surround a grid with one layer of V, producing (H+2) x (W+2).
+br_strip_border: remove the outermost ring, giving (H-2) x (W-2) or [].
+br_inner_n: strip N rings recursively; N=0 is identity.
+
+br_outer_color: uniform color of ring 0.
+br_is_uniform_outer: succeed if ring 0 is uniform.
+
+br_ring_colors: list of uniform ring colors from outside in, stopping at the
+first non-uniform ring.
+[[1,1,1,1,1],[1,2,2,2,1],[1,2,3,2,1],[1,2,2,2,1],[1,1,1,1,1]] -> [1, 2, 3].
+
+br_max_ring: index of innermost ring = (min(H,W)-1)//2.
+3x3 -> 1. 5x5 -> 2. 1x1 -> 0.
+
+br_is_nested: succeed if every ring is uniform (concentric bullseye pattern).
+Uses forall(between(0, MaxN, N), br_is_uniform_ring(Grid, N)).
+
+br_depth_map: same-sized grid where each cell holds its ring index.
+[[0,0,0],[0,1,0],[0,0,0]] for a 3x3 grid.
+
+br_fill_ring: replace all cells in ring N with value V.
+Fill ring 0 of [[1,2,1],[3,4,3],[1,2,1]] with 9 -> [[9,9,9],[9,4,9],[9,9,9]].
+
+42 PLUnit tests pass.
+
+PrologAI: 167 work packages.
+
+Mentova: 187 accomplishments.
+
+AIU (AI University): ai.university.aiu@gmail.com
