@@ -1,0 +1,179 @@
+Accomplishment 176: Integer Median Computation for Lists and 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+PrologAI gains its 156th work package: the median pack (md_*, Layer 135).
+
+The median is the middle value of a sorted sequence.
+
+It is more resistant to outliers than the mean because extreme values do not
+shift the center of the sorted order.
+
+The median pack provides 14 predicates for computing the lower (floor) integer
+median of lists, grid rows, grid columns, the entire grid, and per-cell
+4-connected and 8-connected neighborhoods.
+
+Introduction
+
+Many perceptual and analytical tasks require a measure of central tendency that
+is robust to outliers and to repeated values.
+
+The mean is easily distorted by a single very high or very low value.
+
+The median is not.
+
+The lower (floor) median is defined as the element at 0-based index (N-1)//2
+of the msort-sorted value list, where msort/2 is the SWI-Prolog built-in that
+sorts while preserving duplicates.
+
+For odd-length lists the lower median is the unique middle element.
+
+For even-length lists the lower median is the lower of the two middle elements.
+
+Using msort/2 rather than sort/2 is critical: sort/2 removes duplicates and
+would return wrong medians when values repeat.
+
+For example, for the list [1, 1, 1, 2, 3] the correct median is 1.
+
+sort/2 would produce [1, 2, 3] and give median 2, which is wrong.
+
+msort/2 preserves the three 1s and gives the correct answer of 1.
+
+Predicates
+
+The 14 public predicates are:
+
+md_median(+List, -M)
+
+Computes M as the lower median of a non-empty integer list.
+
+md_row(+Grid, +R, -M)
+
+Computes M as the lower median of row R (0-based) of Grid.
+
+md_col(+Grid, +C, -M)
+
+Computes M as the lower median of column C (0-based) of Grid.
+
+md_row_medians(+Grid, -Ms)
+
+Computes Ms as the list of lower medians, one per row, in row order.
+
+md_col_medians(+Grid, -Ms)
+
+Computes Ms as the list of lower medians, one per column, in column order.
+
+md_grid(+Grid, -M)
+
+Computes M as the lower median of all cell values in Grid.
+
+md_filter4(+Grid, -OutGrid)
+
+Produces OutGrid where each cell is the lower median of the original cell
+value plus all in-bounds 4-connected neighbor values.
+
+This is a 4-connected median filter, useful for smoothing grids while
+preserving edges better than a mean filter.
+
+md_filter8(+Grid, -OutGrid)
+
+Same as md_filter4 but using 8-connected neighbors.
+
+md_above(+Grid, -Cells)
+
+Produces Cells as the sorted list of R-C positions in Grid whose value is
+strictly greater than the grid-wide lower median.
+
+md_below(+Grid, -Cells)
+
+Produces Cells as the sorted list of R-C positions in Grid whose value is
+strictly less than the grid-wide lower median.
+
+md_row_above(+Grid, +R, -Cells)
+
+Produces Cells as the list of R-C positions in row R whose value is strictly
+greater than that row's lower median.
+
+md_row_below(+Grid, +R, -Cells)
+
+Produces Cells as the list of R-C positions in row R whose value is strictly
+less than that row's lower median.
+
+md_col_above(+Grid, +C, -Cells)
+
+Produces Cells as the list of R-C positions in column C whose value is
+strictly greater than that column's lower median.
+
+md_col_below(+Grid, +C, -Cells)
+
+Produces Cells as the list of R-C positions in column C whose value is
+strictly less than that column's lower median.
+
+Implementation
+
+The core median computation uses msort/2 to sort the input list preserving
+duplicates, computes the lower-median index as MI = (N-1)//2, and retrieves
+the element at that index using nth0/3.
+
+The median filter predicates (md_filter4 and md_filter8) use a triple-nested
+findall pattern: the outer findall collects rows, the middle findall collects
+per-cell medians, and the innermost findall collects neighbor values using an
+offset list and in-bounds guards.
+
+Only member/2 and nth0/3 are imported from library(lists).
+
+msort/2, length/2, findall/3, and between/3 are SWI-Prolog built-ins.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates across four test grids:
+
+G3 (3x3 sequential values 1-9), G3u (3x3 uniform all-ones), G2 (2x2 small
+grid), and G3b (3x3 peak grid).
+
+All 42 tests pass.
+
+Example outputs for G3 = [[1,2,3],[4,5,6],[7,8,9]]:
+
+md_grid returns 5 (the center value of a sequential 3x3 grid).
+
+md_row_medians returns [2, 5, 8] (middle of each row).
+
+md_col_medians returns [4, 5, 6] (middle of each column).
+
+md_filter4 returns [[2,2,3],[4,5,5],[7,7,8]].
+
+md_above returns [1-2, 2-0, 2-1, 2-2] (positions with values 6, 7, 8, 9).
+
+SPARC Documentation
+
+Specification v121: Part 146, requirements MD-MD-001 through MD-MD-014.
+
+Pseudocode v114: Part 146, pseudocode for all 14 predicates.
+
+Architecture v115: ARCH-122, median pack structure.
+
+Refinement v169: acceptance criteria AC-MD-001 through AC-MD-042.
+
+Completion v172: WP 156 release record.
+
+Tutorial Chapter 117 added to all tutorial files.
+
+Conclusion
+
+The median pack completes a suite of statistical measures for 2D grids in
+PrologAI.
+
+Together with the projection pack (sums, maxima, modes), the gradient pack
+(differences, slopes), the extrema pack (global min/max, local peaks), and
+the naggr pack (per-cell neighbor aggregates), the median pack gives PrologAI
+a full statistical foundation for grid analysis.
+
+PrologAI now comprises 156 work packages.
+
+Mentova has achieved 176 accomplishments.
