@@ -1,0 +1,28 @@
+Mentova Accomplishment 162: 1D Cross-Section Extraction from 2D Grids
+
+PrologAI adds Work Package 142 - the cross pack (Layer 121), a focused
+analytics module for extracting and querying 1D slices of 2D grids.
+
+14 predicates (cx_* prefix) covering:
+
+- Row and column extraction: cx_row, cx_col
+- Diagonal extraction: cx_diag (main), cx_antidiag (anti-diagonal)
+- Arithmetic sums per row or column: cx_row_sum, cx_col_sum
+- Value occurrence counts: cx_row_count, cx_col_count
+- Index queries - which rows/columns contain a value: cx_rows_with, cx_cols_with
+- Unique value sets per row/column: cx_row_uniq, cx_col_uniq
+- Mode (most frequent value) with tie-breaking: cx_row_mode, cx_col_mode
+
+42 of 42 PLUnit acceptance tests pass.
+
+A typical pipeline: cx_rows_with finds which rows contain a target color,
+cx_row extracts each row, cx_row_uniq identifies co-occurring values,
+cx_row_mode determines the dominant color - all without nested loops in
+calling code.
+
+PrologAI now carries 142 work packages and 162 Mentova accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+github.com/ai-university-aiu/PrologAI

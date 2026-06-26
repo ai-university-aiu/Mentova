@@ -1,0 +1,215 @@
+Mentova Accomplishment 162: 1D Cross-Section Extraction - The cross Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 142: the cross pack, a Layer 121 symbolic
+reasoning module providing 14 predicates for extracting 1D slices from
+2D grids and computing aggregate statistics over those slices. Slices
+include individual rows, columns, the main diagonal, and the anti-diagonal.
+Aggregate queries cover arithmetic sums, value counts, sorted unique value
+sets, and mode (most frequent value with tie-breaking). All 42 PLUnit
+acceptance tests pass.
+
+
+1. Motivation
+
+Many grid reasoning tasks reduce to questions about individual rows or
+columns: "which rows contain color 3?", "what is the most common value
+in column 2?", "does any row sum to 10?", "what are the distinct values
+along the diagonal?". The PrologAI library had grid-level predicates for
+flood fill, morphological operations, and pattern matching, but no focused
+module for 1D cross-section analytics.
+
+The cross pack fills this gap. It is deliberately orthogonal to the
+project pack (which casts shadows along rows and columns) and the select
+pack (which picks regions by size): the cross pack extracts a slice and
+then answers a statistical question about it.
+
+A common pipeline: use cx_rows_with/3 to find which rows contain a target
+color, extract each with cx_row/3, compute cx_row_uniq/3 to see what other
+colors co-occur, and use cx_row_mode/4 to identify the dominant color per
+row. This chain requires no intermediate grids and no nested findall loops
+in the calling code.
+
+
+2. Predicate Inventory (14 predicates, cx_* prefix)
+
+2.1 Slice Extraction
+
+cx_row(+Grid, +R, -Row)
+Extracts row R (0-indexed) as a list. Implemented as a direct nth0/3 call.
+Row indexing is 0-based to be consistent with all other PrologAI grid packs.
+
+cx_col(+Grid, +C, -Col)
+Extracts column C (0-indexed) as a list with one element per row. Uses
+member(Row, Grid) to iterate rows in document order and nth0(C, Row, V)
+to pick the C-th element from each row inside findall.
+
+cx_diag(+Grid, -Diag)
+Extracts the main diagonal (top-left to bottom-right). For row index R,
+the diagonal element is Grid[R][R]. The diagonal length is min(H, W).
+
+cx_antidiag(+Grid, -Diag)
+Extracts the anti-diagonal (top-right to bottom-left). For row index R,
+the anti-diagonal column is C = W - 1 - R. The guard C >= 0 handles
+non-square grids where H > W.
+
+Examples:
+cx_row([[1,2,3],[4,5,6]], 1, Row).     % Row = [4,5,6]
+cx_col([[1,2,3],[4,5,6]], 2, Col).     % Col = [3,6]
+cx_diag([[1,2,3],[4,5,6],[7,8,9]], D). % D = [1,5,9]
+cx_antidiag([[1,2],[3,4]], D).          % D = [2,3]
+
+
+2.2 Arithmetic Aggregates
+
+cx_row_sum(+Grid, +R, -Sum)
+Computes the sum of all values in row R. Delegates to sum_list/2 from
+library(lists) after extracting the row with nth0/3.
+
+cx_col_sum(+Grid, +C, -Sum)
+Computes the sum of all values in column C. Extracts the column via
+cx_col/3 then calls sum_list/2.
+
+Examples:
+cx_row_sum([[10,20,30]], 0, Sum). % Sum = 60
+cx_col_sum([[1,2],[3,4],[5,6]], 1, Sum). % Sum = 12
+
+
+2.3 Value Count
+
+cx_row_count(+Grid, +R, +V, -N)
+Counts occurrences of value V in row R using findall + member/2 + length/2.
+
+cx_col_count(+Grid, +C, +V, -N)
+Counts occurrences of value V in column C by extracting the column first.
+
+Examples:
+cx_row_count([[1,2,1,1,3]], 0, 1, N). % N = 3
+cx_col_count([[1,2],[1,3],[1,4]], 0, 1, N). % N = 3
+
+
+2.4 Index Queries
+
+cx_rows_with(+Grid, +V, -Rows)
+Returns the sorted list of 0-indexed row indices that contain at least one
+occurrence of V. Uses between/3 to enumerate row indices, nth0/3 to fetch
+each row, and member/2 to test for V; sort/2 deduplicates indices for rows
+that contain V more than once.
+
+cx_cols_with(+Grid, +V, -Cols)
+Returns the sorted list of 0-indexed column indices that contain V in any
+row. Uses between/3 for column indices, member(Row, Grid) to iterate rows,
+and nth0/3 to check each column position; sort/2 deduplicates.
+
+Examples:
+cx_rows_with([[0,0],[1,0],[0,1]], 1, Rows). % Rows = [1,2]
+cx_cols_with([[1,0],[0,1],[1,1]], 1, Cols). % Cols = [0,1]
+
+
+2.5 Unique Values
+
+cx_row_uniq(+Grid, +R, -Vals)
+Returns the sorted set of distinct values in row R. Applies sort/2 to the
+extracted row list; sort/2 both sorts and deduplicates in one call.
+
+cx_col_uniq(+Grid, +C, -Vals)
+Returns the sorted set of distinct values in column C. Extracts the column
+via cx_col/3 then applies sort/2.
+
+Examples:
+cx_row_uniq([[3,1,2,1,3]], 0, Vals). % Vals = [1,2,3]
+cx_col_uniq([[1],[2],[1],[3]], 0, Vals). % Vals = [1,2,3]
+
+
+2.6 Mode (Most Frequent Value)
+
+cx_row_mode(+Grid, +R, +Bg, -Mode)
+Returns the most frequently occurring value in row R. On ties, returns Bg.
+Extracts the row and delegates to private helper cx_mode_/3.
+
+cx_col_mode(+Grid, +C, +Bg, -Mode)
+Returns the most frequently occurring value in column C. On ties, returns Bg.
+Extracts the column and delegates to cx_mode_/3.
+
+Private helper cx_mode_(Vals, Bg, Mode) builds frequency pairs N-V via
+findall + length, finds MaxN via max_list/2, collects all values at MaxN,
+and returns the unique winner or Bg on ties. This is the same pattern
+established by at_mode_ in the autom pack.
+
+Examples:
+cx_row_mode([[1,2,1,1]], 0, 0, Mode). % Mode = 1  (clear winner)
+cx_row_mode([[1,2]], 0, 0, Mode).      % Mode = 0  (tie, returns Bg)
+
+
+3. Implementation Notes
+
+3.1 cx_col Extraction
+
+Column extraction visits every row with member(Row, Grid), which iterates
+rows in document order. This means cx_col always produces a list in
+top-to-bottom row order, matching the row order of cx_row for consistent
+indexing.
+
+3.2 Deduplication in Index Queries
+
+cx_rows_with and cx_cols_with use sort/2 on their findall results. Without
+sort, a row with V appearing twice would contribute its index twice to the
+result. sort/2 is the correct deduplication tool because the integer indices
+are totally ordered and sort always removes duplicates.
+
+3.3 Non-Square Grid Handling
+
+cx_diag and cx_antidiag are defined for any grid shape:
+- For a 2x4 grid: cx_diag produces [Grid[0][0], Grid[1][1]] (length 2).
+- For cx_antidiag on a 3x2 grid: Row 2 would compute C = 2-1-2 = -1,
+  so the guard C >= 0 prevents that element from being included.
+
+3.4 sum_list/2 Dependency
+
+sum_list/2 is imported from library(lists). Unlike max_list/2 and min_list/2
+which fail on the empty list, sum_list([], 0) succeeds, making cx_row_sum
+and cx_col_sum safe for empty rows and columns.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate covering a
+standard case, a boundary case, and an edge case (empty, single element,
+or zero/uniform values).
+
+Key correctness tests:
+  cx_diag([[1,2,3],[4,5,6],[7,8,9]], D) => D=[1,5,9]
+  cx_antidiag([[1,2,3],[4,5,6],[7,8,9]], D) => D=[3,5,7]
+  cx_rows_with([[1,0],[1,1],[0,1]], 1, Rows) => Rows=[0,1,2]
+  cx_cols_with([[1,0],[0,1],[1,1]], 1, Cols) => Cols=[0,1]
+  cx_row_uniq([[3,1,2,1,3]], 0, Vals) => Vals=[1,2,3]
+  cx_row_mode([[1,2,1,1]], 0, 0, Mode) => Mode=1
+  cx_row_mode([[1,2]], 0, 0, Mode) => Mode=0 (tie -> Bg)
+
+Library imports: library(lists): member/2, nth0/3, sum_list/2, max_list/2.
+
+
+5. Significance
+
+The cross pack adds a clean 1D analytics layer to PrologAI. By providing
+direct predicates for row, column, and diagonal queries, it eliminates the
+need to write findall+nth0 loops in calling code for common slice operations.
+
+cx_rows_with and cx_cols_with are particularly useful for identifying which
+rows or columns participate in a pattern: find which rows contain a given
+color, then compare their sums or unique value sets to classify their role.
+
+cx_row_mode and cx_col_mode extend the majority-vote idea from the autom
+pack (at_majority_4) to 1D slices, enabling row-by-row or column-by-column
+dominant-color queries without a full grid transformation.
+
+This is Mentova accomplishment 162. PrologAI now carries 142 work packages.
+
+github.com/ai-university-aiu/PrologAI
