@@ -1,0 +1,186 @@
+Accomplishment 167: The Color Lookup Table and Palette Substitution Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a color lookup table and palette substitution pack as
+Work Package 147 (Layer 126).
+
+The pack provides 14 predicates, all carrying the cm_* prefix, for
+mapping, substituting, and analyzing color (or value) labels in grids
+and lists.
+
+A "map" is represented as a list of Old-New pairs.
+
+The predicates apply, invert, compose, derive, and query such maps.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Many grid-reasoning tasks require understanding a consistent color
+substitution rule and applying it to new inputs.
+
+A common task structure provides several input-output example pairs and
+asks for the output of a novel input.
+
+The colormap pack provides the vocabulary to extract such a substitution
+rule from example pairs and apply it deterministically.
+
+cm_from_grids derives a map from two grids by collecting the value at
+each position in the input and the value at the corresponding position
+in the output.
+
+cm_apply then applies that map to a new input grid.
+
+More complex rules require composing two maps, inverting a map, or
+restricting a map to only the colors that appear in a given context.
+
+All of these operations are first-class predicates in the colormap pack.
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+Two predicates apply a map to a grid.
+
+cm_apply(+Map, +Grid, -Grid2) substitutes each cell using the map.
+For each cell V, it looks for a matching V-V2 pair using memberchk/2.
+On a miss, the cell value is left unchanged.
+
+cm_apply_default(+Map, +Bg, +Grid, -Grid2) behaves identically but
+replaces unmatched cells with the background value Bg.
+
+Two predicates transform maps.
+
+cm_invert(+Map, +Grid, -Grid2) applies the inverse of Map by swapping
+each Old-New pair to New-Old before applying.
+
+cm_compose(+MapA, +MapB, -MapAB) composes two maps so that MapAB[k]
+equals MapB[MapA[k]]. If MapA maps k to an intermediate value v1 and
+MapB has no entry for v1, then MapAB maps k to v1 directly.
+
+Three predicates derive maps.
+
+cm_from_grids(+GridA, +GridB, -Map) derives a map from the cell-by-cell
+correspondence of two same-sized grids. The result is sorted and
+deduplicated.
+
+cm_identity(+Palette, -Map) builds the identity map V-V for every value
+in a palette.
+
+cm_remap(+OldVals, +NewVals, -Map) builds a map from two parallel lists
+of equal length by pairing corresponding elements.
+
+One predicate applies a map to a one-dimensional list.
+
+cm_remap_list(+Map, +List, -List2) applies Map to each element; unmatched
+elements are left unchanged.
+
+Four predicates query maps and grids.
+
+cm_palette(+Map, -Palette) returns the sorted list of all source (key)
+values in Map.
+
+cm_used(+Grid, -UsedVals) returns the sorted list of all distinct values
+that appear anywhere in Grid.
+
+cm_has_key(+Map, +K) succeeds iff K appears as a key in Map.
+
+cm_lookup(+Map, +K, -V) looks up the value for key K, failing if K is
+not present.
+
+Two predicates filter and extend maps.
+
+cm_restrict(+Map, +Keys, -Map2) keeps only entries whose key appears
+in the Keys list.
+
+cm_expand(+Map, +Bg, +Palette, -Map2) extends Map with K-Bg entries
+for each palette value that has no existing entry in Map.
+
+
+3. Implementation
+
+The cm_apply, cm_apply_default, and cm_remap_list predicates share the
+cm_apply_cell_/3 helper predicate, which uses an if-then-else with
+memberchk/2 for deterministic first-match lookup.
+
+Nested maplist/3 applies this helper across all rows and all cells in
+a grid.
+
+The cm_compose predicate uses findall to iterate over MapA and calls
+memberchk for each intermediate value against MapB.
+
+The sort/2 built-in handles deduplication in cm_from_grids, cm_palette,
+and cm_used.
+
+The cm_expand predicate uses findall with the negation-as-failure guard
+\+ memberchk(K-_, Map) to identify palette values that have no entry,
+then append/3 to combine with the original map.
+
+
+4. Canonical Usage Pattern
+
+Given a list of input-output grid pairs, derive a consistent color rule
+and apply it to a new input:
+
+  cm_from_grids(In1, Out1, Map1),
+  cm_from_grids(In2, Out2, Map2),
+  cm_restrict(Map1, Keys, Restricted),
+  cm_apply(Restricted, NewIn, NewOut).
+
+Or derive by composition:
+
+  cm_from_grids(In1, Out1, MapA),
+  cm_from_grids(In2, Out2, MapB),
+  cm_compose(MapA, MapB, Combined).
+
+
+5. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Tests cover canonical cases, edge cases (no-match pass-through, empty
+maps, identity maps), and boundary cases (restrict to empty set, expand
+when all keys are missing).
+
+All 42 pass under SWI-Prolog.
+
+
+6. SPARC Documentation
+
+Specification v112, Part 137 defines all 14 predicates.
+
+Pseudocode v105, Part 137 gives the algorithmic descriptions.
+
+Architecture v106, ARCH-113 records the module placement and design
+patterns.
+
+Refinement v160 records acceptance criteria AC-CM-001 through AC-CM-042.
+
+Completion v163 records the release evidence for WP 147.
+
+Tutorial Chapter 108 demonstrates all 14 predicates with examples and
+shows the canonical pattern of deriving a map from input-output examples
+and applying it to a new input.
+
+
+7. Position in the Cognitive Architecture
+
+The colormap pack is Layer 126 in the PrologAI cognitive stack.
+
+It provides the substitution primitive that complements the grid-analysis
+primitives of the cross (Layer 121), mask (Layer 122), and gridmath
+(Layer 125) packs.
+
+PrologAI now carries 147 work packages in the packs/ directory.
+
+
+END
