@@ -1,0 +1,237 @@
+Mentova Accomplishment 161: Cellular Automaton Neighborhood Aggregation - The autom Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 141: the autom pack, a Layer 120 symbolic
+reasoning module providing 14 predicates for applying neighborhood aggregation
+rules across entire 2D grids in a single call. Predicates cover count grids
+(where each cell holds the count of target-valued neighbors), boolean neighbor
+grids (where cells are marked 1/0 based on any-neighbor or all-neighbor
+conditions), isolated cell detection, birth rules (where dead cells become
+alive based on live neighbor count), majority voting, and one step of Conway's
+Game of Life. All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Many visual reasoning tasks require asking grid-wide questions about
+neighborhood structure: "mark every cell that has at least one neighbor of
+color X", "find all cells of color Y that have no same-colored neighbor",
+"apply one step of a growth rule where cells are born when they touch exactly
+N live cells". The existing PrologAI library had per-cell neighbor queries
+(neighbor pack, nb_*) and per-cell neighbor counts (window pack, wn_count4/5).
+What was missing was a layer that produces a complete transformed grid from
+these neighborhood computations in one predicate call.
+
+The autom pack provides that layer. It turns neighborhood queries into
+grid transformations, making it natural to chain: compute the count grid, then
+threshold it with xs_threshold, then use the result to guide a fill or a
+birth step.
+
+
+2. Predicate Inventory (14 predicates, at_* prefix)
+
+2.1 Neighborhood Count Grids
+
+at_count_nbrs_4(+Grid, +V, -CGrid)
+Produces CGrid where CGrid[R][C] is the count of in-bounds 4-connected
+neighbors of (R,C) that equal V. Uses triple-nested findall: outer per-row,
+middle per-cell, innermost per-direction. A private at_offs4_ fact supplies the
+four direction offsets, avoiding literal repetition.
+
+at_count_nbrs_8(+Grid, +V, -CGrid)
+Same as above for 8-connected neighbors, using at_offs8_.
+
+at_count_same_4(+Grid, -CGrid)
+CGrid[R][C] is the count of in-bounds 4-connected neighbors that share the
+same value as (R,C). Retrieves the cell value with nth0 and uses it as the
+filter in the innermost findall.
+
+at_count_same_8(+Grid, -CGrid)
+Same as above for 8-connected neighbors.
+
+Examples:
+at_count_nbrs_4([[0,0,0],[0,1,0],[0,0,0]], 0, CG). % CG=[[2,2,2],[2,4,2],[2,2,2]]
+at_count_same_4([[2,2,2],[2,2,2],[2,2,2]], CG).      % CG=[[2,3,2],[3,4,3],[2,3,2]]
+
+
+2.2 Boolean Neighbor Grids
+
+at_any_nbr_4(+Grid, +V, -BGrid)
+BGrid[R][C] = 1 if any in-bounds 4-neighbor of (R,C) equals V; else 0.
+Uses private helper at_has_nbr_4_ which tries each direction and cuts on the
+first V-valued neighbor found. The if-then-else maps success/failure to 1/0.
+
+at_all_nbrs_4(+Grid, +V, -BGrid)
+BGrid[R][C] = 1 if every in-bounds 4-neighbor of (R,C) equals V. Uses
+forall/2 over in-bounds 4-directions. Vacuously true for cells with no
+in-bounds neighbors (corner cells on a 1x1 grid).
+
+at_any_nbr_8(+Grid, +V, -BGrid)
+Same as at_any_nbr_4 for 8-neighbors. Uses at_has_nbr_8_ helper.
+
+at_all_nbrs_8(+Grid, +V, -BGrid)
+Same as at_all_nbrs_4 for 8-neighbors.
+
+Examples:
+at_any_nbr_4([[0,0,0],[0,1,0],[0,0,0]], 1, BG). % BG=[[0,1,0],[1,0,1],[0,1,0]]
+at_all_nbrs_4([[1,1,1],[1,0,1],[1,1,1]], 1, BG). % BG=[[1,0,1],[0,1,0],[1,0,1]]
+at_all_nbrs_8([[1,1,1],[1,0,1],[1,1,1]], 1, BG). % BG=[[0,0,0],[0,1,0],[0,0,0]]
+
+Note: at_all_nbrs_8 differs from at_all_nbrs_4 for non-corner cells in this
+3x3 example because 8-connectivity includes diagonal neighbors, and some of
+those diagonals contain the center 0.
+
+
+2.3 Isolated Cell Detection
+
+at_isolated_4(+Grid, +V, -Cells)
+Returns sorted R-C pairs of V-valued cells that have no V-valued 4-neighbor.
+These are cells of color V that are completely alone in their 4-neighborhood.
+Uses findall with \+ at_has_nbr_4_ (negation-as-failure), then sort/2.
+
+at_isolated_8(+Grid, +V, -Cells)
+Same for 8-connectivity.
+
+Examples:
+at_isolated_4([[0,0,0],[0,1,0],[0,0,0]], 1, Cs). % Cs=[1-1]
+at_isolated_4([[1,1],[0,0]], 1, Cs).               % Cs=[]  (adjacent, not isolated)
+at_isolated_8([[1,0],[0,1]], 1, Cs).               % Cs=[]  (diagonal, 8-connected)
+
+
+2.4 Birth Rules
+
+at_birth_4(+Grid, +Dead, +Live, +N, -Grid2)
+Applies a birth rule: each cell with value Dead that has exactly N cells
+with value Live among its in-bounds 4-neighbors becomes Live. All other cells
+are unchanged. The condition uses (V == Dead, LN =:= N -> V2 = Live ; V2 = V)
+inside the innermost findall.
+
+at_birth_8(+Grid, +Dead, +Live, +N, -Grid2)
+Same for 8-neighbors.
+
+Examples:
+at_birth_4([[0,1,0],[1,0,1],[0,1,0]], 0, 1, 4, G). % G=[[0,1,0],[1,1,1],[0,1,0]]
+at_birth_4([[0,1,0],[0,0,0]], 0, 1, 1, G).          % G=[[1,1,1],[0,1,0]]
+
+
+2.5 Majority Voting
+
+at_majority_4(+Grid, +Bg, -Grid2)
+Each cell takes the value most common among itself and its in-bounds
+4-neighbors. Ties are broken by Bg. Implemented via at_maj4_cell_ (which
+collects self + in-bounds 4-neighbor values) and at_mode_ (which computes the
+maximum-frequency value using findall + max_list/2 and handles ties via a
+unique-winner test).
+
+Examples:
+at_majority_4([[1,1],[1,0]], 0, G). % G=[[1,1],[1,1]] (1 wins everywhere)
+at_majority_4([[0,0,0],[0,1,0],[0,0,0]], 0, G). % G all 0 (0 wins 4-to-1 at center)
+
+
+2.6 Conway's Game of Life
+
+at_step_gol(+Grid, -Grid2)
+Applies one step of Conway's Game of Life (0 = dead, 1 = alive) using the
+standard B3/S23 rule: a dead cell (0) with exactly 3 alive 8-neighbors
+becomes alive (1); an alive cell (1) with 2 or 3 alive 8-neighbors survives;
+all other cells die or stay dead.
+
+Private helper at_gol_next_ uses three Prolog clauses:
+- at_gol_next_(1, N, 1) :- (N =:= 2 ; N =:= 3), !.   [survive]
+- at_gol_next_(0, 3, 1) :- !.                          [birth]
+- at_gol_next_(_, _, 0).                               [death]
+
+Examples:
+at_step_gol([[0,0,0],[1,1,1],[0,0,0]], G).  % G=[[0,1,0],[0,1,0],[0,1,0]]
+  (horizontal blinker becomes vertical blinker)
+at_step_gol([[0,1,1,0],[0,1,1,0]], G).      % G unchanged (2x2 block is stable)
+
+
+3. Implementation Notes
+
+3.1 Triple-Nested Findall Pattern
+
+The count grid predicates use a triple-nested findall pattern:
+- Outer findall: one CRow per row index R
+- Middle findall: one count N per column index C
+- Inner findall: one unit _ per matching in-bounds neighbor
+
+This pattern is idiomatic for grid transformations in SWI-Prolog and is
+already established in the xsel pack's xs_threshold and xs_replace_lt/gt
+predicates. The autom pack extends it to three levels of nesting.
+
+3.2 Private Direction Helpers
+
+at_offs4_ and at_offs8_ are private zero-argument predicates that supply the
+direction offset lists as Prolog facts. This avoids repeating the 4- or
+8-element literal list inside every predicate clause and makes it easy to
+verify that all predicates use the same offsets.
+
+3.3 at_mode_ Design
+
+at_mode_ handles the majority-with-ties case by:
+1. Building N-V frequency pairs via findall.
+2. Extracting just the counts with findall(N, member(N-_, Counts), Ns).
+3. Finding MaxN = max_list(Ns, MaxN).
+4. Collecting all values with count MaxN.
+5. If exactly one winner: Mode = that winner. Otherwise Mode = Bg.
+
+This is clean and correct without requiring sorting by count.
+
+3.4 Test Corrections
+
+Three test cases required correction from initial design:
+- at_count_same_8: A 2x2 checkerboard [[0,1],[1,0]] does NOT produce all
+  zeros because each 0 has a diagonal 0 neighbor and each 1 has a diagonal
+  1 neighbor. A grid with all unique values [[0,1],[2,3]] produces zeros.
+- at_all_nbrs_8 on [[1,1,1],[1,0,1],[1,1,1]]: Corner and edge cells fail
+  the all-V test because they have the center 0 as an 8-neighbor. Only the
+  center (1,1) has all V=1 8-neighbors (the eight surrounding cells). Result:
+  [[0,0,0],[0,1,0],[0,0,0]], not [[1,0,1],[0,1,0],[1,0,1]].
+- at_birth_8 from [[0,0,0],[0,0,0],[0,0,1]] with N=1: cells (1,1), (1,2),
+  and (2,1) all have exactly one live 8-neighbor (the corner 1). Grid2 is
+  [[0,0,0],[0,1,1],[0,1,1]].
+
+Library imports: library(lists): member/2, nth0/3, max_list/2.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate covering a
+standard case, a boundary case, and an empty or uniform case.
+
+Key correctness tests:
+  at_count_nbrs_4([[0,0,0],[0,1,0],[0,0,0]], 0, CG) => CG=[[2,2,2],[2,4,2],[2,2,2]]
+  at_count_same_4([[0,1],[1,0]], CG) => CG=[[0,0],[0,0]]  (checkerboard)
+  at_all_nbrs_8([[1,1,1],[1,0,1],[1,1,1]], 1, BG) => BG=[[0,0,0],[0,1,0],[0,0,0]]
+  at_birth_8([[0,0,0],[0,0,0],[0,0,1]], 0, 1, 1, G) => G=[[0,0,0],[0,1,1],[0,1,1]]
+  at_step_gol([[0,0,0],[1,1,1],[0,0,0]], G) => G=[[0,1,0],[0,1,0],[0,1,0]]
+  at_step_gol([[0,0,0,0],[0,1,1,0],[0,1,1,0],[0,0,0,0]], G) => G unchanged
+
+
+5. Significance
+
+The autom pack adds a cellular automaton computation layer to PrologAI. By
+producing full transformed grids from neighborhood rules, it makes it natural
+to pipeline operations: extract a count grid, threshold it with xs_threshold,
+use the result to locate seeds for spread or fill, or use at_birth to grow
+regions by one ring per step.
+
+at_step_gol specifically demonstrates that PrologAI can simulate arbitrary
+cellular automata with symbolic precision, making it possible to reason about
+which configurations lead to which outcomes after N steps.
+
+at_majority_4 is particularly useful for denoising or smoothing a noisy grid:
+each cell takes the most common value in its neighborhood, propagating uniform
+regions and eroding isolated outliers.
+
+This is Mentova accomplishment 161. PrologAI now carries 141 work packages.
+
+github.com/ai-university-aiu/PrologAI
