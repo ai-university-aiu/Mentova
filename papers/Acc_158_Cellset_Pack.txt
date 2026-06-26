@@ -1,0 +1,203 @@
+Mentova Accomplishment 158: Sparse Cell Set Operations - The Cellset Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 138: the cellset pack, a Layer 117 symbolic
+reasoning module providing 14 predicates for treating grid objects as sorted
+lists of R-C position pairs. Predicates cover grid-to-set conversion,
+set-theoretic operations (union, intersection, difference), translation,
+normalization, bounding box computation, membership testing, background
+neighbor enumeration, shape equality testing, 90-degree clockwise rotation,
+and horizontal mirror. All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Many visual reasoning tasks can be expressed more naturally over sparse position
+sets than over full dense grids. Asking whether two objects have the same shape,
+finding the background cells immediately surrounding a region, computing the
+union of two colored areas, or rotating an extracted object by 90 degrees -
+these operations are simpler and faster when the object is represented as a
+sorted list of R-C pairs rather than a full H-by-W grid with background
+everywhere else. The cellset pack provides that representation and the
+operations that work with it.
+
+
+2. Predicate Inventory (14 predicates, cs_* prefix)
+
+2.1 Grid Conversion
+
+cs_from_grid(+Grid, +Color, -Cells)
+Extracts all positions of Color from Grid as a sorted list of R-C pairs. Uses
+findall over all row-column pairs followed by sort/2 for canonical order.
+Returns [] if Color is absent; never fails.
+
+cs_to_grid(+Cells, +H, +W, +Color, +Bg, -Grid)
+Paints a sorted cell set onto an H-by-W canvas. Uses nested findall with
+memberchk(R-C, Cells) to choose Color or Bg for each cell position.
+
+Examples:
+cs_from_grid([[0,1,0],[1,0,1]], 1, Cells).  % Cells=[0-1,1-0,1-2]
+cs_to_grid([0-0,1-1], 2, 2, 1, 0, Grid).   % Grid=[[1,0],[0,1]]
+cs_from_grid([[0,0],[0,0]], 9, Cells).       % Cells=[]
+
+
+2.2 Set Algebra
+
+cs_union(+A, +B, -Union)
+Sorted set union. Appends A and B then sorts to remove duplicates.
+
+cs_intersect(+A, +B, -Inter)
+Sorted set intersection. Collects members of A that also appear in B using
+memberchk; sorts the result.
+
+cs_subtract(+A, +B, -Diff)
+Set difference A minus B. Delegates to subtract/3 from library(lists).
+
+Examples:
+cs_union([0-0,0-1], [0-0,1-1], U).          % U=[0-0,0-1,1-1]
+cs_intersect([0-0,0-1,1-0], [0-1,1-0,2-2], I). % I=[0-1,1-0]
+cs_subtract([0-0,0-1,1-0], [0-1], D).       % D=[0-0,1-0]
+
+
+2.3 Position Operations
+
+cs_translate(+Cells, +DR, +DC, -Shifted)
+Shifts every R-C pair in Cells by (DR, DC) using maplist with the private
+helper cs_add_. Translation preserves sorted order because arithmetic offsets
+are monotone in both R and C.
+
+cs_bbox(+Cells, -R0, -C0, -R1, -C1)
+Bounding box of a non-empty cell set. Fails if Cells is empty. Uses findall to
+extract row and column indices, then min_list and max_list for extremes.
+
+cs_normalize(+Cells, -Norm, -DR, -DC)
+Translates Cells so the minimum row becomes 0 and the minimum column becomes 0.
+Returns the translation offsets (both non-positive). Empty list passes through
+with zero offsets via a base clause.
+
+Examples:
+cs_translate([0-0,0-1,1-0], 2, 3, S).       % S=[2-3,2-4,3-3]
+cs_bbox([0-1,1-0,1-2], R0,C0,R1,C1).        % R0=0,C0=0,R1=1,C1=2
+cs_normalize([2-3,2-4,3-3], N, DR, DC).     % N=[0-0,0-1,1-0],DR=-2,DC=-3
+
+
+2.4 Membership and Size
+
+cs_size(+Cells, -N)
+Count of cells. Uses length/2 (built-in). Returns 0 for [].
+
+cs_contains(+Cells, +R, +C)
+Deterministic membership test using memberchk/2. Fails if R-C is not in set.
+
+Examples:
+cs_size([0-0,1-1,2-2], N).  % N=3
+cs_contains([0-0,1-1], 1, 1). % true
+cs_contains([0-0,1-1], 2, 2). % false
+
+
+2.5 Neighborhood
+
+cs_adjacent_bg(+Cells, -Adjacent)
+Sorted list of all 4-connected background neighbors. For each cell in Cells,
+generates four neighbors using offsets (-1,0), (1,0), (0,-1), (0,1), filters
+out positions already in Cells using \+/memberchk, then sorts to deduplicate
+positions shared by multiple cells. May include positions with negative
+coordinates for cells at the grid boundary.
+
+Examples:
+cs_adjacent_bg([2-2], Adj).       % Adj=[1-2,2-1,2-3,3-2]
+cs_adjacent_bg([1-1,1-2], Adj).   % Adj=[0-1,0-2,1-0,1-3,2-1,2-2]
+
+
+2.6 Shape Equality
+
+cs_same_shape(+A, +B)
+Succeeds if A and B have the same shape after normalization to the origin.
+Uses an if-then-else: two empty sets succeed immediately; otherwise normalizes
+both with cs_normalize and compares the results with ==/2 (structural equality).
+Two sets have the same shape if their normalized positions are identical.
+
+Examples:
+cs_same_shape([0-0,0-1,1-0], [2-3,2-4,3-3]).  % same L-shape, different position
+cs_same_shape([0-0,0-1], [0-0,1-0]).           % false (horizontal vs vertical)
+cs_same_shape([], []).                           % true
+
+
+2.7 Geometric Transformations
+
+cs_rotate_90(+Cells, +H, -Rotated)
+Rotates cell positions 90 degrees clockwise within a grid of H rows. Formula:
+new_R = old_C, new_C = H-1-old_R. Uses maplist with the private helper
+cs_rot90_, then sorts to restore canonical order after the permutation.
+
+cs_mirror_h(+Cells, +W, -Mirrored)
+Mirrors cell positions horizontally within a grid of W columns. Formula:
+new_R = old_R, new_C = W-1-old_C. Uses maplist with cs_mirh_, then sorts.
+
+Examples:
+cs_rotate_90([0-0,0-1,0-2], 3, Rot).  % Rot=[0-2,1-2,2-2] (top row -> right col)
+cs_rotate_90([0-0,1-0,2-0], 3, Rot).  % Rot=[0-0,0-1,0-2] (left col -> top row)
+cs_mirror_h([0-0,0-1,1-2], 3, M).     % M=[0-1,0-2,1-0]
+
+
+3. Implementation Notes
+
+Sorted representation: All cs_* predicates maintain the invariant that cell
+sets are sorted lists of R-C pairs in Prolog's standard term order (R first,
+then C). The sort/2 built-in enforces this at conversion, union, intersection,
+and transformation boundaries. Translation preserves sort order because
+arithmetic offsets are monotone.
+
+cs_bbox fails cleanly when Cells is empty because `Cells = [_|_]` requires at
+least one element.
+
+cs_normalize has two clauses: the first handles [] with a cut to avoid calling
+cs_bbox on an empty list; the second handles non-empty sets.
+
+cs_same_shape uses if-then-else rather than two clauses so that the empty case
+does not leave a choicepoint.
+
+Library imports: library(lists): member/2, memberchk/2, nth0/3, append/2,
+subtract/3, min_list/2, max_list/2. library(apply): maplist/3.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no warnings. Three tests per predicate.
+
+Key correctness tests:
+  cs_from_grid([[0,1,0],[1,0,1]], 1, C) => C=[0-1,1-0,1-2]
+  cs_union([0-0,0-1], [0-0,1-1], U) => U=[0-0,0-1,1-1]
+  cs_normalize([2-3,2-4,3-3], N, DR, DC) => N=[0-0,0-1,1-0], DR=-2, DC=-3
+  cs_same_shape([0-0,0-1,1-0], [2-3,2-4,3-3]) => true
+  cs_rotate_90([0-0,0-1,0-2], 3, R) => R=[0-2,1-2,2-2]
+  cs_adjacent_bg([1-1,1-2], Adj) => [0-1,0-2,1-0,1-3,2-1,2-2]
+
+
+5. Significance
+
+The cellset pack separates position reasoning from color reasoning. Once a
+color is extracted with cs_from_grid, all subsequent operations are
+color-agnostic: the shape can be translated, normalized, compared, rotated,
+mirrored, or combined with another shape through set algebra, and then painted
+onto any canvas with cs_to_grid. This separation makes rule implementations
+cleaner: identify the objects by color, reason about them as position sets,
+produce the result.
+
+cs_same_shape provides a direct test for the common pattern "does object A
+have the same shape as object B, regardless of position?" without needing to
+extract coordinates from an intermediate grid.
+
+cs_adjacent_bg enables border-tracing and dilation: the background ring
+surrounding an object is exactly the result of cs_adjacent_bg.
+
+This is Mentova accomplishment 158. PrologAI now carries 138 work packages.
+
+github.com/ai-university-aiu/PrologAI

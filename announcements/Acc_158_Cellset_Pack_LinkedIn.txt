@@ -1,0 +1,51 @@
+Mentova Accomplishment 158: Sparse Cell Set Operations - The Cellset Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now treat grid objects as sorted position sets and apply
+set-theoretic operations, translations, rotations, and shape comparisons.
+
+Work Package 138 - the cellset pack - adds 14 cs_* predicates. 42/42 tests.
+
+Grid conversion:
+
+cs_from_grid(Grid, Color, Cells)   % sorted R-C positions of Color
+cs_to_grid(Cells, H, W, Color, Bg, Grid)  % paint cell set onto canvas
+
+Set algebra:
+
+cs_union(A, B, Union)             % sorted set union
+cs_intersect(A, B, Inter)         % sorted set intersection
+cs_subtract(A, B, Diff)           % set difference A minus B
+
+Position operations:
+
+cs_translate(Cells, DR, DC, Shifted)      % shift all cells by (DR, DC)
+cs_bbox(Cells, R0, C0, R1, C1)           % bounding box; fails if empty
+cs_normalize(Cells, Norm, DR, DC)         % translate top-left to (0,0)
+
+Queries:
+
+cs_size(Cells, N)           % count of cells
+cs_contains(Cells, R, C)    % deterministic membership test
+cs_adjacent_bg(Cells, Adj)  % sorted 4-connected background neighbors
+
+Shape and geometry:
+
+cs_same_shape(A, B)               % shape equality after normalization
+cs_rotate_90(Cells, H, Rotated)   % 90-degree CW rotation (H = grid height)
+cs_mirror_h(Cells, W, Mirrored)   % horizontal mirror (W = grid width)
+
+Key design insight: representing objects as sorted R-C lists enables
+set operations that are impossible or awkward on dense grids.
+cs_same_shape normalizes both sets to the origin and compares structurally.
+cs_adjacent_bg gives the exact background ring surrounding any object.
+cs_rotate_90 applies the formula new_R = C, new_C = H-1-R via maplist.
+
+PrologAI: 138 work packages. Mentova: 158 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #SWIProlog #AGI
