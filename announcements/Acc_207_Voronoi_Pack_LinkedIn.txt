@@ -1,0 +1,28 @@
+Mentova Accomplishment 207: Nearest-Color Painting and Voronoi Partitioning
+
+PrologAI now includes a voronoi pack (vn_*, Layer 166) - 14 predicates for
+painting background cells with the nearest non-background color.
+
+The concept: in many visual reasoning tasks, you see a grid with colored objects
+and empty space. You need to fill the empty space with the color of the nearest
+object. That's Voronoi coloring. Now it's one predicate call:
+
+    vn_paint_bg(Grid, Bg, Painted).
+
+The pack also provides:
+
+- vn_nearest_dist: Manhattan distance from any cell to the nearest non-background cell
+- vn_nearest_color: the color of the nearest non-background cell
+- vn_dist_map: the full distance transform (each cell -> its distance to nearest non-Bg)
+- vn_region_cells / vn_regions: which background cells belong to which color's region
+- vn_max_dist / vn_at_dist / vn_within_dist: distance-based filtering
+- vn_medial: the Voronoi edge cells - background cells equidistant from two+ colors
+- vn_expand1 / vn_expand_n: grow a color region N steps into the background
+
+49 tests pass.
+
+This is WP 187, Mentova's 207th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
