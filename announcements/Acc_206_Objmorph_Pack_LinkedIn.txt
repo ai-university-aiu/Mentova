@@ -1,0 +1,30 @@
+Mentova Accomplishment 206: Morphological Operations on Object Terms
+
+PrologAI now includes an objmorph pack (om_*, Layer 165) - 14 predicates for
+binary morphology directly on obj(Color, Cells) terms.
+
+What does that mean? Binary morphology is the science of analyzing the shape
+and boundary of discrete regions. Operations like "find the outer edge,"
+"shrink the region by one step," "expand the region by one step," "remove thin
+protrusions" - all fundamental tools for visual reasoning.
+
+The new pack provides:
+
+- om_neighbors4 and om_neighbors8: the 4 or 8 cells surrounding any cell
+- om_boundary4 / om_interior4: outer ring and inner core under 4-connectivity
+- om_boundary8 / om_interior8: outer ring and inner core under 8-connectivity
+- om_dilate4 / om_dilate8: expand the cell set by one step
+- om_erode4 / om_erode8: shrink the cell set by one step
+- om_dilate4_n / om_erode4_n: repeat N times
+- om_open4: erode then dilate (cleans up thin appendages)
+- om_close4: dilate then erode (fills small gaps)
+
+All 14 predicates work directly on obj terms - no grid conversion required.
+
+46 tests pass.
+
+This is WP 186, Mentova's 206th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

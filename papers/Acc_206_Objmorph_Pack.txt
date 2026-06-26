@@ -1,0 +1,216 @@
+Accomplishment 206: Morphological Operations on Object Terms (Objmorph Pack, om_*, Layer 165)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objmorph pack (14 om_* predicates, Layer 165) for binary
+morphological operations on obj(Color, Cells) terms. Where the existing morph
+pack operates on 2D grids, the objmorph pack operates directly on obj terms
+without converting to or from a grid representation. It provides neighborhood
+generation, boundary and interior extraction under both 4-connectivity and
+8-connectivity, single-step and iterated dilation, single-step and iterated
+erosion, and compound morphological opening and closing.
+
+46 of 46 PLUnit tests pass.
+
+This work package is PrologAI WP 186, merged as PR 271 on 2026-06-26.
+
+1. Motivation
+
+Binary morphology is a fundamental set of tools for analyzing the shape,
+boundary, and structure of discrete cell regions. PrologAI previously had the
+morph pack (mo_*) which applies morphological operations to 2D grids. However,
+many reasoning tasks work with obj(Color, Cells) terms directly - the standard
+PrologAI representation for a colored region of cells.
+
+To use grid-level morphology on an obj term, a solver would need to:
+1. Convert the obj to a binary grid
+2. Apply the grid morphology operation
+3. Convert the result back to an obj
+
+This conversion overhead was unnecessary. The objmorph pack provides all the
+same operations directly on obj terms:
+
+    om_boundary4(Obj, Boundary),
+    om_dilate4_n(Obj, 2, Expanded),
+    om_open4(Obj, Cleaned).
+
+No grid conversion needed.
+
+2. Core Concepts
+
+2.1 Cell Sets as Morphological Domains
+
+An obj(Color, Cells) term is a colored cell set. The objmorph pack treats this
+cell set as a binary image: a cell is either "in" the set or "out." All
+morphological operations are defined by set membership.
+
+2.2 4-Connectivity vs. 8-Connectivity
+
+Two connectivity models are provided:
+
+4-connectivity: a cell's neighbors are the four orthogonal cells (up, down,
+left, right). A cell is interior4 if all 4 orthogonal neighbors are in the set.
+
+8-connectivity: a cell's neighbors are all 8 surrounding cells including
+diagonals. A cell is interior8 if all 8 neighbors are in the set - stricter,
+requiring the diagonal corners to also be present.
+
+These two models produce different boundary and interior measurements. For
+a 3x3 square:
+- interior4: [r(1,1)] (center, which has all 4 orthogonal neighbors inside)
+- interior8: [r(1,1)] (center also has all 8 diagonal neighbors inside)
+
+For a 5x5 square:
+- interior4: the inner 3x3 (9 cells)
+- interior8: the inner 3x3 (9 cells, same in this case)
+
+For a 5x5 square, boundary4 = 16 cells and boundary8 = 16 cells.
+
+2.3 Dilation, Erosion, Opening, Closing
+
+Dilation expands a cell set: every existing cell contributes its neighbors
+to the result. Single-step 4-dilation of one cell produces a plus shape (5
+cells). Single-step 8-dilation produces a 3x3 square (9 cells).
+
+Erosion shrinks a cell set: only interior cells survive. Erosion equals the
+interior operation. Single-step 4-erosion of a 3x3 square leaves only the
+center cell.
+
+Opening = erosion then dilation. Removes thin protrusions and small
+appendages while preserving the bulk of a shape.
+
+Closing = dilation then erosion. Fills small gaps and indentations while
+preserving the bulk of a shape.
+
+3. Predicate Descriptions
+
+3.1 Neighborhood Generators
+
+om_neighbors4(+Cell, -Neighbors): always returns 4 orthogonal cells. For
+r(R,C), returns [r(R-1,C), r(R+1,C), r(R,C-1), r(R,C+1)]. Coordinates may
+be negative; no grid boundary is implied.
+
+om_neighbors8(+Cell, -Neighbors): always returns 8 cells. Includes all
+4 orthogonal plus 4 diagonal neighbors.
+
+3.2 Boundary and Interior
+
+om_boundary4(+Obj, -Boundary): uses findall with \+ forall(member(N,Nbrs),
+member(N,S)) where S is the sorted cell set. A cell is a boundary4 cell
+when NOT all 4 neighbors are in S.
+
+om_interior4(+Obj, -Interior): uses findall with forall(member(N,Nbrs),
+member(N,S)). A cell is interior4 when ALL 4 neighbors are in S.
+
+om_boundary8 and om_interior8: same pattern applied to om_neighbors8.
+
+3.3 Dilation
+
+om_dilate4(+Obj, -Result): collects all 4-connected neighbors of every cell
+via findall then appends to the original sorted cell set and deduplicates
+with sort. The result is the union of the original cells and all their
+4-connected neighbors.
+
+om_dilate8(+Obj, -Result): same with 8-connected neighbors.
+
+3.4 Erosion
+
+om_erode4 delegates to om_interior4. Erosion by definition keeps only
+interior cells. No separate implementation needed.
+
+om_erode8 delegates to om_interior8.
+
+3.5 Iterated Operations
+
+om_dilate4_n(+Obj, +N, -Result): base case N=0 returns Obj unchanged.
+Recursive case dilates once and decrements N. The result of N=2 from a
+single cell is a diamond of Manhattan radius 2 (13 cells).
+
+om_erode4_n(+Obj, +N, -Result): same pattern for erosion.
+
+3.6 Compound Operations
+
+om_open4(+Obj, -Result): erode4 then dilate4. For a 3x3 square:
+- erode4 leaves [r(1,1)]
+- dilate4 of [r(1,1)] gives the plus shape [r(0,1),r(1,0),r(1,1),r(1,2),r(2,1)]
+
+om_close4(+Obj, -Result): dilate4 then erode4. For a single cell at r(0,0):
+- dilate4 gives the plus shape (5 cells)
+- erode4 of the plus gives back [r(0,0)]
+
+4. Design Decisions
+
+4.1 No Grid Parameter
+
+Every predicate in objmorph works without a grid. This is intentional: the
+cell set of an obj term is self-contained. Boundary and interior are defined
+purely by set membership. This makes the predicates composable and applicable
+without needing to define a grid extent.
+
+4.2 Prefix om_*
+
+The om_* prefix was chosen for "obj-morphology." The morph pack uses the
+mo_* prefix, so om_* clearly signals the obj-level variant without collision.
+
+4.3 Boundary Implementation
+
+The boundary predicate uses the dual of the interior condition:
+boundary = NOT all_neighbors_inside = \+ forall(member(N,Nbrs), member(N,S))
+
+This is more concise than computing interior and taking the set difference.
+It also correctly handles cells at the boundary of any finite region.
+
+4.4 sort/2 for Deduplication
+
+All operations that build new cell lists use sort/2 to ensure the canonical
+sorted, deduplicated form. This makes the outputs of om_dilate4 and
+om_close4 directly comparable to each other and to raw cell lists.
+
+5. Examples
+
+Example 1: boundary extraction
+
+    Obj = obj(red, [r(0,0),r(0,1),r(0,2),r(1,0),r(1,1),r(1,2),r(2,0),r(2,1),r(2,2)]),
+    om_boundary4(Obj, obj(red, B)), length(B, 8).
+    % Center r(1,1) is not a boundary4 cell.
+
+Example 2: erosion then dilation (opening)
+
+    square_cells(3, Cells),
+    om_open4(obj(blue, Cells), Result).
+    % Result = obj(blue, [r(0,1),r(1,0),r(1,1),r(1,2),r(2,1)]).
+
+Example 3: detecting thin protrusions
+
+    Obj = obj(x, [r(0,0),r(1,0),r(2,0),r(3,0)]),  % vertical line
+    om_open4(Obj, obj(x, [])).
+    % Thin line has no interior4 cells; opening removes it entirely.
+
+Example 4: iterated dilation
+
+    om_dilate4_n(obj(a,[r(0,0)]), 3, obj(a,D)), length(D, 25).
+    % Diamond of Manhattan radius 3 has 1+4+8+12 = 25 cells.
+
+6. SPARC Documentation
+
+Specification v151 adds Part 176 (objmorph pack specification).
+
+Pseudocode v144 adds Part 176 (objmorph pack pseudocode).
+
+Architecture v145 adds ARCH-152 (objmorph pack layer placement).
+
+Refinement v199 adds acceptance criteria AC-OM-001 through AC-OM-046.
+
+Completion v202 adds the WP-186 completion record.
+
+7. Conclusion
+
+The objmorph pack brings binary morphology directly into the obj-term layer
+of PrologAI. With boundary extraction, interior detection, and the full cycle
+of dilation, erosion, opening, and closing available as first-class predicates
+on obj terms, shape analysis becomes as natural as any other obj operation.
+
+This is WP 186, Mentova's 206th accomplishment.
