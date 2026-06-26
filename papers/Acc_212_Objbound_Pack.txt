@@ -1,0 +1,166 @@
+Accomplishment 212: Object Shape Classification and Bounding Box Analysis (Objbound Pack, ob_*, Layer 171)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objbound pack (14 ob_* predicates, Layer 171) for shape
+classification and bounding-box analysis of individual obj(Color, Cells) terms.
+The pack answers questions about bounding-box dimensions (height, width, area),
+shape type (rectangle, horizontal line, vertical line, single cell, square
+bounding box), interior holes, whether the object is a hollow rectangular frame,
+the total exposed-edge perimeter, and the solid bounding-box rectangle (dense
+hull). All predicates operate directly on obj terms without a grid argument.
+
+73 of 73 PLUnit tests pass.
+
+This work package is PrologAI WP 192, merged as PR 277 on 2026-06-26.
+
+1. Motivation
+
+Visual reasoning tasks frequently require classifying an object by its shape:
+"Is this object a rectangle?" "Does it have a hole inside it?" "Is it a
+rectangular frame?" "How many sides are exposed?"
+
+The existing packs provide:
+- objmorph (om_*): morphological dilation and erosion on obj terms
+- objsym (os_*): symmetry tests and D4 equivalence for obj terms
+- objxf (ox_*): translations, rotations, and reflections for obj terms
+
+None of these answer "is this object a rectangle?" or "is it a frame?" The
+objbound pack fills this gap with a focused set of shape predicates.
+
+2. Core Design
+
+2.1 Bounding Box Helper
+
+All predicates derive from the private ob_bbox_ helper, which collects all
+row indices and column indices via findall, then computes min and max:
+
+    ob_bbox_(obj(_, Cells), MinR, MinC, MaxR, MaxC) :-
+        findall(R, member(r(R,_), Cells), Rs),
+        findall(C, member(r(_,C), Cells), Cs),
+        min_list(Rs, MinR), max_list(Rs, MaxR),
+        min_list(Cs, MinC), max_list(Cs, MaxC).
+
+2.2 Shape Type Tests
+
+ob_is_rect: cell count equals bbox area (H * W). Equivalent to "no holes."
+
+ob_is_hline: H = 1. All cells are in the same row; the object spans only one
+row regardless of width.
+
+ob_is_vline: W = 1. All cells are in the same column.
+
+ob_is_single: both H = 1 and W = 1. Exactly one cell.
+
+ob_is_square_bbox: H = W. The bounding box is square. The object itself may
+not be a solid square (e.g., the plus sign has a 3x3 square bbox).
+
+2.3 Holes
+
+ob_holes enumerates all positions in the bbox (via between/3) that are NOT
+in the cell set (via \+ memberchk). For a solid rectangle, ob_holes returns
+the empty list. For a plus sign in a 3x3 bbox, it returns the 4 corner cells.
+
+ob_n_holes is length of ob_holes. ob_is_hollow is N > 0.
+
+2.4 Frame Detection
+
+A frame is a hollow rectangular border:
+- H >= 3 and W >= 3 (non-trivial interior exists)
+- All border cells (row = MinR or MaxR, or col = MinC or MaxC) are present
+- No interior cell (MinR < R < MaxR AND MinC < C < MaxC) is present
+
+ob_is_frame uses forall to verify border cells and \+ existential to exclude
+interior cells.
+
+2.5 Perimeter
+
+ob_perimeter counts exposed edges. For each cell, the private ob_cell_exposed_
+helper counts 4-adjacent neighbors NOT in the object's cell set. ob_perimeter
+sums these counts via sum_list.
+
+Key values:
+- Single cell: 4 (all 4 sides exposed)
+- 1x3 horizontal bar: 8 (3 cells; two ends have 3 each, middle has 2)
+- 2x2 block: 8 (4 cells; each corner contributes 2 exposed sides)
+- 3x3 frame: 16 (8 cells; every cell has exactly 2 exposed edges - corner
+  cells expose 2 outer sides, edge-middle cells expose 1 outer + 1 interior)
+
+2.6 Dense Hull
+
+ob_dense_hull produces the solid bounding-box rectangle with the same color.
+This is useful for comparing an object to its "filled" version:
+
+    L = obj(l, [r(0,0), r(1,0), r(1,1)]),
+    ob_dense_hull(L, obj(l, Hull)).
+    % Hull = [r(0,0), r(0,1), r(1,0), r(1,1)]
+
+3. Predicate Descriptions
+
+ob_bbox_h(+Obj, -H): bounding box height.
+ob_bbox_w(+Obj, -W): bounding box width.
+ob_bbox_area(+Obj, -Area): H * W.
+ob_is_rect(+Obj): cell count = bbox area.
+ob_is_hline(+Obj): H = 1.
+ob_is_vline(+Obj): W = 1.
+ob_is_single(+Obj): H = 1 AND W = 1.
+ob_is_square_bbox(+Obj): H = W.
+ob_holes(+Obj, -HoleCells): bbox positions absent from cell set.
+ob_n_holes(+Obj, -N): hole count.
+ob_is_hollow(+Obj): N > 0.
+ob_is_frame(+Obj): hollow rectangular border (H>=3, W>=3).
+ob_perimeter(+Obj, -P): total exposed edge count.
+ob_dense_hull(+Obj, -HullObj): solid bbox rectangle with same color.
+
+4. Examples
+
+Example 1: Classify a 2x2 block.
+
+    Sq = obj(s, [r(0,0), r(0,1), r(1,0), r(1,1)]),
+    ob_is_rect(Sq),         % true: 4 cells = 2*2 area
+    ob_is_square_bbox(Sq),  % true: H=W=2
+    ob_perimeter(Sq, 8),    % 4 corners × 2 exposed = 8
+    \+ ob_is_hollow(Sq).    % false: no holes
+
+Example 2: Classify a 3x3 frame.
+
+    Frame = obj(f, [r(0,0),r(0,1),r(0,2),
+                    r(1,0),        r(1,2),
+                    r(2,0),r(2,1),r(2,2)]),
+    ob_is_frame(Frame),      % true
+    ob_holes(Frame, [r(1,1)]), % one interior hole
+    ob_perimeter(Frame, 16). % 8 cells × 2 edges each
+
+Example 3: Classify a horizontal bar vs vertical bar.
+
+    H = obj(h, [r(0,0), r(0,1), r(0,2)]),
+    V = obj(v, [r(0,0), r(1,0), r(2,0)]),
+    ob_is_hline(H),  % true
+    ob_is_vline(V),  % true
+    \+ ob_is_vline(H),  % H is not a vline
+    \+ ob_is_hline(V).  % V is not an hline
+
+5. SPARC Documentation
+
+Specification v157 adds Part 182 (objbound pack specification).
+
+Pseudocode v150 adds Part 182 (objbound pack pseudocode).
+
+Architecture v151 adds ARCH-158 (objbound pack layer placement).
+
+Refinement v205 adds acceptance criteria AC-OB-001 through AC-OB-073.
+
+Completion v208 adds the WP-192 completion record.
+
+6. Conclusion
+
+The objbound pack gives PrologAI a comprehensive set of shape classification
+predicates for individual obj(Color, Cells) terms. Bounding box dimensions,
+shape type tests, hole analysis, frame detection, perimeter computation, and
+dense hull generation cover the shape reasoning needed for visual tasks where
+objects must be classified by their geometric properties.
+
+This is WP 192, Mentova's 212th accomplishment.
