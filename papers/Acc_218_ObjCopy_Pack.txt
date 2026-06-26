@@ -1,0 +1,158 @@
+Accomplishment 218: Object Tiling and Multi-Copy Layout (objcopy Pack, tc_*, Layer 177)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objcopy pack (14 tc_* predicates, Layer 177) for generating
+multiple copies of obj(Color, Cells) terms at computed positions. The pack
+provides explicit top-left placement, row and column tiling, 2D grid tiling,
+position-list stamping, top and left alignment, horizontal and vertical packing
+with configurable gaps, interval spreading, canvas centering, and absolute-frame
+horizontal reflection. The pack has no cross-pack dependencies.
+
+41 of 41 PLUnit tests pass.
+
+This work package is PrologAI WP 198, merged as PR 286 on 2026-06-26.
+
+1. Motivation
+
+After the canvas pack (cv_*, WP 195) provided rendering of obj lists to grids,
+a complementary need arose: constructing the correctly-positioned obj list
+before rendering. The canvas pack handles the rendering step; the objcopy pack
+handles the layout step. Together they enable a full pipeline:
+
+    (1) Start with one or more template objects.
+    (2) Use objcopy to generate positioned copies.
+    (3) Use canvas to render the list to a grid.
+
+This pipeline is used in ARC tasks involving repeating patterns, tiled
+arrangements, packed rows or columns, and symmetrically centered objects.
+
+2. Core Design
+
+2.1 Private Helpers
+
+tc_minrow_, tc_mincol_, tc_maxrow_, tc_maxcol_: find bounding box extremes
+via findall + min_list/max_list.
+
+tc_bbox_h_, tc_bbox_w_: bounding box height and width from extremes.
+
+tc_translate_(+Cells, +DR, +DC, -Cells2): translate a cell list by (DR,DC)
+using a single findall. Used by all predicates that move objects.
+
+tc_place_at_(+Obj, +R0, +C0, -Obj2): private placement by top-left. Computes
+DR = R0-MinR and DC = C0-MinC then delegates to tc_translate_.
+
+min_list_r_ and min_list_c_: thin wrappers over findall+min_list for cells.
+
+tc_pack_row_acc_ and tc_pack_col_acc_: recursive accumulators for sequential
+packing. Each step finds the current object's bbox dimension, places it, then
+advances the cursor by dim+gap.
+
+tc_shift_to_row_ and tc_shift_to_col_: translate a single object to a target
+row or column; used by tc_align_top, tc_align_left, tc_pack_row, tc_pack_col.
+
+2.2 Placement Predicates
+
+tc_place_at computes the bounding box top-left and translates. tc_recolor_all
+is a simple recursive predicate replacing the colour field.
+
+2.3 Tiling Predicates
+
+tc_tile_row, tc_tile_col, and tc_tile_grid all use findall with between/3 to
+generate indices, compute the target position for each copy, and call
+tc_place_at_. The tile grid uses nested between/3 (I for rows, J for cols) to
+enumerate all NR*NC positions in row-major order.
+
+tc_at_positions iterates over a list of r(R,C) terms recursively, calling
+tc_place_at_ for each.
+
+2.4 Alignment and Packing
+
+tc_align_top and tc_align_left use maplist to compute all bounding edges,
+then maplist again to apply shifts. tc_pack_row first aligns all objects to
+row R (using maplist tc_shift_to_row_), then calls the accumulator
+tc_pack_row_acc_ which tracks the current column cursor.
+
+2.5 Spreading
+
+tc_spread_h and tc_spread_v use findall with between/3 and nth0/3 to assign
+positions index-by-index. Rows (for h) or cols (for v) are preserved from
+the original objects.
+
+2.6 Centering and Reflection
+
+tc_center computes the floor-average centering offset and delegates to
+tc_place_at_. tc_flip_h applies W-1-C to every column via findall.
+
+3. Predicate Descriptions
+
+tc_place_at(+Obj, +R0, +C0, -Obj2): place obj with bbox top-left at (R0,C0).
+tc_recolor_all(+Color, +Objs, -Objs2): recolor all objs to Color.
+tc_tile_row(+Obj, +N, +Step, -Objs): N copies along a row, Step cols apart.
+tc_tile_col(+Obj, +N, +Step, -Objs): N copies along a column, Step rows apart.
+tc_tile_grid(+Obj, +NR, +NC, +StepR, +StepC, -Objs): NR x NC grid of copies.
+tc_at_positions(+Obj, +Positions, -Objs): one copy per position in a list.
+tc_align_top(+Objs, -Objs2): all objs to global minimum top row.
+tc_align_left(+Objs, -Objs2): all objs to global minimum left col.
+tc_pack_row(+Objs, +R, +C0, +Gap, -Objs2): pack in a horizontal row.
+tc_pack_col(+Objs, +C, +R0, +Gap, -Objs2): pack in a vertical column.
+tc_spread_h(+Objs, +C0, +Step, -Objs2): redistribute at fixed col intervals.
+tc_spread_v(+Objs, +R0, +Step, -Objs2): redistribute at fixed row intervals.
+tc_center(+Obj, +H, +W, -Obj2): center in H x W canvas.
+tc_flip_h(+Obj, +W, -Obj2): reflect within canvas width W.
+
+4. Examples
+
+Example 1: Tile a dot object in a 3 x 4 grid with step 3.
+
+    tc_tile_grid(obj(r,[r(0,0)]), 3, 4, 3, 3, Objs),
+    % 12 copies at rows 0,3,6 and cols 0,3,6,9
+    cv_render(10, 12, 0, Objs, Grid).
+
+Example 2: Pack three bars in a row with gap 2.
+
+    Bar = obj(b,[r(0,0),r(0,1),r(0,2)]),
+    tc_pack_row([Bar, Bar, Bar], 0, 0, 2, Positioned),
+    cv_render(1, 11, 0, Positioned, Grid).
+    % Bars at cols 0-2, 5-7, 10-12
+
+Example 3: Center a small pattern in a 9 x 9 canvas.
+
+    Pat = obj(r,[r(0,0),r(0,1),r(0,2),r(1,1)]),  % T-shape, H=2 W=3
+    tc_center(Pat, 9, 9, Centered),
+    % Centered at row=(9-2)//2=3, col=(9-3)//2=3
+
+Example 4: Create a symmetric pair by tiling horizontally and flipping.
+
+    Obj = obj(g,[r(0,0),r(1,0),r(1,1)]),  % L-shape
+    tc_flip_h(Obj, 4, Mirror),
+    cv_render(3, 4, 0, [Obj, Mirror], Grid).
+
+5. SPARC Documentation
+
+Specification v163 adds Part 188 (objcopy pack specification).
+
+Pseudocode v156 adds Part 188 (objcopy pack pseudocode).
+
+Architecture v157 adds ARCH-164 (objcopy pack layer placement).
+
+Refinement v211 adds acceptance criteria AC-TC-001 through AC-TC-041.
+
+Completion v214 adds the WP-198 completion record.
+
+6. Conclusion
+
+The objcopy pack completes the object-level layout layer. A reasoner can now
+construct a fully-positioned list of obj terms from a single template in one
+call - as a tiled row, column, grid, or scattered arrangement - and then pass
+that list directly to cv_render for grid output. Together with canvas, objxf,
+and objseq, the pack forms a complete object-level layout and rendering
+toolkit.
+
+This is WP 198, Mentova's 218th accomplishment.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
