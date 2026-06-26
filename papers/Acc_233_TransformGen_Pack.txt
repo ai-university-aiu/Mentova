@@ -1,0 +1,71 @@
+Accomplishment 233: Systematic Generation of Scene Transformation Rule Candidates (transformgen Pack, tg_*, Layer 192)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 213th work package: the transformgen pack, a suite of 14
+tg_* predicates that systematically generate sets of candidate rule terms from
+scene data or training pairs. Where heuristic inference guesses the most likely
+rules, transformgen exhaustively enumerates every plausible rule within a
+bounded search space.
+
+
+Motivation
+
+The gridsolve and ruleinfer packs use pattern-matching heuristics to infer the
+most likely transformation rule from training examples. These heuristics work
+well for common patterns. But ARC-AGI-2 tasks include unusual rules that
+heuristics miss. For those tasks, the only reliable strategy is to generate
+ALL plausible rules from the scene data and filter to those consistent with
+every training pair.
+
+
+Generators
+
+tg_recolor_candidates: all recolor(Old,New) rules for distinct color pairs in
+the scene. If the scene has colors {r, b, g}, this generates 6 recolor rules.
+
+tg_recolor_all_candidates, tg_remove_candidates, tg_keep_candidates: one rule
+per color, systematically covering the filter and uniform-recolor spaces.
+
+tg_shift_candidates: all shift(DR,DC) within bounds. For MaxDR=MaxDC=3, this
+generates 48 shift rules covering all directions and distances up to 3 steps.
+
+tg_reflect_candidates: reflect_h and reflect_v for given grid dimensions.
+
+tg_top_candidates: top_n(K) for K in 1 to min(MaxN, scene size).
+
+tg_color_map_candidate: derive a color_map rule from one Before-After pair
+by positional matching, extracting changed-color pairs.
+
+
+Integration Predicates
+
+tg_from_scenes takes a single Before-After pair and returns the union of all
+applicable generator predicates. tg_from_pairs does the same for a list of
+training pairs. tg_filter_consistent filters any rule list to those fully
+consistent with every training pair, using a self-contained rule application
+engine. tg_all_scene_candidates generates all candidates from a single scene
+with a given shift bound.
+
+
+Test Coverage
+
+42 of 42 unit tests pass. Tests cover all 14 predicates: color extraction,
+all generator predicates, color_map derivation, from_scenes and from_pairs
+integration, filter_consistent for all major rule types, and count/bound
+operations.
+
+
+Significance
+
+The transformgen pack closes the enumeration gap in the ARC-AGI-2 reasoning
+stack. Combined with gridsolve (for heuristic inference), scenerank (for
+coverage ranking), and tg_filter_consistent (for exhaustive filter-based
+selection), PrologAI now has both fast heuristic and complete exhaustive
+paths for finding the correct scene transformation rule.
+
+This is WP 213, Mentova's 233rd accomplishment.

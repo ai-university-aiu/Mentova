@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-232-FF6B35?style=for-the-badge" alt="232 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-233-FF6B35?style=for-the-badge" alt="233 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **232 accomplished** |
-| Scientific papers | **232 published** — one per accomplishment |
+| Documented accomplishments | **233 accomplished** |
+| Scientific papers | **233 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         232 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  232 announcements — one per accomplishment
+├── papers/         233 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  233 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-232 scientific papers, one per accomplished milestone.
+233 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -547,6 +547,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. No cross-pack dependencies; 7 private helpers (dp_centroid_, dp_norm_, dp_pair_delta_, dp_color_pair_, dp_positions_, dp_row_of_, dp_col_of_). Extraction: dp_color_delta (O1/O2 color head unification), dp_pos_delta (centroid subtraction), dp_size_delta (length subtraction). Tests: dp_same_color (head unification), dp_same_form (dp_norm_ + sort + compare), dp_same_pos (centroid equality). Color map: dp_color_map (maplist dp_color_pair_ + sort), dp_apply_color (head unification on C1; fail otherwise), dp_apply_color_map (recursive try-cut), dp_apply_map_all (if-then-else; unchanged on no match). Displacement: dp_const_dr (maplist dp_row_of_), dp_const_dc (maplist dp_col_of_). Cells: dp_common_cells (intersection/3 on sorted positions), dp_cell_diff (subtract/3 twice). 41/41 PLUnit tests pass. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. No cross-pack dependencies; private helpers tc_minrow_, tc_mincol_, tc_maxrow_, tc_maxcol_, tc_bbox_h_, tc_bbox_w_, tc_translate_, tc_place_at_, min_list_r_, min_list_c_, tc_pack_row_acc_, tc_pack_col_acc_, tc_shift_to_row_, tc_shift_to_col_. tc_place_at (bbox top-left placement via translate). tc_recolor_all (recursive color replacement). tc_tile_row (findall+between N copies at C0+I*Step). tc_tile_col (findall+between N copies at R0+I*Step). tc_tile_grid (nested between I/J for NR*NC grid). tc_at_positions (recursive, one copy per r(R,C)). tc_align_top (maplist minrow + min_list global + maplist shift_to_row). tc_align_left (same pattern for cols). tc_pack_row (maplist shift_to_row + pack_row_acc_ cursor). tc_pack_col (maplist shift_to_col + pack_col_acc_ cursor). tc_spread_h (findall+nth0+between; col=C0+I*Step). tc_spread_v (findall+nth0+between; row=R0+I*Step). tc_center (bbox dims + floor//2 offset + place_at_). tc_flip_h (findall r(R,W-1-C)). 41/41 PLUnit tests pass. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. No cross-pack dependencies; private helpers mx_color_, mx_size_, mx_norm_, mx_centroid_, mx_sq_dist_, mx_nearest_in_, mx_greedy_match_, mx_color_delta_, mx_pos_delta_, mx_size_delta_, mx_color_delta_eq_, mx_pos_delta_eq_, mx_size_delta_eq_. Matching: mx_by_color (findall cross-product, color equality), mx_by_size (findall, size equality), mx_by_form (findall, norm equality), mx_by_nearest (mx_greedy_match_: each O1 claims nearest remaining O2 by mx_sq_dist_ + msort). Extraction: mx_unmatched/5 (findall matched, subtract/3). Filtering: mx_filter_changed_color (findall, C1\=C2), mx_filter_same_color (findall, C1=C2). Deltas: mx_color_deltas/mx_pos_deltas/mx_size_deltas (maplist over private delta helpers). Uniformity: mx_all_same_color_delta/mx_all_same_pos_delta/mx_all_same_size_delta (base=[]; step: extract Ref from first, maplist equality check). Zip: mx_zip (recursive, pairs by index). 41/41 PLUnit tests pass. |
+| `Acc_233` | TransformGen pack paper — Systematic Generation of Scene Transformation Rule Candidates (Layer 192, tg_* prefix): 14 tg_* predicates that systematically enumerate candidate rule terms from scene data. tg_scene_colors: findall+sort distinct colors. tg_recolor_candidates: findall recolor(Old,New) for all distinct color pairs. tg_recolor_all_candidates/tg_remove_candidates/tg_keep_candidates: one rule per color. tg_shift_candidates: between(Neg,Pos) for DR/DC; exclude (0,0). tg_reflect_candidates: [reflect_h(W),reflect_v(H)]. tg_top_candidates: between(1,min(MaxN,Len)) for top_n(K). tg_color_map_candidate: positional nth1 pairs; collect CB-CA where CB\==CA; list_to_set; fails if empty. tg_from_scenes: union of all generators for one pair + sorting + identity. tg_from_pairs: union of tg_from_scenes over all pairs. tg_filter_consistent: include(tg_rule_consistent_); self-contained tg_apply_ engine. tg_n_candidates: length. tg_all_scene_candidates: all generators + MaxShift bound. 42/42 PLUnit tests pass. |
 | `Acc_232` | GridSolve pack paper — End-to-End Scene Puzzle Solver (Layer 191, gs_* prefix): 14 gs_* predicates integrating rule inference, candidate ranking, and rule application into a single solve/3 call. gs_apply: self-contained dispatch engine (recolor, recolor_all, color_map, shift, to_origin, reflect_h, reflect_v, remove_color, keep_color, sort_size_desc, sort_size_asc, top_n, identity). gs_coverage: include(gs_pair_ok_) + length. gs_consistent: maplist(gs_pair_ok_). gs_rank_rules: findall -N-Rule keyed msort + extract values. gs_best_rule: rank head. gs_consistent_rules/gs_valid_rules: include filters. gs_infer_candidates: findall over pattern backtracking (recolor, recolor_all, color_map, shift, to_origin, remove_color). gs_default_candidates: static broad set. gs_solve: infer + defaults -> union -> rank -> apply best. gs_solve_n: top N Coverage-Rule pairs + BestRule. gs_explain: best_rule + coverage. gs_all_same_output: maplist gs_apply. gs_n_pairs: length. 41/41 PLUnit tests pass. |
 | `Acc_231` | ColorTable pack paper — Color Substitution Table Learning and Application (Layer 190, ct_* prefix): 14 ct_* predicates for learning a complete color substitution table from Before-After scene pair training examples and applying it to new scenes. Objects matched positionally. ct_infer_from_pair: collect changed-color pairs via positional scan, list_to_set, consistent_map. ct_learn_map: accumulate map over pairs; conflicting pairs returned in Inconsistent list. ct_mapped_color: member lookup + identity fallback. ct_apply_to_scene: maplist ct_apply_map. ct_map_covers: not(unmatched color in scene). ct_complete_map: append identity entries for uncovered colors. ct_invert_map: maplist swap + consistency check. ct_identity_map: list_to_set + findall C-C. ct_restrict_map: include on source color membership. ct_map_colors: findall From + list_to_set. ct_merge_maps/ct_extend_map: append + set + consistent check. ct_consistent_map: not(two different targets for same source). 44/44 PLUnit tests pass. |
 | `Acc_230` | SceneRank pack paper — Rule Hypothesis Ranking for Scene Lists (Layer 189, rk_* prefix): 14 rk_* predicates ranking candidate symbolic rule terms by coverage across Before-After scene pair training examples. A pair is Before-After where both are obj(Color,Cells) lists. rk_pair_ok_ (private): rk_apply_ + msort compare. rk_apply_ (private): self-contained dispatch engine (recolor, recolor_all, color_map, shift, to_origin, reflect_h, reflect_v, remove_color, keep_color, sort_size_desc, sort_size_asc, top_n). rk_coverage_pairs: include(rk_pair_ok_). rk_coverage: length. rk_consistent: maplist(rk_pair_ok_). rk_inconsistent_pairs: findall NOT rk_pair_ok_. rk_rule_score: alias for rk_coverage. rk_rank_rules: findall -N-Rule; msort; extract values. rk_rank_candidates: findall -N-N-Rule; msort; findall N-Rule. rk_best_rule: rank head. rk_all_consistent: include(rk_consistent_check_(Pairs)). rk_filter_min_coverage: include(rk_coverage_ge_(Pairs,MinN)). rk_perfect_rules: n_pairs + filter_min_coverage. rk_coverage_ratio: n_pairs + coverage -> Num/Den. rk_top_n_rules: rank_candidates + length+append Prefix fallback. 41/41 PLUnit tests pass. |
@@ -570,7 +571,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 
 ### Announcements — announcements/
 
-232 announcements in LinkedIn format — one per accomplishment.
+233 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 
