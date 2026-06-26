@@ -1,0 +1,35 @@
+Accomplishment 232: End-to-End Scene Puzzle Solver (gridsolve Pack, gs_*, Layer 191)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a gridsolve pack - 14 gs_* predicates that wrap the full
+symbolic reasoning pipeline into a single solve/3 call.
+
+The pipeline:
+1. Infer specific rule terms from training pairs (recolor, shift, color_map, etc.)
+2. Union with a broad default candidate set
+3. Rank candidates by how many training pairs they explain
+4. Apply the best rule to the test input
+
+gs_solve(TrainingPairs, TestInput, Output) does all of this automatically.
+
+gs_explain returns the winning rule and its coverage for full transparency.
+gs_solve_n returns the top N candidates as Coverage-Rule pairs.
+gs_consistent_rules and gs_valid_rules filter the candidate pool.
+
+The rule application engine (gs_apply) is self-contained and implements the
+full dispatch vocabulary: recolor, recolor_all, color_map, shift, to_origin,
+reflect, remove_color, keep_color, sort, top_n, identity.
+
+41 of 41 unit tests pass.
+
+This is WP 212, Mentova's 232nd accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

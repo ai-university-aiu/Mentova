@@ -1,0 +1,72 @@
+Accomplishment 232: End-to-End Scene Puzzle Solver (gridsolve Pack, gs_*, Layer 191)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 212th work package: the gridsolve pack, a suite of 14 gs_*
+predicates that integrate rule inference, candidate ranking, and rule application
+into a single end-to-end scene puzzle solver.
+
+
+Motivation
+
+The scene reasoning stack now includes many powerful components: ruleinfer can
+infer specific transformation rules from examples; scenerank can rank candidate
+rules by coverage; sceneapply can execute any rule term; colortable can learn
+a color substitution table. But each of these requires wiring together by the
+caller. The gridsolve pack provides the wiring: a single gs_solve/3 call takes
+training pairs and a test input and returns the output.
+
+
+The Pipeline
+
+The solve pipeline has four steps:
+
+1. Infer: gs_infer_candidates analyzes the training pairs and derives specific
+rule terms by pattern matching. If all pairs show red becoming green, it infers
+recolor(r,g). If all pairs show objects moving one step down, it infers shift(1,0).
+It also infers recolor_all, color_map, to_origin, and remove_color candidates.
+
+2. Enumerate: gs_default_candidates provides a broad fallback enumeration of
+common rule terms: all pairwise recolor variants, all recolor_all variants,
+eight shift directions, to_origin, remove_color, sort and top_n patterns,
+and identity. This ensures that even if inference misses the correct rule, the
+default set likely contains it.
+
+3. Rank: the inferred and default candidates are unioned. gs_rank_rules sorts
+them by coverage (how many training pairs each correctly explains). Ties are
+broken by standard Prolog term order.
+
+4. Apply: the best rule is applied to the test input via gs_apply, which
+implements the full sceneapply dispatch vocabulary in a self-contained engine.
+
+
+Supporting Operations
+
+gs_coverage counts pairs explained. gs_consistent checks all-or-nothing.
+gs_consistent_rules and gs_valid_rules filter candidate sets. gs_solve_n returns
+the top N rules as Coverage-Rule pairs alongside the best rule. gs_explain
+returns the best rule and its coverage for inspection. gs_all_same_output applies
+a rule to multiple test inputs in a single maplist call. gs_n_pairs counts pairs.
+
+
+Test Coverage
+
+41 of 41 unit tests pass. Tests cover all 14 predicates: rule application for
+all dispatch types, coverage counting, consistency checking, ranking, inference,
+default candidates, full solve for recolor/shift/recolor_all tasks, solve_n,
+explain, and all_same_output.
+
+
+Significance
+
+The gridsolve pack is the top-level entry point for the symbolic scene reasoning
+stack. It does not require the caller to understand rule inference or ranking
+internals. Combined with the scene, analogy, ruleinfer, scenerank, and colortable
+packs, PrologAI now has a complete and documented pipeline for ARC-AGI-2 style
+visual transformation tasks.
+
+This is WP 212, Mentova's 232nd accomplishment.
