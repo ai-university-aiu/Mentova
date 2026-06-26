@@ -1,0 +1,22 @@
+Accomplishment 220: Object Merging, Set Operations, and Component Splitting (objmerge Pack, mg_*, Layer 179)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has an objmerge pack - 14 mg_* predicates for combining, decomposing, and reshaping object terms at the cell-set level.
+
+The pack provides union, intersection, difference, and symmetric difference of two obj cell sets. It concatenates objects horizontally or vertically with a configurable gap. It merges or subtracts entire lists of objects. It fills an object's bounding box, extracts just the outer frame, or adds a border of padding. And it splits a single object into its 4-connected or 8-connected components using BFS flood-fill.
+
+41 of 41 unit tests pass.
+
+This completes the object-level manipulation toolkit. A reasoner can now combine, split, frame, and pad symbolic objects directly - without converting to a grid. Together with objxf, objcopy, and objmorph, this is a full suite for structural object reasoning.
+
+This is WP 200, Mentova's 220th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

@@ -1,0 +1,141 @@
+Accomplishment 220: Object Merging, Set Operations, and Component Splitting (objmerge Pack, mg_*, Layer 179)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objmerge pack (14 mg_* predicates, Layer 179) for cell-set
+operations and structural operations on obj(Color, Cells) terms. The pack
+provides union, intersection, difference, and symmetric difference of cell
+sets; horizontal and vertical concatenation; list-level union and subtraction;
+bounding-box fill, hollow-frame, and padding; and 4-connected or 8-connected
+component splitting via BFS flood-fill. The pack has no cross-pack
+dependencies.
+
+41 of 41 PLUnit tests pass.
+
+This work package is PrologAI WP 200, merged as PR 288 on 2026-06-26.
+
+1. Motivation
+
+Several ARC-type reasoning tasks require combining or decomposing objects at
+the cell level. The objmerge pack fills the gap between single-object
+operations (objxf, objmorph) and grid-level operations (scene, canvas). It
+provides the following capabilities that no existing pack had:
+
+- Set-theoretic composition: combining two obj terms by union, intersection, or
+  difference of their cell sets.
+- Spatial concatenation: joining two objects side-by-side or top-and-bottom.
+- Geometric generation: expanding an object to its bbox, hollowing it, or
+  padding it with a border.
+- Component analysis: splitting a single obj term into its connected components.
+
+2. Core Design
+
+2.1 Set Operations
+
+mg_union_cells, mg_intersect_cells, mg_diff_cells, and mg_sym_diff_cells each
+sort both input cell lists and delegate to list set operations from
+library(lists). All four take an explicit Color argument so the caller chooses
+the output color independently of the input colors.
+
+mg_sym_diff_cells is computed as (SC1\SC2) ++ (SC2\SC1) using subtract/3
+twice and then append/3.
+
+2.2 Concatenation
+
+mg_concat_h computes the required column shift for O2: DC = maxcol(O1) + 1 +
+Gap - mincol(O2). Then mg_translate_ applies this shift to O2's cells before
+appending. The merged obj uses O1's color.
+
+mg_concat_v is symmetric, shifting by row.
+
+2.3 List Operations
+
+mg_merge_list uses findall over the cross-product of objects and cells, then
+sort to deduplicate.
+
+mg_subtract_list collects all cells from all objects in RemoveList (also via
+findall), sorts both sets, then calls subtract/3.
+
+2.4 Bounding-Box Operations
+
+mg_expand_bbox uses between/3 over the row and column ranges.
+
+mg_hollow_bbox uses the same enumeration with a disjunctive guard (R=MinR OR
+R=MaxR OR C=MinC OR C=MaxC). The result is sorted to remove duplicates at
+corner cells, which would otherwise satisfy multiple disjuncts.
+
+mg_pad expands the range by P on each side before the between/3 enumeration.
+
+2.5 Component Splitting
+
+mg_split_cc4 and mg_split_cc8 both delegate to mg_components_, which iterates
+BFS flood-fill via mg_bfs_ until no cells remain. mg_bfs_ processes a queue
+of cells: for each cell, it finds its unvisited neighbors in the sorted cell
+set via memberchk, adds them to the queue and visited list, then recurses.
+
+mg_neighbors4_ and mg_neighbors8_ are pure arithmetic predicates with no
+side effects, making them safe to call via call/2 from mg_bfs_.
+
+3. Predicate Descriptions
+
+mg_union_cells(+O1, +O2, +Color, -Merged): sorted union of cell sets.
+mg_intersect_cells(+O1, +O2, +Color, -Result): sorted intersection.
+mg_diff_cells(+O1, +O2, +Color, -Result): O1 minus O2 cells.
+mg_sym_diff_cells(+O1, +O2, +Color, -Result): symmetric difference.
+mg_concat_h(+O1, +O2, +Gap, -Merged): O2 to the right of O1 with gap.
+mg_concat_v(+O1, +O2, +Gap, -Merged): O2 below O1 with gap.
+mg_merge_list(+Objs, +Color, -Merged): union of all cells in list.
+mg_subtract_list(+Base, +RemoveList, +Color, -Result): remove list cells.
+mg_expand_bbox(+Obj, -Expanded): fill bounding box.
+mg_hollow_bbox(+Obj, -Hollow): 1-cell-wide outer frame.
+mg_pad(+Obj, +P, +Color, -Padded): add P layers of border cells.
+mg_split_cc4(+Obj, -Parts): 4-connected component obj list.
+mg_split_cc8(+Obj, -Parts): 8-connected component obj list.
+mg_n_components4(+Obj, -N): count of 4-connected components.
+
+4. Example Usage
+
+Example 1: Find cells that appear in both an input and an output object.
+
+    mg_intersect_cells(Input, Output, shared, Shared).
+    % Shared contains only cells present in both
+
+Example 2: Split a disconnected object into its parts.
+
+    Pattern = obj(r, [r(0,0),r(0,1), r(3,3),r(3,4)]),
+    mg_split_cc4(Pattern, Parts),
+    length(Parts, 2).
+    % Two separate horizontal bars
+
+Example 3: Build a framed container around an object.
+
+    mg_expand_bbox(InnerObj, Bbox),  % solid bbox
+    mg_hollow_bbox(Bbox, Frame).     % hollow it
+
+5. SPARC Documentation
+
+Specification v165 adds Part 190 (objmerge pack specification).
+
+Pseudocode v158 adds Part 190 (objmerge pack pseudocode).
+
+Architecture v159 adds ARCH-166 (objmerge pack layer placement).
+
+Refinement v213 adds acceptance criteria AC-MG-001 through AC-MG-041.
+
+Completion v216 adds the WP-200 completion record.
+
+6. Conclusion
+
+The objmerge pack completes the object-level manipulation toolkit. A reasoner
+can now combine, split, frame, and pad obj terms directly without going through
+a grid representation. Together with objxf, objcopy, and objmorph, the four
+packs cover the full range of single-object and multi-object structural
+operations.
+
+This is WP 200, Mentova's 220th accomplishment.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
