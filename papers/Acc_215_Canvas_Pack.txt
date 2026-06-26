@@ -1,0 +1,150 @@
+Accomplishment 215: Grid Canvas and Object Rendering (Canvas Pack, cv_*, Layer 174)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a canvas pack (14 cv_* predicates, Layer 174) that bridges
+the gap between obj(Color, Cells) terms and 2D grid representations. Given
+a list of obj terms, cv_render/5 produces a complete grid in one call. Given
+a grid, cv_extract_all/3 recovers the full object list. Between those two
+endpoints, the pack provides fine-grained control: painting with bounds
+clipping, conditional painting on background cells only, object erasure,
+object translation, bounding-box extraction as a subgrid, and subgrid
+compositing. The pack has no cross-pack dependencies.
+
+41 of 41 PLUnit tests pass.
+
+This work package is PrologAI WP 195, merged as PR 283 on 2026-06-26.
+
+1. Motivation
+
+After WP 194 (objfilter) and WP 193 (objrel) gave PrologAI rich operations
+over lists of obj terms, one practical gap remained: there was no self-
+contained, general-purpose pack for rendering obj terms into grids and
+recovering them back. The motion pack provided mv_scene_to_grid/2, but it
+required a scene(Rows,Cols,Bg,Objects) compound rather than a plain list of
+obj terms. The scene pack extracted objects but produced the same compound.
+
+The canvas pack fills this gap with a clean interface for the most common
+rendering operations, working directly with plain obj(Color, Cells) terms.
+
+2. Core Design
+
+2.1 Private Helpers
+
+Two private predicates underpin most operations.
+
+cv_paint_cells_(+Grid, +Cells, +Color, -Grid2): single-pass paint. Rebuilds
+the entire grid with a nested findall, checking memberchk(r(R,C), Cells) for
+each cell position. O(H*W*|Cells|) but deterministic and side-effect-free.
+
+cv_erase_cells_(+Grid, +Cells, +Bg, -Grid2): same pattern, replacing matched
+cells with Bg instead of Color.
+
+cv_dims_(+Grid, -H, -W): returns height (length of grid) and width (length
+of first row).
+
+2.2 Canvas Creation
+
+cv_blank/4 uses nested findall with between/3 to construct an H x W grid
+without any loop variables or side effects.
+
+2.3 Painting Variants
+
+Four painting predicates handle different scenarios:
+
+cv_paint/3: unconditional paint of all obj cells.
+cv_paint_at/5: translates cells by (DR,DC) before painting.
+cv_paint_clip/3: filters out-of-bounds cells before painting.
+cv_paint_bg/4: filters cells whose current grid value is not Bg.
+
+2.4 Extraction
+
+cv_extract/3 uses a single findall to collect all (R,C) positions where the
+grid equals Color. Returns obj(Color, []) if the color is absent.
+
+cv_extract_all/3 collects all non-Bg (R,C,V) triples, sorts distinct colors,
+then builds one obj per color. Colors are in ascending sort order.
+
+2.5 Stamp and Blit
+
+cv_stamp/3 normalizes an obj to its bounding box (min row and col shifted to
+0) and renders it as a minimal subgrid. This is the inverse of cv_blit.
+
+cv_blit/5 pastes a subgrid Patch onto a canvas at top-left position (R0,C0).
+Each Patch cell overwrites the canvas cell at the corresponding offset. Patch
+cells outside the canvas bounds are silently ignored.
+
+3. Predicate Descriptions
+
+cv_blank(+H, +W, +Bg, -Grid): H x W grid filled with Bg.
+cv_size(+Grid, -H, -W): grid dimensions.
+cv_paint(+Grid, +Obj, -Grid2): paint one obj unconditionally.
+cv_paint_all(+Grid, +Objs, -Grid2): paint list of objs in order.
+cv_paint_at(+Grid, +Obj, +DR, +DC, -Grid2): translate then paint.
+cv_paint_clip(+Grid, +Obj, -Grid2): paint with bounds clipping.
+cv_paint_bg(+Grid, +Obj, +Bg, -Grid2): paint only on bg cells.
+cv_erase(+Grid, +Obj, +Bg, -Grid2): fill obj cells with Bg.
+cv_extract(+Grid, +Color, -Obj): all Color cells as obj.
+cv_extract_all(+Grid, +Bg, -Objs): all non-bg objects.
+cv_render(+H, +W, +Bg, +Objs, -Grid): blank canvas + paint all.
+cv_move(+Grid, +Obj, +DR, +DC, +Bg, -Grid2): erase then repaint at offset.
+cv_stamp(+Obj, +Bg, -Patch): obj as tight bounding-box grid.
+cv_blit(+Canvas, +Patch, +R0, +C0, -Grid2): paste subgrid at position.
+
+4. Examples
+
+Example 1: Render a scene of three objects to a 5x5 grid.
+
+    Objs = [obj(r,[r(0,0)]),
+            obj(b,[r(2,0),r(2,1),r(2,2)]),
+            obj(g,[r(4,4)])],
+    cv_render(5, 5, 0, Objs, Grid).
+    % Grid row 0: [r,0,0,0,0]
+    % Grid row 2: [b,b,b,0,0]
+    % Grid row 4: [0,0,0,0,g]
+
+Example 2: Move an object two rows down.
+
+    cv_blank(5, 5, 0, G0),
+    Obj = obj(r, [r(0,0),r(0,1)]),
+    cv_paint(G0, Obj, G1),
+    cv_move(G1, Obj, 2, 0, 0, G2).
+    % r(0,0) and r(0,1) now at r(2,0) and r(2,1).
+
+Example 3: Stamp an L-shape, then blit it at another position.
+
+    L = obj(p, [r(0,0),r(1,0),r(1,1)]),
+    cv_stamp(L, 0, Patch),
+    % Patch = [[p,0],[p,p]]
+    cv_blank(5, 5, 0, Canvas),
+    cv_blit(Canvas, Patch, 3, 2, Grid2).
+
+5. SPARC Documentation
+
+Specification v160 adds Part 185 (canvas pack specification).
+
+Pseudocode v153 adds Part 185 (canvas pack pseudocode).
+
+Architecture v154 adds ARCH-161 (canvas pack layer placement).
+
+Refinement v208 adds acceptance criteria AC-CV-001 through AC-CV-041.
+
+Completion v211 adds the WP-195 completion record.
+
+6. Conclusion
+
+The canvas pack gives PrologAI a clean, dependency-free bridge between the
+obj-term world and the grid world. A reasoner can now render a list of
+objects to a grid in one call, move objects by translation, extract objects
+back from grids, and compose grids by pasting subpatches. Together with
+the scene pack (which provides the structured scene(Rows,Cols,Bg,Objects)
+representation), canvas covers the direct obj-list-to-grid direction with
+maximum flexibility and minimal overhead.
+
+This is WP 195, Mentova's 215th accomplishment.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

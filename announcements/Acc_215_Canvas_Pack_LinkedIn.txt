@@ -1,0 +1,29 @@
+Mentova Accomplishment 215: Grid Canvas and Object Rendering (Canvas Pack, cv_*, Layer 174)
+
+PrologAI now includes a canvas pack (cv_*, Layer 174) - 14 predicates that
+bridge the gap between obj(Color, Cells) terms and 2D grid representations.
+
+The pack provides:
+
+- cv_blank: create an H x W grid filled with a background value
+- cv_size: get grid dimensions
+- cv_paint: paint one obj term onto a grid
+- cv_paint_all: paint a list of obj terms in order
+- cv_paint_at: translate an obj by (DR,DC) then paint
+- cv_paint_clip: paint with out-of-bounds cells silently skipped
+- cv_paint_bg: paint only onto background-valued cells
+- cv_erase: fill an obj's cells with background
+- cv_extract: extract all cells of a given color as an obj term
+- cv_extract_all: extract all non-background objects from a grid
+- cv_render: blank canvas + paint all (convenience one-call pipeline)
+- cv_move: erase obj from current position, repaint at offset
+- cv_stamp: extract obj as minimal bounding-box grid
+- cv_blit: paste a subgrid at a given canvas position
+
+No cross-pack dependencies. 41 tests pass.
+
+This is WP 195, Mentova's 215th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
