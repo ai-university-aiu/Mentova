@@ -1,0 +1,43 @@
+Accomplishment 198: Object-Level Proximity and Distance
+
+PrologAI now has 178 work packages.
+
+The proximity pack (px_*, Layer 157) computes distances and spatial
+relationships between obj(Color, Cells) terms. No grid argument required.
+
+Distance measures:
+• px_centroid/3: integer-truncated centroid (R, C) of an obj term
+• px_centroid_dist/3: Manhattan distance between centroids of two objs
+• px_min_cell_dist/3: minimum distance between any cell pair of two objs
+
+Contact detection:
+• px_touching/2: succeed if any cell of O1 is 4-adjacent to any cell of O2
+
+Nearest and farthest:
+• px_nearest/3: object with minimum centroid distance from reference
+• px_farthest/3: object with maximum centroid distance
+
+Sorting and filtering:
+• px_sort_by_dist/3: list sorted ascending by centroid distance (stable)
+• px_within_dist/4: objects at centroid distance at most D
+• px_beyond_dist/4: objects at centroid distance strictly greater than D
+
+Pair detection:
+• px_closest_pair/2: unordered pair with minimum centroid distance
+• px_farthest_pair/2: unordered pair with maximum centroid distance
+
+Contact filters:
+• px_touching_objs/3: objects from list that 4-touch the reference
+• px_non_touching_objs/3: objects that do not 4-touch the reference
+
+Distance ranking:
+• px_dist_rank/3: D-Obj pairs sorted ascending by distance (nearest first)
+
+The proximity pack extends the object-scene reasoning ecosystem alongside
+the scene, pair, group, and delta packs: detect, match, group, measure
+change, and now measure distance.
+
+51/51 PLUnit tests pass. PR 263 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
