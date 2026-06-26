@@ -1,0 +1,51 @@
+Accomplishment 202: Size-Based Sorting and Assignment
+
+PrologAI now has 182 work packages.
+
+The sizeop pack (sz_*, Layer 161) provides size-based operations for
+obj(Color, Cells) collections. "Size" = cell count.
+
+Size extraction:
+• sz_of/2: cell count of an obj term
+
+Sorting (stable - equal sizes preserve input order):
+• sz_sort_asc/2: sort by size ascending (smallest first)
+• sz_sort_desc/2: sort by size descending (largest first)
+
+Selection:
+• sz_smallest/2: first object with fewest cells
+• sz_largest/2: first object with most cells
+• sz_nth_smallest/3: Nth object in ascending size order (1-based)
+• sz_nth_largest/3: Nth object in descending size order (1-based)
+
+Rank query:
+• sz_rank_of/3: 1-based size rank of a specific object
+
+Color assignment in size order:
+• sz_assign_colors/3: sort by size ascending, zip with a color list, recolor
+  - smallest -> Colors[1], next -> Colors[2], ... (truncates at shorter list)
+
+Size filtering:
+• sz_by_size/3: objects with exactly N cells
+• sz_above/3: objects with > N cells
+• sz_below/3: objects with < N cells
+
+Size statistics:
+• sz_unique_sizes/2: sorted list of distinct cell counts
+• sz_total_cells/2: sum of all cell counts
+
+Key example - assign colors by size rank:
+
+    sz_assign_colors([obj(a,2cells), obj(b,1cell), obj(c,3cells)],
+                     [red, blue, green],
+                     Result)
+    -> Result: obj(b)->red (size 1), obj(a)->blue (size 2), obj(c)->green (size 3)
+
+60/60 PLUnit tests pass. PR 267 merged to PrologAI main.
+
+Accomplishments 197-202 build a complete object-scene reasoning suite:
+group (partition), proximity (distance), link (correspondence), layout
+(arrangement), weave (list structure), sizeop (size operations).
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

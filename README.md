@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-201-FF6B35?style=for-the-badge" alt="201 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-202-FF6B35?style=for-the-badge" alt="202 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **201 accomplished** |
-| Scientific papers | **201 published** — one per accomplishment |
+| Documented accomplishments | **202 accomplished** |
+| Scientific papers | **202 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         201 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  148 announcements — one per accomplishment
+├── papers/         202 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  149 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-201 scientific papers, one per accomplished milestone.
+202 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -461,6 +461,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_198` | Proximity pack paper — Object-Level Proximity and Distance (Layer 157, px_* prefix): 14 px_* predicates for Manhattan distance and spatial relationship computation for obj(Color,Cells) terms. Centroids: px_centroid (integer-truncated via sum_list+//), px_centroid_dist (Manhattan distance between centroids), px_min_cell_dist (minimum across all cell pairs via findall+min_list). Adjacency: px_touching (4-adjacency: member on both cell lists, =:= 1 check, cut). Selection: px_nearest (min centroid distance via findall+min_list+member+cut), px_farthest (max), px_sort_by_dist (stable msort on D-O pairs). Filtering: px_within_dist (=<), px_beyond_dist (>). Pair extrema: px_closest_pair and px_farthest_pair (all index-ordered pairs I<J via between/3+nth1/3; min/max D). Collection: px_touching_objs (findall with px_touching), px_non_touching_objs (findall with \+ px_touching). Ranking: px_dist_rank (D-Obj pairs via msort). 51/51 PLUnit tests pass. |
 | `Acc_199` | Link pack paper — Object-to-Object Correspondence Linking (Layer 158, lk_* prefix): 14 lk_* predicates for building O1-O2 link pairs between obj(Color,Cells) lists. Construction: lk_by_position (zip: three-clause recursive with cuts on both base cases), lk_by_nearest (private lk_nearest_ helper: findall D-O pairs, min_list+member+cut), lk_by_color (findall Cartesian with O=obj(C,_) pattern, sort), lk_by_size (findall with length equality, sort), lk_by_form (private lk_norm_ normalizes to origin+sort; findall pairs with equal norm; sort). Access: lk_source (findall O1-_ member), lk_target (findall _-O2 member). Transform: lk_invert (findall O2-O1), lk_count (length/2). Application: lk_apply_color (findall obj(C2,Cells1) from member(obj(_,Cells1)-obj(C2,_), Links)), lk_apply_cells (findall obj(C1,Cells2)). Filtering: lk_filter_same_color (O1=obj(C,_), O2=obj(C,_)), lk_filter_diff_color (C1 \= C2). Unlinked: lk_unlinked (\+ member(O-_, Links)). 53/53 PLUnit tests pass. |
 | `Acc_200` | Layout pack paper — Multi-Object Layout Analysis (Layer 159, lt_* prefix): 14 lt_* predicates for collective spatial arrangement analysis of obj(Color,Cells) lists. Bounding box: lt_global_bbox (over ALL cells of all objs: nested findall+min_list/max_list), lt_bbox_area (area=(R2-R1+1)*(C2-C1+1)). Range/count: lt_row_range, lt_col_range (min/max of topmost rows/leftmost cols), lt_row_count, lt_col_count (distinct topmost rows/cols). Line detection: lt_all_same_row and lt_all_same_col (base []+cut + sort to singleton [_]). Centroid: lt_centroid_of_all (private lt_centroid_, collect centroid rows/cols, sum_list+//). Grid: lt_is_grid (centroid R-C pairs; verify all combinations via \+ (member(R,...),member(C,...),\+member(R-C,...)); |Objs|=Rows*Cols). Diagonal: lt_is_diagonal_dr (R-C constant, sort to singleton), lt_is_diagonal_dl (R+C constant). Spacing: lt_gap_h and lt_gap_v (msort C-O/R-O pairs; extract col/row values; private lt_diffs_ recursive predicate for consecutive differences; verify all equal and > 0). This is Mentova's 200th accomplishment. 56/56 PLUnit tests pass. |
+| `Acc_202` | Sizeop pack paper — Size-Based Sorting and Assignment for Object Collections (Layer 161, sz_* prefix): 14 sz_* predicates. Extraction: sz_of (cell count via length/2 on Cells field). Stable sort: sz_sort_asc (N-Obj keysort ascending; equal sizes retain input order), sz_sort_desc (negated-key trick: Neg is -N then keysort ascending = size descending). Selection: sz_smallest and sz_largest (findall sizes, min_list/max_list, then member+cut for first input-order tie-break). Rank-indexed: sz_nth_smallest and sz_nth_largest (sz_sort_asc/desc + nth1/3). Rank query: sz_rank_of (sz_sort_asc + nth1/3 to find 1-based position). Color assignment: sz_assign_colors (sz_sort_asc then private sz_zip_recolor_ with dual base clauses; truncates at shorter list). Filtering: sz_by_size (S=N), sz_above (S>N), sz_below (S<N) via findall with arithmetic test. Statistics: sz_unique_sizes (findall+sort/2 deduplication), sz_total_cells (findall+sum_list/2; empty=0). 60/60 PLUnit tests pass. |
 | `Acc_201` | Weave pack paper — List Interlacing, Slicing, and Cycling (Layer 160, wv_* prefix): 14 wv_* predicates for general-purpose list operations on any Prolog list. Interleaving: wv_alternate (base wv_alternate([],Rest,Rest) then swap-roles recursion; when one list runs out, remainder appended), wv_split_even_odd (base [], then [H|Evens] with swapped Evens/Odds in recursive call), wv_zip (H1-H2 pairs; dual base clauses for empty left/right). Slicing: wv_stride (take head, drop next Step-1 via private wv_drop_, recurse), wv_chunk (length(Chunk,N)+append+cut; trailing remainder discarded), wv_pair_wise (two base clauses: [] and [_]; emit [A,B] recurse from [B|...]), wv_triple_wise (three base clauses), wv_take (dual base clauses: N=0+cut and []), wv_drop (dual base clauses: N=0+cut and []). Cycling and rotation: wv_rotate_left (K mod N then length(Front,K1)+append(Front,Back)+append(Back,Front)), wv_rotate_right (translate to left rotation K2=N-K1), wv_reflect (delegate to reverse/2), wv_repeat (append(List,Rest) recursion; N=0 base returns []), wv_cycle (private wv_cycle_ with Current+Source pair; restart from Source when Current=[]; N=0 base). 66/66 PLUnit tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
