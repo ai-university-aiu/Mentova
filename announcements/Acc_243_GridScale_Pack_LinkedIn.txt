@@ -1,0 +1,29 @@
+Accomplishment 243: gridscale Pack Added to PrologAI (gsc_*, Layer 202)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI Work Package 223 is merged: the gridscale pack (gsc_*, Layer 202) adds
+fourteen predicates for integer block-pixel scaling of raw grids.
+
+The pack upsamples grids by repeating each cell into NxN blocks, downsamples
+by collapsing uniform blocks, detects the scale factor between two grids, infers
+the smallest repeated tile, and also supports majority-vote downscaling,
+nearest-neighbor resize, stride subsampling, border padding, and factor-aligned
+cropping.
+
+Key predicates:
+- gsc_upsample / gsc_downsample: exact integer scaling (downsample fails on non-uniform blocks)
+- gsc_block_majority: majority-vote downscaling (never fails)
+- gsc_scale_factor / gsc_is_scale_of: detect and verify scaling relationships
+- gsc_infer_tile: find the smallest tile whose upsampling equals a given grid
+- gsc_factors: list all valid block sizes for a grid
+- gsc_resize: nearest-neighbor resize to arbitrary target dimensions
+- gsc_pad / gsc_crop_to_factor: border padding and factor-aligned cropping
+
+All 60 acceptance tests pass. PrologAI now comprises 223 work packages
+and reaches Layer 202 in the Data Layer.
+
+SPARC: Spec v189, Pseudo v181, Arch v183, Refinement v236, Completion v239.
+PrologAI PR #312. Mentova Accomplishment 243 of 243.
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveSubstrate

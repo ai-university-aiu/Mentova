@@ -1,0 +1,155 @@
+Acc_243: gridscale Pack - Grid Block-Pixel Scaling (gsc_*, Layer 202)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 223 adds the gridscale pack (gsc_*, Layer 202): fourteen
+predicates for integer block-pixel scaling of raw grids (list-of-lists of color
+atoms). The pack upsamples grids by repeating each cell into an NxN block,
+downsamples by collapsing uniform NxN blocks, detects scale factors, infers the
+smallest repeated tile, and supports majority-vote downscaling, nearest-neighbor
+resize, stride subsampling, border padding, and factor-aligned cropping.
+All 60 acceptance tests pass.
+
+
+1. Motivation
+
+Many structured visual patterns are formed by upsampling a small tile to a larger
+canvas: each cell in the tile becomes an NxN block of the same color. Recovering
+that tile from the upsampled grid, detecting the scale factor, and verifying the
+scaling relationship are foundational operations for pattern generalization.
+
+The gridscale pack provides:
+- Exact integer upsampling and downsampling
+- Detection of the scale factor N between two grids
+- Inference of the smallest tile behind a repeated-block grid
+- Majority-vote downsampling for noisy or approximate block patterns
+- Resize to arbitrary target dimensions (nearest-neighbor)
+- Stride subsampling, border padding, and factor-aligned cropping
+
+
+2. Architecture
+
+Layer 202 sits above gridperiod (Layer 201) in the PrologAI dependency chain.
+Uses library(lists) and library(apply) only; no cross-pack dependencies.
+
+Private helpers:
+- gsc_dims_/3: grid height and width
+- gsc_cell_/4: value at (R, C)
+- gsc_subgrid_/6: extract SH x SW sub-grid from (SR, SC)
+- gsc_majority_/2: most frequent element of a flat list using msort on negative counts
+
+
+3. Key Design Decision: Downsample Uniformity Check
+
+gsc_downsample calls gsc_all_uniform before findall to ensure failures from
+non-uniform blocks propagate correctly. Without this check, findall would
+silently produce short rows for any block that fails uniformity, hiding the
+error. The uniformity guard converts findall's silent swallowing of failures
+into a clean, explicit precondition.
+
+
+4. Predicates
+
+gsc_upsample/3 - Each cell becomes NxN block; output is (H*N) x (W*N). N=1 is no-op.
+
+gsc_downsample/3 - Each NxN block must be uniform; collapses to one cell. Fails if any block is not uniform.
+
+gsc_block_majority/3 - Downsample with majority-vote per block; never fails.
+
+gsc_scale_factor/3 - Find N such that GridB = upsample(GridA, N). Fails if no integer N exists.
+
+gsc_is_scale_of/3 - Test that GridB[r][c] = GridA[r//N][c//N] for all (r,c) using negation-as-failure.
+
+gsc_block_at/5 - Extract NxN sub-grid at block position (BR, BC).
+
+gsc_block_uniform/5 - Succeed if NxN block at (BR, BC) is all one Color; return that Color.
+
+gsc_all_uniform/2 - Succeed if every NxN block in Grid is uniform.
+
+gsc_infer_tile/2 - Find smallest Tile: search largest divisor of H and W (>=2) for which all_uniform holds, then downsample. Fails if no N>=2 qualifies.
+
+gsc_factors/2 - Ascending list of all positive integers dividing both H and W.
+
+gsc_resize/4 - Nearest-neighbor resize: Resized[r][c] = Grid[(r*H)//TargetH][(c*W)//TargetW].
+
+gsc_subsample/3 - Stride-N sampling: Sub[BR][BC] = Grid[BR*N][BC*N].
+
+gsc_pad/4 - Surround Grid with N-cell wide border of Color; output is (H+2N) x (W+2N).
+
+gsc_crop_to_factor/3 - Crop to CH=(H//N)*N rows and CW=(W//N)*N columns (top-left region).
+
+
+5. Example Session
+
+:- use_module(pack(gridscale/prolog/gridscale)).
+
+% Upsample 2x2 checkerboard by factor 2:
+?- gsc_upsample([[r,b],[b,r]], 2, S).
+S = [[r,r,b,b],[r,r,b,b],[b,b,r,r],[b,b,r,r]].
+
+% Downsample back (succeeds because all 2x2 blocks are uniform):
+?- gsc_downsample([[r,r,b,b],[r,r,b,b],[b,b,r,r],[b,b,r,r]], 2, D).
+D = [[r,b],[b,r]].
+
+% Detect scale factor 3:
+?- gsc_scale_factor([[r,b],[b,r]],
+       [[r,r,r,b,b,b],[r,r,r,b,b,b],[r,r,r,b,b,b],
+        [b,b,b,r,r,r],[b,b,b,r,r,r],[b,b,b,r,r,r]], N).
+N = 3.
+
+% Infer smallest tile:
+?- gsc_infer_tile([[r,r,b,b],[r,r,b,b],[b,b,r,r],[b,b,r,r]], T).
+T = [[r,b],[b,r]].
+
+% Pad with green border:
+?- gsc_pad([[r,b],[b,r]], 1, g, P).
+P = [[g,g,g,g],[g,r,b,g],[g,b,r,g],[g,g,g,g]].
+
+% Find common divisors of a 6x6 grid:
+?- gsc_factors([[r,r,r,r,r,r]|_], F).
+F = [1,2,3,6].
+
+
+6. Test Coverage
+
+All 60 acceptance criteria (AC-GSC-001 through AC-GSC-060) are exercised in
+packs/gridscale/test/test_gridscale.pl. Tests cover:
+- Upsample by N=1,2,3 and for 1x1, 2x2, 2x3 source grids
+- Downsample (success and failure on non-uniform blocks)
+- Block majority with uniform and mixed blocks
+- Scale factor detection and verification (success and fail cases)
+- Block extraction, uniformity, and all-uniform checks
+- Tile inference from 4x4 and 6x6 tiled grids; failure on prime-sized non-uniform grids
+- Factor enumeration for 4x4, 3x3, 2x3, 6x6 grids
+- Nearest-neighbor resize (upsample, downsample, identity, 1x1 output)
+- Stride subsampling, border padding, factor-aligned cropping
+- Round-trip tests (upsample then downsample, infer then scale_factor)
+
+
+7. SPARC Documentation
+
+Work Package 223 is recorded in:
+- Specification v189, Part 213 (WP-223-SPEC-001 through WP-223-SPEC-007)
+- Pseudocode v181, Part 213
+- Architecture v183, ARCH-189
+- Refinement v236, AC-GSC-001 through AC-GSC-060
+- Completion v239, WP-223 record
+
+Tutorial chapter: docs/tutorial/Ch184_GridScale.txt
+Pack reference: docs/Pack_Reference.txt (gridscale entry)
+PrologAI PR: #312 (merged 2026-06-26)
+
+
+8. Conclusion
+
+The gridscale pack completes PrologAI's block-pixel scaling toolkit, enabling
+the cognitive engine to detect upsampling relationships, recover the smallest
+tile from a repeated-block grid, and perform a full suite of scaling, sampling,
+padding, and cropping operations on raw grids.
+
+PrologAI now comprises 223 work packages and reaches Layer 202 in the Data Layer.
