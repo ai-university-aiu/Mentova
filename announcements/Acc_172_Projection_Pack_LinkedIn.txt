@@ -1,0 +1,37 @@
+Mentova Accomplishment 172: The Row and Column Projection and Profile Analysis Pack
+
+PrologAI gains its 152nd work package today.
+
+The projection pack (Layer 131, pj_* prefix) provides 14 predicates for
+computing 1D summaries of 2D grids by projecting along rows or columns.
+
+The 14 predicates cover:
+
+Aggregation: sum of each row and column (pj_row_sums, pj_col_sums);
+count of a target value per row and column (pj_row_counts, pj_col_counts);
+maximum value per row and column (pj_row_maxes, pj_col_maxes).
+
+Enumeration: sorted unique values per row and column
+(pj_row_uniq, pj_col_uniq).
+
+Shadow projection: sorted column indices where a value appears in any row
+(pj_shadow_h); sorted row indices where a value appears in any column
+(pj_shadow_v).
+
+Run-length profiles: longest contiguous run of a value per row
+(pj_h_profile); longest run per column (pj_v_profile).
+
+Modal values: most frequent value per row with smallest-value tie-breaking
+(pj_row_modes); modal value per column (pj_col_modes).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v117, Pseudocode v110,
+Architecture v111, Refinement v165, Completion v168.
+
+Tutorial Chapter 113 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
