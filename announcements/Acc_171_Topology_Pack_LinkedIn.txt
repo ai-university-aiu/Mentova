@@ -1,0 +1,41 @@
+Mentova Accomplishment 171: The Grid Topology and Connected Component Analysis Pack
+
+PrologAI gains its 151st work package today.
+
+The topology pack (Layer 130, tp_* prefix) provides 14 predicates for
+flood-fill-based connected component analysis, enclosed region detection,
+and topological classification of grid regions using 4-connected
+(orthogonal) connectivity.
+
+The 14 predicates cover:
+
+Component analysis: flood fill from a seed to find the full connected
+region (tp_component); all components of a value (tp_all_components);
+component count (tp_component_count); size of a component at a seed
+(tp_component_size); largest component (tp_largest_component).
+
+Reachability: whether Dst is reachable from Src through Val cells
+via BFS (tp_reachable); same-component membership (tp_same_component).
+
+Enclosed regions (holes): Bg cells that cannot reach the grid border
+via Bg neighbors (tp_enclosed); hole existence test (tp_has_hole);
+hole count (tp_hole_count); fill all holes with Val (tp_fill_holes).
+
+Border vs interior: components touching the outer border
+(tp_border_components); components with no border contact
+(tp_interior_components).
+
+Component labeling: same-size grid where each Val cell shows its
+1-based component index (tp_label_components).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v116, Pseudocode v109,
+Architecture v110, Refinement v164, Completion v167.
+
+Tutorial Chapter 112 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture

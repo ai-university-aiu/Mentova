@@ -1,0 +1,146 @@
+Accomplishment 171: The Grid Topology and Connected Component Analysis Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a grid topology and connected component analysis pack as
+Work Package 151 (Layer 130).
+
+The pack provides 14 predicates, all carrying the tp_* prefix, for
+flood-fill-based connected component analysis, enclosed region detection,
+and topological classification of grid regions using 4-connected
+(orthogonal) connectivity.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks require identifying which regions are connected,
+whether a region encloses another (forming a hole), and how many distinct
+connected groups of a value exist.
+
+The topology pack provides the complete vocabulary for this reasoning.
+
+A connected component is a maximal set of cells of the same value that
+are all 4-connected to each other.
+
+An enclosed region is a set of background cells that cannot reach the
+grid border without crossing the enclosing value.
+
+Together these concepts support reasoning about shapes with holes,
+regions split by barriers, and topological structure.
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+tp_component(+Grid, +Val, +Seed, -Cells) finds all cells of value Val
+4-connected to Seed via BFS flood fill.
+
+tp_all_components(+Grid, +Val, -Components) partitions all Val cells
+into connected components.
+
+tp_component_count(+Grid, +Val, -N) counts the components.
+
+tp_component_size(+Grid, +Val, +Seed, -N) returns the cell count of the
+component containing Seed.
+
+tp_largest_component(+Grid, +Val, -Cells) returns the cells of the
+largest component.
+
+tp_reachable(+Grid, +Val, +Src, +Dst, -Bool) tests whether Dst is
+reachable from Src through Val cells.
+
+tp_enclosed(+Grid, +Val, +Bg, -Cells) returns Bg cells that cannot reach
+the grid border via Bg neighbors (enclosed by Val).
+
+tp_has_hole(+Grid, +Val, +Bg, -Bool) tests whether Val encloses any Bg region.
+
+tp_hole_count(+Grid, +Val, +Bg, -N) counts distinct enclosed Bg components.
+
+tp_fill_holes(+Grid, +Val, +Bg, -Grid2) replaces enclosed Bg cells with Val.
+
+tp_border_components(+Grid, +Val, -Components) returns components with at
+least one cell on the outer grid border.
+
+tp_interior_components(+Grid, +Val, -Components) returns components with
+no cell on the outer grid border.
+
+tp_label_components(+Grid, +Val, -LabelGrid) produces a same-size grid
+where each Val cell shows its 1-based component index.
+
+tp_same_component(+Grid, +Val, +P1, +P2, -Bool) tests whether P1 and P2
+are in the same component.
+
+
+3. Implementation
+
+The BFS flood fill is implemented by tp_grow_(Grid, Val, Queue, Visited,
+Result). On each step: if the head cell is already in visited, skip and
+continue; otherwise find all in-bounds Val-valued 4-neighbors via
+tp_val_nbr_/7 and add them to the queue.
+
+tp_all_components collects all Val cells once, then calls tp_split_cells_
+which extracts a seed from the remaining list, grows it into a component,
+removes the component with subtract/3 from library(lists), and recurses.
+
+tp_enclosed seeds the BFS from all border cells with value Bg. Enclosed
+cells are those Bg cells not reached. The Val parameter is accepted for
+API consistency but the BFS only steps through Bg cells.
+
+tp_border_components uses once/1 around the inner member/2 call to prevent
+duplicate component entries when multiple cells of the same component touch
+the border.
+
+tp_label_components builds a flat R-C-Label list via tp_build_label_map_
+then uses member/2 with three bound arguments for O(n) lookup.
+
+
+4. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Test grids include a 3x3 uniform grid, a 3x3 grid with one enclosed hole,
+a 4x4 left-right split, two isolated corner cells, a 5x5 grid with a large
+interior hole, and a 3x3 grid with a single interior cell.
+
+All 42 pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+Specification v116, Part 141 defines all 14 predicates.
+
+Pseudocode v109, Part 141 gives the algorithmic descriptions.
+
+Architecture v110, ARCH-117 records the module placement and design
+patterns.
+
+Refinement v164 records acceptance criteria AC-TP-001 through AC-TP-042.
+
+Completion v167 records the release evidence for WP 151.
+
+Tutorial Chapter 112 demonstrates all 14 predicates with examples.
+
+
+6. Position in the Cognitive Architecture
+
+The topology pack is Layer 130 in the PrologAI cognitive stack.
+
+It follows the distance pack (Layer 129, dt_*) and is the first pack to
+provide full connected-component analysis and topological classification.
+
+The topology pack is a prerequisite for higher-level reasoning about
+object identity, region containment, and spatial structure.
+
+PrologAI now carries 151 work packages in the packs/ directory.
+
+
+END
