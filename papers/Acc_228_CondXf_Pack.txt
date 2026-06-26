@@ -1,0 +1,116 @@
+Accomplishment 228: Conditional and Selective Scene Transformation (condxf Pack, xc_*, Layer 187)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 208th work package: the condxf pack, a suite of 14 xc_*
+predicates that apply transformations selectively to a subset of objects in an
+obj(Color, Cells) scene list, leaving the remaining objects unchanged.
+
+
+Motivation
+
+The scenexf pack (sx_*) applies transformations uniformly to every object in a
+scene. But many reasoning tasks require selective transformation: recolor only
+the red objects, shift only objects above a certain size, or identify and recolor
+the single unique-size object. The condxf pack provides the selective half of
+scene transformation, complementing scenexf's uniform half.
+
+
+Conditions Supported
+
+Color conditions: objects are selected by color atom equality. xc_split_color
+partitions a scene into matching and non-matching groups. xc_recolor_matching,
+xc_shift_color (and its alias xc_move_color), and xc_swap_colors all apply
+their operations only to objects of the specified color.
+
+Size conditions: objects are selected by comparing cell count to a threshold N
+using one of five comparison operators: gt (>), lt (<), eq (=:=), ge (>=),
+le (=<). xc_recolor_by_size recolors qualifying objects; xc_split_size partitions
+the scene into qualifying and non-qualifying groups.
+
+Rank conditions: xc_largest and xc_smallest select the extreme objects by cell
+count, with deterministic tie-breaking via standard Prolog term order. The
+corresponding xc_recolor_largest and xc_recolor_smallest recolor these objects.
+
+Uniqueness condition: xc_unique_size identifies objects whose cell count appears
+exactly once in the scene. xc_recolor_unique_size recolors the unique-size
+object and fails gracefully when no such object exists.
+
+
+Predicates
+
+xc_split_color(+Scene, +Color, -Match, -NoMatch): partition scene into objects
+of Color and all others. Order within each group is preserved.
+
+xc_merge(+Group1, +Group2, -Scene2): concatenate two object groups into one
+scene list. Useful after xc_split_color to recombine groups after modifying one.
+
+xc_recolor_matching(+Scene, +MatchColor, +NewColor, -Scene2): recolor all
+objects whose color is MatchColor. Other objects are unchanged.
+
+xc_shift_color(+Scene, +Color, +DR, +DC, -Scene2): translate all objects of
+Color by (DR, DC). Other objects are unchanged.
+
+xc_swap_colors(+Scene, +C1, +C2, -Scene2): swap colors C1 and C2 throughout
+the scene; other colors are unchanged. Implemented with an if-then-else helper
+to handle all three cases cleanly (C==C1, C==C2, neither).
+
+xc_recolor_by_size(+Scene, +N, +Cmp, +NewColor, -Scene2): recolor each object
+whose cell count satisfies size Cmp N. Cmp is one of: gt, lt, eq, ge, le.
+
+xc_move_color(+Scene, +Color, +DR, +DC, -Scene2): alias for xc_shift_color.
+
+xc_largest(+Scene, -Obj): the largest object by cell count. On ties, standard
+Prolog term order determines the result, giving deterministic behavior.
+
+xc_smallest(+Scene, -Obj): the smallest object by cell count.
+
+xc_recolor_largest(+Scene, +NewColor, -Scene2): recolor the largest object.
+
+xc_recolor_smallest(+Scene, +NewColor, -Scene2): recolor the smallest object.
+
+xc_unique_size(+Scene, -Obj): backtrackable; succeeds for each object whose
+cell count appears exactly once in the scene.
+
+xc_recolor_unique_size(+Scene, +NewColor, -Scene2): recolor the unique-size
+object; fails if no such object exists.
+
+xc_split_size(+Scene, +N, +Cmp, -Match, -NoMatch): partition scene by size
+comparison.
+
+
+Implementation Notes
+
+Color conditions use atom equality (==) for correct handling of color atoms.
+
+Size-ranked selection (xc_largest, xc_smallest) uses findall to build a keyed
+list (negated count for descending, count for ascending), then msort to sort.
+When keys are equal, msort falls back to standard Prolog term order on the obj
+term, which provides deterministic but implementation-defined tie-breaking.
+
+xc_recolor_largest and xc_recolor_smallest use identity comparison (==) in a
+maplist helper to recolor exactly the selected object and no others.
+
+No cross-pack dependencies. Uses library(lists) and library(apply).
+
+
+Test Coverage
+
+41 of 41 unit tests pass. Tests cover all predicates, all five comparison
+operators, empty scenes, scenes with no matching objects, tie cases, uniqueness
+detection, and failure cases for xc_recolor_unique_size.
+
+
+Significance
+
+The condxf pack completes the scene transformation toolkit by adding the
+selective dimension. Combined with scenexf (uniform transforms over all objects),
+ruleinfer (rule inference from examples), and sceneapply (symbolic rule dispatch),
+PrologAI now has a full stack for scene reasoning: detect change, infer the rule,
+apply it uniformly or selectively.
+
+This is WP 208, Mentova's 228th accomplishment.

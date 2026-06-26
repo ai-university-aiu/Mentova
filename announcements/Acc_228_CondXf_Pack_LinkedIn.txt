@@ -1,0 +1,38 @@
+Accomplishment 228: Conditional and Selective Scene Transformation (condxf Pack, xc_*, Layer 187)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a condxf pack - 14 xc_* predicates that apply transformations
+selectively to a subset of objects in an obj(Color, Cells) scene list, leaving
+the remaining objects unchanged.
+
+Where scenexf applies transformations to every object uniformly, condxf applies
+them only to objects satisfying a condition: color identity, size comparison, or
+position in a size ranking.
+
+Color conditions: xc_split_color partitions a scene by color. xc_recolor_matching,
+xc_shift_color, xc_move_color, and xc_swap_colors all operate only on objects
+matching a color condition. xc_swap_colors handles the C1-C2 exchange cleanly
+with an if-then-else helper.
+
+Size conditions: xc_recolor_by_size and xc_split_size use five comparison
+operators (gt, lt, eq, ge, le) to select by cell count. xc_largest and
+xc_smallest identify extreme objects; xc_recolor_largest and xc_recolor_smallest
+recolor them.
+
+Uniqueness: xc_unique_size finds objects whose cell count appears exactly once
+in the scene. xc_recolor_unique_size recolors the unique-size object and fails
+gracefully when no such object exists.
+
+41 of 41 unit tests pass.
+
+This is WP 208, Mentova's 228th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
