@@ -1,0 +1,156 @@
+Accomplishment 186: Shear, Cyclic Shift, and Non-Uniform Grid Warping
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 166th work package: the warp pack (wr_*, Layer 145).
+
+The warp pack provides 14 predicates for shear transformations, cyclic (toroidal)
+shifts, per-row arbitrary offset warping, anti-diagonal transposition, and detection
+of shear relationships between grids.
+
+Introduction
+
+The fold pack (Layer 143) and rotation pack (Layer 144) established the crease-fold
+and quarter-turn families of grid transformations. The warp pack adds the progressive-
+shift family: transformations where each row or column is displaced by an increasing
+amount. The canonical member of this family is the shear, where row I shifts right by
+I*Step. This produces a staircase or parallelogram pattern in the grid.
+
+Cyclic variants of shear use modular arithmetic to wrap around the grid edges rather
+than filling vacated cells with a background color. These toroidal operations are
+particularly relevant for tasks where the grid is conceptually unbounded or where the
+pattern repeats.
+
+Shifting a Single Row or Column
+
+wr_shift_row(Grid, R, N, Bg, Out) shifts row R right by N cells. The formula is
+Out[C] = Grid[R][C-N] if C-N is a valid column index, else Bg. Negative N shifts left.
+
+wr_shift_col(Grid, C, N, Bg, Out) shifts column C down by N cells using the same
+linear shift formula applied to a column-major view of the grid.
+
+Horizontal and Vertical Shear
+
+wr_shear_h(Grid, Step, Bg, Out): row I shifts right by I*Step. Row 0 stays fixed.
+For Step=1 on a 3x3 grid [[a,b,c],[d,e,f],[g,h,i]]:
+  Row 0: shift 0: [a,b,c]
+  Row 1: shift 1: [0,d,e]   (f drops off the right edge)
+  Row 2: shift 2: [0,0,g]   (h,i drop off)
+  Out = [[a,b,c],[0,d,e],[0,0,g]]
+
+wr_shear_v(Grid, Step, Bg, Out): column J shifts down by J*Step. Column 0 stays fixed.
+Formula: Out[R][J] = Grid[R - J*Step][J] if R - J*Step is in [0,H-1], else Bg.
+
+Undoing Shear
+
+wr_unshear_h(Grid, Step, Bg, Out) and wr_unshear_v(Grid, Step, Bg, Out) are the
+inverses of the respective shear predicates. They delegate to wr_shear_h and
+wr_shear_v with the step negated:
+  NegStep is -Step, wr_shear_h(Grid, NegStep, Bg, Out).
+
+The round-trip shear then unshear returns the original grid when no content is lost
+to boundary clipping. A grid with I trailing background cells in row I satisfies
+this lossless condition for horizontal shear with step=1.
+
+Cyclic Shifts
+
+wr_cyclic_h(Grid, N, Out): cyclically shift all rows right by N. The formula is
+Out[I][C] = Grid[I][(C-N) mod W]. SWI-Prolog's mod operator handles negative N
+correctly via floored division, so no special-casing is needed. Shifting by W (the
+row width) returns the identity.
+
+wr_cyclic_v(Grid, N, Out): cyclically shift all columns down by N. Formula:
+Out[R][C] = Grid[(R-N) mod H][C].
+
+wr_cyclic_shear_h(Grid, Step, Out): row I wraps right by I*Step. Combines shear
+with cyclic wrap. Formula: Out[I][C] = Grid[I][(C - I*Step) mod W].
+
+wr_cyclic_shear_v(Grid, Step, Out): column J wraps down by J*Step. Formula:
+Out[R][J] = Grid[(R - J*Step) mod H][J].
+
+Per-Row Arbitrary Offsets
+
+wr_skew_offsets(Grid, Offsets, Bg, Out): row I shifts right by Offsets[I]. This
+generalizes wr_shear_h. When Offsets = [0, Step, 2*Step, ..., (H-1)*Step], the
+result equals wr_shear_h(Grid, Step, Bg, Out). Offsets can be any list of integers.
+
+Anti-Diagonal Transpose
+
+wr_transpose_anti(Grid, Out): reflects the grid across the anti-diagonal. For an H x W
+grid, Out has W rows and H columns. The mapping formula is:
+  Out[J][I] = Grid[H-1-I][W-1-J]   for J in 0..W-1, I in 0..H-1.
+
+Example for a 2x2 grid [[a,b],[c,d]]:
+  Out[0][0] = Grid[1][1] = d
+  Out[0][1] = Grid[0][1] = b
+  Out[1][0] = Grid[1][0] = c
+  Out[1][1] = Grid[0][0] = a
+  Out = [[d,b],[c,a]]
+
+For square grids, the anti-diagonal transpose is an involution: applying it twice
+returns the original grid. For a 3x3 grid [[1,2,3],[4,5,6],[7,8,9]]:
+  Out = [[9,6,3],[8,5,2],[7,4,1]]
+  anti(anti([[1,2,3],[4,5,6],[7,8,9]])) = [[1,2,3],[4,5,6],[7,8,9]] (verified).
+
+For non-square grids the output dimensions differ: a 2x3 grid produces a 3x2 output.
+
+Finding Shear Relationships
+
+wr_find_shear_h(GridA, GridB, Bg, Step): find the integer Step in [-(W-1), W-1] such
+that wr_shear_h(GridA, Step, Bg) equals GridB. Searches in order from -(W-1) to +(W-1)
+using between/3 with offset, and cuts after the first match.
+
+wr_find_shear_v(GridA, GridB, Bg, Step): same for vertical shear, searching in
+[-(H-1), H-1].
+
+Implementation Notes
+
+The central private helper is wr_shift_linear_(Row, N, Bg, Out), which implements
+the linear shift formula for a single list. This helper is shared by wr_shift_row,
+wr_shear_h, wr_unshear_h, and wr_skew_offsets. Cyclic predicates use a separate
+private helper wr_cyclic_row_(Row, N, Out) with the modular formula.
+
+wr_cyclic_h uses findall with member/2 rather than maplist with partial application
+to avoid argument-order confusion.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates, including:
+- Round-trip tests (unshear undoes shear on lossless grids)
+- Involution test (anti-diagonal transpose applied twice returns original)
+- Cyclic identity (shift by W or H returns original)
+- find_shear correctness (step=1, step=0, step=-1 all identified correctly)
+
+All 42 tests pass.
+
+SPARC Documentation
+
+Specification v131: Part 156, requirements WR-WR-001 through WR-WR-014.
+
+Pseudocode v124: Part 156, pseudocode for all 14 predicates.
+
+Architecture v125: ARCH-132, warp pack design notes.
+
+Refinement v179: acceptance criteria AC-WR-001 through AC-WR-042.
+
+Completion v182: WP 166 release record.
+
+Tutorial Chapter 127 added to all tutorial files.
+
+Conclusion
+
+The warp pack gives PrologAI a reusable vocabulary for all shear and cyclic shift
+operations on 2D grids. Together with the fold pack (Layer 143) and rotation pack
+(Layer 144), PrologAI now covers the three major families of non-trivial geometric
+grid transformations: crease-fold, quarter-turn rotation, and progressive-shift
+shear. The anti-diagonal transpose completes the D4 dihedral group alongside the
+main-diagonal transpose already present in the transform pack.
+
+PrologAI now comprises 166 work packages.
+
+Mentova has achieved 186 accomplishments.
