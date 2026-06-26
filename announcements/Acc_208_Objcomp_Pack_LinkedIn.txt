@@ -1,0 +1,30 @@
+Mentova Accomplishment 208: Object Connectivity and Component Analysis
+
+PrologAI now includes an objcomp pack (oc_*, Layer 167) - 14 predicates for
+adjacency and connected-component analysis over obj(Color, Cells) collections.
+
+The key question this pack answers: "Which objects form a connected cluster?"
+
+Two objects "touch" when any cell of one is 4-adjacent to any cell of the other.
+The pack builds on this to give you:
+
+- oc_touches: does O1 touch O2?
+- oc_touching_pairs: all touching pairs in a collection
+- oc_adj_list: adjacency list (who touches whom)
+- oc_degree: how many objects does this one touch?
+- oc_isolated: which objects don't touch any other?
+- oc_connected: BFS from one object through the touching graph
+- oc_components: all connected clusters
+- oc_largest_component / oc_smallest_component: the biggest and smallest clusters
+- oc_singleton_components: isolated objects (clusters of size 1)
+- oc_shared_components: clusters with 2+ members
+- oc_max_degree: the most connected object
+- oc_sort_by_degree: objects ranked by how many others they touch
+
+40 tests pass.
+
+This is WP 188, Mentova's 208th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
