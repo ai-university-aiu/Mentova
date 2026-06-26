@@ -1,0 +1,193 @@
+Accomplishment 209: Wavefront BFS Propagation Through Passable Cells (Wavefront Pack, wf_*, Layer 168)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a wavefront pack (14 wf_* predicates, Layer 168) for BFS-based
+wave propagation from seed cells through cells matching a caller-supplied passable
+color. Unlike the voronoi pack (which uses open-space Manhattan distance), the
+wavefront pack uses actual BFS path length, correctly handling obstacles, walls,
+corridors, and irregular shapes. The pack provides: passable-cell collection,
+BFS execution with exact distance tracking, reachability and distance queries,
+path existence testing, distance painting, multi-source competition, wavefront
+collision detection, and enclosed-region discovery.
+
+41 of 41 PLUnit tests pass.
+
+This work package is PrologAI WP 189, merged as PR 274 on 2026-06-26.
+
+1. Motivation
+
+Many visual reasoning tasks involve questions like:
+- "Can the wave reach this cell from that starting point?"
+- "Which cells are closer to the red source than the blue source?"
+- "Which background cells are completely surrounded by walls?"
+- "How many steps does the wave take to reach this corner?"
+
+The connect pack (cc_*) provides connected-component detection and flood fill,
+but does not track wave distances. The voronoi pack (vn_*) provides nearest-color
+assignment using Manhattan distance, but Manhattan ignores walls. The wavefront
+pack fills this gap: BFS-accurate distance tracking through a passable-color
+region, with full support for obstacles and irregular shapes.
+
+2. Core Design
+
+2.1 Seeds and Passable Cells
+
+Seeds are any r(R,C) cells that start the wave at distance 0. Seeds do not need
+to be PassColor cells - they can be colored object cells that emit the wave into
+the surrounding background.
+
+The wave spreads through cells whose grid value equals PassColor (the background
+or "open" color). Each step of BFS advances through four orthogonal neighbors
+(up, down, left, right) that are PassColor and not yet reached.
+
+2.2 BFS Implementation
+
+The BFS maintains an "Enqueued" set rather than a "Visited" set. New neighbors
+are added to Enqueued when enqueued (not when dequeued). This prevents duplicate
+queue insertions while still adding the dequeued cell to the result accumulator
+at its discovered distance. The result is msorted by distance.
+
+Seeds are pre-added to Enqueued before BFS begins, ensuring they appear in the
+result at distance 0 (as starting points) and are never re-inserted.
+
+2.3 Multi-Source Waves
+
+For wf_multi_wave and wf_collision, one BFS is pre-computed per color source.
+Then for each passable cell, all (Distance, Color) pairs are collected across all
+sources and sorted ascending. The minimum-distance color wins. Ties are broken
+by standard term order of the Color atom.
+
+wf_collision identifies cells where the minimum distance is achieved by two or
+more distinct colors - these are the cells on the wavefront collision boundary.
+
+2.4 Enclosed Regions
+
+wf_enclosed detects PassColor cells completely surrounded by non-PassColor walls
+(not reachable from any grid border). It seeds BFS from all PassColor cells on
+the grid border (row 0, last row, column 0, last column), then returns PassColor
+cells absent from the exterior BFS result.
+
+3. Predicate Descriptions
+
+3.1 Foundation
+
+wf_passable(+Grid, +PassColor, -Cells): sorted list of all r(R,C) grid positions
+where the value equals PassColor.
+
+wf_bfs(+Grid, +Seeds, +PassColor, -DistPairs): BFS from Seeds through PassColor
+cells. DistPairs is a sorted list of D-r(R,C) terms. Seeds appear at D=0.
+
+3.2 Reachability
+
+wf_reachable(+Grid, +Seeds, +PassColor, -Cells): all cells appearing in DistPairs
+(seeds at D=0 plus all reachable PassColor cells).
+
+wf_unreachable(+Grid, +Seeds, +PassColor, -Cells): PassColor cells absent from
+the BFS result (isolated pockets with no path from seeds).
+
+wf_path_exists(+Grid, +CellA, +CellB, +PassColor): true when CellB appears in
+the BFS result starting from CellA. Uses memberchk to avoid choicepoints.
+
+3.3 Distance Queries
+
+wf_at_dist(+DistPairs, +D, -Cells): cells at exactly distance D.
+
+wf_within_dist(+DistPairs, +MaxD, -Cells): cells at distance <= MaxD.
+
+wf_dist_of(+DistPairs, +Cell, -D): the BFS distance of a specific cell. Fails
+if the cell is not in DistPairs (not reachable).
+
+wf_max_dist(+DistPairs, -MaxD): maximum wave distance reached.
+
+wf_all_dists(+DistPairs, -Dists): sorted list of distinct distance values.
+
+3.4 Painting and Multi-Source
+
+wf_paint_bg(+Grid, +Seeds, +PassColor, +MaxD, -NewGrid): replace each PassColor
+cell with its BFS distance capped at MaxD. Unreachable cells unchanged.
+
+wf_multi_wave(+Grid, +ColoredSeeds, +PassColor, -Painted): ColoredSeeds is a
+list of Color-Seeds pairs. Painted is a grid where each PassColor cell holds the
+color of its nearest seed (minimum BFS distance; ties by term order).
+
+wf_collision(+Grid, +ColoredSeeds, +PassColor, -Cells): PassColor cells where
+the minimum BFS distance is achieved by two or more distinct colors.
+
+3.5 Enclosure
+
+wf_enclosed(+Grid, +PassColor, -Cells): PassColor cells not reachable from any
+PassColor cell on the grid border. These are fully enclosed by walls.
+
+4. Design Decisions
+
+4.1 Enqueued vs. Visited
+
+Standard BFS textbook implementations use a "visited" set: mark cells when
+dequeuing. The wavefront BFS marks cells when enqueuing instead ("Enqueued").
+This change is essential because seeds are pre-marked in Enqueued before
+processing - if seeds were marked on dequeue, the first dequeue would skip
+them (they'd appear as already-visited). By marking on enqueue, seeds are
+correctly included in the result at distance 0, and future duplicate insertions
+are still prevented.
+
+4.2 No Dependency on Other Packs
+
+The wavefront pack uses only library(lists) predicates. It does not depend on
+the voronoi pack or connect pack, even though it shares related concepts. This
+keeps Layer 168 self-contained and avoids cross-pack coupling.
+
+4.3 Multi-Source BFS Ordering
+
+wf_multi_wave pre-computes BFS once per color before the cell loop, avoiding
+O(cells * colors) BFS calls. For each passable cell, the color lookup is linear
+in the number of (Color, DistPairs) pairs - efficient for typical use with 2-5
+colors.
+
+5. Examples
+
+Example 1: BFS through a corridor
+
+    Grid = [[0,1,0],[0,0,0],[0,1,0]],
+    wf_bfs(Grid, [r(0,0)], 0, DP).
+    % DP = [0-r(0,0), 1-r(1,0), 2-r(1,1), 2-r(2,0), 3-r(1,2), 4-r(0,2), 4-r(2,2)]
+    % The wave must travel around the wall at r(0,1) and r(2,1).
+
+Example 2: Multi-source competition
+
+    G = [[0,0,0],[0,0,0],[0,0,0]],
+    wf_multi_wave(G, [a-[r(0,0)], b-[r(0,2)]], 0, Painted).
+    % Painted: left column = a, right column = b, middle column = a (tie broken by a @< b)
+    wf_collision(G, [a-[r(0,0)], b-[r(0,2)]], 0, Cells).
+    % Cells = [r(0,1), r(1,1), r(2,1)]  (the middle column where distances tie)
+
+Example 3: Enclosed pocket detection
+
+    G = [[0,1,1,0],[1,0,0,1],[1,0,0,1],[0,1,1,0]],
+    wf_enclosed(G, 0, Cells).
+    % Cells = [r(1,1), r(1,2), r(2,1), r(2,2)]  (inner 2x2 pocket)
+
+6. SPARC Documentation
+
+Specification v154 adds Part 179 (wavefront pack specification).
+
+Pseudocode v147 adds Part 179 (wavefront pack pseudocode).
+
+Architecture v148 adds ARCH-155 (wavefront pack layer placement).
+
+Refinement v202 adds acceptance criteria AC-WF-001 through AC-WF-041.
+
+Completion v205 adds the WP-189 completion record.
+
+7. Conclusion
+
+The wavefront pack gives PrologAI accurate BFS-distance wave propagation: from
+seeds through passable regions, around obstacles, with full distance tracking,
+multi-source competition, and enclosed-region detection. This is the obstacle-
+aware counterpart to the Manhattan-distance voronoi pack, completing the suite
+of spatial propagation tools.
+
+This is WP 189, Mentova's 209th accomplishment.
