@@ -1,0 +1,40 @@
+Mentova Accomplishment 174: The 2D Grid Extrema, Local Peaks, and Threshold Filtering Pack
+
+PrologAI gains its 154th work package today.
+
+The extrema pack (Layer 133, ex_* prefix) provides 14 predicates for finding
+maximum and minimum values and their positions in 2D grids, detecting local
+peaks and valleys, computing row and column argmax/argmin, and threshold
+filtering.
+
+The 14 predicates cover:
+
+Global extrema: maximum and minimum values (ex_max_val, ex_min_val);
+positions of all cells holding the maximum or minimum (ex_max_cells,
+ex_min_cells).
+
+Row and column argmax/argmin: 0-based row index with the maximum row sum
+(ex_row_argmax); column index with the maximum column sum (ex_col_argmax);
+symmetric argmin (ex_row_argmin, ex_col_argmin). First occurrence wins on ties.
+
+Local peaks and valleys: cells strictly greater than all in-bounds
+4-connected neighbors (ex_local_max4); cells strictly less than all
+in-bounds neighbors (ex_local_min4).
+
+Threshold filtering: cells with value above a threshold (ex_above); cells
+below (ex_below).
+
+Scalar summary: max minus min (ex_range); positions of all non-zero cells
+(ex_nonzero).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v119, Pseudocode v112,
+Architecture v113, Refinement v167, Completion v170.
+
+Tutorial Chapter 115 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
