@@ -1,0 +1,30 @@
+Mentova Accomplishment 217: Object-Pair Change Analysis and Rule Application (objdelta Pack, dp_*, Layer 176)
+
+PrologAI now includes an objdelta pack (dp_*, Layer 176) - 14 predicates
+for analysing pairs of obj(Color, Cells) terms (before/after states) and
+applying learned rules to new objects.
+
+The pack provides:
+
+- dp_color_delta: extract the C1-C2 color change from one O1-O2 pair
+- dp_pos_delta: extract the dr(DR,DC) centroid displacement from one pair
+- dp_size_delta: extract the size change N2-N1 from one pair
+- dp_same_color: test whether O1 and O2 share the same color
+- dp_same_form: test whether O1 and O2 share the same normalized shape
+- dp_same_pos: test whether O1 and O2 share the same centroid
+- dp_color_map: extract a sorted distinct color map from a list of pairs
+- dp_apply_color: apply one C1-C2 rule; fail if color does not match
+- dp_apply_color_map: apply the first matching map rule to an object
+- dp_apply_map_all: apply a map to a list; unmatched objects unchanged
+- dp_const_dr: verify all pairs share the same row displacement
+- dp_const_dc: verify all pairs share the same col displacement
+- dp_common_cells: positions present in both O1 and O2
+- dp_cell_diff: Added and Removed cell positions between O1 and O2
+
+No cross-pack dependencies. 41 tests pass.
+
+This is WP 197, Mentova's 217th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

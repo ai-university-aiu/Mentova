@@ -1,0 +1,160 @@
+Accomplishment 217: Object-Pair Change Analysis and Rule Application (objdelta Pack, dp_*, Layer 176)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objdelta pack (14 dp_* predicates, Layer 176) for analysing
+pairs of obj(Color, Cells) terms representing before-and-after states. The
+pack extracts what changed (colour, centroid position, cell count, or specific
+cells), builds generalizable colour maps from a set of pairs, applies those
+maps to new objects, verifies constant centroid displacements, and computes
+cell-level intersection and symmetric difference. The pack has no cross-pack
+dependencies.
+
+41 of 41 PLUnit tests pass.
+
+This work package is PrologAI WP 197, merged as PR 285 on 2026-06-26.
+
+1. Motivation
+
+After WP 196 (objseq) completed sequence-order analysis of obj lists, the
+next gap in PrologAI's object-level reasoning ecosystem was transformation
+rule extraction and application. The link pack (lk_*) builds and applies
+correspondence links within a single call. What was missing was the ability
+to:
+
+(a) Extract what changed between a set of paired examples.
+(b) Generalise that change into a rule (a colour map, a displacement).
+(c) Apply the rule to new, unseen objects.
+
+This generalise-then-apply pattern is the core of inductive reasoning in grid
+tasks: observe what the training pairs have in common; apply the rule to the
+test input.
+
+The objdelta pack fills this gap with 14 focused predicates.
+
+2. Core Design
+
+2.1 Pair Representation
+
+Pairs are O1-O2 terms where O1 is the before state and O2 is the after state.
+This is consistent with the link pack, which also uses O1-O2 pairs.
+
+2.2 Private Helpers
+
+dp_centroid_(+Obj, -r(CR,CC)): floor-average centroid (sum//N for rows and
+cols separately).
+
+dp_norm_(+Cells, -Norm): translate cell list to origin (min R=0, min C=0),
+then sort. Used by dp_same_form.
+
+dp_pair_delta_(+O1-O2, -dr(DR,DC)): centroid displacement for one pair.
+Used by dp_const_dr and dp_const_dc.
+
+dp_color_pair_(+O1-O2, -C1-C2): extract the color pair for one O1-O2 term.
+Used by dp_color_map.
+
+dp_positions_(+Obj, -Positions): sorted cell position list. Used by
+dp_common_cells and dp_cell_diff.
+
+dp_row_of_(+DR, +dr(DR,_)): unify row component for maplist.
+dp_col_of_(+DC, +dr(_,DC)): unify col component for maplist.
+
+2.3 Delta Extraction
+
+dp_color_delta, dp_pos_delta, and dp_size_delta are thin deterministic
+predicates. dp_pos_delta delegates to dp_centroid_ twice and subtracts.
+dp_size_delta uses length/2 twice and subtracts.
+
+2.4 Color Map Building and Application
+
+dp_color_map applies maplist with dp_color_pair_ to extract raw C1-C2 pairs,
+then sort/2 to deduplicate and canonicalise.
+
+dp_apply_color uses head unification with the C1 field. dp_apply_color_map
+walks the map with a cut-on-success recursive helper. dp_apply_map_all
+wraps the application in an if-then-else so unmatched objects pass through.
+
+2.5 Constant Displacement Verification
+
+dp_const_dr and dp_const_dc follow the same pattern as oq_const_step in the
+objseq pack: compute all deltas, take the first as reference, then verify
+the remaining via maplist with a unification helper.
+
+2.6 Cell-Level Operations
+
+dp_common_cells uses intersection/3 from library(lists) on sorted position
+lists. dp_cell_diff uses subtract/3 twice (once for Added, once for Removed).
+
+3. Predicate Descriptions
+
+dp_color_delta(+O1, +O2, -C1-C2): color change from O1 to O2.
+dp_pos_delta(+O1, +O2, -dr(DR,DC)): centroid displacement from O1 to O2.
+dp_size_delta(+O1, +O2, -D): size change N2-N1.
+dp_same_color(+O1, +O2): O1 and O2 share the same color.
+dp_same_form(+O1, +O2): O1 and O2 share the same normalized shape.
+dp_same_pos(+O1, +O2): O1 and O2 share the same centroid.
+dp_color_map(+Pairs, -Map): sorted distinct C1-C2 map from pairs.
+dp_apply_color(+C1-C2, +Obj, -Obj2): apply one color rule.
+dp_apply_color_map(+Map, +Obj, -Obj2): apply first matching map rule.
+dp_apply_map_all(+Map, +Objs, -Objs2): apply map to list, unchanged if no match.
+dp_const_dr(+Pairs, -DR): constant row displacement across pairs.
+dp_const_dc(+Pairs, -DC): constant col displacement across pairs.
+dp_common_cells(+O1, +O2, -Cells): positions in both objects.
+dp_cell_diff(+O1, +O2, -Added, -Removed): symmetric cell position difference.
+
+4. Examples
+
+Example 1: Extract and apply a colour map from training pairs.
+
+    TrainPairs = [obj(r,[r(0,0)])-obj(b,[r(0,0)]),
+                  obj(g,[r(1,0)])-obj(y,[r(1,0)])],
+    dp_color_map(TrainPairs, Map),
+    % Map = [g-y, r-b]
+    TestObjs = [obj(r,[r(2,0)]), obj(g,[r(3,0)]), obj(b,[r(4,0)])],
+    dp_apply_map_all(Map, TestObjs, OutObjs).
+    % OutObjs = [obj(b,[r(2,0)]), obj(y,[r(3,0)]), obj(b,[r(4,0)])]
+    % (b is not in the map, so it passes through as obj(b,...))
+
+Example 2: Verify that all training pairs share the same displacement.
+
+    Pairs = [obj(r,[r(0,0)])-obj(r,[r(0,3)]),
+             obj(g,[r(2,1)])-obj(g,[r(2,4)])],
+    dp_const_dc(Pairs, DC).
+    % DC = 3
+
+Example 3: Find what cells changed between two versions of an object.
+
+    Before = obj(r, [r(0,0), r(0,1), r(1,0)]),
+    After  = obj(r, [r(0,0), r(1,0), r(1,1)]),
+    dp_cell_diff(Before, After, Added, Removed).
+    % Added = [r(1,1)], Removed = [r(0,1)]
+
+5. SPARC Documentation
+
+Specification v162 adds Part 187 (objdelta pack specification).
+
+Pseudocode v155 adds Part 187 (objdelta pack pseudocode).
+
+Architecture v156 adds ARCH-163 (objdelta pack layer placement).
+
+Refinement v210 adds acceptance criteria AC-DP-001 through AC-DP-041.
+
+Completion v213 adds the WP-197 completion record.
+
+6. Conclusion
+
+The objdelta pack provides the extract-generalise-apply pattern that is
+central to inductive reasoning in grid-based visual tasks. A reasoner can
+now extract what colour rule the training pairs follow, verify that a
+constant displacement applies, and apply those rules to new test objects
+in a single pipeline. Together with the link (lk_*), objseq (oq_*), and
+pair (pr_*) packs, objdelta completes PrologAI's object-level rule-learning
+toolkit.
+
+This is WP 197, Mentova's 217th accomplishment.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
