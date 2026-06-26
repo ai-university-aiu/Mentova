@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **238 accomplished** |
-| Scientific papers | **238 published** — one per accomplishment |
+| Documented accomplishments | **239 accomplished** |
+| Scientific papers | **239 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -547,6 +547,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. |
+| `Acc_239` | GridTask pack paper — Grid Task End-to-End Raw Grid Solver (Layer 198, gt_*): 14 gt_* predicates for inferring and applying identity, color substitution, scale, and shift rules on raw grids. |
 | `Acc_238` | GridParse pack paper — Grid Parse and Object Extraction (Layer 197, gp_* prefix): 14 gp_* predicates for converting raw grids to obj(Color,Cells) scenes. |
 | `Acc_237` | GridQuery pack paper — Grid Query and Manipulation (Layer 196, gq_* prefix): 14 gq_* predicates for raw grid format (list-of-lists). |
 | `Acc_236` | SeqInfer pack paper — Sequential Rule Inference for Multi-Step Scene Transformations (Layer 195, sq_* prefix): 14 sq_* predicates for finding ordered rule sequences from Before-After training pairs. |

@@ -1,0 +1,41 @@
+Accomplishment 239: Grid Task End-to-End Raw Grid Solver (gridtask Pack, gt_*, Layer 198)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a gridtask pack - 14 gt_* predicates that infer and apply
+transformation rules directly on raw grid format, without converting to an
+object scene first.
+
+The four strategies, tried in order:
+
+- Identity: the output is the same as the input
+- Color substitution: every cell of color A becomes color B
+- Integer scale: each cell is tiled into an N by N block
+- Translation: the grid shifts by a constant (DR, DC) with background fill
+
+The solver picks the first strategy that explains all training pairs and
+applies it to the test grid.
+
+Key predicates:
+
+- gt_diff_cells / gt_n_changed: compare two grids cell by cell
+- gt_bg_color: identify the background (most frequent color)
+- gt_infer_color_map: learn a consistent From-To color map from one pair
+- gt_color_map_pairs: learn a map across multiple training pairs
+- gt_is_scale: detect integer upscaling by factor N
+- gt_infer_shift: detect constant translation with background fill
+- gt_pair_score: pixel accuracy of a rule on one Before-After pair
+- gt_solve: end-to-end solver returning the rule and the predicted output
+
+51 of 51 unit tests pass.
+
+This is WP 219, Mentova's 239th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
