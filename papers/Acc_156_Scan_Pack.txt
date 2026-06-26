@@ -1,0 +1,193 @@
+Mentova Accomplishment 156: Grid Cell Enumeration and Manipulation - The Scan Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 136: the scan pack, a Layer 115 symbolic
+reasoning module providing 14 predicates for enumerating grid cells in
+seven distinct traversal orders, reading and writing individual cells,
+applying batch updates, mapping a goal over all cells, filtering cells by
+a predicate, and reconstructing grids from sparse cell lists. All 42 PLUnit
+acceptance tests pass.
+
+
+1. Motivation
+
+Visual reasoning tasks commonly require visiting every cell of a grid in a
+specific order, extracting all cells of a given value, writing new values to
+specific positions, or transforming every cell according to a rule. The existing
+PrologAI library provided grid-level operations (crop, transform, overlay, fill,
+pattern) but lacked a dedicated module for individual-cell-level traversal and
+manipulation. The scan pack fills this gap with a uniform R-C-V triple encoding
+for all cell results.
+
+
+2. Predicate Inventory (14 predicates, sn_* prefix)
+
+2.1 Enumeration
+
+sn_row_major(+Grid, -Cells)
+Enumerates all R-C-V triples in row-major order: row 0 columns 0..W-1, then
+row 1, and so on. Row index is the outer loop in the findall.
+
+sn_col_major(+Grid, -Cells)
+Enumerates in column-major order: column 0 rows 0..H-1, then column 1.
+Column index is the outer loop.
+
+sn_cells_of(+Grid, +V, -Cells)
+Returns R-C pairs for every cell whose value unifies with V. Uses a single
+findall over both row and column indices.
+
+Examples:
+sn_row_major([[1,2],[3,4]], C). % C = [0-0-1,0-1-2,1-0-3,1-1-4]
+sn_col_major([[1,2],[3,4]], C). % C = [0-0-1,1-0-3,0-1-2,1-1-4]
+sn_cells_of([[1,0,1],[0,1,0]], 1, C). % C = [0-0,0-2,1-1]
+
+
+2.2 Cell Read and Write
+
+sn_set_cell(+Grid, +R, +C, +V, -New)
+Returns a new grid with cell (R,C) set to V. Uses findall to rebuild the grid
+row by row; the target row is rebuilt element by element via sn_set_elem_.
+
+sn_index_of(+Grid, +V, -R, -C)
+Finds the row and column of the first occurrence of V in row-major order.
+Uses between/3 enumeration and commits with a cut after the first match.
+
+sn_update_cells(+Grid, +Updates, -New)
+Applies a list of R-C-V triples as batch cell updates. For each cell, memberchk
+tests whether that position appears in Updates; if so the update value is used,
+otherwise the original value is kept.
+
+Examples:
+sn_set_cell([[1,2],[3,4]], 0, 1, 9, New). % New = [[1,9],[3,4]]
+sn_index_of([[1,2],[3,4]], 4, R, C).       % R=1, C=1
+sn_update_cells([[1,2],[3,4]], [0-1-9,1-0-7], New). % New = [[1,9],[7,4]]
+
+
+2.3 Higher-Order Operations
+
+sn_map_cells(+Grid, :Goal, -New)
+Applies Goal(R, C, OldV, NewV) to every cell using nested findall with call/5.
+New is the grid of NewV values.
+
+sn_filter_cells(+Grid, :Pred, -Cells)
+Collects R-C-V triples where call(Pred, R, C, V) succeeds. Uses findall with
+call/3.
+
+Examples (with helpers add_one(_, _, V, NV) :- NV is V+1 and gt2(_, _, V) :- V > 2):
+sn_map_cells([[1,2],[3,4]], add_one, New). % New = [[2,3],[4,5]]
+sn_filter_cells([[1,2],[3,4]], gt2, C).   % C = [1-0-3,1-1-4]
+
+
+2.4 Traversal Orders
+
+sn_zigzag(+Grid, -Cells)
+Boustrophedon traversal: even rows left-to-right (C = Offset), odd rows
+right-to-left (C = W1 - Offset). Uses if-then-else on row parity inside findall.
+
+sn_spiral_in(+Grid, -Cells)
+Clockwise spiral from the outer ring inward. Delegates to sn_spiral_/6 with
+inclusive bounds T=0, B=H-1, L=0, R=W-1. Each ring collects: top row
+left-to-right, right column top-to-bottom, bottom row right-to-left via
+reverse/2, left column bottom-to-top via reverse/2. Bounds shrink by one per
+ring. Terminates when T > B (no rows) or L > R (no columns) via nested
+if-then-else in a single clause.
+
+sn_border_traversal(+Grid, -Cells)
+Outer border cells clockwise: top row, right column (rows 1..H-1), bottom row
+right-to-left, left column bottom-to-top. Uses if-then-else guards on H > 1 and
+W > 1 to handle single-row and single-column grids.
+
+Examples:
+sn_zigzag([[1,2,3],[4,5,6]], C). % C = [0-0-1,0-1-2,0-2-3,1-2-6,1-1-5,1-0-4]
+sn_spiral_in([[1,2,3],[4,5,6],[7,8,9]], C). % 9-element clockwise spiral
+sn_border_traversal([[1,2,3],[4,5,6],[7,8,9]], C). % 8 outer border cells
+
+
+2.5 Diagonal Traversal
+
+sn_diag_traversal_ne(+Grid, -Cells)
+Visits cells along NE-going diagonals where D = R+C is constant, enumerated
+from D=0 to D=H+W-2. Within each diagonal, row increases and column decreases.
+
+sn_diag_traversal_se(+Grid, -Cells)
+Visits cells along SE-going diagonals where D = C-R is constant, enumerated
+from D=-(H-1) to D=W-1. Within each diagonal, both row and column increase.
+Uses between/3 with negative lower bound which SWI-Prolog supports natively.
+
+Examples:
+sn_diag_traversal_ne([[1,2],[3,4]], C). % C = [0-0-1,0-1-2,1-0-3,1-1-4]
+sn_diag_traversal_se([[1,2],[3,4]], C). % C = [1-0-3,0-0-1,1-1-4,0-1-2]
+
+
+2.6 Grid Construction
+
+sn_grid_from_cells(+H, +W, +Cells, +Bg, -Grid)
+Builds an H-by-W grid from a sparse R-C-V cell list. For each cell position,
+memberchk tests whether R-C-V appears in Cells; if not, Bg is used. The first
+matching triple in Cells is used if duplicates exist.
+
+Example:
+sn_grid_from_cells(2, 2, [0-0-1, 1-1-4], 0, Grid). % Grid = [[1,0],[0,4]]
+sn_grid_from_cells(2, 2, [], 7, Grid).               % Grid = [[7,7],[7,7]]
+
+
+3. Implementation Notes
+
+Determinism: All predicates produce exactly one solution. sn_row_major,
+sn_col_major, sn_cells_of, sn_zigzag, sn_filter_cells, sn_diag_traversal_ne,
+and sn_diag_traversal_se use a single findall and are trivially deterministic.
+sn_set_cell, sn_map_cells, sn_update_cells, and sn_grid_from_cells use nested
+findall (one per row) and are also deterministic. sn_spiral_in uses a single
+clause with nested if-then-else so no choicepoints are created. sn_border_traversal
+uses if-then-else guards. sn_index_of uses a cut.
+
+Negative between: sn_diag_traversal_se enumerates the diagonal index D from
+-H1 to W1 using between(-H1, W1, D). SWI-Prolog's between/3 supports negative
+integer bounds natively.
+
+Reverse for order: sn_spiral_in and sn_border_traversal use reverse/2 from
+library(lists) to produce right-to-left and bottom-to-top sequences from
+left-to-right findall results.
+
+Library imports: library(lists): memberchk/2, nth0/3, append/3, reverse/2.
+All other predicates (between/3, findall/3, call/N, length/2) are SWI-Prolog
+built-ins.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no warnings. Three tests per predicate.
+
+Key correctness tests:
+  sn_spiral_in([[1,2,3],[4,5,6],[7,8,9]], C) => 9-cell clockwise spiral
+  sn_border_traversal([[1,2],[3,4]], C) => [0-0-1,0-1-2,1-1-4,1-0-3]
+  sn_diag_traversal_se([[1],[2],[3]], C) => [2-0-3,1-0-2,0-0-1]
+  sn_update_cells([[1,2],[3,4]], [0-1-9,1-0-7], New) => [[1,9],[7,4]]
+  sn_grid_from_cells(1, 3, [0-1-9], 0, G) => G = [[0,9,0]]
+
+
+5. Significance
+
+The scan pack adds individual-cell-level traversal and manipulation to
+PrologAI's spatial reasoning toolkit. Where the existing grid packs work at
+the level of whole grids or regions, the scan pack works at the level of
+individual cells. This enables ARC-AGI-2 rules that need to identify specific
+cells, transform them based on their position, or reconstruct grids from a
+description of which cells hold which values.
+
+sn_cells_of combined with sn_grid_from_cells forms a two-step pipeline:
+extract all cells of a given color, transform their positions or values, then
+rebuild the grid. sn_map_cells enables position-aware cell transformations that
+cannot be expressed with maplist alone because maplist does not pass the row
+and column indices to the goal.
+
+This is Mentova accomplishment 156. PrologAI now carries 136 work packages.
+
+github.com/ai-university-aiu/PrologAI
