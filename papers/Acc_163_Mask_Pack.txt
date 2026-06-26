@@ -1,0 +1,191 @@
+Mentova Accomplishment 163: Boolean Mask Operations - The mask Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 143: the mask pack, a Layer 122 symbolic
+reasoning module providing 14 predicates for creating, combining, and
+applying binary 0/1 masks to 2D grids. A mask is a same-size grid where
+each cell is 0 (disabled) or 1 (enabled). Predicates cover mask creation
+from value matching, logical combination (AND, OR, XOR, invert), selective
+grid operations (apply, fill, overlay), and mask query (where, count, any,
+all, extract). All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Many grid reasoning tasks involve selecting a subset of cells and then doing
+something to just those cells: "replace all color-3 cells with color 0",
+"blend the input and output grids at positions that differ", "count how many
+cells match this pattern". Without a mask layer, these operations require
+ad hoc findall + rebuild loops each time.
+
+The mask pack provides a reusable abstraction: separate the question "which
+cells?" from the question "what to do with them?". mk_from_val creates a mask
+answering "which cells equal V?". mk_fill answers "set those cells to V2 in
+the original grid". mk_count answers "how many cells?" The operations compose
+cleanly: mk_and(MaskA, MaskB, MaskAB) restricts to positions matching both
+conditions; mk_extract then reads the values at those positions.
+
+
+2. Predicate Inventory (14 predicates, mk_* prefix)
+
+2.1 Mask Creation
+
+mk_from_val(+Grid, +V, -Mask)
+Mask[R][C] = 1 where Grid[R][C] = V, else 0. Uses nested maplist/3 with a
+two-clause per-cell helper: the first clause matches V exactly (uses == for
+structural equality) and gives 1 with a cut; the second clause catches all
+other values and gives 0. Works with any term as V, not just numbers.
+
+mk_from_bg(+Grid, +Bg, -Mask)
+Complementary to mk_from_val: Mask[R][C] = 0 where Grid[R][C] = Bg, else 1.
+Marks all non-background cells as enabled.
+
+Examples:
+mk_from_val([[1,0,1],[0,1,0]], 1, M). % M=[[1,0,1],[0,1,0]]
+mk_from_bg([[0,1,2],[0,3,0]], 0, M). % M=[[0,1,1],[0,1,0]]
+
+
+2.2 Logical Combination
+
+mk_invert(+Mask, -Mask2)
+Flips every bit: 1 -> 0, 0 (or any other value) -> 1. Uses nested maplist/3.
+
+mk_and(+MaskA, +MaskB, -MaskC)
+Element-wise AND: MaskC[R][C] = 1 iff both A and B equal 1. Uses nested
+maplist/4 with a two-clause helper (both-1 -> 1, cut, else -> 0).
+
+mk_or(+MaskA, +MaskB, -MaskC)
+Element-wise OR: MaskC[R][C] = 1 iff at least one equals 1. Uses nested
+maplist/4 with a two-clause helper (both-0 -> 0, cut, else -> 1).
+
+mk_xor(+MaskA, +MaskB, -MaskC)
+Element-wise XOR: MaskC[R][C] = 1 iff exactly one of A, B equals 1. Uses
+arithmetic C is (A+B) mod 2, which handles non-binary integer inputs.
+
+Examples:
+mk_invert([[1,0],[0,1]], M).   % M=[[0,1],[1,0]]
+mk_and([[1,1],[0,1]], [[1,0],[1,1]], M). % M=[[1,0],[0,1]]
+mk_or([[1,0],[0,0]], [[0,0],[0,1]], M). % M=[[1,0],[0,1]]
+mk_xor([[1,0],[0,1]], [[1,1],[0,0]], M). % M=[[0,1],[0,1]]
+
+
+2.3 Grid Operations
+
+mk_apply(+Grid, +Mask, +Bg, -Grid2)
+Grid2[R][C] = Grid[R][C] where Mask[R][C]=1, else Bg. Keeps original values
+at enabled positions; replaces disabled positions with Bg.
+
+mk_fill(+Grid, +Mask, +V, -Grid2)
+Grid2[R][C] = V where Mask[R][C]=1, else Grid[R][C]. Sets enabled positions
+to a constant; leaves disabled positions unchanged. Strict dual of mk_apply.
+
+mk_overlay(+GridA, +GridB, +Mask, -Grid2)
+Grid2[R][C] = GridB[R][C] where Mask[R][C]=1, else GridA[R][C]. Uses nested
+maplist/5 for four-way parallel iteration (GridA, GridB, Mask -> Grid2 per
+row; three input cell values -> one output cell per column).
+
+Examples:
+mk_apply([[1,2],[3,4]], [[1,0],[0,1]], 0, G). % G=[[1,0],[0,4]]
+mk_fill([[1,2],[3,4]], [[1,0],[0,1]], 9, G).  % G=[[9,2],[3,9]]
+mk_overlay([[1,1]], [[2,2]], [[1,0]], G).      % G=[[2,1]]
+
+
+2.4 Mask Queries
+
+mk_where(+Mask, -Cells)
+Returns sorted R-C pairs of positions where Mask=1. Uses between/3 + nth0/3
+inside findall, then sort/2 for canonical order.
+
+mk_count(+Mask, -N)
+Counts 1-valued cells. Uses findall + member/2 over all rows and cells, then
+length/2. Simpler than findall + nth0/3 because position is not needed.
+
+mk_any(+Mask)
+Succeeds iff at least one cell equals 1. Uses member/2 twice (over rows,
+then over cells) with cut on the first match found.
+
+mk_all(+Mask)
+Succeeds iff every cell equals 1. Uses forall/2 (built-in) with B =:= 1.
+Vacuously true for an empty mask.
+
+mk_extract(+Grid, +Mask, -Vals)
+Returns the sorted set of distinct Grid values at Mask=1 positions. Uses
+findall collecting both Grid-nth0 and Mask-nth0 at the same R-C position,
+then sort/2 to deduplicate.
+
+Examples:
+mk_where([[1,0,1],[0,1,0]], Cs). % Cs=[0-0,0-2,1-1]
+mk_count([[1,0,1],[0,1,0]], N). % N=3
+mk_any([[0,0],[0,1]]).          % succeeds
+mk_all([[1,1],[1,1]]).          % succeeds; mk_all([[1,0]]) fails
+mk_extract([[1,2,3],[4,5,6]], [[1,0,1],[0,1,0]], Vs). % Vs=[1,3,5]
+
+
+3. Implementation Notes
+
+3.1 maplist/5 for mk_overlay
+
+mk_overlay requires iterating four parallel sequences simultaneously (GridA
+rows, GridB rows, Mask rows, output rows), then inside each row iterating
+three parallel cell sequences. SWI-Prolog's maplist/5 handles this cleanly:
+  maplist(mk_overlay_row_, GridA, GridB, Mask, Grid2)
+  maplist(mk_overlay_cell_, RA, RB, RM, RC)
+
+3.2 Cut-Based vs Arithmetic Helpers
+
+For mk_and, mk_or: cut-based two-clause helpers avoid redundant arithmetic.
+For mk_xor: C is (A+B) mod 2 correctly handles all integer inputs, including
+cases where A or B is greater than 1 (a non-standard but valid input).
+
+3.3 mk_apply vs mk_fill Duality
+
+The two predicates are strict duals:
+  mk_apply: Grid2 = Grid at 1-positions, Bg at 0-positions.
+  mk_fill:  Grid2 = V   at 1-positions, Grid at 0-positions.
+
+A fill operation can be expressed as mk_fill, while a "hide everything
+except region X" operation is mk_apply.
+
+Library imports: library(apply): maplist/3, maplist/4, maplist/5.
+                 library(lists): member/2, nth0/3.
+forall/2 is a built-in; not imported.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass. Three tests per predicate.
+
+Key correctness tests:
+  mk_from_val([[1,0,1],[0,1,0]], 1, M) => M=[[1,0,1],[0,1,0]]
+  mk_xor([[1,0],[0,1]], [[1,1],[0,0]], M) => M=[[0,1],[0,1]]
+  mk_apply([[1,2],[3,4]], [[1,0],[0,1]], 0, G) => G=[[1,0],[0,4]]
+  mk_overlay([[1,1],[1,1]], [[2,2],[2,2]], [[1,0],[0,1]], G) => G=[[2,1],[1,2]]
+  mk_where([[1,0,1],[0,1,0]], Cs) => Cs=[0-0,0-2,1-1]
+  mk_extract([[1,2,3],[4,5,6]], [[1,0,1],[0,1,0]], Vs) => Vs=[1,3,5]
+
+
+5. Significance
+
+The mask pack adds a composable selection layer to PrologAI. Instead of
+writing bespoke findall loops for every selective operation, reasoning code
+can now build a mask (from a value pattern, from a comparison pack result,
+from a connected-component predicate) and then apply standard mask operations.
+
+mk_from_val and mk_from_bg are natural companions to xs_threshold from the
+xsel pack: xs_threshold produces a value grid, mk_from_val converts it to a
+mask, and mk_fill then uses that mask to modify another grid.
+
+mk_and, mk_or, and mk_xor allow combining masks from different sources:
+"cells that match pattern A and are also adjacent to color B" is
+mk_and(PatternA_mask, AdjacencyB_mask, Result).
+
+This is Mentova accomplishment 163. PrologAI now carries 143 work packages.
+
+github.com/ai-university-aiu/PrologAI
