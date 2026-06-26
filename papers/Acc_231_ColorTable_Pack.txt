@@ -1,0 +1,74 @@
+Accomplishment 231: Color Substitution Table Learning and Application (colortable Pack, ct_*, Layer 190)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 211th work package: the colortable pack, a suite of 14 ct_*
+predicates that learn a complete color substitution table from Before-After
+scene pair training examples and apply that table to new scenes.
+
+
+Motivation
+
+A large class of ARC-AGI-2 tasks applies a consistent color permutation across
+all objects. Red becomes green, blue becomes yellow, and so on. To solve such
+tasks, a solver must observe what each color becomes across training examples,
+assemble a complete mapping, and apply it to the test input.
+
+The colortable pack handles this entire pipeline: inference, accumulation,
+conflict detection, lookup, application, and post-hoc analysis (inversion,
+restriction, completion, identity building).
+
+
+Positional Matching
+
+When inferring the color mapping from one Before-After pair, objects are matched
+positionally: the first Before object corresponds to the first After object,
+the second to the second, and so on. This is the correct semantic for ARC-AGI-2
+scenes where spatial structure is preserved and only colors change.
+
+
+Learning from Multiple Pairs
+
+ct_learn_map processes a list of Before-After pairs, accumulating a consistent
+color map. If a new pair would introduce a conflict (the same source color
+mapping to two different targets), that pair is returned in the Inconsistent
+list rather than corrupting the accumulated map. This gives the caller full
+visibility into which training examples agree and which disagree.
+
+
+Application
+
+ct_apply_to_scene applies a map to every object in a scene via maplist. Colors
+not in the map are left unchanged (identity behavior through ct_mapped_color).
+ct_complete_map can fill in explicit identity entries for any uncovered colors,
+making the table exhaustive.
+
+
+Supporting Operations
+
+ct_consistent_map verifies no conflict. ct_merge_maps and ct_extend_map combine
+two maps, failing on conflict. ct_invert_map reverses the mapping (green becomes
+red, etc.). ct_identity_map builds a no-op table for a given set of colors.
+ct_restrict_map keeps only entries for a specified subset of colors.
+ct_map_colors lists all source colors in a map.
+
+
+Test Coverage
+
+44 of 44 unit tests pass. Tests cover single-object and multi-object pairs,
+identity (no-change) pairs, conflicting pairs, empty inputs, apply_to_scene,
+map_covers, complete_map, invert, identity, restrict, and map_colors.
+
+
+Significance
+
+The colortable pack is the color-table module of the symbolic learning stack.
+Combined with scene analysis (scene pack), transformation inference (ruleinfer),
+and rule ranking (scenerank), PrologAI can now handle color-permutation class
+ARC-AGI-2 tasks end to end.
+
+This is WP 211, Mentova's 231st accomplishment.
