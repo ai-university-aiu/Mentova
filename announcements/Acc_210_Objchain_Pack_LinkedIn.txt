@@ -1,0 +1,32 @@
+Mentova Accomplishment 210: Linear Chain Analysis for obj(Color, Cells) Sequences
+
+PrologAI now includes an objchain pack (ch_*, Layer 169) - 14 predicates for
+detecting and traversing linear chains of objects connected by 4-adjacency.
+
+A chain is a set of objects whose touching graph is a simple path. Exactly two
+objects have one touching neighbor (the endpoints). All others have two (interior).
+
+The pack provides:
+
+- ch_touches: does Obj1 4-touch Obj2?
+- ch_degree: how many objects in a collection touch this one?
+- ch_is_chain: does this set of objects form a linear path?
+- ch_has_cycle: do these objects form a closed cycle?
+- ch_endpoints: which two objects are the endpoints?
+- ch_linearize: put objects in order from one endpoint to the other
+- ch_from_endpoint: traverse from a specific starting object
+- ch_nth: get the Nth object in the ordered chain (0-based)
+- ch_color_seq: the sequence of colors along the chain
+- ch_sub: extract a sub-chain by index range
+- ch_reverse: reverse the chain order
+- ch_length: count objects in the chain
+- ch_is_linear_path: verify that a given ordered sequence is valid
+- ch_direction: is the chain horizontal (h), vertical (v), or other?
+
+48 tests pass.
+
+This is WP 190, Mentova's 210th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
