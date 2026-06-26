@@ -1,0 +1,33 @@
+Accomplishment 237: Grid Query and Manipulation (gridquery Pack, gq_*, Layer 196)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a gridquery pack - 14 gq_* predicates for querying raw grids
+(list-of-lists format) without converting to scene objects.
+
+Key predicates:
+- gq_size: height and width
+- gq_at: color at position (R,C)
+- gq_row / gq_col: extract a row or column
+- gq_colors: all distinct colors in the grid
+- gq_n_cells: count cells of a specific color
+- gq_most_freq_color: most common color (usually the background)
+- gq_region: extract a rectangular sub-grid
+- gq_diff: list of positions where two grids differ
+- gq_n_diff: count of differing cells
+- gq_transpose: swap rows and columns
+- gq_replace: change one cell, return a new grid
+- gq_fill_region: fill a rectangle with a color
+
+45 of 45 unit tests pass.
+
+This is WP 217, Mentova's 237th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
