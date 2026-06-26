@@ -1,0 +1,30 @@
+Mentova Accomplishment 150: 1D Signal Analysis of Grid Rows and Columns
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now reason about a grid row or column as a 1D signal.
+
+Work Package 130 - the signal pack - adds 14 sg_* predicates for 1D signal analysis: local extrema, monotone order tests, consecutive differences, slope signs, threshold partitioning, and grid profiles. 42/42 tests.
+
+The pack treats any integer list as a signal and answers questions like:
+
+- Where are the peaks? (sg_peaks)
+- Where are the valleys? (sg_valleys)
+- Which index holds the maximum? (sg_argmax)
+- Is this sequence strictly increasing? (sg_is_increasing)
+- Which cells are above threshold? (sg_threshold)
+- What are all the values in column 3? (sg_col_profile)
+
+sg_col_profile uses a YALL lambda to capture the column index inside maplist - a clean Prolog pattern for extracting a cross-section from a grid:
+
+maplist([Row, V]>>(nth0(C, Row, V)), Grid, Values).
+
+sg_cross_profile combines row and column extraction in a single call, giving the full cross-shaped value profile at any grid position. Any detector that looks for gradients, boundaries, or monotone regions can now compose directly from these primitives.
+
+PrologAI: 128 work packages. Mentova: 150 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #SignalAnalysis #ComputerVision #SWIProlog #AGI
