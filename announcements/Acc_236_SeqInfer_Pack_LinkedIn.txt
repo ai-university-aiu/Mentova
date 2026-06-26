@@ -1,0 +1,32 @@
+Accomplishment 236: Sequential Rule Inference (seqinfer Pack, sq_*, Layer 195)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a seqinfer pack - 14 sq_* predicates for finding multi-step
+transformation rules from training pairs.
+
+Single-rule search finds: "recolor r to b explains all training pairs."
+
+seqinfer finds: "first recolor r to b, then shift everything down 1 row."
+
+Key predicates:
+- sq_apply: apply a list of rules in sequence (13 rule types supported)
+- sq_infer_2step: find the best 2-step rule sequence
+- sq_infer_3step: find the best 3-step rule sequence
+- sq_solve: combined solver (tries 2-step first, falls back to 1-step)
+- sq_consistent: verify a sequence explains all training pairs
+- sq_coverage: count training pairs explained by a sequence
+- sq_default_rules: 30 standard single-step candidates
+
+44 of 44 unit tests pass.
+
+This is WP 216, Mentova's 236th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
