@@ -1,0 +1,117 @@
+Accomplishment 239: Grid Task End-to-End Raw Grid Solver (gridtask Pack, gt_*, Layer 198)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains the gridtask pack (Work Package 219, Layer 198): 14 gt_*
+predicates for inferring and applying transformation rules directly on raw
+grid format (list-of-lists of color atoms), without converting to the obj
+scene representation. The pack implements four strategies - identity,
+color substitution, integer upscaling, and constant translation - and
+selects the first strategy that explains all training pairs, then applies
+it to the test grid.
+
+
+Background
+
+ARC-AGI-2 tasks present grids as 2D arrays of colored cells. Many simple
+tasks can be solved by a single compact rule: every red cell becomes blue,
+the grid is scaled by factor 2, or every object shifts one column to the
+right. The gridtask pack targets exactly these structured transformation
+tasks, operating directly on raw grids without the overhead of full scene
+construction.
+
+The companion gridparse pack (Layer 197) provides grid-to-scene conversion
+for tasks requiring object-centric reasoning. gridtask complements it by
+handling rule-based raw-grid tasks directly.
+
+
+The gridtask Pack
+
+Pack prefix: gt_*
+Layer: 198
+Work Package: 219
+
+
+Grid Comparison Predicates
+
+gt_diff_cells/3 collects r(R,C) positions where two same-size grids differ.
+gt_n_changed/3 counts the differing cells. gt_unchanged_cells/3 collects
+positions where the grids agree.
+
+gt_bg_color/2 finds the most frequent color in a grid using the
+negative-count keyed-msort pattern: it is the background for most tasks.
+
+
+Color Substitution Predicates
+
+gt_infer_color_map/3 collects all (Before-color, After-color) pairs from
+aligned cell positions, deduplicates via list_to_set/2, and fails if any
+source color maps to two different target colors. Crucially, it includes
+identity pairs (V-V) for unchanged cells; this ensures that a partial
+recoloring (where only some cells of a given color change) correctly fails
+the consistency check.
+
+gt_test_color_map/3 tests that applying a map to Before yields After
+exactly. gt_apply_color_map/3 recolors a grid using a map, leaving
+unmapped colors unchanged. gt_color_map_pairs/2 learns a consistent map
+from multiple Before-After pairs in a single findall. gt_is_color_sub/1
+succeeds if a single consistent map explains all training pairs.
+
+
+Identity and Scale Predicates
+
+gt_is_identity/2 tests structural grid equality. gt_is_scale/3 succeeds
+when After is Before with each cell tiled into an N by N block (N at least 2),
+using modular arithmetic to verify exact divisibility then checking every
+block in After.
+
+
+Translation Predicate
+
+gt_infer_shift/4 finds the constant row and column offset (DR, DC) such
+that shifting Before by that offset with background fill reproduces After.
+It anchors on the first non-background cell in Before, generates candidate
+positions in After with the same color, tries each offset, and verifies the
+full shift with gt_apply_shift_.
+
+
+End-to-End Solver
+
+gt_solve/4 tries four strategies in order:
+1. Identity: all training pairs are input equal to output.
+2. Color substitution: a single consistent color map explains all pairs.
+3. Integer scale: After is Before tiled by factor N.
+4. Translation: After is Before shifted by constant (DR, DC).
+5. Fallback: return the test input unchanged (identity rule).
+
+The first strategy whose conditions all hold is applied to the test grid.
+
+
+Pixel Accuracy
+
+gt_pair_score/4 applies a rule to Before and computes the fraction of cells
+that match After, returning a float in the range 0.0 to 1.0.
+
+
+Test Coverage
+
+51 of 51 acceptance criteria (AC-GT-001 through AC-GT-051) pass. Tests
+cover all four strategies, the identity fallback, inconsistency detection
+in color maps, partial-recolor rejection, and pixel-accuracy scoring.
+
+SPARC documentation: Spec v184, Pseudo v177, Arch v178, Refinement v232,
+Completion v235. Tutorial: Ch180_GridTask.txt. Pack_Reference updated.
+
+
+Conclusion
+
+The gridtask pack completes the raw-grid reasoning suite alongside
+gridquery (Layer 196) and gridparse (Layer 197). With gridtask, PrologAI
+can now solve rule-based ARC-AGI-2 tasks end-to-end in raw grid format:
+infer the rule from labeled pairs, apply it to the test input, and return
+the predicted output grid. This is Mentova's 239th accomplishment and
+PrologAI's 219th work package.
