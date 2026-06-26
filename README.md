@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-183-FF6B35?style=for-the-badge" alt="183 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-189-FF6B35?style=for-the-badge" alt="189 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **183 accomplished** |
-| Scientific papers | **183 published** — one per accomplishment |
+| Documented accomplishments | **189 accomplished** |
+| Scientific papers | **189 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         188 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  135 announcements — one per accomplishment
+├── papers/         189 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  136 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-183 scientific papers, one per accomplished milestone.
+189 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -449,12 +449,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_186` | Warp pack paper — Shear, Cyclic Shift, and Non-Uniform Grid Warping (Layer 145, wr_* prefix): 14 wr_* predicates. Single-row/column shift: wr_shift_row (Out[C]=Row[C-N]), wr_shift_col. Shear: wr_shear_h (row I shifts right by I*Step), wr_shear_v (column J shifts down by J*Step). Inverse: wr_unshear_h and wr_unshear_v (negate step; round-trip verified on lossless grids). Cyclic: wr_cyclic_h ((C-N) mod W), wr_cyclic_v ((R-N) mod H). Cyclic shear: wr_cyclic_shear_h (row I wraps right by I*Step), wr_cyclic_shear_v (column J wraps down by J*Step). Generalized: wr_skew_offsets (per-row offset list; specializes to shear when offsets are arithmetic). Anti-diagonal transpose: wr_transpose_anti (Out[W-1-C][H-1-R]=Grid[R][C]; involution on square grids). Detection: wr_find_shear_h and wr_find_shear_v (search bounded step range for shear mapping GridA to GridB). 42/42 acceptance tests pass. |
 | `Acc_187` | Border pack paper — Concentric Ring Analysis for 2D Grids (Layer 146, br_* prefix): 14 br_* predicates. Ring depth formula: min(R, H-1-R, C, W-1-C); ring 0 is outermost; max ring = (min(H,W)-1)//2. Enumeration: br_ring_cells (R-C pairs in ring N row-major), br_ring_vals (grid values at ring N). Uniformity: br_ring_color (uniform color or fail), br_is_uniform_ring (boolean test). Outer ring: br_outer_color, br_is_uniform_outer. Border layers: br_add_border (add one V-layer: (H+2)x(W+2)), br_strip_border (remove outermost ring: (H-2)x(W-2) or []), br_inner_n (strip N rings; N=0 is identity). Multi-ring: br_ring_colors (collect uniform colors from outside in; stop at first non-uniform), br_max_ring ((min(H,W)-1)//2). Bullseye detection: br_is_nested (forall ring in 0..MaxN: uniform). Depth map: br_depth_map (same-sized grid of ring indices). Ring fill: br_fill_ring (replace ring N with V). 42/42 acceptance tests pass. |
 | `Acc_188` | Splice pack paper — Row and Column Structural Editing (Layer 147, sp_* prefix): 14 sp_* predicates. Row ops: sp_insert_row (insert before index R; R=H appends), sp_delete_row (delete at R). Column ops: sp_insert_col (constant-value column before C via maplist helper), sp_delete_col (delete column C). Swap: sp_swap_rows and sp_swap_cols (between enumeration with conditional assignment; identity when R1=R2 or C1=C2). Reverse: sp_reverse_rows (reverse/2 on row list), sp_reverse_cols (maplist(reverse)). Rotate: sp_rotate_rows and sp_rotate_cols (cyclic shift by K with K mod H/W; K=H/W returns identity). Replicate: sp_replicate_row and sp_replicate_col (split, build N copies with maplist(=(V)), reassemble; N=0 deletes, N=1 is identity). Select: sp_select_rows and sp_select_cols (findall with member; allows repetition and omission). Central pattern: length(Prefix, K) then append(Prefix, Suffix, List) splits at K without index loops. 42/42 acceptance tests pass. |
+| `Acc_189` | Objop pack paper — Object-Level Grid Manipulation (Layer 148, oo_* prefix): 14 oo_* predicates. Identification: oo_cells_of (sorted R-C pairs for color V via findall+between+nth0+sort), oo_bbox (bounding box via findall+min_list+max_list), oo_count (length of cells list), oo_size (bbox height and width), oo_center (integer floor center of bbox). Value ops: oo_erase (replace V with Bg), oo_repaint (replace V with NewV), oo_swap (exchange V1 and V2 via two-pass sequential set_cells calls). Translation: oo_move (translate by DR/DC; erase originals; clip out-of-bounds), oo_copy (paint at offset; originals remain). Rotation and mirror: oo_rotate90 (90 CW; formula (r,c)->(c,H-1-r) around bbox top-left), oo_rotate180 ((r,c)->(H-1-r,W-1-c)), oo_mirror_h ((r,c)->(r,W-1-c)), oo_mirror_v ((r,c)->(H-1-r,c)). Central helper: oo_set_cells_ (full H-by-W scan via nested findall+memberchk). All predicates accept and return complete grids. 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-135 announcements in LinkedIn format — one per accomplishment.
+136 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

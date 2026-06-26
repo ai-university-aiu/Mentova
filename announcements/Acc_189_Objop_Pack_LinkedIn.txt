@@ -1,0 +1,33 @@
+Accomplishment 189: PrologAI adds the objop pack - object-level grid manipulation in 14 predicates.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+The pattern "find the colored object and transform it" is fundamental to visual reasoning.
+
+PrologAI now has a dedicated pack for exactly this: the objop pack (oo_*, Layer 148, WP 169).
+
+What it does:
+- oo_cells_of: find all cells of a given color as a sorted list
+- oo_bbox: compute the tight bounding box of those cells
+- oo_count, oo_size, oo_center: measure the object
+- oo_erase, oo_repaint, oo_swap: value-level color operations
+- oo_move: translate the object with in-bounds clipping
+- oo_copy: duplicate the object at an offset position
+- oo_rotate90: rotate 90 degrees CW around the bbox top-left
+- oo_rotate180: rotate 180 degrees within the bbox
+- oo_mirror_h: flip left-right within the bbox
+- oo_mirror_v: flip top-bottom within the bbox
+
+Every predicate accepts and returns a complete grid. No conversion to sparse representations needed.
+
+The 90-degree rotation formula: normalized (r,c) maps to (c, H-1-r). Verified against the ABCD example where [[A,B],[C,D]] rotates to [[C,A],[D,B]].
+
+42 PLUnit acceptance tests pass. SPARC volumes updated to Spec v134, Pseudo v127, Arch v128, Refinement v182, Completion v185.
+
+PrologAI: 169 work packages.
+Mentova: 189 accomplishments.
+
+Pure symbolic. Glass box. No neural network. No LLM. No pretraining.
+
+github.com/ai-university-aiu/PrologAI

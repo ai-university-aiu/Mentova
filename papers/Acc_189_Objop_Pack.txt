@@ -1,0 +1,195 @@
+Accomplishment 189: Object-Level Grid Manipulation for Synthetic Reasoning
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 169th work package: the objop pack (oo_*, Layer 148).
+
+The objop pack provides 14 predicates for object-level manipulation within the
+full 2D grid representation. Unlike sparse cell-set operations that require
+converting to and from list representations, objop predicates accept and return
+complete grids directly, identifying objects by their color value automatically.
+This pack covers the complete workflow of "find the colored object and transform
+it" that appears throughout visual reasoning tasks.
+
+Introduction
+
+A recurring pattern in visual reasoning is: identify all cells of a given color,
+compute their bounding box, apply a geometric transformation to their positions,
+erase the original cells, and paint the result at the new positions. This pattern
+requires four conceptually distinct operations: location, geometry, erasure, and
+painting.
+
+Previous packs in PrologAI address pieces of this workflow separately. The cellset
+pack (cs_*, Layer 117) operates on sparse R-C position lists but does not work
+with complete grids directly. The scene pack (sc_*, Layer 37) builds object
+inventories from grids but operates on obj(Color, Cells) terms rather than
+returning modified grids. The transform pack (tr_*, Layer 52) applies whole-grid
+spatial transformations but does not isolate individual color regions.
+
+The objop pack unifies these concerns: every predicate takes a complete grid as
+input and returns a complete grid as output, with the color value V serving as
+the implicit object selector throughout.
+
+The Central Scan Helper
+
+The private predicate oo_set_cells_(Grid, Cells, Val, Out) is the structural
+foundation of the pack. It does a full H-by-W grid scan using nested findall
+with between/3 and nth0/3, and for each cell checks whether its R-C position
+appears in the Cells list using memberchk/2 in an if-then-else. If yes, the
+output cell is Val; if no, the output cell preserves the original value.
+
+This pattern was chosen over a recursive row-by-row accumulator because it
+keeps all predicates in findall-style declarative code with no mutable state.
+The O(H*W*|Cells|) cost is acceptable for the grid sizes used in visual
+reasoning benchmarks.
+
+Identifying Objects
+
+oo_cells_of(Grid, V, Cells) collects all R-C pairs where Grid[R][C] = V into a
+sorted list. It uses findall with between/3 generating all row-column pairs,
+nth0/3 for lookup, and sort/2 for canonical order. Sorting ensures determinism
+and removes any potential duplicates from the findall.
+
+oo_bbox(Cells, R0, C0, R1, C1) computes the bounding box of a non-empty cell
+list by extracting all row indices and column indices separately with findall
+and then taking min_list and max_list. The four corners give the tight bounding
+box of the color region.
+
+oo_count, oo_size, and oo_center build on cells_of and bbox to provide counts,
+bounding box dimensions, and the integer floor center of the bounding box.
+
+Value-Level Operations
+
+oo_erase(Grid, V, Bg, Out) replaces all V cells with background. It delegates
+to oo_cells_of to find positions and oo_set_cells_ to paint Bg at those positions.
+
+oo_repaint(Grid, V, NewV, Out) recolors all V cells to NewV. The implementation
+is identical in structure to oo_erase, simply using NewV instead of Bg.
+
+oo_swap(Grid, V1, V2, Out) exchanges all V1 and V2 cells. The implementation
+must process both colors together to avoid overwriting. It first sets all V1
+positions to V2 (producing Grid1), then sets the original V2 positions to V1.
+Since V1 positions now hold V2 in Grid1, the second step correctly writes V1
+there, completing the exchange. This sequential two-pass approach is safe because
+V1 and V2 are assumed to be non-overlapping colors.
+
+Translation and Copying
+
+oo_move(Grid, V, DR, DC, Bg, Out) translates all V cells by the displacement
+(DR, DC). The implementation erases the original V cells to Bg first, then
+computes new positions as R+DR and C+DC, filters out positions that fall outside
+the grid bounds using between/3 guards, and paints V at the surviving positions.
+Out-of-bounds cells are silently dropped, implementing implicit clipping.
+
+oo_copy(Grid, V, DR, DC, Out) copies V cells to the offset position without
+erasing the originals. It computes the offset positions the same way as oo_move
+but calls oo_set_cells_ on the original grid rather than an erased version, so
+the original V cells remain.
+
+In-Place Geometric Transformations
+
+All four geometric transformation predicates follow the same three-step pipeline:
+(1) erase the original V cells to Bg, (2) compute transformed positions using
+a coordinate formula relative to the bounding box, (3) paint V at the new positions.
+
+oo_rotate90(Grid, V, Bg, Out) rotates V cells 90 degrees clockwise around the
+bounding box top-left corner. The coordinate formula normalizes each cell to
+bounding-box-relative coordinates (r = R - R0, c = C - C0), applies the 90 CW
+rotation (r, c) to (c, H-1-r) where H is the bounding box height, then
+denormalizes back to grid coordinates (NewR = R0 + c, NewC = C0 + H1 - r).
+
+This formula can be verified with the ABCD example. For a 2x2 bounding box with
+H=2 and H1=1:
+A=(0,0) - r=0, c=0 - (0,H1-0)=(0,1) - denorm (R0+0, C0+1)
+B=(0,1) - r=0, c=1 - (1,H1-0)=(1,1) - denorm (R0+1, C0+1)
+C=(1,0) - r=1, c=0 - (0,H1-1)=(0,0) - denorm (R0+0, C0+0)
+D=(1,1) - r=1, c=1 - (1,H1-1)=(1,0) - denorm (R0+1, C0+0)
+
+The result arranges as [[C,A],[D,B]], which matches the expected 90-degree CW
+rotation of [[A,B],[C,D]].
+
+oo_rotate180(Grid, V, Bg, Out) applies the formula (r, c) to (H-1-r, W-1-c)
+where H and W are the bounding box height and width. This rotates 180 degrees
+around the bounding box center.
+
+oo_mirror_h(Grid, V, Bg, Out) flips V cells left-right within the bounding box
+using (r, c) to (r, W-1-c). The row coordinate is unchanged; only the column
+is flipped relative to the bounding box left edge.
+
+oo_mirror_v(Grid, V, Bg, Out) flips V cells top-bottom using (r, c) to (H-1-r, c).
+The column coordinate is unchanged; only the row is flipped relative to the
+bounding box top edge.
+
+Implementation Notes
+
+All coordinate formulas require that H1 = H - 1 and W1 = W - 1 be evaluated
+before the findall that references them. This is because between/3 requires
+integer bounds, and an unevaluated expression like H-1 is a compound term, not
+an integer. Computing H1 and W1 outside the findall as is/2 arithmetic expressions
+satisfies this requirement.
+
+The private helpers oo_rotate90_cells_, oo_rotate180_cells_, oo_mirror_h_cells_,
+and oo_mirror_v_cells_ encapsulate each coordinate formula. They take the cell
+list, bounding box corners, and dimension constants as arguments, and return the
+list of transformed positions. This separation allows the formula to be tested
+independently of the grid-level pipeline.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates at 3 tests each:
+- oo_cells_of: basic sparse pattern, empty result for absent color, all cells
+- oo_bbox: rectangular region, single cell, row-only span
+- oo_count: three cells, zero for absent color, all cells in row
+- oo_size: 2x3 block, single-cell bounding box, tall column
+- oo_center: 3x3, 1x3 row (center column = 1), 4x4 (integer division)
+- oo_erase: alternating pattern, absent color (identity), all cells
+- oo_repaint: diagonal, identity repaint, partial column
+- oo_swap: basic exchange, 2x2 blocks, absent second color
+- oo_move: right 2, down 2, out-of-bounds clipping (result all background)
+- oo_copy: right 1, down 1, diagonal
+- oo_rotate90: 2x1 column becomes 1x2 row, single cell identity, L-shape
+- oo_rotate180: row with gaps, single cell identity, diagonal 2x2
+- oo_mirror_h: asymmetric 5-cell row, symmetric row (identity), L-shape
+- oo_mirror_v: 2-cell column (identity), single cell identity, L-shape
+
+All 42 tests pass.
+
+SPARC Documentation
+
+Specification v134: Part 159, requirements OO-OO-001 through OO-OO-014.
+
+Pseudocode v127: Part 159, pseudocode for all 14 predicates including the four
+private coordinate-formula helpers and the central oo_set_cells_ scan helper.
+
+Architecture v128: ARCH-135, objop pack design notes covering the full-grid
+scan pattern, the bounding-box-relative coordinate system, the two-pass swap
+strategy, and the in-bounds clipping rule for oo_move.
+
+Refinement v182: acceptance criteria AC-OO-001 through AC-OO-042.
+
+Completion v185: WP 169 release record.
+
+Tutorial Chapter 130 added to all tutorial files.
+
+Conclusion
+
+The objop pack gives PrologAI a unified interface for object-level grid
+manipulation. Every predicate in the pack follows a consistent design: identify
+by color, compute bounding box, apply transformation, return a complete grid.
+This design means that any sequence of object operations can be composed without
+ever leaving the dense grid representation, eliminating the conversion overhead
+of working through sparse cell-set intermediaries.
+
+Combined with the scene pack (object inventory), the cellset pack (sparse
+operations), the transform pack (whole-grid transforms), and the path pack
+(flood fill), the objop pack completes the object manipulation layer of the
+PrologAI perceptual and reasoning stack.
+
+PrologAI now comprises 169 work packages.
+
+Mentova has achieved 189 accomplishments.
