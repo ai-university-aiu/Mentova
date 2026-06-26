@@ -1,0 +1,51 @@
+Mentova Accomplishment 177: The Neighborhood Mode Filter Pack
+
+PrologAI gains its 157th work package today.
+
+The nmode pack (Layer 136, nm_* prefix) provides 14 predicates for
+computing the mode (most frequent value) of lists, grid rows, columns,
+the entire grid, and per-cell 4-connected and 8-connected neighborhoods.
+
+The mode is the value that appears most frequently. When values are tied,
+the smallest tied value wins as a deterministic tie-breaker.
+
+This completes the statistical neighborhood triad:
+- naggr (Layer 134): sum, max, min, mean, range, spread, diff count per cell
+- median (Layer 135): middle value for lists, rows, columns, grid, filter
+- nmode (Layer 136): most frequent value, uniform detection, outlier detection
+
+The 14 predicates cover:
+
+Single-list: nm_mode (the mode), nm_mode_all (all tied values), nm_mode_count
+(mode with its frequency).
+
+Per-row and per-column: nm_row, nm_col, nm_row_modes, nm_col_modes.
+
+Grid-wide: nm_grid.
+
+Mode filters: nm_filter4 and nm_filter8 replace each cell with the mode
+of the cell and its in-bounds 4 or 8 neighbors - smoothing patterns while
+preserving the dominant local value. A checkerboard grid under nm_filter8
+collapses to a uniform grid because every cell has equal numbers of both
+alternating values, and the tie goes to the smallest.
+
+Uniform detection: nm_uniform4 and nm_uniform8 find cells whose
+in-bounds neighbors all share one value.
+
+Outlier detection: nm_outlier4 and nm_outlier8 find cells whose own value
+disagrees with the mode of their neighbors (cell excluded from the mode).
+
+Implementation detail: a cut in the empty-list base case of nm_count_prefix_/4
+prevents duplicate solutions when nm_mode is called inside findall.
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v122, Pseudocode v115,
+Architecture v116, Refinement v170, Completion v173.
+
+Tutorial Chapter 118 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
