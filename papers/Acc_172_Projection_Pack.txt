@@ -1,0 +1,141 @@
+Accomplishment 172: The Row and Column Projection and Profile Analysis Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a row and column projection and profile analysis pack as
+Work Package 152 (Layer 131).
+
+The pack provides 14 predicates, all carrying the pj_* prefix, for
+computing 1D summaries of 2D grids by projecting along rows or columns.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently require reducing a 2D grid to 1D summaries
+along one axis to detect patterns: stripes, gradients, imbalances, repeated
+values, and directional structure.
+
+Projection is the operation of collapsing a grid along one axis to produce
+a list, one entry per row or per column.
+
+The projection pack provides a complete vocabulary for this class of
+reasoning, covering aggregation (sums, counts, maxima), enumeration (unique
+values), positional detection (shadow projection), sequential structure
+(run-length profiles), and statistics (modal values).
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+pj_row_sums(+Grid, -Sums) returns the sum of each row as a list of integers.
+
+pj_col_sums(+Grid, -Sums) returns the sum of each column.
+
+pj_row_counts(+Grid, +Val, -Counts) returns the count of Val in each row.
+
+pj_col_counts(+Grid, +Val, -Counts) returns the count of Val in each column.
+
+pj_row_maxes(+Grid, -Maxes) returns the maximum value in each row.
+
+pj_col_maxes(+Grid, -Maxes) returns the maximum value in each column.
+
+pj_row_uniq(+Grid, -ValLists) returns the sorted unique values in each row.
+
+pj_col_uniq(+Grid, -ValLists) returns the sorted unique values in each column.
+
+pj_shadow_h(+Grid, +Val, -ColIndices) returns the sorted list of 0-based
+column indices where Val appears in at least one row. This is the horizontal
+shadow of Val projected onto the column axis.
+
+pj_shadow_v(+Grid, +Val, -RowIndices) returns the sorted list of 0-based
+row indices where Val appears in at least one column.
+
+pj_h_profile(+Grid, +Val, -Profile) returns the longest contiguous run of
+Val in each row. Run length is 0 when Val is absent.
+
+pj_v_profile(+Grid, +Val, -Profile) returns the longest contiguous run of
+Val in each column.
+
+pj_row_modes(+Grid, -Modes) returns the most frequently occurring value
+in each row. On count ties, the smallest value wins.
+
+pj_col_modes(+Grid, -Modes) returns the modal value in each column.
+
+
+3. Implementation
+
+All row predicates follow a uniform pattern: maplist for single-list
+operations (pj_row_sums uses maplist(sum_list, Grid, Sums)) or findall
+iterating over member(Row, Grid).
+
+All column predicates share the private helper pj_col_(Grid, C, Col), which
+uses findall(V, (member(Row, Grid), nth0(C, Row, V)), Col) to extract the
+C-th column as a list. Column width is computed once via
+(Grid = [Fr|_] -> length(Fr, W) ; W = 0) before a findall over
+between(0, W1, C).
+
+Value counting uses include(=(Val), List, Occ), length(Occ, N). The partial
+application =(Val) acts as an integer equality filter for ground values.
+
+Run-length profiling uses the pj_run_acc_ tail-recursive accumulator. It
+tracks the current run length (Cur) and the maximum seen (Max). On a match,
+Cur1 is Cur + 1, Max1 is max(Cur1, Max). On a mismatch, Max1 is max(Cur,
+Max) and Cur resets to 0. The final N is the Max at end of list.
+
+Modal value computation uses pj_mode_: sort the list for unique values,
+collect N-V pairs with counts via include, then recurse with pj_max_pair_
+choosing the pair with higher count; on count ties, the smaller V wins.
+
+
+4. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Test grids include a 3x3 uniform grid of all 1s, a 3x3 varied 1-9 grid,
+a 3x3 repeating 0-1-2 grid, a 3x3 stripe grid for run-length tests, and
+a 2x3 mode test grid.
+
+All 42 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+Specification v117, Part 142 defines all 14 predicates.
+
+Pseudocode v110, Part 142 gives the algorithmic descriptions.
+
+Architecture v111, ARCH-118 records the module placement and design
+patterns.
+
+Refinement v165 records acceptance criteria AC-PJ-001 through AC-PJ-042.
+
+Completion v168 records the release evidence for WP 152.
+
+Tutorial Chapter 113 demonstrates all 14 predicates with examples.
+
+
+6. Position in the Cognitive Architecture
+
+The projection pack is Layer 131 in the PrologAI cognitive stack.
+
+It follows the topology pack (Layer 130, tp_*) and provides complementary
+analysis: where the topology pack asks which cells are connected, the
+projection pack asks what the aggregate structure of rows and columns looks
+like.
+
+The projection pack is a prerequisite for higher-level reasoning about
+directional patterns, gradient structure, and axis-aligned regularities.
+
+PrologAI now carries 152 work packages in the packs/ directory.
+
+
+END
