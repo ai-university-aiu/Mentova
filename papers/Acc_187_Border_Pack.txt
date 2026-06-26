@@ -1,0 +1,166 @@
+Accomplishment 187: Concentric Ring Analysis for 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 167th work package: the border pack (br_*, Layer 146).
+
+The border pack provides 14 predicates for concentric ring analysis of 2D grids,
+covering ring enumeration, uniformity testing, border layer addition and stripping,
+nested bullseye detection, depth mapping, and targeted ring filling.
+
+Introduction
+
+Many visual reasoning tasks involve grids with concentric ring structure: a frame
+of one color surrounding a frame of another color surrounding a center region. The
+existing frame pack (Layer 42) tests whether the outermost ring of a grid is uniform,
+and the crop pack (Layer 49) removes single border layers, but neither pack provides
+the vocabulary for analyzing multiple concentric rings or detecting full bullseye
+structures.
+
+The border pack fills this gap with a unified ring-depth model that assigns every cell
+a ring index based on its distance from the nearest edge.
+
+The Ring Depth Formula
+
+The ring depth of a cell at row R, column C in an H x W grid is:
+
+    ring_depth(R, C) = min(R, H-1-R, C, W-1-C)
+
+This formula measures how many steps inward the cell is from the nearest border. Ring
+0 contains all cells on the outermost edge. Ring 1 contains all cells one step inside
+the outermost edge. Ring N contains all cells at exactly N steps from the outer edge.
+
+The maximum ring index for a grid is (min(H,W)-1) // 2. A 3x3 grid has max ring 1
+(the center cell). A 5x5 grid has max ring 2. A 1x5 grid has max ring 0 (every cell
+is on an edge, so the entire grid is ring 0).
+
+Enumerating Cells and Values
+
+br_ring_cells(Grid, N, Cells) enumerates all R-C pairs at ring depth N in row-major
+order. For a 3x3 grid, ring 0 produces 8 pairs (the 8 border cells) and ring 1
+produces 1 pair (the center).
+
+br_ring_vals(Grid, N, Vals) collects the grid values at those positions. Combined
+with sort/2, this produces the set of distinct colors in ring N.
+
+Uniformity Testing
+
+br_ring_color(Grid, N, Color) determines whether ring N is uniform: it sorts the
+ring's value list and succeeds only if the sorted result is a singleton. This fails
+for non-uniform rings, making it directly usable as a test.
+
+br_is_uniform_ring(Grid, N) wraps br_ring_color and discards the color.
+
+br_outer_color(Grid, V) and br_is_uniform_outer(Grid) focus on the outermost ring
+(ring 0) specifically.
+
+Adding and Removing Border Layers
+
+br_add_border(Grid, V, Out) surrounds Grid with one layer of V cells, producing an
+(H+2) x (W+2) output. The implementation uses findall with append/3 to prepend and
+append V to each row, then assembles the full border rows above and below.
+
+br_strip_border(Grid, Inner) removes the outermost ring, producing the (H-2) x
+(W-2) inner grid. For a 2x2 or smaller grid, the inner grid is empty and Inner = [].
+
+br_inner_n(Grid, N, Inner) applies br_strip_border N times recursively. N=0 is the
+identity. This predicate makes it straightforward to peel off any number of concentric
+layers to reach a specific inner region.
+
+Ring add and strip are not exact inverses of each other unless the added border value
+matches the expected content, but the round-trip br_strip_border(br_add_border(Grid,
+V), Inner) = Grid holds for any V when Grid has non-zero dimensions.
+
+Multi-Ring Color Collection
+
+br_ring_colors(Grid, Colors) collects the uniform color of each ring from outside in,
+stopping at the first non-uniform ring. For a perfect bullseye 5x5 grid with rings of
+colors 1, 2, 3, it returns [1, 2, 3]. For a grid whose outermost ring is not uniform,
+it returns [].
+
+br_max_ring(Grid, N) returns the index of the innermost ring, computed as
+(min(H,W)-1)//2 without examining cell values.
+
+Nested Bullseye Detection
+
+br_is_nested(Grid) tests whether every ring from 0 to the max ring index is uniform.
+This is implemented with forall(between(0, MaxN, N), br_is_uniform_ring(Grid, N)).
+
+A grid passes br_is_nested if and only if br_ring_colors returns a list whose length
+equals MaxN + 1. The two predicates provide complementary interfaces: br_is_nested is
+a boolean test while br_ring_colors returns the actual color sequence.
+
+Ring Depth Map
+
+br_depth_map(Grid, DepthGrid) produces a same-sized grid where each cell holds its
+ring index. For a 3x3 grid, the depth map is [[0,0,0],[0,1,0],[0,0,0]]. For a 4x4
+grid, the depth map is [[0,0,0,0],[0,1,1,0],[0,1,1,0],[0,0,0,0]]. The depth map is
+useful for visualizing the ring structure and for driving conditional operations based
+on ring depth.
+
+Targeted Ring Filling
+
+br_fill_ring(Grid, N, V, Out) replaces all cells in ring N with value V, leaving all
+other cells unchanged. Combined with br_ring_colors, this enables pattern synthesis:
+given a color sequence, one can reconstruct a nested grid by filling rings in order.
+
+Implementation Notes
+
+Three predicates (br_ring_cells, br_depth_map, br_fill_ring) use nested findall with
+between/3. SWI-Prolog between/3 requires integer bounds, so H-1 cannot be passed
+directly. Each predicate evaluates H1 is H-1 and W1 is W-1 before the between/3
+calls to avoid a type error.
+
+br_add_border uses findall with member/2 and append/3 directly rather than maplist
+with partial application, because the prepend-and-append operation does not fit
+naturally into the unary maplist template.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates. The test suite covers:
+- Ring enumeration (br_ring_cells, br_ring_vals) for 1x1, 3x3, 5x5 grids
+- Uniformity tests for uniform, non-uniform, and single-cell rings
+- Border addition producing correct (H+2) x (W+2) shape and values
+- Border stripping for 4x4, 3x3, and 2x2 grids (empty result for 2x2)
+- Inner-n stripping by 1 and 2 layers on a 5x5 bullseye
+- Outer color and uniform outer ring tests
+- Ring color collection for 2-ring and 3-ring bullseye grids
+- Max ring index for 3x3, 5x5, and 1x1 grids
+- Nested detection for uniform and non-uniform grids
+- Depth maps for 3x3, 4x4, and 1x5 grids
+- Ring filling for outer ring, center, and identity (same value) fill
+
+All 42 tests pass.
+
+SPARC Documentation
+
+Specification v132: Part 157, requirements BR-BR-001 through BR-BR-014.
+
+Pseudocode v125: Part 157, pseudocode for all 14 predicates.
+
+Architecture v126: ARCH-133, border pack design notes including the between/3
+integer-bound rule and the reason findall replaces maplist in br_add_border.
+
+Refinement v180: acceptance criteria AC-BR-001 through AC-BR-042.
+
+Completion v183: WP 167 release record.
+
+Tutorial Chapter 128 added to all tutorial files.
+
+Conclusion
+
+The border pack gives PrologAI a unified vocabulary for concentric ring analysis.
+Ring detection, ring uniformity testing, bullseye detection, and ring-level
+modification are now first-class operations expressible as single predicate calls.
+Together with the frame pack (Layer 42), which handles single outer-ring tests, and
+the crop and assemble packs, which handle border addition and stripping at the grid
+level, the border pack completes the suite of concentric-structure predicates.
+
+PrologAI now comprises 167 work packages.
+
+Mentova has achieved 187 accomplishments.
