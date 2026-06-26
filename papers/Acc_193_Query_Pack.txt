@@ -1,0 +1,136 @@
+Accomplishment 193: Aggregate Queries over Object Lists
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 173rd work package: the query pack (qu_*, Layer 152).
+
+The query pack provides 14 predicates for answering aggregate questions about
+lists of obj(Color, Cells) terms. It covers counting by attribute, finding
+extremes, computing totals and averages, testing for uniformity, and enumerating
+distinct values. All predicates are deterministic.
+
+Introduction
+
+The scene pack (Layer 37) produces object representations from grids. The pair
+pack (Layer 149) groups and matches them. The arrange pack (Layer 150) reasons
+about positions. The xform pack (Layer 151) applies and infers transformations.
+But none of these answer aggregate questions: How many objects share a color?
+Which color appears most often? Are all objects the same size?
+
+The query pack answers these questions by treating the entire list of objects as
+the unit of analysis, rather than individual objects in isolation.
+
+Counting by Attribute
+
+Three predicates count objects by attribute and return sorted Key-N pairs.
+
+qu_count_by_color/2 counts how many objects have each color. Given
+[obj(1,...), obj(2,...), obj(1,...)], it returns [1-2, 2-1]: color 1 appears
+twice and color 2 once. The result is sorted by color ascending.
+
+qu_count_by_size/2 counts how many objects have each cell count, returning
+sorted Size-N pairs.
+
+qu_count_by_form/2 counts by "form" - the origin-normalized cell list (minimum
+row=0, minimum column=0, sorted). Two objects at different positions with the
+same arrangement of cells contribute to the same form key. This is an exact
+structural match, not D4-invariant: a horizontal bar and a vertical bar have
+different forms even though they are D4-equivalent shapes. This design keeps the
+query pack self-contained, without importing D4 machinery from the pair pack.
+
+All three use the two-phase findall+sort pattern: collect all key values, sort
+for distinct keys, then count per key with a nested findall.
+
+Finding Extremes
+
+qu_most_frequent_color/2 returns the color appearing in the most objects. On
+ties, it returns the smallest color value. Since the Color-N list from
+qu_count_by_color is sorted by color ascending, a member+cut call naturally
+returns the smallest color at the maximum count.
+
+qu_least_frequent_color/2 returns the color appearing in the fewest objects,
+with the same tie-breaking rule.
+
+qu_largest_obj/2 returns the obj term with the most cells. On ties (multiple
+objects with the same maximum cell count), it returns the first in the input
+list. findall preserves the order of the input list, so member+cut on the
+resulting N-Obj pairs finds the first occurrence at the maximum.
+
+qu_smallest_obj/2 returns the obj term with the fewest cells, with the same
+first-in-input-order tie-breaking.
+
+All four extremum predicates end with member(...), !. The cut eliminates the
+choicepoint that member would otherwise leave, making each predicate
+deterministic.
+
+Totals and Averages
+
+qu_total_cells/2 sums the cell counts of all objects in the list. It collects
+each object's cell count via findall then applies sum_list/2.
+
+qu_avg_size/2 computes the floor-average cell count per object using integer
+division (//) consistent with the centroid computation in the arrange pack.
+
+Uniformity Tests
+
+Three predicates test whether all objects share a single value for an attribute.
+
+qu_all_same_color/1 succeeds if every object has the same color.
+qu_all_same_size/1 succeeds if every object has the same cell count.
+qu_all_same_form/1 succeeds if every object has the same origin-normalized form.
+
+All three use the same pattern: collect all attribute values with findall, apply
+sort/2 (which deduplicates), and require the result to be a singleton list [_].
+One line of reasoning per predicate.
+
+Enumeration
+
+qu_colors/2 returns the sorted list of distinct color values present in the
+object list.
+
+qu_sizes/2 returns the sorted list of distinct cell counts.
+
+Both use findall+sort/2: collect all values, then deduplicate and sort.
+
+Verification
+
+42 PLUnit tests cover all 14 predicates (3 tests each):
+
+qu_count_by_color: two-color list with majority, single obj, three distinct colors.
+qu_count_by_size: two-size list with majority, single obj, three distinct sizes.
+qu_count_by_form: two same-shape objs at different positions, two different shapes, single obj.
+qu_most_frequent_color: majority color, tie returns smallest, single obj.
+qu_least_frequent_color: minority color, tie returns smallest, single obj.
+qu_largest_obj: clear winner, tie returns first in input, single obj.
+qu_smallest_obj: clear winner, tie returns first in input, single obj.
+qu_total_cells: two-obj sum, single obj, three-obj sum.
+qu_avg_size: exact division, floor division (6//3=2), single obj returns its size.
+qu_all_same_color: all same succeeds, mixed fails, single obj.
+qu_all_same_size: all same succeeds, mixed fails, single obj.
+qu_all_same_form: same shape at different positions succeeds, different shapes fails, single obj.
+qu_colors: duplicates removed, all same, single obj.
+qu_sizes: duplicates removed, all same, single obj.
+
+All 42 tests pass with no warnings.
+
+Library: packs/query/prolog/query.pl, Layer 152.
+Tests: packs/query/test/test_query.pl, 42/42 pass.
+SPARC: Specification v138, Pseudocode v131, Architecture v132, Refinement v186, Completion v189.
+PrologAI PR: 258, merged 2026-06-26.
+
+Significance
+
+The query pack completes the current object-reasoning stack. PrologAI can now:
+- Find objects in a scene (scene pack, Layer 37)
+- Group and match them by color, size, D4-shape (pair pack, Layer 149)
+- Reason about their positions (arrange pack, Layer 150)
+- Apply and infer transformations (xform pack, Layer 151)
+- Answer aggregate questions about object collections (query pack, Layer 152)
+
+With 173 work packages and 193 accomplishments, PrologAI and Mentova continue
+to build a complete symbolic cognitive substrate for visual reasoning.
