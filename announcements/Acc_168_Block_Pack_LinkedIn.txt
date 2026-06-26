@@ -1,0 +1,44 @@
+Mentova Accomplishment 168: The Rectangular Sub-Grid Block Decomposition Pack
+
+PrologAI gains its 148th work package today.
+
+The block pack (Layer 127, bk_* prefix) provides 14 predicates for
+splitting grids into uniform rectangular blocks and performing block-level
+operations.
+
+The 14 predicates cover:
+
+Extraction and dimensions: extract any rectangular sub-grid by inclusive
+row and column bounds (bk_extract), compute block grid dimensions by
+integer division (bk_dims).
+
+Splitting: split into horizontal strips of fixed height (bk_split_h) or
+vertical strips of fixed width (bk_split_v).
+
+Tiling: stack N copies vertically (bk_tile_h) or extend each row N times
+horizontally (bk_tile_v).
+
+Counting: count complete horizontal strips (bk_count_h) or vertical
+strips (bk_count_v).
+
+Block-level operations: apply a predicate to each block in a list
+(bk_map), retrieve the value at a single cell (bk_uniform).
+
+Analysis: most frequent value in a 2x2 block with tie-breaking to
+lowest value (bk_mode_color), most frequent in-bounds border value in
+a 3x3 neighborhood (bk_border_color).
+
+Structural tests: whether every cell equals a target color (bk_is_solid),
+whether a cell lies on the outer grid border (bk_is_border).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v113, Pseudocode v106,
+Architecture v107, Refinement v161, Completion v164.
+
+Tutorial Chapter 109 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
