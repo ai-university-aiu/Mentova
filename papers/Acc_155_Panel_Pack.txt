@@ -1,0 +1,179 @@
+Mentova Accomplishment 155: Grid Panel Detection and Splitting - The Panel Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 135: the panel pack, a Layer 114 symbolic
+reasoning module providing 14 predicates for detecting all-background divider
+rows and columns, splitting a grid at those positions, removing dividers,
+decomposing into quadrants, and partitioning columns into equal or custom-width
+strips. All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Many visual reasoning tasks present grids divided into panels by separator rows
+or columns. These separators are rows or columns where every cell has the
+background value. The task requires identifying the panels, treating each one
+independently, applying a transformation, and (sometimes) recombining them.
+
+The existing PrologAI library had crop (single-point split) and assemble
+(concatenation) but no pack dedicated to detecting and working with panel
+structures. The panel pack fills this gap.
+
+
+2. Predicate Inventory (14 predicates, pn_* prefix)
+
+2.1 Divider Detection
+
+pn_is_divider_row(+Grid, +R, +Bg)
+Succeeds if row R of Grid consists entirely of Bg. Uses forall/2 with ==
+for structural equality checking.
+
+pn_is_divider_col(+Grid, +C, +Bg)
+Succeeds if column C of Grid is entirely Bg. Uses forall over member(Row, Grid)
+with nth0(C, Row, V) and V == Bg.
+
+pn_divider_rows(+Grid, +Bg, -Rows)
+List of all 0-based row indices where pn_is_divider_row succeeds.
+
+pn_divider_cols(+Grid, +Bg, -Cols)
+List of all 0-based column indices where pn_is_divider_col succeeds.
+
+Examples:
+pn_divider_rows([[1],[0],[2],[0],[3]], 0, Rows).  % Rows = [1,3]
+pn_divider_cols([[0,1,0],[0,2,0]], 0, Cols).      % Cols = [0,2]
+
+
+2.2 Splitting
+
+pn_split_rows(+Grid, +RowIdxs, -Parts)
+Splits the grid at the given row indices. Each index in RowIdxs specifies a
+divider row that is excluded from all parts. The result contains one part per
+interval between dividers (including before the first and after the last).
+
+pn_split_cols(+Grid, +ColIdxs, -Parts)
+Analogous to pn_split_rows but for columns. Uses pn_slice_row_ via maplist
+to extract column ranges from every row.
+
+Implementation: both predicates delegate to a two-clause recursive helper
+with cut on the empty-divider base case. pn_extract_rows_ uses if-then-else
+to return [] for an empty range. pn_slice_row_ uses length/2 + append/3 to
+extract any contiguous column range without indexing.
+
+pn_auto_split_rows(+Grid, +Bg, -Parts)
+Combines pn_divider_rows and pn_split_rows into one call.
+
+pn_auto_split_cols(+Grid, +Bg, -Parts)
+Combines pn_divider_cols and pn_split_cols.
+
+Examples:
+pn_auto_split_rows([[1,2],[3,4],[0,0],[5,6],[7,8]], 0, Parts).
+  % Parts = [[[1,2],[3,4]], [[5,6],[7,8]]]
+pn_auto_split_cols([[1,0,2],[3,0,4]], 0, Parts).
+  % Parts = [[[1],[3]], [[2],[4]]]
+
+
+2.3 Stripping Dividers
+
+pn_strip_rows(+Grid, +Bg, -Stripped)
+Removes all divider rows. Uses findall + \+ memberchk over row indices.
+
+pn_strip_cols(+Grid, +Bg, -Stripped)
+Removes all divider columns. Builds a kept-column index list, then applies
+maplist(pn_select_cols_) to each row.
+
+Examples:
+pn_strip_rows([[1,2],[0,0],[3,4],[0,0],[5,6]], 0, S).  % S=[[1,2],[3,4],[5,6]]
+pn_strip_cols([[1,0,2],[3,0,4]], 0, S).                % S=[[1,2],[3,4]]
+
+
+2.4 Quadrant Decomposition
+
+pn_quadrants(+Grid, -TL, -TR, -BL, -BR)
+Splits at MidR = H // 2 and MidC = W // 2 into four sub-grids.
+TL: rows [0, MidR), cols [0, MidC).
+TR: rows [0, MidR), cols [MidC, W).
+BL: rows [MidR, H), cols [0, MidC).
+BR: rows [MidR, H), cols [MidC, W).
+
+pn_rect_ is a private helper that extracts a rectangular block with
+findall + between(R0, R1a, R) + nth0 + pn_slice_row_.
+
+Example:
+pn_quadrants([[1,2,3,4],[5,6,7,8],[a,b,c,d],[e,f,g,h]], TL, TR, BL, BR).
+  % TL=[[1,2],[5,6]], TR=[[3,4],[7,8]], BL=[[a,b],[e,f]], BR=[[c,d],[g,h]]
+
+
+2.5 Column Partitioning
+
+pn_n_col_parts(+Grid, +N, -Parts)
+Splits columns into N equal-width strips. Grid width must be divisible by N.
+Uses findall with between(0, N1, K) and arithmetic for strip boundaries, then
+maplist(pn_slice_row_) to extract each strip.
+
+pn_col_slices(+Grid, +Widths, -Parts)
+Splits by a list of widths. pn_cumsum_ computes running totals; pn_col_slices_
+is a two-clause recursive predicate with cut on the empty base case.
+
+Examples:
+pn_n_col_parts([[1,2,3,4,5,6]], 3, Parts). % Parts=[[[1,2]],[[3,4]],[[5,6]]]
+pn_col_slices([[1,2,3,4,5,6]], [2,3,1], Parts). % Parts=[[[1,2]],[[3,4,5]],[[6]]]
+
+
+2.6 Presence Test
+
+pn_has_dividers(+Grid, +Bg)
+Succeeds if any all-Bg row or column exists. Uses if-then-else to short-circuit
+on the first positive result: checks rows first, then columns only if needed.
+
+
+3. Implementation Notes
+
+Cuts for determinism: pn_split_rows_, pn_split_cols_, and pn_col_slices_
+each have two clauses differentiated by whether the divider list is empty.
+The cut on the base case prevents spurious choicepoints from the recursive
+clause when the list is empty.
+
+pn_slice_row_ implementation: uses length/2 to create a Skip list of C0
+anonymous variables, append/3 to discard those elements, then length/2 + append/3
+to extract exactly Len = C1 - C0 elements. No indexing with nth0 is needed.
+
+pn_quadrants and pn_n_col_parts use integer arithmetic (//2) for midpoints
+and strip widths, so both always produce integer-bounded results.
+
+Imports: library(lists): memberchk/2, nth0/3, append/2, append/3;
+library(apply): maplist/3. forall/2 is a built-in and is not imported.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no warnings. Three tests per predicate.
+
+Key correctness tests:
+  pn_split_rows([[a],[b],[c],[d],[e]], [1,3], Parts) => Parts=[[[a]],[[c]],[[e]]]
+  pn_quadrants([[1,2],[3,4]], TL, TR, BL, BR) => each quadrant is 1x1
+  pn_col_slices([[1,2,3,4,5,6]], [2,3,1], Parts) => three unequal-width slices
+  pn_has_dividers([[1,2],[3,4]], 0) => fails (no dividers)
+  pn_strip_cols([[0,0],[0,0]], 0, S) => S=[[],[]] (all columns removed)
+
+
+5. Significance
+
+The panel pack adds structured grid decomposition to PrologAI's spatial
+reasoning toolkit. Tasks where a grid is divided by separator lines into
+panels can now be solved with a clean two-step pipeline:
+  pn_auto_split_rows(Grid, Bg, Panels) then process each Panel.
+
+pn_quadrants enables midpoint-based decomposition without explicit midpoint
+calculation in the rule. pn_col_slices enables custom-width panel extraction
+for grids where panel widths are non-uniform.
+
+This is Mentova accomplishment 155. PrologAI now carries 135 work packages.
+
+github.com/ai-university-aiu/PrologAI
