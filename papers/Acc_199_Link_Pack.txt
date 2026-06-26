@@ -1,0 +1,144 @@
+Accomplishment 199: Object-to-Object Correspondence Linking (Link Pack, lk_*, Layer 158)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a link pack (14 lk_* predicates, Layer 158) that builds and
+manipulates correspondence links between pairs of obj(Color, Cells) terms.
+
+A link is an O1-O2 pair. Links are built by five criteria: position (zip),
+centroid proximity (nearest), color, size, and normalized form.
+
+The pack provides extraction, inversion, counting, two application modes
+(color transfer and cell transfer), color-based filtering, and unlinked-object
+detection.
+
+53 of 53 PLUnit tests pass.
+
+This work package is PrologAI WP 179, merged as PR 264 on 2026-06-26.
+
+1. Motivation
+
+Many reasoning tasks require establishing a 1-to-1 or many-to-many
+correspondence between two sets of objects, then applying that correspondence
+to produce an output.
+
+Examples include:
+- Input objects are paired with output objects at the same position (zip by
+  position).
+- Each input object is paired with the nearest output object (proximity-based
+  correspondence).
+- Input and output objects are matched by their shared color (color-based
+  correspondence).
+- Matched objects exchange their colors or positions.
+
+Before the link pack, this kind of correspondence had to be assembled from
+multiple predicates without a common representation. The link pack introduces
+a single data structure (the O1-O2 pair) and a full set of operations on it.
+
+2. The Link Data Structure
+
+A link is an O1-O2 pair using the infix -/2 functor.
+
+A links list is a list of such pairs.
+
+This is the same -/2 functor used throughout PrologAI for Key-Value pairs (as
+in the group pack's Key-[Objs] groups). Reusing a familiar functor keeps the
+representation idiomatic.
+
+3. Building Links
+
+lk_by_position/3 zips two object lists element-wise.
+
+The Nth link is the Nth object from list 1 paired with the Nth object from
+list 2. Stops at the shorter list.
+
+Implementation: three-clause recursive predicate with cuts on both empty base
+cases, then pair the heads of both lists and recurse on the tails.
+
+lk_by_nearest/3 links each O1 to the nearest O2 by centroid distance.
+
+The private helper lk_nearest_/3 computes centroid distances to all candidates
+using findall, then min_list to find the minimum distance, then member+cut to
+take the first candidate at that distance (ties broken by list order).
+
+lk_by_color/3 pairs all O1 and O2 objects that share the same color atom.
+
+Uses findall over the Cartesian product with the pattern O1=obj(C,_),
+O2=obj(C,_) binding the same C variable, then sort to deduplicate.
+
+lk_by_size/3 pairs all O1 and O2 objects with the same cell count.
+
+lk_by_form/3 pairs all O1 and O2 objects with the same normalized form.
+
+The private helper lk_norm_/2 translates cells to origin (min row=0,
+min col=0) and sorts them - the same algorithm as in the group and proximity
+packs, defined locally for self-containment.
+
+4. Extraction and Inversion
+
+lk_source/2 collects the O1 objects from each link in link order.
+
+lk_target/2 collects the O2 objects in link order.
+
+lk_invert/2 swaps O1 and O2 in every link.
+
+5. Applying Correspondence
+
+lk_apply_color/2 produces a list of obj(O2Color, O1Cells) terms - each O1 is
+recolored with its linked O2's color while keeping its own cells.
+
+This transfers the color information from the correspondence target to the
+correspondence source.
+
+lk_apply_cells/2 produces a list of obj(O1Color, O2Cells) terms - each O1
+keeps its own color but gets its linked O2's cells.
+
+This transfers the shape information from the correspondence target.
+
+Together these two predicates cover the two most common ways a correspondence
+is applied to produce an output scene.
+
+6. Filtering
+
+lk_filter_same_color/2 keeps links where O1 and O2 have identical color atoms.
+
+lk_filter_diff_color/2 keeps links where the colors differ.
+
+Both use findall with the appropriate equality or inequality check on the color
+atoms extracted from the O1 and O2 obj terms.
+
+7. Unlinked Objects
+
+lk_unlinked/3 returns objects from a list that do not appear as O1 in any link.
+
+Uses findall with negation-as-failure: keep O if \+ member(O-_, Links).
+
+This is useful for identifying objects that were not matched by a link-building
+predicate (e.g., objects without a color partner in lk_by_color when the colors
+don't match).
+
+8. SPARC Documentation
+
+Specification v144 adds Part 169 (link pack specification).
+
+Pseudocode v137 adds Part 169 (link pack pseudocode).
+
+Architecture v138 adds ARCH-145 (link pack layer placement).
+
+Refinement v192 adds acceptance criteria AC-LK-001 through AC-LK-053.
+
+Completion v195 adds the WP-179 completion record.
+
+9. Conclusion
+
+The link pack introduces a dedicated data structure and operation set for
+object-to-object correspondence - one of the most fundamental patterns in
+multi-object reasoning.
+
+Where the delta pack answers "what changed between two scenes," and the
+group pack answers "how is one scene organized," the link pack answers "which
+objects in scene A correspond to which objects in scene B, and how should that
+correspondence be applied."
