@@ -1,0 +1,42 @@
+Accomplishment 201: List Interlacing, Slicing, and Cycling
+
+PrologAI now has 181 work packages.
+
+The weave pack (wv_*, Layer 160) provides general-purpose list interlacing,
+slicing, and cycling. All 14 predicates work on any Prolog list; no dependency
+on obj() terms.
+
+Interleaving:
+• wv_alternate/3: interleave two lists alternately; append remainder when one runs out
+• wv_split_even_odd/3: split into 0-based even (0,2,4,...) and odd (1,3,5,...) indexed elements
+• wv_zip/3: pair elements as H1-H2 (stop at shorter list)
+
+Slicing:
+• wv_stride/3: every Step-th element starting at index 0
+• wv_chunk/3: consecutive non-overlapping chunks of N; trailing remainder discarded
+• wv_pair_wise/2: consecutive overlapping pairs [[A,B],[B,C],...]
+• wv_triple_wise/2: consecutive overlapping triples [[A,B,C],[B,C,D],...]
+• wv_take/3: first N elements (whole list if N > length)
+• wv_drop/3: discard first N elements (empty if N > length)
+
+Cycling and rotation:
+• wv_rotate_left/3: rotate left by K (K reduced mod length)
+• wv_rotate_right/3: rotate right by K (K reduced mod length)
+• wv_reflect/2: reverse the list (mirror reflection)
+• wv_repeat/3: concatenate list N times
+• wv_cycle/3: produce exactly N elements by cycling list repeatedly
+
+Key use patterns enabled:
+• Cycle a 3-color palette to recolor 7 objects: wv_cycle([red,green,blue], 7, Colors)
+• Extract every second object from a sorted list: wv_stride(SortedObjs, 2, Evens)
+• Pair adjacent objects for pairwise comparison: wv_pair_wise(Objs, Pairs)
+• Interleave objects from two input zones: wv_alternate(Zone1, Zone2, Combined)
+
+66/66 PLUnit tests pass. PR 266 merged to PrologAI main.
+
+Accomplishments 197-201 (group, proximity, link, layout, weave) form a
+complete object-scene reasoning suite: partition, measure, correspond, analyze
+arrangement, and restructure as a list.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
