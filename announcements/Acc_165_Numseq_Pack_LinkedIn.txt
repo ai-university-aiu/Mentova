@@ -1,0 +1,41 @@
+Mentova Accomplishment 165: The Numerical Sequence Operations Pack
+
+PrologAI gains its 145th work package today.
+
+The numseq pack (Layer 124, nr_* prefix) provides 14 predicates for
+analyzing and transforming one-dimensional lists of numbers.
+
+These predicates pair naturally with the cross pack (Layer 121), which
+extracts rows, columns, and diagonals from two-dimensional grids.
+
+Together they form a pipeline: extract a slice, then reason about its
+numerical content.
+
+The 14 predicates cover:
+
+Pairwise differences (nr_diff) and cumulative sums (nr_cumsum).
+
+Running maximum (nr_running_max) and running minimum (nr_running_min).
+
+Five element-wise binary operations: addition, subtraction,
+multiplication, maximum, and minimum (nr_zip_add, nr_zip_sub,
+nr_zip_mul, nr_zip_max, nr_zip_min).
+
+Scalar multiply (nr_scale) and scalar offset (nr_offset).
+
+Non-decreasing test (nr_is_sorted) and arithmetic sequence test
+(nr_is_arith).
+
+And shortest repeating period detection (nr_period).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v110, Pseudocode v103,
+Architecture v104, Refinement v158, Completion v161.
+
+Tutorial Chapter 106 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
