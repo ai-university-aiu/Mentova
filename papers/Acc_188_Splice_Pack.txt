@@ -1,0 +1,174 @@
+Accomplishment 188: Row and Column Structural Editing for 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 168th work package: the splice pack (sp_*, Layer 147).
+
+The splice pack provides 14 predicates for structural editing of 2D grid rows and
+columns. Unlike cell-level predicates that modify individual values, splice
+predicates reshape the grid itself by inserting, deleting, swapping, reversing,
+rotating, replicating, or selecting rows and columns - changing the grid dimensions
+rather than the content at fixed positions.
+
+Introduction
+
+Visual reasoning tasks often require structural grid manipulation rather than purely
+value-level transformations. A task may demand inserting a separator row between two
+panels, removing a background row, swapping two rows to reorder a pattern, or
+selecting only certain rows that satisfy a criterion. The existing stripe pack
+(Layer 103) fills entire rows or columns with a color. The fold pack (Layer 143)
+splits and folds grids around a crease. The transform pack (Layer 37) transposes
+and flips grids as a whole. None of these provide the vocabulary to insert a new
+row at an arbitrary position, delete a specific row, or keep only a chosen subset
+of rows.
+
+The splice pack fills this gap with a unified pair of row and column editing
+interfaces, where every row operation has a matching column operation implemented
+through a private per-row helper called via maplist.
+
+The Split-and-Reassemble Pattern
+
+The central implementation pattern in the splice pack is:
+
+    length(Prefix, K),
+    append(Prefix, Suffix, List)
+
+This splits List at position K: Prefix holds the first K elements and Suffix holds
+the rest. When K is bound to an integer, length/2 creates a list of exactly K free
+variables, and append/3 then unifies them with the first K elements of List. The
+pattern avoids explicit index loops and generalizes cleanly to both row and column
+contexts.
+
+After splitting, the target operation modifies either Prefix, the element at
+position K (the head of Suffix), or Suffix, then reassembles with append.
+
+Inserting and Deleting Rows and Columns
+
+sp_insert_row(Grid, R, NewRow, Out) inserts NewRow before row index R. Setting R=0
+prepends; setting R=H appends. The implementation splits Grid at R and reassembles
+with NewRow between Prefix and Suffix.
+
+sp_delete_row(Grid, R, Out) deletes row R by splitting at R, discarding the head of
+Suffix, and reassembling Prefix with the remaining Suffix.
+
+sp_insert_col(Grid, C, V, Out) inserts a column of constant value V before column C
+in every row. The private helper sp_insert_col_row_/4 is applied to each row via
+maplist. The helper uses the same split pattern on the row list.
+
+sp_delete_col(Grid, C, Out) deletes column C from every row via the private helper
+sp_delete_col_row_/3 called through maplist.
+
+Swapping
+
+sp_swap_rows(Grid, R1, R2, Out) exchanges the rows at indices R1 and R2. The
+implementation fetches both rows with nth0, then builds the output by enumerating
+all row indices with between(0, H1, I) and conditionally assigning Row1 or Row2
+at the appropriate positions. When R1 = R2 the two assignments cancel and the grid
+is unchanged.
+
+sp_swap_cols(Grid, C1, C2, Out) applies the same logic column-wise through the
+private helper sp_swap_in_row_/4 called via maplist. The helper enumerates column
+indices with between(0, W1, C) and computes W1 is W-1 before the call to satisfy
+between's requirement for integer bounds.
+
+Reversing
+
+sp_reverse_rows(Grid, Out) is a single call to reverse(Grid, Out), reversing the
+top-level list of rows.
+
+sp_reverse_cols(Grid, Out) calls maplist(reverse, Grid, Out), applying the built-in
+reverse to each individual row. This mirrors the grid left-right without any
+position arithmetic.
+
+Cyclic Rotation
+
+sp_rotate_rows(Grid, K, Out) shifts rows so that row K becomes row 0. K is reduced
+modulo H before splitting: K1 is K mod H. Then length(Prefix, K1) and
+append(Prefix, Suffix, Grid) split at K1, and append(Suffix, Prefix, Out)
+reassembles with the suffix first. When K1 = 0 the split is at the start and the
+output equals the input.
+
+sp_rotate_cols(Grid, K, Out) applies the same cyclic logic to columns through the
+private helper sp_rotate_row_cols_/3 called via maplist.
+
+Replication
+
+sp_replicate_row(Grid, R, N, Out) replaces row R with N copies of it. The
+implementation splits Grid at R, builds a list of N copies with length(Copies, N)
+and maplist(=(Row), Copies), then reassembles with append([Prefix, Copies, Suffix],
+Out). Setting N=1 is identity. Setting N=0 deletes row R. Setting N=2 inserts one
+extra copy.
+
+sp_replicate_col(Grid, C, N, Out) applies the same strategy column-wise through the
+private helper sp_replicate_col_in_row_/4.
+
+Selection
+
+sp_select_rows(Grid, Indices, Out) keeps only the rows at the indices in the list
+Indices, in the order Indices specifies. The implementation uses findall(Row,
+(member(I, Indices), nth0(I, Grid, Row)), Out). Indices may repeat indices or omit
+any row entirely.
+
+sp_select_cols(Grid, Indices, Out) applies the same strategy column-wise through the
+private helper sp_select_col_from_row_/3.
+
+Implementation Notes
+
+Every column-level operation delegates to a private row-level helper called through
+maplist. This keeps the column predicates to single clauses while the helpers handle
+the per-row logic. The helpers are named with a trailing underscore to signal that
+they are private.
+
+The between/3 calls in sp_swap_rows and sp_swap_in_row_ require integer upper
+bounds. These are computed with H1 is H-1 and W1 is W-1 before the findall that
+contains the between call.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates at 3 tests each:
+- Insert at start, middle, and end for rows and columns
+- Delete at first, middle, and last index for rows and columns
+- Swap: adjacent indices, non-adjacent indices, identical indices (identity)
+- Reverse: 3-element, 2-element, and 1-element lists
+- Rotate: K=0 identity, K=1 shift, K=length full cycle returning identity
+- Replicate: N=2 copies, N=1 identity, N=0 deletion
+- Select: subset of indices, all indices, single index
+
+All 42 tests pass.
+
+SPARC Documentation
+
+Specification v133: Part 158, requirements SP-SP-001 through SP-SP-014.
+
+Pseudocode v126: Part 158, pseudocode for all 14 predicates including all private
+helpers.
+
+Architecture v127: ARCH-134, splice pack design notes covering the split-and-
+reassemble pattern, maplist arity conventions, cyclic rotation with K mod H, and the
+replication semantics for N=0 and N=1.
+
+Refinement v181: acceptance criteria AC-SP-001 through AC-SP-042.
+
+Completion v184: WP 168 release record.
+
+Tutorial Chapter 129 added to all tutorial files.
+
+Conclusion
+
+The splice pack gives PrologAI a complete vocabulary for row and column structural
+editing. Every row-level operation (insert, delete, swap, reverse, rotate, replicate,
+select) has a corresponding column-level operation. Together they cover all structural
+reshaping operations that preserve the rectangular grid invariant. Combined with the
+bound pack (bd_crop_bbox/bd_place), the stripe pack (sr_fill_row/sr_fill_col), and
+the transform pack (tr_transpose/tr_rot90), the splice pack completes the layer of
+grid structure manipulation that sits between single-cell edits and whole-grid
+transformations.
+
+PrologAI now comprises 168 work packages.
+
+Mentova has achieved 188 accomplishments.

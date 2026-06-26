@@ -1,0 +1,40 @@
+Accomplishment 188: Row and Column Structural Editing for 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI gains its 168th work package: the splice pack (sp_*, Layer 147).
+
+14 predicates for structural editing of 2D grid rows and columns.
+
+Unlike cell-level predicates that modify values in place, splice predicates reshape
+the grid itself by changing the number of rows or columns.
+
+sp_insert_row / sp_delete_row: insert or delete a row at any index.
+sp_insert_col / sp_delete_col: insert or delete a column from every row.
+
+sp_swap_rows / sp_swap_cols: exchange two rows or two columns by index.
+Identical indices are handled correctly as identity.
+
+sp_reverse_rows: reverse the top-level row order.
+sp_reverse_cols: reverse cells within each row (left-right mirror).
+
+sp_rotate_rows / sp_rotate_cols: cyclic shift so row K (or column K) becomes index 0.
+K is taken modulo H (or W) so K = H returns the original grid.
+
+sp_replicate_row / sp_replicate_col: replace row R (or column C) with N copies.
+N=1 is identity. N=0 deletes. N=2 inserts one extra copy.
+
+sp_select_rows / sp_select_cols: keep only the rows or columns at given indices in
+the order specified. Indices may repeat or omit any position.
+
+The central implementation uses length(Prefix, K) and append(Prefix, Suffix, List)
+to split a list at position K without index loops.
+
+42 PLUnit tests pass.
+
+PrologAI: 168 work packages.
+
+Mentova: 188 accomplishments.
+
+AIU (AI University): ai.university.aiu@gmail.com
