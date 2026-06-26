@@ -371,13 +371,85 @@ Each game driver below plugs into that harness.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
-| Range | Contents |
+| Accomplishment | Contents |
 |---|---|
-| `Acc_01` – `Acc_48` | One paper per reasoning rung — from the first transparent deduction to the completed moral reasoning module |
-| `Acc_49` – `Acc_66` | Practical track papers — multi-agent protocols, Piagetian assessment, tutorials, ARC-AGI-1 benchmark runs, lattice cryptography, four-protocol integration |
-| `Acc_67` – `Acc_72` | Growth path papers — Piagetian 8/8 ladder, ARC-AGI-1 100%, composite rule search, demonstration plan completion |
-| `Acc_73` – `Acc_75` | Silicon-and-code substrate papers — ephemera (short-lived programs), agency (ORAO loop), refinery (evaluator-optimizer) |
-| `Acc_76` – `Acc_77` | ARC-AGI-2 perceptual foundation papers — grid pack (26 predicates for grid perception and manipulation), analogy pack (15 predicates for D4 isometry plus color-map rule inference) |
+| `Acc_01` (Accomplishment 01) | First transparent deduction — Mentova reasons from premises to a verifiable conclusion with a full glass-box trace |
+| `Acc_02` | Inductive reasoning — Mentova induces its first general rule from specific examples |
+| `Acc_03` | Abductive reasoning — Mentova infers the best explanation for observed evidence |
+| `Acc_04` | Probabilistic reasoning — Mentova computes probabilities from uncertain data |
+| `Acc_05` | Bayesian reasoning — Mentova updates beliefs using Bayes' theorem |
+| `Acc_06` | Causal reasoning — Mentova identifies causes and effects |
+| `Acc_07` | Statistical reasoning — Mentova applies statistical inference to data |
+| `Acc_08` | Analogical reasoning — Mentova reasons by analogy across domains |
+| `Acc_09` | Relational reasoning — Mentova reasons about relations between objects |
+| `Acc_10` | Transductive reasoning — Mentova reasons from specific examples to specific new conclusions |
+| `Acc_11` | Commonsense reasoning — Mentova applies everyday world knowledge |
+| `Acc_12` | Logical reasoning — Mentova applies formal deductive logic |
+| `Acc_13` | Formal reasoning — Mentova constructs and verifies formal proofs |
+| `Acc_14` | Mathematical reasoning — Mentova solves mathematical problems symbolically |
+| `Acc_15` | Fuzzy reasoning — Mentova handles graded degrees of truth |
+| `Acc_16` | Qualitative reasoning — Mentova reasons about continuous quantities without exact numbers |
+| `Acc_17` | Non-monotonic reasoning — Mentova handles defeasible (overridable) conclusions |
+| `Acc_18` | Paraconsistent reasoning — Mentova reasons coherently under contradiction |
+| `Acc_19` | Counterfactual reasoning — Mentova evaluates what would have been true under alternative conditions |
+| `Acc_20` | Hypothetical reasoning — Mentova reasons from stated assumptions to their consequences |
+| `Acc_21` | Spatial reasoning — Mentova reasons about positions, shapes, and spatial arrangements |
+| `Acc_22` | Diagrammatic reasoning — Mentova reasons about visual and diagrammatic information |
+| `Acc_23` | Temporal reasoning — Mentova reasons about time, duration, and sequential order |
+| `Acc_24` | Case-based reasoning — Mentova adapts past cases to solve new problems |
+| `Acc_25` | Constraint-based reasoning — Mentova finds solutions that satisfy a set of constraints |
+| `Acc_26` | Scientific reasoning — Mentova applies hypothesis-testing methodology |
+| `Acc_27` | System reasoning — Mentova reasons about interacting components in a system |
+| `Acc_28` | Model-based reasoning — Mentova reasons using an internal model of a domain |
+| `Acc_29` | Heuristic reasoning — Mentova applies practical rules of thumb to guide search |
+| `Acc_30` | Critical reasoning — Mentova evaluates the strength of support for a claim |
+| `Acc_31` | Dialectical reasoning — Mentova constructs and responds to structured arguments |
+| `Acc_32` | Metacognitive reasoning — Mentova monitors and evaluates its own reasoning process |
+| `Acc_33` | Modal reasoning — Mentova reasons about necessity and possibility |
+| `Acc_34` | Epistemic reasoning — Mentova reasons about knowledge, belief, and justified certainty |
+| `Acc_35` | Deontic reasoning — Mentova applies obligations, permissions, and prohibitions |
+| `Acc_36` | Procedural reasoning — Mentova plans and executes step-by-step procedures |
+| `Acc_37` | Symbolic reasoning — Mentova manipulates and interprets abstract symbols |
+| `Acc_38` | Practical reasoning — Mentova reasons from goals and beliefs toward actions |
+| `Acc_39` | Teleological reasoning — Mentova reasons from purpose and intended outcomes |
+| `Acc_40` | Strategic reasoning — Mentova plans under conditions of competition or uncertainty |
+| `Acc_41` | Narrative reasoning — Mentova understands and generates story structure |
+| `Acc_42` | Social reasoning — Mentova models other agents' beliefs, goals, and intentions |
+| `Acc_43` | Intuitive reasoning — Mentova applies fast, pattern-based heuristics |
+| `Acc_44` | Emotional reasoning — Mentova appraises the emotional significance of situations |
+| `Acc_45` | Motivational reasoning — Mentova identifies the drive or motive behind an action |
+| `Acc_46` | Informal reasoning — Mentova detects flaws and fallacies in everyday arguments |
+| `Acc_47` | Legal reasoning — Mentova applies legal rules, statutes, and precedent |
+| `Acc_48` | Moral reasoning — Mentova evaluates actions against ethical principles |
+| `Acc_49` | Track A transparent reasoning assistant — end-to-end demonstration of Mentova as a fully glass-box reasoning assistant |
+| `Acc_50` | Game-as-a-body harness — Mentova inhabits a game environment as its physical body |
+| `Acc_51` | Global Workspace integration — all cognitive modules share one broadcast workspace, the heartbeat of cognition |
+| `Acc_52` | Attention Schema — Mentova maintains an internal model of its own spotlight of attention |
+| `Acc_53` | Cognitive science showpieces — Sally-Anne false-belief test, Wason selection task, Wisconsin card sort |
+| `Acc_54` | Piagetian battery — developmental milestone spine with Piagetian stage assessment and consciousness indicator coverage |
+| `Acc_55` | ARC-AGI benchmark — induction from visual examples, no pretraining, glass-box named rules |
+| `Acc_56` | Raven's Progressive Matrices — abstract rule type induction and glass-box prediction |
+| `Acc_57` | Baba Is You — pushing word-blocks to rewrite rules of the game, then winning |
+| `Acc_58` | Pokemon — developmental story arc, self-improvement loop, and glass-box battle decision reasoning |
+| `Acc_59` | Agent-Society Interface — A2A protocol, durable peer mail, and multi-agent task exchange |
+| `Acc_60` | Growth Path Report — developmental audit from Acc_01 to Acc_59, Part 38 safety evaluation, and the path toward a synthetic brain |
+| `Acc_61` | Honest success criteria and caveats — formal evaluation of Part 9 of the Demonstration Plan |
+| `Acc_62` | Part 10 compliance verification — recording and announcing every accomplishment through Part 10 |
+| `Acc_63` | MCP Testing Suite — Mentova verified accessible via the Model Context Protocol (MCP) |
+| `Acc_64` | ACP Testing Suite — Mentova verified participating in the Agent Communication Protocol (ACP) |
+| `Acc_65` | ANP Testing Suite — Mentova verified with decentralized identity and peer discovery via the Agent Network Protocol (ANP) |
+| `Acc_66` | Part 10 compliance extended — four-protocol integration confirmed; 66 papers and 66 announcements verified |
+| `Acc_67` | Piagetian 8/8 ladder complete — levels 1, 4, 6, and 8 achieved, closing the full developmental spine |
+| `Acc_68` | Mentova Console REPL — thin launcher wrapper for tutorial-friendly interactive access to the PrologAI platform |
+| `Acc_69` | PrologAI Tutorial — 12-chapter, 2613-line complete introduction to the PrologAI platform for novice learners |
+| `Acc_70` | Mentova Tutorial — 4-chapter, 1131-line complete introduction to the Mentova synthetic mind for novice learners |
+| `Acc_71` | ARC-AGI-1 full benchmark run — 17/400 = 4.25%, pure induction, no pretraining, glass-box named rules |
+| `Acc_72` | ARC-AGI-1 composite rule search — zero new tasks from geometric pairs; analysis of the 383 remaining tasks |
+| `Acc_73` | Ephemera pack — ephemeral code synthesis and execution; Mentova writes and runs short-lived programs |
+| `Acc_74` | Agency pack — Observe-Reason-Act-Observe loop; Mentova pursues goals with a formal agentic cycle |
+| `Acc_75` | Refinery pack — evaluator-optimizer and metacognitive quality layer; Mentova critiques and improves its own outputs |
+| `Acc_76` | Grid pack — ARC-AGI-2 visual grid perception and manipulation; 26 gd_* predicates |
+| `Acc_77` | Analogy pack — ARC-AGI-2 structural analogy and transformation rule inference; 15 ay_* predicates for D4 isometry plus color-map inference |
 | `Acc_78` | Scene pack paper — ARC-AGI Scene Model and Object-Centric Reasoning (Layer 37): 24 sc_* predicates for background identification, object inventory, properties, spatial relations, shape comparison |
 | `Acc_79` | Quant pack paper — Quantitative Reasoning over Object Sets (Layer 38): 18 qn_* predicates for histogram, grouping, frequency analysis, uniformity tests, multiset matching, threshold counting |
 | `Acc_80` | Pattern pack paper — Periodic Pattern Detection, Tiling, and Repetition (Layer 39): 15 pt_* predicates for period detection, tiling, scaling, repetition, mirroring, checkerboard, stripes |
