@@ -1,0 +1,31 @@
+Mentova Accomplishment 209: Wavefront BFS Propagation Through Passable Cells
+
+PrologAI now includes a wavefront pack (wf_*, Layer 168) - 14 predicates for
+BFS wave propagation from seed cells through passable cells in a 2D grid.
+
+The key difference from the voronoi pack: the wavefront pack uses actual BFS
+path length, not open-space Manhattan distance. Obstacles are respected.
+
+The wave starts at seed cells (distance 0) and spreads through 4-adjacent cells
+matching the passable color. The full distance map is returned as D-r(R,C) pairs.
+
+What the pack provides:
+
+- wf_passable: which cells can the wave enter?
+- wf_bfs: run the full BFS, get exact distances for every reached cell
+- wf_reachable / wf_unreachable: which cells can/cannot be reached from seeds?
+- wf_at_dist / wf_within_dist / wf_dist_of: distance queries on the BFS result
+- wf_max_dist / wf_all_dists: aggregate distance information
+- wf_path_exists: is there a path from A to B through passable cells?
+- wf_paint_bg: replace each passable cell with its distance value
+- wf_multi_wave: multiple color sources compete; each cell gets the nearest color
+- wf_collision: find cells equidistant from two or more color sources
+- wf_enclosed: find passable cells that are completely surrounded by walls
+
+41 tests pass.
+
+This is WP 189, Mentova's 209th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
