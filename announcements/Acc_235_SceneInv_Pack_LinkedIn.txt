@@ -1,0 +1,31 @@
+Accomplishment 235: Scene Invariant Detection (sceneinv Pack, si_*, Layer 194)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a sceneinv pack - 14 si_* predicates that detect what stays
+CONSTANT across all Before-After training pairs.
+
+Before searching for a transformation rule, you can now ask:
+
+- Does the object count always stay the same? (si_n_preserved)
+- Is the set of colors always the same? (si_colors_preserved)
+- Does the total number of colored cells never change? (si_cells_preserved)
+- Is the Before object count always exactly N? (si_const_n_before)
+- Is the After object count always exactly N? (si_const_n_after)
+- Is the color set in Before always the same? (si_const_colors_before)
+
+This sits upstream of the gridsolve/scenerank pipeline: discover constraints
+first, then search for rules that respect those constraints.
+
+46 of 46 unit tests pass.
+
+This is WP 215, Mentova's 235th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

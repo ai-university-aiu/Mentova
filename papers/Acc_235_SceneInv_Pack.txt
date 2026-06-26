@@ -1,0 +1,92 @@
+Accomplishment 235: Scene Invariant Detection (sceneinv Pack, si_*, Layer 194)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains the sceneinv pack (Work Package 215, Layer 194): 14 si_*
+predicates that detect structural properties that hold across ALL training
+pairs in a Before-After scene sequence. Knowing what stays constant constrains
+the solution search before any transformation hypothesis is tested.
+
+
+Background
+
+An ARC-style reasoning task presents several Before-After training pairs and
+one test Before scene. The solver must infer the transformation and apply it to
+the test. A principled first step is to identify invariants - properties that
+are the same in every training example. If the object count never changes, then
+any candidate rule that changes the count can be rejected immediately. If the
+total number of colored cells never changes, that too is a constraint on the
+solution.
+
+Prior packs (gridsolve, scenerank, transformgen) generate and rank candidate
+rules. The sceneinv pack sits upstream of that process, extracting constraints
+from training data before the search begins.
+
+
+The sceneinv Pack
+
+Pack prefix: si_*
+Layer: 194
+Work Package: 215
+
+Three families of invariants are detected.
+
+Object-count invariants:
+si_n_before/2 and si_n_after/2 return the object count for one pair.
+si_all_n_before/2 and si_all_n_after/2 collect counts across all pairs.
+si_const_n_before/2 and si_const_n_after/2 succeed only when the count is
+the same for every pair in the list.
+si_n_preserved/1 checks that Before and After have the same count in every pair.
+
+Color-set invariants:
+si_colors_before/2 and si_colors_after/2 return sorted distinct colors for one pair.
+si_const_colors_before/2 and si_const_colors_after/2 succeed only when the
+sorted color set is identical across all pairs.
+si_colors_preserved/1 checks that the color set does not change within any pair.
+
+Cell-count invariants:
+si_total_cells_before/2 sums the cell counts of all objects in one Before scene.
+si_cells_preserved/1 checks that the total cell count matches in Before and After
+for every pair.
+
+
+Constancy Test Mechanism
+
+All constancy predicates use the same mechanism: collect the property value for
+each pair into a list, then reduce with list_to_set/2. A single-element set means
+all values are equal; any two distinct values produce a two-element set and the
+predicate fails. This avoids explicit pairwise comparison and handles any number
+of pairs uniformly.
+
+
+Vacuous Success
+
+Preservation predicates (si_n_preserved, si_colors_preserved, si_cells_preserved)
+succeed vacuously on an empty list. This is the standard Prolog convention for
+universal quantification over an empty domain. Constancy predicates
+(si_const_n_before, si_const_n_after, si_const_colors_before, si_const_colors_after)
+fail on an empty list because no invariant can be claimed from zero evidence.
+
+
+Test Coverage
+
+46 of 46 acceptance criteria (AC-SI-001 through AC-SI-046) pass. Tests cover:
+- Single-pair and multi-pair cases for every predicate
+- Vacuous success for empty lists on preservation predicates
+- Expected failure on empty lists for constancy predicates
+- Cross-predicate consistency: n_before == n_after implies n_preserved
+
+SPARC documentation: Spec v180, Pseudo v173, Arch v174, Refinement v228,
+Completion v231. Tutorial: Ch176_SceneInv.txt. Pack_Reference updated.
+
+
+Conclusion
+
+The sceneinv pack adds the invariant-detection layer to PrologAI's solving
+pipeline. By discovering constraints before hypothesis testing, it reduces search
+space and can eliminate incorrect candidate rules without executing them. This is
+Mentova's 235th accomplishment and PrologAI's 215th work package.
