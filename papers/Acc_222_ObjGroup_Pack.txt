@@ -1,0 +1,115 @@
+Accomplishment 222: Object-List Grouping by Shared Attribute (objgroup Pack, og_*, Layer 181)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Summary
+
+PrologAI now has an objgroup pack - 14 og_* predicates for partitioning a list of
+obj(Color, Cells) terms into groups sharing a common attribute value. This is WP 202,
+Mentova's 222nd accomplishment.
+
+
+Motivation
+
+The objfilter pack selects individual objects by predicate. The objattr pack computes
+aggregate statistics over all objects. But neither answers: how many objects of each
+color are there, which size class has the most members, or do objects fall into two
+distinct shape groups? The objgroup pack fills this gap by organizing objects into
+named bins.
+
+
+Groups Representation
+
+A group is a Key-ObjList pair. The Key identifies the shared attribute value; ObjList
+holds all objects with that value in their original input order. A group list produced
+by og_by_* is sorted by Key (alphabetically for color, numerically ascending for size
+and row/col).
+
+
+Predicates
+
+og_by_color/2
+    Partitions objects into Color-ObjList groups. Example: three objects with colors
+    r, b, r produce [b-[ObjB], r-[ObjR1, ObjR2]].
+
+og_by_size/2
+    Partitions by cell count. Groups sorted by size ascending.
+
+og_by_form/2
+    Partitions by normalized shape. Normalization: translate so the top-left cell is
+    at r(0,0), then sort the cell list. Two objects share a form iff their normalized
+    lists are identical. Color and position are ignored.
+
+og_by_row/2
+    Partitions by the row of the top-left corner, sorted ascending.
+
+og_by_col/2
+    Partitions by the column of the top-left corner, sorted ascending.
+
+og_n_groups/2
+    Count of groups in a group list.
+
+og_n_members/3
+    Filter groups to those with exactly N members.
+
+og_singletons/2
+    Groups with exactly 1 member (specialization of og_n_members for N=1).
+
+og_largest/2
+    The group with the most members. First in key order on tie.
+
+og_smallest/2
+    The group with the fewest members. First in key order on tie.
+
+og_all_same_size/1
+    True iff all groups have the same member count. Vacuously true for empty input.
+
+og_sort_desc/2
+    Sort groups by member count descending (largest group first).
+
+og_flat/2
+    Flatten all groups back to a single list of obj terms, in group order.
+
+og_filter_size/4
+    Keep groups whose member count is in Min..Max inclusive.
+
+
+Implementation Notes
+
+All grouping predicates use a shared private generic og_group_by_ meta-predicate.
+It collects Key-Obj pairs by applying the key extractor to each object, collects
+distinct keys in sorted order, then collects all objects for each key via findall.
+This keeps each og_by_* predicate to a one-line body.
+
+The og_largest and og_smallest predicates use the negated-key sort trick seen in
+objattr: negate the count for largest (so smallest negated = largest count), sort,
+then extract the first element.
+
+The og_all_same_size predicate uses maplist with a private og_count_eq_ closure,
+the same pattern as oa_all_same_color in objattr.
+
+
+Test Coverage
+
+41 of 41 unit tests pass (AC-OG-001 through AC-OG-041, defined in Refinement v215
+Part 192). Tests cover all 14 predicates including empty inputs, single-group inputs,
+tie conditions, and the no-singletons case.
+
+
+SPARC Documentation
+
+Specification v167 - Part 192: objgroup pack formal specification
+Pseudocode v160 - Part 192: reasoning pseudocode for all 14 predicates
+Architecture v161 - ARCH-168: objgroup pack placement at Layer 181
+Refinement v215 - AC-OG-001 through AC-OG-041: acceptance criteria
+Completion v218 - WP-202 completion record
+
+
+PrologAI Repository
+
+PR #290 merged into main.
+Pack directory: packs/objgroup/
+Tutorial chapter: docs/tutorial/Ch163_ObjGroup.txt

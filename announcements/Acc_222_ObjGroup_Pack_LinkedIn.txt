@@ -1,0 +1,32 @@
+Accomplishment 222: Object-List Grouping by Shared Attribute (objgroup Pack, og_*, Layer 181)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has an objgroup pack - 14 og_* predicates for partitioning a list of
+obj(Color, Cells) terms into Key-ObjList groups that share a common attribute value.
+
+A symbolic reasoner now has a direct way to ask: which objects share the same color,
+which size class has the most members, which objects fall into the same shape group,
+which objects are on the same row?
+
+The pack provides five partitioning predicates (by color, size, form, row, and column)
+and nine inspection predicates (count groups, filter by member count, find singletons,
+find the largest and smallest group, test uniformity, sort groups, flatten groups, and
+filter by size range).
+
+og_by_form is the most powerful: it groups by normalized shape, ignoring color and
+position entirely, so an L-shape at position r(0,0) and an L-shape at r(5,3) in a
+different color fall into the same group.
+
+41 of 41 unit tests pass.
+
+This is WP 202, Mentova's 222nd accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
