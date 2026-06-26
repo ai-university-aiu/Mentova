@@ -1,0 +1,179 @@
+Accomplishment 198: Object-Level Proximity and Distance (Proximity Pack, px_*, Layer 157)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a proximity pack (14 px_* predicates, Layer 157) that computes
+distances and spatial relationships between obj(Color, Cells) terms directly,
+without a grid argument.
+
+All distance measures use Manhattan distance. Centroid distance is the Manhattan
+distance between the integer-truncated average positions of two objects' cells.
+
+51 of 51 PLUnit tests pass.
+
+This work package is PrologAI WP 178, merged as PR 263 on 2026-06-26.
+
+1. Motivation
+
+Spatial reasoning between objects is a core requirement for many reasoning
+tasks.
+
+The existing spatial pack computes distances between individual cells.
+
+The scene pack provides ordinal direction predicates (above, below, left_of,
+right_of) between objects.
+
+But no pack provided numeric distance between objects - neither centroid-to-
+centroid nor cell-level minimum distance - and no pack provided proximity-based
+filtering or sorting of object lists by distance from a reference.
+
+The proximity pack fills that gap.
+
+2. Distance Measures
+
+Two distance measures are provided, each with a different semantic.
+
+Centroid distance (px_centroid_dist/3) computes the distance between the
+integer-truncated average positions of two objects' cells.
+
+The centroid is the representative point of the object: where it "is" in the
+scene.
+
+Centroid distance is fast to compute and stable: large objects with many cells
+still have a single well-defined representative position.
+
+Minimum cell distance (px_min_cell_dist/3) computes the minimum Manhattan
+distance across all pairs of cells, one from each object.
+
+Minimum cell distance is the actual closest approach between two objects.
+
+It is zero when objects share a cell, and one when they are touching (4-
+adjacent).
+
+Most predicates in the proximity pack use centroid distance.
+
+px_min_cell_dist/3 is provided for cases where the actual nearest-approach
+matters more than the representative position.
+
+3. Centroid Computation
+
+px_centroid/3 computes the integer-truncated centroid (R, C) of an obj term.
+
+The centroid row is the sum of all row values in Cells divided by the cell
+count, truncated to an integer with the // operator.
+
+The centroid column is the same for column values.
+
+Integer truncation is deterministic and requires no floating-point arithmetic.
+
+Implementation: sum_list/2 from library(lists) sums row values; length/2
+gives the cell count; // divides.
+
+4. Contact Detection
+
+px_touching/2 succeeds if any cell of O1 is 4-adjacent to any cell of O2.
+
+4-adjacent means the two cells share an edge: their Manhattan distance is
+exactly 1.
+
+Implementation: iterate over both cell lists with member/2; test
+abs(R1-R2) + abs(C1-C2) =:= 1; cut on success.
+
+The cut prevents redundant work when multiple touching pairs exist.
+
+5. Nearest and Farthest
+
+px_nearest/3 returns the object in a list with the minimum centroid distance
+from a reference object.
+
+px_farthest/3 returns the object with the maximum centroid distance.
+
+Both use the same pattern: findall of D-O pairs, min_list/max_list to find the
+extremum, then member/2 with a cut to take the first matching object (ties go
+to the object appearing first in the input list).
+
+6. Sorting and Filtering
+
+px_sort_by_dist/3 returns the input list sorted ascending by centroid distance.
+
+Implementation: findall of D-O pairs, msort/2 for stable sort (equal distances
+preserve original order), findall to extract objects.
+
+px_within_dist/4 keeps objects at centroid distance at most D (inclusive).
+
+px_beyond_dist/4 keeps objects at centroid distance strictly greater than D.
+
+Both use findall with a comparison inside the goal.
+
+7. Pair Detection
+
+px_closest_pair/2 finds the unordered pair of objects from a list with the
+minimum centroid distance.
+
+px_farthest_pair/2 finds the pair with the maximum centroid distance.
+
+Implementation: between(1, N, I) then I1 is I+1 then between(I1, N, J) with
+nth1/3 generates all index-ordered pairs exactly once, avoiding self-pairs and
+duplicate pairs.
+
+Distances are collected, the extremum is found with min_list/max_list, and the
+first matching triple is taken with member/2 + cut.
+
+8. Contact Filters
+
+px_touching_objs/3 collects objects from a list that 4-touch the reference.
+
+px_non_touching_objs/3 collects objects that do not 4-touch the reference
+(negation-as-failure: \+ px_touching).
+
+9. Distance Ranking
+
+px_dist_rank/3 returns a list of D-Obj pairs sorted ascending by centroid
+distance from a reference.
+
+The first element is the nearest object; the last is the farthest.
+
+Equal-distance objects retain their relative order from the input list because
+msort/2 is stable.
+
+10. Integration
+
+The proximity pack extends the object-scene reasoning ecosystem:
+
+scene pack: object detection and individual object properties.
+
+pair pack: cross-scene object matching by color, size, and shape.
+
+group pack: partitioning a scene by shared property.
+
+delta pack: change detection between two scenes.
+
+proximity pack: numeric distance and spatial relationships between objects.
+
+Together these five packs give a complete toolkit for analyzing object scenes:
+detect, match, group, measure change, and measure distance.
+
+11. SPARC Documentation
+
+Specification v143 adds Part 168 (proximity pack specification).
+
+Pseudocode v136 adds Part 168 (proximity pack pseudocode).
+
+Architecture v137 adds ARCH-144 (proximity pack layer placement).
+
+Refinement v191 adds acceptance criteria AC-PX-001 through AC-PX-051.
+
+Completion v194 adds the WP-178 completion record.
+
+12. Conclusion
+
+The proximity pack gives PrologAI the ability to measure how far apart objects
+are, find which objects are nearest or farthest from a reference, sort objects
+by distance, and identify objects that are touching.
+
+These are foundational spatial operations for any reasoning system that must
+understand not just what objects exist in a scene but how they relate to each
+other in space.
