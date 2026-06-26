@@ -1,0 +1,47 @@
+Mentova Accomplishment 179: The Variance Statistics Pack
+
+PrologAI gains its 159th work package today.
+
+The varstat pack (Layer 138, vt_* prefix) provides 14 predicates for integer
+summation, floor and rounded arithmetic means, per-element deviation from the
+mean, and position analysis for cells above or below various means in 2D grids.
+
+The 14 predicates cover:
+
+List statistics: vt_sum (total), vt_mean_floor (floor mean), vt_mean_round
+(rounded mean using banker's rounding), vt_deviation (signed per-element
+deviation from floor mean), vt_abs_deviation (absolute deviation).
+
+Per-row and per-column sums: vt_row_sums and vt_col_sums give the total
+for each row or column as a list.
+
+Per-row and per-column means: vt_row_means and vt_col_means give the floor
+mean for each row or column.
+
+Global analysis: vt_global_mean gives the floor mean of all cells in the
+grid.
+
+Position selection: vt_above_mean and vt_below_mean find cells above or
+below the global mean. vt_row_above_mean finds cells above their row mean.
+vt_col_above_mean finds cells above their column mean.
+
+Example: for [[1,2,3],[4,5,6],[7,8,9]]:
+vt_global_mean -> 5 (45 divided by 9 cells = 5)
+vt_above_mean -> [1-2, 2-0, 2-1, 2-2] (values 6, 7, 8, 9)
+vt_row_above_mean -> [0-2, 1-2, 2-2] (rightmost cell in each row)
+vt_col_above_mean -> [2-0, 2-1, 2-2] (bottom cell in each column)
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v124, Pseudocode v117,
+Architecture v118, Refinement v172, Completion v175.
+
+Tutorial Chapter 120 added.
+
+Combined with rank, median, nmode, extrema, and naggr, PrologAI now covers
+six complementary statistical perspectives on integer grid structure.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
