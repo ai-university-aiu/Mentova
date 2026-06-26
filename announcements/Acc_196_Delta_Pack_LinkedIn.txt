@@ -1,0 +1,43 @@
+Accomplishment 196: Scene-Level Delta Analysis
+
+PrologAI now has 176 work packages.
+
+The delta pack (dl_*, Layer 155) answers the question "what changed?" when
+comparing two object scenes.
+
+Change decomposition:
+• dl_added/3: objects in S2 whose cell set does not appear in S1
+• dl_removed/3: objects in S1 whose cell set does not appear in S2
+• dl_matched/3: O1-O2 pairs sharing identical cell sets
+• dl_recolored/3: From-To color changes for matched objects (C1 \= C2)
+• dl_unchanged/3: objects with identical color+cells in both scenes
+
+Color analysis:
+• dl_color_gain/3: colors in S2 not in S1
+• dl_color_loss/3: colors in S1 not in S2
+
+Numeric metrics:
+• dl_count_diff/3: N = length(S2) - length(S1)
+• dl_size_diff/3: N = total_cells(S2) - total_cells(S1)
+
+Change type classification:
+• dl_is_added_only/2: no removals or recolorings
+• dl_is_removed_only/2: no additions or recolorings
+• dl_is_recolor_only/2: no additions or removals (correct precondition for pg_infer_table)
+• dl_is_stable/2: scenes are identical
+
+Composite:
+• dl_scene_diff/3: all four components as delta(Added, Removed, Recolored, Unchanged)
+
+Matching uses exact cell-set equality via Prolog unification. This is
+consistent with pg_infer_table in the pigment pack: the same semantics
+throughout the object-scene stack.
+
+The delta pack is the gateway to ARC-AGI-2 compositional reasoning. To induce
+a multi-step rule, you must first classify what each step does. The delta pack
+provides that classification.
+
+42/42 PLUnit tests pass. PR 261 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
