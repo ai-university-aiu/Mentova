@@ -1,0 +1,176 @@
+Accomplishment 184: Grid Folding, Unfolding, and Fold-Symmetry Detection
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 164th work package: the fold pack (fd_*, Layer 143).
+
+The fold pack provides 14 predicates for splitting a 2D grid into two halves
+along a horizontal or vertical crease, overlaying two grids with a
+background-priority rule, folding one half onto the other as in paper origami,
+unfolding a half-grid into a full symmetric grid, testing and finding fold
+symmetry, detecting all-same-value marker rows and columns, and composing a
+double fold that reduces a grid to its top-left quadrant.
+
+Introduction
+
+A recurring structure in visual reasoning is a grid that was produced by
+folding. Given a folded result, the task is to recover the original, or to
+recognize that a symmetric grid admits a fold, or to find where the fold crease
+lies. These tasks require precise vocabulary: what does it mean to fold at row
+R, how does ink transfer when two half-grids overlap, and what is the
+difference between a grid that is symmetric around a center row versus one
+where the fold crease falls between two rows?
+
+Before the fold pack, these operations required assembling list manipulations
+from scratch for each task. The fold pack encapsulates them in 14 named
+predicates with consistent semantics.
+
+Splitting
+
+fd_split_h(Grid, R, Top, Bottom) splits Grid horizontally. Top receives rows 0
+through R; Bottom receives the remaining rows. It uses a list prefix of length
+R+1 via length/2 and append/3.
+
+fd_split_v(Grid, C, Left, Right) splits Grid vertically. Each row is split
+independently by a private helper that uses a column prefix of length C+1.
+
+Overlaying
+
+fd_overlay(A, B, Bg, Out) combines two grids cell by cell. Where A's cell is
+not the background value Bg, A's cell wins. Where A's cell equals Bg, B's cell
+is used. This captures the natural behavior of placing one transparent sheet
+over another where only the inked cells of the top sheet are visible.
+
+Folding
+
+fd_fold_h(Grid, R, Bg, Out) folds the bottom half of Grid upward. The crease
+falls between row R and row R+1. Row I of the output overlays Top[I] with
+Bottom[R-I] using fd_overlay. When the bottom half is shorter than the top half
+(the fold does not reach the top), the topmost rows pass through unchanged.
+
+fd_fold_v(Grid, C, Bg, Out) folds the right half leftward. The crease falls
+between column C and column C+1. Column I of the output overlays Left[row][I]
+with Right[row][C-I].
+
+Unfolding
+
+fd_unfold_h(Half, Grid) creates a symmetric full grid by stacking Half above
+its row-reversed copy. The result has twice the height of Half.
+
+fd_unfold_v(Half, Grid) creates a symmetric full grid by joining each row with
+its own reverse. The result has twice the width of Half.
+
+Fold Symmetry
+
+fd_sym_h(Grid, R) succeeds if Grid is symmetric under a horizontal fold with
+crease after row R. The mirror formula is: row I corresponds to row 2R+1-I.
+This is the between-rows formula: with crease between rows R and R+1, row 0 of
+the top half maps to row 0 of the bottom half which is overall row R+1, so
+Grid[0] must equal Grid[R+1], which is Grid[2R+1-0].
+
+This formula was chosen specifically to be consistent with fd_fold_h. The
+center-row formula (2R-I) would make R=0 vacuously true for any grid because
+all mirrors of rows above 0 at R=0 fall below row 0 and are out of bounds.
+The between-rows formula avoids this: fd_sym_h(Grid, 0) checks that Grid[0]
+equals Grid[1], which is non-trivial.
+
+fd_sym_v(Grid, C) is the column analogue: col J maps to col 2C+1-J.
+
+fd_find_fold_h(Grid, R) tries R = 0, 1, ..., H-1 and returns the first R for
+which fd_sym_h succeeds. fd_find_fold_v(Grid, C) is the column analogue.
+
+The roundtrip property holds: fd_unfold_h(Half, Grid) always produces a Grid
+for which fd_find_fold_h returns the last row index of Half (i.e., the crease
+between the two copies). Likewise for fd_unfold_v and fd_find_fold_v.
+
+Marker Detection
+
+fd_mark_row(Grid, V, R) finds the first row where every cell equals V. Useful
+for detecting an all-zero or all-separator row that marks a fold crease.
+
+fd_mark_col(Grid, V, C) is the column analogue.
+
+Double Fold
+
+fd_fold_both(Grid, R, C, Bg, Out) applies fd_fold_h at row R and then fd_fold_v
+at column C on the result. The output has height R+1 and width C+1, capturing
+the top-left quadrant of the original grid after two orthogonal folds.
+
+Example Results
+
+fd_split_h([[a,b],[c,d],[e,f],[g,h]], 1, Top, Bottom):
+  Top = [[a,b],[c,d]], Bottom = [[e,f],[g,h]].
+
+fd_overlay([[0,1],[2,0]], [[9,9],[9,9]], 0, Out):
+  Out = [[9,1],[2,9]].
+  Cell (0,0): A=0=Bg, use B=9. Cell (0,1): A=1 != Bg, use A=1.
+
+fd_fold_h([[0,0],[0,7],[5,0]], 1, 0, Out):
+  Top = [[0,0],[0,7]], Bottom = [[5,0]], HB = 1.
+  Row 0: K = 1-0 = 1, K >= HB=1, keep Top[0] = [0,0].
+  Row 1: K = 0, overlay([0,7],[5,0],0): 0=bg->5; 7!=bg->7. Out[1] = [5,7].
+  Out = [[0,0],[5,7]].
+
+fd_unfold_h([[1,2],[3,4]], Grid):
+  Grid = [[1,2],[3,4],[3,4],[1,2]].
+
+fd_sym_h([[1,2],[3,4],[3,4],[1,2]], 1):
+  Formula: row I maps to row 2*1+1-I = 3-I.
+  I=0: Grid[0]=[1,2] vs Grid[3]=[1,2]. OK.
+  I=1: Grid[1]=[3,4] vs Grid[2]=[3,4]. OK.
+  Succeeds.
+
+fd_fold_both([[1,2,3],[4,5,6],[7,8,9]], 0, 0, 0, Out):
+  After fold_h at R=0: Top=[[1,2,3]], Bottom=[[4,5,6],[7,8,9]].
+  K=0-0=0, overlay([1,2,3],[4,5,6],0): all non-zero -> [1,2,3]. FoldedH=[[1,2,3]].
+  After fold_v at C=0: Left=[[1]], Right=[[2,3]].
+  I=0: K=0-0=0, overlay(1,2,0)->1. Out=[[1]].
+
+Implementation Notes
+
+fd_fold_h uses a findall loop over row indices rather than direct recursion.
+For each I in 0..R, it computes K = R-I and conditionally overlays or passes
+through. fd_fold_v delegates to a private fd_fold_row_v_ predicate called via
+maplist/4, applying the same column-index logic within each row.
+
+fd_sym_h and fd_sym_v use forall/2 over the full grid with conditional
+in-bounds checks. This avoids building an explicit mirror grid; only the
+existing grid cells are accessed.
+
+fd_mark_row and fd_mark_col use forall/2 with member/2 and nth0/3 to verify
+the all-V condition, with a cut after the first qualifying index.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates. All 42 tests pass.
+
+SPARC Documentation
+
+Specification v129: Part 154, requirements FD-FD-001 through FD-FD-014.
+
+Pseudocode v122: Part 154, pseudocode for all 14 predicates.
+
+Architecture v123: ARCH-130, fold pack design notes.
+
+Refinement v177: acceptance criteria AC-FD-001 through AC-FD-042.
+
+Completion v180: WP 164 release record.
+
+Tutorial Chapter 125 added to all tutorial files.
+
+Conclusion
+
+The fold pack gives PrologAI a complete, semantically coherent vocabulary for
+paper-folding operations on 2D grids. The between-rows mirror formula for
+fd_sym_h and fd_sym_v ensures that symmetry detection is non-vacuous and
+consistent with the fold and unfold predicates. The roundtrip property
+(unfold then find-fold recovers the original crease) holds by construction.
+
+PrologAI now comprises 164 work packages.
+
+Mentova has achieved 184 accomplishments.
