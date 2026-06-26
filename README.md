@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-204-FF6B35?style=for-the-badge" alt="204 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-205-FF6B35?style=for-the-badge" alt="205 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **204 accomplished** |
-| Scientific papers | **204 published** — one per accomplishment |
+| Documented accomplishments | **205 accomplished** |
+| Scientific papers | **205 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         204 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  151 announcements — one per accomplishment
+├── papers/         205 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  153 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-204 scientific papers, one per accomplished milestone.
+205 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -464,12 +464,14 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_202` | Sizeop pack paper — Size-Based Sorting and Assignment for Object Collections (Layer 161, sz_* prefix): 14 sz_* predicates. Extraction: sz_of (cell count via length/2 on Cells field). Stable sort: sz_sort_asc (N-Obj keysort ascending; equal sizes retain input order), sz_sort_desc (negated-key trick: Neg is -N then keysort ascending = size descending). Selection: sz_smallest and sz_largest (findall sizes, min_list/max_list, then member+cut for first input-order tie-break). Rank-indexed: sz_nth_smallest and sz_nth_largest (sz_sort_asc/desc + nth1/3). Rank query: sz_rank_of (sz_sort_asc + nth1/3 to find 1-based position). Color assignment: sz_assign_colors (sz_sort_asc then private sz_zip_recolor_ with dual base clauses; truncates at shorter list). Filtering: sz_by_size (S=N), sz_above (S>N), sz_below (S<N) via findall with arithmetic test. Statistics: sz_unique_sizes (findall+sort/2 deduplication), sz_total_cells (findall+sum_list/2; empty=0). 60/60 PLUnit tests pass. |
 | `Acc_203` | Posop pack paper — Position-Based Sorting, Filtering, and Assignment for Object Collections (Layer 162, po_* prefix): 14 po_* predicates. Extraction: po_row_of (min R via findall+min_list on r(R,_) cells), po_col_of (min C via findall+min_list). Rank queries: po_row_rank, po_col_rank, po_reading_rank (private sort then nth1/3; stable keysort preserves input order for ties). Color assignment: po_assign_by_row, po_assign_by_col, po_assign_reading (private sort then private po_zip_recolor_ with dual base clauses; truncates at shorter list). Reading-order sort uses compound key (Row-Col) with keysort; compound terms compare left-argument-first in SWI-Prolog standard order giving row-then-col ordering without a custom comparator. Threshold filtering: po_above_row (row < R), po_from_row (row >= R), po_left_of (col < C), po_from_col (col >= C); all via findall with arithmetic test. Band filtering: po_in_row_band (row in [R1,R2] inclusive), po_in_col_band (col in [C1,C2] inclusive). Spatial complement of sizeop (Acc_202). 58/58 PLUnit tests pass. |
 | `Acc_201` | Weave pack paper — List Interlacing, Slicing, and Cycling (Layer 160, wv_* prefix): 14 wv_* predicates for general-purpose list operations on any Prolog list. Interleaving: wv_alternate (base wv_alternate([],Rest,Rest) then swap-roles recursion; when one list runs out, remainder appended), wv_split_even_odd (base [], then [H|Evens] with swapped Evens/Odds in recursive call), wv_zip (H1-H2 pairs; dual base clauses for empty left/right). Slicing: wv_stride (take head, drop next Step-1 via private wv_drop_, recurse), wv_chunk (length(Chunk,N)+append+cut; trailing remainder discarded), wv_pair_wise (two base clauses: [] and [_]; emit [A,B] recurse from [B|...]), wv_triple_wise (three base clauses), wv_take (dual base clauses: N=0+cut and []), wv_drop (dual base clauses: N=0+cut and []). Cycling and rotation: wv_rotate_left (K mod N then length(Front,K1)+append(Front,Back)+append(Back,Front)), wv_rotate_right (translate to left rotation K2=N-K1), wv_reflect (delegate to reverse/2), wv_repeat (append(List,Rest) recursion; N=0 base returns []), wv_cycle (private wv_cycle_ with Current+Source pair; restart from Source when Current=[]; N=0 base). 66/66 PLUnit tests pass. |
+| `Acc_204` | Objxf pack paper — Spatial and Color Transformations for obj(Color, Cells) Terms (Layer 163, ox_* prefix): 14 ox_* predicates. Bounding box: ox_bbox (min/max row/col via findall+min_list/max_list), ox_size (H=R1-R0+1, W=C1-C0+1). Translation: ox_translate (add DR,DC to all cells), ox_to_origin (translate by -R0,-C0), ox_recolor (replace Color field only). Rotations use bounding-box-local coords Lr=R-R0, Lc=C-C0: ox_rot90 (r->r(R0+Lc, C0+(H-1)-Lr)), ox_rot180 (r->r(R0+R1-R, C0+C1-C)), ox_rot270 (r->r(R0+(W-1)-Lc, C0+Lr)). Reflections: ox_reflect_h (rows mirrored), ox_reflect_v (cols mirrored). Set algebra: ox_merge (append+sort union), ox_diff (\\+ member), ox_intersect (member). Scale-up: ox_scale_up (each cell -> Factor x Factor block via between/3). 60/60 PLUnit tests pass. |
+| `Acc_205` | Shrink pack paper — Grid Downscaling and Block Decomposition (Layer 164, dn_* prefix): 14 dn_* predicates. Inverse of ox_scale_up. Block structure: dn_block_dims (BI=H//N, BJ=W//N), dn_block_cells (r(R,C) pairs for block I,J via between/3; no grid needed). Block color: dn_block_color (sort to [Color] for uniqueness; fails if mixed), dn_block_majority (dn_count_/3 helper + msort + last/2; never fails). Blocky test: dn_is_blocky (forall over all I-J pairs). Shrinking: dn_shrink (majority vote per block), dn_shrink_strict (unique color per block; fails if any block mixed). Scale search: dn_find_scale (between 2..H with divisibility check + dn_is_blocky; cut on first match). Object downscaling: dn_obj_shrink (R//N, C//N integer division; sort removes duplicates), dn_scale_factor (between 2..30; normalize both to origin via dn_norm_cells_; compare; cut). Classification: dn_uniform_blocks, dn_mixed_blocks. Extraction: dn_block_grid (NxN sub-grid), dn_block_val (flat value list row-major). Prefix dn_* chosen to avoid collision with seek pack sk_*. 52/52 PLUnit tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-148 announcements in LinkedIn format — one per accomplishment.
+153 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

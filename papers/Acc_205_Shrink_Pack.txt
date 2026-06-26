@@ -1,0 +1,217 @@
+Accomplishment 205: Grid Downscaling and Block Decomposition (Shrink Pack, dn_*, Layer 164)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a shrink pack (14 dn_* predicates, Layer 164) for grid downscaling
+and NxN block decomposition. It is the inverse of the objxf pack's ox_scale_up
+predicate: where ox_scale_up expands each cell to an NxN block, the shrink pack
+collapses each NxN block back to a single cell.
+
+The pack introduces the concept of "N-blocky" grids - grids where every NxN tile
+is uniformly colored - and provides predicates for testing this property, reading
+block colors, shrinking blocky grids, finding the scale factor automatically,
+downscaling obj terms, and classifying or extracting individual blocks.
+
+52 of 52 PLUnit tests pass.
+
+This work package is PrologAI WP 185, merged as PR 270 on 2026-06-26.
+
+1. Motivation
+
+Visual reasoning tasks frequently involve scale relationships. A common pattern:
+
+- A small template object is shown.
+- A larger output must be produced by scaling the template up by factor N.
+- Or, conversely, a large "zoomed-in" pattern is shown and the compact version
+  must be recovered.
+
+Before the shrink pack, PrologAI had ox_scale_up/3 (in objxf) for the expansion
+direction, but no inverse. To detect that a 4x4 grid is a 2x scaled version of a
+2x2 pattern required: manual block extraction, per-block uniformity checking, and
+ad-hoc shrinkage logic scattered across the solver.
+
+The shrink pack centralizes all of this. A solver can now write:
+
+    dn_find_scale(LargeGrid, N),
+    dn_shrink_strict(LargeGrid, N, SmallGrid).
+
+in two lines.
+
+2. Core Concepts
+
+2.1 Blocks and N-Blocky Grids
+
+Given a block factor N, block (I,J) in a grid covers:
+  rows [I*N .. I*N+N-1], cols [J*N .. J*N+N-1]
+
+A grid is "N-blocky" if every complete NxN block contains exactly one distinct
+color. This is the exact structure produced by ox_scale_up: each original cell
+becomes an NxN region of uniform color.
+
+Example: the 4x4 grid below is 2-blocky with blocks 1, 2, 3, 4:
+
+    [[1,1,2,2],
+     [1,1,2,2],
+     [3,3,4,4],
+     [3,3,4,4]]
+
+Shrinking by N=2 recovers [[1,2],[3,4]].
+
+2.2 Block Color vs. Majority
+
+Two predicates read block values:
+
+dn_block_color: the "strict" reader. Extracts all N*N cell values, sorts them,
+and succeeds only if the sorted list is [Color] (exactly one unique value). Fails
+if the block has two or more distinct colors. Used as a precondition check.
+
+dn_block_majority: the "tolerant" reader. Counts occurrences of each distinct
+color and returns the most frequent one. Uses msort + last on Count-V pairs to
+get the maximum. Never fails. Used for noisy shrinkage.
+
+3. Predicate Descriptions
+
+3.1 Block Structure
+
+dn_block_dims(+Grid, +N, -BI, -BJ): BI = H // N rows of blocks, BJ = W // N
+cols of blocks (integer division). Used to iterate over all block indices.
+
+dn_block_cells(+N, +I, +J, -Cells): r(R,C) pairs for block (I,J). Computed
+purely from N, I, J without reading the grid. R in [I*N .. I*N+N-1], C in
+[J*N .. J*N+N-1], generated with between/3.
+
+3.2 Block Color
+
+dn_block_color(+Grid, +N, +I, +J, -Color): uses dn_block_cells to get the
+coordinate list, findall to read all grid values, then sort(Vals, [Color]) to
+enforce uniqueness.
+
+dn_block_majority(+Grid, +N, +I, +J, -Color): reads values, counts each via
+dn_count_/3 (private helper), builds Count-V pairs, msort gives ascending order,
+last/2 picks the highest count. Ties broken by standard order (larger value).
+
+3.3 Blocky Testing and Shrinking
+
+dn_is_blocky(+Grid, +N): uses forall over all (I,J) indices to require that
+dn_block_color succeeds everywhere. Fails fast on the first mixed block.
+
+dn_shrink(+Grid, +N, -Small): builds Small as a nested findall. Outer findall
+iterates block rows I; inner findall iterates block cols J and calls
+dn_block_majority. Always produces a result.
+
+dn_shrink_strict(+Grid, +N, -Small): calls dn_is_blocky first (fails immediately
+if any block is mixed), then builds Small using dn_block_color. Use when
+requiring a clean inverse of ox_scale_up.
+
+3.4 Scale Discovery
+
+dn_find_scale(+Grid, -N): tries N from 2 to H (grid height). For each N, checks
+H mod N =:= 0, W mod N =:= 0, then calls dn_is_blocky. Cuts on the first
+matching N. Fails if no valid N exists.
+
+3.5 Object Downscaling
+
+dn_obj_shrink(+Obj, +N, -Small): maps each cell r(R,C) to r(R//N, C//N) via
+integer division. Multiple cells that fall in the same block map to the same
+result cell; sort/2 removes duplicates. Factor N must be a positive integer.
+
+dn_scale_factor(+Obj1, +Obj2, -N): searches N from 2 to 30. For each N, shrinks
+Obj2 by N, normalizes both results to origin (via private dn_norm_cells_), and
+checks if the normalized cell sets are identical. Cuts on the first match.
+
+Normalization uses min_list to find the minimum row and column, then shifts all
+cells so that the top-left corner is at r(0,0). This makes the comparison
+color-independent and position-independent.
+
+3.6 Block Classification and Extraction
+
+dn_uniform_blocks(+Grid, +N, -Pairs): I-J pairs for all blocks where
+dn_block_color succeeds.
+
+dn_mixed_blocks(+Grid, +N, -Pairs): I-J pairs for all blocks where
+dn_block_color fails.
+
+dn_block_grid(+Grid, +N, +I, +J, -Patch): extracts block (I,J) as an NxN
+sub-grid (list of N lists, each of N values).
+
+dn_block_val(+Grid, +N, +I, +J, -Vals): flat list of all N*N values in block
+(I,J) in row-major order.
+
+4. Design Decisions
+
+4.1 Prefix Choice
+
+The prefix dn_* (downscale) was chosen over sk_* because the seek pack (WP 97,
+Layer 76) already owns the sk_* prefix with predicates sk_positions, sk_rows_with,
+sk_find_d4, and others. Using dn_* avoids namespace ambiguity when both packs are
+imported in the same scope.
+
+4.2 dn_block_cells Omits the Grid Parameter
+
+dn_block_cells/4 takes only (N, I, J, Cells) - no grid. The cells in a block are
+purely a function of the block indices and factor N; no grid values are read.
+This makes dn_block_cells composable with other predicates and avoids a spurious
+grid dependency.
+
+4.3 Majority Tie-Breaking
+
+When two values have equal occurrence counts, dn_block_majority picks the one
+that is larger in standard term order (because msort on Count-V pairs places it
+last). This is deterministic but arbitrary; the semantic content is that for
+clean blocky grids, all blocks are uniform so the tie case never arises.
+
+4.4 Relationship to as_downscale
+
+The assemble pack (WP 112, as_*) provides as_downscale(Grid, K, Small) which
+reduces each KxK block by majority vote. The shrink pack extends this with:
+strict mode (fail if mixed), block uniformity testing, scale discovery,
+block-level inspection, and obj-level downscaling. The two are complementary.
+
+5. Examples
+
+Example 1: recovering the scale factor and compact form of a scaled pattern.
+
+    LargeGrid = [[r,r,g,g],[r,r,g,g],[b,b,w,w],[b,b,w,w]],
+    dn_find_scale(LargeGrid, N),          % N = 2
+    dn_shrink_strict(LargeGrid, N, S),    % S = [[r,g],[b,w]]
+
+Example 2: testing whether a candidate grid is a valid scale-up.
+
+    dn_is_blocky([[a,a,b,b],[a,a,b,b]], 2).  % true
+    dn_is_blocky([[a,b,b,b],[a,a,b,b]], 2).  % false (block (0,0) has a,b)
+
+Example 3: downscaling an obj term.
+
+    dn_obj_shrink(obj(red,[r(0,0),r(0,1),r(1,0),r(1,1)]), 2, R).
+    % R = obj(red,[r(0,0)]).  All 4 cells map to block r(0,0).
+
+Example 4: finding the scale factor connecting two objects.
+
+    Obj1 = obj(a,[r(0,0),r(0,1)]),
+    Obj2 = obj(a,[r(0,0),r(0,1),r(0,2),r(0,3),r(1,0),r(1,1),r(1,2),r(1,3)]),
+    dn_scale_factor(Obj1, Obj2, N).  % N = 2
+
+6. SPARC Documentation
+
+Specification v150 adds Part 175 (shrink pack specification).
+
+Pseudocode v143 adds Part 175 (shrink pack pseudocode).
+
+Architecture v144 adds ARCH-151 (shrink pack layer placement).
+
+Refinement v198 adds acceptance criteria AC-DN-001 through AC-DN-052.
+
+Completion v201 adds the WP-185 completion record.
+
+7. Conclusion
+
+The shrink pack completes the scale axis of PrologAI's visual reasoning suite.
+With ox_scale_up for expansion and the shrink pack for contraction, PrologAI can
+now detect scale relationships, verify scaled patterns, and recover compact forms
+from zoomed-in representations - all within the symbolic layer, without grid
+intermediaries.
+
+This is WP 185, Mentova's 205th accomplishment.
