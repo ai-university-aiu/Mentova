@@ -1,0 +1,196 @@
+Accomplishment 182: Grid Collection Operations for Multi-Grid Analysis
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+PrologAI gains its 162nd work package: the gridops pack (go_*, Layer 141).
+
+The gridops pack provides 14 predicates for reasoning across a collection of
+multiple 2D integer grids simultaneously: finding positions that always, never,
+or sometimes hold a given value; counting per-cell value occurrences; computing
+the modal value per cell; detecting stable and unstable cells; testing grid
+equality; and performing elementwise arithmetic (add, subtract, max, min,
+overlay, intersect).
+
+Introduction
+
+Many reasoning tasks require comparing multiple grids at once rather than
+analyzing a single grid in isolation. In ARC-AGI, for example, each task
+presents several training examples, each consisting of an input grid and
+an output grid. Discovering the rule requires finding what is common across
+all examples and what changes between them.
+
+The gridops pack addresses this need by treating a list of grids as a first-
+class data structure and providing predicates that operate across the entire
+collection simultaneously.
+
+The difference between the gridops pack and the diff pack (WP 160) is one
+of perspective. The diff pack compares input-output pairs: given a training
+pair (In, Out), what changed? The gridops pack compares a collection of
+similar grids: given Grids, where do they all agree? Where do they differ?
+
+This distinction is important. When a solver wants to know "what is constant
+across all the input grids?" it needs gridops. When it wants to know "what
+changed between this specific input and this specific output?" it needs diff.
+
+Predicates
+
+The 14 public predicates are:
+
+go_always(+Grids, +V, -Cells)
+
+Cells is the sorted list of R-C positions where EVERY grid in Grids contains
+value V. Implemented via forall(member(Grid, Grids), ...).
+
+go_never(+Grids, +V, -Cells)
+
+Cells is the sorted list of R-C positions where NO grid has value V.
+Implemented via \+(exists Grid having V).
+
+go_sometimes(+Grids, +V, -Cells)
+
+Cells is the sorted list of R-C positions where SOME (>=1) grid has value V
+but NOT all grids do. Deduplicated via sort because multiple source grids can
+produce the same R-C position.
+
+go_count_v(+Grids, +V, -CountGrid)
+
+CountGrid is a grid of integers; each cell (R,C) holds the count of how many
+grids in Grids have value V at (R,C). Implemented via nested findall + length.
+
+go_modal(+Grids, -ModalGrid)
+
+ModalGrid is a grid where each cell (R,C) holds the value appearing most often
+across all grids at that position. Ties broken by smallest value.
+
+go_stable(+Grids, -Triples)
+
+Triples is the list of R-C-V terms for positions where ALL grids in Grids
+agree on value V. V comes from the first grid; verified against the rest
+using forall.
+
+go_unstable(+Grids, -Cells)
+
+Cells is the sorted list of R-C positions where the grids do not all agree
+on the same value.
+
+go_eq(+G1, +G2)
+
+Succeeds if G1 and G2 are cell-for-cell identical. Implemented as
+structural unification G1 = G2.
+
+go_add(+G1, +G2, -G)
+
+G[R][C] = G1[R][C] + G2[R][C]. Elementwise integer addition via maplist/4.
+
+go_sub(+G1, +G2, -G)
+
+G[R][C] = G1[R][C] - G2[R][C]. Elementwise integer subtraction.
+
+go_emax(+G1, +G2, -G)
+
+G[R][C] = max(G1[R][C], G2[R][C]). Elementwise integer maximum.
+
+go_emin(+G1, +G2, -G)
+
+G[R][C] = min(G1[R][C], G2[R][C]). Elementwise integer minimum.
+
+go_overlay(+Grids, +Bg, -G)
+
+G[R][C] = the first non-Bg value at (R,C) scanning Grids in order; Bg if
+all grids have Bg at that position. Implemented via if-then-else with
+member backtracking.
+
+go_intersect(+Grids, +Bg, -G)
+
+G[R][C] = V if ALL grids have the same non-Bg value V at (R,C); else Bg.
+Implemented via if-then-else checking first grid then forall for the rest.
+
+Example Results
+
+For Gs = [[[1,2],[3,0]], [[1,5],[3,0]]] (two 2x2 grids):
+
+go_always(Gs, 1, C) gives C = [0-0]: only position (0,0) has value 1 in
+both grids.
+
+go_never(Gs, 0, C) gives C = [0-0,0-1,1-0]: these three positions have no
+zero in either grid.
+
+go_sometimes(Gs, 2, C) gives C = [0-1]: position (0,1) has value 2 in the
+first grid but value 5 in the second.
+
+go_count_v(Gs, 0, CG) gives CG = [[0,0],[0,2]]: position (1,1) has value 0
+in both grids, giving count 2.
+
+go_modal(Gs, MG) gives MG = [[1,2],[3,0]]: at (0,1), values are 2 and 5,
+a tie at count 1 each; 2 is smaller so 2 wins.
+
+go_stable(Gs, T) gives T = [0-0-1, 1-0-3, 1-1-0]: three positions where
+both grids have the same value.
+
+go_unstable(Gs, C) gives C = [0-1]: only (0,1) differs (2 vs 5).
+
+go_overlay([[[1,0],[0,2]], [[0,3],[4,0]]], 0, G) with Bg=0 gives
+G = [[1,3],[4,2]]: at (0,0) first grid has 1 (non-0), so 1; at (0,1) first
+grid has 0, second has 3, so 3; etc.
+
+go_intersect([[[1,0],[0,2]], [[1,3],[4,0]]], 0, G) with Bg=0 gives
+G = [[1,0],[0,0]]: only (0,0) has the same non-0 value (1) in both grids.
+
+Implementation
+
+go_always uses forall/2 (SWI-Prolog built-in). For each candidate position,
+forall iterates all grids and checks that each has value V there.
+
+go_sometimes uses a combination of "exists Grid having V" and
+"\+ forall(G2, G2[R][C]=V)". The findall can produce duplicate R-C pairs
+(one per grid that has V at that position), so sort removes duplicates.
+
+go_modal uses a private helper go_mode_/2. The helper: sorts the value list
+to get unique values, counts each with include/3, builds N-V pairs, msorts
+them ascending (so same-count values are sorted by V ascending), and returns
+the last entry's value (highest count; smallest V on tie).
+
+go_add, go_sub, go_emax, go_emin each use maplist/4 with named private
+row-level and cell-level helper predicates.
+
+go_overlay and go_intersect both use SWI-Prolog if-then-else (Cond->T;F)
+inside the innermost findall for deterministic cell resolution.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates across 8 test grid
+configurations. All 42 tests pass.
+
+SPARC Documentation
+
+Specification v127: Part 152, requirements GO-GO-001 through GO-GO-014.
+
+Pseudocode v120: Part 152, pseudocode for all 14 predicates.
+
+Architecture v121: ARCH-128, gridops pack structure and design notes.
+
+Refinement v175: acceptance criteria AC-GO-001 through AC-GO-042.
+
+Completion v178: WP 162 release record.
+
+Tutorial Chapter 123 added to all tutorial files.
+
+Conclusion
+
+The gridops pack completes the cross-grid analysis layer of PrologAI.
+
+Together with the diff pack (pairwise input-output comparison), the cooccur
+pack (within-grid adjacency analysis), the rowsig pack (row and column
+signature analysis), and the varstat pack (statistical analysis), PrologAI
+now has comprehensive coverage of grid analysis from the individual cell
+through the row/column through the single-grid level through the multi-grid
+collection level.
+
+PrologAI now comprises 162 work packages.
+
+Mentova has achieved 182 accomplishments.
