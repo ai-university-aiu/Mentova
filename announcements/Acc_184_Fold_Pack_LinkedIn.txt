@@ -1,0 +1,48 @@
+Accomplishment 184: Grid Folding, Unfolding, and Fold-Symmetry Detection
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI gains its 164th work package: the fold pack (fd_*, Layer 143).
+
+14 predicates for paper-origami reasoning on 2D grids.
+
+fd_split_h splits a grid into top and bottom halves at a horizontal crease row.
+fd_split_v splits into left and right halves at a vertical crease column.
+
+fd_overlay combines two same-size grids: where grid A has a non-background cell,
+A wins; where A has background, B shows through.
+
+fd_fold_h folds the bottom half upward. Row I of the output overlays Top[I]
+with Bottom[R-I]. Rows that have no bottom counterpart pass through unchanged.
+
+fd_fold_v folds the right half leftward with the same mirror logic per column.
+
+fd_unfold_h creates a symmetric full grid from a half by stacking it above its
+upside-down copy. fd_unfold_v creates a symmetric grid by joining each row with
+its own left-right reverse.
+
+fd_sym_h tests whether a grid is symmetric under a fold crease after row R,
+using the between-rows mirror formula: row I maps to row 2R+1-I. This formula
+is consistent with fd_fold_h and avoids vacuous symmetry at R=0.
+
+fd_sym_v is the column analogue.
+
+fd_find_fold_h and fd_find_fold_v search for the first valid crease.
+
+The roundtrip holds: unfold a half, then find-fold, and you recover the
+original crease index.
+
+fd_mark_row finds the first row where every cell equals a marker value.
+fd_mark_col finds the first column where every cell equals a marker value.
+
+fd_fold_both applies a horizontal fold then a vertical fold in one call,
+reducing a grid to its top-left quadrant.
+
+42 PLUnit tests pass.
+
+PrologAI: 164 work packages.
+
+Mentova: 184 accomplishments.
+
+AIU (AI University): ai.university.aiu@gmail.com
