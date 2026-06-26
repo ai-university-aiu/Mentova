@@ -1,0 +1,148 @@
+Accomplishment 175: The Per-Cell Neighborhood Value Aggregation Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a per-cell neighborhood value aggregation pack as Work Package
+155 (Layer 134).
+
+The pack provides 14 predicates, all carrying the na_* prefix, for computing
+per-cell aggregate statistics over in-bounds 4-connected and 8-connected
+neighborhoods in 2D grids.
+
+Aggregates include sum, maximum, minimum, integer floor mean, max-minus-min
+range, count of distinct values, and count of differing neighbors.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently require understanding a cell in terms of its
+surrounding context: what values are nearby, how spread out they are, how much
+they differ from the cell itself.
+
+The automaton pack (at_*, Layer 120) provides count-based neighbor operations
+such as counting how many neighbors hold a specific value.  But value-based
+aggregate operations are absent from the platform.
+
+The naggr pack fills this gap with a focused vocabulary for neighborhood value
+aggregation, giving the reasoning engine a richer signal about local grid
+structure.
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+na_sum4(+Grid, -SumGrid) returns a same-size grid where each cell is the sum
+of the values of in-bounds 4-connected neighbors.
+
+na_sum8(+Grid, -SumGrid) returns per-cell sums of 8-connected neighbors.
+
+na_max4(+Grid, -MaxGrid) returns per-cell maximum of in-bounds 4-neighbors.
+Returns 0 when no in-bounds neighbors exist.
+
+na_max8(+Grid, -MaxGrid) returns per-cell maximum of 8-neighbors.
+
+na_min4(+Grid, -MinGrid) returns per-cell minimum of in-bounds 4-neighbors.
+
+na_min8(+Grid, -MinGrid) returns per-cell minimum of 8-neighbors.
+
+na_mean4(+Grid, -MeanGrid) returns per-cell integer floor mean of 4-neighbors.
+Returns 0 for cells with no in-bounds neighbors.
+
+na_mean8(+Grid, -MeanGrid) returns per-cell floor mean of 8-neighbors.
+
+na_range4(+Grid, -RangeGrid) returns per-cell max minus min of 4-neighbors.
+Returns 0 when fewer than 2 in-bounds neighbors exist.
+
+na_range8(+Grid, -RangeGrid) returns per-cell range of 8-neighbors.
+
+na_spread4(+Grid, -SpreadGrid) returns per-cell count of distinct values among
+4-neighbors.  Uses sort/2 to deduplicate before measuring.
+
+na_spread8(+Grid, -SpreadGrid) returns per-cell distinct-value count of
+8-neighbors.
+
+na_diff4(+Grid, -DiffGrid) returns per-cell count of 4-neighbors whose value
+differs from the cell itself.
+
+na_diff8(+Grid, -DiffGrid) returns per-cell count of 8-neighbors differing
+from the cell.
+
+
+3. Implementation
+
+All 14 predicates use the same outer structure: nested findall where the outer
+findall collects one row list per row index R and the inner findall collects
+one aggregate value per column index C within that row.
+
+Two private helpers, na_nbr4_vals_ and na_nbr8_vals_, collect the values of
+all in-bounds neighbors by enumerating direction offsets via member and
+filtering with explicit bounds guards NR>=0, NR<H, NC>=0, NC<W.
+
+For the 4-direction case, offsets are [-1-0, 1-0, 0-(-1), 0-1].
+For the 8-direction case, all eight diagonal and orthogonal offsets are used.
+
+sum_list([],0) from library(lists) handles the empty-neighborhood case for
+na_sum4 and na_sum8.
+
+For na_max4, na_max8, na_min4, na_min8, na_mean4, na_mean8, and na_range4,
+na_range8, an if-then-else guard on Vals=[] (or N<2 for range) returns 0 as a
+sentinel for cells with no qualifying neighbors.
+
+na_spread4 and na_spread8 call sort/2 (a SWI-Prolog built-in) to deduplicate
+neighbor values, then measure the length of the resulting unique set.
+
+na_diff4 and na_diff8 retrieve the cell value via nth0/3, count same-valued
+neighbors via a nested findall with =:= comparison, and subtract from the
+total neighbor count.
+
+
+4. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Test grids include a 3x3 sequential grid (values 1 through 9), a 3x3 uniform
+grid of all 1s, a 2x2 grid, a 1x1 singleton grid to test empty-neighborhood
+sentinels, and a 3x3 checkerboard grid alternating values 1 and 2.
+
+All 42 tests pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+Specification v120, Part 145 defines all 14 predicates.
+
+Pseudocode v113, Part 145 gives the algorithmic descriptions.
+
+Architecture v114, ARCH-121 records the module placement and design patterns.
+
+Refinement v168 records acceptance criteria AC-NA-001 through AC-NA-042.
+
+Completion v171 records the release evidence for WP 155.
+
+Tutorial Chapter 116 demonstrates all 14 predicates with examples.
+
+
+6. Position in the Cognitive Architecture
+
+The naggr pack is Layer 134 in the PrologAI cognitive stack.
+
+It sits immediately above the extrema pack (Layer 133, ex_*) and below
+subsequent grid intelligence layers.
+
+The naggr pack extends neighborhood reasoning in a complementary direction to
+the automaton pack: at_* asks how many neighbors share a value; na_* asks what
+aggregate value the neighborhood expresses.
+
+PrologAI now carries 155 work packages in the packs/ directory.
+
+
+END

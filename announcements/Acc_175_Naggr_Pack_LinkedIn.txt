@@ -1,0 +1,41 @@
+Mentova Accomplishment 175: The Per-Cell Neighborhood Value Aggregation Pack
+
+PrologAI gains its 155th work package today.
+
+The naggr pack (Layer 134, na_* prefix) provides 14 predicates for computing
+per-cell aggregate statistics over in-bounds 4-connected and 8-connected
+neighborhoods in 2D grids.
+
+Where the automaton pack (at_*, Layer 120) counts how many neighbors have a
+specific value, the naggr pack measures what those neighbor values actually are.
+The two packs are complementary: one asks "how many?" and the other asks "how
+much?"
+
+The 14 predicates cover:
+
+Sum: total of 4-neighbor values (na_sum4) and 8-neighbor values (na_sum8).
+
+Maximum and minimum: highest and lowest in-bounds neighbor values for both
+connectivity levels (na_max4, na_max8, na_min4, na_min8).
+
+Mean: integer floor mean of neighbor values (na_mean4, na_mean8).
+
+Range: max minus min of neighbor values (na_range4, na_range8).
+
+Spread: count of distinct values among neighbors, using sort/2 to deduplicate
+(na_spread4, na_spread8).
+
+Difference: count of neighbors whose value differs from the cell itself
+(na_diff4, na_diff8).
+
+All empty neighborhoods return 0.  All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v120, Pseudocode v113,
+Architecture v114, Refinement v168, Completion v171.
+
+Tutorial Chapter 116 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
