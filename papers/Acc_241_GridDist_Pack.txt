@@ -1,0 +1,128 @@
+Accomplishment 241: Grid Distance Transform (griddist Pack, gd_*, Layer 200)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains the griddist pack (Work Package 221, Layer 200): 14 gd_*
+predicates for computing spatial distances between cells in raw grid format
+and for operations derived from those distances. The pack provides Manhattan
+and Chebyshev point-to-point distances, per-cell distance maps to the nearest
+Color cell, BFS flood distances with impassable walls, Voronoi color
+assignment, zone marking, ring extraction, N-step morphological dilation and
+erosion, distance-based recoloring, equidistance detection, and a
+farthest-cell lookup.
+
+
+Background
+
+Spatial reasoning over grids requires knowing not just what a cell's immediate
+neighbors look like (handled by gridnbr at Layer 199) but how far every cell
+is from objects of interest. The griddist pack answers those global proximity
+questions: which cell is nearest to a given color, how do distances partition
+the grid into regions, and how do Color regions grow or shrink when expanded
+or contracted by N steps? These capabilities are foundational for ARC-AGI-2
+tasks that involve proximity-based coloring, Voronoi-style partitioning, or
+multi-step morphological transformations.
+
+
+The griddist Pack
+
+Pack prefix: gd_*
+Layer: 200
+Work Package: 221
+
+
+Distance Primitives
+
+gd_manhattan/5 and gd_chebyshev/5 compute the L1 (city-block) and L-infinity
+(chessboard) distances between two grid positions. These serve as building
+blocks for the higher-level distance operations.
+
+
+Distance Maps
+
+gd_dist_map/3 produces a raw grid (same dimensions as input) where each cell
+holds the minimum Manhattan distance to the nearest Cell whose value equals
+Color. If Color is absent from the grid, all cells receive the sentinel value
+9999. gd_dist_map8/3 is the Chebyshev-distance variant.
+
+The implementation uses a direct O(H x W x |Seeds|) approach: for each cell,
+compute the distance to every Color seed and take the minimum. This is
+equivalent to multi-source BFS for Manhattan distance on small grids and
+avoids the complexity of a full BFS queue for the common case.
+
+
+Nearest Coordinate and Zone Marking
+
+gd_nearest_coord/5 returns the [R2,C2] coordinates of the Color cell nearest
+to a given position. gd_zone/4 marks every non-Color cell within Manhattan
+distance N of any Color cell with the atom zone, leaving Color cells and
+far cells unchanged.
+
+
+Ring and Voronoi
+
+gd_ring/5 returns all in-bounds cell positions at exactly Manhattan distance D
+from a given center, clipping to grid boundaries. gd_voronoi/2 replaces every
+background cell with the color of its nearest non-background cell, using the
+standard background-detection pattern (most frequent color). Ties in distance
+and color frequency are broken by standard Prolog term order.
+
+
+BFS Flood with Obstacles
+
+gd_bfs_flood/5 computes true BFS distances from a start cell, treating cells
+with value Wall as impassable. Unlike the distance map predicates (which use
+Manhattan distance directly), BFS correctly accounts for detours around
+obstacles. Unreachable cells and Wall cells receive 9999. The predicate fails
+if the start cell itself is a Wall.
+
+
+Distance-Based Recoloring and Morphological N-Step Ops
+
+gd_recolor_by_dist/4 recolors each Color cell based on its Manhattan distance
+from the nearest background cell. A user-supplied Palette list maps distance
+1 (outermost border) to Palette[1], distance 2 to Palette[2], and so on.
+Color cells beyond the palette length keep their original Color value.
+
+gd_expand_n/4 uses the distance map to implement N-step morphological
+dilation: every cell within Manhattan distance N of any Color cell is set to
+Color. gd_shrink_n/4 uses the background distance map to implement N-step
+erosion: every Color cell within Manhattan distance N of the nearest
+background cell is replaced by background. Both are equivalent to applying
+the single-step expand or shrink from gridnbr N times, but computed in one
+pass via the distance map.
+
+
+Equidistance Detection and Farthest Cell
+
+gd_equidistant/4 computes distance maps for two colors and marks each cell
+where the two distances are equal with the atom equidist. This identifies the
+Voronoi boundary between two color regions. gd_max_dist/4 returns the row and
+column of the cell farthest from any Color cell, resolving ties by row-major
+order. It fails gracefully when no Color cell exists.
+
+
+Test Coverage
+
+All 53 acceptance criteria (AC-GDT-001 through AC-GDT-053) pass. Tests cover
+all 14 predicates including edge cases: absent colors (9999 sentinel), 1x1
+grids, wall-blocked BFS paths, empty-palette recoloring, N=0 no-op expand and
+shrink, equidistance with identical colors (all cells become equidist), and
+farthest-cell failure when Color is absent.
+
+SPARC documentation: Spec v187, Pseudo v179, Arch v181, Refinement v234,
+Completion v237. Tutorial: Ch182_GridDist.txt. Pack_Reference updated.
+
+
+Conclusion
+
+The griddist pack adds global spatial distance reasoning to PrologAI's raw-
+grid toolkit. With gridquery (query), gridparse (scene conversion), gridtask
+(rule inference), gridnbr (neighbor analysis), and now griddist (distance
+transform), the platform has a comprehensive layered stack for low-level grid
+perception from immediate adjacency up to grid-wide proximity fields.
+This is Mentova's 241st accomplishment and PrologAI's 221st work package.
