@@ -1,0 +1,45 @@
+Mentova Accomplishment 156: Grid Cell Enumeration and Manipulation - The Scan Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now enumerate, read, write, map, and filter individual grid cells
+across seven traversal orders.
+
+Work Package 136 - the scan pack - adds 14 sn_* predicates. 42/42 tests.
+
+Basic enumeration:
+
+sn_row_major(Grid, Cells)  % R-C-V triples, row then column
+sn_col_major(Grid, Cells)  % column then row
+sn_cells_of(Grid, V, Cells) % all positions of a specific value
+sn_index_of(Grid, V, R, C) % first occurrence, row-major, cut
+
+Cell operations:
+
+sn_set_cell(Grid, R, C, V, New)     % one cell replaced
+sn_update_cells(Grid, Updates, New) % batch R-C-V list applied
+sn_map_cells(Grid, Goal, New)       % Goal(R, C, OldV, NewV) over all cells
+sn_filter_cells(Grid, Pred, Cells)  % keep cells where Pred(R, C, V) holds
+sn_grid_from_cells(H, W, Cells, Bg, Grid) % build grid from sparse cell list
+
+Traversal orders:
+
+sn_zigzag: even rows left-to-right, odd rows right-to-left
+sn_spiral_in: clockwise spiral from outer ring inward
+sn_border_traversal: outer border clockwise only
+sn_diag_traversal_ne: NE diagonals where R+C is constant
+sn_diag_traversal_se: SE diagonals where C-R is constant
+
+The key implementation insight for sn_spiral_in: a single clause with nested
+if-then-else handles the termination condition (T > B or L > R), so no
+choicepoints are created. reverse/2 handles the right-to-left bottom row and
+bottom-to-top left column. sn_diag_traversal_se uses between/3 with a negative
+lower bound - SWI-Prolog supports negative integers in between/3 natively.
+
+PrologAI: 136 work packages. Mentova: 156 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #SWIProlog #AGI
