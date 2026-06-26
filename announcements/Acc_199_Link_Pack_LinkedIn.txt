@@ -1,0 +1,42 @@
+Accomplishment 199: Object-to-Object Correspondence Linking
+
+PrologAI now has 179 work packages.
+
+The link pack (lk_*, Layer 158) builds and manipulates correspondence links
+between two lists of obj(Color, Cells) terms. A link is an O1-O2 pair.
+
+Building links by:
+• lk_by_position/3: zip two lists element-wise (Nth obj paired with Nth obj)
+• lk_by_nearest/3: each O1 linked to the nearest O2 by centroid distance
+• lk_by_color/3: all pairs sharing the same color atom
+• lk_by_size/3: all pairs with the same cell count
+• lk_by_form/3: all pairs with the same origin-normalized shape
+
+Extraction and manipulation:
+• lk_source/2: O1 from each link, in link order
+• lk_target/2: O2 from each link, in link order
+• lk_invert/2: swap O1 and O2 in every link
+• lk_count/2: number of links
+
+Applying correspondence:
+• lk_apply_color/2: recolor O1 with O2's color; keep O1's cells
+• lk_apply_cells/2: replace O1's cells with O2's cells; keep O1's color
+
+Filtering:
+• lk_filter_same_color/2: keep links where O1 and O2 share a color
+• lk_filter_diff_color/2: keep links where O1 and O2 differ in color
+
+Unlinked objects:
+• lk_unlinked/3: objects from a list not appearing as O1 in any link
+
+lk_apply_color transfers color from correspondence target to source.
+lk_apply_cells transfers shape from target to source.
+These cover the two most common ways a correspondence determines the output.
+
+Where delta answers "what changed," group answers "how is one scene organized,"
+the link pack answers "which objects in scene A correspond to scene B, and how?"
+
+53/53 PLUnit tests pass. PR 264 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
