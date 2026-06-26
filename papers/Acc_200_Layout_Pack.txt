@@ -1,0 +1,160 @@
+Accomplishment 200: Multi-Object Layout Analysis (Layout Pack, lt_*, Layer 159)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a layout pack (14 lt_* predicates, Layer 159) that analyzes
+the collective spatial arrangement of a list of obj(Color, Cells) terms.
+
+It provides a global bounding box (over all cells of all objects combined),
+row and column range and count, line detection (all-same-row, all-same-col),
+centroid aggregation, grid arrangement detection, diagonal arrangement
+detection for both diagonal directions, and uniform spacing checks.
+
+56 of 56 PLUnit tests pass.
+
+This work package is PrologAI WP 180, merged as PR 265 on 2026-06-26.
+
+1. Motivation
+
+Individual object inspection predicates (scene pack, pair pack) answer
+questions about one object at a time.
+
+The group pack organizes objects into partitions by shared property.
+
+But no pack answered "what is the spatial structure of the whole collection?"
+- Do all objects lie in a single row or column?
+- Do they form a grid pattern?
+- Are they diagonally arranged?
+- How far apart are they?
+
+The layout pack fills this gap, providing predicates that take a list of
+objects and return facts about their collective arrangement.
+
+2. Global Bounding Box
+
+lt_global_bbox/5 computes the bounding box over ALL cells of all objects
+combined.
+
+This is different from per-object bounding boxes (scene pack's sc_obj_bbox):
+it gives the overall extent of the entire scene of objects.
+
+Implementation: collect all r(R,_) row values and r(_,C) col values from
+every cell of every object via nested findall over member, then min_list and
+max_list to find the four corners.
+
+lt_bbox_area/2 computes the area (R2-R1+1)*(C2-C1+1) of the global bounding
+box.
+
+3. Row and Column Range and Count
+
+lt_row_range/3 gives the minimum and maximum topmost row values across all
+objects.
+
+lt_col_range/3 gives the minimum and maximum leftmost column values.
+
+lt_row_count/2 gives the number of distinct topmost rows.
+
+lt_col_count/2 gives the number of distinct leftmost columns.
+
+These predicates describe how spread out the objects are in each dimension.
+
+4. Line Detection
+
+lt_all_same_row/1 succeeds iff all objects share the same topmost row.
+
+lt_all_same_col/1 succeeds iff all share the same leftmost column.
+
+Both use the same pattern: collect topmost rows (or leftmost cols), sort with
+sort/2, and check that exactly one distinct value remains (the list unifies
+with the singleton pattern [_]).
+
+5. Centroid Aggregation
+
+lt_centroid_of_all/3 computes the integer-truncated centroid of all object
+centroids.
+
+The private helper lt_centroid_/3 computes each individual centroid (same
+algorithm as the proximity pack's helper). Then lt_centroid_of_all averages
+the centroid rows and the centroid cols separately, using integer truncation.
+
+This gives the geometric center of the collection of objects.
+
+6. Grid Detection
+
+lt_is_grid/3 detects when objects' centroids form an R x C grid.
+
+The predicate computes all (centroid_R, centroid_C) pairs, finds the distinct
+centroid row values and distinct centroid col values, then verifies:
+1. Every combination (R, C) appears in the centroid pairs.
+2. |Objs| = Rows * Cols (no duplicate centroids).
+
+Implementation of the completeness check: \+ (member(R, CRows),
+member(C, CCols), \+ member(R-C, CentroidPairs)).
+
+7. Diagonal Detection
+
+lt_is_diagonal_dr/1 detects the downward-right diagonal: R - C is constant
+for all centroids.
+
+lt_is_diagonal_dl/1 detects the downward-left diagonal: R + C is constant.
+
+Both use findall to compute the relevant sum or difference for each centroid,
+then sort/2 to deduplicate and check for a singleton list.
+
+8. Uniform Spacing
+
+lt_gap_h/2 succeeds when objects have a uniform horizontal gap (equal column
+differences between consecutive objects sorted by centroid column).
+
+lt_gap_v/2 is the vertical analog.
+
+Implementation: sort centroid-O pairs with msort (stable), extract the
+position values, compute consecutive differences with the private lt_diffs_/2
+recursive predicate, verify all differences are equal and positive.
+
+The positive check (Gap > 0) ensures that objects at the same centroid
+position don't produce a spurious gap of zero.
+
+9. SPARC Documentation
+
+Specification v145 adds Part 170 (layout pack specification).
+
+Pseudocode v138 adds Part 170 (layout pack pseudocode).
+
+Architecture v139 adds ARCH-146 (layout pack layer placement).
+
+Refinement v193 adds acceptance criteria AC-LT-001 through AC-LT-056.
+
+Completion v196 adds the WP-180 completion record.
+
+10. Significance: Accomplishment 200
+
+This is Mentova's 200th accomplishment.
+
+The first 66 accomplishments established the six-part Demonstration Plan
+(Volumes 1 through 6 of the SPARC series) and verified core reasoning
+capabilities.
+
+Accomplishments 67 through 199 expanded PrologAI's pack ecosystem and solved
+the ARC-AGI-1 benchmark at 100% - a confirmed perfect score on all 400 tasks.
+
+Accomplishments 197 through 200 (group, proximity, link, layout) form a
+coherent foundation for object-scene reasoning: partition, measure, correspond,
+and analyze arrangement.
+
+Mentova reaches this milestone as a glass-box synthetic mind with 180 work
+packages, 200 verified accomplishments, and a complete symbolic reasoning
+ecosystem for multi-object spatial intelligence.
+
+11. Conclusion
+
+The layout pack gives PrologAI the ability to reason about the collective
+structure of a scene: whether objects form a line, a grid, a diagonal, or a
+uniformly-spaced sequence.
+
+This is a foundational spatial meta-reasoning capability - reasoning not just
+about individual objects but about the pattern formed by the collection as a
+whole.
