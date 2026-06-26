@@ -1,0 +1,30 @@
+Mentova Accomplishment 164: Grid-as-Table Operations
+
+PrologAI adds Work Package 144 - the table pack (Layer 123), a relational
+layer for treating 2D grids as tables of rows.
+
+14 predicates (tb_* prefix) covering:
+
+- Transpose: tb_transpose
+- Row operations: tb_sort_rows, tb_filter_rows, tb_unique_rows
+- Grouping and counting: tb_group_by, tb_count_by
+- Column manipulation: tb_select_cols, tb_drop_col, tb_add_col
+- Row manipulation: tb_insert_row, tb_delete_row, tb_swap_rows
+- Extremum queries: tb_col_max_row, tb_col_min_row
+
+42 of 42 PLUnit acceptance tests pass.
+
+When a grid encodes one row per object with color, position, and shape
+columns: tb_filter_rows finds objects of a given color, tb_sort_rows ranks
+by size, tb_group_by clusters by shape, tb_count_by reports how many
+objects exist per color.
+
+tb_select_cols with a reordered ColIdxs list achieves column permutation
+in one call - useful for normalizing object feature representations.
+
+PrologAI now carries 144 work packages and 164 Mentova accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+github.com/ai-university-aiu/PrologAI

@@ -1,0 +1,128 @@
+Mentova Accomplishment 164: Grid-as-Table Operations - The table Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 144: the table pack, a Layer 123 symbolic
+reasoning module providing 14 predicates for treating a 2D grid as a
+table of rows and applying tabular operations. Predicates cover transpose,
+row sorting, row filtering, grouping, counting, deduplication, column
+selection and manipulation (select, drop, add), row manipulation (insert,
+delete, swap), and extremum row queries (first row with max or min column
+value). All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Grids in visual reasoning tasks often carry structured tabular information:
+each row records the properties of one object, and columns represent
+attributes (color, position, size). Extracting rows by attribute value,
+counting how many objects have a given color, or sorting objects by size
+are natural tabular queries. The existing PrologAI library had grid-level
+geometric operations (fill, morph, crop, scan) and 1D slice analytics
+(cross pack, cx_*) but no module treating a grid explicitly as a table.
+
+The table pack fills that gap. It provides the core vocabulary of relational
+data operations adapted to grids: sort, filter, group, count, project
+(select columns), and structural manipulation (insert, delete, swap rows).
+
+
+2. Predicate Inventory (14 predicates, tb_* prefix)
+
+tb_transpose(+Grid, -TGrid)
+TGrid[C][R] = Grid[R][C]. Produces a grid with rows and columns exchanged.
+Implemented by iterating column indices 0..W-1; each column of Grid is
+collected as a row of TGrid using member(Row,Grid)+nth0(C,Row,V) inside findall.
+
+tb_sort_rows(+Grid, +C, -Sorted)
+Sorts rows ascending by the value of column C. Uses findall to build V-Row
+key-value pairs, keysort/2 (built-in stable sort), then unwraps the rows.
+Stable: rows with equal column C values preserve their original order.
+
+tb_filter_rows(+Grid, +C, +V, -Filtered)
+Keeps only rows where column C equals V (structural equality). Uses findall
+with member+nth0 and unification. Works with any Prolog term as V.
+
+tb_group_by(+Grid, +C, -Groups)
+Groups rows by unique column C value. Groups is a V-Rows list ordered by
+the sorted set of unique column C values. Uses sort/2 to find unique keys,
+then per-key findall for each group.
+
+tb_count_by(+Grid, +C, -Counts)
+Counts rows per unique column C value. Delegates to tb_group_by then maps
+length/2 over each group. Counts is a V-N list.
+
+tb_unique_rows(+Grid, -UniqueGrid)
+Removes duplicate rows preserving the first occurrence. Uses a recursive
+accumulator with \+ member/2 to detect already-seen rows.
+
+tb_select_cols(+Grid, +ColIdxs, -SubGrid)
+Extracts the columns at the indices given in ColIdxs, in that order.
+Passing ColIdxs in non-monotone order achieves column reordering.
+
+tb_drop_col(+Grid, +C, -Grid2)
+Removes column C from every row using between/3 over column indices with
+a Ci \= C guard.
+
+tb_add_col(+Grid, +NewCol, -Grid2)
+Appends list NewCol as a new rightmost column. Uses nth0/3 to pair each
+row by index with the corresponding NewCol element, then append/3.
+
+tb_insert_row(+Grid, +Row, +R, -Grid2)
+Inserts Row before position R (0-indexed). Two-clause recursion: base case
+(R=0) prepends; recursive case decrements R and recurses on the tail.
+Position H (grid height) inserts at the end.
+
+tb_delete_row(+Grid, +R, -Grid2)
+Removes the row at position R using findall with nth0/3 and I \= R guard.
+
+tb_swap_rows(+Grid, +R1, +R2, -Grid2)
+Swaps rows R1 and R2. Fetches both rows first, then rebuilds via findall
+with an if-then-else substituting at positions R1 and R2.
+
+tb_col_max_row(+Grid, +C, -R)
+Returns the first 0-indexed row where column C has its maximum value.
+Uses findall to collect column C values, max_list/2 for the extremum,
+then nth0+nth0+cut to locate the first row with that value.
+
+tb_col_min_row(+Grid, +C, -R)
+Same as tb_col_max_row using min_list/2.
+
+
+3. Test Results
+
+42 PLUnit acceptance tests pass. Key correctness tests:
+  tb_transpose([[1,2,3],[4,5,6]], T) => T=[[1,4],[2,5],[3,6]]
+  tb_sort_rows([[3,a],[1,b],[2,c]], 0, S) => S=[[1,b],[2,c],[3,a]]
+  tb_filter_rows([[1,a],[2,b],[1,c]], 0, 1, F) => F=[[1,a],[1,c]]
+  tb_group_by([[1,a],[2,b],[1,c]], 0, G) => G=[1-[[1,a],[1,c]], 2-[[2,b]]]
+  tb_count_by([[1,a],[2,b],[1,c],[1,d]], 0, C) => C=[1-3, 2-1]
+  tb_select_cols([[1,2,3]], [2,0], Sub) => Sub=[[3,1]]  (column reorder)
+  tb_insert_row([[1,2],[5,6]], [3,4], 1, G) => G=[[1,2],[3,4],[5,6]]
+  tb_swap_rows([[1,2],[3,4],[5,6]], 0, 2, G) => G=[[5,6],[3,4],[1,2]]
+  tb_col_max_row([[1,5],[3,2],[2,8]], 1, R) => R=2
+
+Library imports: library(lists): member/2, nth0/3, append/3, max_list/2,
+  min_list/2.  keysort/2 is a built-in.
+
+
+4. Significance
+
+The table pack adds a relational layer to PrologAI grid reasoning. When a
+grid encodes one row per object with columns for color, position, and shape,
+tb_filter_rows finds all objects of a given color, tb_sort_rows ranks them
+by size, tb_group_by clusters them by shape, and tb_count_by reports how
+many objects exist per color.
+
+tb_transpose makes it easy to switch between row-oriented and
+column-oriented views of a grid. tb_select_cols with a reordered ColIdxs
+list achieves column permutation in one call.
+
+This is Mentova accomplishment 164. PrologAI now carries 144 work packages.
+
+github.com/ai-university-aiu/PrologAI
