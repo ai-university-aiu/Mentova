@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-220-FF6B35?style=for-the-badge" alt="220 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-221-FF6B35?style=for-the-badge" alt="221 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **220 accomplished** |
-| Scientific papers | **220 published** — one per accomplishment |
+| Documented accomplishments | **221 accomplished** |
+| Scientific papers | **221 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         220 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  220 announcements — one per accomplishment
+├── papers/         221 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  221 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-220 scientific papers, one per accomplished milestone.
+221 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -475,6 +475,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. No cross-pack dependencies; 7 private helpers (dp_centroid_, dp_norm_, dp_pair_delta_, dp_color_pair_, dp_positions_, dp_row_of_, dp_col_of_). Extraction: dp_color_delta (O1/O2 color head unification), dp_pos_delta (centroid subtraction), dp_size_delta (length subtraction). Tests: dp_same_color (head unification), dp_same_form (dp_norm_ + sort + compare), dp_same_pos (centroid equality). Color map: dp_color_map (maplist dp_color_pair_ + sort), dp_apply_color (head unification on C1; fail otherwise), dp_apply_color_map (recursive try-cut), dp_apply_map_all (if-then-else; unchanged on no match). Displacement: dp_const_dr (maplist dp_row_of_), dp_const_dc (maplist dp_col_of_). Cells: dp_common_cells (intersection/3 on sorted positions), dp_cell_diff (subtract/3 twice). 41/41 PLUnit tests pass. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. No cross-pack dependencies; private helpers tc_minrow_, tc_mincol_, tc_maxrow_, tc_maxcol_, tc_bbox_h_, tc_bbox_w_, tc_translate_, tc_place_at_, min_list_r_, min_list_c_, tc_pack_row_acc_, tc_pack_col_acc_, tc_shift_to_row_, tc_shift_to_col_. tc_place_at (bbox top-left placement via translate). tc_recolor_all (recursive color replacement). tc_tile_row (findall+between N copies at C0+I*Step). tc_tile_col (findall+between N copies at R0+I*Step). tc_tile_grid (nested between I/J for NR*NC grid). tc_at_positions (recursive, one copy per r(R,C)). tc_align_top (maplist minrow + min_list global + maplist shift_to_row). tc_align_left (same pattern for cols). tc_pack_row (maplist shift_to_row + pack_row_acc_ cursor). tc_pack_col (maplist shift_to_col + pack_col_acc_ cursor). tc_spread_h (findall+nth0+between; col=C0+I*Step). tc_spread_v (findall+nth0+between; row=R0+I*Step). tc_center (bbox dims + floor//2 offset + place_at_). tc_flip_h (findall r(R,W-1-C)). 41/41 PLUnit tests pass. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. No cross-pack dependencies; private helpers mx_color_, mx_size_, mx_norm_, mx_centroid_, mx_sq_dist_, mx_nearest_in_, mx_greedy_match_, mx_color_delta_, mx_pos_delta_, mx_size_delta_, mx_color_delta_eq_, mx_pos_delta_eq_, mx_size_delta_eq_. Matching: mx_by_color (findall cross-product, color equality), mx_by_size (findall, size equality), mx_by_form (findall, norm equality), mx_by_nearest (mx_greedy_match_: each O1 claims nearest remaining O2 by mx_sq_dist_ + msort). Extraction: mx_unmatched/5 (findall matched, subtract/3). Filtering: mx_filter_changed_color (findall, C1\=C2), mx_filter_same_color (findall, C1=C2). Deltas: mx_color_deltas/mx_pos_deltas/mx_size_deltas (maplist over private delta helpers). Uniformity: mx_all_same_color_delta/mx_all_same_pos_delta/mx_all_same_size_delta (base=[]; step: extract Ref from first, maplist equality check). Zip: mx_zip (recursive, pairs by index). 41/41 PLUnit tests pass. |
+| `Acc_221` | ObjAttr pack paper — Object-List Aggregate Attribute Analysis (Layer 180, oa_* prefix): 14 oa_* predicates for computing aggregate statistics and rankings over a list of obj(Color, Cells) terms. No cross-pack dependencies; private helpers oa_color_, oa_size_, oa_norm_, oa_topleft_, oa_count_color_, oa_total_cells_color_, oa_mode_, oa_run_max_, oa_run_max_acc_, oa_color_eq_, oa_size_eq_, oa_norm_eq_. Counts: oa_total_cells (sum_list of sizes), oa_color_counts (findall+sort distinct colors; count per color), oa_cell_counts_by_color (sum cells per color), oa_n_colors (length of distinct list), oa_n_objs_of_color (oa_count_color_). Dominance: oa_dominant_color (negated-total msort trick), oa_rarest_color (ascending msort), oa_unique_color (member Color-1; backtrackable). Rankings: oa_size_rank (negated count msort), oa_pos_rank (r(R,C) key msort). Mode: oa_majority_size (oa_mode_ via oa_run_max_acc_ run-length accumulator). Uniformity: oa_all_same_color (maplist oa_color_eq_), oa_all_same_size (maplist oa_size_eq_), oa_all_same_form (oa_norm_ translate-to-origin + sort; maplist oa_norm_eq_). 41/41 PLUnit tests pass. |
 | `Acc_220` | ObjMerge pack paper — Object Merging, Set Operations, and Component Splitting (Layer 179, mg_* prefix): 14 mg_* predicates for cell-set operations and structural operations on obj(Color, Cells) terms. No cross-pack dependencies; private helpers mg_cells_, mg_color_, mg_maxrow_, mg_maxcol_, mg_minrow_, mg_mincol_, mg_translate_, mg_neighbors4_, mg_neighbors8_, mg_bfs_, mg_components_. Set ops: mg_union_cells (union/3 on sorted cell lists), mg_intersect_cells (intersection/3), mg_diff_cells (subtract/3), mg_sym_diff_cells (two subtract/3 + append). Concat: mg_concat_h (shift O2 by maxcol(O1)+1+Gap-mincol(O2) then append), mg_concat_v (shift by row). List: mg_merge_list (findall all cells + sort), mg_subtract_list (findall remove cells + subtract/3). Bbox: mg_expand_bbox (between/3 over MinR..MaxR x MinC..MaxC), mg_hollow_bbox (same + disjunctive border guard + sort to deduplicate corners), mg_pad (expand range by P each side). Components: mg_split_cc4/mg_split_cc8 (mg_components_ iterates mg_bfs_ using neighbors4_/neighbors8_), mg_n_components4 (length of split_cc4 result). 41/41 PLUnit tests pass. |
 | `Acc_214` | Objfilter pack paper — Object List Filtering and Selection (Layer 173, of_* prefix): 14 of_* predicates for filtering and selecting from a list of obj(Color, Cells) terms. No cross-pack dependencies; 9 private helpers (of_size_, of_bbox_, of_is_rect_, of_is_hline_, of_is_vline_, of_is_single_, of_is_hollow_, of_largest_acc_, of_smallest_acc_). Color filters: of_by_color (findall match obj(Color,_)), of_not_color (findall C\=Color). Size filters: of_exact_size, of_min_size, of_max_size (findall+member+arithmetic). Shape filters: of_is_rect (count=H*W), of_is_hline (MinR=MaxR), of_is_vline (MinC=MaxC), of_is_single (count=1), of_is_hollow (count<H*W). Aggregates: of_largest (first max via accumulator), of_smallest (first min via accumulator). Meta: of_filter (wraps include/3), of_partition (wraps partition/4); both :- meta_predicate. 43/43 PLUnit tests pass. |
 | `Acc_213` | Objrel pack paper — Object Pair Relation Analysis (Layer 172, or_* prefix): 14 or_* predicates for pairwise geometric and spatial relationships between two obj(Color, Cells) terms. Colors ignored throughout. Private helpers: or_centroid_ (float centroid sum_rows/N, sum_cols/N), or_bbox_ (row/col extremes via findall+min/max_list), or_dir_ (delta to compass atom via arithmetic if-then-else). or_overlap (member+memberchk+cut). or_shared_cells (findall+memberchk filter). or_n_shared (length of intersection). or_touch4 (\+overlap guard then Manhattan=1 pair search+cut). or_touch8 (\+overlap guard then Chebyshev=1 pair search+cut). or_contains (forall+memberchk). or_union_cells (append+sort). or_dist (Euclidean sqrt of squared centroid deltas). or_manhattan (abs sum of centroid deltas). or_direction (centroid deltas through or_dir_; Dir one of n/s/e/w/ne/nw/se/sw/same). or_aligned_h (centroid rows =:=). or_aligned_v (centroid cols =:=). or_gap_rows (max(0,max(MinR1,MinR2)-min(MaxR1,MaxR2)-1)). or_gap_cols (same for col extremes). 61/61 PLUnit tests pass. |
@@ -486,7 +487,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 
 ### Announcements — announcements/
 
-220 announcements in LinkedIn format — one per accomplishment.
+221 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

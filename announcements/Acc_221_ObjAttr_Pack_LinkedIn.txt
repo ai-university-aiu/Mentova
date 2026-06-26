@@ -1,0 +1,30 @@
+Accomplishment 221: Object-List Aggregate Attribute Analysis (objattr Pack, oa_*, Layer 180)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has an objattr pack - 14 oa_* predicates for computing aggregate statistics
+and rankings over a list of obj(Color, Cells) terms.
+
+The pack answers scene-level questions that previous packs left to calling code: Which
+color has the most total cells? Which object is largest? Are all objects the same shape?
+What is the most common size?
+
+It covers total cell count, per-color object and cell counts, dominant and rarest colors,
+unique-color detection (backtrackable), size ranking, position ranking, majority size mode,
+and three uniformity tests - all-same color, all-same size, and all-same form. The form
+test normalizes each object to the origin and compares sorted cell lists, so two objects
+at different positions and in different colors match if their relative cell arrangements
+are identical.
+
+41 of 41 unit tests pass.
+
+This is WP 201, Mentova's 221st accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

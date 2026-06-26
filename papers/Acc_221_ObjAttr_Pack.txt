@@ -1,0 +1,113 @@
+Accomplishment 221: Object-List Aggregate Attribute Analysis (objattr Pack, oa_*, Layer 180)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Summary
+
+PrologAI now has an objattr pack - 14 oa_* predicates for computing aggregate statistics
+and rankings over a list of obj(Color, Cells) terms. This is WP 201, Mentova's 221st
+accomplishment.
+
+
+Motivation
+
+Previous packs added predicates for filtering, transforming, matching, and merging
+individual objects. What was missing was a way to characterize the list as a whole:
+which color dominates, how do objects rank by size, are all objects the same shape?
+The objattr pack fills this gap.
+
+
+Predicates
+
+oa_total_cells/2
+    Sums the cell count across every object in the list.
+
+oa_color_counts/2
+    Returns sorted Color-Count pairs giving the number of objects per distinct color.
+
+oa_cell_counts_by_color/2
+    Returns sorted Color-Total pairs giving the total cells per distinct color,
+    summed across all objects of that color.
+
+oa_n_colors/2
+    Counts distinct colors.
+
+oa_n_objs_of_color/3
+    Counts objects with a specific color.
+
+oa_dominant_color/2
+    Returns the color with the most total cells. If two colors tie, alphabetical order
+    determines the winner.
+
+oa_rarest_color/2
+    Returns the color with the fewest total cells.
+
+oa_unique_color/2
+    Backtrackable predicate that returns each color appearing in exactly one object.
+    Fails if no such color exists.
+
+oa_size_rank/2
+    Returns the object list sorted by cell count descending (largest first).
+
+oa_pos_rank/2
+    Returns the object list sorted by top-left corner in row-major order
+    (topmost row, leftmost column first).
+
+oa_majority_size/2
+    Returns the most frequently occurring cell count. Uses a run-length mode accumulator
+    over a sorted count list - no external library needed.
+
+oa_all_same_color/1
+    Succeeds iff all objects share the same color.
+
+oa_all_same_size/1
+    Succeeds iff all objects have the same cell count.
+
+oa_all_same_form/1
+    Succeeds iff all objects have the same normalized shape. Normalization translates
+    each object to the origin (top-left at r(0,0)) and sorts the cell list. Color and
+    position are ignored; only the relative cell arrangement matters.
+
+
+Implementation Notes
+
+The dominant and rarest color predicates use a negated-key sort trick: to sort Color-Total
+pairs by Total descending without a custom comparator, the Total is negated before msort,
+then the first element of the sorted list is the answer.
+
+The majority-size predicate uses oa_mode_, which applies msort to a list of cell counts
+and then walks the sorted list with a run-length accumulator (oa_run_max_acc_) tracking
+the current run and the best run seen so far.
+
+The normalization for oa_all_same_form subtracts the minimum row and column from every
+cell and then sorts. Two objects have the same form iff their normalized cell lists are
+identical.
+
+All predicates handle the empty list gracefully (uniformity tests succeed vacuously;
+count predicates return 0; ranking predicates return the empty list).
+
+
+Test Coverage
+
+41 of 41 unit tests pass (AC-OA-001 through AC-OA-041, defined in Refinement v214
+Part 191). Tests cover all 14 predicates including edge cases: empty lists, single-object
+lists, tie conditions, and the none-unique-color failure case.
+
+
+SPARC Documentation
+
+Specification v166 - Part 191: objattr pack formal specification
+Pseudocode v159 - Part 191: reasoning pseudocode for all 14 predicates
+Architecture v160 - ARCH-167: objattr pack placement at Layer 180
+Refinement v214 - AC-OA-001 through AC-OA-041: acceptance criteria
+Completion v217 - WP-201 completion record
+
+
+PrologAI Repository
+
+PR #289 merged into main.
+Pack directory: packs/objattr/
+Tutorial chapter: docs/tutorial/Ch162_ObjAttr.txt
