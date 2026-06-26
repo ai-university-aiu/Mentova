@@ -1,0 +1,166 @@
+Accomplishment 178: Dense Ranking of Integer Values in Lists and 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+PrologAI gains its 158th work package: the rank pack (rk_*, Layer 137).
+
+The rank pack provides 14 predicates for 1-based dense ranking of integer
+values in lists and 2D grids, 0-based argsort (stable ascending and
+descending), per-row and per-column ranking grids, grid-wide ranking grids,
+cell-level rank queries, and top-N/bottom-N/rank-threshold cell selection.
+
+Introduction
+
+Ranking assigns an ordinal position to each value relative to the other
+values in a dataset.
+
+Dense ranking: the smallest distinct value receives rank 1, the second
+smallest receives rank 2, and so on. Duplicate values all receive the
+same rank. The total number of rank levels equals the number of distinct
+values, not the total number of elements.
+
+For example, for the list [5, 1, 3]: the distinct values in ascending order
+are [1, 3, 5]. Value 1 has rank 1, value 3 has rank 2, value 5 has rank 3.
+Applying dense rank to [5, 1, 3] gives [3, 1, 2].
+
+Ranking is useful when the absolute values matter less than their relative
+order within a context. Per-row ranking tells which columns are locally
+large or small within each row. Grid-wide ranking places every cell on a
+global ordinal scale.
+
+Predicates
+
+The 14 public predicates are:
+
+rk_rank_of(+List, +V, -R)
+
+R is the 1-based dense rank of value V in List. Fails if V is absent.
+
+rk_dense(+List, -Ranks)
+
+Ranks is the list of 1-based dense ranks for each element, in order.
+
+rk_argsort_asc(+List, -Indices)
+
+Indices is the list of 0-based positions of List elements sorted in ascending
+value order. Stable: equal values keep their original left-to-right order.
+
+rk_argsort_desc(+List, -Indices)
+
+Indices sorted in descending value order. Also stable.
+
+rk_row_dense(+Grid, -RankGrid)
+
+Each cell is replaced with its dense rank within its own row independently.
+
+rk_col_dense(+Grid, -RankGrid)
+
+Each cell is replaced with its dense rank within its own column independently.
+
+rk_grid_dense(+Grid, -RankGrid)
+
+Each cell is replaced with its dense rank among all cell values in Grid.
+
+rk_row_rank_of(+Grid, +R, +C, -Rank)
+
+Dense rank of cell (R,C) within row R.
+
+rk_col_rank_of(+Grid, +R, +C, -Rank)
+
+Dense rank of cell (R,C) within column C.
+
+rk_grid_rank_of(+Grid, +R, +C, -Rank)
+
+Dense rank of cell (R,C) among all cell values in Grid.
+
+rk_top_n(+Grid, +N, -Cells)
+
+Sorted R-C positions of cells whose value is among the N largest distinct
+values in Grid. All cells with those values are included.
+
+rk_bottom_n(+Grid, +N, -Cells)
+
+Sorted R-C positions of cells whose value is among the N smallest distinct
+values in Grid.
+
+rk_above_rank(+Grid, +K, -Cells)
+
+Sorted R-C positions whose grid-wide dense rank is strictly greater than K.
+
+rk_below_rank(+Grid, +K, -Cells)
+
+Sorted R-C positions whose grid-wide dense rank is strictly less than K.
+
+Example Results
+
+For G = [[1,2,3],[4,5,6],[7,8,9]]:
+
+rk_row_dense returns [[1,2,3],[1,2,3],[1,2,3]]: each row has 3 distinct
+values, so all values rank 1, 2, 3 in order.
+
+rk_col_dense returns [[1,1,1],[2,2,2],[3,3,3]]: each column also has 3
+distinct values. The top row values (1, 2, 3) each have rank 1 in their
+column; middle row (4, 5, 6) each rank 2; bottom row (7, 8, 9) each rank 3.
+
+rk_grid_dense returns [[1,2,3],[4,5,6],[7,8,9]]: same as the input because
+all 9 values are distinct and sequential starting from 1.
+
+rk_top_n(G, 2, Cells) returns [2-1, 2-2]: the 2 largest distinct values
+are 8 and 9, found at positions (2,1) and (2,2).
+
+rk_above_rank(G, 7, Cells) returns [2-1, 2-2]: cells with rank 8 or 9.
+
+Implementation
+
+rk_pos1_/3 implements the core rank lookup by walking a sorted unique list
+from position 1 using a recursive accumulator rk_pos1_acc_/4. The cut in
+rk_pos1_acc_ prevents backtracking after a match is found.
+
+rk_argsort_asc builds Value-Index pairs using rk_zip_/3, sorts them with
+msort/2 (stable), and extracts the index from each pair.
+
+rk_argsort_desc negates each value before msort: sorting negated values
+ascending gives descending order of original values.
+
+rk_col_dense uses nested findall: for each (R,C) position, it re-computes
+the column values and ranks cell (R,C) within them. This is straightforward
+and correct.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates across three test grids:
+G3 (sequential 3x3), G3u (uniform all-ones 3x3), and G3b (3x3 grid with
+3 distinct values {1,3,5} appearing multiple times in a symmetric pattern).
+
+All 42 tests pass.
+
+SPARC Documentation
+
+Specification v123: Part 148, requirements RK-RK-001 through RK-RK-014.
+
+Pseudocode v116: Part 148, pseudocode for all 14 predicates.
+
+Architecture v117: ARCH-124, rank pack structure and design notes.
+
+Refinement v171: acceptance criteria AC-RK-001 through AC-RK-042.
+
+Completion v174: WP 158 release record.
+
+Tutorial Chapter 119 added to all tutorial files.
+
+Conclusion
+
+The rank pack provides the ordinal dimension of grid analysis. Combined with
+the naggr pack (aggregated values), the median pack (central tendency),
+and the nmode pack (modal value), PrologAI now has a comprehensive suite
+for understanding the structure of 2D integer grids from multiple statistical
+perspectives.
+
+PrologAI now comprises 158 work packages.
+
+Mentova has achieved 178 accomplishments.
