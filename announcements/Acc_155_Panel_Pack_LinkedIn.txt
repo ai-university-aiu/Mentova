@@ -1,0 +1,34 @@
+Mentova Accomplishment 155: Grid Panel Detection and Splitting - The Panel Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now detect, split, and strip panel-structured grids.
+
+Work Package 135 - the panel pack - adds 14 pn_* predicates for working with grids that have all-background divider rows or columns. 42/42 tests.
+
+The core pattern:
+
+pn_divider_rows(Grid, 0, Rows)  % find all-zero separator rows
+pn_auto_split_rows(Grid, 0, Panels)  % split into panels automatically
+pn_strip_rows(Grid, 0, S)  % remove all divider rows in one call
+
+Same operations for columns: pn_divider_cols, pn_auto_split_cols, pn_strip_cols.
+
+More tools:
+
+pn_quadrants: split at integer midpoints into TL, TR, BL, BR sub-grids.
+pn_n_col_parts: split columns into N equal-width strips.
+pn_col_slices: split by a custom list of widths.
+pn_has_dividers: one-call check for any divider anywhere.
+
+The key implementation insight: pn_split_rows_ and pn_split_cols_ use two-clause recursion with cut on the empty-divider base case. Without the cut, both clauses could match when the divider list is empty, producing spurious choicepoints.
+
+pn_slice_row_ extracts column ranges using length/2 + append/3 - no index arithmetic needed.
+
+PrologAI: 135 work packages. Mentova: 155 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #SWIProlog #AGI
