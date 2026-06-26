@@ -1,0 +1,27 @@
+Accomplishment 190: Object Pairing and D4-Canonical Shape Correspondence
+
+PrologAI now has 170 work packages.
+
+The pair pack (pr_*, Layer 149) provides 14 predicates for grouping, comparing,
+and matching obj(Color, Cells) terms by color, size, and D4-canonical shape.
+
+The key capability: a horizontal two-cell pair and a vertical two-cell pair are
+identified as the same shape. An L-shape and its 90-degree rotation are the same
+shape. Any two objects related by any combination of rotations and reflections
+(the 8 elements of the dihedral group D4) are the same shape.
+
+This is done by: normalizing each shape to the origin, applying all 8 D4
+symmetric transforms, re-normalizing each result, and taking the
+lexicographically smallest one as the canonical form.
+
+The pack gives you:
+• Property access: pr_obj_shape/2, pr_obj_color/2, pr_obj_size/2
+• Pairwise tests: pr_shape_eq/2, pr_color_eq/2, pr_size_eq/2
+• Grouping: pr_group_shape/2, pr_group_color/2, pr_group_size/2
+• Unique object: pr_unique_color/2, pr_unique_size/2
+• Cross-scene matching: pr_match_shape/3, pr_match_color/3, pr_match_size/3
+
+42/42 PLUnit tests pass. PR 255 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
