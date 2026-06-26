@@ -1,0 +1,29 @@
+Mentova Accomplishment 212: Object Shape Classification for obj(Color, Cells) Terms
+
+PrologAI now includes an objbound pack (ob_*, Layer 171) - 14 predicates for
+classifying the shape of individual objects and analyzing their bounding boxes.
+
+The pack provides:
+
+- ob_bbox_h: bounding box height
+- ob_bbox_w: bounding box width
+- ob_bbox_area: height times width
+- ob_is_rect: is every cell in the bounding box occupied? (no holes)
+- ob_is_hline: do all cells lie in a single row?
+- ob_is_vline: do all cells lie in a single column?
+- ob_is_single: exactly one cell?
+- ob_is_square_bbox: does the bounding box have equal height and width?
+- ob_holes: which cells in the bounding box are NOT part of the object?
+- ob_n_holes: how many holes?
+- ob_is_hollow: at least one hole?
+- ob_is_frame: hollow rectangular border (H>=3, W>=3, all border cells present, no interior cells)?
+- ob_perimeter: total exposed edges (single cell = 4, 1x3 bar = 8, 2x2 block = 8, 3x3 frame = 16)
+- ob_dense_hull: the solid bounding-box rectangle with the same color
+
+73 tests pass.
+
+This is WP 192, Mentova's 212th accomplishment.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
