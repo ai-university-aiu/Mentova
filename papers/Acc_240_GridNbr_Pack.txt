@@ -1,0 +1,106 @@
+Accomplishment 240: Grid Neighbor Analysis (gridnbr Pack, gn_*, Layer 199)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains the gridnbr pack (Work Package 220, Layer 199): 14 gn_*
+predicates for analyzing cell neighborhoods in raw grid format and applying
+morphological operations. The pack provides 4- and 8-connected neighbor
+value retrieval, per-cell and grid-wide neighbor color counting, border and
+isolated cell detection, dilation and erosion, majority neighbor color, and
+a Conway-style cellular automaton step predicate.
+
+
+Background
+
+ARC-AGI-2 tasks frequently require understanding what a cell's neighbors
+look like: does a colored cell touch the background? Does it have no same-
+color neighbors (isolated)? How many neighbors share its color? The gridnbr
+pack answers these questions directly for raw grids, complementing the
+existing gridtask (Layer 198) end-to-end solver and gridquery (Layer 196)
+basic query operations.
+
+
+The gridnbr Pack
+
+Pack prefix: gn_*
+Layer: 199
+Work Package: 220
+
+
+Neighbor Value Retrieval
+
+gn_nbr4/4 and gn_nbr8/4 collect the values at 4-connected (cardinal) and
+8-connected (cardinal plus diagonal) neighbors respectively. Out-of-bounds
+positions are omitted without padding, so the list length varies: 2-4 for
+4-connected and 3-8 for 8-connected neighbors.
+
+gn_count4/5 and gn_count8/5 count how many neighbors equal a given color.
+gn_count4_grid/3 and gn_count8_grid/3 produce full grids where each cell
+holds the count of a given color in its neighborhood.
+
+
+Neighborhood Condition Tests
+
+gn_any4/4 uses memberchk/2 (deterministic, no choicepoints) to test that
+at least one 4-neighbor has a given color. gn_all4/4 tests that every
+4-neighbor matches; it fails for cells with no 4-neighbors (1x1 grid).
+
+
+Border and Isolated Cell Detection
+
+gn_mark_border/3 replaces each non-background cell that has at least one
+background 4-neighbor with the atom border. This identifies the outer layer
+of foreground objects.
+
+gn_mark_isolated/3 replaces each non-background cell that has no same-color
+4-neighbor with the atom isolated. This identifies "noise" cells not
+connected to any other cell of the same color.
+
+
+Morphological Operations
+
+gn_expand_color/3 implements morphological dilation: every background cell
+with at least one Color 4-neighbor is set to Color. One call grows a Color
+region outward by one pixel in all four cardinal directions.
+
+gn_shrink_color/3 implements morphological erosion: every Color cell that
+touches a non-Color 4-neighbor is replaced with the background color. One
+call removes the outer layer of Color regions.
+
+The background for both operations is determined by the keyed-msort pattern
+(most frequent color).
+
+
+Majority Neighbor and Cellular Automaton
+
+gn_majority_nbr4/4 finds the most frequently occurring color among the
+4-connected neighbors, using keyed-msort on negative counts for deterministic
+tie-breaking. Fails for cells with no 4-neighbors.
+
+gn_conway_step/4 applies one step of a configurable cellular automaton rule:
+every Color cell with exactly N Color 4-neighbors is replaced by the
+background color. This models a "cell dies if it has N same-color neighbors"
+rule and can be iterated to simulate evolving patterns.
+
+
+Test Coverage
+
+All 51 acceptance criteria (AC-GN-001 through AC-GN-051) pass. Tests cover
+all 14 predicates including edge cases for 1x1 grids, corner and edge
+cells, and the interaction between dilation and erosion on 5x5 grids.
+
+SPARC documentation: Spec v185, Pseudo v178, Arch v179, Refinement v233,
+Completion v236. Tutorial: Ch181_GridNbr.txt. Pack_Reference updated.
+
+
+Conclusion
+
+The gridnbr pack adds the neighborhood-level reasoning layer to PrologAI's
+raw-grid toolkit. With gridquery (query), gridparse (scene conversion),
+gridtask (rule inference), and now gridnbr (neighbor analysis), the platform
+has a comprehensive set of low-level grid operations for ARC-AGI-2 tasks.
+This is Mentova's 240th accomplishment and PrologAI's 220th work package.

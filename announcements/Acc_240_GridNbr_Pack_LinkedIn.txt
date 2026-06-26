@@ -1,0 +1,33 @@
+Accomplishment 240: Grid Neighbor Analysis (gridnbr Pack, gn_*, Layer 199)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a gridnbr pack - 14 gn_* predicates for analyzing cell
+neighborhoods and applying morphological operations on raw grids.
+
+What it does:
+
+- gn_nbr4 / gn_nbr8: list values at 4- or 8-connected neighbors (omits out-of-bounds)
+- gn_count4 / gn_count8: count a given color among neighbors
+- gn_count4_grid / gn_count8_grid: produce a full count grid for every cell
+- gn_any4: does any 4-neighbor have this color? (deterministic)
+- gn_all4: do ALL 4-neighbors have this color?
+- gn_mark_border: label foreground cells that touch the background as border
+- gn_mark_isolated: label non-background cells with no same-color 4-neighbor as isolated
+- gn_expand_color: morphological dilation — grow Color outward by one layer
+- gn_shrink_color: morphological erosion — remove the outer layer of Color
+- gn_majority_nbr4: most frequent color among 4-neighbors
+- gn_conway_step: one cellular automaton step — kill Color cells with exactly N Color neighbors
+
+51 of 51 unit tests pass.
+
+This is WP 220, Mentova's 240th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
