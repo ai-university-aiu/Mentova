@@ -1,0 +1,100 @@
+Accomplishment 237: Grid Query and Manipulation (gridquery Pack, gq_*, Layer 196)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains the gridquery pack (Work Package 217, Layer 196): 14 gq_*
+predicates for querying and modifying raw grid data (list-of-lists of color atoms).
+This provides the primary interface for working with ARC-style tasks in their native
+format before or instead of converting to obj(Color, Cells) scene representation.
+
+
+Background
+
+ARC-AGI-2 tasks store grids as 2D arrays of color values. PrologAI uses
+obj(Color, Cells) terms for most scene reasoning, but working directly with the
+raw grid format is sometimes necessary - for detecting background colors, comparing
+grid states, extracting sub-regions, and making cell-level modifications.
+
+Prior packs (canvas, grid, gridops) provide rendering and painting operations.
+The gridquery pack focuses on QUERYING: what is at this position, how many cells
+are this color, where do these two grids differ.
+
+
+The gridquery Pack
+
+Pack prefix: gq_*
+Layer: 196
+Work Package: 217
+
+A raw grid is a list of rows. Each row is a list of color atoms. Positions are
+0-indexed (row 0 = top, column 0 = leftmost).
+
+
+Size and Cell Access
+
+gq_size/3 returns height and width; gq_at/4 retrieves one cell.
+gq_row/3 and gq_col/3 extract an entire row or column as a list.
+
+
+Color Statistics
+
+gq_colors/2 returns a sorted list of distinct colors.
+gq_n_cells/3 counts cells of a specific color (0 for absent).
+gq_most_freq_color/2 identifies the most common color using the same keyed-msort
+pattern as multicolor's mc_dominant_color: negative count as sort key.
+
+
+Region Extraction
+
+gq_region/6 takes inclusive bounds (R0,C0)-(R1,C1) and returns the rectangular
+sub-grid. It uses numlist to enumerate row indices and a maplist over the column
+slice for each row.
+
+
+Grid Comparison
+
+gq_diff/3 collects all r(R,C) positions where two grids differ, using between/3
+for index enumeration. The r(R,C) cell format is consistent with the obj-term
+representation, so diff cells can be used directly in scene-level predicates.
+gq_n_diff/3 is the length of the diff list. gq_same_size/2 verifies dimensions.
+
+
+Structural Operations
+
+gq_transpose/2 swaps rows and columns using gq_col: for column index C, the
+transposed grid's C-th row is the original grid's C-th column. This produces a
+single deterministic result.
+
+gq_replace/5 rebuilds the grid row-by-row with one cell changed.
+gq_fill_region/7 rebuilds with every cell in a rectangle set to a given color.
+
+
+Test Coverage
+
+45 of 45 acceptance criteria (AC-GQ-001 through AC-GQ-045) pass. Tests cover:
+- Size queries for 1x1, 2x2, 3x3, and empty grids
+- Cell access at corners and centers
+- Row and column extraction
+- Color counting including absent colors
+- Most frequent color detection
+- Region extraction including single-cell regions
+- Grid diff: identical (0 diff), one cell, all cells
+- Transpose including empty and square grids
+- Replace and fill_region with various bounds
+- Column extraction including the rightmost column
+
+SPARC documentation: Spec v182, Pseudo v175, Arch v176, Refinement v230,
+Completion v233. Tutorial: Ch178_GridQuery.txt. Pack_Reference updated.
+
+
+Conclusion
+
+The gridquery pack completes the raw-grid interface layer of PrologAI. Together
+with canvas (for rendering) and connect (for segmentation), it provides a complete
+toolkit for bridging ARC's native grid format to the obj-term scene representation
+used by the higher-level reasoning packs. This is Mentova's 237th accomplishment
+and PrologAI's 217th work package.
