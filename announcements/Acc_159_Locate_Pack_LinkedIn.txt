@@ -1,0 +1,49 @@
+Mentova Accomplishment 159: Pattern Location and Subgrid Matching - The Locate Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now find where sub-patterns occur in grids, match row/column
+sequences, and locate unique marker cells.
+
+Work Package 139 - the locate pack - adds 14 lc_* predicates. 42/42 tests.
+
+Subgrid template matching:
+
+lc_subgrid_at(Grid, Sub, R0, C0)   % does Sub appear at (R0,C0)?
+lc_find_sub(Grid, Sub, R0, C0)     % first position where Sub matches
+lc_all_sub(Grid, Sub, Positions)   % all positions where Sub matches
+lc_subgrid_count(Grid, Sub, N)     % how many times Sub appears
+
+Row and column sequence search:
+
+lc_row_pattern(Grid, Pattern, R)       % first row matching Pattern
+lc_all_row_pattern(Grid, Pattern, Rows) % all rows matching Pattern
+lc_col_pattern(Grid, Pattern, C)        % first column matching Pattern
+lc_all_col_pattern(Grid, Pattern, Cols) % all columns matching Pattern
+
+Row structural tests:
+
+lc_row_prefix(Grid, R, Prefix, Rest)   % row R = Prefix ++ Rest
+lc_row_suffix(Grid, R, Suffix)          % row R ends with Suffix
+
+Anchor, counting, containment:
+
+lc_anchor(Grid, V, R, C)         % unique cell with value V (fails if not 1)
+lc_row_count(Grid, V, Counts)    % V count per row as a list
+lc_row_contains(Grid, V, Rows)   % sorted rows containing V
+lc_col_contains(Grid, V, Cols)   % sorted columns containing V
+
+Key design insights:
+lc_subgrid_at uses forall/2 to verify all Sub positions at once.
+lc_all_col_pattern uses nested findall: inner finds column values, outer
+  collects columns where those values unify with Pattern.
+lc_anchor: findall collects all V positions; [R-C] pattern enforces uniqueness.
+lc_row_suffix: append + cut makes suffix testing deterministic.
+
+PrologAI: 139 work packages. Mentova: 159 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #SWIProlog #AGI

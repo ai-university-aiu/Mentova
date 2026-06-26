@@ -1,0 +1,174 @@
+Mentova Accomplishment 159: Pattern Location and Subgrid Matching - The Locate Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 139: the locate pack, a Layer 118 symbolic
+reasoning module providing 14 predicates for finding patterns within grids.
+Predicates cover subgrid template matching, finding and counting pattern
+occurrences, row and column sequence search, row prefix and suffix testing,
+unique-cell anchoring, per-row value counting, and row/column containment
+queries. All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Many visual reasoning tasks require finding where a known sub-pattern appears
+in a larger grid, identifying which rows or columns follow a given sequence, or
+locating the single "special" marker cell that serves as an anchor for a
+transformation rule. The existing PrologAI library had general cell enumeration
+(scan pack) and set operations (cellset pack) but lacked a focused module for
+template matching and pattern search. The locate pack provides that missing layer.
+
+
+2. Predicate Inventory (14 predicates, lc_* prefix)
+
+2.1 Subgrid Template Matching
+
+lc_subgrid_at(+Grid, +Sub, +R0, +C0)
+Tests whether Sub appears with its top-left corner at (R0, C0) in Grid. Uses
+forall/2 over all Sub row-column pairs; each pair verifies the Grid cell at the
+offset (R0+SR, C0+SC) equals Sub[SR][SC].
+
+lc_find_sub(+Grid, +Sub, -R0, -C0)
+Finds the first (row-major) top-left position where Sub appears in Grid.
+Enumerates candidate positions with between/3 and calls lc_subgrid_at; cuts
+after the first match. Fails if Sub is not present.
+
+lc_all_sub(+Grid, +Sub, -Positions)
+Returns the list of all R0-C0 pairs where Sub appears. Uses findall with
+lc_subgrid_at as the filter over all valid top-left positions.
+
+lc_subgrid_count(+Grid, +Sub, -N)
+Counts how many times Sub appears. Delegates to lc_all_sub and measures the
+result list with length/2.
+
+Examples:
+lc_subgrid_at([[1,2,3],[4,5,6],[7,8,9]], [[5,6],[8,9]], 1, 1).  % true
+lc_find_sub([[0,0,0],[0,1,0],[0,0,0]], [[1]], R, C).             % R=1, C=1
+lc_all_sub([[1,0,1],[0,0,0],[1,0,1]], [[1]], P).                 % P=[0-0,0-2,2-0,2-2]
+lc_subgrid_count([[1,0,1],[0,0,0],[1,0,1]], [[1]], N).           % N=4
+
+
+2.2 Row and Column Sequence Search
+
+lc_row_pattern(+Grid, +Pattern, -R)
+Finds the first row index where the grid row equals Pattern. Uses nth0 with
+Pattern for direct structural unification; cuts on the first match.
+
+lc_all_row_pattern(+Grid, +Pattern, -Rows)
+Returns all row indices where the grid row equals Pattern. Uses findall with
+nth0(R, Grid, Pattern).
+
+lc_col_pattern(+Grid, +Pattern, -C)
+Finds the first column index whose extracted value list equals Pattern. Extracts
+each column with an inner findall over row indices and unifies the result with
+Pattern; cuts after the first match.
+
+lc_all_col_pattern(+Grid, +Pattern, -Cols)
+Returns all column indices whose value list equals Pattern. The outer findall
+collects columns for which the inner findall produces a list unifying with Pattern.
+
+Examples:
+lc_row_pattern([[0,0],[1,2],[0,0]], [1,2], R).          % R=1
+lc_all_row_pattern([[1,1],[0,0],[1,1]], [1,1], Rs).     % Rs=[0,2]
+lc_col_pattern([[1,0],[2,0],[3,0]], [1,2,3], C).        % C=0
+lc_all_col_pattern([[1,1],[2,2],[3,3]], [1,2,3], Cols). % Cols=[0,1]
+
+
+2.3 Row Structural Tests
+
+lc_row_prefix(+Grid, +R, +Prefix, -Rest)
+Decomposes grid row R as Prefix ++ Rest using append/3. Prefix can be [] to
+retrieve the full row as Rest, or a partial prefix to bind Rest.
+
+lc_row_suffix(+Grid, +R, +Suffix)
+Succeeds if grid row R ends with Suffix. Uses append(_, Suffix, Row) with a
+cut to make it a deterministic existence test (not a generator).
+
+Examples:
+lc_row_prefix([[1,2,3],[4,5,6]], 0, [1,2], Rest).  % Rest=[3]
+lc_row_prefix([[1,2,3]], 0, [], Rest).              % Rest=[1,2,3]
+lc_row_suffix([[1,2,3],[4,5,6]], 0, [2,3]).         % true
+
+
+2.4 Anchor, Counting, and Containment
+
+lc_anchor(+Grid, +V, -R, -C)
+Succeeds if exactly one cell in Grid equals V and returns its position. Collects
+all V positions with findall; unifies the result with the single-element pattern
+[R-C]. Fails if V appears 0 or more than 1 times.
+
+lc_row_count(+Grid, +V, -Counts)
+Returns a list with one integer per row counting occurrences of V. Uses maplist
+with the private helper lc_count_in_row_ which uses findall + member/2 + length/2.
+
+lc_row_contains(+Grid, +V, -Rows)
+Returns the sorted list of row indices that contain at least one cell equal to V.
+Uses findall with member/2; sort removes duplicate indices.
+
+lc_col_contains(+Grid, +V, -Cols)
+Returns the sorted list of column indices that contain at least one cell equal to
+V. Uses findall with nth0; sort removes duplicate indices.
+
+Examples:
+lc_anchor([[0,0,0],[0,9,0],[0,0,0]], 9, R, C).    % R=1, C=1
+lc_anchor([[9,0],[9,0]], 9, _, _).                  % fails (two occurrences)
+lc_row_count([[1,0,1],[0,0,0],[1,1,0]], 1, Cs).    % Cs=[2,0,2]
+lc_row_contains([[0,1,0],[1,0,0],[0,0,1]], 1, Rs). % Rs=[0,1,2]
+lc_col_contains([[1,0,1],[0,1,0]], 1, Cols).        % Cols=[0,1,2]
+
+
+3. Implementation Notes
+
+lc_subgrid_at uses forall/2 (a built-in), which succeeds when its condition
+generates no solutions (empty Sub) or when its action succeeds for every
+solution. This handles empty Sub grids gracefully.
+
+lc_col_pattern and lc_all_col_pattern: The inner findall extracts a column as
+a value list and unifies it with Pattern. Inside findall, the Pattern variable
+is ground (given by the caller), so unification acts as a filter.
+
+lc_row_suffix uses a cut after append(_, Suffix, Row) to prevent backtracking
+to shorter suffix matches, making it a purely existential test.
+
+lc_anchor uses the single-element list pattern [R-C] to both verify uniqueness
+and extract the position in one step.
+
+Library imports: library(lists): member/2, nth0/3, append/3. library(apply): maplist/3.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no warnings. Three tests per predicate.
+
+Key correctness tests:
+  lc_find_sub([[0,1,0],[0,0,0]], [[1]], R, C) => R=0, C=1
+  lc_all_sub([[1,1],[1,0]], [[1],[1]], P) => P=[0-0]
+  lc_all_col_pattern([[1,1],[2,2],[3,3]], [1,2,3], Cols) => Cols=[0,1]
+  lc_anchor([[9,0],[9,0]], 9, _, _) => fails
+  lc_row_count([[1,0,1],[0,0,0],[1,1,0]], 1, Cs) => Cs=[2,0,2]
+
+
+5. Significance
+
+The locate pack adds template-matching capability to PrologAI. lc_find_sub
+and lc_all_sub answer "where does this pattern occur?" - a question that
+arises in many tasks where the output must be placed at the location of a
+matching sub-pattern in the input. lc_anchor provides a direct predicate for
+the very common ARC-AGI-2 pattern where a single special-colored cell marks
+the target position for a transformation.
+
+lc_col_pattern and lc_all_col_pattern extend sequence matching to columns,
+which rows-only search cannot cover. The nested-findall technique used in
+lc_all_col_pattern - where an inner findall's result is unified with a ground
+Pattern inside an outer findall - is a reusable SWI-Prolog idiom.
+
+This is Mentova accomplishment 159. PrologAI now carries 139 work packages.
+
+github.com/ai-university-aiu/PrologAI
