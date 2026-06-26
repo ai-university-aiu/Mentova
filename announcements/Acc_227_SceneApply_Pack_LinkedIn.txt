@@ -1,0 +1,35 @@
+Accomplishment 227: Scene-Level Rule Term Evaluation Engine (sceneapply Pack, sa_*, Layer 186)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a sceneapply pack - 14 sa_* predicates that apply symbolic
+rule terms to obj(Color, Cells) scene lists.
+
+The rule vocabulary covers every scene-level transformation: recolor(Old,New),
+recolor_all(New), color_map(Map), shift(DR,DC), to_origin, reflect_h/v,
+remove_color, keep_color, sort_size_desc/asc, sort_pos, top_n(N), dedup_form.
+
+The core predicate sa_apply dispatches on the rule term structure to the
+appropriate helper. sa_apply_seq applies a sequence of rules in order - the
+first symbolic pipeline for scene transformations in PrologAI.
+
+sa_verify, sa_verify_seq, sa_verify_all, and sa_verify_seq_all confirm that
+a rule or sequence of rules correctly transforms training examples. Once
+verified, sa_apply produces the output.
+
+Combined with ruleinfer (which discovers rules from examples), sceneapply
+completes the learn-and-apply cycle: infer the rule, verify it across all pairs,
+apply it to the test input.
+
+46 of 46 unit tests pass.
+
+This is WP 207, Mentova's 227th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

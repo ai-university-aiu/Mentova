@@ -1,0 +1,95 @@
+Accomplishment 227: Scene-Level Rule Term Evaluation Engine (sceneapply Pack, sa_*, Layer 186)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 207th work package: the sceneapply pack, a suite of 14 sa_*
+predicates that apply symbolic rule terms to obj(Color, Cells) scene lists.
+
+
+Motivation
+
+The ruleinfer pack (ri_*) can determine what transformation rule was applied to
+a scene. The sceneapply pack executes that rule. Together they form the complete
+learn-and-apply cycle: infer the rule from examples, verify it across all training
+pairs, then apply it to the test input.
+
+
+Rule Term Vocabulary
+
+A rule term is a Prolog term representing a scene transformation:
+
+Color transformations: recolor(Old,New), recolor_all(New), color_map(Map)
+Spatial transformations: shift(DR,DC), to_origin, reflect_h(Width), reflect_v(Height)
+Filtering: remove_color(Color), keep_color(Color)
+Ordering: sort_size_desc, sort_size_asc, sort_pos
+Selection: top_n(N)
+Deduplication: dedup_form
+
+
+Predicates
+
+sa_apply(+Rule, +Scene, -Scene2): dispatch on rule term and apply to the scene.
+Each rule term maps to an internal implementation (maplist for color/spatial
+rules, include for filter rules, msort-keyed sort for ordering).
+
+sa_apply_seq(+Rules, +Scene, -Scene2): recursive descent over a rule list,
+threading the scene through each rule in order. Empty sequence is identity.
+
+sa_verify(+Rule, +Before, +After): apply rule to Before and compare with After
+using msort, making the check order-insensitive.
+
+sa_verify_seq(+Rules, +Before, +After): same for a rule sequence.
+
+sa_verify_all(+Rule, +Pairs): verify rule works on all Before-After training pairs.
+sa_verify_seq_all(+Rules, +Pairs): same for a rule sequence.
+
+sa_rule_type(+Rule, -Type): classify rule as color, spatial, filter, order, or
+dedup based on the rule term structure.
+
+sa_is_color_rule/1, sa_is_spatial_rule/1, sa_is_filter_rule/1: type-check
+predicates that delegate to sa_rule_type.
+
+sa_colors_affected(+Rule, -Colors): extract color atoms referenced in the rule.
+Spatial, ordering, and dedup rules return [].
+
+sa_compose(+Rule1, +Rule2, -Seq): make a two-step sequence [Rule1, Rule2].
+
+sa_seq_len(+Seq, -N): number of steps in a rule sequence.
+
+sa_rule_invertible(+Rule): succeed if the rule has a trivially constructible
+inverse. Invertible rules: recolor (swap Old/New), shift (negate DR/DC),
+reflect_h and reflect_v (self-inverse). Filter rules and ordering rules are
+not trivially invertible.
+
+
+Implementation Notes
+
+sa_apply dispatches on the Prolog term functor and arity. No central table or
+meta-predicate is needed: Prolog's pattern matching handles dispatch naturally.
+
+All verification predicates use msort for comparison, making them
+order-insensitive. This correctly handles cases where the After scene has the
+same objects but in a different order.
+
+No cross-pack dependencies. Uses library(lists) and library(apply).
+
+
+Test Coverage
+
+46 of 46 unit tests pass. Tests cover all 14 rule types, single and sequential
+application, verification (positive and negative), rule classification, color
+extraction, composition, and invertibility.
+
+
+Significance
+
+The sceneapply pack completes the rule-handling triad for scene-level reasoning:
+scenecmp detects that something changed, ruleinfer identifies the rule, and
+sceneapply executes it. Any transformation representable as a rule term can now
+be learned from examples and applied to new inputs in a single symbolic pipeline.
+
+This is WP 207, Mentova's 227th accomplishment.
