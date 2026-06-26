@@ -1,0 +1,203 @@
+Accomplishment 201: List Interlacing, Slicing, and Cycling (Weave Pack, wv_*, Layer 160)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains a weave pack (14 wv_* predicates, Layer 160) that provides
+general-purpose list interlacing, slicing, and cycling operations.
+
+All predicates work on any Prolog list; no dependency on obj() terms or grid
+representations.
+
+The pack covers: interleaving two lists alternately (wv_alternate), splitting
+into even/odd indexed elements (wv_split_even_odd), striding by a fixed step
+(wv_stride), chunking into sub-lists of fixed size (wv_chunk), extracting
+sliding windows of width 2 and 3 (wv_pair_wise, wv_triple_wise), rotating
+left and right with modulo semantics (wv_rotate_left, wv_rotate_right),
+reversing (wv_reflect), repeating (wv_repeat), taking and dropping prefixes
+(wv_take, wv_drop), cycling to a target length (wv_cycle), and pairing two
+lists element-wise (wv_zip).
+
+66 of 66 PLUnit tests pass.
+
+This work package is PrologAI WP 181, merged as PR 266 on 2026-06-26.
+
+1. Motivation
+
+Object-scene reasoning packs (group, proximity, link, layout) produce and
+consume lists of obj(Color, Cells) terms.
+
+Many ARC-AGI-2 compositional rules require list-level restructuring of those
+object collections before or after applying object-level operations:
+
+- Interleave two object lists (one from each input zone) into an alternating
+  combined sequence.
+- Extract every second object in a sorted list to isolate an object
+  sub-sequence.
+- Split a sorted object list into consecutive pairs for pairwise comparison.
+- Rotate an object sequence cyclically so a different object becomes the head.
+- Cycle a short color palette to color a longer object list.
+
+None of the existing packs (arrange, order, sift, pigment) provide these
+list-level structural operations. The weave pack fills this gap with
+operations that work on any list, enabling composition with any upstream pack.
+
+2. Predicate Descriptions
+
+2.1 wv_alternate/3
+
+wv_alternate(+L1, +L2, -Result) interleaves elements from L1 and L2
+alternately: [L1[0], L2[0], L1[1], L2[1], ...].
+
+When one list is exhausted, the remaining elements of the other list are
+appended at the end.
+
+Implementation: base case wv_alternate([], Rest, Rest) handles exhaustion of
+L1; the recursive case places the head of L1 in the result, then swaps L1 and
+L2 roles, ensuring strict alternation.
+
+2.2 wv_split_even_odd/3
+
+wv_split_even_odd(+List, -Evens, -Odds) splits List into elements at 0-based
+even indices (0, 2, 4, ...) and odd indices (1, 3, 5, ...).
+
+Implementation: at each step the head goes to Evens; the roles of Evens and
+Odds are swapped in the recursive call, so the next head goes to Odds.
+
+2.3 wv_stride/3
+
+wv_stride(+List, +Step, -Result) collects every Step-th element starting at
+index 0, using a private wv_drop_ helper to skip Step-1 elements between
+sampled elements.
+
+2.4 wv_chunk/3
+
+wv_chunk(+List, +N, -Chunks) splits List into consecutive non-overlapping
+chunks of exactly N elements using length/2 and append/3; any trailing
+elements that do not complete a full chunk are silently discarded.
+
+2.5 wv_pair_wise/2 and wv_triple_wise/2
+
+wv_pair_wise(+List, -Pairs) produces all consecutive overlapping pairs:
+[[A,B],[B,C],[C,D],...]. It emits [A,B] and recurses from [B|...].
+
+wv_triple_wise(+List, -Triples) produces all consecutive overlapping triples:
+[[A,B,C],[B,C,D],...].
+
+Both return [] for lists too short to produce even one window.
+
+2.6 wv_rotate_left/3 and wv_rotate_right/3
+
+wv_rotate_left(+List, +K, -Result) rotates left by K positions (mod length).
+Implementation: compute K1 = K mod N; if K1 = 0 return List; otherwise split
+via length(Front,K1)+append(Front,Back,List) then append(Back,Front,Result).
+
+wv_rotate_right(+List, +K, -Result) converts right rotation to an equivalent
+left rotation by K2 = N - K1.
+
+2.7 wv_reflect/2
+
+wv_reflect(+List, -Result) reverses the list by delegating to reverse/2 from
+library(lists).
+
+2.8 wv_repeat/3
+
+wv_repeat(+List, +N, -Result) concatenates List with itself N times via
+append/3 recursion; base case N=0 returns [].
+
+2.9 wv_take/3 and wv_drop/3
+
+wv_take(+List, +N, -Result) returns the first N elements; if N >= length(List)
+it returns the whole list.
+
+wv_drop(+List, +N, -Result) discards the first N elements; if N >= length(List)
+it returns [].
+
+Both use dual base clauses (N=0 with cut; [] base).
+
+2.10 wv_cycle/3
+
+wv_cycle(+List, +N, -Result) produces exactly N elements by cycling through
+List repeatedly. The private helper wv_cycle_/4 carries both the current
+position in the list and the original source; when Current is exhausted, it
+restarts from Source.
+
+2.11 wv_zip/3
+
+wv_zip(+List1, +List2, -Pairs) pairs corresponding elements as H1-H2 terms
+using the -/2 functor; stops at the shorter list.
+
+3. Key Design Decisions
+
+3.1 List Polymorphism
+
+All predicates accept any Prolog list. They do not require obj() terms. This
+makes the pack composable with any upstream pack that produces a list, and
+with raw color lists, cell lists, or number lists.
+
+3.2 Truncation Semantics for wv_chunk
+
+wv_chunk silently discards trailing elements that do not form a complete chunk.
+This is deliberate: chunk size N is typically determined by the task rule, and
+incomplete trailing groups are noise. A predicate that produces incomplete
+chunks would require special-case handling in downstream code.
+
+3.3 Modulo Semantics for Rotation
+
+wv_rotate_left and wv_rotate_right reduce K modulo the list length before
+operating. This means rotate_left([a,b,c], 7) gives the same result as
+rotate_left([a,b,c], 1) for a 3-element list. The caller does not need to
+normalize K.
+
+3.4 Private Helper wv_drop_
+
+The wv_drop_ helper is defined as a private predicate (trailing underscore)
+rather than re-using the public wv_drop/3. This avoids a cross-call dependency
+and keeps wv_stride logically self-contained.
+
+4. Examples
+
+Interleaving two color palettes:
+
+    ?- wv_alternate([red, green], [blue, yellow, white], R).
+    R = [red, blue, green, yellow, white].
+
+Pairing adjacent objects for comparison:
+
+    ?- wv_pair_wise([obj(a,C1), obj(b,C2), obj(c,C3)], Pairs).
+    Pairs = [[obj(a,C1),obj(b,C2)], [obj(b,C2),obj(c,C3)]].
+
+Cycling a 3-color palette to color 7 objects:
+
+    ?- wv_cycle([red, green, blue], 7, Colors).
+    Colors = [red, green, blue, red, green, blue, red].
+
+    ?- wv_zip([obj(a,_), obj(b,_), obj(c,_)], [red, green, blue], Pairs).
+    Pairs = [obj(a,_)-red, obj(b,_)-green, obj(c,_)-blue].
+
+5. SPARC Documentation
+
+Specification v146 adds Part 171 (weave pack specification).
+
+Pseudocode v139 adds Part 171 (weave pack pseudocode).
+
+Architecture v140 adds ARCH-147 (weave pack layer placement).
+
+Refinement v194 adds acceptance criteria AC-WV-001 through AC-WV-066.
+
+Completion v197 adds the WP-181 completion record.
+
+6. Conclusion
+
+The weave pack gives PrologAI a complete set of list-level structural
+operations that complement the object-level reasoning packs.
+
+Together with group (partition), proximity (distance), link (correspondence),
+and layout (arrangement), the weave pack completes a five-pack object-scene
+reasoning suite that can express: which objects belong together, how far apart
+they are, which objects correspond, how the collection is arranged, and how to
+restructure a collection as a list.
+
+This is WP 181, Mentova's 201st accomplishment.
