@@ -1,0 +1,159 @@
+Accomplishment 185: Grid Rotation and Rotational Symmetry Detection
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 165th work package: the rotation pack (ro_*, Layer 144).
+
+The rotation pack provides 14 predicates for rotating 2D grids by multiples of 90
+degrees clockwise, testing and detecting rotational symmetry, rotating lists of cell
+coordinate pairs, combining grids through rotation-based overlay (spin), and finding
+which rotation maps one grid to another.
+
+Introduction
+
+Rotation is one of the eight rigid isometries that appear throughout visual
+reasoning tasks. While PrologAI's arc_benchmark.pl file contains rotation logic for
+specific ARC-AGI-1 rules, no standalone reusable rotation pack existed before this
+work package. The rotation pack encapsulates all rotation operations in 14 named,
+tested predicates with consistent clockwise conventions and round-trip guarantees.
+
+The three non-trivial rotations are:
+
+  90 CW: (R,C) -> (C, H-1-R). Output dimensions: W rows, H cols.
+  180:   (R,C) -> (H-1-R, W-1-C). Same dimensions.
+  270 CW: (R,C) -> (W-1-C, R). Output dimensions: W rows, H cols.
+
+Core Rotation
+
+ro_rot90(Grid, Out) builds each output row C as column C of Grid read from the
+bottom row upward: Out[C] = [Grid[H-1][C], Grid[H-2][C], ..., Grid[0][C]].
+This is implemented via nested findall with between/3 and nth0/3.
+
+ro_rot180(Grid, Out) uses a two-step approach: reverse each row (horizontal mirror),
+then reverse the row order (vertical mirror). The composition of the two mirrors is
+algebraically equivalent to the 180-degree rotation formula (H-1-R, W-1-C).
+
+ro_rot270(Grid, Out) builds each output row C as column W-1-C of Grid read
+top-to-bottom. This is the 90-degree counter-clockwise rotation.
+
+ro_rot_n(Grid, N, Out) dispatches to the three predicates above based on N in
+0..3, with cuts to prevent choicepoints when N is a ground integer.
+
+All Rotations and Canonical Form
+
+ro_all(Grid, Rots) produces [G0, G90, G180, G270] as a four-element list.
+
+ro_canonical(Grid, Canon) finds the lexicographically smallest of the four
+rotations using msort/2 and SWI-Prolog's standard term ordering. The canonical
+form is the same for all members of a rotation equivalence class.
+
+Rotational Symmetry
+
+ro_is_rot2(Grid) tests whether Grid is invariant under 180-degree rotation.
+ro_is_rot4(Grid) tests whether Grid is invariant under 90-degree rotation; this
+requires the grid to be square since 90-degree rotation swaps H and W.
+
+ro_sym_order(Grid, N) returns the smallest N in {1, 2, 4}:
+  N=4: the grid has 4-fold rotational symmetry (invariant under 90).
+  N=2: the grid has 2-fold rotational symmetry (invariant under 180, not 90).
+  N=1: the grid has no rotational symmetry other than the trivial 360 = identity.
+
+Implementation uses cascading cuts: 4-fold is checked first, then 2-fold, with 1
+as the fallback.
+
+Cell Coordinate Rotation
+
+ro_rotate_cells(Cells, H, W, N, Out) rotates a list of R-C cell coordinate pairs.
+The H and W parameters define the bounding box. The mapping is:
+  N=0: identity.
+  N=1: (R,C) -> (C, H-1-R).
+  N=2: (R,C) -> (H-1-R, W-1-C).
+  N=3: (R,C) -> (W-1-C, R).
+
+A key implementation detail for N=3: the new column is the OLD ROW (NC = R), not
+the old column. Using NC = C (the old column) instead was a bug caught during testing.
+
+Spin Operations
+
+ro_spin2(Grid, Bg, Out) overlays Grid with its 180-degree rotation. Non-background
+cells of the original Grid take priority. This is useful when a half-grid of ink
+must be completed to a 2-fold symmetric whole.
+
+ro_spin4(Grid, Bg, Out) chains four overlays: Grid, G90, G180, G270. When the
+original Grid has ink only in one rotational sector, the result has all four sectors
+filled with the same ink. Applied to a single corner cell in a 2x2 grid with
+background 0:
+
+  ro_spin4([[1,0],[0,0]], 0, Out).
+  Out = [[1,1],[1,1]]
+
+Applied to a single corner cell in a 3x3 grid:
+
+  ro_spin4([[1,0,0],[0,0,0],[0,0,0]], 0, Out).
+  Out = [[1,0,1],[0,0,0],[1,0,1]]
+
+Rotation Matching
+
+ro_match_rotation(GridA, GridB, N) finds the smallest N in 0..3 such that
+rotating GridA by N*90 CW produces GridB. Fails if no such N exists.
+
+ro_equiv_rotation(GridA, GridB) succeeds if any rotation of GridA equals GridB.
+
+Round-Trip Properties
+
+Four applications of ro_rot90 return the original grid.
+Two applications of ro_rot180 return the original grid.
+Three applications of ro_rot90 produce the same result as ro_rot270.
+These properties hold for grids of any dimension, square or not.
+
+Example Results
+
+ro_rot90([[a,b],[c,d]], Out): Out = [[c,a],[d,b]].
+ro_rot180([[a,b],[c,d]], Out): Out = [[d,c],[b,a]].
+ro_rot270([[a,b],[c,d]], Out): Out = [[b,d],[a,c]].
+
+ro_sym_order([[1,2],[2,1]], N): N = 2.
+  Verification: ro_rot180([[1,2],[2,1]]) = reverse_rows(reverse_each) =
+  reverse([[2,1],[1,2]]) = [[1,2],[2,1]] == original. 2-fold confirmed.
+
+ro_rotate_cells([0-0, 0-1, 1-0], 3, 3, 3, Out): Out = [2-0, 1-0, 2-1].
+  Formula N=3: (R,C) -> (W1-C, R) = (2-C, R).
+  (0,0) -> (2,0). (0,1) -> (1,0). (1,0) -> (2,1). Correct.
+
+Validation
+
+46 PLUnit acceptance tests cover all 14 predicates, including round-trip tests and
+the consistency check that three 90-degree rotations equal one 270-degree rotation.
+All 46 tests pass.
+
+SPARC Documentation
+
+Specification v130: Part 155, requirements RO-RO-001 through RO-RO-014.
+
+Pseudocode v123: Part 155, pseudocode for all 14 predicates.
+
+Architecture v124: ARCH-131, rotation pack design notes.
+
+Refinement v178: acceptance criteria AC-RO-001 through AC-RO-046.
+
+Completion v181: WP 165 release record.
+
+Tutorial Chapter 126 added to all tutorial files.
+
+Conclusion
+
+The rotation pack gives PrologAI a clean, reusable vocabulary for all quarter-turn
+rotation operations on 2D grids. The round-trip properties and consistency checks
+in the test suite ensure that the implementations are algebraically correct. The
+spin predicates (ro_spin2, ro_spin4) bridge the gap between partial grid patterns
+and their rotationally complete counterparts, directly supporting the ARC-AGI-2
+capability of completing patterns with rotational symmetry.
+
+PrologAI now comprises 165 work packages.
+
+Mentova has achieved 185 accomplishments.
