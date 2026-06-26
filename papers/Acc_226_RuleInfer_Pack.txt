@@ -1,0 +1,103 @@
+Accomplishment 226: Scene-Level Transformation Rule Inference from Object-List Pairs (ruleinfer Pack, ri_*, Layer 185)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 206th work package: the ruleinfer pack, a suite of 14 ri_*
+predicates that infer which scene-level transformation was applied to a Before
+scene to produce an After scene.
+
+
+Motivation
+
+Solving pattern induction problems requires more than recognizing that something
+changed. The engine must determine what rule was applied. The ruleinfer pack
+provides this inference layer: given one or more Before-After training pairs,
+determine the transformation rule symbolically.
+
+This pack bridges scenecmp (which detects that scenes differ) and scenexf (which
+applies transformations). The ruleinfer pack answers: "What exactly changed, and
+how?"
+
+
+Predicates
+
+The 14 ri_* predicates fall into three categories:
+
+Inference (single pair):
+
+ri_infer_recolor(+Before, +After, -Old, -New): detect single-color substitution.
+Computes the distinct-color set difference between Before and After; exactly one
+color appears only in Before (Old) and exactly one appears only in After (New).
+Verifies that the count of Old-colored objects equals the count of New-colored
+objects, ensuring no objects were added or removed.
+
+ri_infer_recolor_all(+Before, +After, -New): detect uniform recolor. Succeeds
+when After has exactly one distinct color New.
+
+ri_infer_color_map(+Before, +After, -Map): detect full color substitution by
+comparing position-matched objects. Returns one Old-New pair per position where
+the color changed; unchanged positions are omitted.
+
+ri_infer_keep_color(+Before, +After, -Color): detect keep_color filter. After
+has exactly one distinct color and fewer objects than Before; the count of Color
+objects in Before equals the length of After.
+
+ri_infer_remove_color(+Before, +After, -Color): detect color removal. Color is
+the single color present in Before but absent from After.
+
+ri_infer_shift(+Before, +After, -DR, -DC): detect uniform spatial shift. Uses
+the first object in Before as a reference: finds the matching object in After
+(same color and normalized form), computes candidate DR and DC, then verifies
+the full scene matches when shifted. A cut after verification makes the
+predicate deterministic.
+
+ri_infer_to_origin(+Before, +After): detect shift-to-origin. Computes the scene
+bounding box minimum row and column, applies the negated shift, and verifies the
+result (as an msort-ordered set) equals After.
+
+Consistency (multiple pairs):
+
+ri_consistent_recolor(+Old, +New, +Pairs): verify recolor(Old, New) works on
+all training pairs using forall. Comparison is msort-based so object order does
+not matter.
+
+ri_consistent_color_map(+Map, +Pairs), ri_consistent_keep_color(+Color, +Pairs),
+ri_consistent_remove_color(+Color, +Pairs), ri_consistent_shift(+DR, +DC, +Pairs):
+same pattern for their respective rules.
+
+Cross-pair queries:
+
+ri_all_same_n_objs(+Pairs): all pairs preserve object count.
+ri_all_same_colors(+Pairs): all pairs preserve the set of distinct colors.
+
+
+Implementation Notes
+
+The shift inference uses a matching step: find the object in After with the same
+color and normalized form as the first Before object. This handles scenes where
+objects are permuted. The final msort comparison verifies the whole scene, not
+just the first object.
+
+Color comparisons use atom equality (==) throughout.
+
+No cross-pack dependencies. Uses library(lists) and library(apply).
+
+
+Test Coverage
+
+41 of 41 unit tests pass. Tests cover all inference predicates, consistency
+predicates, and cross-pair queries including failure cases for each.
+
+
+Significance
+
+The ruleinfer pack gives PrologAI the ability to learn transformation rules
+symbolically from examples. Combined with the scenexf pack (which applies rules)
+and the scenecmp pack (which detects differences), the platform now supports the
+full learn-verify-apply cycle at the scene level.
+
+This is WP 206, Mentova's 226th accomplishment.

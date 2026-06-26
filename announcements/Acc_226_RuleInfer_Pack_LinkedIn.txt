@@ -1,0 +1,35 @@
+Accomplishment 226: Scene-Level Transformation Rule Inference from Object-List Pairs (ruleinfer Pack, ri_*, Layer 185)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a ruleinfer pack - 14 ri_* predicates that infer which
+scene-level transformation was applied to a Before scene to produce an After
+scene.
+
+This pack closes the loop between scene comparison and scene transformation.
+scenecmp tells you THAT something changed. scenexf applies the change. ruleinfer
+tells you WHAT the rule was.
+
+Given a Before-After pair, ruleinfer can determine:
+- Was it a recolor? (ri_infer_recolor)
+- Was every object set to the same color? (ri_infer_recolor_all)
+- Was a color filter applied? (ri_infer_keep_color, ri_infer_remove_color)
+- Was the scene shifted? (ri_infer_shift, ri_infer_to_origin)
+- What was the full color substitution map? (ri_infer_color_map)
+
+Once a candidate rule is found from one pair, consistency predicates verify it
+works across all training pairs. Cross-pair queries check whether object counts
+and color sets are preserved.
+
+41 of 41 unit tests pass.
+
+This is WP 206, Mentova's 226th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
