@@ -1,0 +1,187 @@
+Accomplishment 213: Object Pair Relation Analysis (Objrel Pack, or_*, Layer 172)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Abstract
+
+PrologAI gains an objrel pack (14 or_* predicates, Layer 172) for computing
+pairwise geometric and spatial relationships between obj(Color, Cells) terms.
+The pack answers questions about shared cells (overlap, shared set,
+intersection size), adjacency (4-neighbor and 8-neighbor touching without
+overlap), containment, cell set union, centroid distances (Euclidean and
+Manhattan), compass direction, alignment (shared centroid row or column), and
+bounding box gaps. Colors are ignored throughout; all reasoning is based
+on cell positions alone.
+
+61 of 61 PLUnit tests pass.
+
+This work package is PrologAI WP 193, merged as PR 280 on 2026-06-26.
+
+1. Motivation
+
+Existing packs answer questions about a single obj(Color, Cells) term:
+- objxf (ox_*): translate, rotate, reflect, scale a single object
+- objmorph (om_*): dilate and erode a single object
+- objsym (os_*): symmetry tests and D4 equivalence for a single object
+- objbound (ob_*): bounding box, shape type, holes, and perimeter for a single object
+- objchain (ch_*): chain structure across a list of objects
+
+None of these answer questions about the relationship between two objects:
+"Do these two objects share any cells?" "Are they touching?" "Is one inside
+the other?" "How far apart are their centers?" "Which direction is one from
+the other?" The objrel pack fills this gap.
+
+2. Core Design
+
+2.1 Private Helpers
+
+or_centroid_(Obj, CR, CC) computes the floating-point centroid of an object.
+It collects all row indices and all column indices via findall, then divides
+their sums by the cell count.
+
+or_bbox_(Obj, MinR, MinC, MaxR, MaxC) computes the bounding box via findall
+plus min_list/max_list, following the same pattern as ob_bbox_ in the
+objbound pack but private to this module.
+
+or_dir_(DR, DC, Dir) maps a centroid delta (DR, DC) to a compass direction
+atom using arithmetic comparisons in a chain of if-then-else clauses.
+Positive DR is south (rows increase downward); positive DC is east.
+
+2.2 Overlap and Shared Cells
+
+or_overlap tests whether member/2 can find any cell in Obj1 that
+also passes memberchk/2 against Obj2's cells. A cut after the first
+match makes this efficient.
+
+or_shared_cells uses findall with a memberchk filter to collect all
+cells of Obj1 that appear in Obj2.
+
+or_n_shared delegates to or_shared_cells and takes the length.
+
+2.3 Adjacency
+
+or_touch4 first checks \+ or_overlap (overlapping objects are not
+"touching"). Then it searches for any cell pair whose Manhattan distance
+is exactly 1. A cut terminates on the first such pair.
+
+or_touch8 uses the same guard and structure but tests max(|DR|,|DC|) = 1
+(Chebyshev distance), which includes diagonal neighbors.
+
+2.4 Containment and Union
+
+or_contains uses forall(member(C, Cells2), memberchk(C, Cells1)) to
+verify that every cell of Obj2 appears in Obj1.
+
+or_union_cells appends both cell lists and applies sort/2 to remove
+duplicates and establish canonical order.
+
+2.5 Distance
+
+or_dist computes Euclidean distance: sqrt((R2-R1)^2 + (C2-C1)^2) on
+floating-point centroids.
+
+or_manhattan computes abs(R2-R1) + abs(C2-C1) on the same centroids.
+
+2.6 Direction
+
+or_direction calls or_centroid_ on both objects, computes deltas
+DR = R2-R1 and DC = C2-C1, then dispatches to or_dir_ for the
+compass direction. The result same is returned when both deltas are zero.
+
+2.7 Alignment
+
+or_aligned_h checks R1 =:= R2 for centroid rows.
+or_aligned_v checks C1 =:= C2 for centroid columns.
+Arithmetic comparison handles both integer and float centroids.
+
+2.8 Bounding Box Gaps
+
+or_gap_rows applies the formula:
+  G = max(0, max(MinR1, MinR2) - min(MaxR1, MaxR2) - 1)
+
+This counts empty rows between the two bounding boxes. When the bboxes
+touch or overlap in the row dimension, the result is 0.
+
+Example: bboxes at rows 0-0 and rows 3-3 give max(0, 3-0-1) = 2.
+Two empty rows (rows 1 and 2) lie between them.
+
+or_gap_cols applies the same formula to column extremes.
+
+3. Predicate Descriptions
+
+or_overlap(+Obj1, +Obj2): at least one cell is shared.
+or_shared_cells(+Obj1, +Obj2, -Shared): cell intersection.
+or_n_shared(+Obj1, +Obj2, -N): intersection size.
+or_touch4(+Obj1, +Obj2): 4-adjacent, no overlap.
+or_touch8(+Obj1, +Obj2): 8-adjacent (includes diagonal), no overlap.
+or_contains(+Obj1, +Obj2): Obj1 cell set includes all of Obj2.
+or_union_cells(+Obj1, +Obj2, -Union): sorted union of cell sets.
+or_dist(+Obj1, +Obj2, -D): Euclidean centroid distance.
+or_manhattan(+Obj1, +Obj2, -D): Manhattan centroid distance.
+or_direction(+Obj1, +Obj2, -Dir): compass direction (n/s/e/w/ne/nw/se/sw/same).
+or_aligned_h(+Obj1, +Obj2): same centroid row.
+or_aligned_v(+Obj1, +Obj2): same centroid column.
+or_gap_rows(+Obj1, +Obj2, -G): empty rows between bounding boxes.
+or_gap_cols(+Obj1, +Obj2, -G): empty columns between bounding boxes.
+
+4. Examples
+
+Example 1: Test whether two objects overlap and find their shared cells.
+
+    P = obj(p, [r(0,0), r(0,1)]),
+    Q = obj(q, [r(0,1), r(0,2)]),
+    or_overlap(P, Q),               % true: r(0,1) is shared
+    or_shared_cells(P, Q, [r(0,1)]).
+
+Example 2: Test adjacency.
+
+    Left  = obj(l, [r(2,0)]),
+    Right = obj(r, [r(2,1)]),
+    Diag  = obj(d, [r(3,1)]),
+    or_touch4(Left, Right),   % true: 4-adjacent east
+    or_touch8(Left, Diag),    % true: 8-adjacent SE (not 4-adjacent)
+    \+ or_touch4(Left, Diag). % false: diagonal is not 4-adjacent
+
+Example 3: Direction and distance.
+
+    North = obj(n, [r(0,5)]),
+    South = obj(s, [r(4,5)]),
+    or_direction(South, North, n),  % North is north of South
+    or_dist(North, South, 4.0),     % 4 rows apart
+    or_manhattan(North, South, 4.0).
+
+Example 4: Bounding box gap.
+
+    Top = obj(t, [r(0,0), r(0,1), r(0,2)]),
+    Bot = obj(b, [r(3,0), r(3,1), r(3,2)]),
+    or_gap_rows(Top, Bot, 2),  % rows 1 and 2 are empty between them
+    or_gap_cols(Top, Bot, 0).  % cols overlap, no column gap
+
+5. SPARC Documentation
+
+Specification v158 adds Part 183 (objrel pack specification).
+
+Pseudocode v151 adds Part 183 (objrel pack pseudocode).
+
+Architecture v152 adds ARCH-159 (objrel pack layer placement).
+
+Refinement v206 adds acceptance criteria AC-OR-001 through AC-OR-061.
+
+Completion v209 adds the WP-193 completion record.
+
+6. Conclusion
+
+The objrel pack gives PrologAI a complete set of pairwise relation predicates
+for obj(Color, Cells) terms. A reasoner can now determine whether two objects
+overlap, whether they are adjacent (4-way or 8-way), whether one contains the
+other, how far apart they are, which direction one lies from the other, whether
+they are row- or column-aligned, and how many rows or columns separate their
+bounding boxes. These 14 predicates complement the existing single-object packs
+(objbound, objsym, objxf, objmorph) and give the platform the dyadic reasoning
+needed for complex visual tasks.
+
+This is WP 193, Mentova's 213th accomplishment.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
