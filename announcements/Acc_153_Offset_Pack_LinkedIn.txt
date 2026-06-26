@@ -1,0 +1,31 @@
+Mentova Accomplishment 153: Grid Shifting and Circular Rolling - The Offset Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now shift and roll grids in any direction.
+
+Work Package 133 - the offset pack - adds 14 od_* predicates for grid shifting and rolling. 42/42 tests.
+
+Two operations, four directions each:
+
+Shifting: content moves; vacated cells become background; content that falls off an edge is dropped.
+Rolling: content wraps around; no content is lost.
+
+od_shift_right / od_shift_left / od_shift_down / od_shift_up
+od_roll_right / od_roll_left / od_roll_down / od_roll_up
+
+Plus:
+- od_shift_color: move only one specific color, leave everything else unchanged
+- od_infer_shift: given two grids, find (DR, DC) such that shifting one gives the other
+
+od_shift_dir dispatches by direction atom. It uses if-then-else rather than separate clauses - this matters for determinism: multi-clause dispatch leaves choicepoints for the unmatched directions.
+
+Shift. Roll. Find the offset. Reconstruct the output.
+
+PrologAI: 131 work packages. Mentova: 153 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #SWIProlog #AGI

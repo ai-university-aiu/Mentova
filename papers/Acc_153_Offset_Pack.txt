@@ -1,0 +1,174 @@
+Mentova Accomplishment 153: Grid Shifting and Circular Rolling - The Offset Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 133: the offset pack, a Layer 112 symbolic
+reasoning module providing 14 predicates for grid shifting and circular rolling.
+The pack shifts grids in four directions with background fill, rolls circularly
+in four directions, provides single-row equivalents, shifts one specific color
+within a grid while leaving other content unchanged, and infers the shift
+displacement between two grids. All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Grid shifts and rolls are among the most common structural transformations in
+visual pattern recognition. "Move this content to the right" or "shift this
+pattern down one row" are operations that appear in motion detection, object
+displacement tasks, and cyclic pattern recognition.
+
+The existing PrologAI library provides grid-level transformations (flip,
+rotate, scale) but lacked directional shifting and circular rolling as
+first-class predicates. The offset pack fills this gap.
+
+
+2. Predicate Inventory (14 predicates, od_* prefix)
+
+2.1 Row-Level Shifting
+
+od_shift_row(+Row, +N, +Bg, -Shifted)
+Shifted is Row with content moved N positions rightward. The leftmost N
+positions become Bg; the rightmost N elements of the original row are
+dropped. For N=0, Shifted = Row.
+
+Implementation: length/2 + append/3 to extract the first W-N elements;
+findall(Bg, between(1,N,_), BgCells) to create N background cells.
+
+od_shift_row_left(+Row, +N, +Bg, -Shifted)
+Content moves leftward by N. The rightmost N positions become Bg; the
+leftmost N elements are dropped.
+
+Examples:
+od_shift_row([1,2,3,4], 1, 0, S).  % S = [0,1,2,3]
+od_shift_row([1,2,3,4], 2, 0, S).  % S = [0,0,1,2]
+od_shift_row_left([1,2,3,4], 1, 0, S).  % S = [2,3,4,0]
+
+
+2.2 Grid-Level Shifting
+
+od_shift_right(+Grid, +N, +Bg, -Shifted)
+od_shift_left(+Grid, +N, +Bg, -Shifted)
+Apply od_shift_row or od_shift_row_left to every row using maplist with a
+YALL lambda to capture N and Bg.
+
+od_shift_down(+Grid, +N, +Bg, -Shifted)
+Content moves downward by N rows. The top N rows become Bg rows (each of
+width W); the bottom N rows are dropped.
+
+od_shift_up(+Grid, +N, +Bg, -Shifted)
+Content moves upward by N rows. The top N rows are dropped; N Bg rows are
+appended at the bottom.
+
+od_shift_dir(+Grid, +Dir, +N, +Bg, -Shifted)
+Dispatches by direction atom (right, left, down, up) using a single
+if-then-else clause for determinism. Avoids choicepoint warnings that
+multi-clause dispatch would produce.
+
+
+2.3 Circular Rolling
+
+od_roll_row(+Row, +N, -Rolled)
+Circular right shift. The last (N mod W) elements wrap to become the first
+elements. Split point = W - (N mod W); append Suffix before Prefix.
+
+od_roll_right(+Grid, +N, -Rolled) / od_roll_left(+Grid, +N, -Rolled)
+Apply row-level roll to every row.
+
+od_roll_down(+Grid, +N, -Rolled)
+The last (N mod H) rows wrap to the top.
+
+od_roll_up(+Grid, +N, -Rolled)
+The first (N mod H) rows wrap to the bottom.
+
+Examples:
+od_roll_row([1,2,3,4], 1, R).       % R = [4,1,2,3]
+od_roll_row([1,2,3,4], 4, R).       % R = [1,2,3,4]  (identity)
+od_roll_down([[1],[2],[3],[4]], 1, R). % R = [[4],[1],[2],[3]]
+
+
+2.4 Color-Specific Shifting
+
+od_shift_color(+Grid, +Color, +DR, +DC, +Bg, -Result)
+Translates all cells equal to Color by (DR rows, DC columns). For each output
+cell (R, C):
+- If Grid[R-DR][C-DC] is Color (in bounds): output Color.
+- Else if Grid[R][C] is Color: output Bg (the color vacated this position).
+- Else: output Grid[R][C] (non-Color cells unchanged).
+
+Implemented with nested findall and in-bounds if-then-else per cell.
+
+Examples:
+od_shift_color([[0,1,0]], 1, 0, 1, 0, R).  % R = [[0,0,1]]
+od_shift_color([[2],[0],[0]], 2, 1, 0, 0, R).  % R = [[0],[2],[0]]
+od_shift_color([[1,0]], 1, 0, 2, 0, R).  % R = [[0,0]]  (clipped)
+
+
+2.5 Shift Inference
+
+od_infer_shift(+GridA, +GridB, +Bg, -DR, -DC)
+DR and DC are the displacement such that shifting GridA by (DR, DC) gives
+GridB. Positive DR = downward, positive DC = rightward.
+
+Uses a brute-force search over all integer displacements in the range
+[-(H-1), H-1] x [-(W-1), W-1]. The private helper od_apply_shift_ applies
+a signed shift using if-then-else to choose the appropriate direction.
+Commits to the first successful match with cut.
+
+Examples:
+od_infer_shift([[0,1,0],[0,0,0]], [[0,0,1],[0,0,0]], 0, DR, DC).
+% DR=0, DC=1
+
+od_infer_shift([[1,2],[3,4]], [[1,2],[3,4]], 0, DR, DC).
+% DR=0, DC=0
+
+
+3. Implementation Notes
+
+N=0 edge cases: findall(Bg, between(1,0,_), BgCells) returns [] when N=0.
+append([], List, List) is the identity, so all shift predicates correctly
+return the original input unchanged when N=0.
+
+od_shift_dir uses a single-clause if-then-else rather than four separate
+clauses to avoid choicepoints. When Dir = right, the Prolog engine would
+otherwise keep choicepoints for the left/down/up clauses, producing warnings.
+
+od_shift_color does not require explicit grid construction for the base
+(Color-replaced-by-Bg) and overlay (Color-placed-at-new-positions) steps.
+Instead, a single nested findall with in-bounds check handles both decisions
+per output cell in one pass.
+
+Imports: library(lists) for member/2, nth0/3, append/3; library(apply) for
+maplist/3.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no warnings. Three tests per predicate.
+
+Key correctness tests:
+  od_shift_row([5,6,7], 0, 0, S) => S = [5,6,7]  (N=0 identity)
+  od_roll_row([1,2,3,4], 4, R) => R = [1,2,3,4]  (full cycle identity)
+  od_shift_color([[1,0]], 1, 0, 2, 0, R) => R = [[0,0]]  (out-of-bounds clip)
+  od_infer_shift([[1,2],[3,4]], [[1,2],[3,4]], 0, 0, 0)  (identity detected)
+
+
+5. Significance
+
+The offset pack adds directional translation and cyclic rotation to PrologAI's
+spatial reasoning toolkit. Together with vec2 (displacement vectors), ray
+(directional probes), and the scene/fill packs, it enables complete analysis
+and reconstruction of grids that differ by a spatial offset.
+
+od_infer_shift is particularly useful for ARC-AGI-2: given an input-output
+pair where the transformation is a pure translation, a single call identifies
+the direction and magnitude.
+
+This is Mentova accomplishment 153. PrologAI now carries 131 work packages.
+
+github.com/ai-university-aiu/PrologAI
