@@ -1,0 +1,33 @@
+Accomplishment 223: Scene-Level Comparison of Two Object Lists (scenecmp Pack, sm_*, Layer 182)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a scenecmp pack - 14 sm_* predicates for comparing two scenes
+(Before and After obj(Color, Cells) lists) at the inventory level.
+
+When analyzing a visual transformation, the first questions to ask are often the
+simplest: did the number of objects change? Did new colors appear? Did the shapes
+change? The scenecmp pack answers all of these without requiring an explicit
+object-to-object matching.
+
+It provides count comparisons (sm_same_n_objs, sm_same_total_cells), color comparisons
+(sm_same_colors, sm_added_colors, sm_removed_colors), form comparisons (sm_same_forms,
+sm_added_forms, sm_removed_forms), a color change magnitude (sm_n_color_change), and a
+top-level change detector (sm_any_change) that short-circuits as soon as any difference
+is found.
+
+sm_forms uses normalized shapes: each object is translated to the origin and its cells
+are sorted. Two objects have the same form regardless of position or color.
+
+41 of 41 unit tests pass.
+
+This is WP 203, Mentova's 223rd accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

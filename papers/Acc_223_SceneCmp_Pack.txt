@@ -1,0 +1,118 @@
+Accomplishment 223: Scene-Level Comparison of Two Object Lists (scenecmp Pack, sm_*, Layer 182)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Summary
+
+PrologAI now has a scenecmp pack - 14 sm_* predicates for comparing two lists of
+obj(Color, Cells) terms (Before and After scenes) at the inventory level. This is
+WP 203, Mentova's 223rd accomplishment.
+
+
+Motivation
+
+Analyzing visual transformation tasks requires comparing what the scene looked like
+before and after a transformation. Previous packs addressed single scenes (scene,
+objattr, objgroup) or individual object pairs (objdelta, objmatch). The scenecmp pack
+provides the missing layer: high-level inventory comparison between two scenes without
+requiring an explicit object matching.
+
+
+Design
+
+The pack operates at the inventory level. Rather than asking "which object moved where?",
+it asks "did the number of objects change? Did new colors appear? Did new shapes appear?"
+This makes it fast and deterministic, and useful as a first filter before more detailed
+analysis.
+
+A form is a normalized shape: each object is translated so its top-left cell is at
+r(0,0), then its cell list is sorted. Two objects have the same form iff their
+normalized cell lists are identical.
+
+
+Predicates
+
+sm_n_objs/2
+    Count of objects in the list.
+
+sm_total_cells/2
+    Total cell count across all objects.
+
+sm_colors/2
+    Sorted list of distinct colors.
+
+sm_forms/2
+    Sorted list of distinct normalized shapes.
+
+sm_same_n_objs/2
+    Symmetric test: both scenes have the same object count.
+
+sm_same_total_cells/2
+    Symmetric test: both scenes have the same total cell count.
+
+sm_same_colors/2
+    Symmetric test: both scenes have exactly the same color set.
+
+sm_same_forms/2
+    Symmetric test: both scenes have exactly the same form set.
+
+sm_added_colors/3
+    Colors present in After but not in Before.
+
+sm_removed_colors/3
+    Colors present in Before but not in After.
+
+sm_added_forms/3
+    Normalized forms present in After but not in Before.
+
+sm_removed_forms/3
+    Normalized forms present in Before but not in After.
+
+sm_n_color_change/3
+    |added colors| + |removed colors|. Zero means same palette. Two means a color
+    swap. Higher values mean more complex recoloring.
+
+sm_any_change/2
+    True iff the object count, color set, or form set differs. Fails if no
+    difference is detected.
+
+
+Implementation Notes
+
+All predicates use the shared private helper sm_distinct_colors_ (findall + sort)
+and sm_distinct_forms_ (findall normalize + sort). The normalize step (sm_norm_)
+is the same as in objgroup and objattr: subtract the minimum row and column from
+each cell, then sort the cell list.
+
+The sm_any_change predicate uses a disjunction with a cut: it tries each of three
+inequalities (count, color, form) and succeeds as soon as any difference is found.
+This makes it short-circuit correctly.
+
+The sm_n_color_change predicate delegates to sm_added_colors and sm_removed_colors,
+then adds their lengths.
+
+
+Test Coverage
+
+41 of 41 unit tests pass (AC-SM-001 through AC-SM-041, defined in Refinement v216
+Part 193). Tests cover all 14 predicates including empty scenes, no-change detection,
+and multi-color change counting.
+
+
+SPARC Documentation
+
+Specification v168 - Part 193: scenecmp pack formal specification
+Pseudocode v161 - Part 193: reasoning pseudocode for all 14 predicates
+Architecture v162 - ARCH-169: scenecmp pack placement at Layer 182
+Refinement v216 - AC-SM-001 through AC-SM-041: acceptance criteria
+Completion v219 - WP-203 completion record
+
+
+PrologAI Repository
+
+PR #291 merged into main.
+Pack directory: packs/scenecmp/
+Tutorial chapter: docs/tutorial/Ch164_SceneCmp.txt
