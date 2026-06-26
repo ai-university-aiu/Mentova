@@ -1,0 +1,45 @@
+Accomplishment 186: Shear, Cyclic Shift, and Non-Uniform Grid Warping
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI gains its 166th work package: the warp pack (wr_*, Layer 145).
+
+14 predicates for progressive-shift grid transformations.
+
+wr_shear_h: row I shifts right by I*Step. For a 3x3 grid with Step=1, row 0
+stays put, row 1 shifts right by 1, row 2 shifts right by 2 — a staircase.
+[[a,b,c],[d,e,f],[g,h,i]] with Step=1 -> [[a,b,c],[0,d,e],[0,0,g]].
+
+wr_shear_v: column J shifts down by J*Step. Column 0 stays put, column 1 shifts
+down by 1, column 2 shifts down by 2.
+
+wr_unshear_h and wr_unshear_v undo the respective shear by negating the step.
+Round-trip verified on lossless grids (no boundary clipping occurs).
+
+wr_cyclic_h: all rows shift right cyclically using (C-N) mod W. No fill color.
+Shifting by W returns the original. Negative N shifts left.
+
+wr_cyclic_v: all columns shift down cyclically using (R-N) mod H.
+
+wr_cyclic_shear_h: row I wraps right by I*Step (shear with toroidal wrap).
+wr_cyclic_shear_v: column J wraps down by J*Step.
+
+wr_skew_offsets: per-row arbitrary offsets. Row I shifts right by Offsets[I].
+Generalizes wr_shear_h: when Offsets=[0,1,2,...], the result equals shear Step=1.
+
+wr_transpose_anti: anti-diagonal transpose. Out[W-1-C][H-1-R] = Grid[R][C].
+[[a,b],[c,d]] -> [[d,b],[c,a]]. Applying twice returns the original square grid.
+
+wr_shift_row: shift a single row right by N.
+wr_shift_col: shift a single column down by N.
+
+wr_find_shear_h and wr_find_shear_v detect the shear step relating two grids.
+
+42 PLUnit tests pass.
+
+PrologAI: 166 work packages.
+
+Mentova: 186 accomplishments.
+
+AIU (AI University): ai.university.aiu@gmail.com
