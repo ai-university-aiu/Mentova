@@ -1,0 +1,26 @@
+Accomplishment 191: Object Arrangement and Spatial Ordering
+
+PrologAI now has 171 work packages.
+
+The arrange pack (ag_*, Layer 150) provides 14 predicates for reasoning about
+how obj(Color, Cells) terms are positioned relative to each other in a scene.
+
+Using the integer floor-average centroid as each object's representative point:
+• ag_centroid/2: centroid of an obj term
+• ag_offset/3: displacement vector from one centroid to another
+• ag_row_order/2, ag_col_order/2: pairwise positional ordering
+• ag_row_aligned/2, ag_col_aligned/2: shared row or column test
+• ag_sort_by_row/2, ag_sort_by_col/2: stable sort by centroid position
+• ag_row_gaps/2, ag_col_gaps/2: consecutive centroid gaps
+• ag_equal_row_gaps/1, ag_equal_col_gaps/1: equal spacing detection
+• ag_group_bbox/5: bounding box of all cells of a group
+• ag_nearest/3: nearest neighbor by Manhattan centroid distance
+
+The equal-gap predicates are the key new capability: they detect whether
+a list of objects forms an evenly-spaced arrangement in either dimension -
+a pattern that appears throughout grid-based visual reasoning.
+
+42/42 PLUnit tests pass. PR 256 merged to PrologAI main.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

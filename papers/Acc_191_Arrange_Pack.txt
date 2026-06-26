@@ -1,0 +1,138 @@
+Accomplishment 191: Object Arrangement and Spatial Ordering
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Abstract
+
+PrologAI gains its 171st work package: the arrange pack (ag_*, Layer 150).
+
+The arrange pack provides 14 predicates for reasoning about the spatial arrangement
+of obj(Color, Cells) terms as produced by the scene pack. Using the integer
+floor-average centroid of each object as its positional representative, the pack
+provides pairwise spatial ordering, stable sorting, gap uniformity detection, group
+bounding boxes, and nearest-neighbor lookup. Together these predicates answer "how
+are these objects laid out?" - a question that must be answered to recognize grid
+arrangements, evenly-spaced sequences, and proximity-based groupings in visual
+reasoning tasks.
+
+Introduction
+
+Visual reasoning tasks often require recognizing how objects are arranged: are they
+in a row? are they evenly spaced? which object is nearest to which other object?
+These questions cannot be answered by looking at objects in isolation - they require
+comparing positions across all objects in a scene.
+
+The arrange pack builds on the scene pack (sc_*, Layer 37), which identifies objects
+in a grid and produces obj(Color, Cells) terms, and the pair pack (pr_*, Layer 149),
+which groups and matches objects by color, size, and shape. The arrange pack adds the
+third axis of comparison: position.
+
+All positional reasoning is mediated through the centroid: the integer floor-average
+of all cell row coordinates for the row, and all cell column coordinates for the
+column. This is a single representative point that summarizes where the object sits
+in the grid, regardless of its size or shape.
+
+Design
+
+The arrange pack is organized around five capabilities:
+
+1. Centroid computation and displacement
+
+ag_centroid/2 computes the floor-average centroid of an obj term.
+
+ag_offset/3 computes the displacement vector from one centroid to another.
+This is the primary tool for asking "where is obj B relative to obj A?":
+the answer is a row-column vector that can be applied to other objects or
+compared across scene pairs.
+
+2. Pairwise spatial tests
+
+ag_row_order/2 and ag_col_order/2 test ordering of centroid coordinates.
+ag_row_aligned/2 and ag_col_aligned/2 test coincidence of centroid coordinates.
+These four predicates support directional and alignment reasoning between pairs
+of objects.
+
+3. Stable sorting
+
+ag_sort_by_row/2 and ag_sort_by_col/2 produce stable sorted lists of objects
+by centroid position. Stability is important: when two objects have the same
+centroid row or column, their relative order in the output matches their relative
+order in the input. This ensures deterministic behavior in all cases.
+
+Both predicates use the build-key, keysort, extract-value pattern:
+findall(Key-Obj) builds the keyed list, keysort sorts it stably, then findall
+extracts the objects in sorted order.
+
+4. Gap analysis
+
+ag_row_gaps/2 and ag_col_gaps/2 compute the list of consecutive gaps between
+sorted distinct centroid positions. sort/2 deduplicates centroid values before
+computing differences, so two objects at the same centroid position contribute
+only one value to the gap sequence.
+
+ag_equal_row_gaps/1 and ag_equal_col_gaps/1 test whether all gaps are equal,
+which detects evenly-spaced arrangements.
+
+The private helper ag_consec_gaps_ computes consecutive differences. Its singleton
+clause carries a cut to prevent choicepoint warnings when the recursive path
+reduces to a one-element list.
+
+5. Group operations
+
+ag_group_bbox/5 computes the bounding box enclosing every cell of every object in
+a list. Unlike centroid-based bounding boxes, this uses actual cell coordinates and
+accounts for the physical extent of multi-cell objects.
+
+ag_nearest/3 finds the nearest neighbor to a reference object in a candidate list,
+measuring Manhattan distance between centroids. It uses the keysort pattern to
+find the minimum without needing an explicit comparison loop.
+
+Implementation
+
+Library imports: library(lists): member/2, min_list/2, max_list/2, sum_list/2.
+Built-ins: findall/3, sort/2, keysort/2, length/2.
+
+No assert/retract, no global state, no side effects. All predicates are pure
+logical relations over input/output arguments.
+
+Verification
+
+42 PLUnit tests cover all 14 predicates (3 tests each):
+• ag_centroid: single cell, horizontal pair (floor(2/2)=1 for col), 2x2 square (floor(2/4)=0).
+• ag_offset: rightward, downward, diagonal.
+• ag_row_order: above, equal row, below fails.
+• ag_col_order: left, equal column, right fails.
+• ag_row_aligned: same row, pair with matching centroid rows, different rows fail.
+• ag_col_aligned: same column, pair with matching centroid columns, different columns fail.
+• ag_sort_by_row: three objects, equal-row stability, singleton.
+• ag_sort_by_col: three objects, equal-column stability, singleton.
+• ag_row_gaps: three unequal gaps, equal gaps, two objects.
+• ag_col_gaps: three unequal gaps, equal gaps, two objects.
+• ag_equal_row_gaps: equal succeeds, unequal fails, two objects trivially equal.
+• ag_equal_col_gaps: equal succeeds, unequal fails, two objects trivially equal.
+• ag_group_bbox: two multi-cell objects, single cell, three spread objects.
+• ag_nearest: closer of two, three candidates, single candidate.
+
+All 42 tests pass with no warnings.
+
+Library: packs/arrange/prolog/arrange.pl, Layer 150.
+Tests: packs/arrange/test/test_arrange.pl, 42/42 pass.
+SPARC: Specification v136, Pseudocode v129, Architecture v130, Refinement v184, Completion v187.
+PrologAI PR: 256, merged 2026-06-26.
+
+Significance
+
+The arrange pack completes the object-level analysis triad: the scene pack finds
+objects, the pair pack compares objects by color/size/shape, and the arrange pack
+reasons about how objects are positioned relative to each other.
+
+With centroid sorting, gap uniformity detection, and nearest-neighbor lookup,
+PrologAI can now express and test spatial arrangement patterns that appear throughout
+visual reasoning tasks: a row of equally-spaced objects, objects aligned in a
+column, the object nearest to a reference point, the bounding box enclosing a group.
+
+With 171 work packages and 191 accomplishments, PrologAI and Mentova continue to
+build a complete symbolic cognitive substrate for visual reasoning.
