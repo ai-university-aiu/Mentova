@@ -1,0 +1,158 @@
+Accomplishment 169: The Grid Edge Detection and Boundary Analysis Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+2026-06-25
+
+
+Abstract
+
+PrologAI gains a grid edge detection and boundary analysis pack as Work
+Package 149 (Layer 128).
+
+The pack provides 14 predicates, all carrying the ed_* prefix, for
+detecting boundaries between regions of different values in a 2D grid.
+
+All 42 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks require recognizing where one region ends and
+another begins.
+
+The edge pack provides a complete vocabulary for this boundary reasoning.
+
+An edge is defined as a position where two adjacent cells carry different
+values.
+
+A boundary cell is one that has at least one 4-connected neighbor with
+a different value.
+
+The edge pack answers questions such as: where are the horizontal and
+vertical boundaries in this grid? Which cells of color X border a
+different color? What is the shape of the edge skeleton? Does this grid
+have any variation at all?
+
+
+2. Predicates
+
+The pack exports 14 predicates.
+
+ed_h_edges(+Grid, -Edges) collects all horizontal edge R-C pairs where
+Grid[R][C] differs from Grid[R+1][C].
+
+ed_v_edges(+Grid, -Edges) collects all vertical edge R-C pairs where
+Grid[R][C] differs from Grid[R][C+1].
+
+ed_h_edge(+Grid, +R, +C, -Bool) returns Bool=1 iff a horizontal edge
+exists between row R and row R+1 at column C.
+
+ed_v_edge(+Grid, +R, +C, -Bool) returns Bool=1 iff a vertical edge
+exists between column C and column C+1 at row R.
+
+ed_all_edges(+Grid, -Edges) combines horizontal and vertical edges into
+a sorted list of h-R-C and v-R-C direction-tagged terms.
+
+ed_boundary_cells(+Grid, +Val, -Cells) returns sorted R-C pairs of all
+cells with value Val that have at least one 4-connected neighbor with
+a different value.
+
+ed_outer_boundary(+Grid, -Cells) returns sorted R-C pairs of all cells
+on the outer border of the grid (row 0, last row, column 0, last column).
+
+ed_inner_cells(+Grid, +Val, -Cells) returns sorted R-C pairs of all
+cells with value Val that are NOT in ed_boundary_cells (strictly interior
+to their uniform region).
+
+ed_edge_count(+Grid, -N) returns the total number of edges (horizontal
+plus vertical).
+
+ed_is_smooth(+Grid) succeeds iff Grid has zero edges.
+
+ed_label_edges(+Grid, +Bg, -Grid2) produces a same-size grid where each
+cell is 1 if it is a boundary cell and Bg otherwise.
+
+ed_has_edge(+Grid, +R, +C, -Bool) returns Bool=1 iff cell (R,C) is a
+boundary cell.
+
+ed_corners(+Grid, -Corners) returns sorted R-C pairs of 2x2 top-left
+corner positions where the four cells in the block are not all equal.
+
+ed_corner_count(+Grid, -N) returns the number of corner positions.
+
+
+3. Implementation
+
+ed_h_edges and ed_v_edges use findall with between/3 for dimension
+iteration and nth0/3 for cell access.
+
+The height bound H2 = H-2 is computed (not H1 = H-1, which would be
+unused) to avoid singleton variable warnings.
+
+ed_h_edge and ed_v_edge use a single if-then-else to produce Bool=1 or 0.
+
+ed_all_edges uses findall to attach h- and v- direction tags then appends
+and sorts.
+
+ed_boundary_cells uses a disjunctive findall body that short-circuits on
+the first qualifying neighbor found. The left-column neighbor is accessed
+via C0 is C-1, nth0(C0, Row, V2) to avoid passing an unevaluated C-1
+expression to nth0.
+
+ed_inner_cells delegates to ed_boundary_cells then uses negation-as-failure
+with member to exclude boundary cells.
+
+ed_label_edges uses an outer findall over rows and an inner findall over
+columns. The private helper ed_has_diff_nbr_/6 implements the four-direction
+if-then-else check with bounds guards.
+
+ed_corners uses findall over all 2x2 top-left positions and tests whether
+the four cells are not all equal using negation-as-failure.
+
+
+4. Testing
+
+42 acceptance tests cover all 14 predicates at 3 tests per predicate.
+
+Tests cover empty-edge grids, stripe grids, split grids, checkerboard
+grids, and the mixed center-and-ring grid G3m.
+
+Test names that would begin with a digit use a grid prefix (grid2x2_,
+grid3x3_) to satisfy the SWI-Prolog atom naming rule that unquoted atoms
+cannot begin with a digit.
+
+All 42 pass under SWI-Prolog.
+
+
+5. SPARC Documentation
+
+Specification v114, Part 139 defines all 14 predicates.
+
+Pseudocode v107, Part 139 gives the algorithmic descriptions.
+
+Architecture v108, ARCH-115 records the module placement and design
+patterns.
+
+Refinement v162 records acceptance criteria AC-ED-001 through AC-ED-042.
+
+Completion v165 records the release evidence for WP 149.
+
+Tutorial Chapter 110 demonstrates all 14 predicates with examples.
+
+
+6. Position in the Cognitive Architecture
+
+The edge pack is Layer 128 in the PrologAI cognitive stack.
+
+It follows the block pack (Layer 127, bk_*) and complements the scene
+pack (Layer 37, sc_*) which provides spatial relationship reasoning.
+
+The edge pack provides the raw edge and boundary vocabulary that higher
+perceptual reasoning packs can consume.
+
+PrologAI now carries 149 work packages in the packs/ directory.
+
+
+END
