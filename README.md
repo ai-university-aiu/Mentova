@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-177-FF6B35?style=for-the-badge" alt="177 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-178-FF6B35?style=for-the-badge" alt="178 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **177 accomplished** |
-| Scientific papers | **177 published** — one per accomplishment |
+| Documented accomplishments | **178 accomplished** |
+| Scientific papers | **178 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         177 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  124 announcements — one per accomplishment
+├── papers/         178 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  125 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-177 scientific papers, one per accomplished milestone.
+178 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -438,12 +438,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_175` | Naggr pack paper — Per-Cell Neighborhood Value Aggregation (Layer 134): 14 na_* predicates for per-cell aggregate statistics over in-bounds 4-connected and 8-connected neighborhoods. Sum: na_sum4, na_sum8. Max: na_max4, na_max8. Min: na_min4, na_min8. Floor mean: na_mean4, na_mean8. Range (max minus min): na_range4, na_range8. Spread (count distinct): na_spread4, na_spread8. Difference count (neighbors differing from cell): na_diff4, na_diff8. All empty neighborhoods return 0. 42/42 acceptance tests pass. |
 | `Acc_176` | Median pack paper — Integer Median Computation for Lists and 2D Grids (Layer 135): 14 md_* predicates for the lower (floor) integer median. List median: md_median. Per-row: md_row, md_row_medians. Per-column: md_col, md_col_medians. Grid-wide: md_grid. Filters: md_filter4 and md_filter8 replace each cell with the median of the cell and its in-bounds 4/8 neighbors. Above/below selection: md_above, md_below, md_row_above, md_row_below, md_col_above, md_col_below. Uses msort/2 to preserve duplicates for correct computation. 42/42 acceptance tests pass. |
 | `Acc_177` | Nmode pack paper — Neighborhood Mode Filter for 2D Grids (Layer 136, nm_* prefix): 14 nm_* predicates for mode computation. Mode of a list with smallest-value tie-breaking (nm_mode), all tied values (nm_mode_all), mode with count (nm_mode_count), per-row mode (nm_row), per-column mode (nm_col), per-row mode list (nm_row_modes), per-column mode list (nm_col_modes), grid-wide mode (nm_grid), 4-connected mode filter (nm_filter4), 8-connected mode filter (nm_filter8), uniform 4-neighborhood detection (nm_uniform4), uniform 8-neighborhood detection (nm_uniform8), 4-connected outlier detection (nm_outlier4), 8-connected outlier detection (nm_outlier8). Key fix: cut in nm_count_prefix_ prevents duplicate solutions inside findall. 42/42 acceptance tests pass. |
+| `Acc_178` | Rank pack paper — Dense Ranking of Integer Values in Lists and 2D Grids (Layer 137, rk_* prefix): 14 rk_* predicates. List: rk_rank_of (1-based dense rank of a value), rk_dense (replace each element with its rank), rk_argsort_asc and rk_argsort_desc (0-based argsort, stable). Grid row/column/global: rk_row_dense, rk_col_dense, rk_grid_dense. Cell queries: rk_row_rank_of, rk_col_rank_of, rk_grid_rank_of. Selection: rk_top_n and rk_bottom_n (by distinct value) plus rk_above_rank and rk_below_rank (by rank threshold). 42/42 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-124 announcements in LinkedIn format — one per accomplishment.
+125 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

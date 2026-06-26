@@ -1,0 +1,46 @@
+Mentova Accomplishment 178: The Dense Ranking Pack
+
+PrologAI gains its 158th work package today.
+
+The rank pack (Layer 137, rk_* prefix) provides 14 predicates for 1-based
+dense ranking of integer lists and 2D grids.
+
+Dense rank: smallest distinct value = rank 1, second smallest = rank 2, etc.
+Duplicates all receive the same rank. If a grid has 3 distinct values, every
+cell gets rank 1, 2, or 3 regardless of how many cells it has.
+
+The 14 predicates cover:
+
+List operations: rk_rank_of (rank of a specific value), rk_dense (replace
+each element with its rank), rk_argsort_asc and rk_argsort_desc (0-based
+indices in sorted order, stable for equal values).
+
+Per-row and per-column ranking: rk_row_dense and rk_col_dense replace each
+cell with its rank within its own row or column.
+
+Grid-wide ranking: rk_grid_dense ranks each cell against the entire grid.
+
+Cell-level queries: rk_row_rank_of, rk_col_rank_of, rk_grid_rank_of ask
+"what is the rank of this specific cell?"
+
+Selection: rk_top_n and rk_bottom_n find cells with the N largest or
+smallest distinct values. rk_above_rank and rk_below_rank filter by
+rank threshold.
+
+Example: for [[1,2,3],[4,5,6],[7,8,9]]:
+rk_row_dense -> [[1,2,3],[1,2,3],[1,2,3]] (each row rank starts fresh)
+rk_col_dense -> [[1,1,1],[2,2,2],[3,3,3]] (top row is rank 1 in each column)
+rk_grid_dense -> [[1,2,3],[4,5,6],[7,8,9]] (globally ranked 1-9)
+rk_top_n(N=2) -> [2-1,2-2] (positions of values 8 and 9)
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v123, Pseudocode v116,
+Architecture v117, Refinement v171, Completion v174.
+
+Tutorial Chapter 119 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
