@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **241 accomplished** |
-| Scientific papers | **241 published** — one per accomplishment |
+| Documented accomplishments | **242 accomplished** |
+| Scientific papers | **242 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -547,6 +547,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. |
+| `Acc_242` | GridPeriod pack paper — Grid Periodic Pattern Detection and Extension (Layer 201, gper_*): 14 gper_* predicates for row and column period detection, tile extraction, grid tiling and extension, autocorrelation scoring, and wrap-around cyclic shifts. |
 | `Acc_241` | GridDist pack paper — Grid Distance Transform (Layer 200, gd_*): 14 gd_* predicates for Manhattan and Chebyshev distances, distance maps, BFS flood with obstacles, Voronoi assignment, zone marking, N-step morphological expand and shrink, distance-based recoloring, and equidistance detection. |
 | `Acc_240` | GridNbr pack paper — Grid Neighbor Analysis (Layer 199, gn_*): 14 gn_* predicates for 4/8-neighbor queries, morphological dilation and erosion, border and isolated cell detection, and Conway-style cellular automaton steps on raw grids. |
 | `Acc_239` | GridTask pack paper — Grid Task End-to-End Raw Grid Solver (Layer 198, gt_*): 14 gt_* predicates for inferring and applying identity, color substitution, scale, and shift rules on raw grids. |
