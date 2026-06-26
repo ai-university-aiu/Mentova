@@ -1,0 +1,58 @@
+Mentova Accomplishment 160: Extended Cell Selection by Value Comparison - The xsel Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now select, locate, and transform grid cells based on numerical
+value comparisons.
+
+Work Package 140 - the xsel pack - adds 14 xs_* predicates. 42/42 tests.
+
+Threshold selectors (return sorted R-C pairs):
+
+xs_cells_lt(Grid, V, Cells)      % cells with value < V
+xs_cells_gt(Grid, V, Cells)      % cells with value > V
+xs_cells_le(Grid, V, Cells)      % cells with value =< V
+xs_cells_ge(Grid, V, Cells)      % cells with value >= V
+xs_cells_between(Grid, Lo, Hi, Cells)  % cells with Lo =< value =< Hi
+xs_cells_ne(Grid, V, Cells)      % cells with value != V
+
+Extremum locators:
+
+xs_max_cells(Grid, Cells)        % all cells containing the maximum value
+xs_min_cells(Grid, Cells)        % all cells containing the minimum value
+
+Conditional replacement:
+
+xs_threshold(Grid, T, OnV, OffV, Grid2)  % value >= T -> OnV, else OffV
+xs_replace_lt(Grid, V, New, Grid2)       % replace cells below threshold
+xs_replace_gt(Grid, V, New, Grid2)       % replace cells above threshold
+
+Value ranking:
+
+xs_rank_vals(Grid, Vals)         % sorted unique values (rank ladder)
+xs_val_rank(Grid, V, Rank)       % 0-based ordinal rank of value V
+xs_rank_grid(Grid, RankGrid)     % replace each cell with its rank
+
+Examples:
+
+xs_cells_lt([[1,2],[3,4]], 3, Cs).          % Cs=[0-0, 0-1]
+xs_max_cells([[5,0],[0,5]], Cs).            % Cs=[0-0, 1-1]
+xs_threshold([[1,3],[5,2]], 3, 1, 0, G).   % G=[[0,1],[1,0]]
+xs_rank_grid([[5,3],[1,7]], G).             % G=[[2,1],[0,3]]
+
+Key design insights:
+Six threshold selectors all share the same findall + arithmetic-guard + sort
+  pattern; only the comparison operator changes.
+xs_max_cells and xs_min_cells use two passes: first find the extremum with
+  max_list/min_list, then collect matching positions.
+xs_rank_vals uses findall with nested member/2 + sort/2 (deduplication is free).
+xs_val_rank and xs_rank_val_ use nth0 + cut to commit to the unique position
+  in the sorted unique list, eliminating choicepoints.
+
+PrologAI: 140 work packages. Mentova: 160 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #SWIProlog #AGI
