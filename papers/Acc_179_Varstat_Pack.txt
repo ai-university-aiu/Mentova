@@ -1,0 +1,188 @@
+Accomplishment 179: Mean, Sum, and Deviation Statistics for Integer Lists and 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+PrologAI gains its 159th work package: the varstat pack (vt_*, Layer 138).
+
+The varstat pack provides 14 predicates for integer summation, floor and
+rounded arithmetic means, per-element signed and absolute deviation from the
+floor mean, per-row and per-column sums and means, global grid mean, and
+sorted position lists for cells above or below various means in 2D integer
+grids.
+
+Introduction
+
+Statistical summary measures are among the most universal analytical tools
+in data analysis.
+
+For 2D integer grids of the kind used in visual reasoning benchmarks, three
+classes of statistics are especially useful.
+
+The first class is sums: the total of all values in a list, in each row,
+in each column, or across the entire grid.
+
+The second class is means: the arithmetic average, computed as sum divided
+by count. For integer arithmetic, this yields a floor mean (truncated toward
+zero) or a rounded mean (nearest integer with banker's rounding).
+
+The third class is deviations: how much each value differs from the mean.
+A signed deviation is positive when the value exceeds the mean and negative
+when it falls short. An absolute deviation ignores the sign.
+
+These three classes combine naturally for answering questions such as: which
+cells are above the average for their row? Which cells exceed the global
+mean? What is the spread of values around the mean in each column?
+
+Predicates
+
+The 14 public predicates are:
+
+vt_sum(+List, -Sum)
+
+Sum is the integer total of all values in List.
+
+vt_mean_floor(+List, -Mean)
+
+Mean is the floor of the arithmetic mean: sum(List) // length(List).
+Fails when List is empty.
+
+vt_mean_round(+List, -Mean)
+
+Mean is the rounded arithmetic mean using float division followed by
+banker's rounding (round/1 in SWI-Prolog, which rounds half to even).
+Fails when List is empty.
+
+vt_deviation(+List, -Devs)
+
+Devs[I] is the signed difference between List[I] and the floor mean.
+Negative values are below the mean; positive values are above.
+
+vt_abs_deviation(+List, -AbsDevs)
+
+AbsDevs[I] is the absolute value of the deviation: |List[I] - floor_mean|.
+Always non-negative.
+
+vt_row_sums(+Grid, -Sums)
+
+Sums[R] is the integer sum of all values in row R of Grid.
+
+vt_col_sums(+Grid, -Sums)
+
+Sums[C] is the integer sum of all values in column C of Grid.
+
+vt_row_means(+Grid, -Means)
+
+Means[R] is the floor mean of all values in row R.
+
+vt_col_means(+Grid, -Means)
+
+Means[C] is the floor mean of all values in column C.
+
+vt_global_mean(+Grid, -Mean)
+
+Mean is the floor mean of all cell values across the entire grid.
+
+vt_above_mean(+Grid, -Cells)
+
+Cells is the sorted list of R-C positions whose value is strictly greater
+than the global floor mean. Enumerated in row-major order.
+
+vt_below_mean(+Grid, -Cells)
+
+Cells is the sorted list of R-C positions whose value is strictly less than
+the global floor mean.
+
+vt_row_above_mean(+Grid, -Cells)
+
+Cells is the sorted list of R-C positions whose value is strictly greater
+than the floor mean of their own row.
+
+vt_col_above_mean(+Grid, -Cells)
+
+Cells is the sorted list of R-C positions whose value is strictly greater
+than the floor mean of their own column. Enumerated in row-major order.
+
+Example Results
+
+For G = [[1,2,3],[4,5,6],[7,8,9]]:
+
+vt_sum([1,2,3], S) gives S = 6.
+
+vt_mean_floor([1,2,3], M) gives M = 2.
+
+vt_row_sums(G, S) gives S = [6, 15, 24]: row 0 sums to 6, row 1 to 15,
+row 2 to 24.
+
+vt_col_sums(G, S) gives S = [12, 15, 18]: column 0 sums to 12, column 1
+to 15, column 2 to 18.
+
+vt_row_means(G, M) gives M = [2, 5, 8]: each row has 3 values, floors are
+2, 5, 8.
+
+vt_col_means(G, M) gives M = [4, 5, 6]: column means are 12//3=4, 15//3=5,
+18//3=6.
+
+vt_global_mean(G, M) gives M = 5: total is 45, divided by 9 cells = 5.
+
+vt_above_mean(G, C) gives C = [1-2, 2-0, 2-1, 2-2]: the cells with values
+6, 7, 8, 9 are all above the global mean of 5.
+
+vt_row_above_mean(G, C) gives C = [0-2, 1-2, 2-2]: in each row, only the
+rightmost cell (3, 6, 9) exceeds its row mean (2, 5, 8).
+
+vt_col_above_mean(G, C) gives C = [2-0, 2-1, 2-2]: in each column, only
+the bottom cell (7, 8, 9) exceeds its column mean (4, 5, 6).
+
+Implementation
+
+vt_mean_floor uses integer floor division: Mean is Sum // N.
+
+vt_mean_round uses floating-point division: Mean is round(float(Sum) / float(N)).
+The SWI-Prolog round/1 function applies banker's rounding (round half to even):
+round(1.5) = 2, round(2.5) = 2, round(3.5) = 4.
+
+vt_col_above_mean enumerates in row-major order (R outer, C inner). For each
+(R, C) pair, it re-computes the column mean via a nested findall over all rows.
+This is O(H * W * H) but simple and deterministic.
+
+The sum_list/2 predicate from library(lists) is used throughout for efficient
+summation.
+
+Validation
+
+42 PLUnit acceptance tests cover all 14 predicates across three test grids:
+G3 (sequential 1-9), G3u (uniform all-2), and G3b (transposed sequential).
+
+All 42 tests pass.
+
+SPARC Documentation
+
+Specification v124: Part 149, requirements VT-VT-001 through VT-VT-014.
+
+Pseudocode v117: Part 149, pseudocode for all 14 predicates.
+
+Architecture v118: ARCH-125, varstat pack structure and design notes.
+
+Refinement v172: acceptance criteria AC-VT-001 through AC-VT-042.
+
+Completion v175: WP 159 release record.
+
+Tutorial Chapter 120 added to all tutorial files.
+
+Conclusion
+
+The varstat pack provides the mean and deviation dimension of grid analysis.
+Combined with the rank pack (ordinal position), the median pack (central
+tendency), the nmode pack (modal value), the extrema pack (peaks and troughs),
+and the naggr pack (neighborhood aggregation), PrologAI now has a comprehensive
+suite for characterizing integer grid structure from six complementary
+statistical perspectives.
+
+PrologAI now comprises 159 work packages.
+
+Mentova has achieved 179 accomplishments.
