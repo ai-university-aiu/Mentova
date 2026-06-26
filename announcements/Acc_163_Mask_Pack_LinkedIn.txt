@@ -1,0 +1,28 @@
+Mentova Accomplishment 163: Boolean Mask Operations on 2D Grids
+
+PrologAI adds Work Package 143 - the mask pack (Layer 122), a composable
+selection layer for grid operations using binary 0/1 masks.
+
+14 predicates (mk_* prefix) covering:
+
+- Mask creation: mk_from_val (1 where cell=V), mk_from_bg (1 where cell!=Bg)
+- Logical combination: mk_invert, mk_and, mk_or, mk_xor
+- Grid operations: mk_apply (keep at 1-cells), mk_fill (write at 1-cells), mk_overlay (blend two grids)
+- Mask queries: mk_where (R-C positions), mk_count, mk_any, mk_all, mk_extract
+
+42 of 42 PLUnit acceptance tests pass.
+
+The mask pack separates "which cells?" from "what to do with them?". Build
+a mask from xs_threshold output (xsel pack), then use mk_fill to modify just
+those cells. Combine masks from different sources with mk_and: "cells that
+match pattern A AND are adjacent to color B."
+
+mk_overlay uses maplist/5 for four-way parallel iteration - a clean
+implementation of pixel blending in symbolic Prolog.
+
+PrologAI now carries 143 work packages and 163 Mentova accomplishments.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+github.com/ai-university-aiu/PrologAI
