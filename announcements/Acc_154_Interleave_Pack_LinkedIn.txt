@@ -1,0 +1,41 @@
+Mentova Accomplishment 154: Row and Column Interleaving - The Interleave Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+PrologAI can now merge, split, weave, and stride grids by rows and columns.
+
+Work Package 134 - the interleave pack - adds 14 il_* predicates for row and column interleaving. 42/42 tests.
+
+The core operations:
+
+Merge two grids by alternating rows: il_rows
+Merge by alternating columns: il_cols
+Split back apart: il_derows, il_decols
+
+Weaving adds separators; unweaving removes them:
+
+il_weave_rows inserts a background row between every pair of rows.
+il_unweave_rows removes the separators to recover the original.
+Same operations for columns: il_weave_cols, il_unweave_cols.
+
+Stride selection picks every Nth row or column:
+
+il_stride_rows([[r0],[r1],[r2],[r3]], 2, 0, S).  % S = [[r0],[r2]]
+il_stride_cols([[1,2,3,4]], 2, 1, S).            % S = [[2,4]]
+
+Two more tools:
+
+il_rows_n: round-robin interleave from a list of grids.
+For [G1, G2, G3] each with H rows: G1[0], G2[0], G3[0], G1[1], G2[1], G3[1], ...
+The findall implementation: between (row index) iterated before member (grid) gives round-robin naturally.
+
+il_block_rows: partition rows into fixed-height panels.
+il_block_rows(Grid, 2, Bs) splits every 2 rows into its own sub-grid.
+
+PrologAI: 134 work packages. Mentova: 154 accomplishments.
+
+github.com/ai-university-aiu/PrologAI
+
+#PrologAI #Mentova #SymbolicAI #ComputerVision #SWIProlog #AGI

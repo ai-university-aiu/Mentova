@@ -1,0 +1,229 @@
+Mentova Accomplishment 154: Row and Column Interleaving - The Interleave Pack
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+
+Abstract
+
+PrologAI gains Work Package 134: the interleave pack, a Layer 113 symbolic
+reasoning module providing 14 predicates for row and column interleaving,
+weaving, stride selection, index-list extraction, round-robin multi-grid
+interleaving, and row block partitioning. All 42 PLUnit acceptance tests pass.
+
+
+1. Motivation
+
+Grid transformations that merge two structures by alternating their rows or
+columns appear across a wide range of visual pattern recognition tasks. These
+include interlacing two half-resolution views into a full-resolution grid,
+inserting separator rows to create tabular layouts, extracting every other row
+to recover sub-grids, and partitioning a tall grid into fixed-height panels.
+
+The PrologAI library had no unified pack for these operations. The crop pack
+handles rectangular subgrid extraction; the assemble pack handles horizontal
+and vertical concatenation. Neither addressed alternating-row/column merge and
+split as a first-class operation with full round-trip support (weave + unweave).
+
+The interleave pack fills this gap.
+
+
+2. Predicate Inventory (14 predicates, il_* prefix)
+
+2.1 Merging Two Grids
+
+il_rows(+GridA, +GridB, -Result)
+Merges two same-height grids by alternating rows. Row 0 of Result is row 0
+of GridA; row 1 is row 0 of GridB; row 2 is row 1 of GridA; etc.
+
+Implementation: base-recursive with a single recursive clause. Each step
+prepends both [RA, RB] to the accumulating result.
+
+il_cols(+GridA, +GridB, -Result)
+Merges two same-dimension grids by alternating columns. For each pair of
+corresponding rows, elements are interleaved A[0], B[0], A[1], B[1], ...
+
+Implementation: maplist/4 applies il_zip_row_ to each row pair. il_zip_row_
+is base-recursive with the same pattern as il_rows.
+
+Examples:
+il_rows([[1,2],[3,4]], [[5,6],[7,8]], R).  % R = [[1,2],[5,6],[3,4],[7,8]]
+il_cols([[1,2],[3,4]], [[5,6],[7,8]], R).  % R = [[1,5,2,6],[3,7,4,8]]
+
+
+2.2 Splitting an Interleaved Grid
+
+il_derows(+Grid, -Even, -Odd)
+Splits Grid into even-indexed rows (0, 2, 4, ...) and odd-indexed rows
+(1, 3, 5, ...). This is the inverse of il_rows when GridA and GridB had
+equal height.
+
+Implementation: il_derows_/4 accumulates with an integer counter. Two
+clauses differentiated by 0 is I mod 2 with cut, avoiding any choicepoint.
+
+il_decols(+Grid, -Even, -Odd)
+Splits each row into even-indexed and odd-indexed elements. Inverse of
+il_cols.
+
+Implementation: maplist/4 applies il_decols_row_ to each row, collecting
+even and odd element lists in parallel.
+
+Examples:
+il_derows([[a],[b],[c],[d]], E, O).  % E=[[a],[c]], O=[[b],[d]]
+il_decols([[1,2,3,4]], E, O).       % E=[[1,3]], O=[[2,4]]
+
+
+2.3 Weaving: Inserting Separators
+
+il_weave_rows(+Grid, +Bg, -Woven)
+Inserts a background row between every pair of adjacent rows. A grid with
+H rows becomes 2*H-1 rows. A single-row or empty grid is returned unchanged.
+
+Implementation: three clauses with cuts for empty and singleton. The
+recursive case builds BgRow using findall(Bg, between(1, W, _), BgRow).
+
+il_weave_cols(+Grid, +Bg, -Woven)
+Inserts Bg between adjacent column values in each row. Row width W becomes
+2*W-1. A single-element or empty row is unchanged.
+
+Implementation: maplist/3 applies il_weave_row_ with Bg partially applied.
+il_weave_row_ has the same three-clause structure as il_weave_rows.
+
+Examples:
+il_weave_rows([[1,2],[3,4],[5,6]], 0, W). % W=[[1,2],[0,0],[3,4],[0,0],[5,6]]
+il_weave_cols([[1,2,3]], 0, W).           % W=[[1,0,2,0,3]]
+
+
+2.4 Unweaving: Removing Separators
+
+il_unweave_rows(+Grid, -Core)
+Removes odd-indexed rows, keeping only even-indexed rows. Reverses
+il_weave_rows. Delegates to il_derows and discards the Odd output.
+
+il_unweave_cols(+Grid, -Core)
+Removes odd-indexed columns. Delegates to il_decols and discards Odd.
+
+Examples:
+il_unweave_rows([[1,2],[0,0],[3,4],[0,0],[5,6]], Core). % Core=[[1,2],[3,4],[5,6]]
+il_unweave_cols([[1,0,2,0,3]], Core).                   % Core=[[1,2,3]]
+
+
+2.5 Stride Selection
+
+il_stride_rows(+Grid, +Step, +Start0, -SubGrid)
+Extracts every Step-th row starting at 0-based index Start0. Indices:
+Start0, Start0+Step, Start0+2*Step, ... up to the last row.
+
+Implementation: findall over between(Start0, H1, I) with filter
+0 is (I - Start0) mod Step. nth0/3 retrieves each row.
+
+il_stride_cols(+Grid, +Step, +Start0, -SubGrid)
+Extracts every Step-th column. Uses if-then-else to handle empty grids
+without choicepoints.
+
+Examples:
+il_stride_rows([[r0],[r1],[r2],[r3]], 2, 0, S). % S=[[r0],[r2]]
+il_stride_cols([[1,2,3,4]], 2, 1, S).           % S=[[2,4]]
+
+
+2.6 Index-List Selection
+
+il_select_rows(+Grid, +Indices, -SubGrid)
+Extracts rows at given 0-based indices. maplist(il_nth0_(Grid), Indices, SubGrid).
+
+il_select_cols(+Grid, +Indices, -SubGrid)
+Extracts columns at given 0-based indices. maplist(il_pick_cols_(Indices), Grid, SubGrid).
+
+Examples:
+il_select_rows([[r0],[r1],[r2]], [0,2], S). % S=[[r0],[r2]]
+il_select_cols([[1,2,3],[4,5,6]], [1], S). % S=[[2],[5]]
+
+
+2.7 Round-Robin Multi-Grid Interleaving
+
+il_rows_n(+Grids, -Result)
+Round-robin interleaves rows from a list of equal-height grids. For grids
+[G1, G2, G3] each with H rows, Result is:
+G1[0], G2[0], G3[0], G1[1], G2[1], G3[1], ..., G1[H-1], G2[H-1], G3[H-1].
+
+Implementation: findall with nested between (row index) and member (grid)
+naturally produces the round-robin order in one call.
+
+Examples:
+il_rows_n([[[a],[b]],[[c],[d]],[[e],[f]]], R). % R=[[a],[c],[e],[b],[d],[f]]
+il_rows_n([], R).                              % R=[]
+
+
+2.8 Block Partitioning
+
+il_block_rows(+Grid, +N, -Blocks)
+Partitions rows into consecutive groups of N. The last group may be partial
+if the total row count is not divisible by N.
+
+Implementation: recursive. Base case for empty grid with cut. Recursive
+case uses if-then-else to distinguish full blocks (length >= N) from a
+partial last block. length/2 + append/3 extracts each block.
+
+Examples:
+il_block_rows([[r0],[r1],[r2],[r3],[r4],[r5]], 2, Bs).
+  % Bs=[[[r0],[r1]],[[r2],[r3]],[[r4],[r5]]]
+il_block_rows([[a],[b],[c],[d],[e]], 2, Bs).
+  % Bs=[[[a],[b]],[[c],[d]],[[e]]]   (last block is partial)
+
+
+3. Implementation Notes
+
+Cuts for determinism: il_derows_, il_decols_list_, il_weave_rows, and
+il_weave_row_ all use cuts to prevent spurious choicepoints from multi-clause
+dispatch. In each case, the cut follows a guard (0 is I mod 2 or empty list
+or singleton) that makes the cases mutually exclusive.
+
+if-then-else for il_stride_cols: the empty-grid case is handled by an
+if-then-else to avoid creating a choicepoint between "Grid has a first row"
+and "Grid is empty."
+
+maplist/4 usage: il_cols uses maplist/4 (4-argument form) to zip GridA and
+GridB rows pairwise. il_decols uses the same form to collect even and odd
+column lists from each row simultaneously.
+
+findall for round-robin: il_rows_n uses findall with between and member to
+produce round-robin order. The key insight is that between(0, H1, I) iterates
+over row indices first, and member(Grid, Grids) iterates over grids second.
+Prolog's depth-first search with between means that for each row index I,
+all grids' row I is collected before moving to I+1.
+
+Imports: library(lists) for member/2, nth0/3, append/2, append/3;
+library(apply) for maplist/3, maplist/4.
+
+
+4. Test Results
+
+42 PLUnit acceptance tests pass with no warnings. Three tests per predicate.
+
+Key correctness tests:
+  il_rows([[1,2],[3,4]], [[5,6],[7,8]], R) => R = [[1,2],[5,6],[3,4],[7,8]]
+  il_decols([[9]], E, O) => E=[[9]], O=[[]] (single element in Even; Odd is empty row)
+  il_weave_rows([[1,2,3]], 0, W) => W=[[1,2,3]] (single row: identity)
+  il_unweave_rows([[1,2],[0,0],[3,4],[0,0],[5,6]], C) => C=[[1,2],[3,4],[5,6]] (round-trip)
+  il_block_rows([[a],[b],[c],[d],[e]], 2, Bs) => last block [[e]] is partial
+  il_rows_n([], R) => R=[] (empty grid list)
+
+
+5. Significance
+
+The interleave pack adds bidirectional row/column interleaving to PrologAI's
+spatial reasoning toolkit. Together with the crop, assemble, and transform
+packs, it enables complete decomposition and reconstruction of grids that are
+structured as interleaved or woven composites.
+
+il_rows_n generalizes pairwise interleaving to an arbitrary number of grids,
+useful for tasks where N sub-grids are merged into a single combined output.
+
+il_block_rows enables panel-based analysis where a tall grid is divided into
+equal-height sub-tasks.
+
+This is Mentova accomplishment 154. PrologAI now carries 134 work packages.
+
+github.com/ai-university-aiu/PrologAI
