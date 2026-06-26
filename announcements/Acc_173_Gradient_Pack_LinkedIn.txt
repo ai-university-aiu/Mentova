@@ -1,0 +1,42 @@
+Mentova Accomplishment 173: The Row and Column Gradient and Progression Analysis Pack
+
+PrologAI gains its 153rd work package today.
+
+The gradient pack (Layer 132, gr_* prefix) provides 14 predicates for
+measuring value gradients, monotonicity, range, cumulative sums, and
+second-order differences in 2D grids.
+
+The 14 predicates cover:
+
+Adjacent differences: differences between adjacent elements per row
+(gr_h_diffs) and column-wise differences between adjacent rows (gr_v_diffs).
+
+Monotonicity: 1 (non-decreasing), -1 (non-increasing), or 0 (mixed) per
+row (gr_h_mono) and per column (gr_v_mono). Constant sequences return 1.
+
+Range: max minus min per row (gr_h_range) and per column (gr_v_range).
+
+Slope: last minus first element per row (gr_h_slope) and per column
+(gr_v_slope).
+
+Constancy: 1 if all values in a row are equal, else 0 (gr_h_const);
+same for columns (gr_v_const).
+
+Cumulative sums: running cumulative sum per row (gr_h_cum); cumulative
+sum down each column (gr_v_cum).
+
+Second-order differences: differences of adjacent differences per row
+(gr_h_second); second-order vertical differences computed by applying
+gr_v_diffs twice (gr_v_second).
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v118, Pseudocode v111,
+Architecture v112, Refinement v166, Completion v169.
+
+Tutorial Chapter 114 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
