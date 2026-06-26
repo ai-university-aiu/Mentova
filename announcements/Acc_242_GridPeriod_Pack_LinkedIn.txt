@@ -1,0 +1,25 @@
+Accomplishment 242: gridperiod Pack Added to PrologAI (gper_*, Layer 201)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI Work Package 222 is merged: the gridperiod pack (gper_*, Layer 201) adds
+fourteen predicates for detecting and exploiting periodic structure in raw grids.
+
+The pack finds the smallest repeating period along rows and columns, extracts the
+fundamental tile, tiles small grids to larger target sizes, measures autocorrelation,
+and applies wrap-around cyclic shifts.
+
+Key predicates:
+- gper_row_period / gper_col_period: find the minimum period in each dimension
+- gper_tile_dims / gper_extract_tile: identify and recover the fundamental tile
+- gper_tile_grid / gper_extend: reconstruct or grow grids by repeating the tile
+- gper_autocorr_row / gper_autocorr_col: quantify periodic strength (0.0 to 1.0)
+- gper_shift_wrap_rows / gper_shift_wrap_cols: cyclic row and column shifts
+
+All 51 acceptance tests pass. PrologAI now comprises 222 work packages
+and reaches Layer 201 in the Data Layer.
+
+SPARC: Spec v188, Pseudo v180, Arch v182, Refinement v235, Completion v238.
+PrologAI PR #311. Mentova Accomplishment 242 of 242.
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveSubstrate

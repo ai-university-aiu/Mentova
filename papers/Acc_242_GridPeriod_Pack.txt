@@ -1,0 +1,152 @@
+Acc_242: gridperiod Pack - Grid Periodic Pattern Detection and Extension (gper_*, Layer 201)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 222 adds the gridperiod pack (gper_*, Layer 201): fourteen
+predicates for detecting and exploiting periodic structure in raw grid format
+(list-of-lists of color atoms). The pack finds the smallest repeating period
+along rows and columns, extracts the fundamental tile, tiles small grids to
+larger target sizes, measures autocorrelation, and applies wrap-around shifts.
+All 51 acceptance tests pass.
+
+
+1. Motivation
+
+Many structured visual patterns are periodic: a small tile repeated to fill a
+larger canvas, alternating rows of colors, or a checkerboard arrangement. Detecting
+that a grid is the repetition of a smaller unit - and recovering that unit - is a
+foundational inference step for compression, extension, and rule generalization.
+
+The gridperiod pack provides the first-class predicates needed to:
+- Confirm that a grid has a given row or column period
+- Find the smallest such period automatically
+- Extract the fundamental tile and reconstruct the full grid from it
+- Extend a smaller grid to an arbitrary larger target size by tiling
+- Quantify how periodic a grid is (autocorrelation score)
+- Apply cyclic shifts to rows or columns (wrap-around)
+
+
+2. Architecture
+
+Layer 201 sits above griddist (Layer 200) in the PrologAI dependency chain.
+It imports only library(lists) and built-in predicates.
+
+Private helpers:
+- gper_dims_/3: height and width from a grid
+- gper_cell_/4: value at (R,C)
+- gper_col_/3: extract a full column as a list
+- gper_shift_list_/3: shift a list left by N positions with wrap-around
+- gper_divides_/2: test that H mod P equals zero
+
+
+3. Predicates
+
+gper_is_row_periodic/2 - Succeed if Grid has row period P using negation-as-failure.
+Every pair of rows separated by distance P must be identical.
+Vacuously true when P >= H (no valid pairs).
+
+gper_is_col_periodic/2 - Succeed if Grid has column period P.
+Every pair of cells in columns separated by P must be identical.
+
+gper_row_period/2 - Find the smallest positive P for which gper_is_row_periodic
+holds, using between/3 with cut. Always finds an answer (P=H is the upper bound).
+
+gper_col_period/2 - Find the smallest positive P for which gper_is_col_periodic
+holds. Always finds an answer (P=W is the upper bound).
+
+gper_tile_dims/3 - Combine gper_row_period and gper_col_period to return PH x PW,
+the dimensions of the smallest tile that tiles the grid.
+
+gper_extract_tile/4 - Return the top-left TH x TW sub-grid of Grid.
+
+gper_tile_grid/4 - Construct an H x W grid by repeating Tile with wrap-around
+indexing: Grid[r][c] = Tile[r mod TH][c mod TW].
+
+gper_extend_rows/3 - Extend Grid to TargetH rows; row R of Extended = row
+(R mod H) of Grid.
+
+gper_extend_cols/3 - Extend Grid to TargetW columns per row; column C =
+column (C mod W) of the original row.
+
+gper_extend/4 - Tile Grid to TargetH x TargetW in one pass (rows and columns).
+
+gper_autocorr_row/3 - Fraction of row pairs (r, r+P) that are identical.
+Returns 1.0 when no such pairs exist or all pairs match.
+
+gper_autocorr_col/3 - Fraction of column pairs (c, c+P) that are identical.
+Returns 1.0 when no pairs exist.
+
+gper_shift_wrap_rows/3 - Shift rows down by N with wrap-around:
+row R of result = row (R-N) mod H of input.
+
+gper_shift_wrap_cols/3 - Shift columns right by N with wrap-around:
+cell (R,C) of result = cell (R,(C-N) mod W) of input.
+
+
+4. Example Session
+
+:- use_module(pack(gridperiod/prolog/gridperiod)).
+
+% Detect the tile dimensions of a 4x4 checkerboard:
+?- gper_tile_dims([[r,b,r,b],[b,r,b,r],[r,b,r,b],[b,r,b,r]], PH, PW).
+PH = 2, PW = 2.
+
+% Extract the 2x2 tile:
+?- gper_extract_tile([[r,b,r,b],[b,r,b,r],[r,b,r,b],[b,r,b,r]], 2, 2, Tile).
+Tile = [[r,b],[b,r]].
+
+% Extend a 2x2 tile to a 6x6 canvas:
+?- gper_extend([[r,b],[b,r]], 6, 6, G).
+G = [[r,b,r,b,r,b],[b,r,b,r,b,r],[r,b,r,b,r,b],[b,r,b,r,b,r],[r,b,r,b,r,b],[b,r,b,r,b,r]].
+
+% Autocorrelation at lag 2 is perfect:
+?- gper_autocorr_row([[r,b],[b,r],[r,b],[b,r]], 2, S).
+S = 1.0.
+
+% Shift rows down by 1 with wrap-around:
+?- gper_shift_wrap_rows([[r,r,r],[b,b,b],[g,g,g]], 1, S).
+S = [[g,g,g],[r,r,r],[b,b,b]].
+
+
+5. Test Coverage
+
+All 51 acceptance criteria (AC-GPER-001 through AC-GPER-051) are exercised in
+packs/gridperiod/test/test_gridperiod.pl. Tests cover:
+- Row and column periodicity detection (including vacuous cases)
+- Period finding with minimum-period guarantee
+- Tile dimension computation and extraction
+- Tiling a 1x1, 2x2, and 2x3 tile to larger grids
+- Row and column extension to target sizes
+- Autocorrelation at various lags (perfect, zero, and single-row edge cases)
+- Wrap-around row and column shifts (zero shift, shift by 1, shift by dimension)
+- Combined round-trip tests (extract then tile, extend then measure period)
+
+
+6. SPARC Documentation
+
+Work Package 222 is recorded in:
+- Specification v188, Part 212 (WP-222-SPEC-001 through WP-222-SPEC-007)
+- Pseudocode v180, Part 212
+- Architecture v182, ARCH-188
+- Refinement v235, AC-GPER-001 through AC-GPER-051
+- Completion v238, WP-222 record
+
+Tutorial chapter: docs/tutorial/Ch183_GridPeriod.txt
+Pack reference: docs/Pack_Reference.txt (gridperiod entry)
+PrologAI PR: #311 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridperiod pack completes PrologAI's periodic-structure toolkit, enabling
+the cognitive engine to detect repeating patterns, recover their fundamental
+tile, extend or reconstruct grids from small seeds, and apply cyclic row and
+column transformations.
+
+PrologAI now comprises 222 work packages and reaches Layer 201 in the
+Data Layer.
