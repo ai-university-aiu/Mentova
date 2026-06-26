@@ -1,0 +1,110 @@
+Accomplishment 225: Scene-Level Uniform Transformation of All Objects (scenexf Pack, sx_*, Layer 184)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+
+Abstract
+
+PrologAI gains its 205th work package: the scenexf pack, a suite of 14 sx_*
+predicates that apply transformations uniformly to every object in a scene list.
+
+A scene is a list of obj(Color, Cells) terms. Where the objxf pack transforms
+a single object, scenexf scales the same class of operations to the entire
+list in one call, producing a fully transformed scene.
+
+
+Motivation
+
+Scene-level reasoning requires more than analyzing objects one at a time. When
+applying a rule discovered from training examples - "all red objects become blue",
+"shift the scene to the origin", "keep only the largest object" - the engine must
+apply the operation across the whole scene simultaneously. The scenexf pack
+provides this scene-wide transformation layer.
+
+
+Predicates
+
+The 14 sx_* predicates fall into five categories:
+
+Color transformations:
+sx_recolor(+Scene, +OldColor, +NewColor, -Scene2) replaces every object whose
+color matches OldColor with NewColor, using atom equality.
+
+sx_recolor_all(+Scene, +NewColor, -Scene2) sets every object in the scene to
+the same new color.
+
+sx_apply_color_map(+Scene, +Map, -Scene2) applies a list of Old-New color pairs.
+An object whose color matches any Old entry is recolored; unmatched objects keep
+their color. Color swapping (r-b, b-r in the same map) is fully supported.
+
+Spatial transformations:
+sx_shift(+Scene, +DR, +DC, -Scene2) translates every object by DR rows and DC
+columns. Negative offsets are allowed.
+
+sx_to_origin(+Scene, -Scene2) shifts the scene so the bounding box top-left
+corner is at r(0,0). It computes the scene-wide minimum row and column and
+subtracts them from every cell.
+
+sx_reflect_h(+Scene, +Width, -Scene2) flips every object horizontally within a
+canvas of the given Width. Each cell r(R,C) becomes r(R, Width-1-C).
+
+sx_reflect_v(+Scene, +Height, -Scene2) flips every object vertically within a
+canvas of the given Height. Each cell r(R,C) becomes r(Height-1-R, C).
+
+Filtering:
+sx_remove_color(+Scene, +Color, -Scene2) discards all objects of the given color.
+
+sx_keep_color(+Scene, +Color, -Scene2) retains only objects of the given color.
+
+Ordering:
+sx_sort_size_desc(+Scene, -Sorted) sorts by cell count descending using a
+negated-count key with msort for stable ordering.
+
+sx_sort_size_asc(+Scene, -Sorted) sorts by cell count ascending.
+
+sx_sort_pos(+Scene, -Sorted) sorts by top-left position in row-major order.
+
+Selection and deduplication:
+sx_top_n(+Scene, +N, -TopN) returns the N largest objects. If N exceeds the
+scene size, all objects are returned sorted by size descending.
+
+sx_dedup_form(+Scene, -Deduped) keeps the first object of each distinct
+normalized form, where normalization translates each object to the origin and
+sorts its cell list.
+
+
+Implementation Notes
+
+Color comparisons use atom equality (==) throughout, consistent with the
+obj(Color, Cells) convention where Color is a color atom such as r, b, or g.
+
+The deduplication accumulator pattern avoids creating intermediate structures:
+it threads a seen-forms list through the recursion, checking each new object's
+normalized form against the accumulated set before deciding whether to include it.
+
+The scene bounding box helper collects all row and column coordinates across
+all objects via a single findall, then takes min and max, making sx_to_origin
+a two-step translate: measure, then shift.
+
+No cross-pack dependencies. Uses library(lists) and library(apply).
+
+
+Test Coverage
+
+41 of 41 unit tests pass. Tests cover all predicates including empty scenes,
+single-object scenes, no-match cases, full-match cases, and multi-object
+composition tests. The reflect_h_bar test verifies that a bar reflected within
+its own width produces the same set of cells (sorted), confirming correctness
+for the symmetric case.
+
+
+Significance
+
+The scenexf pack completes the scene-level transformation layer of PrologAI.
+It pairs with scenecmp (sm_*, comparing two scenes) and objlocate (lq_*, querying
+a scene relative to a reference object) to form a complete toolkit for symbolic
+scene reasoning: analyze a scene, locate objects within it, compare scenes across
+examples, and apply discovered transformations uniformly to generate output scenes.
+
+This is WP 205, Mentova's 225th accomplishment.
