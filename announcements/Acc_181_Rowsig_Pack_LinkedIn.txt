@@ -1,0 +1,39 @@
+Accomplishment 181: Row and Column Signature Analysis
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI gains its 161st work package: the rowsig pack (rs_*, Layer 140).
+
+14 predicates now answer collection-level questions about rows and columns
+in 2D grids.
+
+rs_col_at and rs_all_cols extract individual or all column lists
+(top-to-bottom order).
+
+rs_row_freq and rs_col_freq compute frequency tables: which rows (or
+column lists) appear most often, and how many times.
+
+rs_modal_row and rs_modal_col identify the most frequently occurring
+row or column. Ties broken by largest value in standard order.
+
+rs_uniq_rows and rs_uniq_cols find the rows and columns that appear
+exactly once - the singletons, the odd-ones-out.
+
+rs_dup_row_pairs and rs_dup_col_pairs find all index pairs where two
+rows (or two columns) are identical.
+
+rs_row_palindrome and rs_col_palindrome test whether a row or column
+reads the same forward as backward.
+
+rs_rows_anagram and rs_cols_anagram test whether two rows (or two
+columns) have the same multiset of values - the same elements in any
+order, with multiplicity preserved.
+
+47 PLUnit tests pass.
+
+PrologAI: 161 work packages.
+
+Mentova: 181 accomplishments.
+
+AIU (AI University): ai.university.aiu@gmail.com

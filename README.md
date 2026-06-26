@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-180-FF6B35?style=for-the-badge" alt="180 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-181-FF6B35?style=for-the-badge" alt="181 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **180 accomplished** |
-| Scientific papers | **180 published** — one per accomplishment |
+| Documented accomplishments | **181 accomplished** |
+| Scientific papers | **181 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         180 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  127 announcements — one per accomplishment
+├── papers/         181 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  128 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-180 scientific papers, one per accomplished milestone.
+181 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -441,12 +441,13 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_178` | Rank pack paper — Dense Ranking of Integer Values in Lists and 2D Grids (Layer 137, rk_* prefix): 14 rk_* predicates. List: rk_rank_of (1-based dense rank of a value), rk_dense (replace each element with its rank), rk_argsort_asc and rk_argsort_desc (0-based argsort, stable). Grid row/column/global: rk_row_dense, rk_col_dense, rk_grid_dense. Cell queries: rk_row_rank_of, rk_col_rank_of, rk_grid_rank_of. Selection: rk_top_n and rk_bottom_n (by distinct value) plus rk_above_rank and rk_below_rank (by rank threshold). 42/42 acceptance tests pass. |
 | `Acc_179` | Varstat pack paper — Mean, Sum, and Deviation Statistics for Integer Lists and 2D Grids (Layer 138, vt_* prefix): 14 vt_* predicates. List: vt_sum (total), vt_mean_floor (floor mean via sum//count), vt_mean_round (rounded mean via float division + banker's rounding), vt_deviation (signed per-element deviation from floor mean), vt_abs_deviation (absolute deviation). Grid: vt_row_sums and vt_col_sums (per-row/col integer sums), vt_row_means and vt_col_means (per-row/col floor means), vt_global_mean (global floor mean). Position lists: vt_above_mean and vt_below_mean (cells vs global mean), vt_row_above_mean and vt_col_above_mean (cells vs their row/column mean). 42/42 acceptance tests pass. |
 | `Acc_180` | Cooccur pack paper — Value Co-Occurrence and Adjacency Analysis in 2D Grids (Layer 139, co_* prefix): 14 co_* predicates. Pair enumeration: co_h_pairs (horizontal adjacent pairs), co_v_pairs (vertical, column-major), co_d_pairs_dr (down-right diagonal), co_d_pairs_dl (down-left diagonal). Counting: co_count_h (directed horizontal), co_count_v (directed vertical), co_count_adj4 (undirected 4-adjacent). Testing: co_always_adj4 (every V1 cell borders V2), co_never_adj4 (no V1-V2 adjacency), co_shared_border (at least one shared edge). Analysis: co_isolated4 (V cells with no same-value 4-neighbor), co_border_vals (distinct values bordering V). Summary: co_row_transitions (horizontal transition frequency table), co_most_common_adj4 (most frequent 4-adjacent value). 42/42 acceptance tests pass. |
+| `Acc_181` | Rowsig pack paper — Row and Column Signature Analysis for 2D Grids (Layer 140, rs_* prefix): 14 rs_* predicates. Extraction: rs_col_at (single column top-to-bottom), rs_all_cols (all columns as list of lists). Frequency tables: rs_row_freq (Row-N pairs sorted by count desc), rs_col_freq (Col-N pairs sorted by count desc). Modal: rs_modal_row (most frequent row; largest wins ties), rs_modal_col (most frequent column). Unique detection: rs_uniq_rows (rows appearing exactly once), rs_uniq_cols (columns appearing exactly once). Duplicate pairs: rs_dup_row_pairs (R1-R2 pairs where row R1=row R2, R1<R2), rs_dup_col_pairs (C1-C2 pairs). Palindrome: rs_row_palindrome (row reads same L-R and R-L), rs_col_palindrome (column reads same top-bottom and bottom-top). Anagram: rs_rows_anagram (same value multiset via msort), rs_cols_anagram (same column multiset). 47/47 acceptance tests pass. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
 
 ### Announcements — announcements/
 
-127 announcements in LinkedIn format — one per accomplishment.
+128 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

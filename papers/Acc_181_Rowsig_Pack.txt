@@ -1,0 +1,219 @@
+Accomplishment 181: Row and Column Signature Analysis for 2D Grids
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-25
+
+Abstract
+
+PrologAI gains its 161st work package: the rowsig pack (rs_*, Layer 140).
+
+The rowsig pack provides 14 predicates for analyzing rows and columns of 2D
+integer grids as ordered collections: extracting individual and all columns,
+computing row and column frequency tables, identifying the modal row or
+column, finding rows and columns that appear exactly once, finding index
+pairs of duplicate rows and columns, testing rows and columns for palindrome
+structure, and testing whether two rows or two columns are anagrams (same
+value multiset).
+
+Introduction
+
+A 2D grid can be read row by row, and it can also be read column by column.
+Each row is an ordered list of values. Each column is an ordered list of
+values. The collection of all rows, and the collection of all columns, form
+two parallel views of the same grid.
+
+When reasoning about grid structure at this collection level - asking not
+just what is in a particular row, but which rows appear more than once,
+which column is the odd one out, whether a row reads the same forwards and
+backwards - a dedicated set of predicates provides cleaner and more
+composable reasoning than building each analysis from scratch.
+
+The rowsig pack provides exactly these collection-level row and column
+analysis predicates. It is designed to answer questions like:
+
+- Which row appears most often in this grid?
+- Are any two rows identical?
+- Is row 0 a palindrome?
+- Does column 2 have the same multiset of values as column 4?
+- Which row appears exactly once?
+- Are there any pairs of identical columns?
+
+These questions arise frequently in ARC-AGI-2 tasks that involve grids
+structured as repeating patterns with one exception, mirror-symmetric
+layouts, or value-permuted variants.
+
+Predicates
+
+The 14 public predicates are:
+
+rs_col_at(+Grid, +C, -Col)
+
+Col is the ordered list of values in column C, enumerated top-to-bottom
+(row 0 first). Column 0 is the leftmost column.
+
+rs_all_cols(+Grid, -Cols)
+
+Cols is the list of all column lists in column order (column 0 first).
+Each element of Cols is a top-to-bottom list of values.
+
+rs_row_freq(+Grid, -Freqs)
+
+Freqs is the list of Row-N pairs where N is the number of times Row
+appears in Grid. Sorted by N descending; equal-count rows are ordered
+by reverse standard order (largest row first).
+
+rs_col_freq(+Grid, -Freqs)
+
+Freqs is the list of Col-N pairs where N is the number of times column
+list Col appears. Sorted by N descending.
+
+rs_modal_row(+Grid, -Row)
+
+Row is the row that appears most often in Grid. When multiple rows tie
+for the highest frequency, the largest row in standard order wins
+(using msort + last). Fails if Grid is empty.
+
+rs_modal_col(+Grid, -Col)
+
+Col is the column list that appears most often. Ties broken by the
+largest column list. Fails if Grid has no columns.
+
+rs_uniq_rows(+Grid, -Pairs)
+
+Pairs is the list of R-Row terms for each row index R whose row appears
+exactly once in Grid. Ordered by row index ascending.
+
+rs_uniq_cols(+Grid, -Pairs)
+
+Pairs is the list of C-Col terms for each column index C whose column
+list appears exactly once. Ordered by column index ascending.
+
+rs_dup_row_pairs(+Grid, -Pairs)
+
+Pairs is the list of R1-R2 index pairs where row R1 equals row R2
+and R1 < R2. Ordered by R1 ascending, then R2 ascending.
+
+rs_dup_col_pairs(+Grid, -Pairs)
+
+Pairs is the list of C1-C2 index pairs where column C1 equals column C2
+and C1 < C2. Ordered by C1 ascending, then C2 ascending.
+
+rs_row_palindrome(+Grid, +R)
+
+Succeeds if row R reads the same left-to-right and right-to-left.
+Implemented as reverse(Row, Row), which unifies the row with its own
+reverse.
+
+rs_col_palindrome(+Grid, +C)
+
+Succeeds if column C reads the same top-to-bottom and bottom-to-top.
+
+rs_rows_anagram(+Grid, +R1, +R2)
+
+Succeeds if rows R1 and R2 in Grid have the same multiset of values.
+Implemented as msort(Row1, S), msort(Row2, S). Uses msort (not sort)
+so duplicate values are preserved: [1,1,2] and [2,1,1] are anagrams,
+while [1,2] and [1,1] are not.
+
+rs_cols_anagram(+Grid, +C1, +C2)
+
+Succeeds if columns C1 and C2 in Grid have the same multiset of values.
+
+Example Results
+
+For G = [[1,2],[3,4],[1,2]] (rows 0 and 2 are equal):
+
+rs_col_at(G, 0, Col) gives Col = [1,3,1].
+
+rs_all_cols(G, Cols) gives Cols = [[1,3,1],[2,4,2]].
+
+rs_row_freq(G, Freqs) gives Freqs = [[1,2]-2, [3,4]-1].
+The row [1,2] appears 2 times; [3,4] appears 1 time.
+
+rs_modal_row(G, Row) gives Row = [1,2].
+
+rs_uniq_rows(G, Pairs) gives Pairs = [1-[3,4]].
+Only row 1 (value [3,4]) appears exactly once.
+
+rs_dup_row_pairs(G, Pairs) gives Pairs = [0-2].
+Rows 0 and 2 are equal.
+
+For G2 = [[1,2,1],[3,4,5],[6,7,6]] (rows 0 and 2 are palindromes):
+
+rs_row_palindrome(G2, 0) succeeds: [1,2,1] reversed is [1,2,1].
+rs_row_palindrome(G2, 2) succeeds: [6,7,6] reversed is [6,7,6].
+rs_row_palindrome(G2, 1) fails: [3,4,5] reversed is [5,4,3].
+
+For G3 = [[1,2,3],[3,1,2],[4,5,6]] (rows 0 and 1 are anagrams):
+
+rs_rows_anagram(G3, 0, 1) succeeds: msort([1,2,3]) = msort([3,1,2]) = [1,2,3].
+rs_rows_anagram(G3, 0, 2) fails: msort([1,2,3]) = [1,2,3] != msort([4,5,6]) = [4,5,6].
+
+Implementation
+
+rs_col_at uses findall over member(Row, Grid) with nth0(C, Row, V) to
+extract column C. This preserves the row order of Grid, giving a
+top-to-bottom column list.
+
+rs_row_freq uses sort to deduplicate rows, then counts each unique row
+via include(=(Row), Grid, M). The sort-msort-reverse pattern puts
+higher-count rows first in Freqs.
+
+rs_modal_row uses msort + last on Count-Row pairs. When all rows appear
+equally often, standard order on Row values (ascending in msort) means
+last gives the largest row. This is a deterministic tie-breaking rule.
+
+rs_dup_row_pairs uses a double between/3 loop with R1 < R2 to enumerate
+all ordered index pairs. findall collects only pairs where nth0 retrieves
+equal rows.
+
+rs_row_palindrome and rs_col_palindrome use the Prolog idiom
+reverse(X, X), which succeeds iff X is equal to its own reverse.
+
+rs_rows_anagram and rs_cols_anagram use msort (not sort) to sort while
+preserving duplicate values, then unify the sorted results. This correctly
+distinguishes [1,1,2] from [1,2] even though sort would collapse both.
+
+Validation
+
+47 PLUnit acceptance tests cover all 14 predicates across ten test grids:
+g3 (sequential 3x3), g_dr (duplicate rows), g_dc (duplicate columns),
+g_pr (palindrome rows), g_pc (palindrome column), g_an (anagram rows),
+g_ac (anagram columns), g_all (all rows identical), g_sym (symmetric),
+and g_1 (single-cell grid).
+
+All 47 tests pass.
+
+SPARC Documentation
+
+Specification v126: Part 151, requirements RS-RS-001 through RS-RS-014.
+
+Pseudocode v119: Part 151, pseudocode for all 14 predicates.
+
+Architecture v120: ARCH-127, rowsig pack structure and design notes.
+
+Refinement v174: acceptance criteria AC-RS-001 through AC-RS-047.
+
+Completion v177: WP 161 release record.
+
+Tutorial Chapter 122 added to all tutorial files.
+
+Conclusion
+
+The rowsig pack provides collection-level analysis of rows and columns.
+Where the histogram pack counts individual cell values, rowsig counts
+whole rows and columns as atomic units. Where the diff pack finds
+cell-level differences between two grids, rowsig finds structure in
+the rows and columns within a single grid.
+
+Taken together with cooccur (adjacency patterns), varstat (statistical
+properties), pattern (repeating motifs), and symmetry (reflection axes),
+PrologAI now has comprehensive coverage of the structural properties of
+2D integer grids from the cell level through the row-column level through
+the global structural level.
+
+PrologAI now comprises 161 work packages.
+
+Mentova has achieved 181 accomplishments.
