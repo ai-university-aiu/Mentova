@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-237-FF6B35?style=for-the-badge" alt="237 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-238-FF6B35?style=for-the-badge" alt="238 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **237 accomplished** |
-| Scientific papers | **237 published** — one per accomplishment |
+| Documented accomplishments | **238 accomplished** |
+| Scientific papers | **238 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         237 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  237 announcements — one per accomplishment
+├── papers/         238 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  238 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-237 scientific papers, one per accomplished milestone.
+238 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -547,6 +547,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. No cross-pack dependencies; 7 private helpers (dp_centroid_, dp_norm_, dp_pair_delta_, dp_color_pair_, dp_positions_, dp_row_of_, dp_col_of_). Extraction: dp_color_delta (O1/O2 color head unification), dp_pos_delta (centroid subtraction), dp_size_delta (length subtraction). Tests: dp_same_color (head unification), dp_same_form (dp_norm_ + sort + compare), dp_same_pos (centroid equality). Color map: dp_color_map (maplist dp_color_pair_ + sort), dp_apply_color (head unification on C1; fail otherwise), dp_apply_color_map (recursive try-cut), dp_apply_map_all (if-then-else; unchanged on no match). Displacement: dp_const_dr (maplist dp_row_of_), dp_const_dc (maplist dp_col_of_). Cells: dp_common_cells (intersection/3 on sorted positions), dp_cell_diff (subtract/3 twice). 41/41 PLUnit tests pass. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. No cross-pack dependencies; private helpers tc_minrow_, tc_mincol_, tc_maxrow_, tc_maxcol_, tc_bbox_h_, tc_bbox_w_, tc_translate_, tc_place_at_, min_list_r_, min_list_c_, tc_pack_row_acc_, tc_pack_col_acc_, tc_shift_to_row_, tc_shift_to_col_. tc_place_at (bbox top-left placement via translate). tc_recolor_all (recursive color replacement). tc_tile_row (findall+between N copies at C0+I*Step). tc_tile_col (findall+between N copies at R0+I*Step). tc_tile_grid (nested between I/J for NR*NC grid). tc_at_positions (recursive, one copy per r(R,C)). tc_align_top (maplist minrow + min_list global + maplist shift_to_row). tc_align_left (same pattern for cols). tc_pack_row (maplist shift_to_row + pack_row_acc_ cursor). tc_pack_col (maplist shift_to_col + pack_col_acc_ cursor). tc_spread_h (findall+nth0+between; col=C0+I*Step). tc_spread_v (findall+nth0+between; row=R0+I*Step). tc_center (bbox dims + floor//2 offset + place_at_). tc_flip_h (findall r(R,W-1-C)). 41/41 PLUnit tests pass. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. No cross-pack dependencies; private helpers mx_color_, mx_size_, mx_norm_, mx_centroid_, mx_sq_dist_, mx_nearest_in_, mx_greedy_match_, mx_color_delta_, mx_pos_delta_, mx_size_delta_, mx_color_delta_eq_, mx_pos_delta_eq_, mx_size_delta_eq_. Matching: mx_by_color (findall cross-product, color equality), mx_by_size (findall, size equality), mx_by_form (findall, norm equality), mx_by_nearest (mx_greedy_match_: each O1 claims nearest remaining O2 by mx_sq_dist_ + msort). Extraction: mx_unmatched/5 (findall matched, subtract/3). Filtering: mx_filter_changed_color (findall, C1\=C2), mx_filter_same_color (findall, C1=C2). Deltas: mx_color_deltas/mx_pos_deltas/mx_size_deltas (maplist over private delta helpers). Uniformity: mx_all_same_color_delta/mx_all_same_pos_delta/mx_all_same_size_delta (base=[]; step: extract Ref from first, maplist equality check). Zip: mx_zip (recursive, pairs by index). 41/41 PLUnit tests pass. |
+| `Acc_238` | GridParse pack paper — Grid Parse and Object Extraction (Layer 197, gp_* prefix): 14 gp_* predicates for converting raw grids to obj(Color,Cells) scenes. gp_bg_color: keyed msort by negative count. gp_grid_cells: findall nth0 row-major. gp_color_components: BFS flood fill over cell list; Available shrinks as neighbors are claimed. gp_grid_to_scene: iterate colors -> color_components -> wrap in obj. gp_scene_to_grid: grid_from_rows blank + paint_scene foldl. gp_n_objects: length of gp_grid_to_scene. gp_object_colors: findall non-bg + sort. gp_largest_object: keyed msort by neg length. gp_smallest_object: keyed msort by length. gp_objects_by_size: keyed msort + maplist. gp_grid_from_rows: length+maplist rows. gp_paint_obj: foldl paint_cell per cell. gp_paint_scene: foldl paint_obj. gp_grid_equal: ==. Round-trip verified. 43/43 PLUnit tests pass. |
 | `Acc_237` | GridQuery pack paper — Grid Query and Manipulation (Layer 196, gq_* prefix): 14 gq_* predicates for raw grid format (list-of-lists). gq_size: H+W from length. gq_at: nth0+nth0. gq_row: nth0. gq_col: maplist nth0 over rows. gq_colors: findall+sort. gq_n_cells: findall+length. gq_most_freq_color: keyed msort by neg count. gq_region: numlist + maplist row slice. gq_diff: between enumeration + value compare. gq_n_diff: length of diff list. gq_same_size: equal H+W. gq_transpose: maplist gq_col over column indices. gq_replace: rebuild grid with one cell changed. gq_fill_region: rebuild with rectangle filled. 45/45 PLUnit tests pass. |
 | `Acc_236` | SeqInfer pack paper — Sequential Rule Inference for Multi-Step Scene Transformations (Layer 195, sq_* prefix): 14 sq_* predicates for finding ordered rule sequences from Before-After training pairs. sq_apply: self-contained dispatch engine for 13 rule types (identity, recolor, recolor_all, shift, to_origin, reflect_h, reflect_v, remove_color, keep_color, sort_size_desc, sort_size_asc, top_n, color_map). sq_verify: apply sequence + msort equality check. sq_consistent: maplist over verify. sq_coverage: include count. sq_infer_2step: enumerate ordered pairs of candidates, return highest coverage. sq_infer_3step: enumerate triples. sq_default_rules: 30 standard candidates. sq_solve: 2-step first, fallback to 1-step. sq_rank_seqs, sq_all_consistent, sq_coverage_ratio, sq_n_pairs, sq_explain, sq_verify_all. 44/44 PLUnit tests pass. |
 | `Acc_235` | SceneInv pack paper — Scene Invariant Detection across Training Pairs (Layer 194, si_* prefix): 14 si_* predicates that detect structural invariants from Before-After pairs. Three invariant families: object-count (si_n_before, si_n_after, si_all_n_before, si_all_n_after, si_const_n_before, si_const_n_after, si_n_preserved), color-set (si_colors_before, si_colors_after, si_const_colors_before, si_const_colors_after, si_colors_preserved), and cell-count (si_total_cells_before, si_cells_preserved). Constancy tested via list_to_set; single-element set proves all values equal. Preservation predicates succeed vacuously on empty Pairs. Constancy predicates fail on empty Pairs. 46/46 PLUnit tests pass. |
@@ -575,7 +576,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 
 ### Announcements — announcements/
 
-237 announcements in LinkedIn format — one per accomplishment.
+238 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

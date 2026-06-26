@@ -1,0 +1,36 @@
+Accomplishment 238: Grid Parse and Object Extraction (gridparse Pack, gp_*, Layer 197)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a gridparse pack - 14 gp_* predicates that convert ARC's raw
+grid format (list of rows) into the obj(Color, Cells) scene representation used
+by all of PrologAI's reasoning packs.
+
+The bridge between raw data and reasoning:
+
+- gp_bg_color: find the background (most frequent color)
+- gp_grid_cells: list all positions of a given color
+- gp_color_components: BFS flood fill - one list of cells per connected region
+- gp_grid_to_scene: extract all non-background objects at once
+- gp_scene_to_grid: render a scene back to grid format
+- gp_n_objects: count all non-background connected objects
+- gp_largest_object / gp_smallest_object: size-ranked objects
+- gp_objects_by_size: all objects sorted largest first
+- gp_grid_from_rows: create a blank background grid
+- gp_paint_obj / gp_paint_scene: add objects to a grid
+- gp_grid_equal: verify two grids are identical
+
+Verified round-trip: grid -> scene -> grid produces the original grid.
+
+43 of 43 unit tests pass.
+
+This is WP 218, Mentova's 238th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
