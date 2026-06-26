@@ -1,0 +1,32 @@
+Accomplishment 224: Object-List Spatial and Attribute Query Against a Reference Object (objlocate Pack, lq_*, Layer 183)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has an objlocate pack - 14 lq_* predicates for querying a list of
+obj(Color, Cells) terms for those satisfying a spatial or attribute relationship to
+a reference object.
+
+A symbolic reasoner can now ask natural questions about a scene: "which objects are
+above the red square?", "which objects are touching the blue bar?", "which object is
+nearest the anchor?", "which objects have the same shape as this one?"
+
+lq_touching4 and lq_touching8 test 4-adjacency and 8-adjacency (edge-sharing and
+corner-sharing). lq_overlapping finds shared cells. lq_same_form uses normalized
+shapes (translate-to-origin, sort cells) so position and color are ignored. lq_nearest
+and lq_farthest use squared centroid distance.
+
+All 14 predicates return a filtered list from the input; lq_n_touching4 returns a
+count; lq_nearest and lq_farthest return a single object.
+
+41 of 41 unit tests pass.
+
+This is WP 204, Mentova's 224th accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

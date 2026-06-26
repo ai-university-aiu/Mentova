@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-223-FF6B35?style=for-the-badge" alt="223 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-224-FF6B35?style=for-the-badge" alt="224 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **223 accomplished** |
-| Scientific papers | **223 published** — one per accomplishment |
+| Documented accomplishments | **224 accomplished** |
+| Scientific papers | **224 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         223 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  223 announcements — one per accomplishment
+├── papers/         224 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  224 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-223 scientific papers, one per accomplished milestone.
+224 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -475,6 +475,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. No cross-pack dependencies; 7 private helpers (dp_centroid_, dp_norm_, dp_pair_delta_, dp_color_pair_, dp_positions_, dp_row_of_, dp_col_of_). Extraction: dp_color_delta (O1/O2 color head unification), dp_pos_delta (centroid subtraction), dp_size_delta (length subtraction). Tests: dp_same_color (head unification), dp_same_form (dp_norm_ + sort + compare), dp_same_pos (centroid equality). Color map: dp_color_map (maplist dp_color_pair_ + sort), dp_apply_color (head unification on C1; fail otherwise), dp_apply_color_map (recursive try-cut), dp_apply_map_all (if-then-else; unchanged on no match). Displacement: dp_const_dr (maplist dp_row_of_), dp_const_dc (maplist dp_col_of_). Cells: dp_common_cells (intersection/3 on sorted positions), dp_cell_diff (subtract/3 twice). 41/41 PLUnit tests pass. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. No cross-pack dependencies; private helpers tc_minrow_, tc_mincol_, tc_maxrow_, tc_maxcol_, tc_bbox_h_, tc_bbox_w_, tc_translate_, tc_place_at_, min_list_r_, min_list_c_, tc_pack_row_acc_, tc_pack_col_acc_, tc_shift_to_row_, tc_shift_to_col_. tc_place_at (bbox top-left placement via translate). tc_recolor_all (recursive color replacement). tc_tile_row (findall+between N copies at C0+I*Step). tc_tile_col (findall+between N copies at R0+I*Step). tc_tile_grid (nested between I/J for NR*NC grid). tc_at_positions (recursive, one copy per r(R,C)). tc_align_top (maplist minrow + min_list global + maplist shift_to_row). tc_align_left (same pattern for cols). tc_pack_row (maplist shift_to_row + pack_row_acc_ cursor). tc_pack_col (maplist shift_to_col + pack_col_acc_ cursor). tc_spread_h (findall+nth0+between; col=C0+I*Step). tc_spread_v (findall+nth0+between; row=R0+I*Step). tc_center (bbox dims + floor//2 offset + place_at_). tc_flip_h (findall r(R,W-1-C)). 41/41 PLUnit tests pass. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. No cross-pack dependencies; private helpers mx_color_, mx_size_, mx_norm_, mx_centroid_, mx_sq_dist_, mx_nearest_in_, mx_greedy_match_, mx_color_delta_, mx_pos_delta_, mx_size_delta_, mx_color_delta_eq_, mx_pos_delta_eq_, mx_size_delta_eq_. Matching: mx_by_color (findall cross-product, color equality), mx_by_size (findall, size equality), mx_by_form (findall, norm equality), mx_by_nearest (mx_greedy_match_: each O1 claims nearest remaining O2 by mx_sq_dist_ + msort). Extraction: mx_unmatched/5 (findall matched, subtract/3). Filtering: mx_filter_changed_color (findall, C1\=C2), mx_filter_same_color (findall, C1=C2). Deltas: mx_color_deltas/mx_pos_deltas/mx_size_deltas (maplist over private delta helpers). Uniformity: mx_all_same_color_delta/mx_all_same_pos_delta/mx_all_same_size_delta (base=[]; step: extract Ref from first, maplist equality check). Zip: mx_zip (recursive, pairs by index). 41/41 PLUnit tests pass. |
+| `Acc_224` | ObjLocate pack paper — Object-List Spatial and Attribute Query Against a Reference Object (Layer 183, lq_* prefix): 14 lq_* predicates for querying a list of obj(Color,Cells) terms for those satisfying a spatial or attribute relationship to a reference object. No cross-pack dependencies; private helpers lq_color_, lq_cells_, lq_centroid_, lq_topleft_, lq_norm_, lq_sq_dist_, lq_touch4_, lq_touch8_, lq_overlap_. Directional (centroid-based): lq_above (CR<RefR), lq_below (CR>RefR), lq_left_of (CC<RefC), lq_right_of (CC>RefC). Adjacency: lq_touching4 (Manhattan=1, no overlap), lq_touching8 (Chebyshev=1, no overlap), lq_overlapping (shared cell). Attribute: lq_same_color (color atom equality), lq_same_form (lq_norm_ translate-to-origin+sort), lq_aligned_h (min_row equality), lq_aligned_v (min_col equality). Distance: lq_nearest (D-Obj msort, take first), lq_farthest (-D-Obj msort, take first), lq_n_touching4 (length of lq_touching4 result). 41/41 PLUnit tests pass. |
 | `Acc_223` | SceneCmp pack paper — Scene-Level Comparison of Two Object Lists (Layer 182, sm_* prefix): 14 sm_* predicates for comparing Before and After obj(Color,Cells) lists at the inventory level. No cross-pack dependencies; private helpers sm_color_, sm_size_, sm_norm_, sm_distinct_colors_, sm_distinct_forms_. Introspection: sm_n_objs (length), sm_total_cells (sum_list), sm_colors (findall+sort), sm_forms (findall norm+sort). Symmetric: sm_same_n_objs, sm_same_total_cells, sm_same_colors, sm_same_forms (equality of inventory). Asymmetric: sm_added_colors (subtract(CA,CB)), sm_removed_colors (subtract(CB,CA)), sm_added_forms (subtract(FA,FB)), sm_removed_forms (subtract(FB,FA)). Aggregate: sm_n_color_change (length(Added)+length(Removed)). Detector: sm_any_change (disjunction+cut: count OR color OR form differs). 41/41 PLUnit tests pass. |
 | `Acc_222` | ObjGroup pack paper — Object-List Grouping by Shared Attribute (Layer 181, og_* prefix): 14 og_* predicates for partitioning a list of obj(Color, Cells) terms into Key-ObjList groups sharing a common attribute value. No cross-pack dependencies; private helpers og_color_, og_size_, og_topleft_, og_norm_, og_group_by_, og_row_key_, og_col_key_, og_count_, og_count_eq_. Grouping: og_by_color (og_group_by_ with og_color_ key), og_by_size (og_size_ key), og_by_form (og_norm_ translate-to-origin+sort key), og_by_row (og_row_key_ min-row), og_by_col (og_col_key_ min-col). Inspection: og_n_groups (length), og_n_members (findall count=N), og_singletons (og_n_members N=1). Aggregates: og_largest (negated-count msort first), og_smallest (ascending-count msort first). Uniformity: og_all_same_size (maplist og_count_eq_). Utilities: og_sort_desc (negated-count msort), og_flat (findall over all members), og_filter_size (findall N>=Min, N=<Max). 41/41 PLUnit tests pass. |
 | `Acc_221` | ObjAttr pack paper — Object-List Aggregate Attribute Analysis (Layer 180, oa_* prefix): 14 oa_* predicates for computing aggregate statistics and rankings over a list of obj(Color, Cells) terms. No cross-pack dependencies; private helpers oa_color_, oa_size_, oa_norm_, oa_topleft_, oa_count_color_, oa_total_cells_color_, oa_mode_, oa_run_max_, oa_run_max_acc_, oa_color_eq_, oa_size_eq_, oa_norm_eq_. Counts: oa_total_cells (sum_list of sizes), oa_color_counts (findall+sort distinct colors; count per color), oa_cell_counts_by_color (sum cells per color), oa_n_colors (length of distinct list), oa_n_objs_of_color (oa_count_color_). Dominance: oa_dominant_color (negated-total msort trick), oa_rarest_color (ascending msort), oa_unique_color (member Color-1; backtrackable). Rankings: oa_size_rank (negated count msort), oa_pos_rank (r(R,C) key msort). Mode: oa_majority_size (oa_mode_ via oa_run_max_acc_ run-length accumulator). Uniformity: oa_all_same_color (maplist oa_color_eq_), oa_all_same_size (maplist oa_size_eq_), oa_all_same_form (oa_norm_ translate-to-origin + sort; maplist oa_norm_eq_). 41/41 PLUnit tests pass. |
@@ -489,7 +490,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 
 ### Announcements — announcements/
 
-223 announcements in LinkedIn format — one per accomplishment.
+224 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

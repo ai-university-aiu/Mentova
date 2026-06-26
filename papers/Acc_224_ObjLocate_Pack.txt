@@ -1,0 +1,109 @@
+Accomplishment 224: Object-List Spatial and Attribute Query Against a Reference Object (objlocate Pack, lq_*, Layer 183)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+Summary
+
+PrologAI now has an objlocate pack - 14 lq_* predicates for querying a list of
+obj(Color, Cells) terms for those satisfying a spatial or attribute relationship to a
+given reference object. This is WP 204, Mentova's 224th accomplishment.
+
+
+Motivation
+
+The objrel pack tests pairwise spatial relationships between two specific objects.
+What was missing was a list-level version: given a scene full of objects and a specific
+reference object, find all objects that are above it, or touching it, or the same color,
+or nearest to it. The objlocate pack provides exactly this capability.
+
+
+Predicates
+
+lq_above/3
+    Objects with centroid row strictly less than Ref's centroid row.
+
+lq_below/3
+    Objects with centroid row strictly greater than Ref's.
+
+lq_left_of/3
+    Objects with centroid column strictly less than Ref's.
+
+lq_right_of/3
+    Objects with centroid column strictly greater than Ref's.
+
+lq_touching4/3
+    Objects 4-adjacent to Ref: they have a cell at Manhattan distance 1 from any Ref
+    cell, and they do not overlap Ref.
+
+lq_touching8/3
+    Objects 8-adjacent to Ref: a cell at Chebyshev distance 1, no overlap.
+
+lq_overlapping/3
+    Objects sharing at least one cell with Ref.
+
+lq_same_color/3
+    Objects with the same color atom as Ref.
+
+lq_same_form/3
+    Objects with the same normalized shape as Ref. Normalization translates each
+    object to the origin and sorts its cell list.
+
+lq_aligned_h/3
+    Objects whose top-left cell row equals Ref's top-left cell row.
+
+lq_aligned_v/3
+    Objects whose top-left cell column equals Ref's top-left cell column.
+
+lq_nearest/3
+    The single object in Objs with the smallest squared centroid distance to Ref.
+    Uses msort on D-Obj pairs; first element after sort wins on ties.
+
+lq_farthest/3
+    The single object with the largest squared centroid distance to Ref.
+
+lq_n_touching4/3
+    Count of 4-adjacent objects in the list.
+
+
+Implementation Notes
+
+All list-query predicates use findall with a condition that calls the corresponding
+private helper. This keeps each predicate body to two or three lines and makes the
+code readable.
+
+lq_touching4 and lq_touching8 include an explicit \+ lq_overlap_ guard before the
+adjacency test. This prevents the case where an object's cells overlap Ref's cells
+from being counted as touching.
+
+lq_nearest and lq_farthest use the negated-distance msort trick: to find the minimum,
+sort D-Obj pairs ascending (msort) and take the first. To find the maximum, sort
+-D-Obj pairs ascending and take the first.
+
+Centroid coordinates are floats (SR/N). Squared distance is (R1-R2)^2 + (C1-C2)^2,
+computed as integer arithmetic since SWI-Prolog evaluates integer subtraction exactly.
+
+
+Test Coverage
+
+41 of 41 unit tests pass (AC-LQ-001 through AC-LQ-041, defined in Refinement v217
+Part 194). Tests cover all 14 predicates including empty list inputs, no-match cases,
+and multi-match cases.
+
+
+SPARC Documentation
+
+Specification v169 - Part 194: objlocate pack formal specification
+Pseudocode v162 - Part 194: reasoning pseudocode for all 14 predicates
+Architecture v163 - ARCH-170: objlocate pack placement at Layer 183
+Refinement v217 - AC-LQ-001 through AC-LQ-041: acceptance criteria
+Completion v220 - WP-204 completion record
+
+
+PrologAI Repository
+
+PR #292 merged into main.
+Pack directory: packs/objlocate/
+Tutorial chapter: docs/tutorial/Ch165_ObjLocate.txt
