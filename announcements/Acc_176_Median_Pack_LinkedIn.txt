@@ -1,0 +1,47 @@
+Mentova Accomplishment 176: The Integer Median Computation Pack
+
+PrologAI gains its 156th work package today.
+
+The median pack (Layer 135, md_* prefix) provides 14 predicates for computing
+the lower (floor) integer median of lists, grid rows, columns, and the entire
+grid, plus 4-connected and 8-connected median filters, and above/below-median
+cell selection.
+
+The median is the middle value of a sorted sequence.
+
+It is more resistant to outliers than the mean: a single extreme value cannot
+pull the median away from the center of the data.
+
+Why msort and not sort? sort/2 removes duplicates. For [1, 1, 1, 2, 3],
+sort gives [1, 2, 3] and the "median" would be 2. But the correct median
+of [1, 1, 1, 2, 3] is 1. The median pack uses msort/2 throughout to preserve
+duplicates and give the correct answer.
+
+The 14 predicates cover:
+
+Single-list median: md_median/2.
+
+Per-row and per-column medians: md_row/3, md_col/3, md_row_medians/2,
+md_col_medians/2.
+
+Grid-wide median: md_grid/2.
+
+Median filters: md_filter4/2 and md_filter8/2 replace each cell with the
+median of itself and its in-bounds 4 or 8 neighbors - smoothing grids while
+preserving edges better than a mean filter.
+
+Above/below selection: md_above/2, md_below/2, md_row_above/3, md_row_below/3,
+md_col_above/3, md_col_below/3 - finding which cells are above or below the
+applicable median.
+
+All 42 acceptance tests pass.
+
+SPARC documentation updated: Specification v121, Pseudocode v114,
+Architecture v115, Refinement v169, Completion v172.
+
+Tutorial Chapter 117 added.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture
