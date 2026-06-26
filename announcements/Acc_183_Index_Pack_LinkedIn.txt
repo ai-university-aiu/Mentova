@@ -1,0 +1,47 @@
+Accomplishment 183: Coordinate-Valued Grid Generation for Spatial Reasoning
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI gains its 163rd work package: the index pack (ix_*, Layer 142).
+
+14 predicates generate grids whose cell values come from coordinates alone,
+not from data.
+
+ix_row_grid creates a grid where every cell in row R holds value R.
+
+ix_col_grid creates a grid where every cell in column C holds value C.
+
+ix_sum_grid produces a diagonal-band index: cell(R,C) = R+C.
+
+ix_diff_grid produces an anti-diagonal index: cell(R,C) = R-C.
+
+ix_prod_grid: cell(R,C) = R*C.
+
+ix_manhattan_grid computes the taxi-cab distance from a reference point to
+every cell.
+
+ix_chebyshev_grid computes the king-move distance. Cells at distance K form
+a hollow square ring around the reference point. A 5x5 grid centered at (2,2)
+shows shells 0, 1, 2 forming three nested squares.
+
+ix_mod_grid, ix_row_mod_grid, and ix_col_mod_grid create modular stripe
+patterns: diagonal, horizontal, and vertical respectively.
+
+ix_mask_rows and ix_mask_cols select arbitrary rows or columns by index list,
+replacing all others with a background value.
+
+ix_apply bridges coordinate grids and value grids: it applies a binary
+operation (add, sub, mul, max, or min) cell by cell between an index grid
+and a value grid.
+
+ix_from assigns each cell a signed linear offset from a reference point,
+using row-major stride.
+
+42 PLUnit tests pass.
+
+PrologAI: 163 work packages.
+
+Mentova: 183 accomplishments.
+
+AIU (AI University): ai.university.aiu@gmail.com
