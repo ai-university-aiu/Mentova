@@ -1,0 +1,35 @@
+Accomplishment 231: Color Substitution Table Learning and Application (colortable Pack, ct_*, Layer 190)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI now has a colortable pack - 14 ct_* predicates that learn a complete
+color substitution table from Before-After scene pair training examples.
+
+The core question: what color becomes what? If red becomes green and blue
+becomes yellow across every training example, then that is the rule. Apply
+it to the test input and you are done.
+
+ct_learn_map processes a list of Before-After pairs and accumulates a consistent
+color map. Conflicting pairs (same source color, different target) are returned
+separately rather than corrupting the map.
+
+ct_apply_to_scene applies the learned table to any scene. Colors not in the
+table are left unchanged. ct_complete_map can fill in identity entries for
+any uncovered colors. ct_invert_map reverses the table for the inverse task.
+
+Positional matching: objects are paired by position (first with first, second
+with second), which is correct for ARC-AGI-2 scenes where spatial structure
+is preserved and only colors change.
+
+44 of 44 unit tests pass.
+
+This is WP 211, Mentova's 231st accomplishment.
+
+#PrologAI #Mentova #SymbolicAI #ArtificialIntelligence #AIU
+
+D. R. Dison
+Founder of AIU
+Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
