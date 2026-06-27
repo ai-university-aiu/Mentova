@@ -1,0 +1,156 @@
+Acc_248: gridxform Pack - Grid Transformations: Rotate, Flip, Transpose, Crop, Pad, Scale, Tile, and Canonical D4 Form (gx_*, Layer 207)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 228 adds the gridxform pack (gx_*, Layer 207): fourteen
+predicates for geometric transformation of raw grids. The pack provides three
+rotations (90, 180, 270 degrees clockwise), two reflections (horizontal,
+vertical), two diagonal flips (main diagonal transpose, anti-diagonal), crop to
+explicit or auto-detected bounding box, pad with background color, integer
+upscale, tile to target dimensions, D4 symmetry group enumeration, and
+canonical D4 form computation. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Rotation and reflection are fundamental operations for visual reasoning. ARC-
+style tasks frequently require recognizing that a pattern is a rotated or
+mirrored version of another, extracting a sub-region, scaling a tile unit, or
+determining whether two grids are related by symmetry. The gridxform pack
+provides the complete set of D4 group operations plus utility transforms for
+the spatial manipulation of symbolic grids.
+
+The gridxform pack provides:
+- Three rotations: 90 CW, 180, 270 CW
+- Four reflections: horizontal flip, vertical flip, main-diagonal transpose, anti-diagonal flip
+- Crop: explicit bounding box and auto-detect-content crop
+- Pad: four-sided background padding
+- Scale: integer upscale (each cell to N x N block)
+- Tile: fill target dimensions by repetition
+- D4 group: enumerate all 8 D4 isometries
+- Normalize: canonical D4 form (lexicographic minimum)
+
+
+2. Architecture
+
+Layer 207 sits immediately above gridmask (Layer 206). Uses library(lists)
+only; no cross-pack dependencies.
+
+Private helpers:
+- gx_dims_/3: grid height and width
+- gx_cell_/4: cell value at (R, C)
+- gx_build_/4: build explicit NewH x NewW grid using lambda Goal(R, C, V)
+
+Key design decision: gx_build_ takes explicit NewH and NewW rather than
+deriving them from the input grid. This is essential because rotations and
+transpositions produce output dimensions (W x H) that differ from input
+dimensions (H x W). The lambda captures the original H and W via closure.
+
+
+3. Predicates
+
+Rotation predicates:
+
+gx_rotate90/2 - result[R][C] = original[H-1-C][R], output is W x H.
+gx_rotate180/2 - result[R][C] = original[H-1-R][W-1-C], same dims.
+gx_rotate270/2 - result[R][C] = original[C][W-1-R], output is W x H.
+
+Reflection predicates:
+
+gx_flip_h/2 - left-right mirror: result[R][C] = original[R][W-1-C].
+gx_flip_v/2 - top-bottom mirror: result[R][C] = original[H-1-R][C].
+gx_transpose/2 - main diagonal: result[R][C] = original[C][R], output is W x H.
+gx_flip_d2/2 - anti-diagonal: result[R][C] = original[H-1-C][W-1-R], output is W x H.
+
+Spatial utility predicates:
+
+gx_crop/6 - extract rows [R0..R1] x cols [C0..C1] inclusive.
+gx_crop_content/3 - auto-crop to non-BgColor bounding box; Grid unchanged if all-background.
+gx_pad/7 - pad with BgColor: Top rows, Bot rows, Left cols, Right cols.
+gx_scale/3 - upscale by N: each cell becomes N x N block.
+gx_tile/4 - tile Grid to fill H x W target via modular indexing.
+
+Symmetry predicates:
+
+gx_d4_group/2 - enumerate all 8 D4 isometries in fixed order.
+gx_normalize/2 - canonical form: lexicographically smallest of the 8.
+
+
+4. Example Session
+
+:- use_module(pack(gridxform/prolog/gridxform)).
+
+% Rotate 90 CW:
+gx_rotate90([[a,b,c],[d,e,f],[g,h,i]], R).
+% R = [[g,d,a],[h,e,b],[i,f,c]]
+
+% Rotate 270 CW (= 90 CCW):
+gx_rotate270([[a,b,c],[d,e,f]], R).
+% R = [[c,f],[b,e],[a,d]]
+
+% Auto-crop to content:
+gx_crop_content([[x,x,x],[x,r,r],[x,r,r]], x, R).
+% R = [[r,r],[r,r]]
+
+% Scale 2x2 by 2:
+gx_scale([[r,x],[x,r]], 2, R).
+% R = [[r,r,x,x],[r,r,x,x],[x,x,r,r],[x,x,r,r]]
+
+% Tile 2x2 checker to 4x4:
+gx_tile([[r,x],[x,r]], 4, 4, R).
+% R = [[r,x,r,x],[x,r,x,r],[r,x,r,x],[x,r,x,r]]
+
+% Pad single cell with 1-cell border:
+gx_pad([[r]], 1, 1, 1, 1, x, R).
+% R = [[x,x,x],[x,r,x],[x,x,x]]
+
+% Canonical form:
+gx_normalize([[b,a],[b,a]], Canon).
+% Canon = lexicographically minimum of all 8 D4 isometries
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GX-001 through AC-GX-044) are exercised in
+packs/gridxform/test/test_gridxform.pl. Tests cover:
+- All three rotations on 3x3, 2x3 (non-square), and 1x1 grids
+- Round-trip identities: rotate180 twice, flip_h twice, flip_v twice,
+  transpose twice, flip_d2 twice, rotate90 + rotate270, rotate90 x 4
+- Crop: center, top row, bottom-right 2x2
+- Crop_content: center cell, all-background, corner cell, non-square region
+- Pad: uniform, left-right only, asymmetric
+- Scale: N=1 identity, N=2, N=3
+- Tile: exact same size, larger, 1x1 source
+- D4 group: count = 8, first element = identity, symmetric grid
+- Normalize: returns msort minimum, uniform grid stable
+- Combined: four 90-degree rotations = identity, scale of center grid
+
+
+6. SPARC Documentation
+
+Work Package 228 is recorded in:
+- Specification v194, Part 218 (WP-228-SPEC-001 through WP-228-SPEC-007)
+- Pseudocode v186, Part 218
+- Architecture v188, ARCH-194
+- Refinement v241, AC-GX-001 through AC-GX-044
+- Completion v244, WP-228 record
+
+Tutorial chapter: docs/tutorial/Ch189_GridXform.txt
+Pack reference: docs/Pack_Reference.txt (gridxform entry)
+PrologAI PR: #317 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridxform pack completes the spatial transformation layer of the grid
+reasoning toolkit, adding the full D4 symmetry group plus crop, pad, scale, and
+tile utilities. Combined with gridflood (region analysis), gridpath
+(pathfinding), and gridmask (boolean masks), the system now has a comprehensive
+set of operations for symbolic grid perception and manipulation.
+
+PrologAI now comprises 228 work packages and reaches Layer 207 in the Data Layer.
