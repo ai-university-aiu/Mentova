@@ -1,0 +1,145 @@
+Acc_257: gridframe Pack - Grid Frame Analysis (gfr_*, Layer 216)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 237 adds the gridframe pack (gfr_*, Layer 216): fourteen
+predicates for concentric-ring (frame) analysis of symbolic grids. Frame depth D
+is defined as min(R, H-1-R, C, W-1-C) for cell (R,C) in an H x W grid. Frame 0
+is the outermost border; deeper frames are inner rings. The pack covers cell-depth
+computation, frame extraction, peel operations, uniformity testing, color
+enumeration, counting, modification, fill, innermost-frame retrieval, and onion
+pattern detection. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many grid-reasoning tasks involve concentric ring patterns - "onion" or "target"
+layouts where each ring has a distinct color, or tasks that require peeling away
+outer layers to reveal an inner structure. The gridframe pack makes these
+structural properties computable in single predicate calls, extending the
+thirteen-pack grid suite with frame-depth awareness.
+
+
+2. Architecture
+
+Layer 216 sits immediately above griddiag (Layer 215) in the Data Layer.
+Uses library(lists): nth0/3, member/2, list_to_set/2. No cross-pack dependencies.
+
+Frame depth formula: depth(R, C) = min(min(R, H-1-R), min(C, W-1-C)).
+Maximum depth for H x W grid: floor((min(H,W) - 1) / 2).
+A 1x1 grid has one frame at depth 0. A 3x3 has 2 frames; a 5x5 has 3 frames.
+
+Private helpers:
+- gfr_dims_/3   - grid height and width
+- gfr_cell_/4   - cell value at (R,C)
+- gfr_build_/4  - build H x W grid with Goal(R,C,V) lambda
+- gfr_depth_/5  - depth of cell (R,C): min(min(R,H-1-R), min(C,W-1-C))
+- gfr_all_eq_/1 - test all list elements equal
+
+
+3. Predicates
+
+Depth and extraction:
+
+gfr_cell_depth/4  - frame depth of a specific cell
+gfr_frame/3       - R-C pairs at frame depth D
+gfr_max_depth/2   - maximum depth = floor((min(H,W)-1)/2)
+gfr_frame_count/2 - number of frame depths (max_depth + 1)
+gfr_peel/2        - inner (H-2)x(W-2) grid after removing outermost frame
+gfr_all_frames/2  - list of frame cell-lists from depth 0 to max_depth
+
+Uniformity and colors:
+
+gfr_frame_uniform/3  - yes/no - all cells in frame D are the same color
+gfr_frame_colors/3   - deduplicated color list for frame D
+gfr_count_in_frame/4 - count of Color at frame depth D
+gfr_uniform_frames/2 - ascending list of depths with uniform frames
+
+Modification and pattern:
+
+gfr_set_frame/4     - set all cells at depth D to Color
+gfr_fill_frames/3   - assign Colors[D] to each frame D
+gfr_innermost/2     - R-C pairs at maximum frame depth
+gfr_onion_layers/2  - D-Color pairs for uniform frames (onion pattern)
+
+
+4. Example Session
+
+:- use_module(pack(gridframe/prolog/gridframe)).
+
+% Frame depth:
+G = [[a,b,c],[d,e,f],[g,h,i]].
+gfr_cell_depth(G, 0, 0, D).
+% D = 0   (corner is on the border)
+
+gfr_cell_depth(G, 1, 1, D).
+% D = 1   (center of 3x3)
+
+% Frame extraction:
+gfr_frame(G, 0, Cells).
+% Cells = [0-0, 0-1, 0-2, 1-0, 1-2, 2-0, 2-1, 2-2]   (8 border cells)
+
+% Peel operation:
+Ring = [[r,r,r,r,r],[r,x,x,x,r],[r,x,b,x,r],[r,x,x,x,r],[r,r,r,r,r]].
+gfr_peel(Ring, Inner).
+% Inner = [[x,x,x],[x,b,x],[x,x,x]]
+
+% Onion detection:
+gfr_onion_layers(Ring, Layers).
+% Layers = [0-r, 1-x, 2-b]   (all three frames are uniform)
+
+% Fill to create onion:
+gfr_fill_frames(G, [r, x], Result).
+% Result = [[r,r,r],[r,x,r],[r,r,r]]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GFR-001 through AC-GFR-044) exercised in
+packs/gridframe/test/test_gridframe.pl. Tests use fixtures g1x1, g3x3, g3x3_rx,
+g4x4, g5x5, g5x5_onion, g2x4, and g3x4. Tests cover:
+- gfr_cell_depth: corners at depth 0, centers at depth 1 and 2
+- gfr_frame: cell counts for 3x3 (8+1), 5x5 (16+8+1)
+- gfr_max_depth: 1 for 3x3 and 4x4, 2 for 5x5, 0 for 2x4
+- gfr_frame_count: 2 for 3x3, 3 for 5x5, 1 for 1x1
+- gfr_peel: 3x3→1x1, 5x5→3x3, 5x5_onion inner, 3x4→1x2
+- gfr_all_frames: lengths 2 and 3
+- gfr_frame_uniform: yes for uniform frames, no for mixed border
+- gfr_frame_colors: single color vs multiple colors
+- gfr_set_frame: border and center replacement
+- gfr_count_in_frame: exact counts including border and 0
+- gfr_uniform_frames: [0,1], [0,1,2], [1]
+- gfr_fill_frames: round-trip creates target patterns
+- gfr_innermost: [1-1] and [2-2]
+- gfr_onion_layers: [0-r,1-x] and [0-r,1-x,2-b]
+
+
+6. SPARC Documentation
+
+Work Package 237 is recorded in:
+- Specification v203, Part 227 (WP-237-SPEC-001 through WP-237-SPEC-007)
+- Pseudocode v195, Part 227
+- Architecture v197, ARCH-203
+- Refinement v250, AC-GFR-001 through AC-GFR-044
+- Completion v253, WP-237 record
+
+Tutorial chapter: docs/tutorial/Ch198_GridFrame.txt
+Pack reference: docs/Pack_Reference.txt (gridframe entry)
+PrologAI PR: #326 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridframe pack provides complete concentric-ring analysis for raw grids.
+Depth computation, frame extraction, peeling, uniformity testing, color
+enumeration, counting, modification, fill, and onion-pattern detection are
+all available in single predicate calls. Together with the other thirteen grid
+packs at Layers 196-215, PrologAI now analyzes grids along rows, columns,
+diagonals, regions, adjacency graphs, and concentric frames.
+
+PrologAI now comprises 237 work packages and reaches Layer 216 in the Data Layer.
