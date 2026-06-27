@@ -1,0 +1,170 @@
+Acc_252: gridedge Pack - Grid Edge Detection, Boundary Analysis, Corners, Endpoints, and Transition Maps (ge_*, Layer 211)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 232 adds the gridedge pack (ge_*, Layer 211): fourteen
+predicates for detecting edges, boundaries, and structural features of symbolic
+grids. The pack covers 4- and 8-connected edge cell detection, single-cell edge
+testing, directional boundary detection, inner and outer border extraction, edge
+grid construction, edge counting, neighbor difference analysis, corner and
+endpoint detection, smooth cell detection, per-cell transition count maps, and
+color-specific edge counting. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Structural analysis of symbolic grids requires more than color statistics:
+it requires understanding where color regions meet, where corners occur,
+where lines begin and end, and how many cells on each side of a boundary are
+affected. The gridedge pack provides the complete toolkit for all of these
+boundary-awareness operations, serving as the structural companion to gridcolor
+(color statistics) and gridflood (region connectivity).
+
+
+2. Architecture
+
+Layer 211 sits immediately above gridstitch (Layer 210). Uses library(lists)
+only (nth0/3, member/2). No cross-pack dependencies.
+
+Private helpers:
+- ge_dims_/3: grid height and width
+- ge_cell_/4: cell value at row R, column C (0-indexed); fails out of bounds
+- ge_build_/4: build H x W grid using lambda Goal(R, C, V)
+- ge_nbr4_/4: generate one 4-connected neighbor on backtracking (4 choices)
+- ge_nbr8_/4: generate one 8-connected neighbor on backtracking (8 choices)
+- ge_boundary_to_nonbg_/3: BgColor cells adjacent to any non-BgColor cell
+
+Critical design invariant: predicates that ask "does this cell have at least
+one neighbor satisfying property P?" must wrap the neighbor check in once/1
+inside findall. Without once, a cell adjacent to k qualifying neighbors would
+appear k times in the output list.
+
+
+3. Predicates
+
+Edge detection:
+
+ge_edge_cells/3 - FgColor cells with at least one 4-connected differently-colored
+  in-bounds neighbor; each cell appears exactly once.
+ge_edge_cells8/3 - same with 8-connected (Moore) neighborhood.
+ge_is_edge/3 - test single cell (R,C); returns yes or no.
+
+Boundary detection:
+
+ge_boundary/4 - Color1 cells adjacent to at least one Color2 cell (4-connected).
+ge_inner_border/3 - BgColor cells adjacent to at least one non-BgColor cell.
+ge_outer_border/3 - non-FgColor cells adjacent to at least one FgColor cell.
+
+Grid construction:
+
+ge_edge_grid/4 - grid with FgColor edge cells replaced by EdgeColor; other cells
+  retain original color.
+
+Counting:
+
+ge_edge_count/3 - count of 4-connected edge cells for FgColor.
+ge_edge_color_count/4 - count of FgColor cells adjacent to at least one BgColor cell.
+
+Structural features:
+
+ge_neighbors_diff/4 - list of 4-connected neighbor positions with different color.
+ge_corners/3 - FgColor cells with 2 or more differently-colored 4-neighbors.
+ge_endpoints/3 - FgColor cells with exactly 1 same-color 4-neighbor.
+ge_smooth_cells/3 - FgColor cells with no differently-colored in-bounds 4-neighbors.
+ge_transition_map/2 - grid where each cell value = count of differently-colored
+  4-connected neighbors (integer in [0..4]).
+
+
+4. Example Session
+
+:- use_module(pack(gridedge/prolog/gridedge)).
+
+% Edge cells of r in a 3x3 grid:
+G = [[r,r,x],[r,r,x],[x,x,x]].
+ge_edge_cells(G, r, Cells).
+% Cells = [0-1, 1-0, 1-1]
+% Note: (0,0) is NOT an edge cell; its only neighbors are (0,1)=r and (1,0)=r.
+
+% Test a single cell:
+ge_is_edge(G, 0-1, B).
+% B = yes
+ge_is_edge(G, 0-0, B2).
+% B2 = no
+
+% Directional boundary: r cells touching x:
+ge_boundary(G, r, x, Cells).
+% Cells = [0-1, 1-0, 1-1]
+
+% Outer border (x cells touching r):
+ge_outer_border(G, r, OB).
+% OB = [0-2, 1-2, 2-0, 2-1]
+
+% Transition map:
+ge_transition_map(G, TM).
+% TM = [[0,1,1],[1,2,1],[1,1,0]]
+
+% Corner cells of r:
+ge_corners(G, r, Corners).
+% Corners = [1-1]   (only cell with 2+ differently-colored neighbors)
+
+% Smooth cells of r:
+ge_smooth_cells(G, r, Smooth).
+% Smooth = [0-0]   (only cell with all-r in-bounds neighbors)
+
+% Endpoints of r in a cross pattern:
+ge_endpoints([[x,r,x],[r,r,r],[x,r,x]], r, Pts).
+% Pts = [0-1, 1-0, 1-2, 2-1]   (the 4 arm tips)
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GE-001 through AC-GE-044) exercised in
+packs/gridedge/test/test_gridedge.pl. Tests cover:
+- ge_edge_cells: rb grid (3 cells), uniform (0), cross (4 arms), 5x5 ring (8)
+- ge_edge_cells8: rb grid (3), diagonal (3)
+- ge_is_edge: boundary cell (yes), interior uniform (no), ring center (no), ring edge (yes)
+- ge_boundary: r->x (3 cells), no contact (0), x->r (4 cells)
+- ge_inner_border: 5x5 ring with x bg (12 cells), uniform (0)
+- ge_outer_border: rb grid (4 cells), uniform (0)
+- ge_edge_grid: marks 3 cells as EdgeColor; uniform unchanged
+- ge_edge_count: rb (3), uniform (0), cross (4)
+- ge_neighbors_diff: corner with all-r neighbors (empty), edge cell (1 diff), cross center (empty)
+- ge_corners: rb [1-1], uniform empty
+- ge_endpoints: cross (4 arms), line (2 endpoints)
+- ge_smooth_cells: ring interior [2-2], uniform all 9, rb [0-0]
+- ge_transition_map: uniform all-zero, rb [[0,1,1],[1,2,1],[1,1,0]], checkerboard [[2,2],[2,2]]
+- ge_edge_color_count: rb (3), uniform (0)
+- Combined: edge+smooth partition ring (8+1=9); outer border all non-FgColor; values in [0..4];
+  1x1 grid edge detection (empty); 1x1 is_edge (no); cross center smooth; uniform endpoints empty
+
+
+6. SPARC Documentation
+
+Work Package 232 is recorded in:
+- Specification v198, Part 222 (WP-232-SPEC-001 through WP-232-SPEC-007)
+- Pseudocode v190, Part 222
+- Architecture v192, ARCH-198
+- Refinement v245, AC-GE-001 through AC-GE-044
+- Completion v248, WP-232 record
+
+Tutorial chapter: docs/tutorial/Ch193_GridEdge.txt
+Pack reference: docs/Pack_Reference.txt (gridedge entry)
+PrologAI PR: #321 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridedge pack provides a complete toolkit for detecting edges, boundaries,
+and structural features of symbolic grids: edge cells (4/8-connected), boundary
+detection, corner and endpoint analysis, smooth interior detection, and
+per-cell transition counts. Together with gridflood (Layer 204), gridpath
+(Layer 205), gridmask (Layer 206), gridxform (Layer 207), gridsymm (Layer 208),
+gridcolor (Layer 209), gridstitch (Layer 210), and gridedge (Layer 211),
+PrologAI now has a comprehensive eight-pack grid reasoning suite at Layers 204-211.
+
+PrologAI now comprises 232 work packages and reaches Layer 211 in the Data Layer.
