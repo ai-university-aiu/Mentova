@@ -1,0 +1,173 @@
+Acc_250: gridcolor Pack - Color Counting, Histogram, Recoloring, Threshold, and Dominant Color (gc_*, Layer 209)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 230 adds the gridcolor pack (gc_*, Layer 209): fourteen
+predicates for color analysis and transformation of symbolic grids. The pack
+covers counting, histograms, frequency ranking, unique color enumeration, cell
+position lookup, single-color and multi-color recoloring, color mapping, binary
+thresholding, dominant color detection, fractional area computation, color
+count, and frequency-sorted color lists. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Color is the primary encoding axis in symbolic visual reasoning. To solve
+tasks that involve recoloring, color replacement, color frequency analysis,
+or binary foreground/background separation, an agent needs a complete toolkit
+for color statistics and color transformation. The gridcolor pack provides all
+of these capabilities in a single, coherent module with no cross-pack
+dependencies beyond the standard lists library.
+
+
+2. Architecture
+
+Layer 209 sits immediately above gridsymm (Layer 208). Uses library(lists)
+only (nth0/3, member/2, last/2). No cross-pack imports.
+
+Private helpers:
+- gc_dims_/3: grid height and width
+- gc_cell_/4: cell value at row R, column C (0-indexed)
+- gc_all_cells_/2: collect all cell values as a flat list in row-major order
+- gc_build_/4: build H x W grid using lambda Goal(R, C, V)
+
+
+3. Predicates
+
+Color counting and analysis:
+
+gc_count/3 - count cells matching Color: gc_count(+Grid, +Color, -N).
+gc_histogram/2 - Color-Count pairs sorted alphabetically by Color name:
+  gc_histogram(+Grid, -Pairs).
+gc_most_frequent/2 - most frequently occurring color:
+  gc_most_frequent(+Grid, -Color).
+gc_least_frequent/2 - least frequently occurring color:
+  gc_least_frequent(+Grid, -Color).
+gc_unique_colors/2 - sorted list of distinct color atoms:
+  gc_unique_colors(+Grid, -Colors).
+gc_count_colors/2 - number of distinct colors:
+  gc_count_colors(+Grid, -N).
+gc_sorted_by_freq/2 - colors sorted most-frequent-first:
+  gc_sorted_by_freq(+Grid, -Colors).
+
+Cell lookup:
+
+gc_color_cells/3 - R-C positions where Grid[R][C] = Color (row-major order):
+  gc_color_cells(+Grid, +Color, -Cells).
+gc_contains/2 - succeed if Color appears in Grid:
+  gc_contains(+Grid, +Color).
+
+Color transformation:
+
+gc_recolor/4 - replace every OldColor with NewColor:
+  gc_recolor(+Grid, +OldColor, +NewColor, -Result).
+gc_color_map/3 - apply list of Old-New mappings; unmapped colors pass through:
+  gc_color_map(+Grid, +Map, -Result).
+gc_threshold/5 - binary grid: cells in Colors list become FgColor, others BgColor:
+  gc_threshold(+Grid, +Colors, +FgColor, +BgColor, -Result).
+
+Derived statistics:
+
+gc_dominant/3 - most frequent non-BgColor cell color:
+  gc_dominant(+Grid, +BgColor, -Color).
+gc_fraction/3 - float fraction [0.0..1.0] of cells matching Color:
+  gc_fraction(+Grid, +Color, -Frac).
+
+
+4. Example Session
+
+:- use_module(pack(gridcolor/prolog/gridcolor)).
+
+% Count red cells in a mixed grid:
+gc_count([[r,r,x],[r,x,b],[x,x,r]], r, N).
+% N = 4
+
+% Build a histogram:
+gc_histogram([[r,r],[r,x]], Pairs).
+% Pairs = [r-3, x-1]
+
+% Most and least frequent:
+gc_most_frequent([[r,r,x],[r,x,b]], C).
+% C = r
+gc_least_frequent([[r,r,x],[r,x,b]], C).
+% C = b
+
+% Unique colors in sorted order:
+gc_unique_colors([[r,x,b],[b,x,r]], Colors).
+% Colors = [b, r, x]
+
+% Cells matching a color:
+gc_color_cells([[r,x],[x,r]], r, Cells).
+% Cells = [0-0, 1-1]
+
+% Recolor and map:
+gc_recolor([[r,b],[b,r]], r, x, R).
+% R = [[x,b],[b,x]]
+gc_color_map([[r,g],[g,r]], [r-b, g-r], R).
+% R = [[b,r],[r,b]]
+
+% Binary threshold:
+gc_threshold([[r,x,b],[r,r,x]], [r,b], sel, bg, R).
+% R = [[sel,bg,sel],[sel,sel,bg]]
+
+% Dominant non-background color:
+gc_dominant([[x,r,x],[x,r,r]], x, Color).
+% Color = r
+
+% Fractional area:
+gc_fraction([[r,r,r],[r,r,r],[r,r,r]], r, F).
+% F = 1.0
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GC-001 through AC-GC-044) exercised in
+packs/gridcolor/test/test_gridcolor.pl. Tests cover:
+- gc_count: color present, absent, and background cells
+- gc_histogram: correct pairs, single color, alphabetical sort order
+- gc_most_frequent: clear winner, uniform grid
+- gc_least_frequent: minority color, single-color grid
+- gc_unique_colors: 3-color, 1-color, 2-color equal grids
+- gc_color_cells: exact positions, absent color, full grid
+- gc_contains: present and absent cases
+- gc_recolor: replace all, absent color unchanged, full replacement
+- gc_color_map: two-color swap, partial mapping, empty map
+- gc_threshold: single color, multiple colors, empty color list
+- gc_dominant: non-background winner, single foreground cell
+- gc_fraction: partial, full (1.0), absent (0.0)
+- gc_count_colors: mixed (3), uniform (1)
+- gc_sorted_by_freq: correct descending order
+- Combined: count then fraction consistency; recolor then count;
+  threshold then unique colors; color_map then histogram;
+  dominant after recolor; color_cells count vs gc_count
+
+
+6. SPARC Documentation
+
+Work Package 230 is recorded in:
+- Specification v196, Part 220 (WP-230-SPEC-001 through WP-230-SPEC-007)
+- Pseudocode v188, Part 220
+- Architecture v190, ARCH-196
+- Refinement v243, AC-GC-001 through AC-GC-044
+- Completion v246, WP-230 record
+
+Tutorial chapter: docs/tutorial/Ch191_GridColor.txt
+Pack reference: docs/Pack_Reference.txt (gridcolor entry)
+PrologAI PR: #319 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridcolor pack provides a complete toolkit for color analysis and
+transformation of symbolic grids: counting, histograms, frequency ranking,
+recoloring, color mapping, thresholding, and dominant color detection. Together
+with gridflood (regions), gridpath (paths), gridmask (masks), gridxform
+(transforms), gridsymm (symmetry), and gridcolor (color), PrologAI now has a
+comprehensive six-pack grid reasoning suite at Layers 204-209.
+
+PrologAI now comprises 230 work packages and reaches Layer 209 in the Data Layer.
