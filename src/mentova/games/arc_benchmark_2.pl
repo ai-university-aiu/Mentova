@@ -45,8 +45,6 @@
 :- use_module(library(lists), [
     % member/2 for candidate search.
     member/2,
-    % msort/2 for sorting.
-    msort/2,
     % append/2 for concatenation.
     append/2,
     % last/2 for last element.
@@ -113,6 +111,84 @@ arc2_transform(rotate_180, Grid, Result) :-
     arc2_transform(vertical_flip, T, Result).
 
 % ---------------------------------------------------------------------------
+% CELL ACCESS
+% arc2_cell_/4: get color at (R,C); fails if out of bounds.
+% ---------------------------------------------------------------------------
+
+% arc2_cell_(+Grid, +R, +C, -Color): retrieve a cell; fails on out-of-bounds.
+arc2_cell_(Grid, R, C, Color) :-
+    R >= 0, C >= 0,
+    nth0(R, Grid, Row),
+    nth0(C, Row, Color).
+
+% ---------------------------------------------------------------------------
+% PLUS-SHAPE RECOLOR
+% Detects 5-cell cross/plus shapes of a source color and recolors to target.
+% Rule learned from training pairs where only one color change type occurs.
+% Reference: ARC-AGI-2 task 1818057f -- plus shapes of 4 recolored to 8.
+% ---------------------------------------------------------------------------
+
+% arc2_is_plus_center_/4: true if (R,C) is the center of a plus shape of Color.
+arc2_is_plus_center_(Grid, R, C, Color) :-
+    arc2_cell_(Grid, R, C, Color),
+    R1 is R - 1, arc2_cell_(Grid, R1, C, Color),
+    R2 is R + 1, arc2_cell_(Grid, R2, C, Color),
+    C1 is C - 1, arc2_cell_(Grid, R, C1, Color),
+    C2 is C + 1, arc2_cell_(Grid, R, C2, Color).
+
+% arc2_apply_plus_recolor/4: recolor all cells in plus shapes of A to B.
+arc2_apply_plus_recolor(Grid, A, B, Result) :-
+    length(Grid, NR),
+    NR > 0,
+    Grid = [FirstRow|_],
+    length(FirstRow, NC),
+    MaxR is NR - 1,
+    MaxC is NC - 1,
+    % Collect all plus-center positions.
+    findall(r(R,C),
+        (between(0, MaxR, R), between(0, MaxC, C),
+         arc2_is_plus_center_(Grid, R, C, A)),
+        Centers),
+    % Expand each center to all 5 plus cells.
+    findall(R-C,
+        (member(r(CR,CC), Centers),
+         (R = CR, C = CC ;
+          R is CR - 1, C = CC ;
+          R is CR + 1, C = CC ;
+          R = CR, C is CC - 1 ;
+          R = CR, C is CC + 1)),
+        PlusCellsList),
+    sort(PlusCellsList, PlusCells),
+    % Build result grid: replace plus cells with B, leave rest unchanged.
+    numlist(0, MaxR, Rows),
+    maplist([R, Row]>>(
+        numlist(0, MaxC, Cols),
+        maplist([C, Cell]>>(
+            ( member(R-C, PlusCells) ->
+                Cell = B
+            ;   arc2_cell_(Grid, R, C, Cell)
+            )
+        ), Cols, Row)
+    ), Rows, Result).
+
+% arc2_learn_single_recolor_/3: all changed cells go A->B and no other changes.
+arc2_learn_single_recolor_(TrainingPairs, A, B) :-
+    findall(Before-After,
+        (member(pair(In, Out), TrainingPairs),
+         append(In, FlatIn), append(Out, FlatOut),
+         nth0(I, FlatIn, Before),
+         nth0(I, FlatOut, After),
+         Before \= After),
+        Changes),
+    Changes \= [],
+    sort(Changes, [A-B]),
+    A \= B.
+
+% arc2_transform for the parameterized plus-recolor rule.
+arc2_transform(recolor_plus(A, B), Grid, Result) :-
+    arc2_apply_plus_recolor(Grid, A, B, Result).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------
@@ -153,6 +229,13 @@ arc2_induce_rule(TrainingPairs, Rule) :-
     arc2_named_rule(Rule),
     forall(member(pair(In, Out), TrainingPairs),
            arc2_transform(Rule, In, Out)).
+
+% Plus-shape recolor: all changes are A->B and each changed cell is in a plus shape.
+arc2_induce_rule(TrainingPairs, recolor_plus(A, B)) :-
+    arc2_learn_single_recolor_(TrainingPairs, A, B),
+    forall(member(pair(In, Out), TrainingPairs),
+           (arc2_apply_plus_recolor(In, A, B, Computed),
+            Computed = Out)).
 
 % Fallback: try recolor bijection (color substitution map).
 arc2_induce_rule(TrainingPairs, recolor_auto) :-

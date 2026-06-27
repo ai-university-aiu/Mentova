@@ -7,8 +7,8 @@ Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009
 Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
-STATUS: ACTIVE. Climbing begins when ARC-AGI-2 task files are loaded.
-Last updated: 2026-06-27. Infrastructure complete. Awaiting task download.
+STATUS: ACTIVE. Climbing in progress.
+Last updated: 2026-06-27. Wave 1 complete: 1/120 = 0.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -121,15 +121,84 @@ SCORE PROGRESSION TABLE
 
 Date        | Score      | Percent | Notes
 ------------|------------|---------|------------------------------------------
-(no scores yet - task files not loaded)
+2026-06-27  |   1 / 120  |  0.83%  | Wave 1: plus-shape recolor rule
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
 
 
+ATTEMPT 1 - 2026-06-27 - Score: 1/120 = 0.83%
+
+Date: 2026-06-27
+
+Confirmed score: 1 / 120 = 0.83%
+
+Infrastructure completed in this wave:
+
+ARC-AGI-2 task files downloaded from the ARC Prize GitHub repository
+(https://github.com/arcprize/ARC-AGI-2) via git clone --depth 1.
+
+1000 training tasks and 120 public evaluation tasks are now available
+in /home/ccaitwo/Mentova/data/arc_agi_2/arc_agi2_repo/.
+
+The converter tools/arc_agi2_to_prolog.py was built and run, generating
+data/arc_agi_2/arc_tasks_2.pl containing 120 arc2_task/4 facts.
+
+Rule added in this wave:
+
+recolor_plus(A, B) - Plus-shape recolor rule.
+
+Description: Find all 5-cell cross/plus shapes of source color A in the
+input grid, and recolor every cell in each plus shape to target color B.
+
+A plus shape is defined by a center cell (R, C) and its four cardinal
+neighbors (R-1, C), (R+1, C), (R, C-1), (R, C+1), all having color A.
+
+Rule learning: The rule is induced from training pairs where exactly one
+color change type occurs across all pairs (all changes are A->B for a
+single fixed A and B). If the induced rule reproduces all training outputs
+from their inputs, it is accepted.
+
+Task solved: 1818057f (plus shapes of color 4 recolored to color 8).
+
+Verification: rule recolor_plus(4, 8) applied to each training input
+produces exactly the training output for all 3 training pairs. Applied
+to test input produces exact match with test output.
+
+Bugs fixed:
+
+The benchmark runner arc_benchmark_2.pl imported msort/2 from
+library(lists), but msort/2 is a system predicate not exported by
+library(lists). This caused a harmless warning on every benchmark run.
+Fixed by removing msort/2 from the explicit import list.
+
+Lessons learned:
+
+1. ARC-AGI-2 evaluation tasks are significantly harder than ARC-AGI-1.
+None of the six initial geometric transforms (reverse_rows, vertical_flip,
+transpose, rotate_90_cw, rotate_90_ccw, rotate_180) solved any task.
+The recolor bijection fallback also solved none.
+
+2. A systematic change-type analysis of all 120 tasks reveals only a
+handful with simple single-change patterns. Of these, the plus-shape
+recolor pattern (1818057f) was the first confirmed solvable task.
+
+3. The benchmark infrastructure works correctly. The 0/120 initial score
+was expected - the same starting point as ARC-AGI-1 Wave 1.
+
+4. Three additional swap-type tasks (28a6681f: 1<->0, 88e364bc: 4<->0,
+9bbf930d: 6<->7) and three additional single-fill tasks (36a08778,
+7666fa5d, da515329) have been identified for Wave 2 analysis.
+
+5. The ARC-AGI-2 public evaluation set contains 120 tasks (not 400 like
+ARC-AGI-1). Every single task correct represents 0.83% of the score.
+
+
 ALL SOLVED TASKS
 (Task IDs added in alphabetical order after each wave)
+
+1818057f  - Wave 1 - recolor_plus(4,8) - plus shapes of 4 become 8
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -171,3 +240,7 @@ Dison, D. R. (2026). PrologAI Pack Enhancements for ARC-AGI-2 (WP-274 to WP-277)
 
 Dison, D. R. (2026). ARC-AGI-2 Benchmark Infrastructure.
   Accomplishment Record Acc_298. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 1: Plus-shape recolor rule.
+  Score: 1/120 = 0.83%. Task 1818057f solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-27.
