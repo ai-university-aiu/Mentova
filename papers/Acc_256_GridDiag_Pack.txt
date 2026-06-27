@@ -1,0 +1,149 @@
+Acc_256: griddiag Pack - Grid Diagonal Analysis (gdi_*, Layer 215)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 236 adds the griddiag pack (gdi_*, Layer 215): fourteen
+predicates for extracting, analyzing, and modifying the main diagonals and
+anti-diagonals of symbolic grids. Main diagonal K contains all cells where
+C - R = K; anti-diagonal K contains all cells where R + C = K. The pack covers
+diagonal extraction, principal-diagonal trace, all-diagonals enumeration, color
+counting, uniformity testing, uniform-diagonal collection, diagonal length, and
+set-to-color modification. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Diagonal structure is a fundamental spatial property that grid-reasoning
+systems must detect. Tasks with diagonal symmetry, diagonal color patterns,
+diagonal fills, or cross-shaped objects require the ability to enumerate and
+analyze diagonals as first-class objects. The griddiag pack makes this
+computable in a single predicate call, extending the twelve-pack grid suite
+with diagonal awareness.
+
+
+2. Architecture
+
+Layer 215 sits immediately above gridgraph (Layer 214) in the Data Layer.
+Uses library(lists): nth0/3, member/2. No cross-pack dependencies.
+
+Private helpers:
+- gdi_dims_/3     - grid height and width
+- gdi_cell_/4     - cell value at (R,C); fails out of bounds
+- gdi_build_/4    - build H x W grid with Goal(R,C,V) lambda
+- gdi_main_rc_/5  - enumerate valid (R,C) on K-th main diagonal
+- gdi_anti_rc_/5  - enumerate valid (R,C) on K-th anti-diagonal
+- gdi_all_eq_/1   - test all list elements equal
+
+Main diagonal K enumeration: R in [max(0,-K), min(H-1,W-1-K)], C = R+K.
+Anti-diagonal K enumeration: C in [max(0,K-H+1), min(W-1,K)], R = K-C.
+
+
+3. Predicates
+
+Extraction:
+
+gdi_main_diag/3  - values on K-th main diagonal (C-R=K), ascending R
+gdi_anti_diag/3  - values on K-th anti-diagonal (R+C=K), ascending C
+gdi_trace/2      - principal diagonal (K=0), length = min(H,W)
+gdi_all_main_diags/2 - all H+W-1 main diagonals (K from -(H-1) to W-1)
+gdi_all_anti_diags/2 - all H+W-1 anti-diagonals (K from 0 to H+W-2)
+
+Counting and uniformity:
+
+gdi_main_count/4         - count Color on K-th main diagonal
+gdi_anti_count/4         - count Color on K-th anti-diagonal
+gdi_main_uniform/3       - yes/no uniformity of K-th main diagonal
+gdi_anti_uniform/3       - yes/no uniformity of K-th anti-diagonal
+gdi_uniform_main_diags/2 - list of K values with uniform main diagonals
+gdi_uniform_anti_diags/2 - list of K values with uniform anti-diagonals
+gdi_diag_length/3        - length (cell count) of K-th main diagonal
+
+Modification:
+
+gdi_set_main_diag/4 - set all cells on main diagonal K to Color
+gdi_set_anti_diag/4 - set all cells on anti-diagonal K to Color
+
+
+4. Example Session
+
+:- use_module(pack(griddiag/prolog/griddiag)).
+
+% Principal diagonal extraction:
+G = [[r,x,x],[x,r,x],[x,x,r]].
+gdi_trace(G, Vals).
+% Vals = [r, r, r]
+
+% K-th main diagonal:
+G4 = [[a,b,c,d],[e,f,g,h],[i,j,k,l],[m,n,o,p]].
+gdi_main_diag(G4, 1, Vals).
+% Vals = [b, g, l]
+
+% Anti-diagonal:
+gdi_anti_diag(G4, 3, Vals).
+% Vals = [m, j, g, d]   (ascending C: C=0,1,2,3 -> R=3,2,1,0)
+
+% Uniformity:
+G2 = [[x,x,r],[x,r,x],[r,x,x]].
+gdi_anti_uniform(G2, 2, Bool).
+% Bool = yes   (anti-diagonal K=2: all r)
+
+% Modification:
+All = [[r,r,r],[r,r,r],[r,r,r]].
+gdi_set_main_diag(All, 0, x, Result).
+% Result = [[x,r,r],[r,x,r],[r,r,x]]
+
+% All diagonals enumeration:
+gdi_all_main_diags(All, Diags).
+% Diags = [[r],[r,r],[r,r,r],[r,r],[r]]  (5 diagonals for 3x3)
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GDI-001 through AC-GDI-044) exercised in
+packs/griddiag/test/test_griddiag.pl. Tests cover:
+- gdi_trace: uniform, diagonal, 4x4 principal, non-square 2x3
+- gdi_main_diag: K=0,1,-1,3,-3 corner diagonals on g4x4
+- gdi_anti_diag: K=0,1,3 on g4x4; K=2 on g3x3_anti
+- gdi_all_main_diags: count 5 for 3x3, count 7 for 4x4
+- gdi_all_anti_diags: count 5 for 3x3, count 7 for 4x4
+- gdi_main_count: diagonal r count, off-diagonal x count
+- gdi_anti_count: K=2 r count on anti-grid, K=0 single r
+- gdi_main_uniform: diagonal grid (yes), checker (yes), anti-grid (no)
+- gdi_anti_uniform: K=2 yes, K=0 single-cell yes, K=1 all-x yes
+- gdi_set_main_diag: K=0 changes diagonal, preserves off-diagonal
+- gdi_set_anti_diag: K=2 changes anti-diagonal
+- gdi_uniform_main_diags: all 5 for uniform, all 5 for diagonal grid
+- gdi_uniform_anti_diags: all 5 for uniform, all 5 for anti grid
+- gdi_diag_length: K=0,1,2 on 3x3; K=0 on 4x4; K=0 on 2x3
+- Combined: trace=main_diag(0), cell-count sum, set-then-retrieve
+
+
+6. SPARC Documentation
+
+Work Package 236 is recorded in:
+- Specification v202, Part 226 (WP-236-SPEC-001 through WP-236-SPEC-007)
+- Pseudocode v194, Part 226
+- Architecture v196, ARCH-202
+- Refinement v249, AC-GDI-001 through AC-GDI-044
+- Completion v252, WP-236 record
+
+Tutorial chapter: docs/tutorial/Ch197_GridDiag.txt
+Pack reference: docs/Pack_Reference.txt (griddiag entry)
+PrologAI PR: #325 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The griddiag pack provides complete symbolic diagonal analysis for raw grids.
+Extraction, counting, uniformity, set operations, and all-diagonals enumeration
+are available in single predicate calls. Together with gridgraph (Layer 214),
+gridmorph (Layer 212), gridconv (Layer 213), and the rest of the twelve-pack
+grid suite, PrologAI now analyzes grids along rows, columns, diagonals, regions,
+and adjacency graphs.
+
+PrologAI now comprises 236 work packages and reaches Layer 215 in the Data Layer.
