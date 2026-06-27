@@ -1,0 +1,116 @@
+Acc_262: gridhist Pack - Grid Histogram Analysis (ghst_*, Layer 221)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 242 adds the gridhist pack (ghst_*, Layer 221): fourteen
+predicates for per-row and per-column color frequency histograms, modal color
+lookup, count queries, color diversity (entropy), and row/column selection by
+frequency threshold. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently require analyzing the frequency profile of each
+row or column independently: which color appears most often in a given row, how
+many distinct colors appear in a given column, which rows contain a target color
+at least N times. The gridhist pack provides these operations on individual rows
+and columns, complementing the global color analysis in gridcolor.
+
+
+2. Architecture
+
+Layer 221 sits immediately above gridseg (Layer 220) in the Data Layer.
+Uses library(lists): nth0/3, member/2, reverse/2. No cross-pack dependencies.
+
+Histogram is built by msort followed by run-length counting. The private
+ghst_list_hist_/2 helper produces sorted Color-Count pairs. ghst_modal_/2
+finds the maximum by extracting N-C pairs, sorting, reversing, and taking
+the first element (highest count, last alphabetically on tie).
+
+
+3. Predicates
+
+Histograms:
+
+ghst_row_hist/3      - sorted Color-Count histogram for row R
+ghst_col_hist/3      - sorted Color-Count histogram for column C
+ghst_all_row_hists/2 - list of histograms for all rows (row 0 first)
+ghst_all_col_hists/2 - list of histograms for all columns
+
+Modal color:
+
+ghst_modal_row/3  - most frequent color in row R
+ghst_modal_col/3  - most frequent color in column C
+
+Color counts:
+
+ghst_row_count/4  - count of a given color in row R
+ghst_col_count/4  - count of a given color in column C
+
+Color entropy:
+
+ghst_row_entropy/3  - number of distinct colors in row R
+ghst_col_entropy/3  - number of distinct colors in column C
+
+Max and min row:
+
+ghst_max_row/3  - row with highest count of Color (ties: highest index)
+ghst_min_row/3  - row with lowest non-zero count (ties: lowest index)
+
+Threshold selection:
+
+ghst_rows_with/4  - row indices where Color appears at least N times
+ghst_cols_with/4  - column indices where Color appears at least N times
+
+
+4. Example Session
+
+:- use_module(pack(gridhist/prolog/gridhist)).
+
+G = [[a,b,a],[b,a,b],[a,b,a]].
+ghst_row_hist(G, 0, H).       % H = [a-2, b-1]
+ghst_modal_row(G, 0, C).      % C = a
+ghst_row_count(G, 0, b, N).   % N = 1
+ghst_row_entropy(G, 0, E).    % E = 2
+ghst_max_row(G, a, Row).      % Row = 2 (rows 0 and 2 tie; highest = 2)
+ghst_rows_with(G, a, 2, Rs).  % Rs = [0, 2]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GHST-001 through AC-GHST-044) exercised in
+packs/gridhist/test/test_gridhist.pl. Tests cover row/col histograms (6),
+all hists (4), modal (6), row/col count (5), entropy (6), max/min row (6),
+rows/cols_with (6), combined (4). Fixed choicepoint warning in combined test
+by replacing member/2 with memberchk/2.
+
+
+6. SPARC Documentation
+
+Work Package 242 is recorded in:
+- Specification v208, Part 232 (WP-242-SPEC-001 through WP-242-SPEC-007)
+- Pseudocode v200, Part 232
+- Architecture v202, ARCH-208
+- Refinement v255, AC-GHST-001 through AC-GHST-044
+- Completion v258, WP-242 record
+
+Tutorial chapter: docs/tutorial/Ch203_GridHist.txt
+Pack reference: docs/Pack_Reference.txt (gridhist entry)
+PrologAI PR: #331 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridhist pack provides complete per-row and per-column color frequency
+analysis for raw grids. The fourteen ghst_* predicates cover histograms, modal
+color, counts, entropy, max/min row selection, and threshold filtering. This
+closes the gap between global color analysis (gridcolor) and the per-row/column
+structure needed for reasoning about frequency patterns within individual lines
+of a grid.
+
+PrologAI now comprises 242 work packages and reaches Layer 221 in the Data Layer.
