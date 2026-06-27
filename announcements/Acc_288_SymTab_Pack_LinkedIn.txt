@@ -1,0 +1,31 @@
+Accomplishment 288: Mentova can now learn what objects stand for.
+
+The new symtab pack gives PrologAI fourteen predicates for learning
+symbol-to-value mappings from training examples.
+
+What color does a red object encode?
+What operation does a size-3 object represent?
+Which objects in this scene are symbols and which are content?
+What is the symbol table that explains every training pair?
+Does this candidate symbol table agree with all the evidence?
+Which table, among several candidates, explains the most pairs?
+
+Extract color, size, position, and hole-count features from objects.
+Identify symbol candidates by size or color uniqueness.
+Learn by contrastive analysis across all training pairs.
+Apply the learned table to produce a color map for new inputs.
+Score candidate tables against training evidence.
+Select the best-supported table.
+
+This is the core vocabulary for the in-context symbol definition problem
+- the single hardest category in ARC-AGI-2, and the one all 2025 AI
+competition systems found most challenging.
+
+PrologAI now has everything it needs to attempt ARC-AGI-2 Wave 1.
+
+268 work packages. Layer 247. The symbol learning layer is complete.
+
+D. R. Dison
+Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

@@ -1,0 +1,104 @@
+Acc_288: Symbol Table Learning from Input-Output Pairs Pack (symtab, st_*, Layer 247)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Abstract
+
+PrologAI gains the ability to learn what objects stand for from training examples.
+
+The symtab pack (Work Package 268, Layer 247, prefix st_*) provides 14 predicates
+for learning symbol-to-value mappings from training pairs and applying those mappings
+to new inputs. A symbol table is a list of sym(Feature, Value) terms. The pack
+addresses the in-context symbol definition problem: the single hardest challenge
+category in ARC-AGI-2 and the one most problematic for all current AI systems.
+
+Background
+
+In ARC-AGI-2, some tasks give the solver a "private language": objects in the input
+grid that stand for something other than themselves. A red square might mean "rotate
+clockwise." A blue triangle might mean "use blue for all small objects." The meaning
+is not given; it must be inferred from the training pairs alone.
+
+This is called in-context symbol definition. Every major 2025 competition team
+reported it as the hardest category. No pretrained knowledge is available; the solver
+must read the training pairs and learn a private symbol code, then apply it.
+
+The symtab pack provides the complete vocabulary for this process.
+
+The Pack
+
+Module: symtab. File: packs/symtab/prolog/symtab.pl.
+Prefix: st_. Layer: 247. Work Package: 268. PrologAI PR: 359.
+
+The 14 public predicates are organized into five functional groups.
+
+Feature Extraction.
+
+st_color_feature/2, st_size_feature/2, and st_position_feature/3 extract
+observable features from ob/3 objects: color(C), size(N), and pos(Q).
+st_hole_count/2 estimates enclosed gaps using bbox area minus cell count.
+
+Symbol Detection.
+
+st_is_symbol/2 checks whether an object is plausibly a symbol by size or color
+uniqueness heuristics. st_candidate_symbols/2 extracts the smallest quartile of
+objects from a scene as symbol candidates.
+
+Table Operations.
+
+st_lookup/3 retrieves a value from a symbol table. st_entry_consistent/2 verifies
+that a proposed entry does not conflict with existing entries.
+
+Learning.
+
+st_contrastive_learn/2 performs cross-pair analysis: it intersects candidate sym
+entries across all training pairs, retaining only entries consistent with every pair.
+st_identify_symbols/2 collects all sym entries where input features co-vary with
+output color changes.
+
+Application and Selection.
+
+st_apply_table/3 applies a symbol table to input objects and returns a color map.
+st_score_table/3 counts training pairs correctly explained by a table.
+st_best_table/3 selects the highest-scoring table from a list of candidates.
+st_build_table/2 is the full pipeline: contrastive learn, score, return best.
+
+Test Results
+
+44 acceptance tests, AC-ST-001 through AC-ST-044. All 44 pass.
+The suite covers feature extraction, symbol detection, table operations, contrastive
+learning, table application, and scoring.
+
+SPARC Documentation
+
+Specification: Part 258 (WP-268-SPEC-001 through WP-268-SPEC-005).
+Pseudocode: Part 258 (WP-268-PSEUDO-001 through WP-268-PSEUDO-014).
+Architecture: ARCH-234.
+Refinement: AC-ST-001 through AC-ST-044.
+Completion: WP-268 entry.
+Versions: Spec v234, Pseudo v226, Arch v228, Refinement v281, Completion v284.
+
+Significance
+
+The symtab pack fills the most critical gap identified in the ARC-AGI-2 readiness
+analysis. Together with the gridobjmatch pack (WP-267, object-level change detection),
+the invariant pack (WP-269, cross-pair invariant extraction), and the existing
+seqinfer pack (multi-step rule search), PrologAI is now equipped with the core
+cognitive vocabulary needed to attempt ARC-AGI-2 at Wave 1.
+
+The in-context symbol definition problem is what separates ARC-AGI-2 from ARC-AGI-1.
+The symtab pack is PrologAI's direct answer to that challenge.
+
+PrologAI now has 268 work packages and reaches Layer 247.
+
+References
+
+PrologAI Specification v234, Part 258.
+PrologAI Architecture v228, ARCH-234.
+PrologAI Completion v284, WP-268 entry.
+Pack_Reference.txt, symtab entry.
+docs/tutorial/Ch229_SymTab.txt.
+ARC-AGI-2_Readiness_Analysis.txt, Section 6 (Priority 1).
