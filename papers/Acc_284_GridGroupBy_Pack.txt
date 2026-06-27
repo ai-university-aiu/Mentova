@@ -1,0 +1,139 @@
+Acc_284: Grid Group-By Operations Pack (gridgroupby, ggb_*, Layer 243)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Abstract
+
+PrologAI gains a relational layer above its connected component pack.
+
+The gridgroupby pack (Work Package 264, Layer 243, prefix ggb_*) provides 14
+predicates for grouping, filtering, sorting, pairing, and counting
+ob(Color,Cells,BBox) object terms produced by gob_all_objects.
+
+The pack does not access grids directly. All 14 predicates operate on object
+lists, making them composable with any source of ob/3 terms.
+
+Background
+
+ARC-AGI-2 tasks frequently require reasoning about collections of objects as a
+group: which objects share a color, which are the two largest, how many objects
+of each color are present, which color has exactly two representatives.
+
+The gridobj pack (WP-263) introduced gob_all_objects/3, which returns all
+connected components as ob(Color,Cells,BBox) terms. The gridgroupby pack builds
+directly on that output, providing the relational vocabulary needed to answer
+questions about the object population.
+
+The Pack
+
+Module: gridgroupby. File: packs/gridgroupby/prolog/gridgroupby.pl.
+Prefix: ggb_. Layer: 243. Work Package: 264. PrologAI PR: 354.
+
+Predicates:
+
+ggb_group_by_color(+Objects, -Groups)
+Groups objects by shared color into grp(Color, ObjList) terms. Groups are in
+ascending color (atom) order.
+
+ggb_group_by_size(+Objects, -Groups)
+Groups objects by shared cell count into grp(Size, ObjList) terms. Groups are in
+ascending size order.
+
+ggb_group_by_row(+Objects, -Groups)
+Groups objects by the top row of their bounding box into grp(Row0, ObjList)
+terms. Groups are in ascending row order.
+
+ggb_group_by_col(+Objects, -Groups)
+Groups objects by the left column of their bounding box into grp(Col0, ObjList)
+terms. Groups are in ascending column order.
+
+ggb_filter_by_color(+Objects, +Color, -Filtered)
+Returns only objects whose color equals Color.
+
+ggb_filter_by_size(+Objects, +Size, -Filtered)
+Returns only objects whose cell count equals Size.
+
+ggb_filter_larger(+Objects, +N, -Filtered)
+Returns only objects whose cell count is strictly greater than N.
+
+ggb_filter_smaller(+Objects, +N, -Filtered)
+Returns only objects whose cell count is strictly less than N.
+
+ggb_sort_by_size_asc(+Objects, -Sorted)
+Sorts objects by cell count, smallest first.
+
+ggb_sort_by_size_desc(+Objects, -Sorted)
+Sorts objects by cell count, largest first.
+
+ggb_sort_by_row(+Objects, -Sorted)
+Sorts objects by the top row of their bounding box, smallest row first.
+
+ggb_sort_by_col(+Objects, -Sorted)
+Sorts objects by the left column of their bounding box, smallest column first.
+
+ggb_pair_by_color(+Objects, -Pairs)
+Returns a list of pair(Color, Obj1, Obj2) for each color that has exactly two
+objects. Colors with one object or three or more objects are omitted.
+
+ggb_count_per_color(+Objects, -Counts)
+Returns a list of cnt(Color, N) for each distinct color, in descending count
+order (most frequent color first).
+
+Internal Design
+
+All four group-by predicates share a helper ggb_group_by_key_(Objects, Goal,
+Groups) that:
+  1. Collects k(Key, Obj) pairs by calling Goal(Obj, Key) for each object.
+  2. Sorts the pairs with msort (ascending by key, then by term order).
+  3. Collects consecutive same-key runs into grp(Key, ObjList) terms.
+
+The run-collection uses == (syntactic identity) for key comparison, so integer
+keys (sizes, rows, columns) and atom keys (colors) both compare correctly.
+
+Descending sort predicates (ggb_sort_by_size_desc) use neg(Neg, Obj) wrapper
+keys where Neg is -Size, so msort produces the most negative value first,
+which corresponds to the largest original size.
+
+ggb_pair_by_color delegates to ggb_group_by_color and pattern-matches on groups
+with exactly two members.
+
+ggb_count_per_color delegates to ggb_group_by_color, computes each group's
+length, then sorts by descending count using the same neg/2 key pattern.
+
+Test Coverage
+
+44 tests, AC-GGB-001 through AC-GGB-044, in
+packs/gridgroupby/test/test_gridgroupby.pl. All 44 tests pass.
+
+Coverage: group-by predicates (001-013), filter predicates (014-022), sort
+predicates (023-033), pair and count predicates (034-040), integration (041-044).
+
+SPARC Documentation
+
+Specification v230: WP 264 added to the Data Layer work package list.
+Pseudocode v222: 14 pseudocode entries for all ggb_* predicates added.
+Architecture v224: Layer 243 (gridgroupby, ggb_*) added to the layer table.
+Refinement v277: 44 test IDs AC-GGB-001 through AC-GGB-044 documented.
+Completion v280: WP 264 marked complete with pack metadata and test count.
+
+Pack Reference: gridgroupby entry added.
+Tutorial: Chapter 225 (Ch225_GridGroupBy.txt) added; PrologAI_Tutorial.txt updated.
+
+Platform Status
+
+With gridgroupby merged, PrologAI has 264 work packages and Layer 243 in the Data
+Layer. The platform can now perceive objects (gridobj), then reason about their
+collective properties (gridgroupby): which colors dominate, which objects pair up,
+what size distribution exists.
+
+References
+
+PrologAI repository, PR 354: feat(gridgroupby): WP 264 - group, filter, sort,
+pair, and count objects by attribute (ggb_*, Layer 243).
+
+PrologAI_1_Specification_v230.txt - Work Package 264 specification.
+PrologAI_3_Architecture_v224.txt - Layer 243 architecture entry.
+PrologAI_4_Refinement_v277.txt - Test IDs AC-GGB-001 through AC-GGB-044.
