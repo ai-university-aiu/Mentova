@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-283-FF6B35?style=for-the-badge" alt="283 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-284-FF6B35?style=for-the-badge" alt="284 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **283 accomplished** |
-| Scientific papers | **283 published** — one per accomplishment |
+| Documented accomplishments | **284 accomplished** |
+| Scientific papers | **284 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         283 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  283 announcements — one per accomplishment
+├── papers/         284 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  284 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -367,7 +367,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-283 scientific papers, one per accomplished milestone.
+284 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -556,6 +556,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_271` | GridShift pack paper — Grid Shifting and Cyclic Rolling (Layer 230, gsh_*): 14 gsh_* predicates for linear shifts, toroidal rolls, per-row/column operations, color-specific shift, and full-grid offset. |
 | `Acc_272` | GridMap pack paper — Grid Color Mapping (Layer 231, gmp_*): 14 gmp_* predicates for color remapping, normalization, palette ops, masking, inversion, cycling, and map algebra. |
 | `Acc_273` | GridRefl pack paper — Grid Reflection and Rotation (Layer 232, grf_*): 14 grf_* predicates for flips, rotations, transpositions, D4 symmetry detection, and symmetry completion. |
+| `Acc_284` | GridGroupBy pack paper — Grid Group-By Operations (Layer 243, ggb_*): 14 ggb_* predicates for grouping, filtering, sorting, pairing, and counting ob/3 object terms by color, size, row, column, and threshold. |
 | `Acc_283` | GridObj pack paper — Grid Object Operations (Layer 242, gob_*): 14 gob_* predicates for 4-connected component cells, color, size, bbox, mask, extraction, all-objects inventory, count, largest/smallest selection, flood fill, enclosed-region fill, removal, and movement. |
 | `Acc_282` | GridResize pack paper — Grid Resize and Scale Operations (Layer 241, grs_*): 14 grs_* predicates for integer scale-up/down, mode downsample, nearest-neighbor resize, modular tiling, crop, border crop, letterbox fit, and canvas embed. |
 | `Acc_281` | GridColorOp pack paper — Grid Color Operations (Layer 240, gco_*): 14 gco_* predicates for color counting, ranking, swapping, replacing, masking, cycling, palette application, and binary inversion. |
@@ -621,7 +622,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 
 ### Announcements — announcements/
 
-283 announcements in LinkedIn format — one per accomplishment.
+284 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

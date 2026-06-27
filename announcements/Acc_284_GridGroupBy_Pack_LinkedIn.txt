@@ -1,0 +1,23 @@
+Acc_284: PrologAI gains object grouping, filtering, sorting, pairing, and counting.
+
+The gridgroupby pack (Layer 243, ggb_* prefix) adds 14 predicates that operate
+on the ob(Color,Cells,BBox) object lists produced by the gridobj pack.
+
+Group objects by color, size, row, or column. Filter to objects of a specific
+color or size, or above/below a size threshold. Sort by size ascending or
+descending, or by spatial position (row or column). Pair up objects that share
+a color (exactly two per color). Count how many objects of each color exist.
+
+All 14 predicates are pure list transformations - no grid access, fully composable.
+
+This gives the platform the relational vocabulary needed to answer questions like:
+"which color has exactly two objects?", "what are the three smallest objects?",
+"group all objects by which row they start in".
+
+44/44 tests pass. 264 work packages total. Layer 243 in the Data Layer.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #SymbolicAI #ObjectReasoning #ARC #CognitiveSystems
