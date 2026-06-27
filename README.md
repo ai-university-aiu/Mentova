@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-266-FF6B35?style=for-the-badge" alt="266 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-267-FF6B35?style=for-the-badge" alt="267 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -551,6 +551,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_259` | GridDelta pack paper — Grid Delta Analysis (Layer 218, gdt_*): 14 gdt_* predicates for difference detection, change maps, color transitions, delta application and inversion, overlay, and identity testing. |
 | `Acc_260` | GridRowCol pack paper — Grid Row and Column Comparative Analysis (Layer 219, grc_*): 14 grc_* predicates for extracting, comparing, sorting, and finding matching rows and columns. |
 | `Acc_261` | GridSeg pack paper — Grid Segmentation by Separator Rows and Columns (Layer 220, gsg_*): 14 gsg_* predicates for separator detection, splitting, panel extraction, and border trimming. |
+| `Acc_267` | GridCrop pack paper — Grid Cropping and Padding (Layer 226, gcr_*): 14 gcr_* predicates for bounding-box computation, trimming, cropping, padding, centering, border add/remove, and row/column expansion. |
 | `Acc_266` | GridMark pack paper — Grid Marking and Annotation (Layer 225, gmk_*): 14 gmk_* predicates for individual cell marking, row/column/rectangle marking, border, diagonal, anti-diagonal, corners, cross, checkerboard, cell querying, and mark erasure. |
 | `Acc_265` | GridTile pack paper — Grid Tiling Pattern Analysis (Layer 224, gti_*): 14 gti_* predicates for period detection, tile extraction, tiling verification, row/col periodicity, tile counting, matching, offset, and minimal tile cropping. |
 | `Acc_264` | GridGrav pack paper — Grid Gravity Simulation (Layer 223, gv_*): 14 gv_* predicates for settling non-bg cells in four directions, pile analysis, floating cell detection, and column gap and count queries. |

@@ -1,0 +1,11 @@
+Acc_267: gridcrop Pack - Grid Cropping and Padding (gcr_*, Layer 226)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI reaches Work Package 247 with the gridcrop pack (Layer 226): fourteen gcr_* predicates for grid cropping, trimming, padding, centering, and expanding.
+
+The pack introduces gcr_bbox/3 — the bounding box of non-background content — and builds all resizing operations on top: trim rows/cols, crop to explicit rectangle, pad to target size, center in a frame, add or remove borders, and expand in any direction. 44/44 tests pass.
+
+PrologAI now has 247 work packages and a twenty-three-pack grid reasoning suite at Layers 204-226.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #GridReasoning #GridCropping
