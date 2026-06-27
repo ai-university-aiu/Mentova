@@ -1,0 +1,134 @@
+Acc_258: gridspiral Pack - Grid Spiral Traversal (gsp_*, Layer 217)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 238 adds the gridspiral pack (gsp_*, Layer 217): fourteen
+predicates for clockwise spiral traversal of symbolic grids. The spiral starts at
+(0,0), moves right along the top row, down the right column, left along the bottom
+row, up the left column, then repeats for the next inner frame until all cells are
+visited. The pack covers spiral cell ordering, value reading and writing, position
+lookup, per-frame spirals, uniformity, counting, rotation, and slicing.
+All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Spiral patterns appear frequently in grid-reasoning tasks. Tasks that read a
+sequence from a grid in spiral order, fill a grid with a sequence spirally, or
+detect that values follow a spiral pattern all require spiral traversal. The
+gridspiral pack makes the full spiral order available as a first-class object,
+enabling these computations in single predicate calls.
+
+
+2. Architecture
+
+Layer 217 sits immediately above gridframe (Layer 216) in the Data Layer.
+Uses library(lists): nth0/3, member/2, append/3, reverse/2. No cross-pack
+dependencies.
+
+The core private helper is gsp_frame_spiral_/4, which builds one frame's
+clockwise traversal as four segments: top row (left to right), right column
+(down), bottom row (reversed, right to left), left column (reversed, up).
+Segments are omitted when the frame is a single row or column.
+
+gsp_full_spiral_/3 concatenates all frame spirals from depth 0 to max_depth.
+gsp_write_spiral uses gsp_build_ with a lambda that looks up each cell's spiral
+index and maps it to the corresponding value in the supplied list.
+
+
+3. Predicates
+
+Traversal:
+
+gsp_spiral/2          - R-C list in clockwise spiral order
+gsp_read_spiral/2     - color values read in spiral order
+gsp_write_spiral/3    - overwrite cells in spiral order from a value list
+gsp_fill_spiral/3     - alias for gsp_write_spiral
+gsp_spiral_length/2   - H*W (total cells)
+gsp_spiral_reversed/2 - R-C list in reverse order (inner to outer)
+
+Position:
+
+gsp_spiral_index/4    - 0-based position of (R,C) in the spiral
+gsp_nth_spiral/4      - (R,C) at 0-based position N
+
+Frame spirals:
+
+gsp_frame_spiral/3       - clockwise spiral for frame D only
+gsp_all_frame_spirals/2  - list of per-frame spirals
+
+Analysis and modification:
+
+gsp_spiral_uniform/2  - yes/no if all cells have same color
+gsp_spiral_count/3    - count of Color in the grid
+gsp_rotate_spiral/3   - rotate values N steps along spiral
+gsp_spiral_slice/4    - sublist of spiral[Start..End]
+
+
+4. Example Session
+
+:- use_module(pack(gridspiral/prolog/gridspiral)).
+
+% Spiral order:
+G = [[a,b,c],[d,e,f],[g,h,i]].
+gsp_read_spiral(G, Vals).
+% Vals = [a, b, c, f, i, h, g, d, e]
+
+% Fill from spiral:
+gsp_write_spiral(G, [r,x,r,x,r,x,r,x,r], Result).
+% Replaces all cells in spiral order
+
+% Rotation:
+gsp_rotate_spiral(G, 0, Same).
+% Same = G   (identity)
+
+% Frame spirals:
+gsp_frame_spiral(G, 0, Frame0).
+% Frame0 = [0-0, 0-1, 0-2, 1-2, 2-2, 2-1, 2-0, 1-0]
+
+% Slicing:
+gsp_spiral_slice(G, 0, 2, Top).
+% Top = [0-0, 0-1, 0-2]   (top row in spiral order)
+
+% Roundtrip:
+gsp_read_spiral(G, Vals), gsp_write_spiral(G, Vals, G).
+% Writing back read values returns original
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GSP-001 through AC-GSP-044) exercised in
+packs/gridspiral/test/test_gridspiral.pl. Tests cover spiral structure (5),
+value read/write (5), length/index/nth (6), frame spirals (7), uniformity
+and reversal (5), counting (3), rotation (3), slicing (2), and combined
+round-trip and coverage tests (8).
+
+
+6. SPARC Documentation
+
+Work Package 238 is recorded in:
+- Specification v204, Part 228 (WP-238-SPEC-001 through WP-238-SPEC-007)
+- Pseudocode v196, Part 228
+- Architecture v198, ARCH-204
+- Refinement v251, AC-GSP-001 through AC-GSP-044
+- Completion v254, WP-238 record
+
+Tutorial chapter: docs/tutorial/Ch199_GridSpiral.txt
+Pack reference: docs/Pack_Reference.txt (gridspiral entry)
+PrologAI PR: #327 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridspiral pack provides complete clockwise spiral traversal for symbolic
+grids. Ordering, reading, writing, position lookup, per-frame spirals, rotation,
+and slicing are all available in single predicate calls. Together with gridframe
+(Layer 216) for concentric ring structure and griddiag (Layer 215) for diagonal
+analysis, PrologAI now traverses grids in all major spatial orderings.
+
+PrologAI now comprises 238 work packages and reaches Layer 217 in the Data Layer.
