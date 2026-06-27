@@ -475,6 +475,208 @@ arc2_induce_rule(TrainingPairs, arm_endpoint_ray) :-
            arc2_transform(arm_endpoint_ray, In, Out)).
 
 % ---------------------------------------------------------------------------
+% SEGMENT EQUALIZATION
+% Non-background cells form segments in one direction: each segment is a set
+% of consecutive cells sharing a row (horizontal), column (vertical), or
+% anti-diagonal (r+c=const). One endpoint of every segment is aligned to a
+% common value (the anchor). The other endpoint is extended or trimmed so
+% every segment matches the middle segment by position.
+% Reference: ARC-AGI-2 task e376de54.
+% ---------------------------------------------------------------------------
+
+% arc2_segeq_kv_/5: direction-specific (Key, Vary) for cell (R, C).
+arc2_segeq_kv_(R, C, antidiag, K, V) :-
+%   Anti-diagonal: key = R+C; varying coordinate = row R.
+    K is R + C, V = R.
+% Horizontal: key = row; varying coordinate = column.
+arc2_segeq_kv_(R, C, horizontal, K, V) :-
+%   Horizontal segments share their row as the key; column varies.
+    K = R, V = C.
+% Vertical: key = column; varying coordinate = row.
+arc2_segeq_kv_(R, C, vertical, K, V) :-
+%   Vertical segments share their column as the key; row varies.
+    K = C, V = R.
+
+% arc2_segeq_align_/4: alignment value of a segment endpoint.
+arc2_segeq_align_(antidiag, Key, Vary, Align) :-
+%   Anti-diagonal: alignment = 2*Vary - Key (= r-c of that cell).
+    Align is 2 * Vary - Key.
+% Linear directions: alignment IS the vary value directly.
+arc2_segeq_align_(horizontal, _, Vary, Vary).
+% Vertical: alignment is the row number, which is Vary.
+arc2_segeq_align_(vertical, _, Vary, Vary).
+
+% arc2_segeq_cvary_/4: correct vary coordinate from (Dir, Key, TargetAlignment).
+arc2_segeq_cvary_(antidiag, Key, TAlign, Vary) :-
+%   Invert the alignment formula: Vary = (Key + TAlign) // 2.
+    Vary is (Key + TAlign) // 2.
+% Horizontal: correct vary equals the target alignment directly.
+arc2_segeq_cvary_(horizontal, _, TAlign, TAlign).
+% Vertical: correct vary equals the target alignment directly.
+arc2_segeq_cvary_(vertical, _, TAlign, TAlign).
+
+% arc2_segeq_cellpos_/5: grid (R, C) from direction, key, and vary value.
+arc2_segeq_cellpos_(antidiag, Key, Vary, Vary, C) :-
+%   Anti-diagonal: row = Vary, column = Key - Vary.
+    C is Key - Vary.
+% Horizontal: row = Key, column = Vary.
+arc2_segeq_cellpos_(horizontal, Key, Vary, Key, Vary).
+% Vertical: row = Vary, column = Key.
+arc2_segeq_cellpos_(vertical, Key, Vary, Vary, Key).
+
+% arc2_segeq_consec_/1: true if a sorted integer list contains no gaps.
+arc2_segeq_consec_(Sorted) :-
+%   Minimum is the list head.
+    Sorted = [Vmin|_],
+%   Maximum is the last element.
+    last(Sorted, Vmax),
+%   A gap-free run of integers has exactly Vmax-Vmin+1 elements.
+    Len is Vmax - Vmin + 1,
+%   Length must equal Len.
+    length(Sorted, Len).
+
+% arc2_segeq_dir_/2: detect the segment direction; commits on first valid match.
+arc2_segeq_dir_(Cells, Dir) :-
+%   Candidate directions in preference order.
+    member(Dir, [antidiag, horizontal, vertical]),
+%   Compute (Key, Vary) for every cell under this direction.
+    findall(K-V, (member(r(R,C,_), Cells), arc2_segeq_kv_(R,C,Dir,K,V)), KVs),
+%   Extract all key values and de-duplicate.
+    findall(K, member(K-_, KVs), Ks0), sort(Ks0, UniqueKs),
+%   Require at least two distinct segments.
+    length(UniqueKs, NSegs), NSegs >= 2,
+%   Each key's vary values must form a consecutive integer run.
+    forall(member(K, UniqueKs), (
+        findall(V, member(K-V, KVs), Vs0),
+        msort(Vs0, Vs), arc2_segeq_consec_(Vs)
+    )),
+%   Commit to this direction; do not backtrack to later candidates.
+    !.
+
+% arc2_segeq_build_segs_/3: build seg(K,Vmin,Vmax,Color) for each sorted key.
+arc2_segeq_build_segs_(KVVs, SortedKeys, Segs) :-
+%   For each key, sort its vary values to get min and max, then look up color.
+    findall(seg(K,Vmin,Vmax,Color), (
+        member(K, SortedKeys),
+        findall(V, member(K-V-_, KVVs), Vs0), msort(Vs0, Vs),
+        Vs = [Vmin|_], last(Vs, Vmax),
+        once(member(K-Vmin-Color, KVVs))
+    ), Segs).
+
+% arc2_segeq_anchor_/4: min-anchor case -- all min-alignments equal.
+arc2_segeq_anchor_(Dir, Segs, min, DTarget) :-
+%   Collect the alignment value of the minimum-vary endpoint of every segment.
+    findall(A, (member(seg(K,Vmin,_,_),Segs), arc2_segeq_align_(Dir,K,Vmin,A)), As),
+%   All min-alignments must be identical; sort to a singleton.
+    sort(As, [_]),
+%   Pick the middle segment by index.
+    length(Segs, N), MidIdx is N // 2,
+%   Get the middle segment's max-vary.
+    nth0(MidIdx, Segs, seg(MidK,_,MidVmax,_)),
+%   Target = alignment of the max-end of the middle segment.
+    arc2_segeq_align_(Dir, MidK, MidVmax, DTarget), !.
+% arc2_segeq_anchor_/4: max-anchor case -- all max-alignments equal.
+arc2_segeq_anchor_(Dir, Segs, max, DTarget) :-
+%   Collect the alignment value of the maximum-vary endpoint of every segment.
+    findall(A, (member(seg(K,_,Vmax,_),Segs), arc2_segeq_align_(Dir,K,Vmax,A)), As),
+%   All max-alignments must be identical.
+    sort(As, [_]),
+%   Pick the middle segment by index.
+    length(Segs, N), MidIdx is N // 2,
+%   Get the middle segment's min-vary.
+    nth0(MidIdx, Segs, seg(MidK,MidVmin,_,_)),
+%   Target = alignment of the min-end of the middle segment.
+    arc2_segeq_align_(Dir, MidK, MidVmin, DTarget).
+
+% arc2_segeq_setrange_/7: set cells in vary range [Vfrom..Vto] to Value in Grid.
+arc2_segeq_setrange_(_, _, _, Grid, Vfrom, Vto, Grid) :-
+%   Base case: empty or reversed range; return Grid unchanged.
+    Vfrom > Vto, !.
+arc2_segeq_setrange_(Dir, Key, Value, GridIn, Vfrom, Vto, GridOut) :-
+%   Compute the grid coordinates for this vary position.
+    arc2_segeq_cellpos_(Dir, Key, Vfrom, R, C),
+%   Write Value into cell (R, C).
+    arc2_set_cell_(GridIn, R, C, Value, GridMid),
+%   Advance to the next position.
+    Vnext is Vfrom + 1,
+%   Recurse for the remainder of the range.
+    arc2_segeq_setrange_(Dir, Key, Value, GridMid, Vnext, Vto, GridOut).
+
+% arc2_segeq_adj1_/7: adjust one segment; anchor=min means the min-end is fixed.
+arc2_segeq_adj1_(Dir, Bg, seg(K,_,CurMax,Color), min, DTarget, GridIn, GridOut) :-
+%   Compute the correct max-vary for this segment given the target alignment.
+    arc2_segeq_cvary_(Dir, K, DTarget, CorrectMax),
+%   Trim excess cells above CorrectMax (set CorrectMax+1 .. CurMax to Bg).
+    TrimFrom is CorrectMax + 1,
+    arc2_segeq_setrange_(Dir, K, Bg, GridIn, TrimFrom, CurMax, GridMid),
+%   Extend missing cells beyond CurMax (set CurMax+1 .. CorrectMax to Color).
+    AddFrom is CurMax + 1,
+    arc2_segeq_setrange_(Dir, K, Color, GridMid, AddFrom, CorrectMax, GridOut).
+% arc2_segeq_adj1_/7: anchor=max means the max-end is fixed; adjust the min-end.
+arc2_segeq_adj1_(Dir, Bg, seg(K,CurMin,_,Color), max, DTarget, GridIn, GridOut) :-
+%   Compute the correct min-vary for this segment.
+    arc2_segeq_cvary_(Dir, K, DTarget, CorrectMin),
+%   Trim excess cells below CorrectMin (set CurMin .. CorrectMin-1 to Bg).
+    TrimTo is CorrectMin - 1,
+    arc2_segeq_setrange_(Dir, K, Bg, GridIn, CurMin, TrimTo, GridMid),
+%   Extend missing cells below CurMin (set CorrectMin .. CurMin-1 to Color).
+    AddTo is CurMin - 1,
+    arc2_segeq_setrange_(Dir, K, Color, GridMid, CorrectMin, AddTo, GridOut).
+
+% arc2_segeq_adjall_/7: base case; return Grid unchanged when no segments remain.
+arc2_segeq_adjall_(_, _, [], _, _, Grid, Grid).
+% arc2_segeq_adjall_/7: adjust one segment then recurse over the rest.
+arc2_segeq_adjall_(Dir, Bg, [Seg|Rest], AE, DT, GridIn, GridOut) :-
+%   Adjust the current segment.
+    arc2_segeq_adj1_(Dir, Bg, Seg, AE, DT, GridIn, GridMid),
+%   Continue with remaining segments.
+    arc2_segeq_adjall_(Dir, Bg, Rest, AE, DT, GridMid, GridOut).
+
+% Register segment_equalize as a known named transform.
+arc2_named_rule(segment_equalize).
+
+% arc2_transform for segment_equalize: equalize all segment lengths to the middle.
+arc2_transform(segment_equalize, Grid, GridOut) :-
+%   Find the most common cell value (background).
+    arc2_bg_color_(Grid, Bg),
+%   Determine grid dimensions.
+    length(Grid, NR), NR > 0, Grid = [FR|_], length(FR, NC),
+    MaxR is NR - 1, MaxC is NC - 1,
+%   Collect all non-background cells as r(R,C,V) terms.
+    findall(r(R,C,V), (
+        between(0,MaxR,R), between(0,MaxC,C),
+        arc2_cell_(Grid,R,C,V), V \= Bg
+    ), Cells),
+%   Fail if there are no non-background cells.
+    Cells \= [],
+%   Detect which direction the segments run.
+    arc2_segeq_dir_(Cells, Dir),
+%   Compute (Key, Vary, Color) for every non-background cell.
+    findall(K-Vary-V, (
+        member(r(R,C,V), Cells),
+        arc2_segeq_kv_(R,C,Dir,K,Vary)
+    ), KVVs),
+%   Collect and sort the unique segment keys.
+    findall(K, member(K-_-_, KVVs), Ks0), sort(Ks0, SortedKeys),
+%   Build segment descriptors from the grouped cells.
+    arc2_segeq_build_segs_(KVVs, SortedKeys, Segs),
+%   Determine which endpoint is the anchor and compute the target alignment.
+    arc2_segeq_anchor_(Dir, Segs, AnchorEnd, DTarget),
+%   Extend or trim every segment's non-anchor end to match the target.
+    arc2_segeq_adjall_(Dir, Bg, Segs, AnchorEnd, DTarget, Grid, GridOut).
+
+% arc2_induce_rule for segment_equalize: verify transform on all training pairs.
+arc2_induce_rule(TrainingPairs, segment_equalize) :-
+%   Guard: each output grid has the same dimensions as its input.
+    forall(member(pair(In,Out), TrainingPairs), (
+        length(In, NR), length(Out, NR),
+        In = [FR|_], Out = [GR|_], length(FR, NC), length(GR, NC)
+    )),
+%   Verify the transform produces the correct output for every training pair.
+    forall(member(pair(In,Out), TrainingPairs),
+           arc2_transform(segment_equalize, In, Out)).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------
