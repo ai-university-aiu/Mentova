@@ -1,0 +1,47 @@
+ACCOMPLISHMENT RECORD Acc_297
+
+Title: induction Pack Enhancement - id_cross_pair_invariants/2 and id_cross_pair_variants/2 (WP-277)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/PrologAI (PR 363)
+
+
+SUMMARY
+
+Work Package 277 extends the induction pack (Layer 59, id_* predicates) with two cross-pair property aggregation predicates. The existing induction pack analyzed a single input-output pair; these new predicates aggregate across the entire list of training pairs simultaneously.
+
+
+WHAT WAS BUILT
+
+id_cross_pair_invariants(+Pairs, -Invariants):
+Returns the sorted list of property atoms that hold for every pair in the list. Pairs is a list of pair(InGrid, OutGrid) terms. Properties tested:
+
+- dims_preserved: same dimensions in and out
+- colors_preserved: exact same color set in and out
+- total_nonzero_preserved: same count of non-background cells
+- monotone_input: input has exactly one non-background color
+- monotone_output: output has exactly one non-background color
+- bg_preserved: background (0) cell positions are identical in in and out
+- scale_preserved: dimensions preserved (alias for dims_preserved at grid level)
+
+id_cross_pair_variants(+Pairs, -Variants):
+Returns properties that hold for SOME but not ALL pairs - the variant properties that change across the training set. Together with id_cross_pair_invariants/2, this partitions the property space: invariants hold everywhere, variants hold somewhere, and absent properties hold nowhere.
+
+46 tests pass (37 original induction tests + 9 new tests across 2 new test blocks).
+
+
+WHY THIS MATTERS
+
+Task-level characterization requires knowing what is constant across all training pairs (invariants) and what varies (variants). This cross-pair view complements the existing single-pair analysis. For ARC-AGI-2:
+
+- If dims_preserved is an invariant, the solver can restrict search to dimension-preserving rules.
+- If bg_preserved is an invariant, the solver knows background cells are structural and not content.
+- If monotone_output is an invariant, the solver knows the output always uses a single non-bg color.
+- If colors_preserved is a variant (not invariant), the solver knows color set changes are part of the task.
+
+These observations feed directly into tc_categorize (taskcat pack) and the ARC-AGI-2 benchmark runner dispatch logic.

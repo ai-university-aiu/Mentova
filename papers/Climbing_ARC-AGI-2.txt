@@ -1,0 +1,173 @@
+CLIMBING THE MOUNTAIN: MENTOVA'S ARC-AGI-2 ODYSSEY
+
+A Scientific Chronicle of Every Attempt, Every Score,
+Every Algorithm, Every Lesson, and the Path to the Summit
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+STATUS: ACTIVE. Climbing begins when ARC-AGI-2 task files are loaded.
+Last updated: 2026-06-27. Infrastructure complete. Awaiting task download.
+
+CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
+
+Every benchmark run, every new rule, every bug fix, every performance
+improvement, and every score improvement described in this paper is performed
+autonomously, without any human coding, without any human debugging, and without
+any human intervention in the development loop.
+
+The human contributor (D. R. Dison) authored the scientific vision, the research
+direction, and the authorship of this work. All code, all analysis, all bug
+diagnosis, all performance profiling, all rule design, and all score improvements
+are produced autonomously.
+
+
+ABSTRACT
+
+This is the scientific chronicle of Mentova's climb up the ARC-AGI-2 benchmark.
+
+Methodology: pure induction from training examples, no pretraining on the
+ARC-AGI-2 corpus, every solved task attributed to a named glass-box rule that
+can be independently verified in SWI-Prolog.
+
+ARC-AGI-2 is harder than ARC-AGI-1. It introduces four difficulty flavors not
+present at scale in ARC-AGI-1:
+
+Flavor 1 - Multi-rule compositional: the transformation requires two or more
+independently named rules applied to different parts of the grid simultaneously.
+
+Flavor 2 - Multi-step sequential: the transformation requires an ordered sequence
+of two or more steps applied to the entire grid.
+
+Flavor 3 - Contextual rule application: which rule to apply is selected by a
+context feature in the input (a gate color, size, or shape attribute).
+
+Flavor 4 - In-context symbol definition: some objects in the input serve as a
+task-defined symbol table that maps colors or shapes to meanings, and the
+solution requires reading and applying that symbol table.
+
+PrologAI's response: the taskcat pack (tc_categorize/2) classifies each task
+into one of these four flavors and dispatches to the appropriate solver. The
+legend, multipair, symtab, invariant, and contrast packs provide supporting
+analysis. The seqinfer, condxf, hyp, and induction packs provide the actual
+transformation search.
+
+
+WHAT IS ARC-AGI-2?
+
+ARC-AGI-2 is the second-generation Abstract Reasoning Corpus for Artificial
+General Intelligence benchmark, created by Francois Chollet and the ARC Prize
+Foundation as a successor to ARC-AGI-1.
+
+It is designed to be significantly harder than ARC-AGI-1 while still requiring
+only core knowledge priors that any human can apply.
+
+ARC-AGI-2 tasks use the same basic format as ARC-AGI-1 (2D integer grids,
+colors 0-9, training pairs, test input) but with more complex transformations
+requiring multi-step reasoning, context sensitivity, and in-context symbol use.
+
+The benchmark explicitly targets capabilities that neural networks trained on
+large datasets struggle with, while being tractable for humans using fluid
+intelligence.
+
+
+PLATFORM CAPABILITY AT CLIMB START (2026-06-27)
+
+Infrastructure:
+- arc_tasks_2.pl: data loader for ARC-AGI-2 task facts (Acc_298).
+- arc_benchmark_2.pl: wave solver with task-type-aware dispatch (Acc_298).
+- Climbing_ARC-AGI-2.txt: this wave log (Acc_298).
+
+Pack enhancements for ARC-AGI-2 (all merged 2026-06-27):
+- WP-274: seqinfer - sq_arc2_candidates/1 (extended integer-color candidate list).
+- WP-275: hyp - hy_spatial_hyp/3, hy_structural_hyp/3, hy_sequence_hyp/4.
+- WP-276: condxf - xc_infer_gate/3 (gate feature inference).
+- WP-277: induction - id_cross_pair_invariants/2, id_cross_pair_variants/2.
+
+Core packs for ARC-AGI-2 analysis (all merged prior to climb start):
+- taskcat (tc_*, Layer 252): classifies tasks into single_rule / multi_step /
+  context_gated / symbol_table and suggests solving strategies.
+- multipair (mp_*, Layer 251): cross-pair object tracking and correspondence.
+- legend (lg_*, Layer 250): legend / key-region detection from training pairs.
+- contrast (ca_*, Layer 249): feature contrast and cross-pair delta analysis.
+- symtab (sy_*, Layer 248): in-context symbol table extraction and lookup.
+- invariant (iv_*, Layer 247): cross-pair property invariant detection.
+
+Previous benchmark: ARC-AGI-1 = 400 / 400 = 100.00% (Climbing_ARC-AGI-1.txt).
+
+
+HOW TO START CLIMBING
+
+Step 1: Download ARC-AGI-2 public evaluation tasks (JSON format).
+  Source: https://arcprize.org/ or the ARC Prize GitHub repository.
+
+Step 2: Place JSON files in /home/ccaitwo/Mentova/data/arc_agi_2/tasks/
+
+Step 3: Run the converter:
+  python3 tools/arc_agi2_to_prolog.py
+  This populates data/arc_agi_2/arc_tasks_2.pl with arc2_task/4 facts.
+
+Step 4: Run the first benchmark:
+  swipl -l src/mentova/games/arc_benchmark_2.pl \
+        -l data/arc_agi_2/arc_tasks_2.pl \
+        -g arc2_benchmark_print -g halt
+
+Step 5: Document the result as ATTEMPT 1 in this file.
+
+
+SCORE PROGRESSION TABLE
+(Add a row after each scored wave)
+
+Date        | Score      | Percent | Notes
+------------|------------|---------|------------------------------------------
+(no scores yet - task files not loaded)
+
+
+COMPLETE SCORE PROGRESSION
+(Narrative entries added after each wave)
+
+
+ALL SOLVED TASKS
+(Task IDs added in alphabetical order after each wave)
+
+
+APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
+
+Principle 1: Named glass-box rules. Every solved task is attributed to a named
+transformation rule verifiable by arc2_transform(RuleName, TestInput, Output).
+
+Principle 2: Pure induction. No pretraining on the ARC-AGI-2 corpus. Rules are
+induced solely from each task's own training pairs.
+
+Principle 3: Task-type classification first. Run tc_categorize before searching
+for rules. The category determines which solver to invoke.
+
+Principle 4: Verify against all training pairs. A candidate rule must correctly
+transform every training pair, not just one or two.
+
+Principle 5: Honest scores. Report exactly what the evaluator produces.
+
+Principle 6: Measure after every change. Run the full benchmark after every wave.
+
+Principle 7: Document everything. Every attempt, every rule, every lesson.
+
+
+REFERENCES
+
+ARC Prize Foundation. (2024-2026). ARC-AGI-2 Benchmark.
+  https://arcprize.org/
+
+Chollet, F. (2019). On the Measure of Intelligence. arXiv:1911.01547.
+
+Dison, D. R. (2026). Climbing ARC-AGI-1: 400/400 = 100.00%.
+  Accomplishment Records Acc_71 through Acc_79. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-2 Readiness Analysis. PrologAI docs.
+  /home/ccaitwo/PrologAI/docs/ARC-AGI-2_Readiness_Analysis.txt
+
+Dison, D. R. (2026). PrologAI Pack Enhancements for ARC-AGI-2 (WP-274 to WP-277).
+  Accomplishment Records Acc_294-Acc_297. AIU / PrologAI.
+
+Dison, D. R. (2026). ARC-AGI-2 Benchmark Infrastructure.
+  Accomplishment Record Acc_298. AIU / PrologAI.

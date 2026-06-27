@@ -1,0 +1,54 @@
+ACCOMPLISHMENT RECORD Acc_298
+
+Title: ARC-AGI-2 Benchmark Infrastructure - arc_tasks_2.pl, arc_benchmark_2.pl, Climbing_ARC-AGI-2.txt
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/Mentova
+
+
+SUMMARY
+
+Establishes the three infrastructure items required before Mentova can begin climbing ARC-AGI-2: the task data loader (arc_tasks_2.pl), the wave solver (arc_benchmark_2.pl), and the wave log (Climbing_ARC-AGI-2.txt). Together with the six priority packs (symtab, invariant, contrast, legend, multipair, taskcat) and four pack enhancements (WP-274 to WP-277), this completes the full ARC-AGI-2 readiness build.
+
+
+WHAT WAS BUILT
+
+arc_tasks_2.pl (data/arc_agi_2/arc_tasks_2.pl):
+Module arc_tasks_2 exporting arc2_task/4. Defines the fact format for ARC-AGI-2 tasks: arc2_task(TaskId, TrainingPairs, TestIn, TestOut). Currently a stub; populated by tools/arc_agi2_to_prolog.py once JSON task files are downloaded to data/arc_agi_2/tasks/. Follows the same structure as arc_tasks.pl for ARC-AGI-1.
+
+arc_benchmark_2.pl (src/mentova/games/arc_benchmark_2.pl):
+Full wave solver for ARC-AGI-2. Exports arc2_benchmark_run/3, arc2_benchmark_print/0, arc2_induce_rule/2, arc2_named_rule/1, arc2_transform/3. Implements three search levels:
+
+Level 1 - Single named rule: arc2_induce_rule tries each named rule against all training pairs.
+Level 2 - Ordered rule pair: arc2_induce_rule_pair_ searches all rule combinations.
+Level 3 - Color bijection: arc2_induce_recolor infers a color substitution map.
+
+Transform registry includes reverse_rows, vertical_flip, transpose, rotate_90_cw, rotate_90_ccw, and rotate_180 as the initial geometric rule set. Wave rules are added in the same pattern as ARC-AGI-1 wave files.
+
+arc2_benchmark_print/0 prints a full scored report to stdout. When no tasks are loaded, it prints a helpful message with download instructions.
+
+Climbing_ARC-AGI-2.txt (papers/Climbing_ARC-AGI-2.txt):
+Wave log following the structure of Climbing_ARC-AGI-1.txt. Contains author information, abstract, what-is-ARC-AGI-2 section, platform capability summary at climb start, how-to-start instructions, score progression table (empty until first wave), complete score progression section, all-solved-tasks list, methodology principles carried forward from ARC-AGI-1, and references.
+
+
+WHY THIS MATTERS
+
+ARC-AGI-1 was solved at 400/400 = 100.00% using this same infrastructure pattern: a data loader, a benchmark runner, and a wave log. The ARC-AGI-2 infrastructure follows the identical methodology, adapted for ARC-AGI-2's harder task types by incorporating tc_categorize dispatch and the new pack enhancements from WP-274 to WP-277.
+
+ARC-AGI-2 is significantly harder than ARC-AGI-1 due to its four difficulty flavors. The infrastructure is now in place to begin climbing systematically using the same glass-box named-rule induction approach that achieved a perfect score on ARC-AGI-1.
+
+
+READINESS STATUS
+
+As of this accomplishment, all items from the ARC-AGI-2 Readiness Analysis (PrologAI docs) are complete:
+
+Section 6 (six priority packs): COMPLETE (Acc_288 through Acc_293).
+Section 7 (four pack enhancements): COMPLETE (Acc_294 through Acc_297, WP-274 to WP-277).
+Section 8 (three infrastructure items): COMPLETE (this accomplishment).
+
+The platform is READY to begin climbing ARC-AGI-2 once task files are downloaded.

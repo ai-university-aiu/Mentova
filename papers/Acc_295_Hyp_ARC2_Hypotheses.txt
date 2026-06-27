@@ -1,0 +1,37 @@
+ACCOMPLISHMENT RECORD Acc_295
+
+Title: hyp Pack Enhancement - Spatial, Structural, and Sequence Hypothesis Generation (WP-275)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/PrologAI (PR 363)
+
+
+SUMMARY
+
+Work Package 275 extends the hyp pack (Layer 74, hy_* predicates) with three new hypothesis generation predicates that extend the pack beyond color substitutions to cover spatial movement, structural patterns, and two-step sequence hypotheses.
+
+
+WHAT WAS BUILT
+
+hy_spatial_hyp(+Pairs, +Moves, -Hyp):
+Finds the first shift(DR, DC) in the candidate Moves list such that shifting all non-zero cells of each input grid by (DR, DC) exactly reproduces the output grid (staying within grid bounds). Returns shift(DR, DC) for the first consistent move. Fails when no candidate move explains all training pairs.
+
+hy_structural_hyp(+Pairs, +Patterns, -Hyp):
+Finds the first named structural pattern from the candidate Patterns list that holds for every training pair. Supported patterns include dims_preserved, colors_preserved, total_nonzero_preserved, monotone_output, output_subset_of_input, and input_subset_of_output. Returns structural(Pattern). Fails when no pattern matches all pairs.
+
+hy_sequence_hyp(+Pairs, +Maps1, +Maps2, -Hyp):
+Finds a two-step color-map hypothesis seq(Map1, Map2) such that applying Map1 then Map2 to each training input produces the output. Both maps are standard color substitution lists. Returns seq(Map1, Map2) for the first consistent combination. Fails when no combination works.
+
+43 tests pass (34 original hyp tests + 9 new tests across 3 new test blocks).
+
+
+WHY THIS MATTERS
+
+ARC-AGI-2 tasks frequently require hypotheses that go beyond simple color substitution. Spatial movement (an object slides to a new position), structural patterns (the output always has the same dimensions as the input), and two-step color chains (color 1 becomes 2 in step 1, then 2 becomes 3 in step 2) are exactly the kinds of hypotheses needed for the multi-step sequential difficulty flavor.
+
+The three new predicates follow the same interface pattern as existing hy_* predicates: they take training pairs and candidate parameters, and return a verified hypothesis term.
