@@ -1,0 +1,31 @@
+Accomplishment 246: gridpath Pack Added to PrologAI (gpa_*, Layer 205)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI Work Package 226 is merged: the gridpath pack (gpa_*, Layer 205) adds
+fourteen predicates for BFS pathfinding, distance mapping, flood expansion,
+wavefront extraction, line-of-sight testing, and region-to-region path finding.
+
+The pack finds shortest 4-connected paths between cells avoiding obstacle colors,
+computes BFS distance maps from any seed, finds the nearest cell of a given color,
+tests horizontal/vertical line-of-sight, generates cell sequences along segments,
+and discovers the shortest path between any two colored regions. All 57 acceptance
+tests pass.
+
+Key predicates:
+- gpa_shortest_path / gpa_path_length / gpa_reachable: BFS shortest 4-path
+- gpa_all_reachable / gpa_distance_map: full reachability and distance analysis
+- gpa_nearest: nearest cell of target color via BFS distance map
+- gpa_flood_n / gpa_wavefront: flood expansion and wavefront-at-N
+- gpa_straight_h / gpa_straight_v: horizontal and vertical segment generation
+- gpa_line_of_sight: same-row or same-column visibility check
+- gpa_between_h / gpa_between_v: strictly interior cells of segments
+- gpa_region_path: shortest path between any Color1 and Color2 cell
+
+All 57 acceptance tests pass. PrologAI now comprises 226 work packages
+and reaches Layer 205 in the Data Layer.
+
+SPARC: Spec v192, Pseudo v184, Arch v186, Refinement v239, Completion v242.
+PrologAI PR #315. Mentova Accomplishment 246 of 246.
+
+#PrologAI #Mentova #AIU #SymbolicAI #CognitiveSubstrate
