@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-254-FF6B35?style=for-the-badge" alt="254 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-255-FF6B35?style=for-the-badge" alt="255 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -547,6 +547,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. |
+| `Acc_255` | GridGraph pack paper — Region Adjacency Graph (Layer 214, ggr_*): 14 ggr_* predicates for color adjacency, borders, enclosure, spanning detection, color merging, and connected component analysis. |
 | `Acc_254` | GridConv pack paper — Grid Convolution (Layer 213, gcv_*): 14 gcv_* predicates for sliding window statistics, subgrid pattern matching, density maps, hot spot detection, and square structuring element dilation and erosion. |
 | `Acc_253` | GridMorph pack paper — Morphological Grid Operations (Layer 212, gmo_*): 14 gmo_* predicates for dilation, erosion, opening, closing, inner/outer boundary extraction, morphological gradient, top-hat and bottom-hat transforms, hole filling, border flood fill, and size filtering. |
 | `Acc_252` | GridEdge pack paper — Grid Edge Detection (Layer 211, ge_*): 14 ge_* predicates for 4/8-connected edge detection, directional boundary analysis, inner/outer border extraction, corner and endpoint detection, smooth cell identification, and per-cell transition count maps. |

@@ -1,0 +1,156 @@
+Acc_255: gridgraph Pack - Region Adjacency Graph Analysis (ggr_*, Layer 214)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 235 adds the gridgraph pack (ggr_*, Layer 214): fourteen
+predicates for region adjacency graph (RAG) analysis of symbolic grids. A
+region is the set of all cells of a given color. The pack covers color pair
+adjacency, per-color neighbor lists, full adjacency graph construction, degree
+computation, directional shared border analysis, isolated and enclosed color
+detection, horizontal and vertical spanning detection, color merging, and
+4-connected component counting and partitioning. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+ARC-AGI-2 tasks frequently require understanding which color regions touch each
+other, which regions are enclosed within others, and which regions span the
+full width or height of the grid. These structural properties define the
+"grammar" of grid layouts that solvers must recognize and transform. The
+gridgraph pack makes all of these relationships computable in a few predicate
+calls, providing the symbolic foundation for rule-based layout analysis.
+
+
+2. Architecture
+
+Layer 214 sits immediately above gridconv (Layer 213). Uses library(lists):
+nth0/3, member/2, append/3, list_to_set/2, subtract/3. msort/2 is a built-in.
+No cross-pack dependencies.
+
+Private helpers:
+- ggr_dims_/3: grid height and width
+- ggr_cell_/4: cell value at row R, column C; fails out of bounds
+- ggr_nbr4_/4: one 4-connected neighbor on backtracking
+- ggr_colors_/2: list of distinct colors (via list_to_set)
+- ggr_bfs_same_/6: BFS through same-color cells from a seed list
+- ggr_count_components_/5: recursive component counter
+- ggr_partition_components_/5: recursive component cell partitioner
+
+ggr_adj_colors deduplicates via list_to_set (not once/1) since pairs are
+assembled into a canonical form first. ggr_shared_border uses once/1 to
+ensure each C1 cell appears at most once regardless of how many C2 neighbors
+it has. ggr_enclosed_colors uses two independent negation-as-failure guards.
+
+
+3. Predicates
+
+Color adjacency:
+
+ggr_adj_colors/2 - sorted list of adjacent color pairs (C1-C2, C1 @< C2)
+ggr_adj_of/3 - sorted list of distinct colors adjacent to Color
+ggr_adj_graph/2 - full adjacency as list of (Color, Neighbors)
+ggr_are_adj/3 - test if two colors share a 4-connected boundary
+
+Degree and borders:
+
+ggr_color_degree/3 - count distinct colors adjacent to Color
+ggr_shared_border/4 - C1 cells with at least one C2 4-neighbor (directional)
+ggr_border_length/4 - count of shared border cells (directional)
+
+Structural analysis:
+
+ggr_isolated_colors/2 - colors with no differently-colored 4-neighbor
+ggr_enclosed_colors/3 - colors with no border cells AND only OuterColor neighbors
+ggr_spanning_h/2 - colors with cells in column 0 AND last column
+ggr_spanning_v/2 - colors with cells in row 0 AND last row
+
+Operations and components:
+
+ggr_merge_colors/4 - replace FromColor with ToColor everywhere
+ggr_color_components/3 - count 4-connected components of Color
+ggr_component_cells/3 - partition Color cells into connected components
+
+
+4. Example Session
+
+:- use_module(pack(gridgraph/prolog/gridgraph)).
+
+% Region adjacency graph:
+Ring = [[r,r,r,r,r],[r,x,x,x,r],[r,x,x,x,r],[r,x,x,x,r],[r,r,r,r,r]].
+ggr_adj_colors(Ring, Pairs).
+% Pairs = [r-x]
+
+ggr_adj_graph(Ring, Graph).
+% Graph = [r-[x], x-[r]]
+
+% Enclosure detection:
+ggr_enclosed_colors(Ring, Inner, r).
+% Inner = [x]   (x cells: none on border, all non-x neighbors are r)
+
+% Spanning detection:
+ggr_spanning_v(Ring, Cols).
+% Cols = [r]   (r has cells in row 0 and row 4)
+
+% Directional border asymmetry:
+G = [[r,r,x],[r,r,x],[x,x,x]].
+ggr_border_length(G, r, x, 3).
+ggr_border_length(G, x, r, 4).
+
+% Component partitioning:
+Two = [[r,x,x,x,r],[x,x,x,x,x],[x,x,x,x,x],[x,x,x,x,x],[r,x,x,x,r]].
+ggr_color_components(Two, r, 4).
+ggr_component_cells(Two, r, Comps).
+% 4 components, each with 1 cell (the corner cells)
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GGR-001 through AC-GGR-044) exercised in
+packs/gridgraph/test/test_gridgraph.pl. Tests cover:
+- ggr_adj_colors: rb (1 pair), abc (2 pairs, not a-c), uniform (empty)
+- ggr_adj_of: r and x in rb, b in abc (a,c), uniform r (empty)
+- ggr_adj_graph: rb structure, uniform structure
+- ggr_are_adj: r-x yes, r-r no, a-b yes, a-c no
+- ggr_color_degree: r in rb (1), b in abc (2), uniform r (0)
+- ggr_shared_border: r->x (3), x->r (4)
+- ggr_border_length: r->x (3), x->r (4)
+- ggr_isolated_colors: uniform r (r), rb (empty)
+- ggr_enclosed_colors: ring x enclosed by r, block r enclosed by x, r not enclosed in ring
+- ggr_spanning_h: rb (x yes, r no), full-row r (yes)
+- ggr_spanning_v: abc (none), vspan (r yes)
+- ggr_merge_colors: r->x in rb = all-x, absent color noop
+- ggr_color_components: block (1), four-corners (4), uniform (1)
+- ggr_component_cells: block (1 comp 9 cells), four-corners (4 comps 1 cell each)
+- Combined: pairs symmetric, degree=adj_of length, border asymmetric, merge+isolated, cells count=components
+
+
+6. SPARC Documentation
+
+Work Package 235 is recorded in:
+- Specification v201, Part 225 (WP-235-SPEC-001 through WP-235-SPEC-007)
+- Pseudocode v193, Part 225
+- Architecture v195, ARCH-201
+- Refinement v248, AC-GGR-001 through AC-GGR-044
+- Completion v251, WP-235 record
+
+Tutorial chapter: docs/tutorial/Ch196_GridGraph.txt
+Pack reference: docs/Pack_Reference.txt (gridgraph entry)
+PrologAI PR: #324 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridgraph pack provides a complete symbolic region adjacency graph engine.
+Adjacency, degree, borders, enclosure, spanning, merging, and component
+analysis are all computable in single predicate calls. Together with gridflood
+(Layer 204, within-region connectivity), gridpath (Layer 205, pathfinding),
+and gridmorph (Layer 212, morphological ops), PrologAI now has a comprehensive
+suite for analyzing both the internal structure of colored regions and their
+mutual relationships.
+
+PrologAI now comprises 235 work packages and reaches Layer 214 in the Data Layer.
