@@ -1,0 +1,121 @@
+Acc_263: gridpos Pack - Grid Positional Analysis (gps_*, Layer 222)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 243 adds the gridpos pack (gps_*, Layer 222): fourteen
+predicates for extracting sub-grids and cell positions based on geometric
+position within a raw grid. Operations cover halves, quadrants, even/odd rows
+and columns, checkerboard patterns, center cell, corner cells, and the
+horizontal/vertical cross through the center. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently require selecting a spatially defined portion of
+a grid: the top half, a particular quadrant, every other row, or the four corner
+cells. These operations appear as pre-processing steps (extract a region),
+post-processing steps (isolate the center cross after a transformation), and
+hypothesis steps (is the pattern confined to the even columns?). The gridpos pack
+provides all of these as first-class, tested predicates.
+
+
+2. Architecture
+
+Layer 222 sits immediately above gridhist (Layer 221) in the Data Layer.
+Uses library(lists): nth0/3, member/2. No cross-pack dependencies.
+
+Four private helpers support the public interface:
+- gps_dims_/3: grid dimensions.
+- gps_col_/3: extract a column as a top-to-bottom list.
+- gps_subgrid_/6: extract any rectangular sub-grid by row/col bounds.
+- gps_row_parity_/3: extract even or odd-indexed cells from a single row.
+
+
+3. Predicates
+
+Halves:
+
+gps_top_half/2      - rows [0, H//2)
+gps_bottom_half/2   - rows [H//2, H)
+gps_left_half/2     - columns [0, W//2)
+gps_right_half/2    - columns [W//2, W)
+
+Quadrants:
+
+gps_quadrant/3      - one of tl/tr/bl/br as a rectangular sub-grid
+
+Row and column parity:
+
+gps_even_rows/2     - rows at even 0-indexed positions (0, 2, 4, ...)
+gps_odd_rows/2      - rows at odd 0-indexed positions (1, 3, 5, ...)
+gps_even_cols/2     - columns at even 0-indexed positions
+gps_odd_cols/2      - columns at odd 0-indexed positions
+
+Checkerboard:
+
+gps_checkerboard/3  - R-C pairs where (R+C) mod 2 = Parity (Parity bound to 0 or 1)
+
+Center and corners:
+
+gps_center_cell/3   - center coordinates (H//2, W//2)
+gps_corners/2       - four R-C-Value terms in tl/tr/bl/br order
+
+Center cross:
+
+gps_cross_h/3       - center row index and row content
+gps_cross_v/3       - center column index and column content as a list
+
+
+4. Example Session
+
+:- use_module(pack(gridpos/prolog/gridpos)).
+
+G = [[a,b,c,d],[e,f,g,h],[i,j,k,l],[m,n,o,p]].
+
+gps_top_half(G, T).          % T = [[a,b,c,d],[e,f,g,h]]
+gps_quadrant(G, br, Q).      % Q = [[k,l],[o,p]]
+gps_even_rows(G, E).         % E = [[a,b,c,d],[i,j,k,l]]
+gps_checkerboard(G, 0, Cs).  % Cs = [0-0,0-2,1-1,1-3,2-0,2-2,3-1,3-3]
+gps_center_cell(G, R, C).    % R = 2, C = 2
+gps_corners(G, Cs).          % Cs = [0-0-a, 0-3-d, 3-0-m, 3-3-p]
+gps_cross_v(G, C, Col).      % C = 2, Col = [c,g,k,o]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GPS-001 through AC-GPS-044) are exercised in
+packs/gridpos/test/test_gridpos.pl. Tests cover top/bottom halves (6),
+left/right halves (6), quadrants (4), even/odd rows (6), even/odd cols (6),
+checkerboard (4), center cell (3), corners (3), cross_h (3), cross_v (3).
+Tests use three canonical grids: 4x4, 3x3, and 1x1.
+
+
+6. SPARC Documentation
+
+Work Package 243 is recorded in:
+- Specification v209, Part 233 (WP-243-SPEC-001 through WP-243-SPEC-007)
+- Pseudocode v201, Part 233
+- Architecture v203, ARCH-209
+- Refinement v256, AC-GPS-001 through AC-GPS-044
+- Completion v259, WP-243 record
+
+Tutorial chapter: docs/tutorial/Ch204_GridPos.txt
+Pack reference: docs/Pack_Reference.txt (gridpos entry)
+PrologAI PR: #332 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridpos pack provides complete positional sub-grid extraction and cell
+identification for raw grids. The fourteen gps_* predicates cover halves,
+quadrants, parity-based row/column selection, checkerboard patterns, center cell,
+corner cells, and center cross. This completes the geometric position family of
+grid operations and enables downstream reasoning about where features appear
+within a grid.
+
+PrologAI now comprises 243 work packages and reaches Layer 222 in the Data Layer.
