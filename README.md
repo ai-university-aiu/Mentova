@@ -6,8 +6,8 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-299-FF6B35?style=for-the-badge" alt="299 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-1%2F120%20%3D%200.83%25-orange?style=for-the-badge" alt="ARC-AGI-2: 1/120 = 0.83%">
+  <img src="https://img.shields.io/badge/accomplishments-300-FF6B35?style=for-the-badge" alt="300 Accomplishments">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-2%2F120%20%3D%201.67%25-orange?style=for-the-badge" alt="ARC-AGI-2: 2/120 = 1.67%">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,9 +99,9 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **1/120 = 0.83%** — Wave 1; climbing underway |
-| Documented accomplishments | **299 accomplished** |
-| Scientific papers | **299 published** — one per accomplishment |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **2/120 = 1.67%** — Wave 2; climbing underway |
+| Documented accomplishments | **300 accomplished** |
+| Scientific papers | **300 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | Piagetian 8/8 cognitive levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 1 complete (1/120 = 0.83%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 2 complete (2/120 = 1.67%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -235,8 +235,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         299 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  299 announcements — one per accomplishment
+├── papers/         300 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  300 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -560,6 +560,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_273` | GridRefl pack paper — Grid Reflection and Rotation (Layer 232, grf_*): 14 grf_* predicates for flips, rotations, transpositions, D4 symmetry detection, and symmetry completion. |
 | `Acc_298` | ARC-AGI-2 infrastructure — arc_tasks_2.pl (task loader), arc_benchmark_2.pl (wave solver with task-type-aware dispatch), and Climbing_ARC-AGI-2.txt (wave log). All Section 8 readiness items complete; platform ready to climb ARC-AGI-2. |
 | `Acc_299` | ARC-AGI-2 Wave 1 — task files downloaded, converter built, 120 evaluation tasks loaded. First rule: recolor_plus(4,8) solves task 1818057f. Score: 1/120 = 0.83%. |
+| `Acc_300` | ARC-AGI-2 Wave 2 — BFS flood-fill connected-component analysis implemented; chain_strip rule solves task 7b5033c1. Score: 2/120 = 1.67%. |
 | `Acc_297` | induction pack enhancement (WP-277) — id_cross_pair_invariants/2 and id_cross_pair_variants/2 aggregate properties across all training pairs (dims, colors, bg, monotone, total-nonzero); 46/46 tests pass. |
 | `Acc_296` | condxf pack enhancement (WP-276) — xc_infer_gate/3 automatically infers the gate_color that partitions training pairs by change signature for context-gated task solving; 45/45 tests pass. |
 | `Acc_295` | hyp pack enhancement (WP-275) — hy_spatial_hyp/3 (shift hypotheses), hy_structural_hyp/3 (structural pattern hypotheses), hy_sequence_hyp/4 (two-step color-map hypotheses) extend hypothesis search beyond color substitution; 43/43 tests pass. |
