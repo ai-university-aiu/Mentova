@@ -1,0 +1,166 @@
+Acc_245: gridflood Pack - Grid Flood-Fill, Region Analysis, Hole Filling, and Connected Components (gf_*, Layer 204)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 225 adds the gridflood pack (gf_*, Layer 204): fourteen
+predicates for BFS flood-fill operations, connected-region analysis, hole
+detection and filling, and connected-component enumeration on raw grids. The
+pack supports 4-connected and 8-connected neighborhoods, detects enclosed
+background cells unreachable from the grid border, enumerates all connected
+regions of a given color, and identifies the largest such region. All 54
+acceptance tests pass.
+
+
+1. Motivation
+
+Many visual reasoning tasks require identifying contiguous regions of the same
+color, filling bounded areas, detecting enclosed holes, and counting or
+selecting connected components. Flood-fill is the foundational algorithm for
+these operations - it propagates from a seed cell to all reachable same-color
+neighbors using breadth-first search.
+
+The gridflood pack provides:
+- 4-connected and 8-connected flood-fill (gf_fill, gf_fill8)
+- Global palette swap independent of connectivity (gf_recolor)
+- Region isolation onto a blank background (gf_isolate)
+- Region cell enumeration, size, and bounding box
+- Enclosed cell detection and hole filling (gf_enclosed_cells, gf_fill_enclosed)
+- Connected-component enumeration (gf_components, gf_n_components, gf_largest)
+- Connectivity testing for any color (gf_is_connected)
+- Boundary-stop flood-fill (gf_boundary_fill)
+
+
+2. Architecture
+
+Layer 204 sits immediately above gridrun (Layer 203) in the PrologAI dependency
+chain. Uses library(lists) and library(apply) only; no cross-pack dependencies.
+
+Private helpers:
+- gf_dims_/3: grid height and width
+- gf_cell_/4: cell value at (R, C)
+- gf_bfs4_/7: BFS over 4-connected same-color cells using explicit queue
+- gf_bfs8_/7: BFS over 8-connected same-color cells
+- gf_set_cells_/4: rebuild grid replacing RegionCells with NewColor
+- gf_keep_larger_/3: fold helper for gf_largest selecting longer region
+- gf_extract_components_/6: iteratively extract one region per call
+
+
+3. Predicates
+
+gf_fill/5 - Replace 4-connected same-color region at (R,C) with NewColor via BFS. No-op if seed already equals NewColor.
+
+gf_fill8/5 - Replace 8-connected same-color region at (R,C) with NewColor. Diagonal neighbors are included in the BFS.
+
+gf_recolor/4 - Global swap: every OldColor cell becomes NewColor. Disconnected patches are all changed simultaneously. Differs from gf_fill in that connectivity is irrelevant.
+
+gf_isolate/5 - Keep the 4-connected region at (R,C); set all other cells to BgColor. Extracts a single object onto a blank canvas.
+
+gf_region_cells/4 - List of R-C coordinates of the 4-connected same-color region at (R,C), in BFS discovery order.
+
+gf_region_size/4 - Cell count of the 4-connected same-color region at (R,C).
+
+gf_region_bbox/7 - Bounding box (MinR, MinC, MaxR, MaxC) of the 4-connected region at (R,C). Uses min_list/max_list on extracted row and column coordinate lists.
+
+gf_enclosed_cells/3 - BgColor cells not reachable from any border cell via 4-connected BgColor paths. Seeds BFS simultaneously from all border BgColor cells; the complement of the reachable set (restricted to BgColor) is the enclosed set.
+
+gf_fill_enclosed/4 - Replace all enclosed BgColor cells with FillColor. Border-reachable BgColor cells are unchanged.
+
+gf_components/3 - List of cell-lists, one per 4-connected Color region, in top-left seed order. Iteratively runs BFS from the next unvisited Color cell and removes visited cells using subtract/3.
+
+gf_n_components/3 - Count of 4-connected Color regions. Returns 0 if Color is absent.
+
+gf_largest/3 - Cell-list of the largest 4-connected Color region. Ties favor the first-encountered region. Fails if no Color cells exist.
+
+gf_is_connected/3 - Succeed if all Color cells form at most one connected region. Supports Connectivity = 4 or 8. Vacuously true when no Color cells exist.
+
+gf_boundary_fill/6 - Flood-fill from (R,C) with FillColor, treating BoundaryColor cells as walls. Fills only cells matching the seed color; cells of other colors (besides BoundaryColor) also stop the fill. No-op when seed is BoundaryColor.
+
+
+4. Example Session
+
+:- use_module(pack(gridflood/prolog/gridflood)).
+
+% 4-connected fill:
+?- gf_fill([[r,r,b],[r,r,b],[b,b,b]], 0, 0, g, R).
+R = [[g,g,b],[g,g,b],[b,b,b]].
+
+% 8-connected fill on diagonal:
+?- gf_fill8([[b,r,r],[r,b,r],[r,r,b]], 0, 0, g, R).
+R = [[g,r,r],[r,g,r],[r,r,g]].
+
+% Hole detection in ring:
+?- gf_enclosed_cells([[r,r,r,r],[r,b,b,r],[r,b,b,r],[r,r,r,r]], b, Enc).
+Enc = [1-1,1-2,2-1,2-2].
+
+% Fill the hole:
+?- gf_fill_enclosed([[r,r,r,r],[r,b,b,r],[r,b,b,r],[r,r,r,r]], b, r, R).
+R = [[r,r,r,r],[r,r,r,r],[r,r,r,r],[r,r,r,r]].
+
+% Connected components:
+?- gf_n_components([[r,b,r],[b,b,b],[r,b,r]], r, N).
+N = 4.
+
+% Largest region:
+?- gf_largest([[r,r,b],[r,r,b],[b,b,b]], r, Cells).
+Cells = [0-0,0-1,1-0,1-1].  % 4-cell block
+
+% Connectivity test:
+?- gf_is_connected([[r,r,r],[r,r,r],[r,r,r]], r, 4).
+true.
+?- \+ gf_is_connected([[r,b,r],[b,b,b],[r,b,r]], r, 4).
+true.  % 4 disconnected corners
+
+% Boundary fill:
+?- gf_boundary_fill([[r,r,b],[r,r,b],[b,b,b]], 0, 0, b, g, R).
+R = [[g,g,b],[g,g,b],[b,b,b]].
+
+
+5. Test Coverage
+
+All 54 acceptance criteria (AC-GF-001 through AC-GF-054) are exercised in
+packs/gridflood/test/test_gridflood.pl. Tests cover:
+- gf_fill: same-color no-op, connected block, L-shape region, 1x1 grid, checkerboard island
+- gf_fill8: diagonal 3-cell chain, 2x2 block, same-color no-op
+- gf_recolor: all cells changed, absent color, same-color, disconnected patches
+- gf_isolate: 2x2 block isolation, L-shape isolation, 1x1 grid
+- gf_region_cells: block coordinates, single island, full grid
+- gf_region_size: 4-cell, 1-cell, 9-cell
+- gf_region_bbox: block 0-1 x 0-1, full 0-2 x 0-2, L-shape 0-2 x 0-2
+- gf_enclosed_cells: ring hole, open border, absent color, nested hole
+- gf_fill_enclosed: fill ring holes, no-change on open
+- gf_components: 4 isolated corners, single region, absent color, 1-region
+- gf_n_components: 4, 1, 0, 5 (checkerboard)
+- gf_largest: 4-cell winner, 9-cell only, fail on absent, 1-cell tie
+- gf_is_connected: all-r connected, corners disconnected, diagonal fail-4 pass-8, vacuous, 2x2 block
+- gf_boundary_fill: r region, seed-is-boundary no-op, no-walls case
+- Combined: fill then n_components, fill_enclosed then is_connected, region_cells then fill
+
+
+6. SPARC Documentation
+
+Work Package 225 is recorded in:
+- Specification v191, Part 215 (WP-225-SPEC-001 through WP-225-SPEC-007)
+- Pseudocode v183, Part 215
+- Architecture v185, ARCH-191
+- Refinement v238, AC-GF-001 through AC-GF-054
+- Completion v241, WP-225 record
+
+Tutorial chapter: docs/tutorial/Ch186_GridFlood.txt
+Pack reference: docs/Pack_Reference.txt (gridflood entry)
+PrologAI PR: #314 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridflood pack delivers BFS-based flood-fill and connected-component
+reasoning to PrologAI's raw-grid toolkit. With hole detection, region
+enumeration, largest-region extraction, and boundary-stop fill, the
+cognitive engine can now identify bounded areas, count color blobs, and
+isolate individual objects from complex multi-color scenes.
+
+PrologAI now comprises 225 work packages and reaches Layer 204 in the Data Layer.
