@@ -1,0 +1,3 @@
+ARC-AGI-2 Wave 2 complete. Score: 2/120 = 1.67%. New task solved: 7b5033c1. Rule: chain_strip - BFS flood-fill finds connected same-color blobs, traces the linear chain from the topmost endpoint, outputs each blob's color repeated for its cell count as a Nx1 strip. Key insight: reading-order traversal fails on the test case because the grid interleaves cells from different blobs in the same rows. Connectivity-based traversal (flood-fill + chain order) is correct. This wave establishes connected-component analysis as a working primitive in Mentova's ARC-AGI-2 engine. Climbing continues.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

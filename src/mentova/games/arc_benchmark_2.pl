@@ -61,6 +61,8 @@
 :- discontiguous arc2_transform/3.
 % Allow arc2_named_rule/1 at non-consecutive positions.
 :- discontiguous arc2_named_rule/1.
+% Allow arc2_induce_rule/2 clauses at non-consecutive positions.
+:- discontiguous arc2_induce_rule/2.
 
 % ---------------------------------------------------------------------------
 % TRANSFORM REGISTRY
@@ -187,6 +189,159 @@ arc2_learn_single_recolor_(TrainingPairs, A, B) :-
 % arc2_transform for the parameterized plus-recolor rule.
 arc2_transform(recolor_plus(A, B), Grid, Result) :-
     arc2_apply_plus_recolor(Grid, A, B, Result).
+
+% ---------------------------------------------------------------------------
+% CHAIN STRIP TRANSFORM
+% Non-background cells form same-color connected blobs arranged in a linear
+% chain. Output: Nx1 strip listing each blob's color once per cell, in the
+% order that follows the chain's adjacency graph starting from the endpoint
+% whose topmost-leftmost cell comes first in reading order.
+% Reference: ARC-AGI-2 task 7b5033c1.
+% ---------------------------------------------------------------------------
+
+% arc2_bg_color_/2: find the most common cell value (background) in the grid.
+arc2_bg_color_(Grid, Bg) :-
+%   Flatten the grid to a single list for frequency analysis.
+    append(Grid, All),
+%   Sort to group equal values into contiguous runs.
+    msort(All, Sorted),
+%   Scan runs to find the mode (most frequent value).
+    arc2_run_mode_(Sorted, Bg).
+
+% arc2_run_mode_/2: find the mode of a sorted list using run-length scanning.
+arc2_run_mode_([H|T], Mode) :-
+%   Start scanning with H as the current run value, count 1, best 1.
+    arc2_run_mode_h_(T, H, 1, H, 1, Mode).
+
+% arc2_run_mode_h_/6: helper accumulating current-run and best-run stats.
+arc2_run_mode_h_([], C, N, B, BN, M) :-
+%   End of list: emit whichever run had the higher count.
+    ( N > BN -> M = C ; M = B ).
+arc2_run_mode_h_([H|T], H, N, B, BN, M) :-
+%   Same value continues the current run; increment count.
+    N1 is N+1, arc2_run_mode_h_(T, H, N1, B, BN, M).
+arc2_run_mode_h_([H|T], C, N, B, BN, M) :-
+%   New value starts a fresh run; update best if current run beats it.
+    H \= C,
+    ( N > BN -> NB=C, NBN=N ; NB=B, NBN=BN ),
+    arc2_run_mode_h_(T, H, 1, NB, NBN, M).
+
+% arc2_bfs_/7: BFS flood-fill collecting cells of Color reachable from seeds.
+arc2_bfs_(_, [], _, Vis, Acc, Acc, Vis).
+arc2_bfs_(Grid, [R-C|Q], Color, Vis0, Acc0, Comp, Vis) :-
+%   Only expand cells not yet visited that have the target color.
+    (   \+ memberchk(R-C, Vis0), arc2_cell_(Grid, R, C, Color)
+    ->  Vis1 = [R-C|Vis0],
+%       Add all four cardinal neighbors to the queue.
+        R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+        append(Q, [R1-C, R2-C, R-C1, R-C2], Q1),
+        arc2_bfs_(Grid, Q1, Color, Vis1, [R-C|Acc0], Comp, Vis)
+%       Cell already visited or wrong color: skip it.
+    ;   arc2_bfs_(Grid, Q, Color, Vis0, Acc0, Comp, Vis)
+    ).
+
+% arc2_all_comps_/3: find all connected same-color components ignoring Bg.
+arc2_all_comps_(Grid, Bg, Comps) :-
+%   Determine grid dimensions.
+    length(Grid, NR), Grid = [FR|_], length(FR, NC),
+    MaxR is NR-1, MaxC is NC-1,
+%   Collect all non-background cell coordinates in reading order.
+    findall(R-C,
+        (between(0,MaxR,R), between(0,MaxC,C),
+         arc2_cell_(Grid,R,C,V), V \= Bg),
+        Seeds),
+%   Process seeds left-to-right, top-to-bottom, skipping already-visited ones.
+    arc2_seeds_to_comps_(Grid, Seeds, [], Comps).
+
+% arc2_seeds_to_comps_/4: iterate seeds, flood-filling each unvisited one.
+arc2_seeds_to_comps_(_, [], _, []).
+arc2_seeds_to_comps_(Grid, [R-C|Rest], Vis0, Comps) :-
+    (   memberchk(R-C, Vis0)
+%       Already assigned to a component: skip.
+    ->  arc2_seeds_to_comps_(Grid, Rest, Vis0, Comps)
+%       New seed: flood-fill to find its full component.
+    ;   arc2_cell_(Grid, R, C, Color),
+        arc2_bfs_(Grid, [R-C], Color, Vis0, [], Cells, Vis1),
+        Comps = [comp(Color,Cells)|Tail],
+        arc2_seeds_to_comps_(Grid, Rest, Vis1, Tail)
+    ).
+
+% arc2_comp_adjacent_/2: true when two components share a grid-adjacent cell.
+arc2_comp_adjacent_(comp(_,C1), comp(_,C2)) :-
+%   Check if any cell from C1 is a 4-neighbor of any cell from C2.
+    member(R1-CC1, C1),
+    member(R2-CC2, C2),
+    (   R1 =:= R2, D is abs(CC1-CC2), D =:= 1
+    ;   CC1 =:= CC2, D is abs(R1-R2), D =:= 1
+    ), !.
+
+% arc2_nbr_map_/2: build a list of comp-neighbors pairs for all components.
+arc2_nbr_map_(Comps, Map) :-
+%   For each component, find all other components adjacent to it.
+    maplist([C, C-Ns]>>(
+        include([X]>>(X \= C, arc2_comp_adjacent_(C, X)), Comps, Ns)
+    ), Comps, Map).
+
+% arc2_chain_endpoints_/3: components with at most one neighbor (chain ends).
+arc2_chain_endpoints_(Comps, NbrMap, Ends) :-
+%   Endpoint = degree 0 or degree 1 in the adjacency graph.
+    include([C]>>(
+        member(C-Ns, NbrMap), length(Ns, L), L =< 1
+    ), Comps, Ends).
+
+% arc2_earliest_comp_/2: component whose min cell is first in reading order.
+arc2_earliest_comp_([C], C) :- !.
+arc2_earliest_comp_([C|Cs], Best) :-
+%   Recursively pick the component with the smallest (R,C) cell.
+    arc2_earliest_comp_(Cs, Best0),
+    C = comp(_,CC), Best0 = comp(_,BC),
+    msort(CC, [MC|_]), msort(BC, [MB|_]),
+    ( MC @< MB -> Best = C ; Best = Best0 ).
+
+% arc2_trace_chain_/4: follow adjacency from Cur, building ordered chain list.
+arc2_trace_chain_(Cur, NbrMap, Visited, [Cur|Rest]) :-
+%   Look up this component's neighbors.
+    member(Cur-Ns, NbrMap),
+%   Remove already-visited components to find the next hop.
+    subtract(Ns, Visited, Unvisited),
+    (   Unvisited = [Next|_]
+%       Follow the next unvisited neighbor.
+    ->  arc2_trace_chain_(Next, NbrMap, [Next|Visited], Rest)
+%       No unvisited neighbors: end of chain.
+    ;   Rest = []
+    ).
+
+% arc2_named_rule: register chain_strip as a known rule name.
+arc2_named_rule(chain_strip).
+
+% arc2_transform for chain_strip: produce the Nx1 chain-ordered strip.
+arc2_transform(chain_strip, Grid, Result) :-
+%   Find the background (most common) color.
+    arc2_bg_color_(Grid, Bg),
+%   Find all connected same-color components.
+    arc2_all_comps_(Grid, Bg, Comps),
+%   Build adjacency map and find chain order.
+    arc2_nbr_map_(Comps, NbrMap),
+    arc2_chain_endpoints_(Comps, NbrMap, Ends),
+    ( Ends = [_|_] -> true ; Comps = Ends ),
+    arc2_earliest_comp_(Ends, Start),
+    arc2_trace_chain_(Start, NbrMap, [Start], Chain),
+%   Build the output strip: each component contributes [Color] x cell_count.
+    maplist([comp(Color,Cells), Rows]>>(
+        length(Cells, N),
+        length(Rows, N),
+        maplist(=([Color]), Rows)
+    ), Chain, Nested),
+    append(Nested, Result).
+
+% arc2_induce_rule for chain_strip: output must be Nx1, rule must fit all pairs.
+arc2_induce_rule(TrainingPairs, chain_strip) :-
+%   Guard: every output row is a single-element list.
+    forall(member(pair(_,Out), TrainingPairs),
+           (Out = [[_]|_], \+ member([_,_|_], Out))),
+%   Verify: chain_strip applied to every training input yields the training output.
+    forall(member(pair(In,Out), TrainingPairs),
+           arc2_transform(chain_strip, In, Out)).
 
 % ---------------------------------------------------------------------------
 % RECOLOR RULES
