@@ -1,0 +1,144 @@
+Acc_278: gridgrav Pack - Grid Gravity and Sliding (gra_*, Layer 237)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+
+Abstract
+
+PrologAI Work Package 258 adds the gridgrav pack (gra_*, Layer 237): fourteen
+predicates for making non-bg cells fall or slide toward the edges of their rows
+and columns. The pack covers gravity in all four directions, blocked gravity with
+immovable wall cells, column and row value extraction and placement, a settled-state
+test, and a gravity score. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Grid reasoning tasks frequently require objects to fall, slide, or settle in a
+given direction - colored cells obeying a simulated gravity field. The gridgrav
+pack provides a clean, composable vocabulary for all such operations. Rather than
+requiring callers to implement column extraction, padding, and reconstruction from
+scratch, the pack exposes direct predicates for the most common gravity patterns.
+The blocked variant supports the common task type where certain cells act as fixed
+floors or walls that stop other cells from sliding through them.
+
+
+2. Architecture
+
+Layer 237 sits immediately above gridextract (Layer 236) in the Data Layer.
+Uses library(lists): member/2. All other operations (nth0/3, length/2, append/3,
+between/3, findall/3) are SWI-Prolog built-ins.
+
+Key design decisions:
+
+gra_settle_segment_/4 is the single private helper powering all gravity directions.
+Dir=down or Dir=right packs non-bg values to the end of the segment (bg padding
+first); Dir=up or Dir=left packs to the start. This unifies eight distinct
+gravity behaviors into one three-line predicate.
+
+gra_cols_to_grid_/3 transposes a list of settled column lists back to row-major
+form using a findall+member+nth0 pattern. For column-based operations (down/up),
+columns are processed independently and then transposed back.
+
+gra_segment_apply_/5 powers gra_blocked_fall: it splits a list at each occurrence
+of the BlockColor, settles each segment independently in the given direction, and
+reassembles with BlockColor cells in their original positions.
+
+gra_is_settled/2 is implemented as gra_fall_down(Grid,Bg,Grid): if the result
+unifies with the original grid, the grid is already settled. This is a clean
+functional-equality check with no separate traversal.
+
+
+3. Predicates
+
+Directional fall:
+
+gra_fall_down/3     - each column: non-bg values sink to bottom, bg fills above
+gra_fall_up/3       - each column: non-bg values rise to top, bg fills below
+gra_fall_left/3     - each row: non-bg values slide left, bg fills right
+gra_fall_right/3    - each row: non-bg values slide right, bg fills left
+gra_fall/4          - dispatch by direction atom: down | up | left | right
+
+Extraction:
+
+gra_col_nonbg/4     - non-bg values from a column (0-indexed), top to bottom
+gra_row_nonbg/4     - non-bg values from a row (0-indexed), left to right
+
+Placement:
+
+gra_set_col_bottom/5 - pack values to bottom of column; remaining cells become bg
+gra_set_col_top/5    - pack values to top of column; remaining cells become bg
+gra_set_row_left/5   - pack values to left of row; remaining cells become bg
+gra_set_row_right/5  - pack values to right of row; remaining cells become bg
+
+Blocked gravity:
+
+gra_blocked_fall/5  - gravity with BlockColor cells as immovable walls
+
+State:
+
+gra_is_settled/2    - true if gra_fall_down leaves grid unchanged
+gra_gravity_score/3 - count of cell positions displaced by fall_down
+
+
+4. Example Session
+
+:- use_module(pack(gridgrav/prolog/gridgrav)).
+
+Grid = [[r,b,b],[b,g,b],[b,b,y]].
+
+gra_fall_down(Grid, b, Fallen).
+% Fallen = [[b,b,b],[b,b,b],[r,g,y]].
+
+gra_fall_left(Grid, b, Left).
+% Left = [[r,b,b],[g,b,b],[y,b,b]].
+
+gra_is_settled([[b,b],[r,g]], b).
+% true.
+
+gra_gravity_score([[r,b],[b,b]], b, 2).
+% Score=2: one cell moves (one leave + one arrive).
+
+Blocked gravity:
+
+BlockGrid = [[r,b],[b,b],[blk,b],[g,b]].
+gra_blocked_fall(BlockGrid, b, blk, down, R).
+% R = [[b,b],[r,b],[blk,b],[g,b]].
+% r settles to just above blk; g below blk is unchanged.
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GRA-001 through AC-GRA-044) are exercised in
+packs/gridgrav/test/test_gridgrav.pl. Tests cover gra_col_nonbg (3),
+gra_row_nonbg (3), gra_fall_down (4), gra_fall_up (3), gra_fall_left (3),
+gra_fall_right (3), gra_fall/4 dispatch (4), gra_set_col_bottom (3),
+gra_set_col_top (3), gra_set_row_left (3), gra_set_row_right (3),
+gra_blocked_fall (4), gra_is_settled (2), gra_gravity_score (2), integration (1).
+
+
+6. SPARC Documentation
+
+Work Package 258 is recorded in:
+- Specification v224, Part 248 (WP-258-SPEC-001 through WP-258-SPEC-005)
+- Pseudocode v216, Part 248
+- Architecture v218, ARCH-224
+- Refinement v271, AC-GRA-001 through AC-GRA-044
+- Completion v274, WP-258 record
+
+Tutorial chapter: docs/tutorial/Ch219_GridGrav.txt
+Pack reference: docs/Pack_Reference.txt (gridgrav entry)
+PrologAI PR: #348 (merged 2026-06-27)
+
+
+7. Conclusion
+
+The gridgrav pack provides fourteen gra_* predicates for gravity and sliding
+operations on symbolic grids. The gra_settle_segment_ helper unifies all four
+directional behaviors; blocked gravity adds immovable wall support with the same
+segment-based architecture. The extraction and placement predicates enable
+extract-transform-insert workflows for column- and row-level transformations.
+
+PrologAI now comprises 258 work packages and reaches Layer 237 in the Data Layer.
