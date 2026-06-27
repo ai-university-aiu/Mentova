@@ -1,0 +1,11 @@
+PrologAI Work Package 272: Multi-Pair Object Tracking (multipair pack, mp_*, Layer 251)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+To understand an ARC task, you need to track the same object across all training examples, not just within one.
+
+Work Package 272 introduces the multipair pack: 14 mp_* predicates for cross-pair object identity. tracked(Idx, Color, PairIdxList) gives every object a consistent identity. Universal vs variable colors separate content from markers. Disappeared and appeared objects flag what the task erases or creates.
+
+273 work packages. Glass-box tracking from first principles.
+
+#PrologAI #SymbolicAI #ARCAGI2

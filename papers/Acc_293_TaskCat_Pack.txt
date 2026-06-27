@@ -1,0 +1,13 @@
+Acc_293: Task Type Classification Pack (tc_*, Layer 252)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+PrologAI Work Package 273 introduces the taskcat pack (tc_*, Layer 252): fourteen predicates for classifying grid transformation tasks by type and selecting appropriate solving strategies. The four task categories are: single_rule, multi_step, context_gated, and symbol_table. All 44 acceptance tests pass.
+
+tc_categorize/2 implements the Chain of Responsibility pattern: it tries single_rule first (simplest wins), then multi_step, then context_gated, then symbol_table as the fallback. tc_suggest_strategies/2 returns an ordered strategy list for each category, enabling systematic fallback through seqinfer_2step, seqinfer_3step, context_gate_search, and symbol_table_learning.
+
+tc_is_single_rule/1 checks for consistent change counts, uniform change patterns, and preserved dimensions. tc_is_multi_step/1 detects sequential tasks from max/average change ratios and distinct pattern counts. tc_has_context_gate/1 detects tasks where an input color separates pairs by change count. tc_has_symbol_table/1 detects tasks where inputs consistently have more distinct colors than outputs.
+
+tc_confidence/2 returns a 0.0-1.0 confidence score based on dims, count, and pattern uniformity. This pack is the strategy dispatch layer for the ARC-AGI-2 solver.
