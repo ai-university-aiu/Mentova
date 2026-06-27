@@ -1,0 +1,11 @@
+Acc_281: gridcolorop Pack - Grid Color Operations (gco_*, Layer 240)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI reaches Work Package 261 with the gridcolorop pack (Layer 240): fourteen gco_* predicates for querying and transforming color distributions in symbolic grids.
+
+The pack covers color counting, distinct-color listing, Nth-color selection, color swapping, replacement, map-based substitution, keep-only masking, color removal, palette cycling, frequency-rank replacement, palette application, most/least color query, and binary inversion. A critical implementation detail: frequency sorting uses arithmetic integer negation (Neg is -N) rather than the compound term -N, which ensures msort produces correctly descending frequency order. All 44 tests pass.
+
+PrologAI now has 261 work packages and a thirty-eight-pack grid reasoning suite at Layers 204-240.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #GridReasoning #ColorReasoning
