@@ -1,0 +1,132 @@
+Acc_276: gridblend Pack - Grid Blending and Layered Composition (gbld_*, Layer 235)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 256 adds the gridblend pack (gbld_*, Layer 235): ten
+predicates for compositing grids in layers, applying spatial blend patterns,
+and reducing lists of grids to a single composite. All operations treat one
+designated BgColor as transparent. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many symbolic reasoning tasks involve combining information from multiple grids
+into a single output: placing a foreground over a background, masking a region
+with a stencil, blending by spatial pattern, or voting across a set of candidates.
+The gridblend pack provides a clean vocabulary for all of these composition
+operations, building directly on the transparency model established by earlier
+grid packs.
+
+The core abstraction: BgColor is transparent. A cell with BgColor in one layer
+yields to the cell below it. This is the common thread through all ten predicates.
+
+
+2. Architecture
+
+Layer 235 sits immediately above gridchain (Layer 234) in the Data Layer.
+Uses library(lists): member/2, nth0/3; msort/2 as a built-in.
+
+Key design decisions:
+
+gbld_overlay and gbld_underlay use symmetric row/cell recursive helpers that
+differ only in which grid's non-bg cell wins. gbld_stencil reuses SC as both
+the selection trigger and the fill value, keeping the API to four arguments.
+
+gbld_priority folds the grid list right-to-left by repeated gbld_overlay: last
+grid becomes the base, each preceding grid overlays it. The first grid is topmost.
+gbld_merge_many folds left-to-right: first grid is the base; each subsequent grid
+overlays the accumulated result. The last grid is topmost.
+
+gbld_checker_blend and gbld_stripe_blend use findall with positional arithmetic
+for clean, deterministic spatial patterning.
+
+gbld_dominant uses msort + a run-length scan (gbld_best_run_/6) to find the mode
+of non-bg values at each position. gbld_composite dispatches to one of the three
+reduction predicates via a cut-guarded three-clause definition.
+
+
+3. Predicates
+
+Two-grid composition:
+
+gbld_overlay/4          - Top over Bottom (non-bg in Top wins)
+gbld_underlay/4         - Bottom over Top (non-bg in Bottom wins)
+gbld_stencil/4          - keep Source only where Stencil = StencilColor
+
+List-wide reduction:
+
+gbld_priority/3         - first grid topmost (priority layering)
+gbld_merge_many/3       - last grid topmost (bottom-up accumulation)
+gbld_dominant/3         - most frequent non-bg per cell (plurality vote)
+gbld_composite/4        - mode-dispatched: overlay | underlay | dominant
+
+Spatial pattern blending:
+
+gbld_checker_blend/5    - blend by checkerboard parity (R+C) mod 2
+gbld_stripe_blend/5     - blend by horizontal row stripes of given width
+
+Threshold-based:
+
+gbld_threshold_replace/5 - replace non-bg cells in rows meeting a count threshold
+
+
+4. Example Session
+
+:- use_module(pack(gridblend/prolog/gridblend)).
+
+gbld_overlay([[r,b],[b,b]], [[g,g],[g,g]], b, R).
+% R = [[r,g],[g,g]]
+
+gbld_stencil([[r,g],[g,r]], [[m,b],[b,m]], m, R).
+% R = [[r,m],[m,r]]
+
+gbld_checker_blend([[r,r],[r,r]], [[g,g],[g,g]], b, 0, R).
+% R = [[r,g],[g,r]]
+
+gbld_dominant([[[r,b]], [[r,g]], [[b,g]]], b, R).
+% R = [[r,g]]    (r appears twice at col 0; g twice at col 1)
+
+gbld_composite([G1,G2,G3], b, overlay, R).   % first on top
+gbld_composite([G1,G2,G3], b, underlay, R).  % last on top
+gbld_composite([G1,G2,G3], b, dominant, R).  % most frequent
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GBLD-001 through AC-GBLD-044) are exercised in
+packs/gridblend/test/test_gridblend.pl. Tests cover gbld_overlay (3),
+gbld_underlay (3), gbld_stencil (3), gbld_priority (3), gbld_checker_blend (3),
+gbld_stripe_blend (3), gbld_threshold_replace (3), gbld_merge_many (3),
+gbld_dominant (3), gbld_composite (3), edge cases (9), and integration (2).
+
+
+6. SPARC Documentation
+
+Work Package 256 is recorded in:
+- Specification v222, Part 246 (WP-256-SPEC-001 through WP-256-SPEC-005)
+- Pseudocode v214, Part 246
+- Architecture v216, ARCH-222
+- Refinement v269, AC-GBLD-001 through AC-GBLD-044
+- Completion v272, WP-256 record
+
+Tutorial chapter: docs/tutorial/Ch217_GridBlend.txt
+Pack reference: docs/Pack_Reference.txt (gridblend entry)
+PrologAI PR: #345 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridblend pack provides ten gbld_* predicates for layered grid composition
+and spatial blending. The uniform transparency model (BgColor = absent) makes
+overlay, underlay, priority, merge, and dominant all directly comparable and
+composable. The spatial pattern predicates (checker and stripe) extend this
+vocabulary to position-dependent blending. The mode-dispatched composite
+predicate provides a single entry point for the three most common reduction
+strategies.
+
+PrologAI now comprises 256 work packages and reaches Layer 235 in the Data Layer.
