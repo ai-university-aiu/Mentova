@@ -1,0 +1,11 @@
+Acc_258: gridspiral Pack - Grid Spiral Traversal (gsp_*, Layer 217)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI reaches Work Package 238 with the gridspiral pack (Layer 217): fourteen gsp_* predicates for clockwise spiral traversal of symbolic grids.
+
+The pack covers spiral cell ordering, value reading and writing, position lookup, per-frame spirals, uniformity testing, counting, rotation, and slicing. 44/44 tests pass.
+
+PrologAI now has 238 work packages and a fourteen-pack grid reasoning suite at Layers 204-217.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #GridReasoning #SpiralTraversal
