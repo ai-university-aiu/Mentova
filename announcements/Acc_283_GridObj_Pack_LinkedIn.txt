@@ -1,0 +1,21 @@
+Acc_283: PrologAI gains connected component analysis, flood fill, and object manipulation.
+
+The gridobj pack (Layer 242, gob_* prefix) adds 14 predicates for treating symbolic
+grids as collections of discrete objects rather than flat color arrays.
+
+4-connected BFS discovers which cells belong to each object. From there: query color,
+size, and bounding box; generate a mask or extract the bounding-box subgrid; flood fill
+a region with a new color; fill enclosed Bg regions surrounded by non-Bg cells; remove
+an object; or move it to a new position.
+
+The enclosed-fill predicate uses a reverse BFS strategy: seed simultaneously from all
+border Bg cells, collect everything reachable, then fill everything that is NOT
+reachable - the enclosed regions.
+
+44/44 tests pass. 263 work packages total. Layer 242 in the Data Layer.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #SymbolicAI #ConnectedComponents #ARC #CognitiveSystems
