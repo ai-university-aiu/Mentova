@@ -1,0 +1,138 @@
+Acc_271: gridshift Pack - Grid Shifting and Cyclic Rolling (gsh_*, Layer 230)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 251 adds the gridshift pack (gsh_*, Layer 230): fourteen
+predicates for shifting and rolling symbolic grids. The pack covers linear
+directional shifts with background fill, toroidal cyclic rolls, per-row and
+per-column operations, color-specific shifting, and full-grid offset.
+All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many symbolic reasoning tasks on grids require moving content in a direction,
+either linearly (with new cells filling in from the background) or cyclically
+(with cells wrapping around to the other side). The gridshift pack provides
+both modes cleanly for all four cardinal directions, at the level of the entire
+grid, individual rows, and individual columns. The color-specific shift and
+full-grid offset round out the pack with operations that move specific content
+to new positions.
+
+
+2. Architecture
+
+Layer 230 sits immediately above gridwave (Layer 229) in the Data Layer.
+Uses library(lists): nth0/3, append/2, append/3, last/2.
+
+Key design decisions:
+
+Linear shifts: gsh_shift_right uses a private helper gsh_shift_row_r_ which
+clamps N to the row width, takes the first (W-N) elements, then prepends N
+background values. Shifts by N >= W produce all-bg rows.
+
+Cyclic rolls: gsh_roll_list_ splits the list at position (W - N mod W), then
+swaps the prefix and suffix. gsh_roll_left converts to an equivalent roll_right.
+gsh_roll_down and gsh_roll_up use the same gsh_roll_list_ on the row list.
+
+Column operations: gsh_roll_col and gsh_shift_col both transpose the grid,
+apply the corresponding row operation, and transpose back. This reuses the
+row logic uniformly.
+
+gsh_offset: a clean grid-level predicate that computes Result[R][C] from
+Grid[R-DR][C-DC] for in-bounds sources, and BgColor otherwise. It unifies
+the concept of "shift right + shift down" in a single step.
+
+
+3. Predicates
+
+Linear shifts:
+
+gsh_shift_right/4  - shift each row right by N (bg fill on left)
+gsh_shift_left/4   - shift each row left by N (bg fill on right)
+gsh_shift_down/4   - shift all rows down by N (bg rows at top)
+gsh_shift_up/4     - shift all rows up by N (bg rows at bottom)
+
+Cyclic rolls:
+
+gsh_roll_right/3   - cyclically roll each row right by N (toroidal)
+gsh_roll_left/3    - cyclically roll each row left by N (toroidal)
+gsh_roll_down/3    - cyclically roll entire grid down by N rows
+gsh_roll_up/3      - cyclically roll entire grid up by N rows
+
+Per-row and per-column:
+
+gsh_roll_row/4     - cyclically roll row R right by N
+gsh_roll_col/4     - cyclically roll column C down by N (via transpose)
+gsh_shift_row/5    - shift row R by N (pos=right, neg=left)
+gsh_shift_col/5    - shift column C by N (pos=down, neg=up; via transpose)
+
+Color-specific and full-grid:
+
+gsh_shift_color/6  - shift all cells of Color by (DR, DC); OOB disappears
+gsh_offset/5       - Result[R][C] = Grid[R-DR][C-DC] or BgColor
+
+
+4. Example Session
+
+:- use_module(pack(gridshift/prolog/gridshift)).
+
+G = [[a,b,c],[d,e,f],[g,h,i]].
+
+gsh_shift_right(G, 1, z, R).
+% R = [[z,a,b],[z,d,e],[z,g,h]]
+
+gsh_roll_right(G, 1, R).
+% R = [[c,a,b],[f,d,e],[i,g,h]]
+
+gsh_roll_down(G, 1, R).
+% R = [[g,h,i],[a,b,c],[d,e,f]]
+
+gsh_roll_col(G, 0, 1, R).
+% R = [[g,b,c],[a,e,f],[d,h,i]]  (col 0 rolled down)
+
+% Roll round-trip:
+gsh_roll_right(G, 2, R1), gsh_roll_left(R1, 2, G).
+
+% Offset equivalence:
+gsh_shift_right(G, 1, z, SR), gsh_offset(G, 0, 1, z, SR).
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GSH-001 through AC-GSH-044) are exercised in
+packs/gridshift/test/test_gridshift.pl. Tests cover gsh_shift_right (3),
+gsh_shift_left (3), gsh_shift_down (3), gsh_shift_up (3), gsh_roll_right (3),
+gsh_roll_left (3), gsh_roll_down (3), gsh_roll_up (3), gsh_roll_row (3),
+gsh_roll_col (3), gsh_shift_color (3), gsh_offset (3), gsh_shift_row (3),
+gsh_shift_col (3), combined (2).
+
+
+6. SPARC Documentation
+
+Work Package 251 is recorded in:
+- Specification v217, Part 241 (WP-251-SPEC-001 through WP-251-SPEC-005)
+- Pseudocode v209, Part 241
+- Architecture v211, ARCH-217
+- Refinement v264, AC-GSH-001 through AC-GSH-044
+- Completion v267, WP-251 record
+
+Tutorial chapter: docs/tutorial/Ch212_GridShift.txt
+Pack reference: docs/Pack_Reference.txt (gridshift entry)
+PrologAI PR: #340 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridshift pack provides fourteen gsh_* predicates for shifting and rolling
+symbolic grids in all four cardinal directions. The uniform design - linear shifts
+with background fill, toroidal cyclic rolls, and per-row/column operations -
+gives callers precise control over how grid content moves. The shift_color and
+offset predicates extend these operations to content-aware and diagonal movement.
+
+PrologAI now comprises 251 work packages and reaches Layer 230 in the Data Layer.

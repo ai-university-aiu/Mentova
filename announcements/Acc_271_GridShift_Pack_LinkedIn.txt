@@ -1,0 +1,11 @@
+Acc_271: gridshift Pack - Grid Shifting and Cyclic Rolling (gsh_*, Layer 230)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI reaches Work Package 251 with the gridshift pack (Layer 230): fourteen gsh_* predicates for shifting and rolling symbolic grids.
+
+The pack covers linear shifts with background fill in all four directions, toroidal cyclic rolls, per-row and per-column rolling and shifting, color-specific cell shifting, and full-grid offset. All 44 tests pass.
+
+PrologAI now has 251 work packages and a twenty-seven-pack grid reasoning suite at Layers 204-230.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #GridReasoning #GridShift
