@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-264-FF6B35?style=for-the-badge" alt="264 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-265-FF6B35?style=for-the-badge" alt="265 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -551,6 +551,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_259` | GridDelta pack paper — Grid Delta Analysis (Layer 218, gdt_*): 14 gdt_* predicates for difference detection, change maps, color transitions, delta application and inversion, overlay, and identity testing. |
 | `Acc_260` | GridRowCol pack paper — Grid Row and Column Comparative Analysis (Layer 219, grc_*): 14 grc_* predicates for extracting, comparing, sorting, and finding matching rows and columns. |
 | `Acc_261` | GridSeg pack paper — Grid Segmentation by Separator Rows and Columns (Layer 220, gsg_*): 14 gsg_* predicates for separator detection, splitting, panel extraction, and border trimming. |
+| `Acc_265` | GridTile pack paper — Grid Tiling Pattern Analysis (Layer 224, gti_*): 14 gti_* predicates for period detection, tile extraction, tiling verification, row/col periodicity, tile counting, matching, offset, and minimal tile cropping. |
 | `Acc_264` | GridGrav pack paper — Grid Gravity Simulation (Layer 223, gv_*): 14 gv_* predicates for settling non-bg cells in four directions, pile analysis, floating cell detection, and column gap and count queries. |
 | `Acc_263` | GridPos pack paper — Grid Positional Analysis (Layer 222, gps_*): 14 gps_* predicates for halves, quadrants, even/odd rows and columns, checkerboard, center cell, corners, and center cross extraction. |
 | `Acc_262` | GridHist pack paper — Grid Histogram Analysis (Layer 221, ghst_*): 14 ghst_* predicates for per-row and per-column color frequency histograms, modal color, entropy, and threshold selection. |
