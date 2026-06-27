@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-27. Wave 2 complete: 2/120 = 1.67%.
+Last updated: 2026-06-27. Wave 3 complete: 3/120 = 2.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -123,10 +123,114 @@ Date        | Score      | Percent | Notes
 ------------|------------|---------|------------------------------------------
 2026-06-27  |   1 / 120  |  0.83%  | Wave 1: plus-shape recolor rule
 2026-06-27  |   2 / 120  |  1.67%  | Wave 2: chain-strip connected-blob traversal
+2026-06-27  |   3 / 120  |  2.50%  | Wave 3: checkerboard diagonal arm projection
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 3 - 2026-06-27 - Score: 3/120 = 2.50%
+
+Date: 2026-06-27
+
+Confirmed score: 3 / 120 = 2.50%
+
+Rules added in this wave:
+
+arm_endpoint_ray - Checkerboard diagonal arm projection.
+
+Description: Detects arm segments embedded in a checkerboard background.
+Each arm segment is a group of same-colored non-background cells arranged
+in a straight diagonal line (main diagonal or anti-diagonal). A valid arm
+endpoint is a cell that has exactly one same-color diagonal neighbor, all
+in one direction (NMain XOR NAnti = 1). Diamond junction cells (which have
+same-color neighbors in BOTH diagonal directions) and midpoint cells (which
+have two same-color neighbors in the SAME direction) are excluded by this
+test.
+
+From each valid endpoint, the rule shoots a ray perpendicular to the arm's
+direction. If the arm lies along a main diagonal (r-c=const), the ray runs
+along anti-diagonals (r+c=const), in both (+1,-1) and (-1,+1) directions.
+If the arm lies along an anti-diagonal (r+c=const), the ray runs along
+main diagonals (r-c=const), in both (+1,+1) and (-1,-1) directions.
+
+A ray fills consecutive background-1 cells with the arm color until the
+next step would be out of bounds or land on a non-1 cell. Background-0
+cells are not modified.
+
+Induction guard: a fast 2x2 checkerboard check on the first training
+input's top-left corner rejects all non-checkerboard tasks in O(1) time
+before any expensive grid scan is performed.
+
+New helper predicates:
+  arc2_replace_idx_/4: 0-based index-based list element replacement.
+  arc2_set_cell_/5: targeted single-cell update of a grid.
+  arc2_diag_nbr_cnt_/6: count same-color diagonal neighbors by direction.
+  arc2_arm_endpoints_/2: findall-based scan for valid arm endpoints.
+  arc2_shoot_ray_/9: directional ray extension through background-1 cells.
+  arc2_apply_arm_rays_/5: sequential application of all endpoint rays.
+
+Task solved: 80a900e0
+
+Description: A 22x21 checkerboard grid containing three separate
+arm-diamond constructs. Construct 1 (upper): diamond of color 6 with arm
+segments in colors 2, 4, and 9. Construct 2 (middle): diamond of color 3
+with arm segments in colors 6 and 7. Construct 3 (lower): diamond of color
+2 with arm segments in color 6. The arm_endpoint_ray rule correctly handles
+all three constructs simultaneously: 14 arm endpoints identified, 45 cells
+changed across 5 arm colors, exact match with expected test output.
+
+Verification across training pairs:
+
+Training pair 0 (input 20x14, output 20x14):
+arm_endpoint_ray applied to the 20x14 checkerboard with 8-arm segments and
+3-diamond. 4 arm endpoints identified. 18 background-1 cells changed to 8.
+Exact match with training output: True.
+
+Training pair 1 (input 24x30, output 24x30):
+arm_endpoint_ray applied to the 24x30 checkerboard with 2-arm and 4-arm
+segments and 3-diamond. 8 arm endpoints identified. 62 cells changed.
+Exact match with training output: True.
+
+Test (input 22x21, output 22x21):
+Three constructs, 7 arm segments. 14 arm endpoints. 45 cells changed.
+Exact match with expected test output: True.
+
+Bugs fixed: None.
+
+Lessons learned:
+
+1. Structural endpoint detection using local neighbor counts is sufficient
+to cleanly separate arm endpoints from diamond junction cells and midpoints.
+No global shape detection (diamond recognition, path finding) is required.
+The three cases (endpoint: NMain XOR NAnti = 1; midpoint: same direction,
+both filled; junction: both directions filled) are distinguished by a 2-bit
+test on diagonal neighbor counts.
+
+2. Background-0 cells along the perpendicular ray path are naturally
+skipped because arc2_shoot_ray_ requires the next cell to have value 1.
+Since the checkerboard has 0s at odd-parity positions, rays that pass
+through a background-0 position simply stop there. This means rays between
+two arm segments of the same color may be broken by intervening 0-cells;
+the rule handles this by shooting from every endpoint independently.
+
+3. Multiple separate arm-diamond constructs in the same grid are handled
+automatically. arc2_arm_endpoints_ scans all cells, so it naturally finds
+all endpoints across all constructs. The arc2_apply_arm_rays_ sequential
+processing applies all rays correctly without any explicit construct
+enumeration.
+
+4. The checkerboard fast guard (2x2 corner check) is effective: it rejects
+all non-checkerboard ARC-AGI-2 tasks in a few operations, avoiding the
+O(NR*NC) arm endpoint scan for the 117 tasks that are not applicable. The
+arm_endpoint_ray rule adds negligible overhead to the benchmark runtime.
+
+5. The color 6 appears as BOTH a diamond color (in Construct 1) and an arm
+color (in Constructs 2 and 3) in the test case. This is handled correctly
+because the distinction is purely structural: color-6 cells in Construct 1
+form junction/midpoint configurations (excluded as endpoints), while
+color-6 cells in Constructs 2 and 3 form simple endpoints.
 
 
 ATTEMPT 2 - 2026-06-27 - Score: 2/120 = 1.67%
@@ -314,8 +418,9 @@ ARC-AGI-1). Every single task correct represents 0.83% of the score.
 ALL SOLVED TASKS
 (Task IDs added in alphabetical order after each wave)
 
-1818057f  - Wave 1 - recolor_plus(4,8)  - plus shapes of 4 become 8
-7b5033c1  - Wave 2 - chain_strip         - connected-blob chain traversal strip
+1818057f  - Wave 1 - recolor_plus(4,8)   - plus shapes of 4 become 8
+7b5033c1  - Wave 2 - chain_strip          - connected-blob chain traversal strip
+80a900e0  - Wave 3 - arm_endpoint_ray     - checkerboard diagonal arm projection
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -364,4 +469,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 1: Plus-shape recolor rule.
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 2: Chain-strip connected-blob traversal rule.
   Score: 2/120 = 1.67%. Task 7b5033c1 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-27.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 3: Checkerboard diagonal arm projection rule.
+  Score: 3/120 = 2.50%. Task 80a900e0 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-27.

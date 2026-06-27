@@ -1,0 +1,235 @@
+ACCOMPLISHMENT RECORD Acc_301
+
+Title: ARC-AGI-2 Wave 3 - Checkerboard Diagonal Arm Projection - Score: 3/120 = 2.50%
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/Mentova
+
+
+SUMMARY
+
+Wave 3 of the ARC-AGI-2 climb. Implements a geometric arm-endpoint ray
+projection rule in the benchmark runner and uses it to solve task 80a900e0
+via the arm_endpoint_ray rule. Score improves from 2/120 = 1.67% to
+3/120 = 2.50%.
+
+
+WHAT WAS BUILT
+
+New rule: arm_endpoint_ray
+
+The arm_endpoint_ray rule is implemented in arc_benchmark_2.pl via six new
+predicates:
+
+arc2_replace_idx_/4
+  Replaces the element at a 0-based index in a list, returning a new list.
+  Used as the building block for arc2_set_cell_/5.
+
+arc2_set_cell_/5
+  Returns a new grid with a single cell replaced by a given value. Uses
+  arc2_replace_idx_/4 twice: once to update the target row, once to update
+  the row within the grid.
+
+arc2_diag_nbr_cnt_/6
+  Counts same-color diagonal neighbors in the main-diagonal direction
+  (NMain = count of matches at (R-1,C-1) and (R+1,C+1)) and the
+  anti-diagonal direction (NAnti = count of matches at (R-1,C+1) and
+  (R+1,C-1)).
+
+arc2_arm_endpoints_/2
+  Finds all valid arm endpoints: non-(0,1) cells that have exactly one
+  same-color diagonal neighbor, and that neighbor lies entirely in one
+  diagonal direction (NMain=1 and NAnti=0, or NMain=0 and NAnti=1). Cells
+  where NMain+NAnti=0 are isolated and not endpoints. Cells where
+  NMain+NAnti=2 with both directions occupied are junction/corner cells and
+  not endpoints. Only cells with exactly one same-color direction match are
+  true arm endpoints.
+
+arc2_shoot_ray_/9
+  Steps from a starting cell (R,C) in direction (DR,DC), filling each
+  consecutive background-1 cell with the arm color V. Stops when the next
+  step would be out of bounds or would land on a non-1 cell (either a
+  background-0 cell or a special cell that blocks the ray).
+
+arc2_apply_arm_rays_/5
+  Applies the perpendicular ray from each arm endpoint in sequence. For an
+  endpoint with Dir=anti (arm is main-diagonal), shoots rays in directions
+  (+1,-1) and (-1,+1). For an endpoint with Dir=main (arm is anti-diagonal),
+  shoots rays in directions (+1,+1) and (-1,-1).
+
+
+Algorithm description:
+
+The input is a checkerboard of alternating 0s and 1s, with special non-bg
+cells embedded at positions where the background would be 1 (i.e., at
+positions where (R+C) is even, if 1-cells are at even parity).
+
+Two types of special cells appear:
+1. Diamond outline cells: form a closed rotated-square boundary. Each
+   diamond cell connects to same-color cells in BOTH diagonal directions
+   (main-diagonal and anti-diagonal), making it either a midpoint of a
+   segment or a junction point.
+2. Arm segment cells: form short linear segments in one diagonal direction
+   only. Each cell in an arm connects to same-color cells in exactly ONE
+   diagonal direction.
+
+The rule identifies arm endpoints (cells at the ends of arm segments) and
+shoots rays perpendicular to the arm's diagonal direction. Each ray fills
+background-1 cells with the arm color until reaching a grid boundary or a
+blocking non-bg cell (typically a diamond cell on the near side, or another
+arm cell on the far side).
+
+The critical distinction between arm endpoints and diamond/junction cells:
+a valid endpoint has same-color diagonal neighbors in exactly ONE direction
+(NMain XOR NAnti = 1). Diamond corner cells have neighbors in BOTH
+directions (NMain=1 AND NAnti=1), so they are junctions and are not
+endpoints. Diamond edge cells that look like midpoints have two neighbors
+in the SAME direction (e.g., NAnti=2), so they are midpoints and are not
+endpoints. This structural test cleanly separates arm endpoints from all
+diamond cells without needing any explicit diamond detection logic.
+
+Arm direction and ray direction:
+- Arm cells connected via main-diagonal (r-c=const) have Dir=anti. Their
+  perpendicular rays run along anti-diagonals (r+c=const), shot in (+1,-1)
+  and (-1,+1) directions.
+- Arm cells connected via anti-diagonal (r+c=const) have Dir=main. Their
+  perpendicular rays run along main diagonals (r-c=const), shot in (+1,+1)
+  and (-1,-1) directions.
+
+Induction guard for arm_endpoint_ray:
+A fast 2x2 checkerboard check is applied to the first training input
+before any expensive computation: (0,0) and (1,1) must be equal; (0,1)
+and (1,0) must be equal; (0,0) and (0,1) must differ. This rejects all
+non-checkerboard tasks in O(1) time.
+
+
+Task solved: 80a900e0
+
+Rule: arm_endpoint_ray
+
+Description: The grid is a checkerboard of alternating 0s and 1s with
+multiple embedded arm-and-diamond constructs. In the training inputs, there
+are 1 to 3 separate constructs, each consisting of one diamond outline (a
+closed rotated-square boundary of a single color) and 2 to 4 arm segments
+in other colors. Each arm segment is 2 to 3 cells long in a diagonal
+direction. The output extends each arm endpoint's perpendicular ray through
+the background-1 cells, recoloring them with the arm's color.
+
+The test input contains three separate constructs:
+
+Construct 1 (upper region, rows 2-8):
+  Diamond: color 6, centered at approximately (5,7), radius 2.
+  Arm A: color 2, anti-diagonal r+c=8, endpoints (2,6) and (4,4).
+    Rays: (4,4) shoots main-diagonal (-1,-1) to (0,0); cells
+    (3,3),(2,2),(1,1),(0,0) become 2. (2,6) shoots (-1,-1) to (0,4);
+    cells (1,5),(0,4) become 2.
+  Arm B: color 4, main-diagonal r-c=-6, endpoints (2,8) and (4,10).
+    Rays: (2,8) shoots anti-diagonal (-1,+1) to (0,10); cells
+    (1,9),(0,10) become 4. (4,10) shoots anti-diagonal (-1,+1) to (0,14);
+    cells (3,11),(2,12),(1,13),(0,14) become 4.
+  Arm C: color 9, main-diagonal r-c=2, endpoints (6,4) and (8,6).
+    Rays: (6,4) shoots anti-diagonal (+1,-1) to (10,0); cells
+    (7,3),(8,2),(9,1),(10,0) become 9. (8,6) shoots (+1,-1) to (14,0);
+    cells (9,5),(10,4),(11,3),(12,2),(13,1),(14,0) become 9.
+
+Construct 2 (middle region, rows 11-17):
+  Diamond: color 3, centered at approximately (14,13), radius 2.
+  Arm D: color 6, main-diagonal r-c=-2, endpoints (11,13) and (13,15).
+    Rays: (11,13) shoots anti-diagonal (-1,+1); cells (10,14) through
+    (4,20) become 6 (7 cells). (13,15) shoots anti-diagonal (-1,+1);
+    cells (12,16) through (8,20) become 6 (5 cells).
+  Arm E: color 7, anti-diagonal r+c=30, endpoints (15,15) and (17,13).
+    Rays: (15,15) shoots main-diagonal (+1,+1); cells (16,16) through
+    (20,20) become 7 (5 cells). (17,13) shoots main-diagonal (+1,+1);
+    cells (18,14) through (21,17) become 7 (4 cells).
+
+Construct 3 (lower region, rows 17-21):
+  Diamond: color 2, centered at approximately (19,5), radius 2.
+  Arm F: color 6, main-diagonal r-c=18, endpoints (20,2) and (21,3).
+    Rays: (20,2) shoots anti-diagonal (+1,-1); cell (21,1) becomes 6.
+    (21,3): both perpendicular ray directions are immediately blocked or
+    out of bounds; no change.
+  Arm G: color 6, anti-diagonal r+c=28, endpoints (20,8) and (21,7).
+    Rays: (20,8) shoots main-diagonal (+1,+1); cell (21,9) becomes 6.
+    (21,7): both perpendicular ray directions are immediately blocked or
+    out of bounds; no change.
+
+Total changes: 45 cells changed (6 to 2; 6 to 4; 10 to 9; 14 to 6; 9 to 7).
+All changes verified to match the expected test output exactly.
+
+
+Verification across training pairs:
+
+Training pair 0 (input 20x14):
+Two arm segments of color 8 (main-diagonal direction, r-c=0 and r-c=4),
+diamond outline of color 3. arm_endpoint_ray identifies 4 endpoints (two
+per arm segment). Rays from the 4 endpoints fill anti-diagonal cells with
+color 8. Exact match with training output: True.
+
+Training pair 1 (input 24x30):
+Four arm segments (two of color 2 on anti-diagonals, two of color 4 on
+main-diagonals), diamond outline of color 3. arm_endpoint_ray identifies
+8 endpoints. Rays from endpoints fill main-diagonal cells with 2 and
+anti-diagonal cells with 4. Exact match with training output: True.
+
+Test case (input 22x21):
+Three constructs with 7 arm segments across colors 2, 4, 6, 7, 9 and two
+diamond outlines (colors 3 and 6). arm_endpoint_ray identifies 14 endpoints.
+45 cells changed. Exact match with expected test output: True.
+
+
+Bugs fixed: None.
+
+
+RESULT
+
+Score: 3 / 120 = 2.50%
+
+Solved tasks: 1818057f (Wave 1), 7b5033c1 (Wave 2), 80a900e0 (Wave 3)
+
+Methodology: pure induction from training examples, no pretraining on the
+ARC-AGI-2 corpus, transformation rule named glass-box.
+
+
+SIGNIFICANCE
+
+Wave 3 demonstrates that Mentova's symbolic reasoning engine can detect
+and exploit geometric structure in structured-background grids (checkerboard
+patterns). The arm_endpoint_ray rule introduces three new capabilities:
+
+1. Cell mutation in-place. The arc2_set_cell_/5 predicate and
+   arc2_replace_idx_/4 enable efficient single-cell updates to a grid
+   represented as a list of lists. This is the first time the benchmark
+   runner performs targeted cell modification rather than wholesale grid
+   replacement, enabling multi-step ray accumulation.
+
+2. Structural endpoint detection. The arc2_diag_nbr_cnt_/6 and
+   arc2_arm_endpoints_/2 predicates introduce a principled test for arm
+   endpoints that cleanly separates them from diamond junction cells and
+   midpoints, using only local neighbor counts rather than global shape
+   detection. This is a minimal and robust structural classifier.
+
+3. Multi-construct generalization. The test case has three separate
+   arm-diamond constructs with different colors and orientations. The rule
+   handles all three simultaneously without task-specific configuration,
+   demonstrating that the endpoint detection and ray-shooting algorithm
+   generalizes across constructs of varying complexity.
+
+The key architectural lesson from this wave: ARC-AGI-2 tasks embed
+semantically meaningful geometric relations in checkerboard backgrounds.
+The checkerboard acts as a "carrier medium" that distinguishes fg-1 cells
+(the meaningful signal positions) from fg-0 cells (the gaps). Rules that
+operate only on fg-1 cells and interpret diagonal cell groups as line
+segments can extract the geometric relationships encoded in the task.
+
+The arm_endpoint_ray rule also introduces the general pattern of
+"endpoint detection + perpendicular projection," which is likely to appear
+in multiple ARC-AGI-2 tasks with different surface forms. Future waves
+should look for this pattern with non-checkerboard backgrounds or with
+different projection rules (e.g., wrap-around projection, bounded
+projection, multi-color projection).

@@ -344,6 +344,137 @@ arc2_induce_rule(TrainingPairs, chain_strip) :-
            arc2_transform(chain_strip, In, Out)).
 
 % ---------------------------------------------------------------------------
+% ARM ENDPOINT RAY TRANSFORM
+% Background is a checkerboard of alternating 0s and 1s.  Non-background
+% special cells form diagonal arm segments.  Each arm endpoint -- a special
+% cell with exactly one same-color diagonal neighbor in one direction and zero
+% in the other -- shoots a perpendicular ray that fills background-1 cells
+% with the arm color until the ray exits the grid or hits a non-bg cell.
+% Reference: ARC-AGI-2 task 80a900e0 (checkerboard diagonal arm projection).
+% ---------------------------------------------------------------------------
+
+% arc2_replace_idx_/4: replace the element at 0-based index N in list L with V.
+arc2_replace_idx_(0, [_|T], V, [V|T]) :- !.
+% Recurse past head H, decrementing the index.
+arc2_replace_idx_(N, [H|T], V, [H|T2]) :-
+%   Guard: index is positive.
+    N > 0,
+%   Decrement and recurse into the tail.
+    N1 is N - 1,
+    arc2_replace_idx_(N1, T, V, T2).
+
+% arc2_set_cell_/5: return a new grid with cell (R,C) replaced by value V.
+arc2_set_cell_(Grid, R, C, V, NewGrid) :-
+%   Extract the row at index R.
+    nth0(R, Grid, OldRow),
+%   Replace column C with V in the extracted row.
+    arc2_replace_idx_(C, OldRow, V, NewRow),
+%   Replace row R with the updated row in the grid.
+    arc2_replace_idx_(R, Grid, NewRow, NewGrid).
+
+% arc2_diag_nbr_cnt_/6: count same-color V diagonal neighbors in both directions.
+% NMain counts (-1,-1) and (+1,+1) hits; NAnti counts (-1,+1) and (+1,-1) hits.
+arc2_diag_nbr_cnt_(Grid, R, C, V, NMain, NAnti) :-
+%   Compute the four diagonal neighbor positions.
+    Rm1 is R - 1, Rp1 is R + 1, Cm1 is C - 1, Cp1 is C + 1,
+%   Test main-diagonal neighbor at (R-1, C-1).
+    (arc2_cell_(Grid, Rm1, Cm1, V) -> M1 = 1 ; M1 = 0),
+%   Test main-diagonal neighbor at (R+1, C+1).
+    (arc2_cell_(Grid, Rp1, Cp1, V) -> M2 = 1 ; M2 = 0),
+%   Test anti-diagonal neighbor at (R-1, C+1).
+    (arc2_cell_(Grid, Rm1, Cp1, V) -> A1 = 1 ; A1 = 0),
+%   Test anti-diagonal neighbor at (R+1, C-1).
+    (arc2_cell_(Grid, Rp1, Cm1, V) -> A2 = 1 ; A2 = 0),
+%   Sum main-diagonal and anti-diagonal counts.
+    NMain is M1 + M2,
+    NAnti is A1 + A2.
+
+% arc2_arm_endpoints_/2: collect all valid arm endpoints from Grid.
+% A valid endpoint is a non-(0,1) cell whose same-color diagonal neighbors all
+% lie in exactly one diagonal direction (NMain XOR NAnti = 1; the other = 0).
+arc2_arm_endpoints_(Grid, Endpoints) :-
+%   Determine grid bounds.
+    length(Grid, NR),
+    Grid = [FR|_], length(FR, NC),
+    MaxR is NR - 1, MaxC is NC - 1,
+%   Scan every cell and keep those satisfying the endpoint criterion.
+    findall(ep(R, C, V, Dir),
+        (between(0, MaxR, R), between(0, MaxC, C),
+         arc2_cell_(Grid, R, C, V),
+         V \= 0, V \= 1,
+         arc2_diag_nbr_cnt_(Grid, R, C, V, NM, NA),
+         (NM =:= 1, NA =:= 0 -> Dir = anti
+         ;NM =:= 0, NA =:= 1 -> Dir = main
+         ;fail)),
+        Endpoints).
+
+% arc2_shoot_ray_/9: step from (R,C) in direction (DR,DC) filling 1-cells with V.
+arc2_shoot_ray_(Grid, R, C, V, DR, DC, NR, NC, Result) :-
+%   Compute the next step position.
+    R1 is R + DR, C1 is C + DC,
+%   Continue only if the next cell is in-bounds and currently holds value 1.
+    (   R1 >= 0, R1 < NR, C1 >= 0, C1 < NC,
+        arc2_cell_(Grid, R1, C1, 1)
+%       Fill the cell and continue the ray from the new position.
+    ->  arc2_set_cell_(Grid, R1, C1, V, Grid1),
+        arc2_shoot_ray_(Grid1, R1, C1, V, DR, DC, NR, NC, Result)
+%       Ray is blocked or exited the grid; return the grid as-is.
+    ;   Result = Grid
+    ).
+
+% arc2_apply_arm_rays_/5: apply the perpendicular ray from each endpoint in turn.
+arc2_apply_arm_rays_(Grid, [], _, _, Grid).
+% Dir=anti means the arm lies along a main diagonal; shoot anti-diagonal rays.
+arc2_apply_arm_rays_(Grid, [ep(R, C, V, anti)|Eps], NR, NC, Result) :-
+%   Shoot in the (+1,-1) direction (down-left along anti-diagonal).
+    arc2_shoot_ray_(Grid, R, C, V, 1, -1, NR, NC, G1),
+%   Shoot in the (-1,+1) direction (up-right along anti-diagonal).
+    arc2_shoot_ray_(G1, R, C, V, -1, 1, NR, NC, G2),
+%   Continue with remaining endpoints.
+    arc2_apply_arm_rays_(G2, Eps, NR, NC, Result).
+% Dir=main means the arm lies along an anti-diagonal; shoot main-diagonal rays.
+arc2_apply_arm_rays_(Grid, [ep(R, C, V, main)|Eps], NR, NC, Result) :-
+%   Shoot in the (+1,+1) direction (down-right along main diagonal).
+    arc2_shoot_ray_(Grid, R, C, V, 1, 1, NR, NC, G1),
+%   Shoot in the (-1,-1) direction (up-left along main diagonal).
+    arc2_shoot_ray_(G1, R, C, V, -1, -1, NR, NC, G2),
+%   Continue with remaining endpoints.
+    arc2_apply_arm_rays_(G2, Eps, NR, NC, Result).
+
+% Register arm_endpoint_ray as a known named transform.
+arc2_named_rule(arm_endpoint_ray).
+
+% arc2_transform for arm_endpoint_ray: find endpoints and shoot perpendicular rays.
+arc2_transform(arm_endpoint_ray, Grid, Result) :-
+%   Determine grid dimensions for bounds checking.
+    length(Grid, NR),
+    Grid = [FR|_], length(FR, NC),
+%   Find all valid arm endpoints; fail immediately if none exist.
+    arc2_arm_endpoints_(Grid, Endpoints),
+    Endpoints \= [],
+%   Apply every endpoint's perpendicular rays to produce the output grid.
+    arc2_apply_arm_rays_(Grid, Endpoints, NR, NC, Result).
+
+% arc2_induce_rule for arm_endpoint_ray: checkerboard guard then full verification.
+arc2_induce_rule(TrainingPairs, arm_endpoint_ray) :-
+%   Extract first training input for the structural pre-check.
+    TrainingPairs = [pair(In0, _)|_],
+%   Sample the top-left 2x2 corner to confirm a checkerboard background.
+    nth0(0, In0, Rcb0), nth0(0, Rcb0, V00), nth0(1, Rcb0, V01),
+    nth0(1, In0, Rcb1), nth0(0, Rcb1, V10), nth0(1, Rcb1, V11),
+%   Corner values must all be 0 or 1.
+    (V00 =:= 0 ; V00 =:= 1),
+%   Horizontally adjacent cells must differ (alternating).
+    V00 =\= V01,
+%   Diagonally opposite cells must match (checkerboard pattern).
+    V00 =:= V11, V01 =:= V10,
+%   Confirm at least one arm endpoint exists in the first training input.
+    arc2_arm_endpoints_(In0, Eps0), Eps0 \= [],
+%   Verify the transform reproduces the correct output for every training pair.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(arm_endpoint_ray, In, Out)).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------
