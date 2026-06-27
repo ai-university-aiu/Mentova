@@ -1,0 +1,149 @@
+Acc_275: gridchain Pack - Grid Sequence Utilities (gch_*, Layer 234)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 255 adds the gridchain pack (gch_*, Layer 234): fourteen
+predicates for structural manipulation of sequences (lists) of grids. The pack
+covers consecutive pairing, sliding windows, zip, take, drop, 0-indexed access,
+sameness testing, deduplication, repetition, interleaving, splitting, reversal,
+per-pair change counts, and first-vs-last change masks. All 44 acceptance tests
+pass with no choicepoint warnings.
+
+
+1. Motivation
+
+Many symbolic reasoning tasks operate not on a single grid but on a sequence of
+grids: a transformation series, a set of input-output examples, a set of
+candidate answers. The gridchain pack provides a clean vocabulary for structuring,
+slicing, combining, and comparing such sequences.
+
+Key design principles:
+
+Sequences are plain Prolog lists of grids. No special wrapper term is needed.
+All predicates follow the gch_* naming convention and are fully deterministic.
+Change-analysis predicates (gch_diff_counts, gch_changes_mask) produce compact
+summaries of how a sequence evolves, suitable for driving higher-level reasoning.
+
+
+2. Architecture
+
+Layer 234 sits immediately above gridlogic (Layer 233) in the Data Layer.
+Uses library(lists): member/2, nth0/3, reverse/2, last/2, append/3.
+
+Key design decisions:
+
+gch_pairs and gch_window use findall with nth0-based indexing, wrapped in an
+if-then-else to ensure a single deterministic result and no choicepoints.
+
+gch_zip and gch_interleave use cuts on their two empty-list base clauses to
+prevent choicepoint warnings. gch_all_same uses cuts on its base cases.
+
+gch_take and gch_drop clamp to the actual list length using min/2 rather than
+failing when the index exceeds the length.
+
+gch_dedup uses an accumulator (Seen list) identical in structure to
+gmp_unique_ordered_ in gridmap, preserving first-occurrence order.
+
+gch_diff_counts delegates to gch_pairs then counts differing positions using
+a recursive cell helper with a cut on the matching-value clause.
+
+gch_changes_mask compares only the first and last grids (using last/2) for a
+clean, focused result. A single-element sequence returns an all-BgColor mask.
+
+
+3. Predicates
+
+Pairing and windowing:
+
+gch_pairs/2      - consecutive pairs: [[G1,G2],[G2,G3],...]
+gch_window/3     - sliding windows of width W
+
+Structural manipulation:
+
+gch_zip/3        - element-wise zip into two-element sublists
+gch_take/3       - first N grids (clamps to length)
+gch_drop/3       - drop first N grids (clamps to length)
+gch_nth/3        - 0-indexed element access
+gch_split_at/4   - split at index N into Before and After
+gch_reverse/2    - reverse the sequence
+
+Identity and filtering:
+
+gch_all_same/1   - succeed if all grids in the sequence are identical
+gch_dedup/2      - remove duplicates preserving first occurrence
+gch_cycle/3      - N copies of a single grid
+gch_interleave/3 - interleave two sequences element by element
+
+Change analysis:
+
+gch_diff_counts/3   - per-pair count of differing cell positions
+gch_changes_mask/4  - first-vs-last change mask with MarkColor
+
+
+4. Example Session
+
+:- use_module(pack(gridchain/prolog/gridchain)).
+
+G1 = [[r,b],[b,r]], G2 = [[b,r],[r,b]], G3 = [[r,r],[b,b]].
+
+gch_pairs([G1,G2,G3], Pairs).
+% Pairs = [[G1,G2],[G2,G3]]
+
+gch_window([G1,G2,G3], 2, Windows).
+% Windows = [[G1,G2],[G2,G3]]
+
+gch_diff_counts([G1,G2,G3], b, Counts).
+% G1 and G2 differ at all 4 positions, G2 and G3 differ at 2
+% Counts = [4,2]
+
+gch_changes_mask([G1,G2,G3], b, m, Mask).
+% G1 = [[r,b],[b,r]], G3 = [[r,r],[b,b]]
+% Changed: (0,1) and (1,1)
+% Mask = [[b,m],[b,m]]
+
+gch_cycle([[r,b]], 3, S).
+% S = [[[r,b]],[[r,b]],[[r,b]]]
+
+gch_dedup([G1,G2,G1,G3], U).
+% U = [G1,G2,G3]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GCH-001 through AC-GCH-044) are exercised in
+packs/gridchain/test/test_gridchain.pl. Tests cover gch_pairs (3),
+gch_window (3), gch_zip (3), gch_take (3), gch_drop (3), gch_nth (3),
+gch_all_same (3), gch_dedup (3), gch_cycle (3), gch_interleave (3),
+gch_split_at (3), gch_reverse (3), gch_diff_counts (3), gch_changes_mask (3),
+combined/integration (2).
+
+
+6. SPARC Documentation
+
+Work Package 255 is recorded in:
+- Specification v221, Part 245 (WP-255-SPEC-001 through WP-255-SPEC-005)
+- Pseudocode v213, Part 245
+- Architecture v215, ARCH-221
+- Refinement v268, AC-GCH-001 through AC-GCH-044
+- Completion v271, WP-255 record
+
+Tutorial chapter: docs/tutorial/Ch216_GridChain.txt
+Pack reference: docs/Pack_Reference.txt (gridchain entry)
+PrologAI PR: #344 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridchain pack provides fourteen gch_* predicates for structural manipulation
+of sequences of grids. The uniform treatment of grid sequences as plain Prolog
+lists, combined with clean deterministic implementations, makes these predicates
+directly composable with the rest of the Data Layer. The change-analysis predicates
+(gch_diff_counts and gch_changes_mask) add a new dimension to the grid reasoning
+suite: the ability to characterize how a transformation unfolds step by step.
+
+PrologAI now comprises 255 work packages and reaches Layer 234 in the Data Layer.
