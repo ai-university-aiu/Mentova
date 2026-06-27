@@ -1,0 +1,26 @@
+Acc_285: PrologAI gains spatial reasoning between objects.
+
+The gridrelation pack (Layer 244, grl_* prefix) adds 14 predicates for computing
+spatial relations between the ob/3 object terms produced by the gridobj pack.
+
+Is object A touching object B? Are they adjacent within N cells? What is the
+minimum distance? Is A entirely above B? Does A's bbox contain B's bbox? Do they
+overlap at the cell level? Do they share any rows or columns? What direction would
+you travel from A to B?
+
+The direction predicate uses doubled bbox centroids for exact integer arithmetic
+with no floating point. The all-relations predicate returns every true relation as
+a list: touching, above, below, left_of, right_of, bbox_contains, bbox_overlap,
+cells_overlap, same_rows, same_cols.
+
+With gridobj (identify objects), gridgroupby (group and filter), and gridrelation
+(spatial relations), the platform now has a complete three-level object reasoning
+pipeline.
+
+44/44 tests pass. 265 work packages total. Layer 244 in the Data Layer.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #SymbolicAI #SpatialReasoning #ARC #CognitiveSystems

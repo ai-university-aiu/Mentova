@@ -1,0 +1,131 @@
+Acc_285: Grid Object Spatial Relations Pack (gridrelation, grl_*, Layer 244)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Abstract
+
+PrologAI gains spatial reasoning between objects.
+
+The gridrelation pack (Work Package 265, Layer 244, prefix grl_*) provides 14
+predicates for computing spatial relations between ob(Color,Cells,BBox) object
+terms produced by gob_all_objects. The pack covers cell-level touching and
+adjacency, bbox-level positional relations, overlap detection, and a unified
+direction and all-relations query.
+
+Background
+
+ARC-AGI-2 tasks often require reasoning about how objects relate spatially to
+each other: is this object above that one, are they touching, do they overlap,
+which direction would you travel to get from one to the other.
+
+The gridobj and gridgroupby packs gave the platform the ability to identify and
+group objects. The gridrelation pack adds the language of spatial relationship,
+completing the object reasoning pipeline.
+
+The Pack
+
+Module: gridrelation. File: packs/gridrelation/prolog/gridrelation.pl.
+Prefix: grl_. Layer: 244. Work Package: 265. PrologAI PR: 355.
+
+Predicates:
+
+grl_touching(+ObjA, +ObjB)
+Succeed if ObjA and ObjB share a 4-adjacent cell edge. Two cells are 4-adjacent
+when they differ by exactly 1 in exactly one coordinate. Cuts on first match.
+
+grl_adjacent(+ObjA, +ObjB, +N)
+Succeed if the minimum Manhattan distance between ObjA and ObjB is at most N.
+
+grl_min_distance(+ObjA, +ObjB, -D)
+D is the minimum Manhattan distance between any cell of ObjA and any cell of ObjB.
+
+grl_above(+ObjA, +ObjB)
+Succeed if ObjA's entire bbox is strictly above ObjB's: ObjA's last row < ObjB's
+first row.
+
+grl_below(+ObjA, +ObjB)
+Succeed if ObjA's entire bbox is strictly below ObjB's: ObjA's first row > ObjB's
+last row.
+
+grl_left_of(+ObjA, +ObjB)
+Succeed if ObjA's entire bbox is strictly to the left: ObjA's last col < ObjB's
+first col.
+
+grl_right_of(+ObjA, +ObjB)
+Succeed if ObjA's entire bbox is strictly to the right: ObjA's first col > ObjB's
+last col.
+
+grl_bbox_contains(+ObjA, +ObjB)
+Succeed if ObjA's bbox fully contains ObjB's bbox on all four sides.
+
+grl_bbox_overlap(+ObjA, +ObjB)
+Succeed if the two bboxes share any area. Uses the standard interval-overlap test
+applied to both the row and column axes independently.
+
+grl_cells_overlap(+ObjA, +ObjB)
+Succeed if ObjA and ObjB share at least one identical cell position.
+
+grl_same_rows(+ObjA, +ObjB)
+Succeed if ObjA's and ObjB's bbox row ranges overlap.
+
+grl_same_cols(+ObjA, +ObjB)
+Succeed if ObjA's and ObjB's bbox column ranges overlap.
+
+grl_direction(+ObjA, +ObjB, -Dir)
+Dir is the primary direction from ObjA to ObjB: above, below, left, right, or
+overlap. Uses doubled bbox centroids (R0+R1, C0+C1) for exact integer arithmetic
+with no rounding. Primary axis is vertical when |DR| >= |DC|.
+
+grl_all_relations(+ObjA, +ObjB, -Relations)
+Relations is the list of all true spatial relation atoms between ObjA and ObjB:
+touching, above, below, left_of, right_of, bbox_contains, bbox_overlap,
+cells_overlap, same_rows, same_cols.
+
+Design Notes
+
+grl_touching and grl_cells_overlap use cut (!) to stop after the first matching
+pair, avoiding redundant solutions from member/2 backtracking.
+
+grl_direction avoids division by using doubled centroids. For an object with
+bbox r0(R0,C0,R1,C1), the doubled centroid row is R0+R1 and doubled centroid
+col is C0+C1. The difference DR = doubled_centroid_B_row - doubled_centroid_A_row
+has the same sign as the true centroid difference but is always an integer.
+
+grl_bbox_overlap uses [a0,a1] and [b0,b1] overlap iff a0 =< b1 and b0 =< a1.
+Adjacent single-cell bboxes (e.g., col 0 and col 1) do NOT overlap by this test
+because C0B=1 =< C1A=0 fails.
+
+Test Coverage
+
+44 tests, AC-GRL-001 through AC-GRL-044, in
+packs/gridrelation/test/test_gridrelation.pl. All 44 tests pass.
+
+SPARC Documentation
+
+Specification v231: WP 265 added to the Data Layer work package list.
+Pseudocode v223: 14 pseudocode entries for all grl_* predicates added.
+Architecture v225: Layer 244 (gridrelation, grl_*) added to the layer table.
+Refinement v278: 44 test IDs AC-GRL-001 through AC-GRL-044 documented.
+Completion v281: WP 265 marked complete with pack metadata and test count.
+
+Pack Reference: gridrelation entry added.
+Tutorial: Chapter 226 (Ch226_GridRelation.txt) added; PrologAI_Tutorial.txt updated.
+
+Platform Status
+
+With gridrelation merged, PrologAI has 265 work packages and Layer 244 in the
+Data Layer. The object reasoning pipeline is now complete at three levels:
+perception (gridobj: identify objects), classification (gridgroupby: group and
+filter), and relation (gridrelation: compute spatial relationships between pairs).
+
+References
+
+PrologAI repository, PR 355: feat(gridrelation): WP 265 - spatial relations
+between objects (grl_*, Layer 244).
+
+PrologAI_1_Specification_v231.txt - Work Package 265 specification.
+PrologAI_3_Architecture_v225.txt - Layer 244 architecture entry.
+PrologAI_4_Refinement_v278.txt - Test IDs AC-GRL-001 through AC-GRL-044.
