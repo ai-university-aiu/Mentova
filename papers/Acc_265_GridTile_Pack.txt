@@ -1,0 +1,113 @@
+Acc_265: gridtile Pack - Grid Tiling Pattern Analysis (gti_*, Layer 224)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 245 adds the gridtile pack (gti_*, Layer 224): fourteen
+predicates for detecting, extracting, verifying, and constructing tiling patterns
+in raw grids. A tiling grid is one that can be described by a smaller repeated
+sub-grid. The pack covers period detection, tile extraction, tiling verification,
+row and column periodicity, tile counting, tile matching, offset computation, and
+minimal tile cropping. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many grid-reasoning tasks feature grids that are built by repeating a small
+pattern. Detecting this structure, extracting the minimal tile, and verifying
+that a candidate tile correctly tiles a grid are fundamental operations. The
+gridtile pack provides all of these as first-class, tested predicates.
+
+
+2. Architecture
+
+Layer 224 sits immediately above gridgrav (Layer 223) in the Data Layer.
+Uses library(lists): nth0/3, member/2. No cross-pack dependencies.
+
+Key design: gti_h_period uses a cut-on-first-match search over candidate
+periods 1..H in order; gti_rows_have_period_ uses negation-as-failure to detect
+any violation efficiently. The tile_to_grid predicate constructs each cell value
+by indexing into the tile with modular arithmetic.
+
+
+3. Predicates
+
+Period detection:
+
+gti_h_period/2    - smallest vertical period P (rows repeat with period P)
+gti_w_period/2    - smallest horizontal period P (cols repeat with period P)
+gti_tile_size/3   - minimal tile dimensions (h_period, w_period)
+
+Verification and extraction:
+
+gti_is_tiling/3      - check if grid tiles with a given (TH, TW) pair
+gti_extract_tile/4   - extract top-left TH x TW sub-grid
+gti_tile_to_grid/4   - build H x W grid from a tile
+gti_crop_to_tile/2   - extract minimal tile using detected periods
+
+Row and column periodicity:
+
+gti_row_is_periodic/3 - check if a row has period P
+gti_col_is_periodic/3 - check if a column has period P
+
+Tile counting:
+
+gti_tile_count_h/3 - H div TH (complete tile rows)
+gti_tile_count_w/3 - W div TW (complete tile cols)
+
+Tile matching and positioning:
+
+gti_matches_tile/4 - sub-grid at (R0,C0) equals tile
+gti_tile_offset/5  - tile-relative position for cell (R,C)
+gti_all_tiles/4    - all tile sub-grids in row-major order
+
+
+4. Example Session
+
+:- use_module(pack(gridtile/prolog/gridtile)).
+
+G = [[a,b,a,b],[c,d,c,d],[a,b,a,b],[c,d,c,d]].
+
+gti_h_period(G, HP).         % HP = 2
+gti_w_period(G, WP).         % WP = 2
+gti_crop_to_tile(G, Tile).   % Tile = [[a,b],[c,d]]
+gti_all_tiles(G, 2, 2, Ts).  % Ts = [[[a,b],[c,d]], ...] (4 identical tiles)
+gti_tile_to_grid([[z]], 3, 3, U).  % U = [[z,z,z],[z,z,z],[z,z,z]]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GTI-001 through AC-GTI-044) are exercised in
+packs/gridtile/test/test_gridtile.pl. Tests cover h_period (3), w_period (3),
+tile_size (3), is_tiling (3), extract_tile (3), tile_to_grid (3),
+row_is_periodic (3), col_is_periodic (3), tile_count_h (3), tile_count_w (3),
+matches_tile (3), tile_offset (3), all_tiles (3), crop_to_tile (4).
+
+
+6. SPARC Documentation
+
+Work Package 245 is recorded in:
+- Specification v211, Part 235 (WP-245-SPEC-001 through WP-245-SPEC-006)
+- Pseudocode v203, Part 235
+- Architecture v205, ARCH-211
+- Refinement v258, AC-GTI-001 through AC-GTI-044
+- Completion v261, WP-245 record
+
+Tutorial chapter: docs/tutorial/Ch206_GridTile.txt
+Pack reference: docs/Pack_Reference.txt (gridtile entry)
+PrologAI PR: #334 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridtile pack provides complete tiling pattern analysis for raw grids. The
+fourteen gti_* predicates cover period detection, tile extraction, tiling
+verification, row/column periodicity, tile counting, matching, offset computation,
+and minimal tile cropping. This enables symbolic reasoning about repeating
+spatial patterns, a capability central to grid transformation and completion tasks.
+
+PrologAI now comprises 245 work packages and reaches Layer 224 in the Data Layer.
