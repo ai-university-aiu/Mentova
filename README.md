@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-293-FF6B35?style=for-the-badge" alt="293 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-298-FF6B35?style=for-the-badge" alt="298 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -233,8 +233,8 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         293 scientific papers — one per accomplishment and benchmark milestone
-├── announcements/  293 announcements — one per accomplishment
+├── papers/         298 scientific papers — one per accomplishment and benchmark milestone
+├── announcements/  298 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
 └── tools/          Python analysis utilities for ARC-AGI task inspection
@@ -556,6 +556,11 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_271` | GridShift pack paper — Grid Shifting and Cyclic Rolling (Layer 230, gsh_*): 14 gsh_* predicates for linear shifts, toroidal rolls, per-row/column operations, color-specific shift, and full-grid offset. |
 | `Acc_272` | GridMap pack paper — Grid Color Mapping (Layer 231, gmp_*): 14 gmp_* predicates for color remapping, normalization, palette ops, masking, inversion, cycling, and map algebra. |
 | `Acc_273` | GridRefl pack paper — Grid Reflection and Rotation (Layer 232, grf_*): 14 grf_* predicates for flips, rotations, transpositions, D4 symmetry detection, and symmetry completion. |
+| `Acc_298` | ARC-AGI-2 infrastructure — arc_tasks_2.pl (task loader), arc_benchmark_2.pl (wave solver with task-type-aware dispatch), and Climbing_ARC-AGI-2.txt (wave log). All Section 8 readiness items complete; platform ready to climb ARC-AGI-2. |
+| `Acc_297` | induction pack enhancement (WP-277) — id_cross_pair_invariants/2 and id_cross_pair_variants/2 aggregate properties across all training pairs (dims, colors, bg, monotone, total-nonzero); 46/46 tests pass. |
+| `Acc_296` | condxf pack enhancement (WP-276) — xc_infer_gate/3 automatically infers the gate_color that partitions training pairs by change signature for context-gated task solving; 45/45 tests pass. |
+| `Acc_295` | hyp pack enhancement (WP-275) — hy_spatial_hyp/3 (shift hypotheses), hy_structural_hyp/3 (structural pattern hypotheses), hy_sequence_hyp/4 (two-step color-map hypotheses) extend hypothesis search beyond color substitution; 43/43 tests pass. |
+| `Acc_294` | seqinfer pack enhancement (WP-274) — sq_arc2_candidates/1 adds 66-entry integer-color candidate list for multi-step ARC-AGI-2 search with sq_infer_2step and sq_infer_3step; 52/52 tests pass. |
 | `Acc_293` | TaskCat pack paper — Task Type Classification and Solving Strategy Selection (Layer 252, tc_*): 14 tc_* predicates for classifying tasks as single_rule, multi_step, context_gated, or symbol_table and returning ordered solving strategy lists. |
 | `Acc_292` | MultiPair pack paper — Multi-Pair Object Tracking and Cross-Pair Correspondence (Layer 251, mp_*): 14 mp_* predicates for tracked object identity, universal/variable color classification, cross-pair matching, and disappeared/appeared object detection. |
 | `Acc_291` | Legend pack paper — Legend and Key Region Detection from Grid Training Pairs (Layer 250, lg_*): 14 lg_* predicates for BFS region finding, legend detection, color map parsing, shape equivalence, and spatial position classification. |

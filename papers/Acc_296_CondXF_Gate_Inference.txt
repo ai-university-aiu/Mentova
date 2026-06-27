@@ -1,0 +1,39 @@
+ACCOMPLISHMENT RECORD Acc_296
+
+Title: condxf Pack Enhancement - xc_infer_gate/3 for Context Gate Inference (WP-276)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/PrologAI (PR 363)
+
+
+SUMMARY
+
+Work Package 276 extends the condxf pack (Layer 187, xc_* predicates) with xc_infer_gate/3, which infers the gate feature that governs context-gated transformations. Before this work package, condxf required the caller to pre-specify the gate condition. Now the gate can be inferred automatically from the training pairs.
+
+
+WHAT WAS BUILT
+
+xc_infer_gate(+Pairs, +_Variants, -Gate):
+Given a list of pair(SceneIn, SceneOut) training pairs, infers which object color in the input scene consistently partitions the pairs into two groups with distinct change signatures.
+
+The inference algorithm:
+1. Collect all object colors from all input scenes.
+2. For each candidate color in sorted order:
+   a. Partition pairs into WithGate (input contains the color) and WithoutGate.
+   b. Compute a change signature for each pair: lost(LostColors)-gained(GainedColors).
+   c. If sort(WithGate sigs) != sort(WithoutGate sigs), the color is the gate.
+3. Return gate_color(Color) for the first discriminating color.
+
+45 tests pass (41 original condxf tests + 4 new xc_infer_gate tests).
+
+
+WHY THIS MATTERS
+
+The context-gated difficulty flavor is one of ARC-AGI-2's four identified hard patterns. In a context-gated task, the transformation rule is selected by a feature in the input - typically a specific object color - that acts like a conditional switch. Previously, the caller had to already know which feature was the gate. With xc_infer_gate/3, the gate can be discovered automatically from the training data, enabling automated context-gated solving.
+
+The change-signature representation (lost colors, gained colors) is compact but informative: it captures the essential behavioral difference between pairs without requiring full grid-level analysis.

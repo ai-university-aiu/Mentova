@@ -1,0 +1,43 @@
+ACCOMPLISHMENT RECORD Acc_294
+
+Title: seqinfer Pack Enhancement - sq_arc2_candidates/1 for Multi-Step ARC-AGI-2 Search (WP-274)
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/PrologAI (PR 363)
+
+
+SUMMARY
+
+Work Package 274 extends the seqinfer pack (Layer 195, sq_* predicates) with sq_arc2_candidates/1, a 66-entry rule candidate list tuned for the four ARC-AGI-2 difficulty flavors: multi-rule compositional, multi-step sequential, context-gated, and symbol-defined.
+
+
+WHAT WAS BUILT
+
+sq_arc2_candidates/1 returns a flat list of 66 scene-level rule terms using integer colors 0-9, the standard ARC encoding. The list is a superset of sq_default_rules/1 (which uses atom colors) and adds:
+
+- Recolor pairs for all integer color pairs in 1-6 (26 new recolor terms)
+- recolor_all(C) for colors 1-6
+- Larger shift variants: deltas of 2 and 3 in each axis
+- remove_color(C) and keep_color(C) for colors 4-6
+- top_n(1), top_n(2), top_n(3) for top-N object selection
+
+The predicate is designed for direct use with sq_infer_2step/3 and sq_infer_3step/3 on harder multi-step tasks where the standard rule set is insufficient.
+
+52 tests pass (44 original seqinfer tests + 8 new sq_arc2_candidates tests).
+
+
+WHY THIS MATTERS
+
+ARC-AGI-1 was solved at 100% using a rule library of ~400 named transforms. ARC-AGI-2 introduces harder multi-step compositions. The sq_arc2_candidates/1 predicate makes the full integer-color candidate space immediately available to the seqinfer search engine without requiring changes to the search logic itself.
+
+The separation between the candidate list (sq_arc2_candidates) and the search algorithm (sq_infer_2step, sq_infer_3step) follows the Open/Closed Principle: the search is closed for modification but open for extension through new candidate lists.
+
+
+TECHNICAL DETAIL
+
+All 66 rule terms in sq_arc2_candidates/1 are handled by the existing sq_apply_one_/3 dispatch predicate. No new apply rules were needed. The predicate is a single fact clause returning a ground list, making it deterministic and fast.

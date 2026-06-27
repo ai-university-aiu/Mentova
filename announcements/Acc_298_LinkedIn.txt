@@ -1,0 +1,3 @@
+ARC-AGI-2 infrastructure complete. arc_tasks_2.pl loads task data. arc_benchmark_2.pl runs the wave solver with task-type-aware dispatch. Climbing_ARC-AGI-2.txt starts the wave log. All items from the ARC-AGI-2 Readiness Analysis are done. Awaiting task file download to begin the climb.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
