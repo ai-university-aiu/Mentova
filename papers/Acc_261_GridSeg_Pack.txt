@@ -1,0 +1,127 @@
+Acc_261: gridseg Pack - Grid Segmentation by Separator Rows and Columns (gsg_*, Layer 220)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 241 adds the gridseg pack (gsg_*, Layer 220): fourteen
+predicates for detecting uniform-color separator rows and columns, splitting
+a grid into non-separator segments, extracting rectangular panels, trimming
+border separators, and identifying the unique separator color. All 44
+acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently use uniform-color rows or columns as visual
+dividers between regions of interest. The gridseg pack provides symbolic tools
+for detecting these separator lines and operating on the segments or panels they
+define. This enables the core ARC-AGI-2 pattern of dividing a grid into
+independent sub-problems.
+
+
+2. Architecture
+
+Layer 220 sits immediately above gridrowcol (Layer 219) in the Data Layer.
+Uses library(lists): nth0/3, member/2, append/2, append/3, list_to_set/2.
+No cross-pack dependencies.
+
+Private helpers: gsg_uniform_/2 (list uniformity), gsg_col_/3 (column
+extraction via findall), gsg_transpose_/2 (transpose via findall),
+gsg_split_rows_/4 (accumulator-based row grouping), gsg_drop_sep_/3
+(leading separator removal). gsg_split_v and gsg_trim_v use the
+transpose-operate-transpose pattern.
+
+
+3. Predicates
+
+Separator detection:
+
+gsg_is_sep_row/3    - row R is entirely one color; binds that color
+gsg_is_sep_col/3    - col C is entirely one color; binds that color
+gsg_sep_rows/3      - all separator row indices for a given color
+gsg_sep_cols/3      - all separator column indices for a given color
+
+Splitting:
+
+gsg_split_h/3           - split by separator rows into non-empty sub-grids
+gsg_split_v/3           - split by separator columns into non-empty sub-grids
+gsg_segment_count_h/3   - number of horizontal segments
+gsg_segment_count_v/3   - number of vertical segments
+
+Panel extraction:
+
+gsg_panels/3       - flat row-major list of all panels
+gsg_panel_count/3  - total number of panels
+
+Trimming:
+
+gsg_trim_h/3  - remove border separator rows (top and bottom)
+gsg_trim_v/3  - remove border separator columns (left and right)
+gsg_trim/3    - remove all border separators
+
+Detection:
+
+gsg_sep_color/2  - find the unique separator color used in the grid
+
+
+4. Example Session
+
+:- use_module(pack(gridseg/prolog/gridseg)).
+
+% Separator detection:
+G = [[a,b,c],[s,s,s],[d,e,f]].
+gsg_is_sep_row(G, 1, Color).  % Color = s
+gsg_sep_rows(G, s, Rows).     % Rows = [1]
+
+% Splitting:
+gsg_split_h(G, s, Segs).      % Segs = [[[a,b,c]], [[d,e,f]]]
+gsg_segment_count_h(G, s, N). % N = 2
+
+% Panels (2D split):
+G2 = [[r,s,r],[s,s,s],[r,s,r]].
+gsg_panels(G2, s, Panels).    % 4 panels
+gsg_panel_count(G2, s, 4).
+
+% Trimming:
+G3 = [[s,s,s],[a,b,c],[d,e,f],[s,s,s]].
+gsg_trim_h(G3, s, T).         % T = [[a,b,c],[d,e,f]]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GSG-001 through AC-GSG-044) exercised in
+packs/gridseg/test/test_gridseg.pl. Tests cover sep detection (6),
+sep_rows/cols (6), split_h (4), split_v (3), segment counts (4), panels (3),
+panel_count (3), trim_h (3), trim_v (2), trim (2), sep_color (2), combined (4).
+
+Initial run: 42/44 (sep_cols findall with unbound C). Fix: added between/3 to
+gsg_sep_cols and gsg_sep_rows. Final: 44/44 pass.
+
+
+6. SPARC Documentation
+
+Work Package 241 is recorded in:
+- Specification v207, Part 231 (WP-241-SPEC-001 through WP-241-SPEC-007)
+- Pseudocode v199, Part 231
+- Architecture v201, ARCH-207
+- Refinement v254, AC-GSG-001 through AC-GSG-044
+- Completion v257, WP-241 record
+
+Tutorial chapter: docs/tutorial/Ch202_GridSeg.txt
+Pack reference: docs/Pack_Reference.txt (gridseg entry)
+PrologAI PR: #330 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridseg pack provides complete symbolic segmentation of grids by uniform
+separator lines. Fourteen gsg_* predicates cover detection, splitting,
+counting, panel extraction, trimming, and separator color identification.
+This is the core toolset for the ARC-AGI-2 pattern of dividing grids into
+independent sub-regions separated by uniform-color lines.
+
+PrologAI now comprises 241 work packages and reaches Layer 220 in the Data Layer.
