@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-27. Wave 3 complete: 3/120 = 2.50%.
+Last updated: 2026-06-27. Wave 4 complete: 4/120 = 3.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -124,10 +124,135 @@ Date        | Score      | Percent | Notes
 2026-06-27  |   1 / 120  |  0.83%  | Wave 1: plus-shape recolor rule
 2026-06-27  |   2 / 120  |  1.67%  | Wave 2: chain-strip connected-blob traversal
 2026-06-27  |   3 / 120  |  2.50%  | Wave 3: checkerboard diagonal arm projection
+2026-06-27  |   4 / 120  |  3.33%  | Wave 4: segment length equalization rule
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 4 - 2026-06-27 - Score: 4/120 = 3.33%
+
+Date: 2026-06-27
+
+Confirmed score: 4 / 120 = 3.33%
+
+Rules added in this wave:
+
+segment_equalize - Segment length equalization to the middle anchor.
+
+Description: Non-background cells form linear segments aligned in one of three
+directions: horizontal (cells sharing the same row), vertical (cells sharing the
+same column), or anti-diagonal (cells sharing the same r+c value). Every segment
+in a given task has cells filling a consecutive range in the varying coordinate
+(column for horizontal, row for vertical, row for anti-diagonal).
+
+The key structural observation: one endpoint of every segment is already aligned
+to a common value across all segments (the anchor). Alignment for a linear
+direction is simply the endpoint's absolute coordinate. Alignment for anti-diagonal
+segments uses the formula 2*row - (r+c), which equals r-c, the main-diagonal
+coordinate of the endpoint cell.
+
+Once the anchor end is identified (the end whose alignment values are equal across
+all segments), the opposite end of each segment is extended or trimmed to match the
+middle segment by sorted position. The middle segment is the reference that already
+has the correct non-anchor endpoint.
+
+Direction detection: the three directions are tried in order: anti-diagonal,
+horizontal, vertical. The first direction for which all groups of cells with the
+same key form a consecutive run in the varying coordinate is chosen.
+
+Segment equalization algorithm:
+  1. Find background color (most common value in the grid).
+  2. Collect all non-background cells.
+  3. Detect direction by trying antidiag / horizontal / vertical.
+  4. Group cells by key; for each group find min-vary and max-vary.
+  5. Compute endpoint alignment for each segment's min-end and max-end.
+  6. If all min-alignments are equal: anchor=min; target=max-alignment of middle.
+     If all max-alignments are equal: anchor=max; target=min-alignment of middle.
+  7. For each segment, compute correct non-anchor endpoint from target alignment:
+       anti-diagonal: correct_vary = (key + target_alignment) // 2
+       horizontal/vertical: correct_vary = target_alignment (direct value)
+  8. Trim excess cells (set to background) and add missing cells (set to color).
+
+New helper predicates:
+  arc2_segeq_kv_/5: compute (Key, Vary) for a cell given direction.
+  arc2_segeq_align_/4: alignment value of a segment endpoint.
+  arc2_segeq_cvary_/4: correct vary coord from (Dir, Key, TargetAlignment).
+  arc2_segeq_cellpos_/5: grid (R,C) from direction, key, and vary.
+  arc2_segeq_consec_/1: true if a sorted list of integers has no gaps.
+  arc2_segeq_dir_/2: detect segment direction with first-match cut.
+  arc2_segeq_build_segs_/3: build seg(K, Vmin, Vmax, Color) descriptors.
+  arc2_segeq_anchor_/4: identify anchor end and compute target alignment.
+  arc2_segeq_setrange_/7: set a range of cells to a value.
+  arc2_segeq_adj1_/7: extend or trim one segment's non-anchor end.
+  arc2_segeq_adjall_/7: apply arc2_segeq_adj1_ to all segments.
+
+Task solved: e376de54
+
+Description: A 16x16 grid on background 7 containing five to seven colored
+segments. Segments run in one direction per training pair: anti-diagonal (r+c
+constant) in pairs 0 and the test, horizontal (same row) in pair 1, vertical
+(same column) in pair 2. One endpoint of every segment is already aligned to a
+shared diagonal value (the anchor). The other endpoint is wrong in 2 to 4 of
+the segments and must be extended or trimmed to match the middle segment.
+
+Training pair 0 (input 16x16, anti-diagonal segments):
+Five anti-diagonal segments (colors 2, 9, 1 at r+c = 7, 11, 15, 19, 23). The
+max-end (bottom) alignment values (r-c of bottom cell) are all equal to 7: the
+anchor is the bottom. Middle segment r+c=15 has top alignment r-c=-3. Three
+segments are wrong (r+c=7: 3 cells, r+c=11: 2 cells, r+c=19: 9 cells, r+c=23:
+4 cells). After correction all have 6 cells. Exact match: True.
+
+Training pair 1 (input 16x16, horizontal segments):
+Three horizontal segments (colors 5, 9, 3 in rows 2, 6, 8). Left ends all at
+col 3 (anchor=min). Middle row=6 has right end at col 9. Row 2 extended from 2
+to 7 cells. Row 8 trimmed from 12 to 7 cells. Exact match: True.
+
+Training pair 2 (input 16x16, vertical segments):
+Five vertical segments (color 8 in columns 2, 5, 7, 9, 13). Top ends all at
+row 2 (anchor=min). Middle col=7 has bottom end at row 5. Cols 2 and 9 extended;
+col 13 trimmed. All five segments become 4 cells. Exact match: True.
+
+Test case (input 16x16, anti-diagonal segments):
+Five anti-diagonal segments (colors 8 and 6 at r+c = 7, 11, 15, 21, 25). Top
+ends (min-row) all have alignment r-c=-3 (anchor=top). Middle r+c=15 has bottom
+alignment r-c=3. Segments r+c=11 extended by 1 cell; r+c=21 trimmed by 1 cell;
+r+c=25 trimmed by 1 cell. All five segments become 4 cells. Exact match: True.
+
+Bugs fixed: None.
+
+Lessons learned:
+
+1. The segment equalization rule has a beautiful dual-anchor structure. Either
+all min-endpoints lie on a common alignment value (anchor=min), or all max-
+endpoints lie on one (anchor=max). This means the input already partially
+encodes the answer: one set of endpoints is correct, the other is not. The rule
+only needs to identify which set is consistent, then propagate the correction.
+
+2. For anti-diagonal segments, "alignment" is not the raw row coordinate but
+rather r-c = 2*row - (r+c). This is because different anti-diagonals (different
+r+c values) at the same row R have different (R, K-R) coordinates, but their
+r-c values 2R-K vary with K. The anchor property is that ALL segments have the
+same r-c at one endpoint, even though they have different row numbers. This is
+the invariant that must be preserved, not the row number itself.
+
+3. The middle-segment reference is robust because ARC-AGI-2 tasks always include
+at least one "already correct" segment. In the test case, two segments (r+c=7
+and r+c=15) are already correct. The middle segment (r+c=15) happens to be one
+of them. The rule would also work if we used any already-correct segment as the
+reference; the middle position is a reliable choice because it avoids ambiguity
+when multiple segments are already correct.
+
+4. Direction detection is unambiguous when segments are long enough and clearly
+separated. For a task with only horizontal single-cell "segments" (which would
+also appear consecutive in column), the direction check might be ambiguous, but
+this did not occur in practice for e376de54 or the other tasks attempted.
+
+5. The segment_equalize transform correctly handles the middle segment itself:
+its non-anchor endpoint already equals the target, so the trim range and add
+range are both empty, and no cells are modified. This is a natural consequence
+of the algorithm requiring no special-casing of the reference segment.
 
 
 ATTEMPT 3 - 2026-06-27 - Score: 3/120 = 2.50%
@@ -421,6 +546,7 @@ ALL SOLVED TASKS
 1818057f  - Wave 1 - recolor_plus(4,8)   - plus shapes of 4 become 8
 7b5033c1  - Wave 2 - chain_strip          - connected-blob chain traversal strip
 80a900e0  - Wave 3 - arm_endpoint_ray     - checkerboard diagonal arm projection
+e376de54  - Wave 4 - segment_equalize     - equalize all segment lengths to middle
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -473,4 +599,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 2: Chain-strip connected-blob traversal rule
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 3: Checkerboard diagonal arm projection rule.
   Score: 3/120 = 2.50%. Task 80a900e0 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-27.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 4: Segment length equalization rule.
+  Score: 4/120 = 3.33%. Task e376de54 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-27.

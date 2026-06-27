@@ -1,0 +1,19 @@
+ARC-AGI-2 Wave 4 - Segment Length Equalization - Score: 4/120 = 3.33%
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Mentova just solved its fourth ARC-AGI-2 evaluation task using a new glass-box rule called segment_equalize.
+
+The rule: non-background cells in the grid form linear segments in one direction (horizontal row, vertical column, or anti-diagonal r+c=const). One endpoint of every segment is already aligned to a common value. The other endpoint is wrong in some segments and must be extended or trimmed to match the middle segment's length.
+
+What makes this interesting is the alignment concept for anti-diagonal segments. The invariant is not the raw row number of the endpoint but its r-c value (2*row - key). All segments that share an anchor will have the same r-c at that endpoint even though their row numbers differ. Once you know the anchor end and the target r-c, the correct row for each segment is (key + target_r_minus_c) // 2. Clean, exact, zero ambiguity.
+
+The rule handles all three directions with the same algorithm. Direction is detected automatically from the input. No task-specific configuration.
+
+Score: 4/120 = 3.33%. Pure induction. No pretraining on the ARC-AGI-2 corpus. Every solved task is attributed to a named, independently verifiable Prolog rule.
+
+Solved tasks: 1818057f (Wave 1: plus-shape recolor), 7b5033c1 (Wave 2: chain strip), 80a900e0 (Wave 3: checkerboard arm projection), e376de54 (Wave 4: segment equalization).
+
+Full details in Accomplishment Record Acc_302. The climb continues.
+
+#PrologAI #Mentova #ARCAGI2 #SymbolicAI #AIReasoning

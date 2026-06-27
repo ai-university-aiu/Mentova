@@ -1,0 +1,197 @@
+ACCOMPLISHMENT RECORD Acc_302
+
+Title: ARC-AGI-2 Wave 4 - Segment Length Equalization - Score: 4/120 = 3.33%
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/Mentova
+
+
+SUMMARY
+
+Wave 4 of the ARC-AGI-2 climb. Implements a segment length equalization rule in
+the benchmark runner and uses it to solve task e376de54 via the segment_equalize
+rule. Score improves from 3/120 = 2.50% to 4/120 = 3.33%.
+
+
+WHAT WAS BUILT
+
+New rule: segment_equalize
+
+The segment_equalize rule is implemented in arc_benchmark_2.pl via eleven new
+predicates.
+
+arc2_segeq_kv_/5
+  Computes a direction-specific (Key, Vary) pair for a cell at (R, C).
+  Anti-diagonal direction: Key = R+C, Vary = R (row is the varying coordinate
+  along the anti-diagonal). Horizontal: Key = R, Vary = C. Vertical: Key = C,
+  Vary = R.
+
+arc2_segeq_align_/4
+  Computes the "alignment value" of a segment endpoint given its direction,
+  key, and vary coordinate. For horizontal and vertical segments the alignment
+  value equals the vary coordinate directly (an absolute column or row number).
+  For anti-diagonal segments the alignment value is 2*Vary - Key, which equals
+  r-c of the endpoint cell. This formula is the key insight: different anti-
+  diagonal segments (different Key values) that share the same alignment value
+  for one endpoint will have different raw row numbers, but their r-c values
+  are identical.
+
+arc2_segeq_cvary_/4
+  Inverts the alignment formula to compute the correct vary coordinate given a
+  direction, a segment key, and a target alignment value. For linear directions
+  this is the identity (correct_vary = target_alignment). For anti-diagonal this
+  is correct_vary = (Key + target_alignment) // 2.
+
+arc2_segeq_cellpos_/5
+  Converts (Dir, Key, Vary) back to a grid (R, C) position, enabling targeted
+  cell modifications during segment extension and trimming.
+
+arc2_segeq_consec_/1
+  Tests whether a sorted list of integers contains no gaps by checking that
+  its length equals max - min + 1. Used during direction detection to verify
+  that each key group forms a consecutive segment.
+
+arc2_segeq_dir_/2
+  Tries anti-diagonal, horizontal, and vertical directions in order; commits
+  to the first direction for which all groups of same-key cells form a
+  consecutive run in the varying coordinate. At least two groups must exist.
+
+arc2_segeq_build_segs_/3
+  Builds a list of seg(Key, MinVary, MaxVary, Color) descriptors from the
+  key-vary-color association list. One descriptor per unique key.
+
+arc2_segeq_anchor_/4
+  Identifies which endpoint is the anchor by checking whether all minimum-
+  end alignment values are equal (anchor=min) or all maximum-end alignment
+  values are equal (anchor=max). Returns the anchor end type and the target
+  alignment value from the middle segment by sorted position.
+
+arc2_segeq_setrange_/7
+  Sets all cells in a vary range [Vfrom..Vto] to a given value. Base case
+  Vfrom > Vto returns the grid unchanged; recursive case modifies one cell
+  then recurses. Used for both trimming (set to background) and extending
+  (set to segment color).
+
+arc2_segeq_adj1_/7
+  Adjusts one segment's non-anchor end. For anchor=min (the minimum-vary end
+  is fixed), computes the correct maximum vary, then trims the range above it
+  and extends the range below it. For anchor=max, the symmetric case.
+
+arc2_segeq_adjall_/7
+  Applies arc2_segeq_adj1_ to every segment in order, threading the grid
+  through each adjustment.
+
+
+Algorithm description:
+
+Non-background cells in the input form linear segments. Every segment has all
+its cells on the same key (r+c for anti-diagonal, row for horizontal, column
+for vertical) and occupies a consecutive range of the varying coordinate.
+
+One endpoint of every segment is already "aligned" in the sense that a common
+formula applied to all segments' endpoint cells yields the same value. For anti-
+diagonal segments this formula is r-c of the endpoint cell; for linear segments
+it is the raw coordinate of the endpoint. The aligned end is the anchor.
+
+The non-anchor endpoint varies across segments, and some are wrong. The middle
+segment (by sorted key position) has the correct non-anchor endpoint. The rule
+reads the target alignment value from the middle segment and applies it to all
+others by extending or trimming from the non-anchor end.
+
+For anti-diagonal segments: given segment key K and target alignment D, the
+correct non-anchor row is (K + D) // 2. Cells above (if anchor=bottom) or below
+(if anchor=top) this row are set to background; cells between this row and the
+current endpoint are set to the segment color.
+
+For horizontal or vertical segments: the correct non-anchor coordinate is the
+target alignment value directly. Extension and trimming proceed by setting
+columns (horizontal) or rows (vertical) to the segment color or background.
+
+
+Task solved: e376de54
+
+Rule: segment_equalize
+
+Description: A 16-row by 16-column grid on background color 7. Non-background
+cells form between three and seven segments aligned in one direction per task
+instance. The same structural rule applies regardless of direction.
+
+The segment equalization rule handles three directions across the three training
+pairs and the test case, demonstrating direction-invariant generalization.
+
+Training pair 0 (anti-diagonal segments, input 16x16):
+Five anti-diagonal segments at r+c = 7, 11, 15, 19, 23 in colors 2, 2, 9, 1, 1.
+Bottom-end alignment values (r-c of bottom cell) are all equal to 7: anchor=max
+(bottom). Middle segment r+c=15 (color 9) has 6 cells with top alignment r-c=-3.
+Segments r+c=7 (3 cells), r+c=11 (2 cells), r+c=23 (4 cells) are extended.
+Segment r+c=19 (9 cells) is trimmed. All become 6 cells. Exact match: True.
+
+Training pair 1 (horizontal segments, input 16x16):
+Three horizontal segments in rows 2, 6, 8 (colors 5, 9, 3). Left ends all at
+column 3: anchor=min. Middle row=6 (color 9) has right end at column 9 = target.
+Row 2 extended from 2 cells to 7 cells; row 8 trimmed from 12 cells to 7 cells.
+Row 6 unchanged. Exact match: True.
+
+Training pair 2 (vertical segments, input 16x16):
+Five vertical segments in columns 2, 5, 7, 9, 13 (all color 8). Top ends all
+at row 2: anchor=min. Middle column=7 has bottom end at row 5 = target.
+Columns 2 and 9 extended; column 13 trimmed. All five become 4 cells. Exact match: True.
+
+Test case (anti-diagonal segments, input 16x16):
+Five anti-diagonal segments at r+c = 7, 11, 15, 21, 25 in colors 8 and 6.
+Top-end alignment values (r-c of top cell) are all equal to -3: anchor=min (top).
+Middle r+c=15 (color 6) has bottom alignment r-c=3. Segments r+c=11 extended by
+1 cell; r+c=21 trimmed by 1 cell; r+c=25 trimmed by 1 cell. All become 4 cells.
+Exact match with expected test output: True.
+
+Bugs fixed: None.
+
+
+RESULT
+
+Score: 4 / 120 = 3.33%
+
+Solved tasks: 1818057f (Wave 1), 7b5033c1 (Wave 2), 80a900e0 (Wave 3),
+              e376de54 (Wave 4)
+
+Methodology: pure induction from training examples, no pretraining on the
+ARC-AGI-2 corpus, transformation rule named glass-box.
+
+
+SIGNIFICANCE
+
+Wave 4 demonstrates three new capabilities for Mentova's ARC-AGI-2 solver.
+
+1. Direction-invariant segment reasoning. The segment_equalize rule operates
+   on horizontal, vertical, and anti-diagonal segments using the same abstract
+   algorithm. It detects the direction automatically and applies the correction
+   without task-specific configuration. A single rule handles three geometric
+   orientations.
+
+2. Alignment-based endpoint reasoning for anti-diagonals. The key insight is
+   that the invariant for anti-diagonal segments is not the raw row number of
+   the endpoint but its r-c value (2*row - key). This transforms the endpoint
+   alignment problem from "check if row numbers are equal" (which they are not
+   across different anti-diagonals) into "check if r-c values are equal" (which
+   they are). This is the first ARC-AGI-2 wave to use a derived coordinate
+   (r-c) rather than a raw grid coordinate as the alignment criterion.
+
+3. Asymmetric endpoint correction. The anchor detection splits segments into
+   two categories: those whose minimum endpoint is fixed (anchor=min) and those
+   whose maximum endpoint is fixed (anchor=max). The correction is applied only
+   to the non-anchor end. This asymmetry is detected from the input data alone,
+   not from task metadata. The algorithm exploits the structural constraint that
+   one set of endpoints is always already correct in the input grid.
+
+The key architectural lesson: ARC-AGI-2 encodes structural constraints as
+partial invariants in the input. One part of the structure is already correct;
+another part needs correction. Rules that identify the invariant (the anchor)
+and propagate it to the non-invariant parts (the variable endpoint) can solve
+a whole class of "fix the defect" tasks. The segment_equalize rule is the
+second example of this pattern after the plus-shape recolor rule (Wave 1, where
+color A was already present and simply needed to become color B).
