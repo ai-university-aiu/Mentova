@@ -1,0 +1,13 @@
+Acc_291: Legend and Key Region Detection Pack (lg_*, Layer 250)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+PrologAI Work Package 271 introduces the legend pack (lg_*, Layer 250): fourteen predicates for detecting and parsing legend regions in grid transformation tasks. A legend region is a small, isolated part of a grid that acts as a code key, mapping visual features to semantic meanings. All 44 acceptance tests pass.
+
+The pack uses BFS 4-connected flood-fill to find all connected color regions in a grid, then filters by size (area <= TotalArea/4) and isolation (not touching other regions) to identify legend candidates. lg_detect_legend/3 returns the most likely legend region. lg_color_map/3 maps each row band of the legend to the color found at its first cell in the source grid. lg_consistent_legend/2 finds a legend structure that appears in every training pair input.
+
+The 14 lg_* predicates: lg_detect_legend, lg_is_legend, lg_legend_entries, lg_consistent_legend, lg_region_bbox, lg_separated, lg_region_area, lg_all_regions, lg_region_color, lg_is_small, lg_same_shape, lg_entry_boundaries, lg_color_map, lg_position.
+
+This pack is part of the ARC-AGI-2 analytical foundation, providing the visual parsing layer for in-context symbol definition tasks where some grid region defines the task's private code.

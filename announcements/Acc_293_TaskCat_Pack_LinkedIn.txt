@@ -1,0 +1,11 @@
+PrologAI Work Package 273: Task Type Classification (taskcat pack, tc_*, Layer 252)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Before searching for a rule, classify the task. That one step reduces the search space dramatically.
+
+Work Package 273 introduces the taskcat pack: 14 tc_* predicates implementing the Chain of Responsibility solving pattern. tc_categorize classifies a task as single_rule, multi_step, context_gated, or symbol_table. tc_suggest_strategies returns an ordered fallback list. tc_confidence scores how certain we are.
+
+273 work packages. Systematic reasoning, not brute force.
+
+#PrologAI #SymbolicAI #ARCAGI2

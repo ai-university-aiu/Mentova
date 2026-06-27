@@ -1,0 +1,13 @@
+Acc_292: Multi-Pair Object Tracking Pack (mp_*, Layer 251)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+PrologAI Work Package 272 introduces the multipair pack (mp_*, Layer 251): fourteen predicates for tracking object identity and correspondence across multiple training pairs simultaneously. Objects are identified by color (bg=0). All 44 acceptance tests pass.
+
+mp_track_objects/2 assigns tracked(Idx, Color, PairIdxList) identity terms to each non-bg color across all training pair inputs. mp_invariant_objects/2 finds colors appearing in every training input. mp_role_objects/3 splits objects into content (invariant) and marker (variable) roles. mp_cross_pair_match/2 builds match(I,J,CommonColors) correspondence terms for every pair of training pair indices.
+
+mp_universal_colors/2 and mp_variable_colors/2 find colors present in all or some inputs respectively - these two sets are guaranteed disjoint. mp_disappeared_objects/2 and mp_appeared_objects/2 find colors that vanish or emerge across inputs and outputs. mp_consistent_count/1 verifies uniform object count across all inputs.
+
+The 14 mp_* predicates provide the cross-pair tracking foundation needed for extracting invariants and contrastive signals at the object level rather than the grid level.

@@ -1,0 +1,11 @@
+PrologAI Work Package 271: Legend Region Detection (legend pack, lg_*, Layer 250)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Many ARC-AGI-2 tasks include a small, isolated region that acts as a code key - defining what symbols mean within that one task.
+
+Work Package 271 introduces the legend pack: 14 lg_* predicates for detecting and parsing these legend regions using BFS flood-fill, size filtering, and isolation checks. lg_detect_legend finds the candidate. lg_color_map decodes it. lg_consistent_legend verifies it appears across all training pairs.
+
+273 work packages. Pure symbolic reasoning. No black box.
+
+#PrologAI #SymbolicAI #ARCAGI2
