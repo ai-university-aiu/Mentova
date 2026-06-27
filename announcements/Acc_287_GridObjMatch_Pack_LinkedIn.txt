@@ -1,0 +1,32 @@
+Accomplishment 287: Mentova can now track objects across scenes.
+
+The new gridobjmatch pack gives PrologAI fourteen predicates for matching
+and comparing object lists from two different grids.
+
+Which objects moved, and by how far?
+Do all objects move by the same vector?
+Which objects changed color?
+What is the color map that explains every color change?
+Which color classes appeared that were not there before?
+Which color classes disappeared?
+Do the two scenes have the same set of object colors?
+How many objects were added or removed?
+
+Match objects by shared color.
+Match objects by nearest position.
+Match objects by shared size.
+
+Find objects in the first scene with no partner in the second.
+Find objects in the second scene with no partner in the first.
+
+Every answer is deterministic. Every answer is exact.
+
+This is the core vocabulary for object-level change analysis, the
+prerequisite for inducing rules from ARC-AGI-2 training pairs.
+
+267 work packages. Layer 246. The object-level change layer is complete.
+
+D. R. Dison
+Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

@@ -1,0 +1,105 @@
+Acc_287: Object Matching and Change Detection Between Object Lists Pack (gridobjmatch, gom_*, Layer 246)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Abstract
+
+PrologAI gains the ability to match objects between two lists and detect what changed.
+
+The gridobjmatch pack (Work Package 267, Layer 246, prefix gom_*) provides 14
+predicates for pairing ob(Color, Cells, BBox) object terms across two lists, measuring
+displacement, inferring color maps, and detecting appeared and disappeared objects.
+It is the core primitive for answering: "what moved, what changed color, what appeared,
+and what disappeared between the input scene and the output scene?"
+
+Background
+
+ARC-AGI-2 tasks present a solver with training pairs, each consisting of an input grid
+and an output grid. To induce the governing rule, the solver must answer a precise
+question: what changed between the input and the output at the level of objects?
+
+Cell-level comparison (handled by gridtransform) is not enough. The solver needs
+object-level tracking: which objects moved, by how much, which objects changed color,
+which objects appeared, and which disappeared. Without this capability the induction
+step cannot produce named, inspectable, reusable rules.
+
+The gridobjmatch pack provides the complete vocabulary for object-level change
+analysis. It sits at Layer 246 and operates directly on ob/3 terms produced by
+gob_all_objects/3 from the gridobj pack.
+
+The Pack
+
+Module: gridobjmatch. File: packs/gridobjmatch/prolog/gridobjmatch.pl.
+Prefix: gom_. Layer: 246. Work Package: 267. PrologAI PR: 358.
+
+The 14 public predicates are organized into five functional groups.
+
+Object Matching.
+
+gom_match_color/3 pairs each object in the first list with the first object in the
+second list sharing the same color. Unmatched objects are dropped silently.
+
+gom_match_nearest/3 pairs each object with its nearest neighbor in the second list
+by doubled-centroid Manhattan distance. Objects are consumed greedily; the doubled
+centroid (R0+R1, C0+C1) avoids integer division.
+
+gom_match_size/3 pairs objects by shared cell count.
+
+Unmatched Object Extraction.
+
+gom_unmatched_a/3 returns objects in the first list that have no partner.
+gom_unmatched_b/3 returns objects in the second list that have no partner.
+
+Color Change Analysis.
+
+gom_color_diff/3 partitions a match list into pairs where both objects share color
+(Same) and pairs where colors differ (Diff).
+
+Movement Analysis.
+
+gom_move_vector/2 computes the mv(DR, DC) displacement between bounding-box top-left
+corners. gom_move_vectors/2 maps this over a list. gom_constant_move/2 succeeds if
+every pair has the same vector; it fails for an empty list.
+
+Color Map and Structural Analysis.
+
+gom_infer_color_map/2 collects cm(OldColor, NewColor) from color-changing pairs.
+gom_appeared/3 and gom_disappeared/3 detect brand-new and lost color classes.
+gom_same_structure/2 checks that both lists share the same multiset of colors.
+gom_count_change/3 returns the signed change in object count.
+
+Test Results
+
+44 acceptance tests, AC-GOM-001 through AC-GOM-044. All 44 pass.
+The suite covers each predicate individually plus 8 integration scenarios.
+
+SPARC Documentation
+
+Specification: Part 257 (WP-267-SPEC-001 through WP-267-SPEC-005).
+Pseudocode: Part 257 (WP-267-PSEUDO-001 through WP-267-PSEUDO-014).
+Architecture: ARCH-233.
+Refinement: AC-GOM-001 through AC-GOM-044.
+Completion: WP-267 entry.
+Versions: Spec v233, Pseudo v225, Arch v227, Refinement v280, Completion v283.
+
+Significance
+
+The gridobjmatch pack completes the object-level analysis layer needed for
+ARC-AGI-2. With this pack, a solver can take two scenes, match their objects by
+color, nearest centroid, or size, and immediately read off the movement vector,
+the color map, the appeared colors, and the disappeared colors. This vocabulary
+is prerequisite for both rule induction (what rule explains all training pairs?)
+and rule application (apply the induced rule to the test input).
+
+PrologAI now has 267 work packages and reaches Layer 246.
+
+References
+
+PrologAI Specification v233, Part 257.
+PrologAI Architecture v227, ARCH-233.
+PrologAI Completion v283, WP-267 entry.
+Pack_Reference.txt, gridobjmatch entry.
+docs/tutorial/Ch228_GridObjMatch.txt.
