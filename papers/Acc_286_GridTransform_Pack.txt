@@ -1,0 +1,126 @@
+Acc_286: Grid Transformation Detection and Application Pack (gridtransform, gtr_*, Layer 245)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Abstract
+
+PrologAI gains transformation detection between grids.
+
+The gridtransform pack (Work Package 266, Layer 245, prefix gtr_*) provides 14
+predicates for detecting color mappings between two grids, computing cell-level
+differences, and applying transformations. Color maps are cm(Old, New) lists.
+Change lists are chg(R, C, OldColor, NewColor) terms.
+
+Background
+
+ARC-AGI-2 tasks require a system to identify the rule that maps input grids to
+output grids. The most fundamental class of such rules is color permutation: every
+cell that was color A becomes color B, every B becomes C, and so on.
+
+Beyond color permutation, the system needs to identify which cells changed, by how
+much, and to reproduce that change on a new input. The gridtransform pack provides
+all the primitives needed for this transformation pipeline.
+
+The Pack
+
+Module: gridtransform. File: packs/gridtransform/prolog/gridtransform.pl.
+Prefix: gtr_. Layer: 245. Work Package: 266. PrologAI PR: 356.
+
+Predicates:
+
+gtr_color_map(+GridA, +GridB, -Map)
+Detect the consistent color mapping from GridA to GridB as a sorted list of
+cm(OldColor, NewColor) pairs. Fails if any source color maps to more than one
+destination at different positions.
+
+gtr_apply_color_map(+Grid, +Map, -Result)
+Apply a cm/2 color map to a grid. Unmapped colors pass through unchanged.
+
+gtr_diff_cells(+GridA, +GridB, -Cells)
+List of r(R,C) positions where the grids have different values.
+
+gtr_diff_count(+GridA, +GridB, -N)
+Count of positions where the grids differ.
+
+gtr_same_cells(+GridA, +GridB, -Cells)
+List of r(R,C) positions where the grids agree.
+
+gtr_changed_colors(+GridA, +GridB, -Changes)
+List of chg(R,C,OldColor,NewColor) for each position that changed.
+
+gtr_invert_map(+Map, -InvMap)
+Invert a color map. Fails if the map is not injective.
+
+gtr_compose_maps(+MapAtoB, +MapBtoC, -MapAtoC)
+Compose two color maps. Only colors present in both maps appear in the result.
+
+gtr_is_identity_map(+Map)
+Succeed if every cm(VA,VB) in Map has VA = VB. Succeeds for empty map.
+
+gtr_apply_changes(+Grid, +Changes, -Result)
+Apply a list of chg/4 terms to a grid.
+
+gtr_delta_grid(+GridA, +GridB, +Bg, -Delta)
+Grid showing only changed cells: changed positions use GridB's value; unchanged
+positions use Bg.
+
+gtr_overlay(+BaseGrid, +DeltaGrid, +Bg, -Result)
+Paste non-Bg cells of DeltaGrid onto BaseGrid.
+
+gtr_common_grid(+GridA, +GridB, +Bg, -Common)
+Keep cells where both grids agree; differing cells become Bg.
+
+gtr_is_color_permutation(+GridA, +GridB)
+Succeed if GridB is a bijective color permutation of GridA: consistent and injective.
+
+Key Composition
+
+The delta and overlay predicates compose cleanly:
+  overlay(A, delta(A, B, Bg), Bg) = B
+
+This means: given grid A and grid B, compute what changed (delta), then applying
+those changes to A via overlay reconstructs B exactly.
+
+The color map pipeline composes equally cleanly:
+  Map = color_map(A, B)
+  apply_color_map(A, Map) = B
+  apply_color_map(B, invert_map(Map)) = A
+
+Test Coverage
+
+44 tests, AC-GTR-001 through AC-GTR-044, in
+packs/gridtransform/test/test_gridtransform.pl. All 44 tests pass.
+
+Coverage: color map predicates (001-005), diff/same/changes (006-014), map algebra
+(015-021), changes and delta (022-025), overlay and common (026-030), permutation
+(031-034), integration (035-044).
+
+SPARC Documentation
+
+Specification v232: WP 266 added to the Data Layer work package list.
+Pseudocode v224: 14 pseudocode entries for all gtr_* predicates added.
+Architecture v226: Layer 245 (gridtransform, gtr_*) added to the layer table.
+Refinement v279: 44 test IDs AC-GTR-001 through AC-GTR-044 documented.
+Completion v282: WP 266 marked complete with pack metadata and test count.
+
+Pack Reference: gridtransform entry added.
+Tutorial: Chapter 227 (Ch227_GridTransform.txt) added; PrologAI_Tutorial.txt updated.
+
+Platform Status
+
+With gridtransform merged, PrologAI has 266 work packages and Layer 245 in the
+Data Layer. The platform now has a complete transformation detection and application
+pipeline: identify objects, group them, relate them spatially, detect how they
+changed, and reproduce that change on new inputs.
+
+References
+
+PrologAI repository, PR 356: feat(gridtransform): WP 266 - color mapping, diff,
+delta, overlay, and permutation detection (gtr_*, Layer 245).
+
+PrologAI_1_Specification_v232.txt - Work Package 266 specification.
+PrologAI_3_Architecture_v226.txt - Layer 245 architecture entry.
+PrologAI_4_Refinement_v279.txt - Test IDs AC-GTR-001 through AC-GTR-044.

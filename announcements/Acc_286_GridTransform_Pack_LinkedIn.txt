@@ -1,0 +1,23 @@
+Acc_286: PrologAI gains transformation detection and application between grids.
+
+The gridtransform pack (Layer 245, gtr_* prefix) adds 14 predicates for detecting
+and applying color transformations between pairs of grids.
+
+gtr_color_map detects the consistent color mapping from grid A to grid B (fails if
+any source color maps to two different destinations). gtr_apply_color_map applies
+the map. gtr_invert_map inverts it. gtr_compose_maps chains two maps together.
+
+Beyond color maps: gtr_diff_cells and gtr_diff_count find where two grids differ.
+gtr_changed_colors records the old and new color at each changed position.
+gtr_delta_grid produces a grid showing only the changes. gtr_overlay pastes a
+delta grid onto a base. The two compose cleanly: overlay(A, delta(A,B,Bg), Bg) = B.
+
+gtr_is_color_permutation tests that two grids are related by a bijective color map.
+
+44/44 tests pass. 266 work packages total. Layer 245 in the Data Layer.
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
+
+#PrologAI #Mentova #SymbolicAI #TransformationDetection #ARC #CognitiveSystems
