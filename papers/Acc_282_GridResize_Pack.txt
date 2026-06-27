@@ -1,0 +1,150 @@
+Acc_282: gridresize Pack - Grid Resize and Scale Operations (grs_*, Layer 241)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+
+Abstract
+
+PrologAI Work Package 262 adds the gridresize pack (grs_*, Layer 241): fourteen
+predicates for scaling, resizing, tiling, cropping, and fitting symbolic grids.
+The pack covers integer scale-up and scale-down, mode-based downsampling, double
+and halve shortcuts, nearest-neighbor resize to arbitrary dimensions, modular
+tiling, rectangular cropping, border removal, aspect-ratio-preserving letterbox
+fit, canvas centering, dimension querying, aspect ratio, and square testing.
+All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Grid reasoning tasks frequently require changing the scale or dimensions of a
+pattern: expanding a small pattern to match a larger canvas, downsampling a noisy
+input, tiling a repeating tile pattern, or cropping to a region of interest.
+The gridresize pack provides a complete vocabulary for these geometric operations
+without requiring callers to implement the cell arithmetic themselves. The
+grs_fit_in predicate is especially useful: given any grid and a target bounding
+box, it automatically scales and centers the content while preserving its aspect
+ratio.
+
+
+2. Architecture
+
+Layer 241 sits immediately above gridcolorop (Layer 240) in the Data Layer.
+No library imports or cross-pack dependencies. Uses SWI-Prolog built-ins only.
+
+Key design decisions:
+
+All if-then-else blocks that follow a grs_dims_ call are wrapped in explicit
+outer parentheses. Without them, SWI-Prolog parses the preceding comma-chain as
+part of the if-then condition. In detail: `','` is xfy 1000, `'->'` is xfy 1050,
+and `';'` is xfy 1100. The right argument of `,` has priority <= 1000, but
+`(Cond) -> Then ; Else` uses operators with priority > 1000. So `grs_dims_(...),
+(Cond) -> Then ; Else` is parsed as `((grs_dims_(...), Cond)) -> Then ; Else`
+where grs_dims_ is inside the condition. When the condition fails, the bindings
+for H and W are lost. The fix is to wrap the entire if-then-else in `( ... )` so
+it is a single subgoal with precedence 0.
+
+grs_mode_ uses Neg is -N (arithmetic evaluation) for sort keys, following the
+same pattern established in gridcolorop for descending-count sorts.
+
+grs_resize uses integer arithmetic (R*H)//NewH rather than floating-point to
+avoid rounding discrepancies across platforms for the nearest-neighbor sampling.
+
+grs_fit_in uses round/1 (rather than floor/1) for the scaled target dimensions,
+to get the best integer approximation of the ideal float dimensions.
+
+grs_crop clamps indices to grid bounds rather than failing; this is more robust
+for callers that may compute approximate crop bounds.
+
+
+3. Predicates
+
+Integer scaling:
+
+grs_scale_up/3           - expand each cell into F x F block
+grs_scale_down/4         - sample top-left of each F x F block
+grs_scale_down_mode/4    - take mode of each F x F block
+grs_double/2             - scale up by 2 (shorthand)
+grs_halve/3              - scale down by 2 (shorthand)
+
+Arbitrary resize and tile:
+
+grs_resize/5             - nearest-neighbor resize to (NewH x NewW)
+grs_tile_to/4            - modular repetition to fill H x W
+
+Crop operations:
+
+grs_crop/6               - extract subgrid, clamped to grid bounds
+grs_border_crop/4        - remove N rows/cols from all borders
+
+Fit and embed:
+
+grs_fit_in/5             - scale to fit in H x W, then center (letterbox)
+grs_embed_in/5           - center in H x W canvas without scaling
+
+Metrics:
+
+grs_grid_size/3          - row and column counts
+grs_aspect_ratio/4       - H, W, and float W/H ratio
+grs_is_square/1          - succeed if H = W
+
+
+4. Example Session
+
+:- use_module(pack(gridresize/prolog/gridresize)).
+
+% Scale up a 2x2 pattern to 4x4.
+grs_scale_up([[a,b],[c,d]], 2, R).
+% R = [[a,a,b,b],[a,a,b,b],[c,c,d,d],[c,c,d,d]].
+
+% Nearest-neighbor resize 1x1 to 3x3.
+grs_resize([[r]], 3, 3, b, R).
+% R = [[r,r,r],[r,r,r],[r,r,r]].
+
+% Tile 2x2 to 3x3.
+grs_tile_to([[a,b],[c,d]], 3, 3, R).
+% R = [[a,b,a],[c,d,c],[a,b,a]].
+
+% Remove 1-cell border from 3x3 grid.
+grs_border_crop([[a,b,c],[d,e,f],[g,h,i]], 1, b, [[e]]).
+
+% Fit 2x1 pattern into 4x4 letterbox.
+grs_fit_in([[r,g]], 4, 4, b, R).
+% R is a 4x4 grid with the pattern scaled and centered.
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GRS-001 through AC-GRS-044) are exercised in
+packs/gridresize/test/test_gridresize.pl. Tests cover grs_scale_up (3),
+grs_scale_down (3), grs_scale_down_mode (3), grs_double (2), grs_halve (1),
+grs_resize (3), grs_tile_to (3), grs_crop (3), grs_border_crop (3),
+grs_fit_in (3), grs_embed_in (3), grs_grid_size (2), grs_aspect_ratio (2),
+grs_is_square (2), integration (8).
+
+
+6. SPARC Documentation
+
+Work Package 262 is recorded in:
+- Specification v228, Part 252 (WP-262-SPEC-001 through WP-262-SPEC-005)
+- Pseudocode v220, Part 252
+- Architecture v222, ARCH-228
+- Refinement v275, AC-GRS-001 through AC-GRS-044
+- Completion v278, WP-262 record
+
+Tutorial chapter: docs/tutorial/Ch223_GridResize.txt
+Pack reference: docs/Pack_Reference.txt (gridresize entry)
+PrologAI PR: #352 (merged 2026-06-27)
+
+
+7. Conclusion
+
+The gridresize pack provides fourteen grs_* predicates for all standard geometric
+resize and scale operations on symbolic grids. The integer scaling, nearest-
+neighbor resize, and modular tiling operations form the basis for tasks involving
+pattern expansion, reduction, and repetition. The grs_fit_in predicate handles
+the common use case of fitting any pattern into a fixed-size canvas while
+preserving its shape.
+
+PrologAI now comprises 262 work packages and reaches Layer 241 in the Data Layer.
