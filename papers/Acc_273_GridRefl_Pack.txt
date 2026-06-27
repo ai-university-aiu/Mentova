@@ -1,0 +1,149 @@
+Acc_273: gridrefl Pack - Grid Reflection and Rotation (grf_*, Layer 232)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 253 adds the gridrefl pack (grf_*, Layer 232): fourteen
+predicates for geometric reflection and rotation of symbolic grids. The pack covers
+horizontal and vertical flips, clockwise rotations by 90, 180, and 270 degrees,
+main-diagonal and anti-diagonal transpositions, symmetry detection on all four
+geometric axes, enumeration of satisfied symmetry axes, and symmetry completion in
+both horizontal and vertical orientations. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many symbolic reasoning tasks on grids require recognizing or applying geometric
+transformations: rotating a pattern by 90 degrees, detecting that a grid is
+left-right symmetric, or completing a partially-filled symmetric structure.
+The gridrefl pack provides a clean, composable vocabulary for all these operations.
+
+The eight symmetries of the square (the D4 group: identity, three rotations, two
+reflections across the main and anti-diagonals, and two reflections across the
+horizontal and vertical midlines) are all covered by the pack's predicates.
+
+
+2. Architecture
+
+Layer 232 sits immediately above gridmap (Layer 231) in the Data Layer.
+Uses library(lists): member/2, reverse/2, nth0/3.
+
+Key design decisions:
+
+grf_rot90 = transpose then flip_h. grf_rot270 = flip_h then transpose. These are
+the standard minimal-operation implementations. grf_rot180 = flip_v then flip_h,
+which avoids calling the transpose helper entirely.
+
+grf_antidiag = rot180 then transpose. This gives AntiDiag[R][C] = Grid[N-1-C][N-1-R]
+for square grids. Both grf_transpose and grf_antidiag are self-inverse.
+
+grf_transpose_ uses cuts on both base cases ([],[]) and ([[]|_],[]) to prevent
+PLUnit choicepoint warnings - a pattern established in the gridwave and gridshift packs.
+
+grf_is_sym_h, grf_is_sym_v, grf_is_sym_d, and grf_is_sym_a each work by computing
+the transformed grid and unifying with the original. If the grid satisfies the
+symmetry, the unification succeeds; otherwise it fails.
+
+grf_make_sym_h and grf_make_sym_v use grf_merge_rows_/4: a simple recursive
+predicate that takes the max of two rows (non-bg beats bg; left/top wins on conflict).
+
+
+3. Predicates
+
+Flips:
+
+grf_flip_h/2  - reverse each row (left-right mirror)
+grf_flip_v/2  - reverse list of rows (top-bottom mirror)
+
+Rotations:
+
+grf_rot90/2   - rotate 90 degrees clockwise
+grf_rot180/2  - rotate 180 degrees
+grf_rot270/2  - rotate 270 degrees clockwise (90 counter-clockwise)
+
+Transpositions:
+
+grf_transpose/2 - swap rows and columns (main-diagonal reflection)
+grf_antidiag/2  - reflect across anti-diagonal (rot180 then transpose)
+
+Symmetry detection:
+
+grf_is_sym_h/1  - succeed if grid equals its horizontal flip
+grf_is_sym_v/1  - succeed if grid equals its vertical flip
+grf_is_sym_d/1  - succeed if grid equals its own transpose
+grf_is_sym_a/1  - succeed if grid equals its own anti-diagonal reflection
+grf_sym_axes/2  - return subset of [h,v,d,a] for satisfied symmetry axes
+
+Symmetry completion:
+
+grf_make_sym_h/3 - make horizontally symmetric by merging each row with its reverse
+grf_make_sym_v/3 - make vertically symmetric by merging row R with row (H-1-R)
+
+
+4. Example Session
+
+:- use_module(pack(gridrefl/prolog/gridrefl)).
+
+G = [[1,2,3],[4,5,6],[7,8,9]].
+
+grf_rot90(G, R).
+% R = [[7,4,1],[8,5,2],[9,6,3]]
+
+grf_rot270(G, R).
+% R = [[3,6,9],[2,5,8],[1,4,7]]
+
+grf_transpose(G, T).
+% T = [[1,4,7],[2,5,8],[3,6,9]]
+
+grf_antidiag(G, A).
+% A = [[9,6,3],[8,5,2],[7,4,1]]
+
+grf_sym_axes([[1,2,1],[3,4,3],[1,2,1]], Axes).
+% Axes = [h, v]
+
+grf_is_sym_d([[1,2,3],[2,4,5],[3,5,6]]).
+% true (diagonally symmetric)
+
+grf_make_sym_h([[r,b,b],[b,b,g]], b, R).
+% R = [[r,b,r],[g,b,g]]
+
+% Four rotations return identity:
+grf_rot90(G, R1), grf_rot90(R1, R2), grf_rot90(R2, R3), grf_rot90(R3, G).
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GRF-001 through AC-GRF-044) are exercised in
+packs/gridrefl/test/test_gridrefl.pl. Tests cover grf_flip_h (3), grf_flip_v (3),
+grf_rot90 (3), grf_rot180 (3), grf_rot270 (3), grf_transpose (3), grf_antidiag (3),
+grf_is_sym_h (3), grf_is_sym_v (3), grf_is_sym_d (3), grf_is_sym_a (3),
+grf_sym_axes (3), grf_make_sym_h (3), grf_make_sym_v (3), combined (2).
+
+
+6. SPARC Documentation
+
+Work Package 253 is recorded in:
+- Specification v219, Part 243 (WP-253-SPEC-001 through WP-253-SPEC-005)
+- Pseudocode v211, Part 243
+- Architecture v213, ARCH-219
+- Refinement v266, AC-GRF-001 through AC-GRF-044
+- Completion v269, WP-253 record
+
+Tutorial chapter: docs/tutorial/Ch214_GridRefl.txt
+Pack reference: docs/Pack_Reference.txt (gridrefl entry)
+PrologAI PR: #342 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridrefl pack provides fourteen grf_* predicates for geometric reflection and
+rotation of symbolic grids. The uniform implementation - each rotation as a sequence
+of at most two primitive operations (flip_h, flip_v, transpose) - makes the pack
+easy to understand, compose, and extend. The symmetry detection predicates close
+the loop by enabling callers to verify that a grid satisfies any of the D4 symmetries.
+
+PrologAI now comprises 253 work packages and reaches Layer 232 in the Data Layer.
