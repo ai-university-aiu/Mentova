@@ -1,0 +1,128 @@
+Acc_259: griddelta Pack - Grid Delta Analysis (gdt_*, Layer 218)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 239 adds the griddelta pack (gdt_*, Layer 218): fourteen
+predicates for comparing same-size grids. The pack covers difference detection,
+changed-cell mapping, color-transition analysis, delta application, delta
+inversion, row/column difference analysis, sub-region agreement testing,
+transparent overlay, and identity testing. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently involve comparing an input grid to an output
+grid to extract the transformation rule, then applying that rule to a new
+input. The griddelta pack provides the symbolic tools for extracting the delta
+between two grids (what changed and how), applying it to a third grid, and
+verifying the result. This enables the core ARC-AGI-2 pattern of learning a
+rule from before/after examples and applying it to a new case.
+
+
+2. Architecture
+
+Layer 218 sits immediately above gridspiral (Layer 217) in the Data Layer.
+Uses library(lists): nth0/3, member/2, list_to_set/2. No cross-pack dependencies.
+
+gdt_apply_delta uses gdt_build_ with a lambda that reads G1, G2, and G3 values
+for each cell and applies the conditional replacement rule. gdt_overlay similarly
+reads G1 and G2 per cell and selects based on the Marker test.
+
+
+3. Predicates
+
+Compatibility and differences:
+
+gdt_compatible/2      - test same dimensions
+gdt_diff_cells/3      - R-C pairs where G1 and G2 differ
+gdt_diff_count/3      - count of differing cells
+gdt_same_cells/3      - R-C pairs where G1 and G2 agree
+
+Color transition analysis:
+
+gdt_changed_pairs/3   - R-C-(Old->New) for each changed cell
+gdt_color_changes/4   - count cells where a specific color was replaced
+gdt_changed_colors/3  - distinct new colors introduced by the delta
+
+Delta operations:
+
+gdt_apply_delta/4     - apply G1→G2 changes to G3
+gdt_invert_delta/3    - reverse delta: changed cells revert to G1's values
+
+Structural analysis:
+
+gdt_diff_rows/3       - rows containing at least one change
+gdt_diff_cols/3       - columns containing at least one change
+gdt_agree_region/6    - test agreement in a rectangular sub-region
+
+Overlay and identity:
+
+gdt_overlay/4         - overlay G2 on G1 with Marker as transparent
+gdt_is_identity/2     - succeeds if two grids are identical
+
+
+4. Example Session
+
+:- use_module(pack(griddelta/prolog/griddelta)).
+
+% Detect changes:
+G1 = [[r,r,r],[r,x,r],[r,r,r]].
+G2 = [[r,r,r],[r,b,r],[r,r,r]].
+gdt_diff_cells(G1, G2, Cells).
+% Cells = [1-1]
+
+gdt_changed_pairs(G1, G2, Pairs).
+% Pairs = [1-1-(x->b)]
+
+% Apply delta:
+G3 = [[r,r,r],[r,x,r],[r,r,r]].
+gdt_apply_delta(G1, G2, G3, Result).
+% Result = [[r,r,r],[r,b,r],[r,r,r]]  (center x → b)
+
+% Invert:
+gdt_invert_delta(G1, G2, Inv).
+% Inv = G1   (G2's changes undone)
+
+% Region agreement:
+gdt_agree_region(G1, G2, 0, 0, 0, 2).
+% Succeeds (top row is identical)
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GDT-001 through AC-GDT-044) exercised in
+packs/griddelta/test/test_griddelta.pl. Tests cover compatibility (2),
+diff_cells (4), diff_count (3), same_cells (3), changed_pairs (2),
+color_changes (3), changed_colors (3), apply_delta (3), diff_rows (3),
+diff_cols (2), agree_region (3), overlay (2), invert_delta (2), is_identity (3),
+and combined tests (5).
+
+
+6. SPARC Documentation
+
+Work Package 239 is recorded in:
+- Specification v205, Part 229 (WP-239-SPEC-001 through WP-239-SPEC-007)
+- Pseudocode v197, Part 229
+- Architecture v199, ARCH-205
+- Refinement v252, AC-GDT-001 through AC-GDT-044
+- Completion v255, WP-239 record
+
+Tutorial chapter: docs/tutorial/Ch200_GridDelta.txt
+Pack reference: docs/Pack_Reference.txt (griddelta entry)
+PrologAI PR: #328 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The griddelta pack provides complete symbolic grid comparison and delta
+operations. Difference detection, color transition mapping, delta application
+and inversion, row/column analysis, region agreement, overlay, and identity
+testing are all in single predicate calls. This is the core toolset for the
+ARC-AGI-2 learn-from-examples pattern.
+
+PrologAI now comprises 239 work packages and reaches Layer 218 in the Data Layer.
