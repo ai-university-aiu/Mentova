@@ -1,0 +1,93 @@
+Acc_290: Contrastive Pair Analysis Pack for Grid Transformation Reasoning
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+
+ABSTRACT
+
+PrologAI Work Package 270 introduces the contrast pack (ca_*, Layer 249):
+fourteen predicates for contrastive pair analysis across training pairs. The pack
+identifies which input features co-vary with output changes - the key causal signal
+for discovering grid transformation rules. All 44 acceptance tests pass.
+
+
+MOTIVATION
+
+A fundamental challenge in learning grid transformation rules from examples is
+distinguishing correlation from causation. Many input features are stable across
+all training examples; only a small subset actually drives the output transformation.
+The contrast pack provides the analytical primitives to isolate that subset.
+
+
+ARCHITECTURE
+
+Layer 249 sits immediately above invariant (Layer 248) and symtab (Layer 247) in the
+Data Layer. It depends only on standard SWI-Prolog libraries. Training pairs are
+pair(InputGrid, OutputGrid) terms. Deltas are delta(I, Changes) terms where Changes
+is a list of chg(R,C,OldV,NewV) terms recording each changed cell.
+
+
+PREDICATES
+
+The fourteen ca_* predicates form a complete contrastive analysis pipeline:
+
+Stage 1 - Delta extraction:
+  ca_pairwise_delta/2: compute per-pair chg(R,C,OldV,NewV) change records.
+
+Stage 2 - Feature profiling:
+  ca_feature_profile/2: extract feat(dims,...), feat(color_count,...),
+    feat(dominant_color,...) from a single grid.
+  ca_profile_diff/3: find features that changed between two profiles.
+
+Stage 3 - Feature classification:
+  ca_stable_features/2: features constant across all training inputs.
+  ca_unstable_features/2: features that vary across training inputs.
+  ca_covarying_features/2: features in all changing pairs and absent from stable pairs.
+
+Stage 4 - Ranking and selection:
+  ca_change_count/3: how many changing pairs contain a given feature.
+  ca_rank_features/2: sort features by change_count/total_changing descending.
+  ca_context_gate/2: the single top-ranked causal feature.
+
+Stage 5 - Correlation and precision:
+  ca_correlated_features/3: features common to pairs with a specific output change.
+  ca_common_context/3: alias for correlated_features.
+  ca_separates/4: precision score of a feature as a classifier.
+  ca_minimal_features/2: greedy feature selection.
+  ca_discriminating_pair/4: find the pair that distinguishes two competing hypotheses.
+
+
+DESIGN HIGHLIGHTS
+
+The co-varying feature criterion is strict: a feature must be present in every
+changing pair AND absent from every stable pair. This filters out features that
+merely correlate with change rather than cause it.
+
+The ca_stable_features and ca_unstable_features sets are guaranteed disjoint. A
+feature stable across all inputs cannot simultaneously vary across some inputs.
+
+The rank_features score is change_count / total_changing_pairs, giving a normalized
+correlation coefficient. The context_gate returns the top-ranked feature.
+
+
+ACCEPTANCE TEST COVERAGE
+
+44 tests (AC-CA-001 through AC-CA-044) cover:
+  - feature_profile extraction for various grid types including all-background grids
+  - pairwise_delta for changing and stable pairs with correct cell indexing
+  - stable/unstable/covarying feature extraction
+  - change_count, rank_features, context_gate correctness
+  - separates precision computation
+  - disjointness invariants (stable vs unstable, covarying vs stable)
+  - full end-to-end contrastive pipeline on symmetric color-swap training pairs
+
+
+SIGNIFICANCE
+
+The contrast pack completes the core learning-from-examples stack alongside
+gridobjmatch (object-level change detection), symtab (symbol table learning),
+and invariant (cross-pair invariant extraction). Together these four packs give
+PrologAI a principled, glass-box approach to extracting transformation rules from
+training pairs without any gradient-based learning.
