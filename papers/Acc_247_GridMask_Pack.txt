@@ -1,0 +1,164 @@
+Acc_247: gridmask Pack - Grid Mask Operations: Boolean Overlay, Union, Intersection, Difference, Invert, and Color Mask (gm_*, Layer 206)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 227 adds the gridmask pack (gm_*, Layer 206): fourteen
+predicates for boolean mask operations on raw grids. The pack provides overlay
+composition, set union/intersection/difference, inversion, mask-based gating,
+cell-list extraction, stamp and transparent paste, sub-grid extraction, grid
+comparison and equality, N-layer border masks, and color selection masks. All
+44 acceptance tests pass.
+
+
+1. Motivation
+
+Many visual reasoning tasks require composing two grids into one, selecting cells
+that satisfy boolean conditions across grids, or generating selection masks for
+specific regions or colors. The gridmask pack provides the complete toolkit for
+these operations, treating grids as sets of colored cells and enabling set-algebra
+at the grid level.
+
+The gridmask pack provides:
+- Overlay: place GridB transparently over GridA
+- Union: combine non-background regions from two grids
+- Intersection: mark cells active in both grids
+- Difference: subtract one region from another
+- Inversion: swap foreground and background
+- Mask gating: show Grid cells through a Mask grid
+- Cell extraction: keep named cells, set others to background
+- Stamp: overwrite Grid region with a small Stamp grid
+- Transparent paste: paste with BgColor cells invisible
+- Sub-grid extraction and comparison
+- Border mask and color selection mask generation
+
+
+2. Architecture
+
+Layer 206 sits immediately above gridpath (Layer 205). Uses library(lists)
+only; no cross-pack dependencies.
+
+Private helpers:
+- gm_dims_/3: grid height and width
+- gm_cell_/4: cell value lookup
+- gm_build_/4: generic H x W grid builder using a lambda (R, C, V)>>Body
+
+Design: gm_build_/4 is the single shared constructor for all output grids.
+Each predicate provides a lambda that maps (R, C) to output value V; gm_build_
+applies the lambda to every cell in row-major order.
+
+
+3. Predicates
+
+gm_overlay/5 - Overlay GridB over GridA. Non-BgColor cells of GridB replace GridA; BgColor cells are transparent (show GridA).
+
+gm_union/4 - Union of two non-background regions. GridA color wins where both are non-BgColor; else the non-BgColor value from either grid; else BgColor.
+
+gm_intersect/5 - Boolean AND: FgColor where both grids are non-BgColor; else BgColor.
+
+gm_difference/5 - Set subtraction: keep GridA where GridB is BgColor; replace with BgOut where GridB is active.
+
+gm_invert/4 - Swap: non-BgColor cells become BgColor; BgColor cells become FgColor.
+
+gm_mask_apply/5 - Gate Grid through Mask: where Mask is non-BgColor Grid passes through; where Mask is BgColor the output is FillColor.
+
+gm_extract/4 - Keep only the R-C cells in the given list; all other cells become BgColor.
+
+gm_stamp/5 - Paste Stamp at (OriginR, OriginC); all Stamp cells overwrite Grid; Stamp cells outside Grid bounds are silently skipped.
+
+gm_compare/4 - List of R-C positions where the two grids differ. Empty if identical.
+
+gm_equal/2 - Succeed if both grids are structurally identical (unification).
+
+gm_sub/6 - Extract a Height x Width rectangular sub-grid at (R0,C0). Fails if sub-grid extends outside Grid bounds.
+
+gm_paste/6 - Transparent paste: only non-BgColor Patch cells overwrite Grid; BgColor Patch cells leave Grid unchanged.
+
+gm_border_mask/3 - Binary mask: cells within N layers from any edge become 'border'; all others become 'interior'. N=0 makes all cells 'interior'.
+
+gm_color_mask/4 - Binary mask: cells matching Color become FgColor; all others become 'bg'.
+
+
+4. Example Session
+
+:- use_module(pack(gridmask/prolog/gridmask)).
+
+% Overlay a b-region on an r-region:
+GA = [[r,r,x],[r,r,x],[x,x,x]].
+GB = [[x,x,x],[x,b,b],[x,b,b]].
+gm_overlay(GA, GB, x, r, R).
+% R = [[r,r,x],[r,b,b],[x,b,b]]
+
+% Intersection: where both non-bg:
+gm_intersect(GA, GB, x, g, R).
+% R = [[x,x,x],[x,g,x],[x,x,x]]  (only (1,1) is non-bg in both)
+
+% Color mask for r in a mixed grid:
+G = [[r,r,b],[r,r,b],[b,b,b]].
+gm_color_mask(G, r, sel, Mask).
+% Mask = [[sel,sel,bg],[sel,sel,bg],[bg,bg,bg]]
+
+% Border mask:
+gm_border_mask([[p,p,p],[p,p,p],[p,p,p]], 1, M).
+% M = [[border,border,border],[border,interior,border],[border,border,border]]
+
+% Sub-grid extraction:
+G = [[r,r,b],[g,g,b],[b,b,b]].
+gm_sub(G, 0, 0, 2, 2, Sub).
+% Sub = [[r,r],[g,g]]
+
+% Transparent paste:
+Base = [[x,x,x],[x,x,x],[x,x,x]].
+Patch = [[r,x],[x,r]].
+gm_paste(Base, Patch, 0, 0, x, R).
+% R = [[r,x,x],[x,r,x],[x,x,x]]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GM-001 through AC-GM-044) are exercised in
+packs/gridmask/test/test_gridmask.pl. Tests cover:
+- gm_overlay: transparent BgColor, non-BgColor paste, same grid
+- gm_union: non-overlapping regions, empty second grid, both empty
+- gm_intersect: one-cell overlap, no overlap, full overlap
+- gm_difference: subtraction, minus empty, empty minus any
+- gm_invert: mixed, all-fg, all-bg
+- gm_mask_apply: partial mask, full mask, empty mask
+- gm_extract: named cells, empty list, all cells
+- gm_stamp: top-left, center, partial out-of-bounds
+- gm_compare: identical, differing regions, all different
+- gm_equal: same succeeds, different fails
+- gm_sub: 2x2 extract, 1x1, out-of-bounds fail, full grid
+- gm_paste: at origin, at center, all-bg patch
+- gm_border_mask: N=1 on 3x3, N=2 on 4x4, N=0
+- gm_color_mask: present color, absent color, universal color
+- Combined: invert then union = all-fg; sub then stamp round-trip
+
+
+6. SPARC Documentation
+
+Work Package 227 is recorded in:
+- Specification v193, Part 217 (WP-227-SPEC-001 through WP-227-SPEC-007)
+- Pseudocode v185, Part 217
+- Architecture v187, ARCH-193
+- Refinement v240, AC-GM-001 through AC-GM-044
+- Completion v243, WP-227 record
+
+Tutorial chapter: docs/tutorial/Ch188_GridMask.txt
+Pack reference: docs/Pack_Reference.txt (gridmask entry)
+PrologAI PR: #316 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridmask pack provides a complete set of boolean mask operations for raw
+grids, enabling the cognitive engine to compose regions, select by criteria,
+gate visibility, and extract spatial sub-regions. It completes the lower layers
+of the grid reasoning toolkit alongside gridflood (region analysis) and
+gridpath (pathfinding).
+
+PrologAI now comprises 227 work packages and reaches Layer 206 in the Data Layer.
