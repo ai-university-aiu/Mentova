@@ -1,0 +1,138 @@
+Acc_274: gridlogic Pack - Grid Logical Operations (ggl_*, Layer 233)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 254 adds the gridlogic pack (ggl_*, Layer 233): fourteen
+predicates for cell-wise logical and set-theoretic operations on symbolic grids.
+One designated BgColor acts as the logical false value; all other colors are true.
+The pack covers pairwise binary operations (AND, OR, XOR, NOT, subtract, common,
+differ), list-wide reductions (any, all, majority, unanimous), and conditional
+operations (mask, if-then-else, filter). All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many symbolic reasoning tasks require combining information from multiple grids:
+finding where two grids agree, taking the union of their non-bg cells, keeping
+only the cells unique to one grid, or selecting from one grid based on a condition
+in another. The gridlogic pack provides a clean vocabulary for all of these
+cell-wise composition operations.
+
+The key abstraction is treating one color (BgColor) as logical false and all others
+as true. This makes AND, OR, XOR, and NOT well-defined on symbolic grids without
+requiring binary representation.
+
+
+2. Architecture
+
+Layer 233 sits immediately above gridrefl (Layer 232) in the Data Layer.
+Uses library(lists): member/2, nth0/3.
+
+Key design decisions:
+
+A single dispatch table ggl_op_/5 with seven clauses (one per operation atom) drives
+all pairwise binary operations. Each clause has a deterministic cut as its first goal
+to prevent choicepoint warnings in PLUnit. The public predicates ggl_and through
+ggl_differ all delegate to ggl_pair_/5, which applies ggl_op_ row by row and cell
+by cell using recursive helper predicates.
+
+ggl_any and ggl_all fold over the grid list using ggl_or and ggl_common respectively.
+ggl_unanimous uses a special "unanimous" op in ggl_op_ that requires exact equality
+at every position including bg.
+
+ggl_majority uses a direct cell-by-cell approach: for each (R,C), it collects all
+non-bg values across the grid list, finds the most frequent, and tests whether it
+exceeds the N/2 threshold. This uses ggl_mode_/3 which finds the mode via findall.
+
+ggl_mask and ggl_if use dedicated row/cell walkers that parallel-traverse three
+grids at once. ggl_filter uses the findall/member pattern used throughout the data
+layer packs.
+
+
+3. Predicates
+
+Pairwise binary operations:
+
+ggl_and/4      - both non-bg → Grid1 value; else bg
+ggl_or/4       - first non-bg wins (Grid1 over Grid2); else bg
+ggl_xor/4      - exactly one non-bg → that value; else bg
+ggl_not/4      - bg → FgColor; non-bg → bg
+ggl_subtract/4 - Grid1 non-bg AND Grid2 bg → Grid1 value; else bg
+ggl_common/4   - both same non-bg value → that value; else bg
+ggl_differ/4   - both non-bg but different → Grid1 value; else bg
+
+List-wide reductions:
+
+ggl_any/3      - list-wide OR (first non-bg across grids)
+ggl_all/3      - list-wide AND (unanimous non-bg agreement)
+ggl_majority/3 - plurality vote per cell (most frequent non-bg if >N/2)
+ggl_unanimous/3 - strict all-grids agreement (including bg/non-bg)
+
+Conditional and filtering:
+
+ggl_mask/5     - keep Grid where MaskGrid = MaskColor; else bg
+ggl_if/5       - CondGrid = CondColor → ThenGrid; else ElseGrid
+ggl_filter/4   - keep cells in Colors list; else bg
+
+
+4. Example Session
+
+:- use_module(pack(gridlogic/prolog/gridlogic)).
+
+A = [[r,b],[b,b]], B = [[r,b],[r,b]].
+ggl_and(A, B, b, R).
+% R = [[r,b],[b,b]]
+
+ggl_or(A, [[b,g],[b,b]], b, R).
+% R = [[r,g],[b,b]]
+
+ggl_not([[r,b],[b,g]], b, x, R).
+% R = [[b,x],[x,b]]
+
+ggl_xor([[r,b],[b,b]], [[r,g],[b,b]], b, R).
+% R = [[b,g],[b,b]]
+
+ggl_any([A, B, [[b,b],[b,g]]], b, R).
+% R = [[r,b],[r,g]]
+
+ggl_mask([[r,g],[g,r]], [[m,b],[b,m]], m, b, R).
+% R = [[r,b],[b,r]]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GGL-001 through AC-GGL-044) are exercised in
+packs/gridlogic/test/test_gridlogic.pl. Tests cover ggl_and (3), ggl_or (3),
+ggl_xor (3), ggl_not (3), ggl_subtract (3), ggl_common (3), ggl_differ (3),
+ggl_any (3), ggl_all (3), ggl_majority (3), ggl_unanimous (3), ggl_mask (3),
+ggl_if (3), ggl_filter (3), combined (2).
+
+
+6. SPARC Documentation
+
+Work Package 254 is recorded in:
+- Specification v220, Part 244 (WP-254-SPEC-001 through WP-254-SPEC-005)
+- Pseudocode v212, Part 244
+- Architecture v214, ARCH-220
+- Refinement v267, AC-GGL-001 through AC-GGL-044
+- Completion v270, WP-254 record
+
+Tutorial chapter: docs/tutorial/Ch215_GridLogic.txt
+Pack reference: docs/Pack_Reference.txt (gridlogic entry)
+PrologAI PR: #343 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridlogic pack provides fourteen ggl_* predicates for cell-wise logical and
+set-theoretic operations on symbolic grids. The uniform treatment of BgColor as
+logical false makes AND, OR, XOR, and the reduction predicates directly applicable
+to the multi-color symbolic grids used throughout PrologAI. The conditional predicates
+(mask, if-then-else, filter) extend this vocabulary to data-driven selection.
+
+PrologAI now comprises 254 work packages and reaches Layer 233 in the Data Layer.
