@@ -1,0 +1,115 @@
+Acc_269: gridscan Pack - Grid Ray Scanning (gsn_*, Layer 228)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 249 adds the gridscan pack (gsn_*, Layer 228): fourteen
+predicates for scanning a grid in four cardinal directions to find non-background
+cells, measure distances, collect row and column contents, and test for blocking.
+All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Spatial reasoning requires projecting outward from a cell and asking what lies
+in a given direction: is there an obstacle ahead? How far? What is the first
+non-background cell encountered? The gridscan pack provides these ray-casting
+operations as clean, named predicates operating on the standard raw grid format.
+This enables reasoning about visibility, reachability, and spatial structure
+without traversal loops in calling code.
+
+
+2. Architecture
+
+Layer 228 sits immediately above gridpatch (Layer 227) in the Data Layer.
+Uses library(lists): nth0/3, last/2. No cross-pack dependencies.
+
+Key design: gsn_first_right and gsn_first_down use between/3 with a cut on the
+first success (deterministic, O(W) or O(H) scan). gsn_first_left and gsn_first_up
+collect all candidates with findall, then take the last element (nearest to origin)
+using last/2.
+
+
+3. Predicates
+
+Row and column content:
+
+gsn_scan_row/4   - C-V pairs for all non-bg cells in row R (ascending column)
+gsn_scan_col/4   - R-V pairs for all non-bg cells in column C (ascending row)
+
+First hit in each direction:
+
+gsn_first_right/5 - first non-bg cell going right from C0 in row R as C-V
+gsn_first_left/5  - nearest non-bg cell going left from C0 in row R as C-V
+gsn_first_down/5  - first non-bg cell going down from R0 in column C as R-V
+gsn_first_up/5    - nearest non-bg cell going up from R0 in column C as R-V
+
+Distances:
+
+gsn_dist_right/5 - C_hit - C0 (steps right to first non-bg; fails if none)
+gsn_dist_left/5  - C0 - C_hit (steps left to nearest non-bg; fails if none)
+gsn_dist_down/5  - R_hit - R0 (steps down to first non-bg; fails if none)
+gsn_dist_up/5    - R0 - R_hit (steps up to nearest non-bg; fails if none)
+
+Blocking detection:
+
+gsn_blocked_right/4 - succeeds if any non-bg cell exists to the right of C0
+gsn_blocked_left/4  - succeeds if any non-bg cell exists to the left of C0
+gsn_blocked_down/4  - succeeds if any non-bg cell exists below R0
+gsn_blocked_up/4    - succeeds if any non-bg cell exists above R0
+
+
+4. Example Session
+
+:- use_module(pack(gridscan/prolog/gridscan)).
+
+G = [[b,b,b,b,b],
+     [b,x,b,b,b],
+     [b,b,b,y,b],
+     [b,b,x,b,b],
+     [b,b,b,b,z]].
+
+gsn_scan_row(G, 2, b, Pairs).      % Pairs = [3-y]
+gsn_first_right(G, 2, 0, b, C-V). % C=3, V=y
+gsn_first_up(G, 4, 1, b, R-V).    % R=1, V=x (nearest above)
+gsn_dist_right(G, 1, 0, b, D).    % D=1
+gsn_dist_up(G, 4, 3, b, D).       % D=2
+gsn_blocked_down(G, 0, 4, b).     % succeeds (z at row 4, col 4)
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GSN-001 through AC-GSN-044) are exercised in
+packs/gridscan/test/test_gridscan.pl. Tests cover gsn_scan_row (3),
+gsn_scan_col (3), gsn_first_right (3), gsn_first_left (3), gsn_first_down (3),
+gsn_first_up (3), gsn_dist_right (3), gsn_dist_left (3), gsn_dist_down (3),
+gsn_dist_up (3), gsn_blocked_right (2), gsn_blocked_left (2), gsn_blocked_down (2),
+gsn_blocked_up (2), combined (6).
+
+
+6. SPARC Documentation
+
+Work Package 249 is recorded in:
+- Specification v215, Part 239 (WP-249-SPEC-001 through WP-249-SPEC-005)
+- Pseudocode v207, Part 239
+- Architecture v209, ARCH-215
+- Refinement v262, AC-GSN-001 through AC-GSN-044
+- Completion v265, WP-249 record
+
+Tutorial chapter: docs/tutorial/Ch210_GridScan.txt
+Pack reference: docs/Pack_Reference.txt (gridscan entry)
+PrologAI PR: #338 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridscan pack provides fourteen gsn_* predicates for directional ray scanning.
+The four directions are covered uniformly: scan all cells, find the first hit,
+measure the distance, and test for blocking. These operations enable symbolic
+reasoning about line-of-sight, reachability, and spatial layout.
+
+PrologAI now comprises 249 work packages and reaches Layer 228 in the Data Layer.
