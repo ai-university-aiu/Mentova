@@ -1,0 +1,111 @@
+Acc_266: gridmark Pack - Grid Marking and Annotation (gmk_*, Layer 225)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 246 adds the gridmark pack (gmk_*, Layer 225): fourteen
+predicates for creating annotated copies of a grid with specific cells overwritten
+by a mark color. All operations are non-destructive. The pack covers individual
+cell marking, row/column marking, border and diagonal marking, corner and cross
+marking, checkerboard marking, cell querying, and mark erasure. All 44 acceptance
+tests pass.
+
+
+1. Motivation
+
+Grid annotation is a foundational operation in spatial reasoning: highlight a
+region, mark the border, annotate the diagonal, or record which cells satisfy
+a property. The gridmark pack provides all such operations as tested, named
+predicates, separating annotation logic from grid construction and analysis.
+
+
+2. Architecture
+
+Layer 225 sits immediately above gridtile (Layer 224) in the Data Layer.
+Uses library(lists): nth0/3, member/2, memberchk/2. No cross-pack dependencies.
+
+Key design: a single private helper gmk_mark_positions_/4 takes a list of R-C
+pairs and reconstructs the grid with those positions set to MarkColor. All
+structural marking predicates (diagonal, border, cross, etc.) compute their
+target position lists and delegate to this helper.
+
+
+3. Predicates
+
+Individual cells:
+
+gmk_mark_cell/5    - overwrite one cell (R,C)
+gmk_mark_cells/4   - overwrite a list of R-C pairs
+
+Lines and rectangles:
+
+gmk_mark_row/4    - overwrite all cells in row R
+gmk_mark_col/4    - overwrite all cells in column C
+gmk_mark_rect/7   - overwrite cells in rectangle [R0..R1] x [C0..C1]
+
+Structural patterns:
+
+gmk_mark_border/3        - outer ring
+gmk_mark_diagonal/3      - main diagonal (R=C)
+gmk_mark_anti_diagonal/3 - anti-diagonal (R+C=W-1)
+gmk_mark_corners/3       - four corner cells
+gmk_mark_cross/3         - center row and center column
+gmk_mark_checkerboard/3  - cells where (R+C) mod 2 = 0
+
+Querying and reversal:
+
+gmk_marked_cells/3 - R-C pairs with MarkColor in row-major order
+gmk_is_marked/4    - check if a cell has MarkColor
+gmk_erase/4        - replace MarkColor with BgColor
+
+
+4. Example Session
+
+:- use_module(pack(gridmark/prolog/gridmark)).
+
+G = [[b,b,b,b],[b,b,b,b],[b,b,b,b],[b,b,b,b]].
+
+gmk_mark_border(G, m, M1).
+gmk_mark_diagonal(G, m, M2).
+gmk_mark_cross(G, m, M3).
+gmk_mark_checkerboard(G, m, M4).
+gmk_marked_cells(M2, m, Cs).  % Cs = [0-0, 1-1, 2-2, 3-3]
+gmk_erase(M2, m, b, E).       % E = G (original)
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GMK-001 through AC-GMK-044) are exercised in
+packs/gridmark/test/test_gridmark.pl. Tests cover mark_cell (3), mark_cells (3),
+mark_row (3), mark_col (3), mark_rect (3), mark_border (3), mark_diagonal (3),
+mark_anti_diagonal (3), mark_corners (2), mark_cross (2), marked_cells (3),
+is_marked (2), mark_checkerboard (2), erase (3), combined (6).
+
+
+6. SPARC Documentation
+
+Work Package 246 is recorded in:
+- Specification v212, Part 236 (WP-246-SPEC-001 through WP-246-SPEC-005)
+- Pseudocode v204, Part 236
+- Architecture v206, ARCH-212
+- Refinement v259, AC-GMK-001 through AC-GMK-044
+- Completion v262, WP-246 record
+
+Tutorial chapter: docs/tutorial/Ch207_GridMark.txt
+Pack reference: docs/Pack_Reference.txt (gridmark entry)
+PrologAI PR: #335 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridmark pack provides complete grid annotation via fourteen gmk_* predicates.
+Operations cover individual cells, rows, columns, rectangles, and structural
+patterns (border, diagonal, anti-diagonal, corners, cross, checkerboard). Query
+and erase predicates close the annotation cycle. This enables symbolic reasoning
+about positional patterns and grid regions.
+
+PrologAI now comprises 246 work packages and reaches Layer 225 in the Data Layer.
