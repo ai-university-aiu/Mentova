@@ -1,0 +1,11 @@
+Acc_277: gridextract Pack - Grid Object Extraction (gxt_*, Layer 236)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI reaches Work Package 257 with the gridextract pack (Layer 236): fourteen gxt_* predicates for extracting structured object information from symbolic grids.
+
+The pack covers cell collection (r(R,C,V) triples), bounding box computation, sub-grid cropping, BFS 4-connected object identification, color statistics, region counting, and color object registries. All 44 tests pass.
+
+PrologAI now has 257 work packages and a thirty-three-pack grid reasoning suite at Layers 204-236.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #GridReasoning #GridExtract
