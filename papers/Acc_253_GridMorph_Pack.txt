@@ -1,0 +1,177 @@
+Acc_253: gridmorph Pack - Morphological Operations on Symbolic Grids (gmo_*, Layer 212)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 233 adds the gridmorph pack (gmo_*, Layer 212): fourteen
+predicates for morphological operations on symbolic grids. The pack provides the
+complete binary morphological toolkit: dilation and erosion (N-step and
+single-step), morphological opening and closing, inner and outer boundary
+extraction, morphological gradient, top-hat and bottom-hat transforms, hole
+filling via BFS flood fill, and connected-component size filtering. All 44
+acceptance tests pass.
+
+
+1. Motivation
+
+ARC-AGI-2 grids frequently feature structured regions that must be analyzed
+morphologically: boundaries between colored zones, enclosed holes, small isolated
+regions, and gradients between foreground and background. The gridmorph pack
+provides the symbolic substrate for all such operations. Dilation and erosion
+underlie opening, closing, and the hat transforms. Hole filling is essential for
+distinguishing enclosed cavities from open background. Size filtering removes
+noise below a threshold. Together these fourteen predicates form a complete
+morphological engine for glass-box symbolic grid reasoning.
+
+
+2. Architecture
+
+Layer 212 sits immediately above gridedge (Layer 211). Uses library(lists)
+only (nth0/3, member/2, append/3). No cross-pack dependencies.
+
+Private helpers:
+- gmo_dims_/3: grid height and width
+- gmo_cell_/4: cell value at row R, column C; fails out of bounds
+- gmo_build_/4: build H x W grid using lambda Goal(R, C, V)
+- gmo_nbr4_/4: generate one 4-connected neighbor on backtracking
+- gmo_bg_color_/3: first non-FgColor cell in row-major order
+- gmo_dilate1_step_/3, gmo_erode1_step_/4: single morphological iteration
+- gmo_dilate_n_/4, gmo_erode_n_/5: N-step iteration (base case cuts choicepoint)
+- gmo_bfs_/6: generic BFS through TargetColor cells
+- gmo_small_cells_/6: classify connected components by size
+
+Design invariants:
+
+Grid boundary behavior: out-of-bounds positions do not exist and are not treated
+as background. A corner FgColor cell whose only in-bounds neighbors are all
+FgColor will NOT be eroded, even at the grid edge.
+
+once/1 invariant: gmo_boundary_inner and gmo_boundary_outer use once/1 inside
+findall to prevent a cell with k qualifying neighbors from appearing k times.
+
+
+3. Predicates
+
+Dilation and erosion:
+
+gmo_dilate/4 - expand FgColor region by N layers (4-connected; non-FgColor
+  adjacent to FgColor in each step becomes FgColor)
+gmo_erode/4 - shrink FgColor region by N layers (FgColor adjacent to
+  non-FgColor in each step becomes background)
+gmo_dilate1/3 - single dilation step
+gmo_erode1/3 - single erosion step (background color discovered automatically)
+
+Opening and closing:
+
+gmo_open/4 - N erosions then N dilations; removes small FgColor protrusions
+  and isolated regions while approximately preserving large region shape
+gmo_close/4 - N dilations then N erosions; fills small gaps and holes in
+  the FgColor region
+
+Boundary extraction:
+
+gmo_boundary_inner/3 - FgColor cells with at least one non-FgColor 4-connected
+  in-bounds neighbor (inner border of the FgColor region)
+gmo_boundary_outer/3 - non-FgColor cells with at least one FgColor 4-connected
+  in-bounds neighbor (outer border around the FgColor region)
+gmo_gradient_cells/3 - union of inner and outer boundaries; all border cells
+
+Derived transforms:
+
+gmo_top_hat/4 - FgColor cells present in input but removed by opening;
+  highlights small bright structures
+gmo_bottom_hat/4 - cells that become FgColor after closing but were not
+  FgColor in input; highlights small dark holes
+
+Flood fill and filtering:
+
+gmo_fill_holes/4 - BFS from grid border finds open background; enclosed
+  background cells become FgColor
+gmo_connected_border/4 - BFS from TargetColor border cells through TargetColor
+  region; returns all reachable TargetColor cells
+gmo_remove_small/5 - remove FgColor connected components below MinSize cells
+
+
+4. Example Session
+
+:- use_module(pack(gridmorph/prolog/gridmorph)).
+
+% Single-cell dilation:
+Dot = [[x,x,x,x,x],[x,x,x,x,x],[x,x,r,x,x],[x,x,x,x,x],[x,x,x,x,x]].
+gmo_dilate(Dot, r, 2, D).
+% D has 13 r cells (Manhattan distance 2 diamond from center)
+
+% Opening removes isolated spot:
+gmo_open(Dot, r, 1, O).
+% O is all-x (single r cell eroded away; nothing to dilate back)
+
+% Hole filling:
+Ring = [[r,r,r,r,r],[r,x,x,x,r],[r,x,x,x,r],[r,x,x,x,r],[r,r,r,r,r]].
+gmo_fill_holes(Ring, r, x, Filled).
+% Filled: all 25 cells are r (9 enclosed x cells filled)
+
+% Boundary extraction:
+Block = [[x,x,x,x,x],[x,r,r,r,x],[x,r,r,r,x],[x,r,r,r,x],[x,x,x,x,x]].
+gmo_boundary_inner(Block, r, Inner).
+% Inner: 8 cells (center (2,2) has all-r neighbors; it is smooth, not inner border)
+gmo_boundary_outer(Block, r, Outer).
+% Outer: 12 cells
+gmo_gradient_cells(Block, r, Grad).
+% Grad: 20 cells (inner 8 + outer 12)
+
+% Size filtering:
+Two = [[r,x,x,x,r],[x,x,x,x,x],[x,x,x,x,x],[x,x,x,x,x],[r,x,x,x,r]].
+gmo_remove_small(Two, r, x, 2, R).
+% R: all r removed (4 corner cells, each a 1-cell component; 1 < 2)
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GMO-001 through AC-GMO-044) exercised in
+packs/gridmorph/test/test_gridmorph.pl. Tests cover:
+- gmo_dilate1: rb (8 cells), uniform unchanged, dot grows (5)
+- gmo_erode1: block to center-only, corner survives, uniform unchanged
+- gmo_dilate: N=1 same as dilate1, N=0 identity, N=2 dot (13 cells)
+- gmo_erode: N=0 identity, N=1 same as erode1, N=2 block to empty
+- gmo_open: removes isolated dot, preserves large region (5 cells)
+- gmo_close: fills ring hole, N=0 identity
+- gmo_boundary_inner: rb (3 not 4), uniform empty, ring (12 not 16)
+- gmo_boundary_outer: rb (4), uniform empty, block (12)
+- gmo_gradient_cells: rb (7), block (20)
+- gmo_top_hat: isolated dot (1 cell), block N=2 (9 cells)
+- gmo_bottom_hat: ring N=2 (non-empty), block N=0 (empty)
+- gmo_fill_holes: ring (25 cells), block (unchanged), combined
+- gmo_connected_border: ring x (empty), block x (16), uniform x 3x3 (9)
+- gmo_remove_small: dots (all removed), block size=9 kept, block threshold=10 removed
+- Combined: erode+dilate=open, fill+count, dilate increases count, erode decreases count
+
+
+6. SPARC Documentation
+
+Work Package 233 is recorded in:
+- Specification v199, Part 223 (WP-233-SPEC-001 through WP-233-SPEC-007)
+- Pseudocode v191, Part 223
+- Architecture v193, ARCH-199
+- Refinement v246, AC-GMO-001 through AC-GMO-044
+- Completion v249, WP-233 record
+
+Tutorial chapter: docs/tutorial/Ch194_GridMorph.txt
+Pack reference: docs/Pack_Reference.txt (gridmorph entry)
+PrologAI PR: #322 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridmorph pack delivers a complete symbolic morphological engine for the
+PrologAI Data Layer. Together with gridflood (Layer 204), gridpath (Layer 205),
+gridmask (Layer 206), gridxform (Layer 207), gridsymm (Layer 208), gridcolor
+(Layer 209), gridstitch (Layer 210), and gridedge (Layer 211), PrologAI now has
+a nine-pack grid reasoning suite at Layers 204-212 covering connectivity,
+pathfinding, masking, transformation, symmetry, color analysis, assembly,
+edge detection, and morphological operations.
+
+PrologAI now comprises 233 work packages and reaches Layer 212 in the Data Layer.
