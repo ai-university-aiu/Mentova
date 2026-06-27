@@ -1,0 +1,139 @@
+Acc_277: gridextract Pack - Grid Object Extraction (gxt_*, Layer 236)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 257 adds the gridextract pack (gxt_*, Layer 236): fourteen
+predicates for collecting cells, computing bounding boxes, extracting sub-grid
+crops, identifying connected objects via BFS flood fill, performing color
+statistics, counting 4-connected regions, and building color object registries.
+All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many symbolic reasoning tasks require extracting structured information from raw
+grids: finding where objects are, how large they are, how many separate pieces
+there are, and what their bounding extents are. The gridextract pack provides a
+unified vocabulary for all of these extraction operations, producing structured
+Prolog terms (r(R,C,V) triples, bb/4 bounding boxes, obj/3 registry records) that
+can be directly pattern-matched by higher-level reasoning predicates.
+
+
+2. Architecture
+
+Layer 236 sits immediately above gridblend (Layer 235) in the Data Layer.
+Uses library(lists): member/2, last/2; msort/2, nth0/3, sumlist/2 as built-ins.
+
+Key design decisions:
+
+All cell-collection predicates use findall with between/3 and nth0/3 for
+deterministic row-major iteration. The r(R,C,V) triple format is consistent
+across all predicates, enabling direct use with member/3 or findall.
+
+gxt_bbox fails on all-bg grids rather than returning a degenerate bounding box,
+making it safe to use as a guard in transformation rules.
+
+gxt_object_at uses iterative BFS (worklist pattern) with member-based visited
+tracking. The Seen list is built up monotonically; each new neighbor is only
+enqueued if it is not already in Seen.
+
+gxt_region_count uses the BFS flood fill and then subtracts all visited cells
+from the remaining worklist. The if-then-else guards Cells binding BEFORE the
+conditional: `gxt_color_cells(..., Cells), (Cells=[] -> Count=0 ; ...)`.
+
+gxt_registry produces obj(Color,Count,BBox) records sorted by color via
+gxt_all_colors (msort + consecutive dedup), giving deterministic output order.
+
+
+3. Predicates
+
+Cell collection:
+
+gxt_nonbg_cells/3  - all non-bg cells as r(R,C,V) triples, row-major order
+gxt_color_cells/3  - all cells of a specific color
+gxt_row_cells/4    - non-bg cells in a specific 0-indexed row
+gxt_col_cells/4    - non-bg cells in a specific 0-indexed column
+
+Bounding box and crop:
+
+gxt_bbox/4         - tight bb(MinR,MinC,MaxR,MaxC) of non-bg cells; fails if all-bg
+gxt_crop_bbox/5    - extract sub-grid for bounding box + off(R1,C1) offset
+gxt_centered_crop/5 - crop centered on centroid of non-bg cells, clamped
+
+Object identification:
+
+gxt_object_at/5    - BFS flood bbox of 4-connected same-color region
+gxt_region_count/4 - count distinct 4-connected regions of a given color
+
+Color statistics:
+
+gxt_all_colors/3   - sorted unique non-bg color list
+gxt_color_count/4  - count cells of a specific color
+gxt_largest_color/3 - non-bg color with the most cells
+gxt_smallest_color/3 - non-bg color with the fewest cells
+
+Registry:
+
+gxt_registry/3     - obj(Color,Count,BBox) for each unique non-bg color
+
+
+4. Example Session
+
+:- use_module(pack(gridextract/prolog/gridextract)).
+
+Grid = [[b,b,b,b],[b,r,r,b],[b,r,b,b],[b,b,b,g]].
+
+gxt_bbox(Grid, b, bb(1,1,2,2), _).
+% Bounding box of all non-bg cells (r and g)
+
+gxt_object_at(Grid, 1, 1, b, bb(1,1,2,2)).
+% BFS from (1,1): r at (1,1),(1,2),(2,1) → bbox (1,1,2,2)
+
+gxt_region_count(Grid, r, b, 1).
+% One connected r-region
+
+gxt_registry(Grid, b, [obj(g,1,bb(3,3,3,3)), obj(r,3,bb(1,1,2,2))]).
+
+gxt_largest_color(Grid, b, r).   % r has 3 cells vs g's 1
+gxt_smallest_color(Grid, b, g).  % g has fewest
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GXT-001 through AC-GXT-044) are exercised in
+packs/gridextract/test/test_gridextract.pl. Tests cover gxt_nonbg_cells (3),
+gxt_color_cells (3), gxt_bbox (3), gxt_crop_bbox (3), gxt_object_at (3),
+gxt_all_colors (3), gxt_color_count (3), gxt_largest_color (3),
+gxt_smallest_color (3), gxt_centered_crop (3), gxt_row_cells (3),
+gxt_col_cells (3), gxt_region_count (3), gxt_registry (3), integration (2).
+
+
+6. SPARC Documentation
+
+Work Package 257 is recorded in:
+- Specification v223, Part 247 (WP-257-SPEC-001 through WP-257-SPEC-005)
+- Pseudocode v215, Part 247
+- Architecture v217, ARCH-223
+- Refinement v270, AC-GXT-001 through AC-GXT-044
+- Completion v273, WP-257 record
+
+Tutorial chapter: docs/tutorial/Ch218_GridExtract.txt
+Pack reference: docs/Pack_Reference.txt (gridextract entry)
+PrologAI PR: #346 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridextract pack provides fourteen gxt_* predicates for extracting structured
+object information from symbolic grids. The r(R,C,V) triple format, bb/4 bounding
+boxes, and obj/3 registry records are composable with higher-level reasoning
+predicates throughout the PrologAI Data Layer. The BFS flood fill enables
+4-connected object identification without requiring a separate flood pack, keeping
+the extraction logic self-contained.
+
+PrologAI now comprises 257 work packages and reaches Layer 236 in the Data Layer.
