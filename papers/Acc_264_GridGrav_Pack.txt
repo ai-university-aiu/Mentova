@@ -1,0 +1,113 @@
+Acc_264: gridgrav Pack - Grid Gravity Simulation (gv_*, Layer 223)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 244 adds the gridgrav pack (gv_*, Layer 223): fourteen
+predicates for simulating gravity within a raw grid. Non-background cells settle
+toward an edge of their row or column. The pack covers settlement in four
+directions, pile analysis, floating cell detection, column gap computation, and
+non-background cell counting. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently involve gravity: cells fall, piles build up,
+objects float above empty space. Understanding which cells would move, how far,
+and what the settled state looks like is a core capability for tasks involving
+physical simulation, counting falling objects, or verifying a stable configuration.
+The gridgrav pack provides all of these operations as tested, named predicates.
+
+
+2. Architecture
+
+Layer 223 sits immediately above gridpos (Layer 222) in the Data Layer.
+Uses library(lists): nth0/3, member/2, append/3, reverse/2; and
+library(apply): maplist/3. No cross-pack dependencies.
+
+Key design: each direction has a private per-row or per-column settler that
+extracts non-bg elements, computes bg padding, and appends them in order. Fall
+down and fall up operate column-by-column and reconstruct the grid from settled
+columns. Fall left and fall right use maplist over rows directly.
+
+
+3. Predicates
+
+Settlement:
+
+gv_fall_down/3   - non-bg cells settle to column bottoms
+gv_fall_up/3     - non-bg cells settle to column tops
+gv_fall_left/3   - non-bg cells settle to row left sides
+gv_fall_right/3  - non-bg cells settle to row right sides
+
+Pile analysis:
+
+gv_col_pile_h/4    - count of non-bg cells in column C
+gv_row_pile_w/4    - count of non-bg cells in row R
+gv_all_col_piles/3 - pile heights for all columns in order
+gv_all_row_piles/3 - pile widths for all rows in order
+
+Floating cells and settlement:
+
+gv_floating_cells/3 - R-C pairs of cells with bg directly below them
+gv_settled/2        - succeeds if no floating cells exist
+
+Column statistics:
+
+gv_col_gap_above/4 - bg cells at top of column before first non-bg
+gv_max_col_pile/3  - column index with most non-bg cells (ties: lowest)
+gv_min_col_pile/3  - column index with fewest non-bg cells (ties: lowest)
+gv_non_bg_count/3  - total non-bg cell count across entire grid
+
+
+4. Example Session
+
+:- use_module(pack(gridgrav/prolog/gridgrav)).
+
+G = [[b,x,b],[x,b,b],[b,b,x],[b,b,b]].
+
+gv_fall_down(G, b, F).         % F = [[b,b,b],[b,b,b],[b,b,b],[x,x,x]]
+gv_all_col_piles(G, b, Piles). % Piles = [1,1,1]
+gv_floating_cells(G, b, Cs).   % Cs = [0-1,1-0,2-2]
+gv_settled(G, b).              % fails (3 cells floating)
+gv_fall_down(G, b, F2), gv_settled(F2, b).  % succeeds
+gv_non_bg_count(G, b, N).      % N = 3
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GV-001 through AC-GV-044) are exercised in
+packs/gridgrav/test/test_gridgrav.pl. Tests cover fall_down (3), fall_up (3),
+fall_left (3), fall_right (3), col_pile_h (3), row_pile_w (3), all_col_piles (3),
+all_row_piles (3), floating_cells (3), settled (3), col_gap_above (3),
+max_col_pile (3), min_col_pile (3), non_bg_count (4). Two tests verified
+expected values against manual column-by-column calculation before encoding.
+
+
+6. SPARC Documentation
+
+Work Package 244 is recorded in:
+- Specification v210, Part 234 (WP-244-SPEC-001 through WP-244-SPEC-007)
+- Pseudocode v202, Part 234
+- Architecture v204, ARCH-210
+- Refinement v257, AC-GV-001 through AC-GV-044
+- Completion v260, WP-244 record
+
+Tutorial chapter: docs/tutorial/Ch205_GridGrav.txt
+Pack reference: docs/Pack_Reference.txt (gridgrav entry)
+PrologAI PR: #333 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridgrav pack provides complete gravity simulation for raw grids. The fourteen
+gv_* predicates cover settlement in four directions, pile counting and statistics,
+floating cell detection, column gap analysis, and global non-bg counting. This
+enables symbolic reasoning about physical layout, object accumulation, and grid
+stability.
+
+PrologAI now comprises 244 work packages and reaches Layer 223 in the Data Layer.
