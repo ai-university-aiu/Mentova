@@ -1,0 +1,102 @@
+Acc_289: Cross-Pair Invariant Extraction Pack (invariant, iv_*, Layer 248)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Abstract
+
+PrologAI gains the ability to find what stays constant across all training examples.
+
+The invariant pack (Work Package 269, Layer 248, prefix iv_*) provides 14 predicates
+for extracting invariant properties from training pairs before any rule search begins.
+Invariants are powerful constraints: knowing that the grid size never changes eliminates
+all resize rules; knowing that the color set is preserved eliminates rules that
+introduce new colors. This dramatically narrows the search space.
+
+Background
+
+The key insight in the ARC-AGI-2 readiness analysis (Sections 2 and 9) is that
+cross-pair invariant detection is one of the first and most important steps in
+solving any grid-reasoning task. Humans explicitly look for what does NOT change
+before trying to identify what does. No prior PrologAI pack performed this
+cross-pair analysis - each analysis predicate (induction, diff, griddelta) operated
+on a single pair at a time.
+
+The invariant pack is the first pack designed to aggregate information across the
+entire training set simultaneously.
+
+The Pack
+
+Module: invariant. File: packs/invariant/prolog/invariant.pl.
+Prefix: iv_. Layer: 248. Work Package: 269. PrologAI PR: 360.
+
+The 14 public predicates are organized into five functional groups.
+
+Grid-Level Invariants.
+
+iv_grid_invariants/2 returns inv(dims(R,C)) if all input grids share the same
+dimensions. iv_output_invariants/2 does the same for output grids.
+iv_object_invariants/2 returns inv(stable_color_set(Cs)) when the set of non-
+background colors is the same in every input.
+
+Variant Features.
+
+iv_variant_features/2 returns the complementary set: feature(dims) when grid
+sizes vary across inputs, feature(color_set) when color sets vary.
+
+Consistent Delta.
+
+iv_consistent_delta/2 finds cross-pair invariants at the input-to-output level:
+inv(dims_preserved) when every pair preserves grid size, inv(color_set_preserved)
+when every pair preserves the color set.
+
+Structural Checks.
+
+iv_preserves_dims/1, iv_preserves_colors/1, and iv_preserves_count/2 check
+structural invariants at the pair level. iv_same_dims/1 and iv_same_color_sets/2
+check structural equality across a list of grids. iv_color_set/3 extracts a
+sorted non-background color set from a single grid.
+
+Stable Color Map and Meta-Predicates.
+
+iv_stable_color_map/2 intersects per-pair cell change maps to find color mappings
+consistent across all training pairs. iv_all_grids/2 and iv_no_grids/2 are
+meta-predicates (1-arg goal) for testing arbitrary properties across grid lists.
+
+Test Results
+
+44 acceptance tests, AC-IV-001 through AC-IV-044. All 44 pass.
+The suite covers feature extraction, structural checks, invariant detection,
+variant feature detection, consistent delta computation, meta-predicates, and
+an integration test on a complete symmetric color swap task.
+
+SPARC Documentation
+
+Specification: Part 259 (WP-269-SPEC-001 through WP-269-SPEC-005).
+Pseudocode: Part 259 (WP-269-PSEUDO-001 through WP-269-PSEUDO-014).
+Architecture: ARCH-235.
+Refinement: AC-IV-001 through AC-IV-044.
+Completion: WP-269 entry.
+Versions: Spec v235, Pseudo v227, Arch v229, Refinement v282, Completion v285.
+
+Significance
+
+With the invariant pack, PrologAI now has three of the six high-priority packs
+identified in the ARC-AGI-2 readiness analysis: gridobjmatch (WP-267, object-level
+change detection), symtab (WP-268, symbol table learning), and invariant (WP-269,
+cross-pair invariant extraction). The remaining priorities are contrast
+(WP-270, contrastive pair analysis), legend (WP-271, legend region detection),
+and multipair (WP-272, cross-pair object tracking).
+
+PrologAI now has 269 work packages and reaches Layer 248.
+
+References
+
+PrologAI Specification v235, Part 259.
+PrologAI Architecture v229, ARCH-235.
+PrologAI Completion v285, WP-269 entry.
+Pack_Reference.txt, invariant entry.
+docs/tutorial/Ch230_Invariant.txt.
+ARC-AGI-2_Readiness_Analysis.txt, Section 6 (Priority 2).

@@ -1,0 +1,33 @@
+Accomplishment 289: Mentova can now find what doesn't change.
+
+The new invariant pack gives PrologAI fourteen predicates for extracting
+invariant properties across all training pairs before any rule search begins.
+
+Does every input grid have the same size?
+Does every output grid have the same size?
+Does the set of colors stay the same in every input?
+Does every transformation preserve the grid dimensions?
+Does every transformation preserve the color set?
+Does every transformation preserve the object count?
+
+Which color mappings are consistent in every training pair?
+What features change freely across examples?
+What features stay locked?
+
+Extract color sets. Check structural equality. Detect cross-pair constraints.
+Find stable color maps by intersecting all pair-level evidence.
+Test any property against all grids with meta-predicate dispatch.
+
+This is how you narrow a search space before you begin.
+Instead of trying every possible rule, first learn what is impossible.
+
+The invariant pack answers: what cannot be the rule?
+
+Everything that passes that filter is what might be.
+
+269 work packages. Layer 248. Cross-pair invariant analysis is complete.
+
+D. R. Dison
+Founder of AIU, Creator of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
