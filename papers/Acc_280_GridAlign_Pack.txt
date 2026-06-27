@@ -1,0 +1,163 @@
+Acc_280: gridalign Pack - Grid Alignment and Shift Matching (gal_*, Layer 239)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+
+Abstract
+
+PrologAI Work Package 260 adds the gridalign pack (gal_*, Layer 239): fourteen
+predicates for computing alignment properties of symbolic grids and for finding
+the translation that best aligns one grid pattern with another. The pack covers
+center-of-mass computation, bounding box extraction, translation, overlap counting
+and scoring, intersection-over-union, offset search, center alignment, placement,
+anchor-based placement, and any-overlap offset enumeration. All 44 acceptance
+tests pass.
+
+
+1. Motivation
+
+Grid reasoning tasks frequently require positioning one pattern relative to
+another: aligning objects, finding the offset that makes two patterns coincide,
+or placing a smaller grid at the correct position on a canvas. These operations
+recur in composition, correspondence, and stamping tasks. The gridalign pack
+provides a dedicated, composable vocabulary for all such alignment operations
+without requiring callers to implement cell iteration from scratch. The
+gal_find_offset predicate is especially useful: given two patterns, it
+automatically discovers the translation that maximises their non-bg overlap.
+
+
+2. Architecture
+
+Layer 239 sits immediately above gridstamp (Layer 238) in the Data Layer.
+Uses library(lists): member/2, min_list/2, max_list/2, sumlist/2, list_to_set/2.
+All other operations are SWI-Prolog built-ins.
+
+Key design decisions:
+
+gal_iou uses \+(V1=Bg, V2=Bg) rather than (V1\=Bg ; V2\=Bg) for the union
+condition inside findall. The disjunction form causes findall to backtrack over
+both branches for cells where both V1 and V2 are non-bg, double-counting those
+cells and producing an incorrect union size. The negation form is deterministic
+and always produces the correct count.
+
+gal_find_offset operates on non-bg cell sets rather than full translated grids:
+it collects Grid1's non-bg positions into S1, Grid2's into S2, then for each
+candidate (DR,DC) counts how many cells in S2 shifted by (DR,DC) land in S1.
+This avoids the cost of constructing a full translated grid for every candidate.
+
+gal_match_any_offset uses list_to_set to deduplicate: multiple non-bg cells in
+Grid2 may independently produce the same offset, and the set semantics ensure
+each valid offset appears exactly once.
+
+gal_place_at uses the same transparency model as gst_stamp: non-Bg cells in
+Grid2 overwrite Canvas; Bg cells leave Canvas unchanged. gal_anchor_to is a
+thin wrapper that computes (R0,C0) = (QR-PR, QC-PC) and delegates.
+
+gal_pick_best_offset_/6 is a tail-recursive fold that tracks the current best
+overlap count and offset; ties are broken by minimum Manhattan distance.
+
+
+3. Predicates
+
+Spatial properties:
+
+gal_center_of_mass/3   - integer-floor centroid of non-bg cells
+gal_nonbg_bbox/3       - tight bounding box r0(R0,C0,R1,C1) or none
+gal_bbox_center/3      - floor center of bounding box, or none
+
+Translation:
+
+gal_translate/5        - shift non-bg cells by (DR,DC); same grid dimensions
+
+Overlap metrics:
+
+gal_overlap_count/4    - count co-located non-bg cells
+gal_overlap_score/4    - overlap / Grid1 non-bg count (float)
+gal_iou/4              - intersection over union (float)
+
+Offset search:
+
+gal_find_offset/5      - best (DR,DC) in [-SearchR,SearchR]^2 by max overlap
+gal_match_any_offset/4 - all (DR,DC) with at least one overlapping non-bg cell
+
+Alignment:
+
+gal_align_centers/4        - translate Grid2 to match Grid1's centroid
+gal_align_bbox_centers/4   - translate Grid2 to match Grid1's bbox center
+gal_nonbg_offset/4         - centroid-to-centroid vector
+
+Placement:
+
+gal_place_at/6    - transparent paste at (R0,C0) on canvas
+gal_anchor_to/8   - cell-to-cell alignment paste
+
+
+4. Example Session
+
+:- use_module(pack(gridalign/prolog/gridalign)).
+
+% Find the offset to align two patterns.
+gal_find_offset(
+    [[b,r,b],[b,b,b]],
+    [[r,b,b],[b,b,b]],
+    b, 2, Offset).
+% Offset = o(0,1).
+
+% Intersection over union.
+gal_iou([[r,b],[b,g]], [[r,b],[b,b]], b, IoU).
+% IoU = 0.5.
+
+% Center of mass of four corners of a 3x3 grid.
+gal_center_of_mass([[r,b,r],[b,b,b],[r,b,r]], b, COM).
+% COM = r(1,1).  (floor average of (0,2,0,2) rows and (0,0,2,2) cols)
+
+% Anchor Grid2's cell (0,0) to Canvas cell (1,1).
+gal_anchor_to(
+    [[b,b,b],[b,b,b],[b,b,b]],
+    [[r,g],[y,p]], 0, 0, 1, 1, b, Result).
+% Result = [[b,b,b],[b,r,g],[b,y,p]].
+
+% Find all offsets where a 1-cell pattern overlaps a target.
+gal_match_any_offset(
+    [[r,b,b],[b,b,b]],
+    [[b,b,r],[b,b,b]],
+    b, Offsets).
+% Offsets includes o(0,-2).
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GAL-001 through AC-GAL-044) are exercised in
+packs/gridalign/test/test_gridalign.pl. Tests cover gal_center_of_mass (3),
+gal_nonbg_bbox (3), gal_bbox_center (2), gal_translate (4), gal_overlap_count (3),
+gal_overlap_score (3), gal_iou (3), gal_find_offset (3), gal_align_centers (2),
+gal_align_bbox_centers (1), gal_nonbg_offset (2), gal_place_at (3),
+gal_anchor_to (2), gal_match_any_offset (2), integration (2), misc (6).
+
+
+6. SPARC Documentation
+
+Work Package 260 is recorded in:
+- Specification v226, Part 250 (WP-260-SPEC-001 through WP-260-SPEC-005)
+- Pseudocode v218, Part 250
+- Architecture v220, ARCH-226
+- Refinement v273, AC-GAL-001 through AC-GAL-044
+- Completion v276, WP-260 record
+
+Tutorial chapter: docs/tutorial/Ch221_GridAlign.txt
+Pack reference: docs/Pack_Reference.txt (gridalign entry)
+PrologAI PR: #350 (merged 2026-06-27)
+
+
+7. Conclusion
+
+The gridalign pack provides fourteen gal_* predicates for alignment, overlap
+measurement, and placement operations on symbolic grids. The gal_find_offset
+predicate discovers the best translation automatically using cell-set arithmetic.
+The gal_iou and gal_overlap_score predicates enable quantitative similarity
+assessment. Together these operations form the alignment foundation for grid
+composition tasks.
+
+PrologAI now comprises 260 work packages and reaches Layer 239 in the Data Layer.

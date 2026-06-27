@@ -1,0 +1,11 @@
+Acc_280: gridalign Pack - Grid Alignment and Shift Matching (gal_*, Layer 239)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI reaches Work Package 260 with the gridalign pack (Layer 239): fourteen gal_* predicates for computing how symbolic grid patterns relate to each other spatially.
+
+The pack covers center of mass, bounding box, translation, overlap counting, overlap score, intersection-over-union, offset search, center alignment, bbox-center alignment, centroid offset, transparent placement, anchor-based placement, and any-overlap offset enumeration. gal_find_offset automatically discovers the translation that maximally aligns two patterns. All 44 tests pass.
+
+PrologAI now has 260 work packages and a thirty-six-pack grid reasoning suite at Layers 204-239.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #GridReasoning #GridAlignment
