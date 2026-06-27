@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-271-FF6B35?style=for-the-badge" alt="271 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-272-FF6B35?style=for-the-badge" alt="272 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -98,8 +98,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| Documented accomplishments | **271 accomplished** |
-| Scientific papers | **271 published** — one per accomplishment |
+| Documented accomplishments | **272 accomplished** |
+| Scientific papers | **272 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -554,6 +554,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_269` | GridScan pack paper — Grid Ray Scanning (Layer 228, gsn_*): 14 gsn_* predicates for row/column content collection, first-hit detection, step-count distances, and blocking checks in four directions. |
 | `Acc_270` | GridWave pack paper — Grid Wave Propagation (Layer 229, gwv_*): 14 gwv_* predicates for multi-color wave expansion, frontier detection, single-color expansion, directional shadow casting, and interior contraction. |
 | `Acc_271` | GridShift pack paper — Grid Shifting and Cyclic Rolling (Layer 230, gsh_*): 14 gsh_* predicates for linear shifts, toroidal rolls, per-row/column operations, color-specific shift, and full-grid offset. |
+| `Acc_272` | GridMap pack paper — Grid Color Mapping (Layer 231, gmp_*): 14 gmp_* predicates for color remapping, normalization, palette ops, masking, inversion, cycling, and map algebra. |
 | `Acc_268` | GridPatch pack paper — Grid Patch Operations (Layer 227, gpt_*): 14 gpt_* predicates for patch extraction, placement, transparent overlay, pattern matching, tiling, scattering, and inpainting. |
 | `Acc_267` | GridCrop pack paper — Grid Cropping and Padding (Layer 226, gcr_*): 14 gcr_* predicates for bounding-box computation, trimming, cropping, padding, centering, border add/remove, and row/column expansion. |
 | `Acc_266` | GridMark pack paper — Grid Marking and Annotation (Layer 225, gmk_*): 14 gmk_* predicates for individual cell marking, row/column/rectangle marking, border, diagonal, anti-diagonal, corners, cross, checkerboard, cell querying, and mark erasure. |

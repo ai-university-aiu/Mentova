@@ -1,0 +1,160 @@
+Acc_272: gridmap Pack - Grid Color Mapping (gmp_*, Layer 231)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 252 adds the gridmap pack (gmp_*, Layer 231): fourteen
+predicates for color mapping, substitution, normalization, palette manipulation,
+and map algebra on symbolic grids. The pack covers atomic color remapping, color
+swapping, replacement, merging, canonical integer normalization, palette extraction,
+foreground recoloring, color masking, palette inversion and cyclic rotation,
+derivation of mappings from aligned grid pairs, map inversion, map composition,
+and mapped-cell counting. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many symbolic reasoning tasks require renaming or substituting colors: converting
+a specific grid's arbitrary color assignments to a canonical form, isolating one
+color while suppressing others, reversing a color scheme, or composing a series
+of remappings into one combined operation. The gridmap pack gives callers a clean,
+composable vocabulary for all of these operations.
+
+The core design is a single private helper gmp_apply_mapping_ that drives all
+atomic substitution predicates (remap, swap, replace, merge). More complex
+operations (normalize, invert, cycle) build a mapping list then delegate to the
+same helper. Map-level utilities (build_map, invert_map, compose_maps) operate
+on the mapping lists themselves without touching grid cells.
+
+
+2. Architecture
+
+Layer 231 sits immediately above gridshift (Layer 230) in the Data Layer.
+Uses library(lists): member/2, nth1/3, append/3.
+
+Key design decisions:
+
+gmp_remap is the central workhorse. It drives two nested findalls: one over rows,
+one over cells. Each cell looks up its color in the Mapping list; unmatched cells
+return their original value. All other substitution predicates build a mapping
+list and call gmp_apply_mapping_.
+
+gmp_normalize uses gmp_unique_ordered_ (a two-clause accumulator-based
+deduplicate-preserving-first-occurrence predicate) to extract the palette in
+row-major order, then gmp_rank_mapping_ to assign consecutive integers starting
+at 1.
+
+gmp_invert and gmp_cycle both use nth1/3 to index into the palette by position.
+gmp_invert maps c_i to c_(n+1-i). gmp_cycle maps c_i to c_((i+N-1 mod M)+1),
+which handles N=0 (identity) and N=M (full wrap = identity) correctly.
+
+gmp_build_map walks both grids row by row using gmp_build_map_rows_ and
+gmp_build_map_cells_, collecting From-To pairs only where both cells are non-bg
+and differ. gmp_unique_ordered_ removes duplicates preserving first-occurrence order.
+
+gmp_invert_map and gmp_compose_maps are single-clause findalls over the mapping
+lists, with no grid involvement.
+
+
+3. Predicates
+
+Atomic substitutions:
+
+gmp_remap/3   - apply From-To list; unmapped cells unchanged
+gmp_swap/4    - swap two colors (bidirectional remap)
+gmp_replace/4 - replace one color with another
+gmp_merge/4   - replace list of colors with single target
+
+Canonical labeling:
+
+gmp_normalize/3 - assign integer rank labels in row-major first-occurrence order
+gmp_palette/3   - ordered distinct non-bg colors in first-occurrence order
+
+Foreground and masking:
+
+gmp_recolor_fg/4  - replace all non-bg cells with a single foreground color
+gmp_mask_color/4  - keep one color; replace all others with bg
+
+Palette permutations:
+
+gmp_invert/3  - reverse palette assignments (c_i -> c_(n+1-i))
+gmp_cycle/4   - cyclic palette index shift by N (mod palette length)
+
+Mapping utilities:
+
+gmp_build_map/4    - derive From-To mapping from two aligned grids
+gmp_invert_map/2   - reverse all From-To pairs to To-From
+gmp_compose_maps/3 - chain two maps (From-Mid-To paths)
+gmp_map_count/3    - count cells whose color is a From key
+
+
+4. Example Session
+
+:- use_module(pack(gridmap/prolog/gridmap)).
+
+G = [[r,g,r],[g,b,g],[r,g,r]].
+
+gmp_remap(G, [r-x, g-y], R).
+% R = [[x,y,x],[y,b,y],[x,y,x]]
+
+gmp_normalize(G, b, N).
+% N = [[1,2,1],[2,b,2],[1,2,1]]  (r->1, g->2)
+
+gmp_palette(G, b, P).
+% P = [r, g]
+
+gmp_invert(G, [r,g], I).
+% I = [[g,r,g],[r,b,r],[g,r,g]]
+
+gmp_cycle([[r,b,r],[b,r,b]], [r,b], 1, C).
+% C = [[b,r,b],[r,b,r]]
+
+gmp_build_map([[r,g],[b,r]], [[x,y],[z,x]], q, M).
+% M = [r-x, g-y, b-z]
+
+gmp_compose_maps([r-g, g-b], [g-x, b-y], Composed).
+% Composed = [r-x, g-y]
+
+% Round-trip via invert_map:
+gmp_remap(G, [r-x,g-y], Mapped),
+gmp_invert_map([r-x,g-y], InvMap),
+gmp_remap(Mapped, InvMap, G).
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GMP-001 through AC-GMP-044) are exercised in
+packs/gridmap/test/test_gridmap.pl. Tests cover gmp_remap (3), gmp_swap (3),
+gmp_replace (3), gmp_merge (3), gmp_normalize (3), gmp_palette (3),
+gmp_recolor_fg (3), gmp_mask_color (3), gmp_invert (3), gmp_cycle (4),
+gmp_build_map (3), gmp_invert_map (3), gmp_compose_maps (3), gmp_map_count (3),
+combined round-trip (1).
+
+
+6. SPARC Documentation
+
+Work Package 252 is recorded in:
+- Specification v218, Part 242 (WP-252-SPEC-001 through WP-252-SPEC-005)
+- Pseudocode v210, Part 242
+- Architecture v212, ARCH-218
+- Refinement v265, AC-GMP-001 through AC-GMP-044
+- Completion v268, WP-252 record
+
+Tutorial chapter: docs/tutorial/Ch213_GridMap.txt
+Pack reference: docs/Pack_Reference.txt (gridmap entry)
+PrologAI PR: #341 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridmap pack provides fourteen gmp_* predicates for color mapping and
+substitution on symbolic grids. The uniform design - a single apply-mapping
+helper driving all atomic operations, plus map-level algebra predicates that
+never touch grid cells directly - makes the pack easy to compose into larger
+symbolic reasoning pipelines.
+
+PrologAI now comprises 252 work packages and reaches Layer 231 in the Data Layer.

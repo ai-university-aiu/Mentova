@@ -1,0 +1,11 @@
+Acc_272: gridmap Pack - Grid Color Mapping (gmp_*, Layer 231)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI reaches Work Package 252 with the gridmap pack (Layer 231): fourteen gmp_* predicates for color mapping and substitution on symbolic grids.
+
+The pack covers atomic remapping (remap/swap/replace/merge), canonical normalization, palette extraction, foreground recoloring, masking, palette inversion and cycling, derivation of mappings from aligned grid pairs, map inversion, map composition, and mapped-cell counting. All 44 tests pass.
+
+PrologAI now has 252 work packages and a twenty-eight-pack grid reasoning suite at Layers 204-231.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #GridReasoning #GridMap
