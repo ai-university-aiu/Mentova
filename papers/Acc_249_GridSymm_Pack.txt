@@ -1,0 +1,139 @@
+Acc_249: gridsymm Pack - Grid Symmetry Detection, Completion, Violations, and Score (gsm_*, Layer 208)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 229 adds the gridsymm pack (gsm_*, Layer 208): fourteen
+predicates for detecting, completing, and measuring symmetry in symbolic grids.
+The pack covers six symmetry types: top-bottom (h), left-right (v), main
+diagonal (d1), anti-diagonal (d2), 90-degree rotation (rot90), and 180-degree
+rotation (rot180). It provides symmetry tests, enumeration of all symmetries
+possessed, completion of a grid to any target symmetry, detection of violating
+cells, and a floating-point symmetry score. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Symmetry is a core perceptual primitive. Many visual reasoning tasks require
+detecting whether a grid is symmetric, identifying which symmetry type it has,
+completing a partially symmetric pattern, or measuring the degree to which a
+grid approaches symmetry. The gridsymm pack provides the complete toolkit for
+all of these operations, covering the full D4 group plus the two primary
+reflection symmetries.
+
+
+2. Architecture
+
+Layer 208 sits immediately above gridxform (Layer 207). Uses library(lists)
+only; no cross-pack dependencies. The symmetry tests are implemented directly
+(not by calling gridxform) to avoid inter-pack coupling.
+
+Private helpers:
+- gsm_dims_/3: grid height and width
+- gsm_cell_/4: cell value at (R, C)
+- gsm_build_/4: build H x W grid using lambda Goal(R, C, V)
+
+
+3. Predicates
+
+Symmetry tests:
+
+gsm_sym_h/1 - top-bottom (horizontal mid-axis): Grid[R][C] = Grid[H-1-R][C].
+gsm_sym_v/1 - left-right (vertical mid-axis): Grid[R][C] = Grid[R][W-1-C].
+gsm_sym_d1/1 - main diagonal: Grid[R][C] = Grid[C][R] (square grids only).
+gsm_sym_d2/1 - anti-diagonal: Grid[R][C] = Grid[H-1-C][H-1-R] (square only).
+gsm_sym_rot90/1 - 90-degree rotational invariance (square grids only).
+gsm_sym_rot180/1 - 180-degree rotational invariance (any rectangular grid).
+
+Enumeration:
+
+gsm_symmetries/2 - list all symmetry types Grid possesses in order.
+
+Completion:
+
+gsm_complete_h/3 - Dir=top maps min(R,H-1-R); Dir=bottom maps max(R,H-1-R).
+gsm_complete_v/3 - Dir=left maps min(C,W-1-C); Dir=right maps max.
+gsm_complete_rot180/3 - fill BgColor cells from 180-rotational mirrors.
+
+Violation detection:
+
+gsm_violations_h/2 - R-C pairs in top half where symmetry fails.
+gsm_violations_v/2 - R-C pairs in left half where symmetry fails.
+gsm_violations_rot180/2 - first-half R-C pairs where rot180 fails.
+
+Score:
+
+gsm_score/3 - Type in {h, v, rot180}; Score = float(matches)/total in [0.0..1.0].
+
+
+4. Example Session
+
+:- use_module(pack(gridsymm/prolog/gridsymm)).
+
+% Test top-bottom symmetry:
+gsm_sym_h([[r,x,r],[x,b,x],[r,x,r]]).
+% true
+
+% Enumerate all symmetries of a D4 grid:
+gsm_symmetries([[r,x,r],[x,x,x],[r,x,r]], Syms).
+% Syms = [h, v, d1, d2, rot90, rot180]
+
+% Complete to horizontally symmetric using top half:
+gsm_complete_h([[r,b],[x,x]], top, R).
+% R = [[r,b],[r,b]]
+
+% Complete rot180 by filling background:
+gsm_complete_rot180([[r,x],[x,x]], x, R).
+% R = [[r,x],[x,r]]
+
+% Violations of horizontal symmetry:
+gsm_violations_h([[r,b,g],[x,x,x],[r,b,r]], Cells).
+% Cells = [0-2]  (col 2: g != r)
+
+% Symmetry score for partially v-symmetric grid:
+gsm_score([[r,x,r],[r,x,b],[r,x,r]], v, S).
+% S = 0.6666...
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GSM-001 through AC-GSM-044) exercised in
+packs/gridsymm/test/test_gridsymm.pl. Tests cover:
+- All 6 symmetry tests with positive and negative cases
+- Non-square failures for d1, d2, rot90
+- gsm_symmetries: D4 grid, asymmetric grid (empty), h-only grid
+- gsm_complete_h: Dir=top, Dir=bottom, already-symmetric identity
+- gsm_complete_v: Dir=left, Dir=right, already-symmetric identity
+- gsm_complete_rot180: fill, preserve non-bg, already-symmetric
+- gsm_violations_h/v/rot180: empty for symmetric, non-empty for violating
+- gsm_score: 1.0 for fully symmetric, partial score, 1.0 for 1x1 grid
+- Combined: complete_h then sym_h; complete_v then sym_v; rot180 score = 1.0
+
+
+6. SPARC Documentation
+
+Work Package 229 is recorded in:
+- Specification v195, Part 219 (WP-229-SPEC-001 through WP-229-SPEC-007)
+- Pseudocode v187, Part 219
+- Architecture v189, ARCH-195
+- Refinement v242, AC-GSM-001 through AC-GSM-044
+- Completion v245, WP-229 record
+
+Tutorial chapter: docs/tutorial/Ch190_GridSymm.txt
+Pack reference: docs/Pack_Reference.txt (gridsymm entry)
+PrologAI PR: #318 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridsymm pack provides a complete toolkit for symmetry analysis of symbolic
+grids, covering the full D4 group as well as practical completion and scoring
+utilities. Together with gridflood (regions), gridpath (paths), gridmask
+(masks), gridxform (transforms), and gridsymm (symmetry), PrologAI now has a
+comprehensive five-pack grid reasoning suite at Layers 204-208.
+
+PrologAI now comprises 229 work packages and reaches Layer 208 in the Data Layer.
