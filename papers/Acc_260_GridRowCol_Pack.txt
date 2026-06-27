@@ -1,0 +1,123 @@
+Acc_260: gridrowcol Pack - Grid Row and Column Comparative Analysis (grc_*, Layer 219)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 240 adds the gridrowcol pack (grc_*, Layer 219): fourteen
+predicates for treating the rows and columns of a raw grid as first-class list
+objects. The pack covers extraction, uniformity testing, equality comparison,
+pattern-based position lookup, matching-pair detection, uniqueness detection, and
+lexicographic sorting of both rows and columns. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Grid-reasoning tasks frequently require comparing rows to each other or columns
+to each other as units: finding the one row that is different, detecting columns
+that repeat, sorting a grid's rows, or identifying which columns share content.
+The gridrowcol pack provides these operations as single predicate calls, building
+directly on the raw grid format without cross-pack dependencies.
+
+
+2. Architecture
+
+Layer 219 sits immediately above griddelta (Layer 218) in the Data Layer.
+Uses library(lists): nth0/3, member/2. No cross-pack dependencies.
+
+Private helper grc_col_/3 extracts a column as a top-to-bottom list using
+findall over member/2 to traverse rows in order. grc_col_sort/2 extracts all
+columns, msorts them, then rebuilds the grid by indexing into the sorted columns.
+
+
+3. Predicates
+
+Extraction:
+
+grc_row/3        - row R (0-indexed) as a flat list
+grc_col/3        - column C as a top-to-bottom list
+
+Uniformity:
+
+grc_row_uniform/3  - succeeds if all cells in row R share one color; binds it
+grc_col_uniform/3  - succeeds if all cells in col C share one color; binds it
+
+Equality:
+
+grc_equal_rows/3   - succeeds if rows R1 and R2 have identical content
+grc_equal_cols/3   - succeeds if cols C1 and C2 have identical content
+
+Position lookup:
+
+grc_row_positions/3  - sorted indices of rows matching a given pattern
+grc_col_positions/3  - sorted indices of columns matching a given pattern
+
+Matching pairs:
+
+grc_matching_rows/2  - R1-R2 pairs (R1<R2) of identical rows
+grc_matching_cols/2  - C1-C2 pairs (C1<C2) of identical columns
+
+Uniqueness:
+
+grc_unique_rows/2  - row indices that appear exactly once in the grid
+grc_unique_cols/2  - column indices that appear exactly once in the grid
+
+Sorting:
+
+grc_row_sort/2   - sort rows lexicographically (msort, preserves duplicates)
+grc_col_sort/2   - reorder columns by lexicographic order of their content
+
+
+4. Example Session
+
+:- use_module(pack(gridrowcol/prolog/gridrowcol)).
+
+% Extraction:
+G = [[a,b,c],[d,e,f],[g,h,i]].
+grc_row(G, 0, Row).    % Row = [a,b,c]
+grc_col(G, 2, Col).    % Col = [c,f,i]
+
+% Finding matching and unique rows:
+G2 = [[r,r,r],[x,x,x],[r,r,r]].
+grc_matching_rows(G2, Pairs).   % Pairs = [0-2]
+grc_unique_rows(G2, Unique).    % Unique = [1]
+
+% Column sorting:
+G3 = [[c,a,b],[c,a,b],[c,a,b],[c,a,b]].
+grc_col_sort(G3, S).   % S = [[a,b,c],[a,b,c],[a,b,c],[a,b,c]]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GRC-001 through AC-GRC-044) exercised in
+packs/gridrowcol/test/test_gridrowcol.pl. Tests cover row/col extraction (4),
+uniformity (6), equality (6), position lookup (6), matching pairs (6),
+uniqueness (6), row sorting (3), column sorting (3), and combined tests (4).
+
+
+6. SPARC Documentation
+
+Work Package 240 is recorded in:
+- Specification v206, Part 230 (WP-240-SPEC-001 through WP-240-SPEC-007)
+- Pseudocode v198, Part 230
+- Architecture v200, ARCH-206
+- Refinement v253, AC-GRC-001 through AC-GRC-044
+- Completion v256, WP-240 record
+
+Tutorial chapter: docs/tutorial/Ch201_GridRowCol.txt
+Pack reference: docs/Pack_Reference.txt (gridrowcol entry)
+PrologAI PR: #329 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridrowcol pack provides complete symbolic row and column analysis for raw
+grids. The fourteen grc_* predicates cover every common comparative operation:
+extraction, uniformity, equality, lookup, matching, uniqueness, and sorting.
+This enables pattern recognition tasks that depend on identifying repeated,
+unique, or ordered rows and columns.
+
+PrologAI now comprises 240 work packages and reaches Layer 219 in the Data Layer.
