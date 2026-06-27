@@ -1,0 +1,11 @@
+Acc_278: gridgrav Pack - Grid Gravity and Sliding (gra_*, Layer 237)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI reaches Work Package 258 with the gridgrav pack (Layer 237): fourteen gra_* predicates for gravity and sliding operations on symbolic grids.
+
+The pack covers fall in all four directions, blocked gravity with immovable wall cells, column and row extraction and placement helpers, a settled-state test, and a gravity score. A single private helper (gra_settle_segment_) powers all directional behaviors. All 44 tests pass.
+
+PrologAI now has 258 work packages and a thirty-four-pack grid reasoning suite at Layers 204-237.
+
+#PrologAI #Mentova #SymbolicAI #ARC_AGI #GridReasoning #GridGravity
