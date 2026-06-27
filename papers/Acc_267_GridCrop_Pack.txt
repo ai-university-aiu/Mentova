@@ -1,0 +1,119 @@
+Acc_267: gridcrop Pack - Grid Cropping and Padding (gcr_*, Layer 226)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 247 adds the gridcrop pack (gcr_*, Layer 226): fourteen
+predicates for resizing grids through cropping, trimming, padding, centering,
+and expanding. All operations are non-destructive. The pack uses a bounding-box
+abstraction to locate non-background content, then provides targeted operations
+above, below, and around that content. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+ARC-AGI-2 tasks frequently require removing uniform background borders from a
+grid, padding a small result to a target size, or placing content in the center
+of a frame. These are distinct operations but share a common reference point:
+the bounding box of non-background cells. The gridcrop pack unifies them through
+a single gcr_bbox/3 predicate and builds all resizing operations on top.
+
+
+2. Architecture
+
+Layer 226 sits immediately above gridmark (Layer 225) in the Data Layer.
+Uses library(lists): nth0/3, member/2, append/2, append/3, min_list/2, max_list/2.
+No cross-pack dependencies.
+
+Key design: gcr_bbox/3 scans the grid once to collect all non-background R-C
+pairs, then derives MinR, MaxR, MinC, MaxC using min_list/max_list. All trim
+predicates delegate to a private gcr_crop_/6 helper using coordinates derived
+from the bounding box.
+
+
+3. Predicates
+
+Bounding box:
+
+gcr_bbox/3         - R0-C0-R1-C1 of non-BgColor cells; fails if all bg
+gcr_content_h/3    - height of bounding box (MaxR - MinR + 1)
+gcr_content_w/3    - width of bounding box (MaxC - MinC + 1)
+
+Trimming:
+
+gcr_trim/3         - remove all outer uniform-bg rows and columns
+gcr_trim_rows/3    - remove leading/trailing uniform-bg rows only
+gcr_trim_cols/3    - remove leading/trailing uniform-bg columns only
+gcr_crop_bbox/3    - crop to non-bg bounding box (equivalent to gcr_trim)
+
+Cropping:
+
+gcr_crop/6         - extract sub-grid at explicit rows R0..R1, cols C0..C1
+
+Padding and centering:
+
+gcr_pad_to/5       - extend to at least TargetH x TargetW with BgColor
+gcr_center_in/5    - center in TargetH x TargetW BgColor frame
+
+Border operations:
+
+gcr_add_border/4   - add N-cell Color border on all four sides
+gcr_remove_border/4 - remove N-cell border from all four sides
+
+Expanding:
+
+gcr_expand_down/4  - append N rows of Color at the bottom
+gcr_expand_right/4 - append N columns of Color at the right
+
+
+4. Example Session
+
+:- use_module(pack(gridcrop/prolog/gridcrop)).
+
+G = [[b,b,b,b],[b,x,x,b],[b,x,x,b],[b,b,b,b]].
+
+gcr_bbox(G, b, Box).          % Box = 1-1-2-2
+gcr_trim(G, b, T).            % T = [[x,x],[x,x]]
+gcr_pad_to(T, b, 4, 4, P).   % P = [[x,x,b,b],[x,x,b,b],[b,b,b,b],[b,b,b,b]]
+gcr_center_in(T, b, 4, 4, C). % C = [[b,b,b,b],[b,x,x,b],[b,x,x,b],[b,b,b,b]]
+gcr_add_border(T, 1, m, B).   % B = [[m,m,m,m],[m,x,x,m],[m,x,x,m],[m,m,m,m]]
+gcr_content_h(G, b, H).       % H = 2
+gcr_content_w(G, b, W).       % W = 2
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GCR-001 through AC-GCR-044) are exercised in
+packs/gridcrop/test/test_gridcrop.pl. Tests cover gcr_bbox (3), gcr_crop_bbox (3),
+gcr_trim (3), gcr_trim_rows (3), gcr_trim_cols (3), gcr_crop (3), gcr_pad_to (3),
+gcr_center_in (3), gcr_add_border (3), gcr_remove_border (3), gcr_expand_down (3),
+gcr_expand_right (3), gcr_content_h (3), gcr_content_w (3), combined (2).
+
+
+6. SPARC Documentation
+
+Work Package 247 is recorded in:
+- Specification v213, Part 237 (WP-247-SPEC-001 through WP-247-SPEC-005)
+- Pseudocode v205, Part 237
+- Architecture v207, ARCH-213
+- Refinement v260, AC-GCR-001 through AC-GCR-044
+- Completion v263, WP-247 record
+
+Tutorial chapter: docs/tutorial/Ch208_GridCrop.txt
+Pack reference: docs/Pack_Reference.txt (gridcrop entry)
+PrologAI PR: #336 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridcrop pack provides complete grid resizing via fourteen gcr_* predicates.
+The bounding-box abstraction unifies trim, crop, pad, and center operations under
+a single spatial reference. Border and expand operations handle frame construction
+and incremental growth. Together these predicates cover the resizing patterns that
+appear most frequently in spatial reasoning tasks.
+
+PrologAI now comprises 247 work packages and reaches Layer 226 in the Data Layer.
