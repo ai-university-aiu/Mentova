@@ -1,0 +1,148 @@
+Acc_270: gridwave Pack - Grid Wave Propagation (gwv_*, Layer 229)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 250 adds the gridwave pack (gwv_*, Layer 229): fourteen
+predicates for multi-color wave expansion, frontier detection, single-color
+expansion, directional shadow casting, and interior contraction on symbolic grids.
+All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Spatial reasoning in grid-based domains often requires modeling how colors or
+signals propagate outward from source cells, where propagation fronts are
+detected, and how non-background structures shrink when their interior is exposed.
+The gridwave pack provides these operations as clean, named predicates on the
+standard symbolic grid format. The wave model — BFS-style expansion with conflict
+handling — captures Voronoi decomposition, frontier detection, and single-source
+spreading in one unified framework.
+
+
+2. Architecture
+
+Layer 229 sits immediately above gridscan (Layer 228) in the Data Layer.
+Uses library(lists): nth0/3, member/2, append/2, reverse/2, list_to_set/2.
+No cross-pack dependencies.
+
+Key design decisions:
+
+Wave expansion (gwv_step): nested findall processes each cell independently.
+A background cell takes the color of its unique non-background neighbor; if two
+or more different non-background colors are adjacent (conflict), the cell stays
+background. This is Voronoi with tie-breaking preserved in the output.
+
+Shadow casting: gwv_shadow_right uses a per-row state machine: after the first
+non-background cell is encountered, subsequent background cells become ShadowColor.
+gwv_shadow_left reverses each row and applies the same machine. gwv_shadow_down
+and gwv_shadow_up transpose the grid, apply the corresponding row shadow, then
+transpose back.
+
+Contraction (gwv_contract): a non-background cell is removed only if it has at
+least one in-bounds 4-connected background neighbor. Out-of-bounds positions
+do NOT count as background (distinct from morphological erosion). This means
+edge non-background cells remain unless they touch background within the grid.
+
+
+3. Predicates
+
+Wave expansion:
+
+gwv_step/3          - one wave-expansion step (all colors, conflict = stays bg)
+gwv_fill/3          - expand to fixed point (multi-color Voronoi with conflict)
+gwv_fill_n/4        - exactly N wave-expansion steps
+
+Frontier detection:
+
+gwv_frontier/3      - bg cells adjacent to any non-bg cell (4-connected)
+gwv_color_frontier/4 - bg cells adjacent to a specific color
+gwv_equidistant_front/3 - bg cells adjacent to two or more different colors
+
+Single-color expansion:
+
+gwv_color_expand/4  - expand one color one step into adjacent bg cells
+gwv_color_expand_n/5 - expand one color exactly N steps
+
+Shadow casting:
+
+gwv_shadow_right/4  - cast shadow rightward from non-bg cells
+gwv_shadow_left/4   - cast shadow leftward
+gwv_shadow_down/4   - cast shadow downward (via transpose)
+gwv_shadow_up/4     - cast shadow upward (via transpose and reverse)
+
+Interior contraction:
+
+gwv_contract/3      - remove non-bg cells touching in-bounds bg neighbors
+gwv_contract_n/4    - N contraction steps
+
+
+4. Example Session
+
+:- use_module(pack(gridwave/prolog/gridwave)).
+
+G = [[b,b,b],[b,x,b],[b,b,b]].
+
+gwv_step(G, b, S).
+% S = [[b,x,b],[x,x,x],[b,x,b]]
+
+gwv_fill_n(G, 2, b, Full).
+% Full = [[x,x,x],[x,x,x],[x,x,x]]
+
+gwv_frontier(G, b, F).
+% F = [0-1, 1-0, 1-2, 2-1]
+
+gwv_shadow_right(G, b, s, SR).
+% SR = [[b,b,b],[b,x,s],[b,b,b]]
+
+gwv_shadow_down(G, b, s, SD).
+% SD = [[b,b,b],[b,x,b],[b,s,b]]
+
+gwv_contract(S, b, C).
+% S = plus shape; C = [[b,b,b],[b,x,b],[b,b,b]] (roundtrip)
+
+Two-color conflict:
+G2 = [[x,b,y],[b,b,b],[b,b,b]].
+gwv_fill(G2, b, F2).
+% F2 = [[x,b,y],[x,b,y],[x,b,y]]  (center column stays bg: permanent conflict)
+gwv_equidistant_front(G2, b, E).
+% E = [0-1]  (cell equidistant between x and y)
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GWV-001 through AC-GWV-044) are exercised in
+packs/gridwave/test/test_gridwave.pl. Tests cover gwv_step (3), gwv_fill (3),
+gwv_fill_n (3), gwv_frontier (3), gwv_color_frontier (3), gwv_equidistant_front (3),
+gwv_color_expand (3), gwv_color_expand_n (3), gwv_shadow_right (3),
+gwv_shadow_left (3), gwv_shadow_down (3), gwv_shadow_up (3), gwv_contract (3),
+gwv_contract_n (3), combined (2).
+
+
+6. SPARC Documentation
+
+Work Package 250 is recorded in:
+- Specification v216, Part 240 (WP-250-SPEC-001 through WP-250-SPEC-005)
+- Pseudocode v208, Part 240
+- Architecture v210, ARCH-216
+- Refinement v263, AC-GWV-001 through AC-GWV-044
+- Completion v266, WP-250 record
+
+Tutorial chapter: docs/tutorial/Ch211_GridWave.txt
+Pack reference: docs/Pack_Reference.txt (gridwave entry)
+PrologAI PR: #339 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridwave pack provides fourteen gwv_* predicates for wave-based reasoning
+on symbolic grids. The wave model unifies multi-color expansion, frontier
+detection, directional shadow projection, and interior contraction in a single,
+coherent framework. These operations enable reasoning about propagation dynamics,
+Voronoi boundaries, visibility shadows, and structural shrinkage.
+
+PrologAI now comprises 250 work packages and reaches Layer 229 in the Data Layer.
