@@ -1,0 +1,165 @@
+Acc_251: gridstitch Pack - Grid Concatenation, Splitting, Tiling, Border, and Repetition (gst_*, Layer 210)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 231 adds the gridstitch pack (gst_*, Layer 210): fourteen
+predicates for assembling and disassembling symbolic grids. The pack covers
+horizontal and vertical concatenation of two grids, list-based stacking,
+splitting at any row or column index, half-splits, quadrant extraction, NR x NC
+tiled arrangement, horizontal and vertical repetition, and N-cell border
+addition and removal. All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many symbolic visual reasoning tasks require composing smaller grids into
+larger ones (stitching), decomposing a grid into parts (splitting), repeating
+a pattern to fill a target area, or isolating interior content by stripping
+a surrounding border. The gridstitch pack provides the complete toolkit for
+all of these assembly and disassembly operations, complementing the existing
+grid analysis packs (gridcolor, gridsymm, gridxform, etc.) with the structural
+combination layer.
+
+
+2. Architecture
+
+Layer 210 sits immediately above gridcolor (Layer 209). Uses library(lists)
+only (nth0/3, append/2, append/3). No cross-pack dependencies.
+
+Private helpers:
+- gst_dims_/3: grid height and width
+- gst_cell_/4: cell value at row R, column C (0-indexed)
+- gst_build_/4: build H x W grid using lambda Goal(R, C, V)
+- gst_fill_/4: build constant H x W grid (all cells set to Color)
+
+
+3. Predicates
+
+Concatenation:
+
+gst_concat_h/3 - place GridA and GridB side by side (GridA left, GridB right);
+  requires matching row counts; rows zipped with append.
+gst_concat_v/3 - stack GridA on top of GridB; requires matching column counts;
+  result is row-list append of both grids.
+gst_hstack/2 - reduce a list of grids left to right using gst_concat_h;
+  empty list yields empty grid; singleton returns grid unchanged (deterministic).
+gst_vstack/2 - reduce a list of grids top to bottom using gst_concat_v;
+  empty list yields empty grid; singleton returns grid unchanged (deterministic).
+
+Splitting:
+
+gst_split_h/4 - split at row R: Top has rows 0..R-1, Bottom has rows R..H-1;
+  implemented as length(Top,R) + append.
+gst_split_v/4 - split at col C: Left has cols 0..C-1, Right has cols C..W-1;
+  implemented per row with length(LRow,C) + append via maplist.
+gst_halves_h/3 - split at H//2 into equal top and bottom halves.
+gst_halves_v/3 - split at W//2 into equal left and right halves.
+gst_quadrants/5 - extract TL, TR, BL, BR by composing gst_halves_h
+  then gst_halves_v on each half; grid must have even row and column counts.
+
+Tiling and repetition:
+
+gst_tile_grid/4 - arrange NR*NC sub-grids (flat list, row-major) into an
+  NR x NC tiled layout using per-band hstack then global vstack.
+gst_repeat_h/3 - repeat Grid N times horizontally via findall + gst_hstack.
+gst_repeat_v/3 - repeat Grid N times vertically via findall + gst_vstack.
+
+Border:
+
+gst_add_border/4 - wrap Grid in an N-cell-wide Color border: builds
+  (H+2N) x (W+2N) grid; interior cells copy from Grid, border cells emit Color.
+gst_strip_border/3 - remove N cells from all sides: extracts (H-2N) x (W-2N)
+  interior offset by N; inverse of gst_add_border.
+
+
+4. Example Session
+
+:- use_module(pack(gridstitch/prolog/gridstitch)).
+
+% Concatenate two 2x2 grids side by side:
+gst_concat_h([[a,a],[a,a]], [[b,b],[b,b]], R).
+% R = [[a,a,b,b],[a,a,b,b]]
+
+% Stack three grids horizontally:
+gst_hstack([[[r,x],[x,r]], [[b,b],[b,b]], [[r,x],[x,r]]], R).
+% R = [[r,x,b,b,r,x],[x,r,b,b,x,r]]
+
+% Split at row 2:
+gst_split_h([[a,b],[c,d],[e,f],[g,h]], 2, Top, Bottom).
+% Top = [[a,b],[c,d]], Bottom = [[e,f],[g,h]]
+
+% Extract four quadrants of a 4x4 grid:
+gst_quadrants([[a,b,c,d],[e,f,g,h],[i,j,k,l],[m,n,o,p]], TL, TR, BL, BR).
+% TL = [[a,b],[e,f]], TR = [[c,d],[g,h]]
+% BL = [[i,j],[m,n]], BR = [[k,l],[o,p]]
+
+% Tile four 2x2 grids in a 2x2 layout:
+gst_tile_grid([[[a,a],[a,a]], [[b,b],[b,b]],
+               [[b,b],[b,b]], [[a,a],[a,a]]], 2, 2, R).
+% R = [[a,a,b,b],[a,a,b,b],[b,b,a,a],[b,b,a,a]]
+
+% Repeat a grid 3 times horizontally:
+gst_repeat_h([[r,x],[x,r]], 3, R).
+% R = [[r,x,r,x,r,x],[x,r,x,r,x,r]]
+
+% Add a 1-cell red border:
+gst_add_border([[x,x],[x,x]], 1, r, R).
+% R = [[r,r,r,r],[r,x,x,r],[r,x,x,r],[r,r,r,r]]
+
+% Strip the border back:
+gst_strip_border([[r,r,r,r],[r,x,x,r],[r,x,x,r],[r,r,r,r]], 1, G).
+% G = [[x,x],[x,x]]
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GST-001 through AC-GST-044) exercised in
+packs/gridstitch/test/test_gridstitch.pl. Tests cover:
+- gst_concat_h: 2x2 + 2x2, 2x3 + 2x2, 1x3 + 1x3
+- gst_concat_v: 2x2 + 2x2, 2x3 + 2x3, 3x1 + 3x1
+- gst_hstack: three grids, singleton, empty
+- gst_vstack: three grids, singleton, empty
+- gst_split_h: at row 1, at row 2
+- gst_split_v: at col 1, at col 2
+- gst_halves_h: 4x4 grid, reconstruct identity
+- gst_halves_v: 4x4 grid, reconstruct identity
+- gst_quadrants: correct quadrant values, reconstruct 4x4
+- gst_tile_grid: 2x2 layout (4 grids), 1x3 layout (3 grids)
+- gst_repeat_h: N=2, N=3, N=1 (identity)
+- gst_repeat_v: N=2, N=1 (identity)
+- gst_add_border: N=1, N=2, interior preservation
+- gst_strip_border: N=1, inverse of add_border, N=2
+- Combined: concat_h + split_v recovery; concat_v + split_h recovery;
+  repeat_h width check; tile + quadrant consistency; add_border + strip roundtrip;
+  split_h + vstack recovery; split_v + hstack recovery
+
+
+6. SPARC Documentation
+
+Work Package 231 is recorded in:
+- Specification v197, Part 221 (WP-231-SPEC-001 through WP-231-SPEC-007)
+- Pseudocode v189, Part 221
+- Architecture v191, ARCH-197
+- Refinement v244, AC-GST-001 through AC-GST-044
+- Completion v247, WP-231 record
+
+Tutorial chapter: docs/tutorial/Ch192_GridStitch.txt
+Pack reference: docs/Pack_Reference.txt (gridstitch entry)
+PrologAI PR: #320 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridstitch pack provides a complete toolkit for assembling and disassembling
+symbolic grids: concatenation, stacking, splitting, quadrant extraction, tiled
+arrangement, repetition, and border operations. Together with gridflood (Layer
+204), gridpath (Layer 205), gridmask (Layer 206), gridxform (Layer 207),
+gridsymm (Layer 208), gridcolor (Layer 209), and gridstitch (Layer 210),
+PrologAI now has a comprehensive seven-pack grid reasoning suite at Layers 204-210.
+
+PrologAI now comprises 231 work packages and reaches Layer 210 in the Data Layer.

@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-250-FF6B35?style=for-the-badge" alt="250 Accomplishments">
+  <img src="https://img.shields.io/badge/accomplishments-251-FF6B35?style=for-the-badge" alt="251 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -547,6 +547,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_217` | ObjDelta pack paper — Object-Pair Change Analysis and Rule Application (Layer 176, dp_* prefix): 14 dp_* predicates for extracting deltas from O1-O2 pairs and applying learned rules to new objects. |
 | `Acc_218` | ObjCopy pack paper — Object Tiling and Multi-Copy Layout (Layer 177, tc_* prefix): 14 tc_* predicates for generating multiple positioned copies of obj(Color, Cells) terms. |
 | `Acc_219` | ObjMatch pack paper — Object-List Correspondence and Matching (Layer 178, mx_* prefix): 14 mx_* predicates for finding correspondences between two obj(Color, Cells) term lists. |
+| `Acc_251` | GridStitch pack paper — Grid Assembly (Layer 210, gst_*): 14 gst_* predicates for horizontal and vertical concatenation, list stacking, row/column splitting, half-splits, quadrant extraction, tiled arrangement, repetition, and border addition and removal. |
 | `Acc_250` | GridColor pack paper — Grid Color Analysis (Layer 209, gc_*): 14 gc_* predicates for counting, histograms, frequency ranking, recoloring, color mapping, binary thresholding, dominant color detection, and fractional area computation. |
 | `Acc_249` | GridSymm pack paper — Grid Symmetry (Layer 208, gsm_*): 14 gsm_* predicates for testing h/v/d1/d2/rot90/rot180 symmetry, enumerating all symmetries possessed, completing grids to target symmetry, detecting violating cells, and computing floating-point symmetry score. |
 | `Acc_248` | GridXform pack paper — Grid Transformations (Layer 207, gx_*): 14 gx_* predicates for rotate 90/180/270, flip horizontal/vertical, main-diagonal transpose, anti-diagonal flip, crop, auto-crop to content, pad, scale, tile, D4 group enumeration, and canonical D4 form. |
