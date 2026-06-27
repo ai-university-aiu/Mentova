@@ -1,0 +1,115 @@
+Acc_268: gridpatch Pack - Grid Patch Operations (gpt_*, Layer 227)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 248 adds the gridpatch pack (gpt_*, Layer 227): fourteen
+predicates for extracting, placing, overlaying, searching, tiling, scattering,
+and inpainting sub-grid regions (patches). All operations are non-destructive.
+All 44 acceptance tests pass.
+
+
+1. Motivation
+
+Many spatial reasoning tasks require working with sub-grid patterns: finding a
+stamp in a scene, placing it at a new location, or tiling a small pattern to fill
+a larger area. The gridpatch pack provides these operations as clean, named
+predicates. gpt_find_all/3 locates all occurrences of a pattern in a grid;
+gpt_scatter/4 stamps it at multiple positions; gpt_tile_fill/4 tiles it; and
+gpt_overlay/6 allows transparent compositing where background cells in the stamp
+do not overwrite the target.
+
+
+2. Architecture
+
+Layer 227 sits immediately above gridcrop (Layer 226) in the Data Layer.
+Uses library(lists): nth0/3, member/2, append/3. No cross-pack dependencies.
+
+Key design: a private gpt_dims_/3 helper reads grid dimensions. All placement
+predicates (gpt_place, gpt_overlay) use findall with nested findall for
+row-major reconstruction. gpt_match_at/4 uses negation-as-failure (\+) for
+efficient all-or-nothing matching. gpt_scatter/4 uses deterministic recursion
+with a cut on the base case.
+
+
+3. Predicates
+
+Extraction and placement:
+
+gpt_extract/6       - copy sub-grid at rows R0..R1, cols C0..C1
+gpt_place/5         - overwrite-paste Patch at (R0,C0)
+gpt_overlay/6       - transparent-paste Patch (TranspColor cells skipped)
+
+Searching:
+
+gpt_match_at/4      - check if Patch matches at (R0,C0)
+gpt_find_all/3      - all positions where Patch matches (row-major)
+gpt_count/3         - count of matching positions
+gpt_replace_first/4 - replace first matching occurrence
+
+Tiling and scattering:
+
+gpt_tile_fill/4     - build H x W grid by repeating Patch
+gpt_scatter/4       - place Patch at each listed position
+
+Dimensions and utility:
+
+gpt_h/2             - row count of patch
+gpt_w/2             - column count of patch
+gpt_size/3          - row and column count
+gpt_eq/2            - patch equality check
+gpt_inpaint/7       - fill rectangle [R0..R1] x [C0..C1] with Color
+
+
+4. Example Session
+
+:- use_module(pack(gridpatch/prolog/gridpatch)).
+
+Checker = [[x,b,x,b],[b,x,b,x],[x,b,x,b],[b,x,b,x]].
+Tile = [[x,b],[b,x]].
+
+gpt_find_all(Checker, Tile, Pos).    % Pos = [0-0, 0-2, 1-1, 2-0, 2-2]
+gpt_count(Checker, Tile, N).         % N = 5
+gpt_tile_fill(Tile, 4, 4, G).        % G = Checker
+gpt_replace_first(Checker, Tile, [[z,z],[z,z]], R).  % replaces at (0,0)
+
+Base = [[b,b,b,b],[b,b,b,b],[b,b,b,b],[b,b,b,b]].
+gpt_scatter(Base, [[m]], [0-0, 1-1, 2-2, 3-3], R2).   % diagonal of m
+gpt_inpaint(Checker, 1, 1, 2, 2, b, R3).              % clear inner 2x2
+
+
+5. Test Coverage
+
+All 44 acceptance criteria (AC-GPT-001 through AC-GPT-044) are exercised in
+packs/gridpatch/test/test_gridpatch.pl. Tests cover gpt_extract (3),
+gpt_place (3), gpt_overlay (3), gpt_match_at (3), gpt_find_all (3),
+gpt_count (2), gpt_scatter (3), gpt_tile_fill (3), gpt_h (2), gpt_w (2),
+gpt_size (2), gpt_eq (2), gpt_inpaint (3), gpt_replace_first (3), combined (7).
+
+
+6. SPARC Documentation
+
+Work Package 248 is recorded in:
+- Specification v214, Part 238 (WP-248-SPEC-001 through WP-248-SPEC-005)
+- Pseudocode v206, Part 238
+- Architecture v208, ARCH-214
+- Refinement v261, AC-GPT-001 through AC-GPT-044
+- Completion v264, WP-248 record
+
+Tutorial chapter: docs/tutorial/Ch209_GridPatch.txt
+Pack reference: docs/Pack_Reference.txt (gridpatch entry)
+PrologAI PR: #337 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridpatch pack provides fourteen gpt_* predicates for full patch lifecycle:
+extraction, placement, overlay, pattern matching, tiling, scattering, and region
+clearing. The gpt_overlay predicate enables transparent compositing. The gpt_find_all
+and gpt_replace_first predicates enable pattern search-and-replace within grids.
+
+PrologAI now comprises 248 work packages and reaches Layer 227 in the Data Layer.
