@@ -1,0 +1,15 @@
+PrologAI Work Package 270: Contrastive Pair Analysis (contrast pack, ca_*, Layer 249)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+The contrast pack answers the core question in learning from examples: which input features actually cause the output to change?
+
+Given training pairs of input and output grids, the fourteen ca_* predicates identify features that co-vary with output changes - present in all changing pairs, absent from stable ones. This is the glass-box causal analysis that replaces learned weights with principled symbolic reasoning.
+
+Key predicates: ca_pairwise_delta (what changed per pair), ca_covarying_features (causal candidates), ca_rank_features (sorted by correlation), ca_context_gate (the top trigger), ca_separates (precision scoring).
+
+The contrast pack completes the four-pack learning stack: gridobjmatch detects object-level changes, symtab learns symbol semantics, invariant extracts what never changes, and contrast isolates what drives the changes.
+
+270 work packages. 44/44 tests pass. Pure symbolic reasoning from first principles.
+
+#PrologAI #SymbolicAI #MachineLearning #ContrastiveAnalysis #AIResearch
