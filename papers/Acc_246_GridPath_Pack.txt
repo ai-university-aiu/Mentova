@@ -1,0 +1,154 @@
+Acc_246: gridpath Pack - Grid Pathfinding, Distance Maps, Flood-N, Wavefront, and Line-of-Sight (gpa_*, Layer 205)
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-26
+
+
+Abstract
+
+PrologAI Work Package 226 adds the gridpath pack (gpa_*, Layer 205): fourteen
+predicates for BFS-based pathfinding, distance mapping, flood expansion,
+wavefront extraction, line-of-sight testing, segment generation, and shortest-path
+discovery between colored regions. All 57 acceptance tests pass.
+
+
+1. Motivation
+
+Many visual reasoning tasks require finding paths between objects, measuring
+distances, and determining visibility between cells. Pathfinding on a grid with
+obstacles is the foundational operation - BFS guarantees a shortest path in
+unweighted grids. The gridpath pack provides all path-related operations that
+higher-level reasoning packs require.
+
+The gridpath pack provides:
+- BFS shortest path between any two cells (with path list output)
+- Path step count and reachability testing
+- All reachable cells from a seed (flood fill on walkable terrain)
+- Distance maps: BFS distance to every reachable cell
+- Nearest-color search using distance maps
+- Flood-N: all cells within N steps
+- Wavefront: cells at exactly N steps (BFS level)
+- Horizontal and vertical segment generation (inclusive or exclusive)
+- Line-of-sight: same row or column with no obstacle between
+- Region-to-region shortest path between any pair of colored cells
+
+
+2. Architecture
+
+Layer 205 sits immediately above gridflood (Layer 204). Uses library(lists)
+only; no cross-pack dependencies.
+
+Private helpers:
+- gpa_dims_/3: grid dimensions
+- gpa_cell_/4: cell value lookup
+- gpa_path_bfs_/9: BFS with path tracking; queue entries are node(R,C,RevPath)
+- gpa_reach_bfs_/7: BFS collecting all reachable non-Obs cells
+- gpa_dist_bfs_/7: BFS collecting R-C-Dist triples
+
+
+3. Predicates
+
+gpa_shortest_path/7 - Shortest 4-connected path from (R1,C1) to (R2,C2) avoiding ObsColor; returns R-C list including endpoints; fails if unreachable or either endpoint is obstacle.
+
+gpa_path_length/7 - Step count of shortest 4-path (path length minus 1). 0 for same start and end.
+
+gpa_reachable/6 - Succeed if a 4-connected path exists from (R1,C1) to (R2,C2).
+
+gpa_all_reachable/5 - All cells reachable from seed via 4-connected non-ObsColor walk; includes seed itself.
+
+gpa_distance_map/5 - BFS distance triples R-C-Dist for all cells reachable from seed. Seed Dist=0.
+
+gpa_nearest/6 - Nearest reachable cell of TargetColor; tie-break by BFS order; returns NR-NC compound; fails if none reachable.
+
+gpa_flood_n/6 - All cells reachable within N 4-connected steps from seed. N=0 returns just seed.
+
+gpa_wavefront/6 - Cells at exactly BFS distance N from seed. Returns [] if no cells at that distance.
+
+gpa_straight_h/4 - Cells on horizontal segment (row R, C1..C2 inclusive); direction follows C1-to-C2.
+
+gpa_straight_v/4 - Cells on vertical segment (col C, R1..R2 inclusive); direction follows R1-to-R2.
+
+gpa_line_of_sight/6 - Succeed if (R1,C1) and (R2,C2) share row or column with no ObsColor strictly between; fail for diagonal pairs.
+
+gpa_between_h/4 - Interior cells of horizontal segment (endpoints excluded) in ascending column order.
+
+gpa_between_v/4 - Interior cells of vertical segment (endpoints excluded) in ascending row order.
+
+gpa_region_path/5 - Shortest 4-path from any Color1 cell to any Color2 cell avoiding ObsColor; globally shortest among all pairs.
+
+
+4. Example Session
+
+:- use_module(pack(gridpath/prolog/gridpath)).
+
+% BFS shortest path avoiding walls:
+G = [[p,p,p],[p,w,p],[p,p,p]].
+gpa_shortest_path(G, 0, 0, 2, 2, w, Path).
+% Path has length 5 (4 steps around the wall)
+
+% Distance from top-left corner:
+gpa_distance_map([[p,p,p],[p,p,p],[p,p,p]], 0, 0, w, Map).
+% member(2-2-4, Map) is true (4 steps to bottom-right)
+
+% Wavefront at distance 2:
+gpa_wavefront([[p,p,p],[p,p,p],[p,p,p]], 1, 1, 2, w, Cells).
+% Cells = [0-0, 0-2, 2-0, 2-2]
+
+% Horizontal segment:
+gpa_straight_h(0, 0, 4, S).
+% S = [0-0, 0-1, 0-2, 0-3, 0-4]
+
+% Line of sight check:
+G2 = [[p,p,p,p,p],[p,w,w,p,p],[p,p,p,p,p]].
+\+ gpa_line_of_sight(G2, 1, 0, 1, 4, w).  % wall blocks row 1
+
+% Region-to-region:
+G3 = [[r,p,p,p],[p,p,p,p],[p,p,p,p],[p,p,p,b]].
+gpa_region_path(G3, r, b, w, Path).
+% Path = [0-0, 1-0, 2-0, 3-0, 3-1, 3-2, 3-3]  (length 7)
+
+
+5. Test Coverage
+
+All 57 acceptance criteria (AC-GPA-001 through AC-GPA-057) are exercised in
+packs/gridpath/test/test_gridpath.pl. Tests cover:
+- gpa_shortest_path: same cell, adjacent, corner-to-corner, blocked, maze, obstacle endpoints, 1x1
+- gpa_path_length: adjacent=1, same=0, corner=4, blocked fails
+- gpa_reachable: open, blocked, same cell
+- gpa_all_reachable: 9-cell open, 3-cell wall, 1-cell, obstacle seed
+- gpa_distance_map: 1x1, corner distance, all 16 cells, wall restriction
+- gpa_nearest: nearest r from corner, nearest b from top-left, absent target
+- gpa_flood_n: N=0, N=1, N=2 all-cells, across wall
+- gpa_wavefront: N=0, N=1 four-cells, N=2 corners, N=10 empty
+- gpa_straight_h: single, left-to-right, right-to-left
+- gpa_straight_v: single, top-to-bottom, bottom-to-top
+- gpa_line_of_sight: row clear, row blocked, col clear, col blocked, diagonal, adjacent
+- gpa_between_h: adjacent empty, one interior, three interior, reversed
+- gpa_between_v: adjacent empty, one interior, three interior
+- gpa_region_path: path exists, length 7, same color, no Color1
+
+
+6. SPARC Documentation
+
+Work Package 226 is recorded in:
+- Specification v192, Part 216 (WP-226-SPEC-001 through WP-226-SPEC-007)
+- Pseudocode v184, Part 216
+- Architecture v186, ARCH-192
+- Refinement v239, AC-GPA-001 through AC-GPA-057
+- Completion v242, WP-226 record
+
+Tutorial chapter: docs/tutorial/Ch187_GridPath.txt
+Pack reference: docs/Pack_Reference.txt (gridpath entry)
+PrologAI PR: #315 (merged 2026-06-26)
+
+
+7. Conclusion
+
+The gridpath pack delivers comprehensive BFS pathfinding and spatial analysis
+to PrologAI's raw-grid toolkit. With shortest-path recovery, distance maps,
+flood expansion, wavefront extraction, segment generation, line-of-sight, and
+region-to-region path finding, the cognitive engine can now reason about
+spatial relationships, connectivity, visibility, and optimal routes.
+
+PrologAI now comprises 226 work packages and reaches Layer 205 in the Data Layer.
