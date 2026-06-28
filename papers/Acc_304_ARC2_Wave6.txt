@@ -1,0 +1,163 @@
+ACCOMPLISHMENT RECORD Acc_304
+
+Title: ARC-AGI-2 Wave 6 - Band Wrap Concentric Rings - Score: 6/120 = 5.00%
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/Mentova
+
+
+SUMMARY
+
+Wave 6 of the ARC-AGI-2 climb. Implements a band-wrap concentric rings rule in
+the benchmark runner and uses it to solve task 45a5af55. Score improves from
+5/120 = 4.17% to 6/120 = 5.00%.
+
+
+WHAT WAS BUILT
+
+New rule: band_wrap
+
+The band_wrap rule is implemented in arc_benchmark_2.pl via five new helper
+predicates plus the required arc2_named_rule/1, arc2_transform/3, and
+arc2_induce_rule/2 clauses.
+
+arc2_bw_uniform_/2
+  Verifies that all elements of a list are equal to a given value. Used as the
+  guard check that confirms every input row is a uniform solid-color row. Fails
+  immediately on the first mismatched cell.
+
+arc2_bw_rle_rows_/2
+  Run-length encodes a flat list of row colors into a list of (Color, Count)
+  band descriptors. Uses arc2_bw_rle_same_/5 as a recursive accumulator helper.
+  Each maximal run of consecutive identical colors becomes one (Color, Count)
+  pair.
+
+arc2_bw_rle_same_/5
+  Recursive accumulator for run counting. Extends the current run by one on each
+  matching element. Terminates when the list is empty or the next element differs
+  from the current run color, returning the accumulated count and the tail.
+
+arc2_bw_sum_counts_/2
+  Sums all Count fields from a (Color,Count) band list. Used to compute
+  TotalCount for the output size formula S = 2*TotalCount - LastCount.
+
+arc2_bw_ring_color_/3
+  Given a band list and a ring index (the distance from the nearest edge in the
+  output grid), returns the color for that ring by successive count subtraction.
+  If ring < T for the current band, that band's color is returned. Otherwise T is
+  subtracted and the predicate recurses into the next band.
+
+The top-level arc2_transform(band_wrap, Grid, Result):
+  1. Verifies all input rows are uniform via arc2_bw_uniform_/2.
+  2. Extracts the per-row color sequence (first cell of each row).
+  3. Run-length encodes the sequence into (Color, Count) bands.
+  4. Requires at least 2 bands.
+  5. Computes TotalT (sum of all counts) and TLast (last count).
+  6. Computes output side length S = 2*TotalT - TLast.
+  7. Builds the S x S output grid: for each cell (R,C), computes ring index
+     ring = min(min(R,C), min(S-1-R, S-1-C)) and looks up the band color.
+
+The arc2_induce_rule(TrainingPairs, band_wrap) guard:
+  - Every input row of every training pair is uniform.
+  - The first training input has at least 2 run-length bands.
+  - arc2_transform(band_wrap, In, Out) holds for every training pair.
+
+
+TASK SOLVED: 45a5af55
+
+Grid format: input 14x11 (test) and 14x11 and 13x12 (training), output 26x26
+(test) and 26x26 and 24x24 (training).
+
+The task's core pattern: every input row is one solid color. Reading rows top to
+bottom gives a sequence of color runs. The output wraps these runs as concentric
+nested rectangles, from the outermost ring (first band) to the center square
+(last band).
+
+Training pair 0 (input 14x11, output 26x26):
+Bands: [(8,2),(2,5),(6,1),(8,2),(1,2),(2,2)].
+TotalCount = 2+5+1+2+2+2 = 14. LastCount = 2. S = 2*14-2 = 26.
+Ring 0-1: color 8 (thickness 2 = outermost frame, 2 rows wide).
+Ring 2-6: color 2 (thickness 5).
+Ring 7: color 6 (thickness 1).
+Ring 8-9: color 8 (thickness 2).
+Ring 10-11: color 1 (thickness 2).
+Ring 12: color 2 (center 2x2 square).
+Exact match: True.
+
+Training pair 1 (input 13x12, output 24x24):
+Bands: [(2,1),(3,1),(2,2),(3,1),(2,1),(1,1),(2,4),(8,2)].
+TotalCount = 1+1+2+1+1+1+4+2 = 13. LastCount = 2. S = 2*13-2 = 24.
+8 concentric rings from outside in, thicknesses 1,1,2,1,1,1,4 plus center 2x2.
+Exact match: True.
+
+Test case (input 14x11, output 26x26):
+Bands: [(3,2),(8,3),(2,1),(8,2),(3,1),(7,2),(5,1),(8,2)].
+TotalCount = 2+3+1+2+1+2+1+2 = 14. LastCount = 2. S = 2*14-2 = 26.
+Ring 0-1: color 3. Ring 2-4: color 8. Ring 5: color 2. Ring 6-7: color 8.
+Ring 8: color 3. Ring 9-10: color 7. Ring 11: color 5. Ring 12: color 8.
+Spot checks:
+  Row 0, all cols: [3,3,3,...,3] (ring=0, color 3). Exact match.
+  Row 2, col 2: ring=2, color 8. Exact match.
+  Row 5, col 5: ring=5, color 2. Exact match.
+  Row 12, col 12: ring=12, center color 8. Exact match.
+Full output: Exact match with TestOut.
+
+
+BENCHMARK RESULT
+
+Full benchmark run after this wave:
+
+  Score: 6 / 120 = 5.00%
+
+Tasks passing:
+  1818057f - Wave 1 - recolor_plus(4,8)
+  45a5af55 - Wave 6 - band_wrap            (NEW)
+  7b5033c1 - Wave 2 - chain_strip
+  80a900e0 - Wave 3 - arm_endpoint_ray
+  97d7923e - Wave 5 - stub_rank_fill
+  e376de54 - Wave 4 - segment_equalize
+
+No regressions. All previously passing tasks continue to pass.
+
+
+SPARC DOCUMENTATION UPDATES
+
+Specification:    v239 -> v240 (Part 269: ARC2-W6-SPEC-001 through ARC2-W6-SPEC-006)
+Pseudocode:       v231 -> v232 (band_wrap pseudocode section)
+Architecture:     v234 -> v235 (Wave 6 architectural note)
+Refinement:       v286 -> v287 (AC-BW-001 through AC-BW-009 acceptance tests)
+Completion:       v292 -> v293 (ARC-AGI-2 Wave 6 completion record)
+
+
+FILES CHANGED
+
+Mentova/src/mentova/games/arc_benchmark_2.pl
+  Added: band_wrap rule and five helper predicates (arc2_bw_uniform_/2,
+  arc2_bw_rle_rows_/2, arc2_bw_rle_same_/5, arc2_bw_sum_counts_/2,
+  arc2_bw_ring_color_/3).
+
+Mentova/papers/Climbing_ARC-AGI-2.txt
+  Updated: header, score progression table row, ATTEMPT 6 entry, ALL SOLVED TASKS
+  list (45a5af55 added alphabetically), REFERENCES entry.
+
+Mentova/papers/Acc_304_ARC2_Wave6.txt
+  Added: this accomplishment record.
+
+Mentova/papers/Acc_304_LinkedIn.txt
+  Added: LinkedIn announcement.
+
+Mentova/README.md
+  Updated: badge, scores, accomplishment count, Papers table.
+
+PrologAI/docs/PrologAI_1_Specification_v240.txt  (archived v239)
+PrologAI/docs/PrologAI_2_Pseudocode_v232.txt     (archived v231)
+PrologAI/docs/PrologAI_3_Architecture_v235.txt   (archived v234)
+PrologAI/docs/PrologAI_4_Refinement_v287.txt     (archived v286)
+PrologAI/docs/PrologAI_5_Completion_v293.txt     (archived v292)
+PrologAI/CLAUDE.md
+PrologAI/README.md

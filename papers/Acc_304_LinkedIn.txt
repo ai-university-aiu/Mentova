@@ -1,0 +1,19 @@
+ARC-AGI-2 Wave 6 - Band Wrap Concentric Rings - Score: 6/120 = 5.00%
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Mentova just solved its sixth ARC-AGI-2 evaluation task using a new glass-box rule called band_wrap.
+
+The rule: the input grid's rows are each a single solid color. Reading top to bottom, those row colors form a sequence of bands (runs of identical colors). The output is a square grid of concentric rectangular rings. The first band paints the outermost ring, the second band paints the next ring inward, and so on, until the last band fills the center square. Each ring has thickness equal to its band's row count. Output size: S = 2 * TotalBandCount - LastBandCount.
+
+The core algorithm is a single formula: cell (R, C) in the output grid belongs to ring min(R, C, S-1-R, S-1-C). That is the distance to the nearest edge. Find which band bracket contains that distance, and you have the color. No iteration, no fill, no recursion over cells - one lookup per cell.
+
+What makes this task elegant: the input IS the recipe. The sequence of row colors and their heights directly encodes the ring structure. The input is a compressed specification of the output.
+
+Score: 6/120 = 5.00%. Pure induction. No pretraining on the ARC-AGI-2 corpus. Every solved task is attributed to a named, independently verifiable Prolog rule.
+
+Solved tasks: 1818057f (Wave 1), 7b5033c1 (Wave 2), 80a900e0 (Wave 3), e376de54 (Wave 4), 97d7923e (Wave 5), 45a5af55 (Wave 6).
+
+Full details in Accomplishment Record Acc_304. The climb continues.
+
+#PrologAI #Mentova #ARCAGI2 #SymbolicAI #AIReasoning

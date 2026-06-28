@@ -1009,6 +1009,110 @@ arc2_induce_rule(TrainingPairs, periodic_repair) :-
            arc2_transform(periodic_repair, In, Out)).
 
 % ---------------------------------------------------------------------------
+% BAND_WRAP RULE
+% Input rows must all be uniform (each row is one solid color).
+% The row-color sequence is run-length encoded into (Color, Count) bands.
+% Output: square grid of side S = 2*(TotalCount - LastCount) + LastCount.
+% Cell (R,C) belongs to ring min(R,C,S-1-R,S-1-C); the band whose cumulative
+% count bracket contains the ring index determines the cell color.
+% ---------------------------------------------------------------------------
+
+% arc2_bw_uniform_/2: all elements of List equal Color.
+arc2_bw_uniform_([], _).
+% Continue checking each element.
+arc2_bw_uniform_([C|Rest], C) :-
+%   Recurse on remaining elements.
+    arc2_bw_uniform_(Rest, C).
+
+% arc2_bw_rle_rows_/2: run-length encode a flat color list into (Color,Count) pairs.
+arc2_bw_rle_rows_([], []).
+% Pull out one run starting with C and accumulate.
+arc2_bw_rle_rows_([C|Cs], [(C,N)|Rest]) :-
+%   Count consecutive C values starting at 1.
+    arc2_bw_rle_same_(Cs, C, 1, N, Tail),
+%   Encode the remainder.
+    arc2_bw_rle_rows_(Tail, Rest).
+
+% arc2_bw_rle_same_/5: accumulate run of identical values.
+arc2_bw_rle_same_([], _, N, N, []).
+% Same color: increment accumulator.
+arc2_bw_rle_same_([C|Cs], C, Acc, N, Tail) :-
+%   Increment and recurse.
+    Acc1 is Acc + 1,
+    arc2_bw_rle_same_(Cs, C, Acc1, N, Tail).
+% Different color: stop.
+arc2_bw_rle_same_([D|Cs], C, N, N, [D|Cs]) :-
+%   Guard: different color ends the run.
+    D \= C.
+
+% arc2_bw_sum_counts_/2: sum all Count values from a (Color,Count) band list.
+arc2_bw_sum_counts_([], 0).
+% Add this band's count to the rest.
+arc2_bw_sum_counts_([(_, T)|Rest], Total) :-
+%   Sum the remaining bands first.
+    arc2_bw_sum_counts_(Rest, Sub),
+%   Add this band's count.
+    Total is Sub + T.
+
+% arc2_bw_ring_color_/3: given bands and a 0-indexed ring distance, return color.
+% Ring distance = min(R, C, S-1-R, S-1-C) for a cell in the output grid.
+arc2_bw_ring_color_([(C, T)|_], Ring, C) :-
+%   Ring falls within this band's thickness.
+    Ring < T, !.
+arc2_bw_ring_color_([(_, T)|Rest], Ring, Color) :-
+%   Subtract this band's count and recurse into next band.
+    Ring2 is Ring - T,
+    arc2_bw_ring_color_(Rest, Ring2, Color).
+
+% Register band_wrap as a known named transform.
+arc2_named_rule(band_wrap).
+
+% arc2_transform for band_wrap: build concentric rectangular rings from RLE bands.
+arc2_transform(band_wrap, Grid, Result) :-
+%   All rows must be uniform (every cell in a row equals its first cell).
+    forall(member(Row, Grid), (Row = [C|_], arc2_bw_uniform_(Row, C))),
+%   Extract per-row color (first cell of each row).
+    maplist([Row, C]>>(Row = [C|_]), Grid, Colors),
+%   Run-length encode into (Color, Count) bands.
+    arc2_bw_rle_rows_(Colors, Bands),
+%   Need at least 2 bands to form any ring structure.
+    length(Bands, NB), NB >= 2,
+%   Sum all band counts.
+    arc2_bw_sum_counts_(Bands, TotalT),
+%   Last band count (becomes the center block).
+    last(Bands, (_, TLast)),
+%   Output grid side length.
+    S is 2 * TotalT - TLast,
+%   Output row index upper bound.
+    S1 is S - 1,
+%   Build S x S grid row by row.
+    findall(Row,
+        (between(0, S1, R),
+%        Build one row: map each column to its ring color.
+         findall(Color,
+             (between(0, S1, C),
+%             Ring = distance from nearest edge.
+              Ring is min(min(R, C), min(S1 - R, S1 - C)),
+%             Look up color for this ring index.
+              arc2_bw_ring_color_(Bands, Ring, Color)),
+             Row)),
+        Result).
+
+% arc2_induce_rule for band_wrap: guard checks then verify all training pairs.
+arc2_induce_rule(TrainingPairs, band_wrap) :-
+%   Guard: every input row in every training pair is uniform.
+    forall(member(pair(In, _), TrainingPairs),
+           forall(member(Row, In), (Row = [C|_], arc2_bw_uniform_(Row, C)))),
+%   Guard: at least 2 bands in the first training input.
+    TrainingPairs = [pair(In0, _)|_],
+    maplist([Row, C]>>(Row = [C|_]), In0, Colors0),
+    arc2_bw_rle_rows_(Colors0, Bands0),
+    length(Bands0, NB0), NB0 >= 2,
+%   Verify: transform produces correct output for every training pair.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(band_wrap, In, Out)).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------
