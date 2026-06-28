@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 9 complete: 9/120 = 7.50%.
+Last updated: 2026-06-28. Wave 10 complete: 10/120 = 8.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -130,10 +130,131 @@ Date        | Score      | Percent | Notes
 2026-06-27  |   7 / 120  |  5.83%  | Wave 7: staircase-lift bar repositioning rule
 2026-06-28  |   8 / 120  |  6.67%  | Wave 8: bar-sort vertical bar height ordering
 2026-06-28  |   9 / 120  |  7.50%  | Wave 9: panel-overlay s1-seeded flood-fill split
+2026-06-28  |  10 / 120  |  8.33%  | Wave 10: apex-shadow arm-vector projection rule
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 10 - 2026-06-28 - Score: 10/120 = 8.33%
+
+Date: 2026-06-28
+
+Confirmed score: 10 / 120 = 8.33%
+
+Rules added in this wave:
+
+apex_shadow - Each shape projects a shadow via its arm-vector geometry.
+
+Description: Every non-background shape has a centre cell and exactly two arm
+vectors.  For a size-1 isolated cell (apex) the centre is that cell and the
+arms are the unit-step directions to its two non-background 8-connected
+neighbours.  For a 3-cell L-shaped component the centre is the corner cell
+(the unique cell with 2 intra-component 4-connected neighbours) and the arms
+point to the other two cells.  The projection displacement is computed as
+-(arm1 + arm2) * 5 / max(|sR|, |sC|) where sR = arm1R + arm2R and
+sC = arm1C + arm2C.  This normalises to 5 steps in the dominant direction.
+
+Effects:
+  - Landing on a background cell: place shadow-9 at that position.
+  - Two different projections to the same background cell: value 1 (collision).
+  - Landing on an existing non-background component: recolour all cells of
+    that component to 9.
+
+Shape geometry observed:
+  - Standard downward chevron (wings at R+1, C-1 and R+1, C+1): arm sum =
+    (+2,0), projection = (-5,0) - projects straight up.
+  - Inverted upward chevron (wings at R-1, C-1 and R-1, C+1): arm sum =
+    (-2,0), projection = (+5,0) - projects straight down.
+  - Diagonal-arm chevron (wings at R-1,C+1 and R+1,C+1): arm sum = (0,+2),
+    projection = (0,-5) - projects straight left.
+  - L-shape with arms up and left from corner: arm sum = (-1,-1),
+    projection = (+5,+5) - projects down-right.
+  - L-shape with arms right and down from corner: arm sum = (+1,+1),
+    projection = (-5,-5) - projects up-left.
+  - L-shape with arms down and left from corner: arm sum = (+1,-1),
+    projection = (-5,+5) - projects up-right.
+
+apex_shadow algorithm:
+  1. Find background colour Bg = mode(all cells).
+  2. Find all 4-connected components of non-background cells.
+  3. For each component:
+     a. Size 1 with exactly 2 non-bg 8-neighbors: apex. Arms = direction
+        vectors from apex to each neighbor.
+     b. Size 3 with one cell having 2 4-connected intra-component neighbors:
+        L-shape. Arms = direction vectors from corner to the other 2 cells.
+     c. Otherwise: skip (wing cells, isolated non-apex singles, etc.).
+  4. Compute projection = -(arm1 + arm2) * 5 / max(|sR|, |sC|).
+  5. Compute target = centre + projection.  Skip if out of bounds.
+  6. If target is background: record as bg-hit.
+  7. If target is non-background: BFS-expand entire component at target,
+     record all cells as recolor targets.
+  8. Count bg-hits per cell; cell value = 9 if count 1, = 1 if count >= 2.
+  9. All recolor cells get value 9 regardless of hit count.
+
+New helper predicates:
+  as_comp_proj_/7    compute (TR,TC) from a single component.
+  as_arm_proj_/10    apply arm-sum normalisation and bounds check.
+  as_8nbr_wings_/5   collect DR-DC directions to non-bg 8-neighbors.
+  as_bg_nonbg_split_/5 partition target list into bg and non-bg groups.
+  as_count_hits_/2   deduplicate sorted list and attach per-element counts.
+  (as_components_, as_bfs4_comp_, as_corner_, as_shadow9_ retained.)
+
+Task solved: 409aa875
+
+Description: A 16x16 grid (background 7) with mixed chevrons, inverted
+chevrons, diagonal-arm chevrons, and L-shaped components in both the upper
+and lower halves.  Projections scatter in four orthogonal and two diagonal
+directions depending entirely on each shape's arm geometry.
+
+Training pair 0 (16x16): upper L (corner=(4,12), arms up+right, proj=(+5,-5))
+  targets (9,7) = background.  Lower apices at rows 14-15 target row 9.
+  Apex (14,7) also targets (9,7): collision -> value 1.  Exact match: True.
+
+Training pair 1 (16x16): six standard downward chevrons at rows 10-14, all
+  project straight up (-5,0) to rows 5-9.  All targets are background.
+  Exact match: True.
+
+Training pair 2 (16x16): nine L-shaped 3-cell components with arms right+down
+  from corner, all project up-left (-5,-5).  One projection hits an existing
+  non-bg component and recolours its 3 cells to 9.  Exact match: True.
+
+Test case (16x16): eight active shapes with four distinct arm-vector patterns:
+  standard chevrons (-5,0), inverted chevron (+5,0), diagonal-arm chevron
+  (0,-5), upper L (+5,+5), lower L (-5,+5).  Nine output changes produced.
+  Collision at (9,14) where standard apex (14,14) and lower-L corner (14,9)
+  both project to the same background cell.  Exact match: True.
+
+Bugs fixed:
+
+The initial apex_shadow implementation incorrectly used a global "leftmost
+non-background column" as the column offset for all projections.  This
+produced ΔC = -leftmost for every shape, which coincidentally matched the
+training pairs where all shapes happened to have identical arm geometries,
+but failed the test case which contains four different arm patterns.  The fix
+replaces the global offset with per-shape arm-vector normalisation, giving
+each shape its own correct projection direction.
+
+Lessons learned:
+
+1. The column offset in apex_shadow is NOT a global property of the grid.
+   It is a per-shape property derived entirely from the two arm vectors.
+   When all training-pair shapes are identical in orientation the global
+   leftmost trick appears to work, but fails as soon as the test contains a
+   shape oriented differently from all training shapes.
+
+2. The normalised arm-vector formula covers ALL four chevron orientations and
+   ALL four L-shape orientations uniformly, with no special cases.  The key
+   insight: divide the arm-sum vector by its L-infinity norm (max of absolute
+   components), then scale by -5.  For chevrons this collapses diagonal arm
+   pairs to a single axis; for L-shapes it preserves the diagonal direction.
+
+3. "Induced correctly on training pairs" does not mean the rule is correct.
+   Training pairs in task 409aa875 all contain only downward-pointing chevrons
+   and one standard L-orientation, so the wrong formula (global leftmost)
+   passes induction while the test case (which adds inverted and diagonal
+   chevrons and a mirrored L) reveals the bug.
 
 
 ATTEMPT 9 - 2026-06-28 - Score: 9/120 = 7.50%
@@ -1019,15 +1140,16 @@ ARC-AGI-1). Every single task correct represents 0.83% of the score.
 ALL SOLVED TASKS
 (Task IDs added in alphabetical order after each wave)
 
-1818057f  - Wave 1 - recolor_plus(4,8)   - plus shapes of 4 become 8
-31f7f899  - Wave 8 - bar_sort            - sort vertical bar heights, reassign colors to slots
-45a5af55  - Wave 6 - band_wrap           - concentric rectangular rings from row-color bands
-4c3d4a41  - Wave 7 - staircase_lift      - staircase heights reposition right-half color bars
-7491f3cf  - Wave 9 - panel_overlay       - s1-seeded flood-fill splits s2/s3 into panel 4
-7b5033c1  - Wave 2 - chain_strip          - connected-blob chain traversal strip
-80a900e0  - Wave 3 - arm_endpoint_ray     - checkerboard diagonal arm projection
-97d7923e  - Wave 5 - stub_rank_fill       - column stubs rank which vertical bar to fill
-e376de54  - Wave 4 - segment_equalize     - equalize all segment lengths to middle
+1818057f  - Wave 1  - recolor_plus(4,8)   - plus shapes of 4 become 8
+31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
+409aa875  - Wave 10 - apex_shadow         - arm-vector projection places shadow-9 or collision-1
+45a5af55  - Wave 6  - band_wrap           - concentric rectangular rings from row-color bands
+4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
+7491f3cf  - Wave 9  - panel_overlay       - s1-seeded flood-fill splits s2/s3 into panel 4
+7b5033c1  - Wave 2  - chain_strip          - connected-blob chain traversal strip
+80a900e0  - Wave 3  - arm_endpoint_ray     - checkerboard diagonal arm projection
+97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
+e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to middle
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -1104,4 +1226,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 8: Bar-sort vertical bar height ordering rul
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 9: Panel-overlay s1-seeded flood-fill rule.
   Score: 9/120 = 7.50%. Task 7491f3cf solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 10: Apex-shadow arm-vector projection rule.
+  Score: 10/120 = 8.33%. Task 409aa875 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.

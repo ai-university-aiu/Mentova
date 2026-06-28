@@ -1649,6 +1649,203 @@ arc2_po_cell_val_(PR, PC, S2, S3, InBg, Wall, Reachable, V) :-
     ).
 
 % ---------------------------------------------------------------------------
+% APEX SHADOW
+% Each non-background shape has a centre cell and two arm vectors.
+% For a size-1 isolated cell with exactly 2 non-bg 8-connected neighbours
+% (apex), the centre is that cell and the arms point to the 2 neighbours.
+% For a 3-cell L-shaped component, the centre is the corner (unique cell
+% with 2 intra-component 4-connected neighbours) and the arms point to the
+% other two cells.  Projection = -(arm1+arm2)*5/max(|sR|,|sC|) where
+% sR=arm1R+arm2R and sC=arm1C+arm2C.  Landing on background places shadow-9;
+% two projections to the same background cell produce value 1 (collision).
+% Landing on an existing non-background component recolours it entirely to 9.
+% Reference: ARC-AGI-2 task 409aa875.
+% ---------------------------------------------------------------------------
+
+% Register apex_shadow as a known named transform.
+arc2_named_rule(apex_shadow).
+
+% arc2_transform for apex_shadow: project each shape via its arm vectors.
+arc2_transform(apex_shadow, Grid, Result) :-
+% Find background colour via modal value.
+    append(Grid, AsAll_), msort(AsAll_, AsSorted_),
+% Determine background.
+    arc2_bs_mode_(AsSorted_, AsBg),
+% Find grid dimensions.
+    length(Grid, AsNR_), nth0(0, Grid, AsR0_), length(AsR0_, AsNC_),
+% Compute row and column index bounds.
+    AsNR1_ is AsNR_ - 1, AsNC1_ is AsNC_ - 1,
+% Enumerate all non-background cell positions.
+    findall(r(R,C), (between(0,AsNR1_,R), between(0,AsNC1_,C),
+        nth0(R,Grid,AsRow__), nth0(C,AsRow__,AsV__), AsV__ \= AsBg), AsNBCs_),
+% Find all 4-connected components of non-background cells.
+    as_components_(AsNBCs_, Grid, AsBg, AsNR_, AsNC_, AsComps_),
+% Collect one projection target per active shape (apex or L-corner).
+    findall(r(TR,TC), (member(AsComp__, AsComps_),
+        as_comp_proj_(AsComp__, Grid, AsBg, AsNR_, AsNC_, TR, TC)), AsTgts_),
+% Separate background targets (shadow-9) from non-bg targets (recolor).
+    as_bg_nonbg_split_(AsTgts_, Grid, AsBg, AsBgTgts_, AsNBgTgts_),
+% Expand non-bg targets to full component cells via BFS recolor.
+    as_shadow9_(AsNBgTgts_, Grid, AsBg, AsNR_, AsNC_, AsRecolor0_),
+    sort(AsRecolor0_, AsRecolor_),
+% Sort bg targets and count hits per cell for collision detection.
+    msort(AsBgTgts_, AsBgSorted_),
+    as_count_hits_(AsBgSorted_, AsBgCounts_),
+% Build result: recolor cells get 9, bg single-hit get 9, double-hit get 1.
+    numlist(0, AsNR1_, AsRI_), numlist(0, AsNC1_, AsCI_),
+    maplist([RI_,OutRow_]>>(
+        maplist([CI_,Cell_]>>(
+            nth0(RI_,Grid,AsGRow__), nth0(CI_,AsGRow__,AsOrig__),
+% Recolor takes priority, then collision (2+ hits), then shadow-9 (1 hit).
+            ( member(r(RI_,CI_), AsRecolor_) ->
+                Cell_ = 9
+            ; member(r(RI_,CI_)-AsHCnt__, AsBgCounts_), AsHCnt__ >= 2 ->
+                Cell_ = 1
+            ; member(r(RI_,CI_)-1, AsBgCounts_) ->
+                Cell_ = 9
+            ;   Cell_ = AsOrig__
+            )
+        ), AsCI_, OutRow_)
+    ), AsRI_, Result).
+
+% as_comp_proj_(+Comp, +Grid, +Bg, +NR, +NC, -TR, -TC): compute projection target.
+as_comp_proj_(Comp, Grid, Bg, NR, NC, TR, TC) :-
+    length(Comp, Sz),
+% Size-1: apex if exactly 2 non-bg 8-neighbors; arms = directions to them.
+    ( Sz =:= 1 ->
+        Comp = [r(R,C)],
+        as_8nbr_wings_(Grid, R, C, Bg, Wings_),
+        length(Wings_, 2),
+        Wings_ = [DR1-DC1, DR2-DC2],
+        as_arm_proj_(DR1, DC1, DR2, DC2, R, C, NR, NC, TR, TC)
+% Size-3: L-shape; arms = directions from corner to the other 2 cells.
+    ; Sz =:= 3 ->
+        as_corner_(Comp, r(CR,CC)),
+        findall(DR-DC, (member(r(NNR,NNC), Comp), (NNR \= CR ; NNC \= CC),
+            DR is NNR - CR, DC is NNC - CC), [ArmA,ArmB]),
+        ArmA = DR1-DC1, ArmB = DR2-DC2,
+        as_arm_proj_(DR1, DC1, DR2, DC2, CR, CC, NR, NC, TR, TC)
+    ; fail
+    ).
+
+% as_arm_proj_: compute (TR,TC) = centre - arm_sum_normalised * 5.
+as_arm_proj_(DR1, DC1, DR2, DC2, R, C, NR, NC, TR, TC) :-
+% Sum of arm direction vectors.
+    SR is DR1 + DR2, SC is DC1 + DC2,
+% L-infinity normalisation factor.
+    M is max(abs(SR), abs(SC)), M > 0,
+% Scale by -5/M to get displacement.
+    DPR is -5 * SR // M, DPC is -5 * SC // M,
+% Target coordinates.
+    TR is R + DPR, TC is C + DPC,
+% Bounds check.
+    TR >= 0, TR < NR, TC >= 0, TC < NC.
+
+% as_8nbr_wings_(+Grid, +R, +C, +Bg, -Wings): list of DR-DC for non-bg 8-neighbors.
+as_8nbr_wings_(Grid, R, C, Bg, Wings) :-
+% Collect direction vectors to all non-background 8-connected neighbours.
+    findall(DR-DC,
+        (member(DR-DC, [(-1)-(-1),(-1)-0,(-1)-1,0-(-1),0-1,1-(-1),1-0,1-1]),
+         NR is R+DR, NC is C+DC,
+         nth0(NR, Grid, AsNR__), nth0(NC, AsNR__, AsNV__), AsNV__ \= Bg),
+        Wings).
+
+% as_bg_nonbg_split_: partition target list into background and non-bg targets.
+as_bg_nonbg_split_([], _, _, [], []).
+as_bg_nonbg_split_([r(TR,TC)|Rest], Grid, Bg, BgTgts, NBgTgts) :-
+% Look up the target cell value.
+    nth0(TR, Grid, AsRow__), nth0(TC, AsRow__, AsV__),
+    as_bg_nonbg_split_(Rest, Grid, Bg, BgRest, NBgRest),
+% Route to bg or non-bg list.
+    ( AsV__ =:= Bg ->
+        BgTgts = [r(TR,TC)|BgRest], NBgTgts = NBgRest
+    ;   BgTgts = BgRest, NBgTgts = [r(TR,TC)|NBgRest]
+    ).
+
+% as_count_hits_(+SortedList, -Pairs): deduplicate sorted list with counts.
+as_count_hits_([], []).
+as_count_hits_([H|T], [H-Count|Rest]) :-
+% Count how many additional copies of H appear in the tail.
+    include(=(H), T, Dupes), length(Dupes, Extra), Count is Extra + 1,
+% Remove all copies and recurse.
+    exclude(=(H), T, Remaining),
+    as_count_hits_(Remaining, Rest).
+
+% as_components_(+NonBg, +Grid, +Bg, +NRows, +NCols, -Comps): BFS over all cells.
+as_components_(NonBg, Grid, Bg, NRows, NCols, Comps) :-
+% Iterate over non-background cells, BFS-expanding each unvisited one.
+    as_comps_iter_(NonBg, Grid, Bg, NRows, NCols, [], Comps).
+
+% as_comps_iter_: process each cell, skipping already-visited ones.
+as_comps_iter_([], _, _, _, _, _, []).
+as_comps_iter_([H|T], Grid, Bg, NRows, NCols, Visited, Comps) :-
+% Skip cells already assigned to a component.
+    ( member(H, Visited) ->
+        as_comps_iter_(T, Grid, Bg, NRows, NCols, Visited, Comps)
+    ;
+% BFS from this cell to collect its component.
+        as_bfs4_comp_([H], Grid, Bg, NRows, NCols, Visited, Comp, Visited1),
+        as_comps_iter_(T, Grid, Bg, NRows, NCols, Visited1, Rest),
+        Comps = [Comp|Rest]
+    ).
+
+% as_bfs4_comp_: 4-connectivity BFS returning the component and updated visited.
+as_bfs4_comp_([], _, _, _, _, Vis, [], Vis).
+as_bfs4_comp_([H|T], Grid, Bg, NRows, NCols, Vis0, Comp, Vis1) :-
+% If already visited, skip.
+    ( member(H, Vis0) ->
+        as_bfs4_comp_(T, Grid, Bg, NRows, NCols, Vis0, Comp, Vis1)
+    ;
+        H = r(R,C),
+% Mark as visited.
+        Vis2 = [H|Vis0],
+% Find 4-connected non-background unvisited neighbours.
+        NRows1 is NRows - 1, NCols1 is NCols - 1,
+        findall(r(NR,NC),
+            (member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1]),
+             NR is R+DR, NC is C+DC,
+             NR >= 0, NR =< NRows1, NC >= 0, NC =< NCols1,
+             nth0(NR, Grid, AsNRow_), nth0(NC, AsNRow_, AsNV_), AsNV_ \= Bg,
+             \+ member(r(NR,NC), Vis2)),
+            Neighbors),
+% Enqueue neighbours.
+        append(T, Neighbors, Q1),
+        as_bfs4_comp_(Q1, Grid, Bg, NRows, NCols, Vis2, CompRest, Vis1),
+        Comp = [H|CompRest]
+    ).
+
+% as_corner_(+Comp, -Corner): find cell with exactly 2 intra-component 4-neighbors.
+as_corner_(Comp, Corner) :-
+    member(Corner, Comp),
+    Corner = r(R,C),
+% Count 4-connected neighbours that are also in the component.
+    include([r(NR,NC)]>>(D is abs(NR-R)+abs(NC-C), D =:= 1), Comp, Ns4),
+    length(Ns4, 2), !.
+
+% as_shadow9_(+Targets, +Grid, +Bg, +NRows, +NCols, -Cells): expand non-bg targets.
+as_shadow9_([], _, _, _, _, []).
+as_shadow9_([r(TR,TC)|Rest], Grid, Bg, NRows, NCols, All) :-
+    nth0(TR, Grid, TRow_), nth0(TC, TRow_, TV_),
+    ( TV_ =:= Bg ->
+% Background target: just this one cell becomes shadow-9.
+        Cells = [r(TR,TC)]
+    ;
+% Non-background target: BFS entire component, all cells become shadow-9.
+        as_bfs4_comp_([r(TR,TC)], Grid, Bg, NRows, NCols, [], Comp, _),
+        Cells = Comp
+    ),
+    as_shadow9_(Rest, Grid, Bg, NRows, NCols, RestCells),
+    append(Cells, RestCells, All).
+
+% arc2_induce_rule for apex_shadow: verify all training pairs match exactly.
+arc2_induce_rule(TrainingPairs, apex_shadow) :-
+% Require at least one training pair.
+    TrainingPairs \= [],
+% Every pair must satisfy arc2_transform exactly.
+    maplist([pair(In,Out)]>>(arc2_transform(apex_shadow, In, Out)),
+            TrainingPairs).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------

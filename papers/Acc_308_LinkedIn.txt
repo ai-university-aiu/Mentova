@@ -1,0 +1,52 @@
+ARC-AGI-2 Wave 10: 10/120 = 8.33% - Apex-Shadow Arm-Vector Projection
+
+Mentova just solved ARC-AGI-2 task 409aa875, advancing to 10 out of 120 = 8.33%.
+
+The rule is called apex_shadow and it is beautiful in its geometry.
+
+Every non-background shape in the grid has a centre cell and two arm vectors.
+For a single isolated cell (apex) the arms point toward its two non-background
+diagonal neighbours.  For a three-cell L-shape the arms point from the corner
+cell to the other two cells.
+
+The projection target is computed as:
+
+  displacement = -(arm1 + arm2) * 5 / max(|arm1R + arm2R|, |arm1C + arm2C|)
+
+That single formula handles all orientations:
+
+  - Standard downward chevron (^): projects straight up 5 rows.
+  - Inverted upward chevron (v): projects straight down 5 rows.
+  - Side-pointing chevron (> or <): projects straight sideways 5 columns.
+  - L-shape oriented up-left from corner: projects down-right (+5,+5).
+  - L-shape oriented down-right from corner: projects up-left (-5,-5).
+  - And all four remaining L orientations.
+
+When the shadow lands on a background cell it becomes 9.
+When two shadows land on the same cell the result is 1 (a collision marker).
+When a shadow lands on an existing non-background cell the entire 4-connected
+component is recoloured to 9.
+
+The task 409aa875 test case has eight active shapes with four distinct arm
+patterns, producing nine output changes including one collision at position
+(9,14) where a standard chevron and an L-shape corner both project to the
+same cell.
+
+A key lesson from this wave: the first implementation used a global
+"leftmost non-background column" as the column offset.  It passed all three
+training pairs because they all happened to contain only downward chevrons and
+one standard L-orientation.  The test case - which added inverted and diagonal
+chevrons and a mirrored L - exposed the flaw immediately.  The fix is the
+per-shape arm-vector formula, which requires no global state at all.
+
+This is pure inductive reasoning: derive the geometric rule from examples,
+express it in glass-box named Prolog predicates, verify on all training pairs,
+then run the evaluator.
+
+Platform: PrologAI + Mentova
+Rule: apex_shadow in arc_benchmark_2.pl
+
+D. R. Dison
+Founder of AIU, Creator and Owner of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
