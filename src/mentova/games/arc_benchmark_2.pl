@@ -2120,6 +2120,369 @@ arc2_induce_rule(TrainingPairs, waterfall) :-
         TrainingPairs).
 
 % ---------------------------------------------------------------------------
+% FRAME FILL (frame_fill) — Wave 13 (DISABLED: rule inconsistent with test)
+% ---------------------------------------------------------------------------
+% arc2_named_rule(frame_fill). % disabled
+
+% arc2_transform(frame_fill, +Grid, -Result)
+arc2_transform(frame_fill, Grid, Result) :-
+% Background = most-frequent value.
+    append(Grid, FfFlat_), msort(FfFlat_, FfSrt_),
+    arc2_bs_mode_(FfSrt_, FfBg_),
+% Grid dimensions.
+    length(Grid, FfNr_), FfNrM1_ is FfNr_ - 1,
+    nth0(0, Grid, FfRow0_), length(FfRow0_, FfNc_), FfNcM1_ is FfNc_ - 1,
+% Find key pairs from the largest 2-row or 2-col solid block.
+    ff_find_pairs_(Grid, FfBg_, FfNrM1_, FfNcM1_, FfPairs_),
+    FfPairs_ \= [],
+% Collect fill assignments: for each (FrameColor,FillColor), find enclosed bg.
+    ff_collect_fills_(FfPairs_, Grid, FfBg_, FfNr_, FfNc_, FfFills_),
+% Apply fills to produce result grid.
+    ff_apply_fills_(Grid, FfFills_, Result).
+
+% ff_find_pairs_(+Grid, +Bg, +NrM1, +NcM1, -Pairs)
+% Find the largest solid 2-row or 2-col block and extract (FrameColor,FillColor) pairs.
+ff_find_pairs_(Grid_, Bg_, NrM1_, NcM1_, Pairs_) :-
+    ff_all_spans_(Grid_, Bg_, NrM1_, NcM1_, Spans_),
+    Spans_ \= [],
+    % Sort descending by cell count; pick the largest span.
+    msort(Spans_, Sorted_),
+    last(Sorted_, best(_, Type_, R0_, C0_, W_, H_)),
+    ( Type_ = row ->
+        ff_pairs_from_rows_(Grid_, R0_, C0_, W_, Pairs_)
+    ; % col
+        ff_pairs_from_cols_(Grid_, R0_, C0_, H_, Pairs_)
+    ).
+
+% ff_all_spans_(+Grid, +Bg, +NrM1, +NcM1, -Spans)
+% Find all solid 2-row and 2-col spans as best(Size, Type, R0, C0, W, H).
+ff_all_spans_(Grid_, Bg_, NrM1_, NcM1_, Spans_) :-
+    findall(best(Size_, row, R0_, C0_, W_, 2),
+        ( between(0, NrM1_, R0_), R0_ < NrM1_, R1_ is R0_+1,
+          ff_max_col_span_(Grid_, Bg_, R0_, R1_, NcM1_, C0_, C1_),
+          W_ is C1_ - C0_ + 1, W_ >= 2,
+          Size_ is W_ * 2 ),
+        RowSpans_),
+    findall(best(Size_, col, R0_, C0_, W_, H_),
+        ( between(0, NcM1_, C0_), C0_ < NcM1_, C1_ is C0_+1,
+          ff_max_row_span_(Grid_, Bg_, C0_, C1_, NrM1_, R0_, R1_),
+          H_ is R1_ - R0_ + 1, H_ >= 2, W_ = 2,
+          Size_ is H_ * 2 ),
+        ColSpans_),
+    append(RowSpans_, ColSpans_, Spans_).
+
+% ff_max_col_span_(+Grid, +Bg, +R0, +R1, +NcM1, -C0, -C1)
+% Find a maximal column span [C0,C1] in rows R0,R1 where all cells are non-bg.
+ff_max_col_span_(Grid_, Bg_, R0_, R1_, NcM1_, C0_, C1_) :-
+    nth0(R0_, Grid_, Row0_), nth0(R1_, Grid_, Row1_),
+    % Collect cols where both rows are non-bg.
+    findall(C, ( between(0, NcM1_, C),
+                 nth0(C, Row0_, V0_), V0_ \= Bg_,
+                 nth0(C, Row1_, V1_), V1_ \= Bg_ ), Cols_),
+    Cols_ \= [],
+    % Find maximal consecutive run.
+    ff_max_consecutive_(Cols_, C0_, C1_).
+
+% ff_max_row_span_(+Grid, +Bg, +C0, +C1, +NrM1, -R0, -R1)
+% Find a maximal row span [R0,R1] in cols C0,C1 where all cells are non-bg.
+ff_max_row_span_(Grid_, Bg_, C0_, C1_, NrM1_, R0_, R1_) :-
+    findall(R, ( between(0, NrM1_, R),
+                 nth0(R, Grid_, GRow_),
+                 nth0(C0_, GRow_, V0_), V0_ \= Bg_,
+                 nth0(C1_, GRow_, V1_), V1_ \= Bg_ ), Rows_),
+    Rows_ \= [],
+    ff_max_consecutive_(Rows_, R0_, R1_).
+
+% ff_max_consecutive_(+List, -Start, -End)
+% Find the longest consecutive subsequence in a sorted integer list.
+ff_max_consecutive_(List_, Start_, End_) :-
+    msort(List_, Sorted_),
+    Sorted_ = [H_|_],
+    ff_consec_runs_(Sorted_, H_, H_, H_, H_, Start_, End_).
+
+ff_consec_runs_([], CurS_, CurE_, BestS_, BestE_, S_, E_) :-
+    CurLen_ is CurE_ - CurS_,
+    BestLen_ is BestE_ - BestS_,
+    ( CurLen_ >= BestLen_ -> S_ = CurS_, E_ = CurE_
+    ; S_ = BestS_, E_ = BestE_ ).
+ff_consec_runs_([X_|Rest_], CurS_, CurE_, BestS_, BestE_, S_, E_) :-
+    ( X_ =:= CurE_ + 1 ->
+        % Extend current run.
+        NewCurE_ = X_,
+        NewCurLen_ is NewCurE_ - CurS_,
+        BestLen_ is BestE_ - BestS_,
+        ( NewCurLen_ > BestLen_ ->
+            ff_consec_runs_(Rest_, CurS_, NewCurE_, CurS_, NewCurE_, S_, E_)
+        ;
+            ff_consec_runs_(Rest_, CurS_, NewCurE_, BestS_, BestE_, S_, E_)
+        )
+    ;
+        % Start new run.
+        CurLen_ is CurE_ - CurS_,
+        BestLen_ is BestE_ - BestS_,
+        ( CurLen_ >= BestLen_ ->
+            ff_consec_runs_(Rest_, X_, X_, CurS_, CurE_, S_, E_)
+        ;
+            ff_consec_runs_(Rest_, X_, X_, BestS_, BestE_, S_, E_)
+        )
+    ).
+
+% ff_pairs_from_rows_(+Grid, +R0, +C0, +W, -Pairs)
+% Extract (FrameColor,FillColor) pairs by reading columns of 2-row block.
+% Top row = FrameColor, bottom row = FillColor.
+ff_pairs_from_rows_(Grid_, R0_, C0_, W_, Pairs_) :-
+    R1_ is R0_ + 1,
+    nth0(R0_, Grid_, Row0_), nth0(R1_, Grid_, Row1_),
+    C1_ is C0_ + W_ - 1,
+    findall(fc(Top_,Bot_),
+        ( between(C0_, C1_, C_),
+          nth0(C_, Row0_, Top_), Top_ \= 0,
+          nth0(C_, Row1_, Bot_), Bot_ \= 0 ),
+        Pairs_).
+
+% ff_pairs_from_cols_(+Grid, +R0, +C0, +H, -Pairs)
+% Extract (FrameColor,FillColor) pairs by reading rows of 2-col block.
+% Left col = FrameColor, right col = FillColor.
+ff_pairs_from_cols_(Grid_, R0_, C0_, H_, Pairs_) :-
+    C1_ is C0_ + 1,
+    R1_ is R0_ + H_ - 1,
+    findall(fc(Left_,Right_),
+        ( between(R0_, R1_, R_),
+          nth0(R_, Grid_, GRow_),
+          nth0(C0_, GRow_, Left_), Left_ \= 0,
+          nth0(C1_, GRow_, Right_), Right_ \= 0 ),
+        Pairs_).
+
+% ff_collect_fills_(+Pairs, +Grid, +Bg, +Nr, +Nc, -Fills)
+% For each fc(FrameColor,FillColor) pair, find interior bg cells.
+ff_collect_fills_([], _, _, _, _, []).
+ff_collect_fills_([fc(FC_,Fill_)|Rest_], Grid_, Bg_, Nr_, Nc_, Fills_) :-
+    ff_interior_(Grid_, FC_, Bg_, Nr_, Nc_, Interior_),
+    findall(fill(R_,C_,Fill_), member(rc(R_,C_), Interior_), ThisFills_),
+    ff_collect_fills_(Rest_, Grid_, Bg_, Nr_, Nc_, RestFills_),
+    append(ThisFills_, RestFills_, Fills_).
+
+% ff_interior_(+Grid, +BlockerColor, +Bg, +Nr, +Nc, -Interior)
+% Interior = bg cells enclosed by BlockerColor (not reachable from boundary).
+ff_interior_(Grid_, Blocker_, Bg_, Nr_, Nc_, Interior_) :-
+    NrM1_ is Nr_ - 1, NcM1_ is Nc_ - 1,
+% Seed BFS with all boundary cells that are not the blocker color.
+    findall(rc(R_,C_),
+        ( ( (R_=0 ; R_=NrM1_), between(0,NcM1_,C_)
+          ; (C_=0 ; C_=NcM1_), between(0,NrM1_,R_) ),
+          nth0(R_,Grid_,GRow_), nth0(C_,GRow_,V_),
+          V_ \= Blocker_ ),
+        Seeds0_),
+    sort(Seeds0_, Seeds_),
+% BFS to find all reachable cells (not blocked by Blocker).
+    ff_bfs_(Seeds_, Seeds_, Grid_, Blocker_, NrM1_, NcM1_, Reachable_),
+    sort(Reachable_, ReachSorted_),
+% Interior = bg cells NOT in reachable set.
+    findall(rc(R_,C_),
+        ( between(0,NrM1_,R_), between(0,NcM1_,C_),
+          nth0(R_,Grid_,GRow_), nth0(C_,GRow_,Bg_),
+          \+ memberchk(rc(R_,C_), ReachSorted_) ),
+        Interior_).
+
+% ff_bfs_(+Queue, +Visited, +Grid, +Blocker, +NrM1, +NcM1, -AllVisited)
+ff_bfs_([], Vis_, _, _, _, _, Vis_).
+ff_bfs_([rc(R_,C_)|Q0_], Vis0_, Grid_, Blocker_, NrM1_, NcM1_, Vis_) :-
+    Ru_ is R_-1, Rd_ is R_+1, Cl_ is C_-1, Cr_ is C_+1,
+    findall(rc(R2_,C2_),
+        ( member(rc(R2_,C2_), [rc(Ru_,C_),rc(Rd_,C_),rc(R_,Cl_),rc(R_,Cr_)]),
+          R2_ >= 0, R2_ =< NrM1_, C2_ >= 0, C2_ =< NcM1_,
+          \+ memberchk(rc(R2_,C2_), Vis0_),
+          nth0(R2_,Grid_,GRow_), nth0(C2_,GRow_,V2_),
+          V2_ \= Blocker_ ),
+        New_),
+    append(Q0_, New_, Q1_),
+    append(Vis0_, New_, Vis1_),
+    ff_bfs_(Q1_, Vis1_, Grid_, Blocker_, NrM1_, NcM1_, Vis_).
+
+% ff_apply_fills_(+Grid, +Fills, -Result)
+% Rebuild grid with fill assignments applied.
+ff_apply_fills_(Grid_, Fills_, Result_) :-
+    length(Grid_, Nr_), Nr1_ is Nr_ - 1,
+    nth0(0, Grid_, Row0_), length(Row0_, Nc_), Nc1_ is Nc_ - 1,
+    findall(Row_,
+        ( between(0, Nr1_, R_),
+          findall(V_,
+            ( between(0, Nc1_, C_),
+              nth0(R_, Grid_, GRow_),
+              nth0(C_, GRow_, OldV_),
+              ( memberchk(fill(R_,C_,NewV_), Fills_) -> V_ = NewV_
+              ; V_ = OldV_ ) ),
+            Row_) ),
+        Result_).
+
+% arc2_induce_rule for frame_fill: verify all training pairs match.
+arc2_induce_rule(TrainingPairs, frame_fill) :-
+    TrainingPairs \= [],
+    forall(member(pair(In_, Out_), TrainingPairs),
+        arc2_transform(frame_fill, In_, Out_)).
+
+% ---------------------------------------------------------------------------
+% ODD COL RULE (Wave 13)
+% Rule name: odd_col
+% Grid is an N×M tiling of cells, separated by uniform rows and cols.
+% In each row section exactly one col section differs from the others.
+% Output: same row structure, but one col section wide (the odd col per row section).
+% ---------------------------------------------------------------------------
+
+% Register odd_col as a named rule.
+arc2_named_rule(odd_col).
+
+% arc2_transform(odd_col, +Grid, -Result)
+arc2_transform(odd_col, Grid, Result) :-
+% Count rows and cols.
+    length(Grid, Nr_),
+% Get first row to count cols.
+    nth0(0, Grid, Row0_), length(Row0_, Nc_),
+% NrM1 and NcM1 for between/3 upper bounds.
+    Nrm1_ is Nr_ - 1, Ncm1_ is Nc_ - 1,
+% Sep rows: rows where all cells share the same value.
+    findall(R_, (
+        between(0, Nrm1_, R_),
+        nth0(R_, Grid, Rw_),
+        oc_all_same_(Rw_, _)
+    ), SepRows_),
+% Must have at least two separator rows (top and bottom boundary).
+    SepRows_ = [_,_|_],
+% Sep cols: cols where all cells in that column share the same value.
+    findall(C_, (
+        between(0, Ncm1_, C_),
+        findall(V_, (
+            between(0, Nrm1_, R_),
+            nth0(R_, Grid, Rw_),
+            nth0(C_, Rw_, V_)
+        ), Cv_),
+        oc_all_same_(Cv_, _)
+    ), SepCols_),
+% Must have at least two separator cols (left and right boundary).
+    SepCols_ = [_,_|_],
+% Build (c0,c1) col-section pairs from adjacent sep cols.
+    oc_adjacent_pairs_(SepCols_, ColSecs_),
+% Must have at least two col sections (otherwise no comparison possible).
+    ColSecs_ = [_,_|_],
+% Build (r0,r1) row-section pairs from adjacent sep rows.
+    oc_adjacent_pairs_(SepRows_, RowSecs_),
+% For each row section, vote for the unique col section index.
+    maplist({Grid,ColSecs_}/[(R0_,R1_), UJ_]>>(
+        oc_vote_unique_col_(R0_, R1_, Grid, ColSecs_, UJ_)
+    ), RowSecs_, UniqueJs_),
+% Build result: one col-section wide, same row structure.
+    last(SepRows_, LastSep_),
+    nth0(0, ColSecs_, (FC0_,FC1_)),
+    oc_build_secs_(RowSecs_, Grid, ColSecs_, UniqueJs_, Body_),
+    nth0(LastSep_, Grid, LastRow_),
+    oc_strip_(LastRow_, FC0_, FC1_, LastStrip_),
+    append(Body_, [LastStrip_], Result).
+
+% oc_all_same_(+List, -Val): List is non-empty and all elements equal Val.
+oc_all_same_([H|T], H) :-
+% All tail elements equal the head.
+    maplist(=(H), T).
+
+% oc_adjacent_pairs_(+List, -Pairs): pairs of adjacent elements.
+oc_adjacent_pairs_([], []).
+% Base: single element — no pair possible.
+oc_adjacent_pairs_([_], []).
+% Recursive: form pair (A,B) and recurse on tail starting at B.
+oc_adjacent_pairs_([A,B|T], [(A,B)|Pairs]) :-
+    oc_adjacent_pairs_([B|T], Pairs).
+
+% oc_strip_(+Row, +C0, +C1, -Strip): slice Row from index C0 to C1 inclusive.
+oc_strip_(Row_, C0_, C1_, Strip_) :-
+% Length of the strip.
+    Len_ is C1_ - C0_ + 1,
+% Drop the first C0 elements.
+    length(Pre_, C0_), append(Pre_, Tail_, Row_),
+% Take the next Len elements.
+    length(Strip_, Len_), append(Strip_, _, Tail_).
+
+% oc_strips_for_row_(+R, +Grid, +ColSecs, -Strips):
+% Extract one strip per col section for row R.
+oc_strips_for_row_(R_, Grid_, ColSecs_, Strips_) :-
+% Get the full row.
+    nth0(R_, Grid_, Row_),
+% For each col section, slice out the strip.
+    maplist({Row_}/[(C0_,C1_), S_]>>(oc_strip_(Row_, C0_, C1_, S_)), ColSecs_, Strips_).
+
+% oc_majority_strip_(+Strips, -Maj):
+% Maj[i] = majority value across all strips at position i.
+oc_majority_strip_(Strips_, Maj_) :-
+% Width from first strip.
+    Strips_ = [H_|_], length(H_, W_), Wm1_ is W_ - 1,
+% For each position, collect values and take mode.
+    findall(MV_, (
+        between(0, Wm1_, I_),
+        maplist({I_}/[S_, V_]>>(nth0(I_, S_, V_)), Strips_, Vs_),
+        msort(Vs_, Sorted_),
+        arc2_bs_mode_(Sorted_, MV_)
+    ), Maj_).
+
+% oc_find_unique_idx_(+Strips, +Maj, -Idx):
+% Idx = index of the one strip that differs from Maj; -1 if 0 or >1 differ.
+oc_find_unique_idx_(Strips_, Maj_, Idx_) :-
+    length(Strips_, N_), Nm1_ is N_ - 1,
+% Collect indices of strips differing from majority.
+    findall(J_, (
+        between(0, Nm1_, J_),
+        nth0(J_, Strips_, S_),
+        S_ \= Maj_
+    ), Diffs_),
+% Unique only if exactly one strip differs.
+    ( Diffs_ = [Idx_] -> true ; Idx_ = -1 ).
+
+% oc_vote_unique_col_(+R0, +R1, +Grid, +ColSecs, -UniqueJ):
+% Vote across content rows in section [R0..R1] to find the unique col section.
+oc_vote_unique_col_(R0_, R1_, Grid_, ColSecs_, UniqueJ_) :-
+% Content rows: R0+1 to R1-1.
+    R0p1_ is R0_ + 1, R1m1_ is R1_ - 1,
+    ( R0p1_ =< R1m1_ ->
+        numlist(R0p1_, R1m1_, ContentRows_)
+    ;   ContentRows_ = [] ),
+% Collect outlier col-section indices from each content row.
+    findall(Idx_, (
+        member(R_, ContentRows_),
+        oc_strips_for_row_(R_, Grid_, ColSecs_, Strips_),
+        oc_majority_strip_(Strips_, Maj_),
+        oc_find_unique_idx_(Strips_, Maj_, Idx_),
+        Idx_ >= 0
+    ), Outliers_),
+    ( Outliers_ = [] ->
+% No unique col found; default to first col section.
+        UniqueJ_ = 0
+    ;   msort(Outliers_, OSort_),
+        arc2_bs_mode_(OSort_, UniqueJ_) ).
+
+% oc_build_secs_(+RowSecs, +Grid, +ColSecs, +UniqueJs, -Rows):
+% For each row section, emit rows R0..R1-1 using the unique col section.
+oc_build_secs_([], _, _, _, []).
+% Recursive: process one row section at a time.
+oc_build_secs_([(R0_,R1_)|Secs_], Grid_, ColSecs_, [J_|Js_], Rows_) :-
+% Get the col bounds for the unique col section.
+    nth0(J_, ColSecs_, (C0_,C1_)),
+    R1m1_ is R1_ - 1,
+% Emit rows R0..R1-1 (exclude R1 to avoid double-counting sep row).
+    numlist(R0_, R1m1_, Rs_),
+    findall(Strip_, (
+        member(R_, Rs_),
+        nth0(R_, Grid_, Row_),
+        oc_strip_(Row_, C0_, C1_, Strip_)
+    ), SecRows_),
+    oc_build_secs_(Secs_, Grid_, ColSecs_, Js_, RestRows_),
+    append(SecRows_, RestRows_, Rows_).
+
+% arc2_induce_rule for odd_col: verify all training pairs match.
+arc2_induce_rule(TrainingPairs, odd_col) :-
+% Require at least one training pair.
+    TrainingPairs \= [],
+% Every training pair must pass the transform exactly.
+    forall(member(pair(In_, Out_), TrainingPairs),
+        arc2_transform(odd_col, In_, Out_)).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------

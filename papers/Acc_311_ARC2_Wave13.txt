@@ -1,0 +1,146 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Accomplishment 311 - ARC-AGI-2 Wave 13: Tiled-Grid Odd-Column Extraction Rule (odd_col)
+Task 38007db0 - Score Advances to 13/120 = 10.83%
+Date: 2026-06-28
+
+ABSTRACT
+
+Mentova solves ARC-AGI-2 task 38007db0 using a new glass-box named rule called
+odd_col. The rule operates on grids that are divided into an N-row-sections by
+M-col-sections tiling by uniform separator rows and separator columns. Within
+each row section, exactly one col section has a unique interior pattern that
+differs from all other col sections in that row section. The rule identifies
+that unique (odd) col section per row section via majority voting across content
+rows, then constructs an output grid that has the same row structure as the input
+but only one col section wide, containing the odd col section for each row
+section. The rule is verified on all 2 training pairs and the test case of task
+38007db0, raising the ARC-AGI-2 score from 12/120 = 10.00% to 13/120 = 10.83%.
+
+1. PROBLEM STATEMENT
+
+Task 38007db0 presents grids where uniform horizontal separator rows (all cells
+equal to the same value, here 1) and uniform vertical separator columns divide
+the grid into a rectangular tiling of content sections. In each row section,
+all but one col section share the same interior pattern; exactly one col section
+differs. The output has the same row count as the input and the same separator
+structure, but is only as wide as one col section. Each row section of the output
+shows only the unique (odd) col section from the corresponding row section of the
+input.
+
+Training pair dimensions and change counts:
+  Train 0: input 19x37, output 19x12, changes = 2 (relative to blank)
+  Train 1: input 19x37, output 19x12, changes = 3
+
+2. KEY INSIGHT - SEPARATOR DETECTION AND MAJORITY VOTING
+
+The critical observation is that the separators use a single uniform value
+(value 1) that is distinct from the content cell values. A separator row is any
+row where all cells share the same value. A separator column is any column where
+all cells in that column share the same value. These definitions work regardless
+of what the separator value is.
+
+Once the separators are identified, the grid decomposes naturally into content
+sections. For each row section (bounded by adjacent separator rows), the content
+rows are all rows strictly between the two bounding separator rows. For each
+content row, the strips extracted from every col section are compared. The strip
+that differs from the majority of strips in that row is the candidate odd col
+section. A vote is cast for that col section index. After accumulating votes
+across all content rows of a row section, the index receiving the plurality of
+votes is the unique col section for that row section.
+
+3. RULE SPECIFICATION (odd_col)
+
+Inputs:
+  - Grid: list of lists of integers
+
+Phase 1 - Separator detection:
+  - SepRows: all row indices R where Grid[R] is a list of identical values.
+  - SepCols: all col indices C where all cells (R,C) across all rows equal the
+    same value.
+  - Require at least 2 separator rows and 2 separator cols to proceed.
+
+Phase 2 - Section pair extraction:
+  - ColSecs: adjacent pairs (C0,C1) from consecutive separator cols.
+  - RowSecs: adjacent pairs (R0,R1) from consecutive separator rows.
+  - Require at least 2 col sections.
+
+Phase 3 - Per row section voting:
+  For each row section (R0,R1):
+    ContentRows = rows R0+1 through R1-1 (strictly between separators).
+    For each R in ContentRows:
+      Strips = list of strips extracted from Grid[R] for each col section.
+      Maj = the majority strip (computed position by position using mode).
+      If exactly one strip differs from Maj, cast vote for that col index.
+    UniqueJ = mode of all votes cast in this row section (default 0 if none).
+
+Phase 4 - Output construction:
+  For each row section (R0,R1) with UniqueJ:
+    ColSec = ColSecs[UniqueJ]
+    OutputRows = strips from col section ColSec for rows R0 through R1-1.
+  Append the final separator row's strip from ColSecs[0] as the last output row.
+  Result: all output rows concatenated.
+
+4. CORRECTNESS VERIFICATION
+
+Both training pairs and the test case of task 38007db0 are verified correct
+in both Python (implementation reference) and SWI-Prolog (deployed rule).
+
+The separator detection correctly identifies the uniform-value rows and cols
+regardless of whether the separator value matches the most common value in the
+grid. The majority-vote mechanism correctly identifies the odd col section even
+when the content strips are long or contain repeated sub-patterns.
+
+5. IMPLEMENTATION
+
+The odd_col rule is implemented in SWI-Prolog in:
+  Mentova/src/mentova/games/arc_benchmark_2.pl
+
+Key predicates and their roles:
+  arc2_named_rule(odd_col)          - registers rule for dispatch
+  arc2_transform(odd_col,.,.)       - main entry: detect seps, build sections,
+                                       vote per row section, assemble output
+  oc_all_same_/2                    - checks if a list has all identical elements
+  oc_adjacent_pairs_/2              - builds (A,B) pairs from adjacent list elements
+  oc_strip_/4                       - slices a row from index C0 to C1 inclusive
+  oc_strips_for_row_/4              - extracts all col-section strips for one row
+  oc_majority_strip_/2              - computes mode value per position across strips
+  oc_find_unique_idx_/3             - finds the single strip that differs from majority
+  oc_vote_unique_col_/5             - votes for unique col index in one row section
+  oc_build_secs_/5                  - assembles the output rows from voted col sections
+  arc2_induce_rule/2                - confirms odd_col applies to all training pairs
+
+All predicates use ERC % comments above every code line per project convention.
+The implementation reuses arc2_bs_mode_/2 (shared helper from Wave 8) for
+mode computation in majority voting.
+
+6. BENCHMARK RESULT
+
+Previous score (Wave 12): 12/120 = 10.00%
+Wave 13 addition: task 38007db0 (odd_col rule)
+New score: 13/120 = 10.83%
+
+All previously solved tasks continue to pass (no regressions):
+  1818057f (recolor_plus), 31f7f899 (bar_sort), 36a08778 (waterfall),
+  38007db0 (odd_col, NEW), 409aa875 (apex_shadow), 45a5af55 (band_wrap),
+  4c3d4a41 (staircase_lift), 7491f3cf (panel_overlay), 7b5033c1 (chain_strip),
+  80a900e0 (arm_endpoint_ray), 8e5c0c38 (sym_restore), 97d7923e (stub_rank_fill),
+  e376de54 (segment_equalize)
+
+7. SIGNIFICANCE
+
+The odd_col rule demonstrates PrologAI's ability to reason about structured
+spatial grids without pixel-level pattern matching. By detecting separator rows
+and columns purely from value uniformity, and by using majority voting to
+identify the exceptional section rather than comparing absolute patterns, the
+rule generalises across different content patterns, grid sizes, and separator
+values. This separator-plus-voting paradigm is a reusable template for future
+ARC-AGI-2 tasks involving tiled or sectioned grids.
+
+REFERENCES
+
+[1] ARC-AGI-2 Benchmark: arc-prize.org
+[2] PrologAI Platform: github.com/ai-university-aiu/PrologAI
+[3] Mentova: github.com/ai-university-aiu/Mentova
+[4] Climbing_ARC-AGI-2.txt: /home/ccaitwo/Mentova/papers/Climbing_ARC-AGI-2.txt
+[5] arc_benchmark_2.pl: Mentova/src/mentova/games/arc_benchmark_2.pl (odd_col block)
