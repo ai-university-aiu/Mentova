@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 10 complete: 10/120 = 8.33%.
+Last updated: 2026-06-28. Wave 11 complete: 11/120 = 9.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -131,10 +131,59 @@ Date        | Score      | Percent | Notes
 2026-06-28  |   8 / 120  |  6.67%  | Wave 8: bar-sort vertical bar height ordering
 2026-06-28  |   9 / 120  |  7.50%  | Wave 9: panel-overlay s1-seeded flood-fill split
 2026-06-28  |  10 / 120  |  8.33%  | Wave 10: apex-shadow arm-vector projection rule
+2026-06-28  |  11 / 120  |  9.17%  | Wave 11: sym-restore per-colour vertical symmetry
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 11 - 2026-06-28 - Score: 11/120 = 9.17%
+
+Date: 2026-06-28
+
+Confirmed score: 11 / 120 = 9.17%
+
+Rules added in this wave:
+
+sym_restore - Restore left-right symmetry per colour by removing orphan cells.
+
+Description: Each non-background colour group in the grid is almost vertically
+symmetric but has a small number of cells that break the mirror.  For each
+colour group the rule scans all candidate vertical axes (represented as Ax2 =
+2 * axis, enabling integer and half-integer axes in one pass).  For each axis
+it counts the orphan cells: cells rc(R,C) whose column-mirror rc(R,Ax2-C) is
+absent from the group.  The axis with the fewest orphans is selected, and those
+orphan cells are removed by setting them to background.
+
+Task 8e5c0c38 training pairs:
+- Pair 0 (bg=8): colour 1 (axis 8.0, 3 orphans), colour 2 (axis 13.0, 3 orphans),
+  colour 6 (axis 17.0, 1 orphan).  Total: 7 changes.
+- Pair 1 (bg=0): colour 2 (axis 16.5, 2 orphans), colour 4 (axis 12.0, 2 orphans),
+  colour 8 (axis 7.0, 2 orphans).  Total: 6 changes.
+Test case (bg=1): colour 6 (axis 9.5, 12 orphans), colour 3 (axis 18.0, 2 orphans),
+colour 4 (axis 6.0, 3 orphans).  Total: 17 changes.
+
+Key insight: the doubling trick (Ax2 = 2*axis) lets a single integer scan cover
+both integer axes (symmetry around a column) and half-integer axes (symmetry
+between two adjacent columns), with no special branching.
+
+Key observation: all colour groups in all training pairs and the test case use
+vertical (column) symmetry, never horizontal (row) symmetry.
+
+Bugs fixed: none.  Rule worked correctly on first verified implementation.
+
+Lessons learned:
+1. Minimum-orphan axis selection naturally handles both integer and half-integer
+   axes via the Ax2 doubling trick.
+2. Attempting horizontal symmetry first (to minimise orphan count globally)
+   gives wrong results when a shape is accidentally row-symmetric with 0 orphans
+   but the intended transformation is column-symmetry restoration.  Always prefer
+   the vertical axis search for this task type.
+3. The rule scales to large colour groups (58 cells, 12 orphans) efficiently
+   because the axis scan is O(width) per group.
+
+Accomplishment: Acc_309.  Paper: Acc_309_ARC2_Wave11.txt.
 
 
 ATTEMPT 10 - 2026-06-28 - Score: 10/120 = 8.33%
@@ -1147,6 +1196,7 @@ ALL SOLVED TASKS
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
 7491f3cf  - Wave 9  - panel_overlay       - s1-seeded flood-fill splits s2/s3 into panel 4
 7b5033c1  - Wave 2  - chain_strip          - connected-blob chain traversal strip
+8e5c0c38  - Wave 11 - sym_restore          - per-colour vertical symmetry restoration
 80a900e0  - Wave 3  - arm_endpoint_ray     - checkerboard diagonal arm projection
 97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
 e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to middle
@@ -1230,4 +1280,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 9: Panel-overlay s1-seeded flood-fill rule.
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 10: Apex-shadow arm-vector projection rule.
   Score: 10/120 = 8.33%. Task 409aa875 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 11: Sym-restore per-colour vertical symmetry rule.
+  Score: 11/120 = 9.17%. Task 8e5c0c38 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.

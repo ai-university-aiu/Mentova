@@ -1,0 +1,124 @@
+ARC-AGI-2 Wave 11: 11/120 = 9.17% - Vertical Symmetry Restoration
+
+Accomplishment: Acc_309
+Date: 2026-06-28
+Platform: PrologAI + Mentova
+Rule: sym_restore
+Task solved: 8e5c0c38
+Score advance: 10/120 = 8.33% -> 11/120 = 9.17%
+
+ABSTRACT
+
+Mentova solves ARC-AGI-2 task 8e5c0c38, advancing the score from 10/120 to
+11/120 = 9.17%.  The rule, named sym_restore, identifies broken vertical mirror
+symmetry within each non-background colour group and removes the minimal set of
+cells (orphans) needed to restore it.  The rule is self-contained, requiring no
+external heuristics: the axis is found by scanning all candidate vertical axes
+and selecting the one that minimises the orphan count.  The rule passes all 2
+training pairs and the test case.
+
+
+TASK DESCRIPTION
+
+Task 8e5c0c38 presents 22x22 grids containing three non-background colour
+groups.  Each colour group is almost vertically symmetric but has a small number
+of cells that break the mirror.  The transformation removes those cells, setting
+them to the background colour, restoring exact left-right symmetry for every
+colour independently.
+
+Training pair 0 (background = 8):
+- Colour 1 (28 cells): axis col 8.0, 3 orphans removed: (3,9), (7,4), (8,4).
+- Colour 6 (9 cells): axis col 17.0, 1 orphan removed: (5,15).
+- Colour 2 (14 cells): axis col 13.0, 3 orphans removed: (14,16), (14,17), (16,10).
+Total changes: 7.
+
+Training pair 1 (background = 0):
+- Colour 2 (20 cells): axis col 16.5, 2 orphans removed: (1,15), (3,13).
+- Colour 4 (20 cells): axis col 12.0, 2 orphans removed: (14,8), (16,13).
+- Colour 8 (8 cells): axis col 7.0, 2 orphans removed: (5,5), (6,5).
+Total changes: 6.
+
+Test case (background = 1):
+- Colour 6 (58 cells): axis col 9.5, 12 orphans removed.
+- Colour 3 (8 cells): axis col 18.0, 2 orphans removed: (16,20), (17,20).
+- Colour 4 (22 cells): axis col 6.0, 3 orphans removed: (18,8), (20,8), (21,5).
+Total changes: 17.
+
+
+THE SYM_RESTORE RULE
+
+Definition: for each non-background colour group, find the vertical axis
+(represented as Ax2 = 2 * axis_column, enabling half-integer axes) that
+minimises the number of orphan cells.  An orphan is a cell rc(R,C) whose
+column-mirror rc(R, Ax2-C) is absent from the group.  Remove all orphans.
+
+Algorithm:
+1. Find background (modal value of all cells).
+2. Group non-background cells by colour.
+3. For each colour group:
+   a. Let MinC..MaxC be the column range.
+   b. For each Ax2 in [2*MinC .. 2*MaxC]:
+      - Count cells rc(R,C) where rc(R,Ax2-C) is absent.
+   c. Use the Ax2 with the smallest orphan count.
+   d. Collect those orphan cells.
+4. Replace each orphan cell with background.
+
+Key insight: the axis is integer when the symmetric core has an odd width
+(a central column), and half-integer when the width is even (no central column).
+Both cases are handled uniformly by scanning doubled-axis integers.
+
+Key observation: the rule always uses vertical (column) symmetry, never
+horizontal (row) symmetry.  Among vertical axes, the minimum-orphan axis
+uniquely identifies the intended axis in all training pairs and test case.
+
+
+PROLOG IMPLEMENTATION
+
+Main predicate:
+arc2_transform(sym_restore, Grid, Result) - finds background, groups cells,
+finds orphans per colour via sr_best_v_orphans_, removes orphans.
+
+Helper predicates:
+sr_color_groups_/3 - enumerate non-bg cells grouped by colour value.
+sr_all_orphans_/2 - concatenate orphan lists across all colour groups.
+sr_best_v_orphans_/2 - scan Ax2 range, find minimum-orphan axis.
+sr_min_orphans_/3 - recursive scan returning best orphan list.
+sr_orphans_for_axis_/3 - filter cells whose mirror is absent.
+sr_remove_rows_/5 - row-by-row orphan removal.
+sr_remove_row_/6 - cell-by-cell replacement within one row.
+
+All predicates follow the ERC (Every Row Comment) convention: one percent
+comment immediately above each line of Prolog code.
+
+
+VERIFICATION
+
+Training pair 0: arc2_transform(sym_restore, TrainIn0, Out0) - PASS.
+Training pair 1: arc2_transform(sym_restore, TrainIn1, Out1) - PASS.
+Test case: arc2_transform(sym_restore, TestIn, TestOut) - PASS.
+Full benchmark: 11/120 = 9.17%, no regressions on previously solved tasks.
+
+
+SCORE STATUS
+
+Wave  1: 1818057f - recolor_plus(4,8)        -  1/120 = 0.83%
+Wave  2: 7b5033c1 - chain_strip              -  2/120 = 1.67%
+Wave  3: 80a900e0 - arm_endpoint_ray         -  3/120 = 2.50%
+Wave  4: e376de54 - segment_equalize         -  4/120 = 3.33%
+Wave  5: 97d7923e - stub_rank_fill           -  5/120 = 4.17%
+Wave  6: 45a5af55 - band_wrap                -  6/120 = 5.00%
+Wave  7: 4c3d4a41 - staircase_lift           -  7/120 = 5.83%
+Wave  8: 31f7f899 - bar_sort                 -  8/120 = 6.67%
+Wave  9: 7491f3cf - panel_overlay            -  9/120 = 7.50%
+Wave 10: 409aa875 - apex_shadow              - 10/120 = 8.33%
+Wave 11: 8e5c0c38 - sym_restore              - 11/120 = 9.17%
+
+109 tasks remain unsolved.  The ARC-AGI-2 climb continues.
+
+
+AUTHOR
+
+D. R. Dison
+Founder of AIU, Creator and Owner of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/

@@ -1,0 +1,42 @@
+ARC-AGI-2 Wave 11: 11/120 = 9.17% - Vertical Symmetry Restoration
+
+Mentova just solved ARC-AGI-2 task 8e5c0c38, advancing to 11 out of 120 = 9.17%.
+
+The rule is called sym_restore and the concept is elegant.
+
+Each non-background colour group in the input grid is almost left-right
+symmetric but has a handful of cells that break the mirror.  The task is
+to identify and remove those cells, restoring exact vertical symmetry for
+every colour independently.
+
+The algorithm is straightforward:
+
+For each colour group, scan every possible vertical axis (the column value
+can be integer or half-integer - both are handled by doubling the axis and
+working in integers).  For each axis count the orphan cells - cells whose
+mirror position is absent from the group.  Pick the axis with the fewest
+orphans, then remove those cells by setting them to background.
+
+That is the entire rule.  No heuristics, no special cases.
+
+On the test case there are three colour groups:
+- Colour 6 (58 cells): axis at col 9.5, 12 orphans removed.
+- Colour 3 (8 cells): axis at col 18.0, 2 orphans removed.
+- Colour 4 (22 cells): axis at col 6.0, 3 orphans removed.
+
+17 cells removed in total.  The expected output matches exactly.
+
+One subtle point: the axis can be a half-integer.  Colour 6's axis at 9.5
+means the shape is symmetric about a point between columns 9 and 10, with
+no central column.  The training pair 1 colour-2 group also uses a
+half-integer axis at 16.5.  The doubling trick handles this uniformly:
+axis 9.5 becomes Ax2 = 19, and the mirror of column C is column 19 - C.
+
+Platform: PrologAI + Mentova
+Rule: sym_restore in arc_benchmark_2.pl
+Score: 11 / 120 = 9.17%
+
+D. R. Dison
+Founder of AIU, Creator and Owner of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
