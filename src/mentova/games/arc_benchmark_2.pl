@@ -52,10 +52,14 @@
     % subtract/3 for set difference.
     subtract/3,
     % numlist/3 for index generation.
-    numlist/3
+    numlist/3,
+    % max_member/2 for finding maximum list element.
+    max_member/2
 ]).
 % Load apply utilities.
-:- use_module(library(apply), [maplist/2, maplist/3, include/3, exclude/3]).
+:- use_module(library(apply), [maplist/2, maplist/3, maplist/4, include/3, exclude/3, foldl/4]).
+% Load pairs utilities for pairs_keys_values/3.
+:- use_module(library(pairs), [pairs_keys_values/3]).
 
 % Allow arc2_transform/3 clauses at non-consecutive positions.
 :- discontiguous arc2_transform/3.
@@ -2970,6 +2974,236 @@ arc2_induce_rule(TrainingPairs, period_repair) :-
 % Require every pair to be solved by arc2_transform(period_repair, ...).
     forall(member(pair(In_, Out_), TrainingPairs),
            arc2_transform(period_repair, In_, Out_)).
+
+% ---------------------------------------------------------------------------
+% legend_fill: fill closed frame interiors using a color lookup table
+% A "legend" (solid 2xN or Nx2 block) maps frame-border colors to fill colors.
+% Each closed frame whose border color is a KEY in the legend has its enclosed
+% background cells filled with the corresponding VALUE.
+% ---------------------------------------------------------------------------
+
+% Enumerate legend_fill as a known named rule.
+arc2_named_rule(legend_fill).
+
+% arc2_induce_rule for legend_fill: verify legend exists and rule is correct.
+arc2_induce_rule(TrainingPairs_, legend_fill) :-
+% Require at least 1 training pair.
+    TrainingPairs_ \= [],
+% Require the first training input to contain a findable legend.
+    TrainingPairs_ = [pair(In0_, _)|_],
+    flatten(In0_, Flat0_), msort(Flat0_, FS0_), arc2_bs_mode_(FS0_, Bg0_),
+    lf_legend_(In0_, Bg0_, _Keys0_, _Vals0_),
+% Require every pair to transform correctly under legend_fill.
+    forall(member(pair(In_, Out_), TrainingPairs_),
+           arc2_transform(legend_fill, In_, Out_)).
+
+% arc2_transform for legend_fill: main transformation entry point.
+arc2_transform(legend_fill, Grid_, Output_) :-
+% Compute background color as the most frequent cell value.
+    flatten(Grid_, Flat_), msort(Flat_, FS_), arc2_bs_mode_(FS_, Bg_),
+% Find the legend and extract its key and value lists.
+    lf_legend_(Grid_, Bg_, Keys_, Vals_),
+% Build key-value pairs and apply fills for each key color.
+    pairs_keys_values(KVPairs_, Keys_, Vals_),
+    foldl([K_-V_, Gin_, Gout_]>>(lf_apply_fill_(Gin_, Bg_, K_, V_, Gout_)),
+          KVPairs_, Grid_, Output_).
+
+% lf_legend_/4: find the legend block and return Keys and Vals lists.
+% Keys is the legend row/col whose colors appear as frame colors in the grid.
+lf_legend_(Grid_, Bg_, Keys_, Vals_) :-
+% Find all solid 2xN or Nx2 blocks and pick the longest one.
+    lf_best_block_(Grid_, Bg_, Raw1_, Raw2_),
+% Determine which of Raw1/Raw2 is the key list (more frame-color matches).
+    lf_orient_kv_(Grid_, Bg_, Raw1_, Raw2_, Keys_, Vals_).
+
+% lf_best_block_/4: find the longest solid 2xN (row) or Nx2 (col) block.
+lf_best_block_(Grid_, Bg_, Best1_, Best2_) :-
+% Collect all row-pair candidates (length, row type, sublists).
+    findall(N_-row(A_, B_), lf_row_block_(Grid_, Bg_, A_, B_, N_), RowCands_),
+% Collect all col-pair candidates.
+    findall(N_-col(A_, B_), lf_col_block_(Grid_, Bg_, A_, B_, N_), ColCands_),
+% Combine and require at least one candidate.
+    append(RowCands_, ColCands_, AllCands_),
+    AllCands_ \= [],
+% Pick the candidate with the maximum length N.
+    max_member(_N_-BestType_, AllCands_),
+    ( BestType_ = row(Best1_, Best2_) ; BestType_ = col(Best1_, Best2_) ).
+
+% lf_row_block_/5: find the LONGEST solid 2xN block (with distinct rows).
+lf_row_block_(Grid_, Bg_, SubA_, SubB_, Len_) :-
+% Iterate over all adjacent row index pairs.
+    length(Grid_, NR_), NR1_ is NR_ - 1,
+    between(0, NR1_, R1_), R2_ is R1_ + 1, R2_ =< NR1_,
+    nth0(R1_, Grid_, Row1_), nth0(R2_, Grid_, Row2_),
+    length(Row1_, NC_), NC1_ is NC_ - 1,
+% Collect solid runs of length >= 2 where the two sub-rows differ.
+    findall(L_-S_, (
+        lf_solid_run_(Row1_, Row2_, Bg_, 0, NC1_, S_, L_), L_ >= 2,
+        lf_take_(Row1_, S_, L_, SA_), lf_take_(Row2_, S_, L_, SB_),
+        SA_ \= SB_
+    ), Runs_),
+    Runs_ \= [],
+% Pick the longest run (max L_).
+    max_member(Len_-Start_, Runs_),
+% Extract the sub-list from each row.
+    lf_take_(Row1_, Start_, Len_, SubA_),
+    lf_take_(Row2_, Start_, Len_, SubB_).
+
+% lf_col_block_/5: find the LONGEST solid Nx2 block (with distinct columns).
+lf_col_block_(Grid_, Bg_, SubA_, SubB_, Len_) :-
+% Extract column count from first row.
+    Grid_ = [Row0_|_], length(Row0_, NC_), NC1_ is NC_ - 1,
+% Iterate over all adjacent column index pairs.
+    between(0, NC1_, C1_), C2_ is C1_ + 1, C2_ =< NC1_,
+    lf_extract_col_(Grid_, C1_, Col1_),
+    lf_extract_col_(Grid_, C2_, Col2_),
+    length(Col1_, NR_), NR1_ is NR_ - 1,
+% Collect solid runs of length >= 2 where the two sub-columns differ.
+    findall(L_-S_, (
+        lf_solid_run_(Col1_, Col2_, Bg_, 0, NR1_, S_, L_), L_ >= 2,
+        lf_take_(Col1_, S_, L_, SA_), lf_take_(Col2_, S_, L_, SB_),
+        SA_ \= SB_
+    ), Runs_),
+    Runs_ \= [],
+% Pick the longest run.
+    max_member(Len_-Start_, Runs_),
+% Extract sub-column.
+    lf_take_(Col1_, Start_, Len_, SubA_),
+    lf_take_(Col2_, Start_, Len_, SubB_).
+
+% lf_solid_run_/7: one solution per starting position S_ where both lists are
+% non-Bg, returning the run length from S_ to the end of the solid block.
+lf_solid_run_(L1_, L2_, Bg_, Lo_, Hi_, Start_, Len_) :-
+% Enumerate every position that is non-Bg in both lists.
+    between(Lo_, Hi_, Start_),
+    nth0(Start_, L1_, V1_), V1_ \= Bg_,
+    nth0(Start_, L2_, V2_), V2_ \= Bg_,
+% Extend as far as both lists remain non-Bg from Start_.
+    lf_solid_end_(L1_, L2_, Bg_, Start_, Hi_, E_),
+    Len_ is E_ - Start_ + 1.
+
+% lf_solid_end_/6: advance End_ as far as both lists are non-Bg.
+lf_solid_end_(L1_, L2_, Bg_, I_, Hi_, End_) :-
+    I1_ is I_ + 1,
+    ( I1_ =< Hi_,
+      nth0(I1_, L1_, V1_), V1_ \= Bg_,
+      nth0(I1_, L2_, V2_), V2_ \= Bg_ ->
+        lf_solid_end_(L1_, L2_, Bg_, I1_, Hi_, End_)
+    ; End_ = I_ ).
+
+% lf_orient_kv_/6: pick which of Raw1/Raw2 is the key list.
+% The key list is the one containing more frame-border colors.
+lf_orient_kv_(Grid_, Bg_, Raw1_, Raw2_, Keys_, Vals_) :-
+% Find all enclosed background cells (not reachable from grid boundary).
+    lf_enclosed_all_(Grid_, Bg_, AllEnc_),
+% Derive frame colors: non-Bg colors adjacent to any enclosed cell.
+    lf_frame_colors_(Grid_, Bg_, AllEnc_, FC_),
+% Count Raw1 and Raw2 elements that are frame colors.
+    include([X_]>>(memberchk(X_, FC_)), Raw1_, FM1_),
+    include([X_]>>(memberchk(X_, FC_)), Raw2_, FM2_),
+    length(FM1_, N1_), length(FM2_, N2_),
+% The list with more matches is the key list; tie goes to Raw1.
+    ( N1_ >= N2_ -> Keys_ = Raw1_, Vals_ = Raw2_
+    ;               Keys_ = Raw2_, Vals_ = Raw1_ ).
+
+% lf_enclosed_all_/3: find all background cells not reachable from the boundary.
+lf_enclosed_all_(Grid_, Bg_, Enclosed_) :-
+    length(Grid_, NR_), Grid_ = [Row0_|_], length(Row0_, NC_),
+    NR1_ is NR_ - 1, NC1_ is NC_ - 1,
+% Seed flood fill from all boundary background cells.
+    findall(R_-C_, (
+        nth0(R_, Grid_, Row_), nth0(C_, Row_, Bg_),
+        ( R_ =:= 0 ; R_ =:= NR1_ ; C_ =:= 0 ; C_ =:= NC1_ )
+    ), Seeds_),
+    sort(Seeds_, SeedSet_),
+% Flood fill outward through background cells from the boundary.
+    lf_flood_(Grid_, Bg_, NR1_, NC1_, SeedSet_, SeedSet_, Exterior_),
+% All background cells in the grid.
+    findall(R_-C_, (nth0(R_, Grid_, Row_), nth0(C_, Row_, Bg_)), AllBg_),
+    sort(AllBg_, AllBgS_),
+% Enclosed = total background minus exterior-reachable background.
+    subtract(AllBgS_, Exterior_, Enclosed_).
+
+% lf_flood_/7: BFS flood fill through background cells.
+% Visits all Bg cells reachable from the queue without crossing non-Bg.
+lf_flood_(_, _, _, _, [], Visited_, Visited_) :- !.
+lf_flood_(Grid_, Bg_, NR1_, NC1_, [R_-C_|Q_], Vis_, Out_) :-
+% Generate all 4-connected background neighbors not yet visited.
+    findall(NR2_-NC2_, (
+        member(DR_-DC_, [(-1)-0, 1-0, 0-(-1), 0-1]),
+        NR2_ is R_ + DR_, NC2_ is C_ + DC_,
+        between(0, NR1_, NR2_), between(0, NC1_, NC2_),
+        nth0(NR2_, Grid_, NRow_), nth0(NC2_, NRow_, Bg_),
+        \+ memberchk(NR2_-NC2_, Vis_)
+    ), Nbrs_),
+    sort(Nbrs_, NbrsS_),
+    subtract(NbrsS_, Vis_, New_),
+    append(Q_, New_, Q2_),
+    append(Vis_, New_, Vis2_),
+    lf_flood_(Grid_, Bg_, NR1_, NC1_, Q2_, Vis2_, Out_).
+
+% lf_frame_colors_/4: collect non-Bg colors adjacent to any enclosed cell.
+lf_frame_colors_(Grid_, Bg_, EnclosedList_, FC_) :-
+    findall(Color_, (
+        member(R_-C_, EnclosedList_),
+        member(DR_-DC_, [(-1)-0, 1-0, 0-(-1), 0-1]),
+        NR_ is R_ + DR_, NC_ is C_ + DC_,
+        nth0(NR_, Grid_, NRow_), nth0(NC_, NRow_, Color_),
+        Color_ \= Bg_
+    ), Colors_),
+    sort(Colors_, FC_).
+
+% lf_apply_fill_/5: fill enclosed background cells bounded by color K with V.
+lf_apply_fill_(Grid_, Bg_, K_, V_, Output_) :-
+% Find all enclosed background cells whose unique non-Bg neighbor is K.
+    lf_enclosed_for_color_(Grid_, Bg_, K_, Cells_),
+    Cells_ \= [], !,
+% Replace those cells in the grid with fill color V.
+    lf_fill_grid_(Grid_, Cells_, V_, Output_).
+% If no enclosed cells for K, leave the grid unchanged.
+lf_apply_fill_(Grid_, _, _, _, Grid_).
+
+% lf_enclosed_for_color_/4: enclosed background cells whose frame is color K.
+lf_enclosed_for_color_(Grid_, Bg_, K_, Cells_) :-
+% Get all enclosed background cells.
+    lf_enclosed_all_(Grid_, Bg_, AllEnc_),
+% Retain only cells where every adjacent non-Bg cell has color K.
+    include([R_-C_]>>(lf_unique_frame_color_(Grid_, Bg_, R_, C_, K_)),
+            AllEnc_, Cells_).
+
+% lf_unique_frame_color_/5: true iff all non-Bg 4-neighbors of (R,C) are K.
+lf_unique_frame_color_(Grid_, Bg_, R_, C_, K_) :-
+    findall(Color_, (
+        member(DR_-DC_, [(-1)-0, 1-0, 0-(-1), 0-1]),
+        NR_ is R_ + DR_, NC_ is C_ + DC_,
+        ( nth0(NR_, Grid_, NRow_) -> nth0(NC_, NRow_, Color_) ; Color_ = oob ),
+        Color_ \= Bg_, Color_ \= oob
+    ), AdjColors_),
+% Require at least one non-Bg neighbor and all of them equal K.
+    AdjColors_ \= [],
+    sort(AdjColors_, [K_]).
+
+% lf_fill_grid_/4: produce Output by replacing Cells_ positions with color V.
+lf_fill_grid_(Grid_, Cells_, V_, Output_) :-
+    length(Grid_, NR_), Grid_ = [Row0_|_], length(Row0_, NC_),
+    NR1_ is NR_ - 1, NC1_ is NC_ - 1,
+    numlist(0, NR1_, RowIdxs_), numlist(0, NC1_, ColIdxs_),
+    maplist([R_, OutRow_]>>(
+        nth0(R_, Grid_, InRow_),
+        maplist([C_, Val_]>>(
+            ( memberchk(R_-C_, Cells_) -> Val_ = V_
+            ; nth0(C_, InRow_, Val_) )
+        ), ColIdxs_, OutRow_)
+    ), RowIdxs_, Output_).
+
+% lf_take_/4: extract Len elements starting at index Start from List.
+lf_take_(List_, Start_, Len_, Sub_) :-
+    length(Pre_, Start_), append(Pre_, Rest_, List_),
+    length(Sub_, Len_), append(Sub_, _, Rest_).
+
+% lf_extract_col_/3: collect all values at column C from Grid.
+lf_extract_col_(Grid_, C_, Col_) :-
+    maplist([Row_, Val_]>>(nth0(C_, Row_, Val_)), Grid_, Col_).
 
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
