@@ -127,10 +127,102 @@ Date        | Score      | Percent | Notes
 2026-06-27  |   4 / 120  |  3.33%  | Wave 4: segment length equalization rule
 2026-06-27  |   5 / 120  |  4.17%  | Wave 5: stub-rank-fill vertical bar selection
 2026-06-27  |   6 / 120  |  5.00%  | Wave 6: band-wrap concentric rectangular rings
+2026-06-27  |   7 / 120  |  5.83%  | Wave 7: staircase-lift bar repositioning rule
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 7 - 2026-06-27 - Score: 7/120 = 5.83%
+
+Date: 2026-06-27
+
+Confirmed score: 7 / 120 = 5.83%
+
+Rules added in this wave:
+
+staircase_lift - Right-half color bars repositioned using left-half staircase heights.
+
+Description: The 8x20 input grid is divided into a left half (columns 0-8) and a
+right half (columns 9-19). The left half contains a staircase of 5-valued cells at
+odd columns 1, 3, 5, 7, growing upward from a floor at row 5. The right half has an
+outer rectangular frame and four vertical color bars at odd columns 11, 13, 15, 17.
+For each bar i, the staircase height H[i] (the count of consecutive 5-valued cells
+from row 5 upward in left column 2i+1) determines the output bar's end row:
+MaxEnd = 5 - H[i]. The color bar is placed flush to MaxEnd with its height clipped
+to min(InputLength, MaxEnd). The output left half is cleared to zeros; the right-half
+frame is preserved; rows below the bar become 5 (staircase fill); row 5 inner bar
+at columns 11-17 becomes all 5.
+
+staircase_lift algorithm:
+  1. For each bar index i in {0,1,2,3}:
+     a. OddCol = 2*i + 1.
+     b. H[i] = count of consecutive 5s from row 5 upward in OddCol.
+  2. For each bar index i:
+     a. Scan right-half column (11+2i) rows 1-4 for first non-0 non-5 value.
+     b. Record Color[i] and run length L[i].
+  3. For each bar index i:
+     a. MaxEnd[i] = max(0, 5 - H[i]).
+     b. OutHeight[i] = min(L[i], MaxEnd[i]).
+     c. OutEnd[i] = MaxEnd[i].
+     d. OutStart[i] = OutEnd[i] - OutHeight[i] + 1.
+  4. Build output grid:
+     - Left half (cols 0-8): all 0.
+     - Col 9: 5 at rows {0,1,2,3,6,7}, 0 at rows {4,5}.
+     - Col 19: 5 at all rows.
+     - Row 0 and Row 7: 5 across entire right half.
+     - Row 5: cols 11-17 = 5 (inner bottom bar); col 9=0, cols 10,18=0, col 19=5.
+     - Each bar column (11+2i): Color[i] at rows OutStart[i]..OutEnd[i],
+       5 at rows (OutEnd[i]+1)..4, as above at rows 0,5,6,7.
+     - Even separator columns 10,12,14,16,18: 0 in rows 1-4, 5 at row 5 for 11..17.
+     - Row 6: col 9=5, col 19=5, all others 0.
+
+New helper predicates:
+  arc2_sl_col_h_/3: count consecutive 5s upward from row 5 in a given column.
+  arc2_sl_count_up_/5: recursive accumulator for the upward 5-run count.
+  arc2_sl_bar_/4: locate first non-background color bar in rows 1-4 of a column.
+  arc2_sl_first_color_/5: scan for first non-0 non-5 cell in a column.
+  arc2_sl_run_len_/5: count consecutive matching-color cells downward.
+  arc2_sl_out_/4: compute output bar span given staircase height and input length.
+  arc2_sl_val_/4: determine the output value of a single cell given all bar data.
+
+Task solved: 4c3d4a41
+
+Description: 8x20 grid with a left-half staircase and a right-half frame containing
+four vertical color bars. The staircase heights encode how high each bar is
+"lifted" toward the top of the frame in the output.
+
+Training pair 0: H=[4,3,2,4], bars color=[3,2,4,7], lengths=[3,4,3,2].
+  MaxEnd=[1,2,3,1]. Bars clipped and repositioned: color 3 at row 1, color 2 at
+  rows 1-2, color 4 at rows 1-3, color 7 at row 1. Exact match: True.
+
+Training pair 1: H=[3,2,2,4], bars color=[4,6,7,8], lengths=[2,2,2,2].
+  MaxEnd=[2,3,3,1]. color 4 at rows 1-2, color 6 at rows 2-3, color 7 at rows 2-3,
+  color 8 at row 1. Exact match: True.
+
+Test case: H=[3,4,4,2], bars color=[9,6,3,8], lengths=[1,2,2,3].
+  MaxEnd=[2,1,1,3]. color 9 at row 2 only, color 6 at row 1 only, color 3 at
+  row 1 only, color 8 at rows 1-3. Exact match: True.
+
+Bugs fixed: None.
+
+Lessons learned:
+
+1. The key insight is that the left-half staircase height H encodes the OUTPUT
+BOTTOM ROW for the corresponding right-half bar via MaxEnd = 5 - H. Bars with
+tall staircases get compressed to near the top; bars with short staircases
+have more space and reach further down.
+
+2. The formula OutHeight = min(L, MaxEnd) clips the bar height to fit the
+available space. This handles all three cases cleanly: bar fits exactly,
+bar is shorter than space (placed flush to bottom), bar is longer (clipped).
+
+3. Searching only ODD columns 1,3,5,7 for staircase heights avoids confusion
+with the even "floor" columns that form part of the bottom bar at row 5.
+
+4. The inner bottom bar (row 5, cols 11-17) is an output artifact, not present
+in the input. It forms a horizontal rule below all four color bars.
 
 
 ATTEMPT 6 - 2026-06-27 - Score: 6/120 = 5.00%
@@ -758,6 +850,7 @@ ALL SOLVED TASKS
 
 1818057f  - Wave 1 - recolor_plus(4,8)   - plus shapes of 4 become 8
 45a5af55  - Wave 6 - band_wrap           - concentric rectangular rings from row-color bands
+4c3d4a41  - Wave 7 - staircase_lift      - staircase heights reposition right-half color bars
 7b5033c1  - Wave 2 - chain_strip          - connected-blob chain traversal strip
 80a900e0  - Wave 3 - arm_endpoint_ray     - checkerboard diagonal arm projection
 97d7923e  - Wave 5 - stub_rank_fill       - column stubs rank which vertical bar to fill
@@ -826,4 +919,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 5: Column stub rank-fill rule.
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 6: Band-wrap concentric rectangular rings rule.
   Score: 6/120 = 5.00%. Task 45a5af55 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-27.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 7: Staircase-lift bar repositioning rule.
+  Score: 7/120 = 5.83%. Task 4c3d4a41 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-27.

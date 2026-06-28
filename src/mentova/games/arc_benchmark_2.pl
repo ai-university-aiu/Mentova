@@ -1113,6 +1113,179 @@ arc2_induce_rule(TrainingPairs, band_wrap) :-
            arc2_transform(band_wrap, In, Out)).
 
 % ---------------------------------------------------------------------------
+% STAIRCASE LIFT (Wave 7) — task 4c3d4a41
+% Left-half staircase heights (odd cols 1,3,5,7) determine how far each
+% right-half color bar is pushed toward the top of the frame.
+% ---------------------------------------------------------------------------
+
+% Register staircase_lift as a known named transform.
+arc2_named_rule(staircase_lift).
+
+% arc2_transform for staircase_lift: reposition right-half color bars using
+% staircase heights read from left-half odd columns.
+arc2_transform(staircase_lift, Grid, Result) :-
+%   Grid must be exactly 8 rows tall.
+    length(Grid, 8),
+%   Each row must be exactly 20 columns wide.
+    nth0(0, Grid, Row0sl), length(Row0sl, 20),
+%   Read staircase height from left-half odd col 1 (bar 0).
+    arc2_sl_col_h_(Grid, 1, H0sl),
+%   Read staircase height from left-half odd col 3 (bar 1).
+    arc2_sl_col_h_(Grid, 3, H1sl),
+%   Read staircase height from left-half odd col 5 (bar 2).
+    arc2_sl_col_h_(Grid, 5, H2sl),
+%   Read staircase height from left-half odd col 7 (bar 3).
+    arc2_sl_col_h_(Grid, 7, H3sl),
+%   Read input color and run length from right-half col 11 (bar 0).
+    arc2_sl_bar_(Grid, 11, C0sl, L0sl),
+%   Read input color and run length from right-half col 13 (bar 1).
+    arc2_sl_bar_(Grid, 13, C1sl, L1sl),
+%   Read input color and run length from right-half col 15 (bar 2).
+    arc2_sl_bar_(Grid, 15, C2sl, L2sl),
+%   Read input color and run length from right-half col 17 (bar 3).
+    arc2_sl_bar_(Grid, 17, C3sl, L3sl),
+%   Compute output bar descriptor for bar 0.
+    arc2_sl_out_(H0sl, C0sl, L0sl, OB0sl),
+%   Compute output bar descriptor for bar 1.
+    arc2_sl_out_(H1sl, C1sl, L1sl, OB1sl),
+%   Compute output bar descriptor for bar 2.
+    arc2_sl_out_(H2sl, C2sl, L2sl, OB2sl),
+%   Compute output bar descriptor for bar 3.
+    arc2_sl_out_(H3sl, C3sl, L3sl, OB3sl),
+%   Collect all four output bar descriptors into a list.
+    Obssl = [OB0sl, OB1sl, OB2sl, OB3sl],
+%   Build result grid: enumerate all row indices.
+    numlist(0, 7, Rowssl),
+%   Enumerate all column indices.
+    numlist(0, 19, Colssl),
+%   Map each row index to a result row.
+    maplist([R, RRow]>>(
+        maplist([C, V]>>(arc2_sl_val_(R, C, Obssl, V)), Colssl, RRow)
+    ), Rowssl, Result).
+
+% arc2_sl_col_h_(+Grid, +Col, -H): count consecutive 5s from row 5 upward.
+arc2_sl_col_h_(Grid, Col, H) :-
+%   Start accumulation from the staircase floor row 5.
+    arc2_sl_count_up_(Grid, 5, Col, 0, H).
+
+% arc2_sl_count_up_(+Grid, +R, +Col, +Acc, -H): accumulate 5-run going upward.
+arc2_sl_count_up_(_, R, _, Acc, Acc) :-
+%   Recursion passed row 1; return accumulated count.
+    R < 1.
+arc2_sl_count_up_(Grid, R, C, Acc, H) :-
+%   Row is still in the valid staircase range.
+    R >= 1,
+%   Fetch the cell value at row R, column C.
+    nth0(R, Grid, Row), nth0(C, Row, V),
+%   If 5, increment and recurse upward; otherwise stop.
+    (V =:= 5
+     -> A1 is Acc + 1, R1 is R - 1,
+        arc2_sl_count_up_(Grid, R1, C, A1, H)
+     ;  H = Acc).
+
+% arc2_sl_bar_(+Grid, +Col, -Color, -Height): locate color bar in rows 1-4.
+arc2_sl_bar_(Grid, Col, Color, Height) :-
+%   Scan rows 1-4 for the first non-0 non-5 cell.
+    arc2_sl_first_color_(Grid, 1, Col, Color, Start),
+%   If no color found, height is 0; otherwise measure the run.
+    (Color =:= 0
+     -> Height = 0
+     ;  arc2_sl_run_len_(Grid, Start, Col, Color, Height)).
+
+% arc2_sl_first_color_(+Grid, +R, +C, -Color, -Start): first non-background cell.
+arc2_sl_first_color_(_, R, _, 0, 1) :-
+%   Scanned past row 4 with no color found; return sentinel.
+    R > 4.
+arc2_sl_first_color_(Grid, R, C, Color, Start) :-
+%   Row still in search window.
+    R =< 4,
+%   Fetch the cell at (R, C).
+    nth0(R, Grid, Row), nth0(C, Row, V),
+%   Non-0 non-5 means this is the colored cell; otherwise advance row.
+    (V =\= 5, V =\= 0
+     -> Color = V, Start = R
+     ;  R1 is R + 1,
+        arc2_sl_first_color_(Grid, R1, C, Color, Start)).
+
+% arc2_sl_run_len_(+Grid, +R, +C, +Color, -Len): measure consecutive Color run.
+arc2_sl_run_len_(_, R, _, _, 0) :-
+%   Passed row 4; run has ended.
+    R > 4.
+arc2_sl_run_len_(Grid, R, C, Color, Len) :-
+%   Row still in measurable range.
+    R =< 4,
+%   Fetch value at (R, C).
+    nth0(R, Grid, Row), nth0(C, Row, V),
+%   If still Color, count and recurse; otherwise end the run.
+    (V =:= Color
+     -> R1 is R + 1,
+        arc2_sl_run_len_(Grid, R1, C, Color, Rest),
+        Len is Rest + 1
+     ;  Len = 0).
+
+% arc2_sl_out_(+H, +Color, +InLen, -bar(Color,OS,OE)): compute output bar span.
+% The bar occupies rows OS..OE where OE = 5-H and height = min(InLen, OE).
+arc2_sl_out_(H, Color, InLen, bar(Color, OS, OE)) :-
+%   Maximum end row: staircase of height H leaves rows 1..(5-H) for color.
+    OE is max(0, 5 - H),
+%   Output height = input height clipped to available space.
+    OH is min(InLen, OE),
+%   Output start row fills from OE upward by OH rows.
+    OS is OE - OH + 1.
+
+% arc2_sl_val_(+R, +C, +OutBars, -V): determine output cell value.
+arc2_sl_val_(_, C, _, 0) :-
+%   Left half (cols 0-8): cleared to zero.
+    C < 9, !.
+arc2_sl_val_(R, 9, _, V) :-
+%   Outer left frame col 9: rows 0-3 and 6-7 are 5, rows 4-5 are 0.
+    !, (memberchk(R, [0,1,2,3,6,7]) -> V = 5 ; V = 0).
+arc2_sl_val_(_, 19, _, 5) :-
+%   Outer right frame col 19: always 5 across all rows.
+    !.
+arc2_sl_val_(0, _, _, 5) :-
+%   Outer top frame row 0: always 5 in the right half.
+    !.
+arc2_sl_val_(7, _, _, 5) :-
+%   Outer bottom frame row 7: always 5 in the right half.
+    !.
+arc2_sl_val_(R, C, _, V) :-
+%   Even separator columns (10,12,14,16,18): 0 except inner bar at row 5.
+    C mod 2 =:= 0, !,
+    (R =:= 5, C >= 11, C =< 17 -> V = 5 ; V = 0).
+arc2_sl_val_(R, C, OutBars, V) :-
+%   Odd bar columns 11,13,15,17.
+    C >= 11, C =< 17, !,
+%   Bar index: col 11->0, col 13->1, col 15->2, col 17->3.
+    BI is (C - 11) // 2,
+%   Retrieve this bar's color and output span.
+    nth0(BI, OutBars, bar(Color, OS, OE)),
+%   Row 5 is always the inner bottom bar (5).
+    (R =:= 5
+     -> V = 5
+%    Rows 1-4: color if in span, else staircase fill (5).
+     ;  R >= 1, R =< 4
+     -> (R >= OS, R =< OE -> V = Color ; V = 5)
+%    Row 6: empty interior below the frame.
+     ;  V = 0).
+arc2_sl_val_(_, _, _, 0).
+
+% arc2_induce_rule for staircase_lift: structural guards then verify all pairs.
+arc2_induce_rule(TrainingPairs, staircase_lift) :-
+%   Guard: first input must be 8 rows tall.
+    TrainingPairs = [pair(In0sl, _)|_],
+    length(In0sl, 8),
+%   Guard: first input row must be 20 columns wide.
+    nth0(0, In0sl, R0sl), length(R0sl, 20),
+%   Guard: row 0 begins with 0 (left half empty) and has 5 at col 9 (frame).
+    nth0(0, R0sl, 0), nth0(9, R0sl, 5),
+%   Guard: row 7 also has 5 at col 9 (bottom frame).
+    nth0(7, In0sl, R7sl), nth0(9, R7sl, 5),
+%   Verify: transform matches expected output for every training pair.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(staircase_lift, In, Out)).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------

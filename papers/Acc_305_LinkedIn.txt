@@ -1,0 +1,19 @@
+ARC-AGI-2 Wave 7: Staircase Lift Rule - 7/120 = 5.83%
+
+D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just solved its 7th ARC-AGI-2 task.
+
+Wave 7 adds the staircase_lift rule. The task (4c3d4a41) presents an 8x20 grid
+split into two halves: a staircase on the left and four color bars on the right.
+The staircase column heights directly encode where each color bar must end in the
+output. The formula: MaxEnd = 5 - H, where H is the staircase height for that bar.
+
+No neural network. No pretraining. One glass-box named rule, verified against every
+training pair before the benchmark runs.
+
+Running total: 7 / 120 = 5.83%.
+
+Next: searching the remaining 113 failing tasks for Wave 8.
+
+#PrologAI #ARCAGI2 #AIReasoning #SymbolicAI #GlassBoxAI
