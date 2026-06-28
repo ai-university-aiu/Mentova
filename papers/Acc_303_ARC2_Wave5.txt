@@ -1,0 +1,163 @@
+ACCOMPLISHMENT RECORD Acc_303
+
+Title: ARC-AGI-2 Wave 5 - Column Stub Rank-Fill - Score: 5/120 = 4.17%
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-27
+
+Platform: PrologAI v15 / Mentova v9
+
+Repository: https://github.com/ai-university-aiu/Mentova
+
+
+SUMMARY
+
+Wave 5 of the ARC-AGI-2 climb. Implements a column stub rank-fill rule in the
+benchmark runner and uses it to solve task 97d7923e via the stub_rank_fill rule.
+Score improves from 4/120 = 3.33% to 5/120 = 4.17%.
+
+
+WHAT WAS BUILT
+
+New rule: stub_rank_fill
+
+The stub_rank_fill rule is implemented in arc_benchmark_2.pl via four new helper
+predicates plus the required arc2_named_rule/1, arc2_transform/3, and
+arc2_induce_rule/2 clauses.
+
+arc2_srf_top_run_/5
+  Counts the consecutive run of cells equal to color V starting at row R in
+  column C, working downward. Used to measure stub length at the top of each
+  column. Recursive: if the cell at (R, C) equals V, increment and recurse to
+  R+1; otherwise return 0.
+
+arc2_srf_find_vbar_/8
+  Finds a vertical bar in column C. A vertical bar has:
+  - A top endpoint at row TR: cell (TR, C) = V (non-background), cell above is
+    background or TR = 0.
+  - A body starting at TR+1: cell (TR+1, C) = B where B differs from both V and
+    background.
+  - All body cells TR+1 through BR-1 equal B.
+  - A bottom endpoint at BR: cell (BR, C) = V.
+  Returns (TR, BR, V, K) where K = BR - TR - 1 is the body length. Backtracks
+  over all valid bars in the column via between/3 on TR and BR.
+
+arc2_srf_apply_fills_/3
+  Reconstructs the grid with fill operations applied. For each cell (R, C), if
+  (R, C) falls strictly inside a fill zone (TR < R < BR in the same column),
+  replace the cell with the fill color. Otherwise keep the original value.
+  Uses findall/3 nested doubly over rows and columns for a clean reconstruction.
+
+arc2_srf_in_fill_zone_/4
+  Helper used by arc2_srf_apply_fills_: tests whether a cell (R, C) is inside
+  any fill operation fill(C, TR, BR, FillV) from the fills list, and returns the
+  fill color if so.
+
+The top-level arc2_transform(stub_rank_fill, Grid, Result):
+  1. Finds background color with arc2_bg_color_/2.
+  2. Collects stubs: for each column C, measures the top run length N of non-
+     background color V. A stub stub(V, N) is recorded if N >= 1 and the cell at
+     row N is background (or the column is entirely stub, N = grid height).
+  3. Collects vertical bars: uses arc2_srf_find_vbar_ via findall to enumerate all
+     vbar(C, TR, BR, V, K) terms.
+  4. For each stub(V, N): filters bars by endpoint color V, sorts by body length K
+     descending (msort then reverse), and picks the Nth entry (1-indexed via nth1).
+     Records fill(C, TR, BR, V).
+  5. Applies all fill operations via arc2_srf_apply_fills_.
+
+The arc2_induce_rule(TrainingPairs, stub_rank_fill) guard:
+  - All training pair grids have identical input/output dimensions.
+  - The first row of the first training input has at least one non-background cell
+    (a necessary but not sufficient condition for stubs to exist).
+  - arc2_transform(stub_rank_fill, In, Out) holds for every training pair.
+
+
+TASK SOLVED: 97d7923e
+
+Grid format: 20 rows x 10 columns, background color 0.
+
+The task contains vertical bars of various body lengths in several columns, plus
+short color stubs at the tops of some columns. The stubs encode selection
+instructions by their length: stub height N = select the Nth-largest bar (by body
+length, descending) with the same endpoint color as the stub.
+
+Training pair 0:
+  Input: Column 9, rows 0-1 = color 2, row 2 = background. Stub: stub(2, 2).
+  Bars with endpoint color 2:
+    Column 5: endpoints rows 5 and 13, body length 7.
+    Column 7: endpoints rows 8 and 14, body length 5.
+    (Column 9 also has a stub portion counted as a bar body of length 2.)
+  Sorted descending: [7, 5, 2]. Select 2nd = body length 5 in column 7.
+  Action: fill column 7, rows 9-13 with color 2.
+  Exact match: True.
+
+Training pair 1:
+  Input: Column 6, row 0 = color 2. Stub: stub(2, 1).
+  Bars with endpoint color 2:
+    Column 3: body length 5.
+    Column 6 body part: body length 2.
+  Sorted: [5, 2]. Select 1st = body length 5 in column 3.
+  Action: fill column 3 body cells with color 2.
+  Exact match: True.
+
+Training pair 2:
+  Two stubs simultaneously: stub(3, 1) and stub(6, 2).
+  Each stub selects its respective bar independently.
+  Both fills applied in a single pass.
+  Exact match: True.
+
+Test case:
+  Input: Column 6, rows 0-1 = color 2. Stub: stub(2, 2).
+  Bars with endpoint color 2 sorted descending by body length.
+  Select 2nd, fill its body with color 2.
+  Exact match: True.
+
+
+BENCHMARK RESULT
+
+Full benchmark run after this wave:
+
+  Score: 5 / 120 = 4.17%
+
+Tasks passing:
+  1818057f - Wave 1 - recolor_plus(4,8)
+  7b5033c1 - Wave 2 - chain_strip
+  80a900e0 - Wave 3 - arm_endpoint_ray
+  97d7923e - Wave 5 - stub_rank_fill   (NEW)
+  e376de54 - Wave 4 - segment_equalize
+
+No regressions. All previously passing tasks continue to pass.
+
+
+SPARC DOCUMENTATION UPDATES
+
+Specification:    v238 -> v239 (Part 268: ARC2-W5-SPEC-001 through ARC2-W5-SPEC-006)
+Pseudocode:       v230 -> v231 (stub_rank_fill pseudocode section)
+Architecture:     v233 -> v234 (Wave 5 architectural note)
+Refinement:       v285 -> v286 (AC-SRF-001 through AC-SRF-007 acceptance tests)
+Completion:       v291 -> v292 (ARC-AGI-2 Wave 5 completion record)
+
+
+FILES CHANGED
+
+Mentova/src/mentova/games/arc_benchmark_2.pl
+  Added: stub_rank_fill rule and four helper predicates.
+
+Mentova/papers/Climbing_ARC-AGI-2.txt
+  Updated: header, score progression table row, ATTEMPT 5 entry, ALL SOLVED TASKS
+  list (97d7923e added), REFERENCES entry.
+
+Mentova/papers/Acc_303_ARC2_Wave5.txt
+  Added: this accomplishment record.
+
+Mentova/README.md
+  Updated: badge, scores, accomplishment count, Papers table.
+
+PrologAI/docs/PrologAI_1_Specification_v239.txt  (archived v238)
+PrologAI/docs/PrologAI_2_Pseudocode_v231.txt     (archived v230)
+PrologAI/docs/PrologAI_3_Architecture_v234.txt   (archived v233)
+PrologAI/docs/PrologAI_4_Refinement_v286.txt     (archived v285)
+PrologAI/docs/PrologAI_5_Completion_v292.txt     (archived v291)
+PrologAI/CLAUDE.md
+PrologAI/README.md

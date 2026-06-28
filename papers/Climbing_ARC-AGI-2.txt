@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-27. Wave 4 complete: 4/120 = 3.33%.
+Last updated: 2026-06-27. Wave 5 complete: 5/120 = 4.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -125,10 +125,121 @@ Date        | Score      | Percent | Notes
 2026-06-27  |   2 / 120  |  1.67%  | Wave 2: chain-strip connected-blob traversal
 2026-06-27  |   3 / 120  |  2.50%  | Wave 3: checkerboard diagonal arm projection
 2026-06-27  |   4 / 120  |  3.33%  | Wave 4: segment length equalization rule
+2026-06-27  |   5 / 120  |  4.17%  | Wave 5: stub-rank-fill vertical bar selection
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 5 - 2026-06-27 - Score: 5/120 = 4.17%
+
+Date: 2026-06-27
+
+Confirmed score: 5 / 120 = 4.17%
+
+Rules added in this wave:
+
+stub_rank_fill - Column stubs rank which vertical bar to fill.
+
+Description: The grid contains vertical bars and short column stubs. A
+vertical bar in column C is a sequence of cells with pattern:
+  [V, B, B, ..., B, V]
+where V is the endpoint color, B is the body color (B differs from V), and the
+bar runs from row TR to row BR. A stub at column C is a run of N consecutive
+cells at the very top of the grid (rows 0..N-1) all equal to V (non-background),
+immediately followed by a background cell at row N (or the grid ends at row N).
+
+The stub encodes a selection instruction: stub(V, N) means "find all vertical
+bars with endpoint color V, sort them by body length K in descending order, and
+select the Nth one (1-indexed) to fill." Filling a selected bar means replacing
+its body cells (rows TR+1 through BR-1 in column C) with the color V.
+
+Multiple stubs can appear simultaneously; each is processed independently.
+
+stub_rank_fill algorithm:
+  1. Find background color (most common value in the grid).
+  2. Collect all stubs: for each column C, measure the top run length N of
+     non-background color V. A stub exists if N >= 1 and row N is background
+     (or N = grid height, meaning the entire column is a stub).
+  3. Collect all vertical bars: for each column C, find sequences where the
+     top and bottom cells equal some non-background color V, the cell above
+     the top is background (or top is row 0), and all interior cells equal
+     some other non-background color B.
+  4. For each stub(V, N): gather all bars with endpoint color V, sort by body
+     length K descending (using msort then reverse), pick the Nth entry.
+  5. Apply fills: for each selected bar at column C, rows TR to BR, replace
+     body rows TR+1 through BR-1 with color V.
+
+New helper predicates:
+  arc2_srf_top_run_/5: count consecutive cells equal to V from row R downward
+    in column C (recursive, counts run length).
+  arc2_srf_find_vbar_/8: find a vertical bar in column C given background and
+    height; succeeds multiple times via backtracking for each valid bar.
+  arc2_srf_apply_fills_/3: reconstruct the grid with fill operations applied
+    (body cells replaced by endpoint color V).
+  arc2_srf_in_fill_zone_/4: check if cell (R, C) falls inside a fill zone
+    (strictly between TR and BR in the same column).
+
+Task solved: 97d7923e
+
+Description: A 20x10 grid on background 0. The top portion of some columns
+contains short color stubs; the rest of the grid contains vertical bars of
+varying body lengths. Each stub selects one bar to fill.
+
+Training pair 0:
+Column 9, rows 0-1: stub(2, 2) - two cells of color 2 at top.
+Vertical bars with endpoint color 2:
+  Column 5: body length 7 (rows 6-12, endpoints rows 5 and 13).
+  Column 7: body length 5 (rows 9-13, endpoints rows 8 and 14).
+  Column 9 (body part): body length 2.
+Sorted descending: [7, 5, 2]. Select Nth=2: body length 5, column 7.
+Fill column 7 rows 9-13 with color 2. Exact match: True.
+
+Training pair 1:
+Column 6, rows 0-0: stub(2, 1) - one cell of color 2 at top.
+Vertical bars with endpoint color 2:
+  Column 3: body length 5.
+  Column 6 (body part): body length 2.
+Sorted descending: [5, 2]. Select Nth=1: body length 5, column 3.
+Fill column 3 body cells with color 2. Exact match: True.
+
+Training pair 2:
+Two stubs present simultaneously: stub(3, 1) and stub(6, 2).
+Each stub independently selects a bar with matching endpoint color.
+Both fills applied in a single pass. Exact match: True.
+
+Test case (20x10 grid):
+Column 6, rows 0-1: stub(2, 2).
+Bars with endpoint color 2 sorted by body length descending.
+Select Nth=2, fill that bar's body with color 2. Exact match: True.
+
+Bugs fixed: None.
+
+Lessons learned:
+
+1. Stubs encode ranked selection, not just presence. A stub of length N means
+"select the Nth-largest." This is a new symbol-in-context pattern where the
+stub height IS the rank, not a color. This required treating the stub length
+as an ordinal selector rather than a quantity.
+
+2. The endpoint color of both the stub and the bar must match. Multiple colors
+can coexist in the same grid; each stub only controls bars of its own color.
+This keeps the rule composable and unambiguous.
+
+3. Vertical bar detection requires careful top-boundary checking: the cell
+directly above the top endpoint must be background (or the top endpoint must
+be in row 0). Without this, stubs themselves would be misidentified as bar
+endpoints and generate spurious bar candidates.
+
+4. msort followed by reverse gives stable descending order. This matters for
+tie-breaking: if two bars have equal body length, their relative order is
+preserved (by column index, since msort is stable). The Nth selection is
+deterministic.
+
+5. The fill zone is open at both ends: the top endpoint (row TR) and bottom
+endpoint (row BR) are not replaced because they already contain the correct
+color V. Only the interior body rows TR+1..BR-1 are overwritten.
 
 
 ATTEMPT 4 - 2026-06-27 - Score: 4/120 = 3.33%
@@ -546,6 +657,7 @@ ALL SOLVED TASKS
 1818057f  - Wave 1 - recolor_plus(4,8)   - plus shapes of 4 become 8
 7b5033c1  - Wave 2 - chain_strip          - connected-blob chain traversal strip
 80a900e0  - Wave 3 - arm_endpoint_ray     - checkerboard diagonal arm projection
+97d7923e  - Wave 5 - stub_rank_fill       - column stubs rank which vertical bar to fill
 e376de54  - Wave 4 - segment_equalize     - equalize all segment lengths to middle
 
 
@@ -603,4 +715,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 3: Checkerboard diagonal arm projection rule
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 4: Segment length equalization rule.
   Score: 4/120 = 3.33%. Task e376de54 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-27.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 5: Column stub rank-fill rule.
+  Score: 5/120 = 4.17%. Task 97d7923e solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-27.
