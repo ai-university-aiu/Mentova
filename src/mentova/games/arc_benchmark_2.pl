@@ -1286,6 +1286,221 @@ arc2_induce_rule(TrainingPairs, staircase_lift) :-
            arc2_transform(staircase_lift, In, Out)).
 
 % ---------------------------------------------------------------------------
+% SNAKE_END_SWAP (Wave 8) — task 332f06d7
+% Replace every 0 with 1 and every 2 with 0; all other values stay.
+% ---------------------------------------------------------------------------
+
+% Register snake_end_swap as a known named transform.
+arc2_named_rule(snake_end_swap).
+
+% arc2_transform for snake_end_swap: remap 0->1 and 2->0 in every cell.
+arc2_transform(snake_end_swap, Grid, Result) :-
+%   Map each row through the snake swap cell rule.
+    maplist([Row, RowOut]>>(
+%       Map each cell: 0->1, 2->0, else unchanged.
+        maplist([V, W]>>(
+%           If the value is 0 replace it with 1.
+            ( V =:= 0 -> W = 1
+%           If the value is 2 replace it with 0.
+            ; V =:= 2 -> W = 0
+%           Otherwise keep the original value.
+            ; W = V )
+        ), Row, RowOut)
+    ), Grid, Result).
+
+% ---------------------------------------------------------------------------
+% BAR_SORT (Wave 8) — task 31f7f899
+% The grid has a horizontal divider row (no BG cells) flanked by vertical
+% colour bars. Each bar has an above-height and below-height. The bars are
+% sorted by above-height ascending and their height-pairs are reassigned
+% left-to-right to produce the output.
+% ---------------------------------------------------------------------------
+
+% Register bar_sort as a known named transform.
+arc2_named_rule(bar_sort).
+
+% arc2_transform for bar_sort: sort bar heights and rebuild the grid.
+arc2_transform(bar_sort, Grid, Result) :-
+%   Flatten grid to find the background (most common) value.
+    append(Grid, Flat),
+%   Sort flat list to prepare mode computation.
+    msort(Flat, Sorted),
+%   Find the most frequent value = background.
+    arc2_bs_mode_(Sorted, BG),
+%   Locate the divider row index and its dominant colour.
+    arc2_bs_divider_(Grid, BG, DivIdx, DIV),
+%   Extract the actual divider row from the grid.
+    nth0(DivIdx, Grid, DivRow),
+%   Segment the divider row into bar descriptors.
+    arc2_bs_bars_(DivRow, 0, BG, DIV, Bars),
+%   Measure above and below height for each bar.
+    arc2_bs_heights_(Grid, DivIdx, Bars, Pairs),
+%   Sort height-pairs by above-height ascending.
+    msort(Pairs, SortedPairs),
+%   Count rows and columns for grid construction.
+    length(Grid, NR), nth0(0, Grid, Row0bs), length(Row0bs, NC),
+%   Build row index list 0..NR-1.
+    NR1 is NR - 1, numlist(0, NR1, RIdxs),
+%   Build column index list 0..NC-1.
+    NC1 is NC - 1, numlist(0, NC1, CIdxs),
+%   Construct each output row.
+    maplist([RI, ORow]>>(
+%       Construct each cell in this row.
+        maplist([CI, Cell]>>(
+%           Delegate cell value to the cell-selector.
+            arc2_bs_cell_(RI, CI, DivIdx, DivRow, BG, Bars, SortedPairs, Cell)
+        ), CIdxs, ORow)
+    ), RIdxs, Result).
+
+% arc2_bs_mode_(+SortedList, -Mode): most frequent element in a sorted list.
+arc2_bs_mode_([H|T], Mode) :-
+%   Start accumulator with first element count 1, best = first element.
+    arc2_bs_mode_acc_(T, H, 1, H, 1, Mode).
+
+% arc2_bs_mode_acc_: base case when list exhausted.
+arc2_bs_mode_acc_([], _, _, BestV, _, BestV).
+% arc2_bs_mode_acc_: current element equals running element; update count.
+arc2_bs_mode_acc_([H|T], H, N, BestV, BestN, Mode) :-
+%   Increment the count for the current run.
+    N1 is N + 1,
+%   If new count exceeds best, promote current element.
+    ( N1 > BestN
+    -> arc2_bs_mode_acc_(T, H, N1, H,    N1,    Mode)
+%   Otherwise keep existing best.
+    ;  arc2_bs_mode_acc_(T, H, N1, BestV, BestN, Mode) ).
+% arc2_bs_mode_acc_: current element differs from running element; reset run.
+arc2_bs_mode_acc_([H|T], Prev, _N, BestV, BestN, Mode) :-
+%   Guard: new element is different from the previous run element.
+    H \= Prev,
+%   Start a new run of length 1 for the new element.
+    arc2_bs_mode_acc_(T, H, 1, BestV, BestN, Mode).
+
+% arc2_bs_divider_(+Grid, +BG, -DivIdx, -DIV):
+% Find the first row with no BG cells; DIV is its most frequent value.
+arc2_bs_divider_(Grid, BG, DivIdx, DIV) :-
+%   Bind DivIdx to each row index until a qualifying row is found.
+    nth0(DivIdx, Grid, DivRow),
+%   The divider row contains no background cells.
+    \+ member(BG, DivRow), !,
+%   Sort the divider row to prepare mode computation.
+    msort(DivRow, SortedDiv),
+%   The divider colour is the most common value in that row.
+    arc2_bs_mode_(SortedDiv, DIV).
+
+% arc2_bs_bars_(+Row, +Col, +BG, +DIV, -Bars):
+% Extract list of bar(StartCol,EndCol,Color) for non-BG non-DIV runs.
+arc2_bs_bars_([], _, _, _, []).
+% Skip BG and DIV cells.
+arc2_bs_bars_([V|T], C, BG, DIV, Bars) :-
+%   Check if this cell is background or divider colour.
+    ( V =:= BG ; V =:= DIV ), !,
+%   Advance to next column.
+    C1 is C + 1,
+%   Continue scanning.
+    arc2_bs_bars_(T, C1, BG, DIV, Bars).
+% Non-BG non-DIV cell starts a new bar.
+arc2_bs_bars_([V|T], C, BG, DIV, [bar(C,EC,V)|Bars]) :-
+%   Collect the full run of V starting at column C.
+    arc2_bs_run_(T, V, C, EC, Rem),
+%   First column after this bar.
+    EC1 is EC + 1,
+%   Continue scanning from the remaining cells.
+    arc2_bs_bars_(Rem, EC1, BG, DIV, Bars).
+
+% arc2_bs_run_(+Rest, +Color, +LastC, -EndC, -Remaining):
+% Extend run of Color; LastC starts as the first column of the run.
+arc2_bs_run_([], _, Last, Last, []).
+% Extend when the next cell matches Color.
+arc2_bs_run_([H|T], Color, Last, EC, Rem) :-
+%   If the head matches the run colour, extend the run.
+    ( H =:= Color
+    ->  Next is Last + 1,
+%       Recurse with the extended column index.
+        arc2_bs_run_(T, Color, Next, EC, Rem)
+%   Otherwise the run is over.
+    ;   EC = Last,
+        Rem = [H|T] ).
+
+% arc2_bs_heights_(+Grid, +DivIdx, +Bars, -Pairs):
+% Pairs is a list of HA-HB for each bar (above height, below height).
+arc2_bs_heights_(_, _, [], []).
+% Process one bar and recurse.
+arc2_bs_heights_(Grid, DivIdx, [bar(SC,_,Color)|Bars], [HA-HB|Pairs]) :-
+%   Count rows above the divider that contain Color at column SC.
+    arc2_bs_count_up_(Grid, DivIdx, SC, Color, 0, HA),
+%   Count rows below the divider that contain Color at column SC.
+    length(Grid, NR),
+%   Delegate below-count to helper.
+    arc2_bs_count_dn_(Grid, DivIdx, NR, SC, Color, 0, HB),
+%   Recurse for the remaining bars.
+    arc2_bs_heights_(Grid, DivIdx, Bars, Pairs).
+
+% arc2_bs_count_up_(+Grid, +DivIdx, +Col, +Color, +Acc, -H):
+% Count consecutive Color rows going upward from just above DivIdx.
+arc2_bs_count_up_(Grid, DivIdx, Col, Color, Acc, H) :-
+%   Compute the row index to inspect next.
+    RowIdx is DivIdx - Acc - 1,
+%   If above the grid boundary, stop.
+    ( RowIdx < 0 -> H = Acc
+%   Otherwise check the cell value.
+    ; nth0(RowIdx, Grid, Row),
+      nth0(Col, Row, V),
+%     If it matches Color, count one more row.
+      ( V =:= Color
+      -> Acc1 is Acc + 1,
+%        Continue upward.
+         arc2_bs_count_up_(Grid, DivIdx, Col, Color, Acc1, H)
+%     Otherwise the run has ended.
+      ;  H = Acc ) ).
+
+% arc2_bs_count_dn_(+Grid, +DivIdx, +NR, +Col, +Color, +Acc, -H):
+% Count consecutive Color rows going downward from just below DivIdx.
+arc2_bs_count_dn_(Grid, DivIdx, NR, Col, Color, Acc, H) :-
+%   Compute the row index to inspect next.
+    RowIdx is DivIdx + Acc + 1,
+%   If below the grid boundary, stop.
+    ( RowIdx >= NR -> H = Acc
+%   Otherwise check the cell value.
+    ; nth0(RowIdx, Grid, Row),
+      nth0(Col, Row, V),
+%     If it matches Color, count one more row.
+      ( V =:= Color
+      -> Acc1 is Acc + 1,
+%        Continue downward.
+         arc2_bs_count_dn_(Grid, DivIdx, NR, Col, Color, Acc1, H)
+%     Otherwise the run has ended.
+      ;  H = Acc ) ).
+
+% arc2_bs_cell_(+RI, +CI, +DivIdx, +DivRow, +BG, +Bars, +SortedPairs, -Cell):
+% Determine the output cell value at row RI, column CI.
+arc2_bs_cell_(RI, CI, DivIdx, DivRow, _BG, _Bars, _SortedPairs, Cell) :-
+%   The divider row is copied unchanged from the input.
+    RI =:= DivIdx, !,
+%   Fetch the value directly from DivRow.
+    nth0(CI, DivRow, Cell).
+% Non-divider row: determine bar colour or background.
+arc2_bs_cell_(RI, CI, DivIdx, _DivRow, BG, Bars, SortedPairs, Cell) :-
+%   Try to find a bar that covers column CI and reaches row RI.
+    ( arc2_bs_bar_covers_(CI, RI, DivIdx, Bars, SortedPairs, Color)
+%     A bar covers this cell.
+    -> Cell = Color
+%     No bar covers; use background.
+    ;  Cell = BG ).
+
+% arc2_bs_bar_covers_(+CI, +RI, +DivIdx, +Bars, +SortedPairs, -Color):
+% Succeed if bar I covers column CI and row RI given sorted height pairs.
+arc2_bs_bar_covers_(CI, RI, DivIdx, Bars, SortedPairs, Color) :-
+%   Choose a bar index I.
+    nth0(I, Bars, bar(SC, EC, Color)),
+%   Column CI must be within the bar's span.
+    CI >= SC, CI =< EC,
+%   Get the sorted height pair assigned to bar I.
+    nth0(I, SortedPairs, HA-HB),
+%   Row must be within the bar's above or below extent.
+    ( RI < DivIdx -> Dist is DivIdx - RI, Dist =< HA
+    ; RI > DivIdx -> Dist is RI - DivIdx, Dist =< HB ).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------

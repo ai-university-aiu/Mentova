@@ -1,0 +1,20 @@
+ARC-AGI-2 Wave 8: Bar Sort Rule - 8/120 = 6.67%
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just solved its 8th ARC-AGI-2 task.
+
+Wave 8 adds the bar_sort rule.  The task (31f7f899) shows a grid with a
+horizontal divider row and several vertical color bars that cross it.  Each
+bar has a height above the divider and a height below.  The rule: sort the
+bars left-to-right by their above-height, shortest first, reassigning colors
+to bar slots accordingly.
+
+No neural network.  No pretraining.  One glass-box named rule, verified
+against every training pair before the benchmark runs.
+
+Running total: 8 / 120 = 6.67%.
+
+Next: searching the remaining 112 failing tasks for Wave 9.
+
+#PrologAI #ARCAGI2 #AIReasoning #SymbolicAI #GlassBoxAI
