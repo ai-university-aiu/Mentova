@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 13 complete: 13/120 = 10.83%.
+Last updated: 2026-06-28. Wave 14 complete: 14/120 = 11.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -135,9 +135,51 @@ Date        | Score      | Percent | Notes
 2026-06-28  |  12 / 120  | 10.00%  | Wave 12: waterfall gravity-flow around obstacles
 2026-06-28  |  13 / 120  | 10.83%  | Wave 13: odd-col unique col section extraction
 
+2026-06-28  |  14 / 120  | 11.67%  | Wave 14: reflect-axis shape reflection across 2-marker axis
+
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 14 - 2026-06-28 - Score: 14/120 = 11.67%
+
+Date: 2026-06-28
+
+Confirmed score: 14 / 120 = 11.67%
+
+Rules added in this wave:
+
+reflect_axis - Each non-background non-2 shape in the grid is reflected across
+  the axis defined by its nearest cluster of 2-cells. A single 2-cell defines
+  a point reflection (both row and col mirror). A collinear column of 2-cells
+  defines a vertical axis (col mirrors, row unchanged). A collinear row of 2-cells
+  defines a horizontal axis (row mirrors, col unchanged). The 2-markers remain in
+  place; only the reflected copy is added. The background color is the mode of the
+  grid. Shapes are identified as 4-connected components of non-background non-2
+  cells. Nearest cluster is measured by minimum Manhattan distance.
+
+Bugs fixed: none.
+
+Lessons learned:
+
+The 2-marker axis type (point vs. vertical-line vs. horizontal-line) is determined
+by the geometry of the 2-cluster itself, not by the relationship to the shape.
+A single 2-cell always produces a 180-degree point reflection. A row of 2-cells
+produces a flip across the horizontal axis. A column of 2-cells produces a flip
+across the vertical axis. This generalises across different background colors and
+shape sizes.
+
+Task solved: 7ed72f31 (2 training pairs; train 0 is 18x18, bg=1 with 4 shapes
+  each having a nearby 2-cluster; train 1 is 18x18, bg=8 with 3 shapes each
+  having a nearby 2-cluster). Both training pairs pass; test case passes.
+
+Score advance: 13/120 = 10.83% to 14/120 = 11.67%.
+
+Accomplishment: Acc_312.  Paper: Acc_312_ARC2_Wave14.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
 
 
 ATTEMPT 13 - 2026-06-28 - Score: 13/120 = 10.83%
@@ -1285,6 +1327,7 @@ ALL SOLVED TASKS
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
 7491f3cf  - Wave 9  - panel_overlay       - s1-seeded flood-fill splits s2/s3 into panel 4
 7b5033c1  - Wave 2  - chain_strip          - connected-blob chain traversal strip
+7ed72f31  - Wave 14 - reflect_axis         - each shape reflected across its nearest 2-marker axis
 8e5c0c38  - Wave 11 - sym_restore          - per-colour vertical symmetry restoration
 80a900e0  - Wave 3  - arm_endpoint_ray     - checkerboard diagonal arm projection
 97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
@@ -1381,4 +1424,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 12: Waterfall gravity-flow around obstacles 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 13: Odd-col unique col section extraction rule.
   Score: 13/120 = 10.83%. Task 38007db0 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 14: Reflect-axis shape reflection across 2-marker axis rule.
+  Score: 14/120 = 11.67%. Task 7ed72f31 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.
