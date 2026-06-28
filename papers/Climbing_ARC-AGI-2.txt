@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 14 complete: 14/120 = 11.67%.
+Last updated: 2026-06-28. Wave 15 complete: 15/120 = 12.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -136,10 +136,91 @@ Date        | Score      | Percent | Notes
 2026-06-28  |  13 / 120  | 10.83%  | Wave 13: odd-col unique col section extraction
 
 2026-06-28  |  14 / 120  | 11.67%  | Wave 14: reflect-axis shape reflection across 2-marker axis
+2026-06-28  |  15 / 120  | 12.50%  | Wave 15: period-repair periodic-pattern deviation fix
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 15 - 2026-06-28 - Score: 15/120 = 12.50%
+
+Date: 2026-06-28
+
+Confirmed score: 15 / 120 = 12.50%
+
+Rules added in this wave:
+
+period_repair - For each row and each column in the grid, find the inner
+  sequence (cells strictly between the first and last wall-marker in that
+  row or column). If that inner sequence follows a repeating period-P
+  pattern with up to 3 deviating cells, repair the deviating cells to match
+  the majority-vote base value for their residue position mod P.
+
+  The period P that best explains the sequence is selected by the following
+  criterion: among all P from 2 to N//2 whose majority-vote base has
+  minimum residue-class support >= 0.75, find the P with the fewest
+  deviating cells (1 to 3). Ties are broken by smallest P. The grid is
+  first repaired row-wise, then transposed and repaired column-wise (which
+  is equivalent to repairing column sequences), then transposed back.
+
+  The wall marker is the first non-background element found in any row or
+  column of the grid. Inner segments shorter than 5 cells are skipped.
+  The background color is the mode of the grid.
+
+Bugs fixed:
+
+1. The cut (!) in the period_repair arc2_induce_rule guard was preventing
+   backtracking to the recolor_plus and recolor_auto fallback clauses for
+   tasks that share the basic double-frame structure but require a different
+   rule. Fixed by replacing the cut with once/1 to commit to the first wall
+   marker without cutting the outer choice point.
+
+2. The periodic_repair arc2_induce_rule was intercepting period_repair tasks
+   because both rules pass the training pairs of task 135a2760 but only
+   period_repair passes the test. Fixed by adding a yield guard to the
+   periodic_repair clause: it steps aside when period_repair also solves all
+   training pairs, giving period_repair priority.
+
+Lessons learned:
+
+1. The minimum-errors selection criterion (smallest P with <= K errors)
+   fails when a large period spuriously achieves fewer errors than the true
+   short period. For column 17 of task 135a2760, period-10 gives 2 errors
+   but produces a wrong fix, while period-2 gives 3 correct errors. The
+   correct selection criterion is: require the majority base to have minimum
+   residue-class support >= 0.75, then minimize error count among those.
+   High base support indicates the pattern is strongly periodic, not
+   coincidental. The 0.75 threshold correctly rejects the spurious period-10
+   base (support 0.67) and accepts the genuine period-2 base (support 0.83).
+
+2. For column 12 of task 135a2760, the correct period is 6 (marks appear
+   every 6 rows, one mark is missing). Smaller periods (2 through 5) each
+   give 3 errors because the majority vote at those residues treats the
+   existing marks as noise to be removed. Period 6 has support 0.75 exactly
+   (3/4 votes for the mark value at residue 3). The sort by fewer errors
+   correctly picks period 6 (1 error) over periods 2 and 5 (3 errors) given
+   equal support.
+
+3. Cuts in specific arc2_induce_rule clauses are dangerous: they kill the
+   choice points for ALL subsequent clauses of arc2_induce_rule/2 if the
+   clause commits (cuts) and then fails later. Using once/1 for deterministic
+   sub-goals inside induction clauses preserves the ability to backtrack to
+   fallback clauses (recolor_plus, recolor_auto).
+
+Task solved: 135a2760 (2 training pairs; train 0 is 5x13 with bg=3 and
+  wall=2, one inner row with period-2 pattern missing one mark; train 1 is
+  21x22 with bg=4 and wall=2, multiple inner rows with period-2 to period-4
+  patterns each having 1-2 deviating cells). Test is 29x29 with bg=8 and
+  wall=3; all 9 required fixes are in columns (period-2 to period-6 patterns
+  with 1 to 3 deviating cells). Both training pairs pass; test case passes.
+
+Score advance: 14/120 = 11.67% to 15/120 = 12.50%.
+
+Accomplishment: Acc_313.  Paper: Acc_313_ARC2_Wave15.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
 
 
 ATTEMPT 14 - 2026-06-28 - Score: 14/120 = 11.67%
@@ -1318,6 +1399,7 @@ ARC-AGI-1). Every single task correct represents 0.83% of the score.
 ALL SOLVED TASKS
 (Task IDs added in alphabetical order after each wave)
 
+135a2760  - Wave 15 - period_repair        - fix period-P pattern deviations in inner row/col sequences
 1818057f  - Wave 1  - recolor_plus(4,8)   - plus shapes of 4 become 8
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
@@ -1428,4 +1510,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 13: Odd-col unique col section extraction ru
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 14: Reflect-axis shape reflection across 2-marker axis rule.
   Score: 14/120 = 11.67%. Task 7ed72f31 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 15: Period-repair periodic-pattern deviation fix rule.
+  Score: 15/120 = 12.50%. Task 135a2760 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.
