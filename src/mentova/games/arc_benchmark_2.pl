@@ -2511,6 +2511,252 @@ arc2_induce_recolor(TrainingPairs, Mapping) :-
            forall(member(Old-New2, Mapping), New1 = New2)).
 
 % ---------------------------------------------------------------------------
+% WAVE 14: reflect_axis rule
+% Each non-background non-2 shape is reflected across the axis defined
+% by its nearest 2-cluster: a single 2-cell (point), a collinear column
+% of 2-cells (vertical axis), or a collinear row of 2-cells (horizontal axis).
+% Task: 7ed72f31
+% ---------------------------------------------------------------------------
+
+% Register reflect_axis as a named rule.
+arc2_named_rule(reflect_axis).
+
+% ra_bg_: background is the most frequent value in the flattened grid.
+% ra_bg_(+Grid, -Bg)
+ra_bg_(Grid, Bg) :-
+% Flatten grid to a single list of values.
+    flatten(Grid, Flat_),
+% Compute mode (most frequent element) of the flat list.
+    arc2_bs_mode_(Flat_, Bg).
+
+% ra_nrc_: grid dimensions.
+% ra_nrc_(+Grid, -NR, -NC)
+ra_nrc_(Grid, NR, NC) :-
+% Row count.
+    length(Grid, NR),
+% Column count from first row.
+    ( Grid = [R0_|_] -> length(R0_, NC) ; NC = 0 ).
+
+% ra_inb_: check (R,C) is within grid bounds.
+% ra_inb_(+R, +C, +NR, +NC)
+ra_inb_(R, C, NR, NC) :-
+% Row must be non-negative.
+    R >= 0,
+% Row must be less than NR.
+    R < NR,
+% Col must be non-negative.
+    C >= 0,
+% Col must be less than NC.
+    C < NC.
+
+% ra_nbrs4_: 4-connected neighbors within bounds.
+% ra_nbrs4_(+R, +C, +NR, +NC, -Nbrs)
+ra_nbrs4_(R, C, NR, NC, Nbrs) :-
+% Compute adjacent row/col indices.
+    R1_ is R - 1, R2_ is R + 1, C1_ is C - 1, C2_ is C + 1,
+% Keep only in-bounds candidates.
+    include([Ri_-Ci_]>>(ra_inb_(Ri_,Ci_,NR,NC)),
+            [R1_-C, R2_-C, R-C1_, R-C2_],
+            Nbrs).
+
+% ra_absorb_: pull members of Candidates that exist in Avail into Taken;
+%             leave the rest in Rem. Used by BFS to expand frontier.
+% ra_absorb_(+Candidates, +Avail, -Taken, -Rem)
+ra_absorb_([], Avail, [], Avail).
+ra_absorb_([H_|T_], Avail, [H_|Taken], Rem) :-
+% H_ exists in Avail: take it and remove it from Avail.
+    select(H_, Avail, Avail2_), !,
+    ra_absorb_(T_, Avail2_, Taken, Rem).
+ra_absorb_([_|T_], Avail, Taken, Rem) :-
+% H_ not in Avail: skip it.
+    ra_absorb_(T_, Avail, Taken, Rem).
+
+% ra_bfs4_: BFS over R-C pairs; expands Queue through Available set.
+% ra_bfs4_(+Queue, +Available, +NR, +NC, -Visited, -Remaining)
+ra_bfs4_([], Avail, _, _, [], Avail).
+ra_bfs4_([H_|QT_], Avail, NR, NC, [H_|Vis], Rem) :-
+% Get 4-connected neighbors of current cell.
+    H_ = R_-C_,
+    ra_nbrs4_(R_, C_, NR, NC, Nbrs_),
+% Absorb any neighbors found in Avail into the BFS queue.
+    ra_absorb_(Nbrs_, Avail, NewQ_, Avail2_),
+% Append new cells to end of queue (breadth-first).
+    append(QT_, NewQ_, Queue2_),
+    ra_bfs4_(Queue2_, Avail2_, NR, NC, Vis, Rem).
+
+% ra_cc4_: connected components (4-connected) of a list of R-C pairs.
+% ra_cc4_(+Pts, +NR, +NC, -Comps) each comp is [R-C|...].
+ra_cc4_([], _, _, []).
+ra_cc4_([Seed_|Rest_], NR, NC, [Comp_|Comps]) :-
+% Grow one component from Seed_ through the remaining points.
+    ra_bfs4_([Seed_], Rest_, NR, NC, Comp_, Rem_),
+    ra_cc4_(Rem_, NR, NC, Comps).
+
+% ra_split_col_: partition R-C-V list into same-color R-C list and other R-C-V list.
+% ra_split_col_(+V, +Cells, -SameRC, -OtherRCV)
+ra_split_col_(_, [], [], []).
+ra_split_col_(V, [R_-C_-V|T_], [R_-C_|S_], O_) :- !,
+    ra_split_col_(V, T_, S_, O_).
+ra_split_col_(V, [H_|T_], S_, [H_|O_]) :-
+    ra_split_col_(V, T_, S_, O_).
+
+% ra_add_col_: prepend color V to each R-C pair to form R-C-V triples.
+% ra_add_col_(+Pairs, +V, -Triples)
+ra_add_col_([], _, []).
+ra_add_col_([R_-C_|T_], V, [R_-C_-V|T2_]) :-
+    ra_add_col_(T_, V, T2_).
+
+% ra_shape_comps_: connected components of non-Bg non-2 cells.
+% ra_shape_comps_(+Grid, +Bg, +NR, +NC, -Comps)
+% Comps = [comp(V,[R-C|...])|...]
+ra_shape_comps_(Grid, Bg, NR, NC, Comps) :-
+% Collect all non-background non-2 cells with their color value.
+    findall(R_-C_-V_,
+        ( nth0(R_, Grid, Row_), nth0(C_, Row_, V_),
+          V_ \= Bg, V_ \= 2 ),
+        Cells_),
+    ra_shape_comps_aux_(Cells_, NR, NC, Comps).
+
+% ra_shape_comps_aux_: auxiliary recursive shape-component grouping.
+% ra_shape_comps_aux_(+Cells, +NR, +NC, -Comps)
+ra_shape_comps_aux_([], _, _, []).
+ra_shape_comps_aux_([R_-C_-V_|Rest_], NR, NC, [comp(V_,Pts_)|Comps]) :-
+% Extract all same-color R-C pairs from Rest_ for BFS.
+    ra_split_col_(V_, Rest_, SamePts_, OtherCells_),
+% BFS from (R,C) through same-color neighbors.
+    ra_bfs4_([R_-C_], SamePts_, NR, NC, RestComp_, RemSame_),
+% This component's points: seed plus BFS result.
+    Pts_ = [R_-C_|RestComp_],
+% Rebuild R-C-V triples for remaining same-color points.
+    ra_add_col_(RemSame_, V_, RemSameV_),
+% Continue with all remaining cells (same- and other-color).
+    append(RemSameV_, OtherCells_, AllRem_),
+    ra_shape_comps_aux_(AllRem_, NR, NC, Comps).
+
+% ra_min_manhattan_: minimum Manhattan distance between two R-C point sets.
+% ra_min_manhattan_(+SetA, +SetB, -MinDist)
+ra_min_manhattan_(SetA_, SetB_, MinDist) :-
+% Compute all pairwise Manhattan distances.
+    findall(D_,
+        ( member(Ra_-Ca_, SetA_),
+          member(Rb_-Cb_, SetB_),
+          D_ is abs(Ra_-Rb_) + abs(Ca_-Cb_) ),
+        Ds_),
+% Return the minimum.
+    min_list(Ds_, MinDist).
+
+% ra_nearest_cluster_: find the nearest 2-cluster to a shape component.
+% ra_nearest_cluster_(+ShapePts, +Clusters, -Nearest)
+ra_nearest_cluster_(ShapePts_, Clusters_, Nearest_) :-
+% Compute distance from shape to each cluster.
+    findall(D_-Cl_,
+        ( member(Cl_, Clusters_),
+          ra_min_manhattan_(ShapePts_, Cl_, D_) ),
+        Pairs_),
+% Sort by distance; first element is nearest.
+    sort(Pairs_, [_-Nearest_|_]).
+
+% ra_extract_rows_: extract R values from list of R-C pairs.
+% ra_extract_rows_(+Pairs, -Rows)
+ra_extract_rows_([], []).
+ra_extract_rows_([R_-_|T_], [R_|Rows_]) :-
+    ra_extract_rows_(T_, Rows_).
+
+% ra_extract_cols_: extract C values from list of R-C pairs.
+% ra_extract_cols_(+Pairs, -Cols)
+ra_extract_cols_([], []).
+ra_extract_cols_([_-C_|T_], [C_|Cols_]) :-
+    ra_extract_cols_(T_, Cols_).
+
+% ra_all_equal_: true if all elements of a list are equal.
+% ra_all_equal_(+List)
+ra_all_equal_([_]).
+ra_all_equal_([X_,X_|T_]) :- ra_all_equal_([X_|T_]).
+
+% ra_axis_: determine reflection axis from a cluster of 2-cells.
+% ra_axis_(+Cluster, -Axis)
+% Axis = h(R) | v(C) | p(R,C)
+ra_axis_([R_-C_], p(R_,C_)) :- !.
+ra_axis_(Cluster_, Axis_) :-
+% Extract all row indices and check if uniform (horizontal axis).
+    ra_extract_rows_(Cluster_, Rows_),
+    ( ra_all_equal_(Rows_) ->
+        Rows_ = [R_|_], Axis_ = h(R_)
+    ;
+% Extract all col indices and check if uniform (vertical axis).
+      ra_extract_cols_(Cluster_, Cols_),
+      ( ra_all_equal_(Cols_) ->
+          Cols_ = [C_|_], Axis_ = v(C_)
+      ;
+% Fall back to point at first cell of cluster.
+        Cluster_ = [R_-C_|_], Axis_ = p(R_,C_) ) ).
+
+% ra_reflect_: reflect point (R,C) through axis to get (R2,C2).
+% ra_reflect_(+R, +C, +Axis, -R2, -C2)
+ra_reflect_(R, C, h(R0_), R2, C) :-
+% Horizontal: row reflects, col unchanged.
+    R2 is 2 * R0_ - R.
+ra_reflect_(R, C, v(C0_), R, C2) :-
+% Vertical: col reflects, row unchanged.
+    C2 is 2 * C0_ - C.
+ra_reflect_(R, C, p(R0_,C0_), R2, C2) :-
+% Point: both row and col reflect.
+    R2 is 2 * R0_ - R, C2 is 2 * C0_ - C.
+
+% ra_set_cell_: set cell (R,C) to value V in Grid; return updated Grid2.
+% ra_set_cell_(+Grid, +R, +C, +V, -Grid2)
+ra_set_cell_(Grid, R, C, V, Grid2) :-
+% Remove row R from Grid, yielding the row and the rest.
+    nth0(R, Grid, Row_, RestRows_),
+% Remove element C from the row.
+    nth0(C, Row_, _, RestCols_),
+% Insert V at position C to form the new row.
+    nth0(C, NewRow_, V, RestCols_),
+% Insert updated row back at position R.
+    nth0(R, Grid2, NewRow_, RestRows_).
+
+% ra_reflect_pts_: add reflected copies of each shape cell into Grid.
+% ra_reflect_pts_(+V, +Pts, +Axis, +NR, +NC, +Grid, -Grid2)
+ra_reflect_pts_(_, [], _, _, _, Grid, Grid).
+ra_reflect_pts_(V, [R_-C_|Rest_], Axis, NR, NC, Grid, Grid2) :-
+% Compute reflected position.
+    ra_reflect_(R_, C_, Axis, R2_, C2_),
+% Add reflected cell only if within grid bounds.
+    ( ra_inb_(R2_, C2_, NR, NC)
+    -> ra_set_cell_(Grid, R2_, C2_, V, Grid1_)
+    ;  Grid1_ = Grid ),
+    ra_reflect_pts_(V, Rest_, Axis, NR, NC, Grid1_, Grid2).
+
+% ra_apply_refls_: reflect all shape components into the grid.
+% ra_apply_refls_(+Comps, +TwoClusters, +NR, +NC, +Grid, -Out)
+ra_apply_refls_([], _, _, _, Grid, Grid).
+ra_apply_refls_([comp(V_,Pts_)|Rest_], TwoClusters_, NR, NC, Grid, Out) :-
+% Find the 2-cluster nearest to this shape component.
+    ra_nearest_cluster_(Pts_, TwoClusters_, NearCl_),
+% Determine reflection axis from that cluster.
+    ra_axis_(NearCl_, Axis_),
+% Add reflected cells to the grid.
+    ra_reflect_pts_(V_, Pts_, Axis_, NR, NC, Grid, Grid2_),
+    ra_apply_refls_(Rest_, TwoClusters_, NR, NC, Grid2_, Out).
+
+% arc2_transform(reflect_axis, +In, -Out): main entry point.
+arc2_transform(reflect_axis, In, Out) :-
+% Get grid dimensions.
+    ra_nrc_(In, NR, NC),
+% Identify background color.
+    ra_bg_(In, Bg_),
+% Collect all 2-cells.
+    findall(R_-C_,
+        ( nth0(R_, In, Row_), nth0(C_, Row_, 2) ),
+        Twos_),
+% Group 2-cells into connected clusters.
+    ra_cc4_(Twos_, NR, NC, TwoClusters_),
+% Find connected components of non-background non-2 shapes.
+    ra_shape_comps_(In, Bg_, NR, NC, ShapeComps_),
+% Reflect each shape across its nearest 2-cluster axis.
+    ra_apply_refls_(ShapeComps_, TwoClusters_, NR, NC, In, Out).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
