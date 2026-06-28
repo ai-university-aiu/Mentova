@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-27. Wave 6 complete: 6/120 = 5.00%.
+Last updated: 2026-06-28. Wave 8 complete: 8/120 = 6.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -128,10 +128,89 @@ Date        | Score      | Percent | Notes
 2026-06-27  |   5 / 120  |  4.17%  | Wave 5: stub-rank-fill vertical bar selection
 2026-06-27  |   6 / 120  |  5.00%  | Wave 6: band-wrap concentric rectangular rings
 2026-06-27  |   7 / 120  |  5.83%  | Wave 7: staircase-lift bar repositioning rule
+2026-06-28  |   8 / 120  |  6.67%  | Wave 8: bar-sort vertical bar height ordering
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 8 - 2026-06-28 - Score: 8/120 = 6.67%
+
+Date: 2026-06-28
+
+Confirmed score: 8 / 120 = 6.67%
+
+Rules added in this wave:
+
+bar_sort - Sort vertical bar heights, reassign colors to slots.
+
+Description: The input contains a horizontal divider row (first row with no
+background cells) and several vertical color bars crossing that divider. Each
+bar extends some number of rows upward (above-height HA) and downward (below-
+height HB) from the divider. The rule sorts the bars left-to-right by their
+above-height in ascending order, reassigning each bar's color to the sorted
+slot while keeping bar widths and the divider row unchanged.
+
+bar_sort algorithm:
+  1. BG = mode(all cells). DivIdx = first row index with no BG cell.
+  2. DIV = mode(divider row).
+  3. Parse divider row into Bars = [bar(StartCol, EndCol, Color), ...].
+  4. For each bar, compute HA (consecutive Color rows above DivIdx) and
+     HB (consecutive Color rows below DivIdx). Store as HA-HB pairs.
+  5. SortedPairs = msort(HA-HB pairs) - sort ascending by HA.
+  6. Output: divider row copied unchanged. For each other row and column,
+     look up the bar slot by column, then check the sorted HA/HB for that
+     slot against the row's distance from the divider. Use sorted color for
+     cells within range; use BG for cells outside all bar spans.
+
+New helper predicates:
+  arc2_bs_mode_/2         mode of a sorted list via linear scan.
+  arc2_bs_divider_/4      locate the divider row and its color.
+  arc2_bs_bars_/5         parse divider row into bar descriptors.
+  arc2_bs_run_/5          extend a run of identical color rightward.
+  arc2_bs_heights_/4      measure HA and HB for each bar.
+  arc2_bs_count_up_/6     count consecutive matching rows above divider.
+  arc2_bs_count_dn_/7     count consecutive matching rows below divider.
+  arc2_bs_cell_/8         compute output cell value given sorted bar data.
+  arc2_bs_bar_covers_/6   check if bar slot I covers column CI at row RI.
+
+Task solved: 31f7f899
+
+Description: Grid with a horizontal divider row (filled with a DIV color
+except where crossed by vertical bars) and N vertical color bars. Each bar
+is a contiguous run of its color in the divider row and extends up/down by
+amounts HA and HB respectively. The output reorders bars left-to-right by
+HA ascending; the divider and bar widths are preserved.
+
+Training pair 0 (13x13): 4 bars crossing divider at row 6.
+  Colors 5,2,7,1 with HA=4,3,2,1.  Sorted ascending HA: 1,2,3,4.
+  Output assigns color 1 to slot 0 (HA=1), 7 to slot 1 (HA=2),
+  2 to slot 2 (HA=3), 5 to slot 3 (HA=4). Exact match: True.
+
+Training pair 1 (15x15): 5 bars crossing divider at row 7.
+  Sorted HA ascending; colors reassigned to sorted slots. Exact match: True.
+
+Training pair 2 (7x7): 3 bars crossing divider at row 3.
+  Sorted HA ascending. Exact match: True.
+
+Test case (17x17): verified by arc2_transform(bar_sort, TestIn, TestOut).
+  Exact match: True.
+
+Bugs fixed: None.
+
+Lessons learned:
+
+1. The divider row is the structural anchor. Identifying it as "the first
+row with no background cells" is a clean, general-purpose definition that
+works for any grid size and any number of bars.
+
+2. msort/2 on (HA-HB) pairs sorts by the first element (HA) automatically,
+since Prolog term ordering places smaller numbers before larger ones. The
+bars are reassigned in sorted order: bar slot 0 gets the shortest HA, etc.
+
+3. The above-height HA is the meaningful sort key here. The below-height HB
+tags along with its HA partner and is not a sort criterion.
 
 
 ATTEMPT 7 - 2026-06-27 - Score: 7/120 = 5.83%
@@ -849,6 +928,7 @@ ALL SOLVED TASKS
 (Task IDs added in alphabetical order after each wave)
 
 1818057f  - Wave 1 - recolor_plus(4,8)   - plus shapes of 4 become 8
+31f7f899  - Wave 8 - bar_sort            - sort vertical bar heights, reassign colors to slots
 45a5af55  - Wave 6 - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7 - staircase_lift      - staircase heights reposition right-half color bars
 7b5033c1  - Wave 2 - chain_strip          - connected-blob chain traversal strip
