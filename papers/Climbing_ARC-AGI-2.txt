@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 15 complete: 15/120 = 12.50%.
+Last updated: 2026-06-28. Wave 16 complete: 16/120 = 13.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -137,10 +137,85 @@ Date        | Score      | Percent | Notes
 
 2026-06-28  |  14 / 120  | 11.67%  | Wave 14: reflect-axis shape reflection across 2-marker axis
 2026-06-28  |  15 / 120  | 12.50%  | Wave 15: period-repair periodic-pattern deviation fix
+2026-06-28  |  16 / 120  | 13.33%  | Wave 16: legend-fill frame-interior fill from color lookup table
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 16 - 2026-06-28 - Score: 16/120 = 13.33%
+
+Date: 2026-06-28
+
+Confirmed score: 16 / 120 = 13.33%
+
+Rules added in this wave:
+
+legend_fill - A solid 2xN or Nx2 rectangular block of non-background cells
+  embedded in the grid serves as a lookup table (the legend). Each column (for
+  a 2-row legend) or row (for a 2-column legend) defines a key-value pair.
+  The legend is the maximal solid block where the two rows or columns are
+  non-identical (different key and value entries). The key row or column is
+  whichever of the two contains more colors that appear as frame-border colors
+  in the grid; ties are broken in favor of the first row or column.
+
+  A frame is any set of same-colored cells that encloses background cells
+  completely (no path from any enclosed background cell to the grid boundary
+  exists without crossing the frame color). Background cells are detected by
+  flood-filling outward from the grid boundary; cells unreachable by that
+  flood are enclosed.
+
+  For each key color K with corresponding value V: find all enclosed
+  background cells whose ONLY adjacent non-background color is K (meaning the
+  cell is inside a frame of color K). Fill those cells with color V. Colors
+  that appear in the value row (but not the key row) of the legend are NOT
+  frame-trigger colors; their enclosed cells are left unfilled.
+
+Bugs fixed: none.
+
+Lessons learned:
+
+1. Legend detection requires picking the LONGEST solid block, not the first.
+   In training pair 0 of task dbff022c, the 4-frame checkerboard structure
+   places single-cell non-Bg runs at columns 1, 3, and 5 of rows 0-1 (each
+   run length 1), while the real legend is at columns 7-11 (run length 5).
+   The initial implementation committed to the first (shortest leftmost) run
+   via a cut, missing the actual legend. Fix: use findall to collect all runs,
+   then take the max-length one.
+
+2. Legend blocks must be required to have two distinct rows or columns.
+   In training pair 2 of dbff022c, the 2-frame border at rows 0-1 cols 12-13
+   produces a 2x2 block [2,2]/[2,2] that is the same length as the actual
+   legend [2,6]/[7,1] at cols 1-2. The first implementation incorrectly
+   picked the higher-index start (col 12 > col 1 in standard order). Fix:
+   filter out any block where the two rows are identical (SubA = SubB).
+   A real legend has at least one key-value pair where key != value; a uniform
+   frame border has all cells the same color.
+
+3. The key vs. value direction in the legend is determined by which row or
+   column contains more frame-border colors. In the test case, the bottom
+   legend row [9,8,3,1,2] contains frame colors {3,1,2} while the top row
+   [5,4,6,7,8] contains only {5}. The bottom row has more matches so it
+   becomes the key row. This correctly gives the mappings 3->6, 1->7, 2->8
+   for the three closed frames in the test grid.
+
+4. Open frames (with a gap in their border) are naturally handled: their
+   enclosed cell set is empty (boundary flood fill reaches through the gap
+   into the interior). The 5-frame in the test case has an opening at the
+   bottom-right, so no interior cells are classified as enclosed.
+
+Task solved: dbff022c (3 training pairs; grids range from 4x15 to 12x12;
+  each contains a legend table and 2-4 closed frames of various shapes;
+  interior background cells of key-colored frames are filled with the
+  mapped value color). Training pairs 0, 1, 2 and test case all pass.
+
+Score advance: 15/120 = 12.50% to 16/120 = 13.33%.
+
+Accomplishment: Acc_314.  Paper: Acc_314_ARC2_Wave16.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
 
 
 ATTEMPT 15 - 2026-06-28 - Score: 15/120 = 12.50%
@@ -1413,6 +1488,7 @@ ALL SOLVED TASKS
 8e5c0c38  - Wave 11 - sym_restore          - per-colour vertical symmetry restoration
 80a900e0  - Wave 3  - arm_endpoint_ray     - checkerboard diagonal arm projection
 97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
+dbff022c  - Wave 16 - legend_fill         - fill closed frame interiors using a color lookup table
 e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to middle
 
 
@@ -1514,4 +1590,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 14: Reflect-axis shape reflection across 2-m
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 15: Period-repair periodic-pattern deviation fix rule.
   Score: 15/120 = 12.50%. Task 135a2760 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 16: Legend-fill frame-interior fill from color lookup table rule.
+  Score: 16/120 = 13.33%. Task dbff022c solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.

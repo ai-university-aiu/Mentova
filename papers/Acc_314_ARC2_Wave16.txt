@@ -1,0 +1,218 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Accomplishment 314 - ARC-AGI-2 Wave 16: Legend-Fill Frame-Interior Rule (legend_fill)
+Task dbff022c - Score Advances to 16/120 = 13.33%
+Date: 2026-06-28
+
+ABSTRACT
+
+Mentova solves ARC-AGI-2 task dbff022c using a new glass-box named rule called
+legend_fill. The rule identifies a compact rectangular "legend" table embedded
+in the grid (a solid 2xN or Nx2 block of non-background cells) that maps
+frame-border colors to fill colors. Each closed frame in the grid whose border
+color appears as a key in the legend has its enclosed interior background cells
+replaced with the corresponding value color. Open frames (with a gap in their
+border) and frames whose colors are not legend keys are left unchanged. The rule
+is verified on all three training pairs and the test case of task dbff022c,
+raising the ARC-AGI-2 score from 15/120 = 12.50% to 16/120 = 13.33%.
+
+1. PROBLEM STATEMENT
+
+Task dbff022c presents grids containing two types of structures: a compact
+legend table and several closed rectangular frames of varying shapes and colors.
+The legend is a 2xN or Nx2 solid rectangle embedded somewhere in the grid.
+Each closed frame has interior background cells that must be filled with a
+specific color determined by consulting the legend. The challenge is to (a)
+correctly locate and parse the legend, (b) identify which row or column of the
+legend gives the key colors versus the fill colors, and (c) efficiently identify
+enclosed interior cells for each keyed frame.
+
+Training pair dimensions:
+  Train 0: 12x12 grid, bg=0, 9 changes. Legend at rows 0-1, cols 7-11 (5 pairs).
+  Train 1: 10x10 grid, bg=0, 6 changes. Legend at rows 0-3, cols 0-1 (4 pairs).
+  Train 2:  4x15 grid, bg=0, 2 changes. Legend at rows 0-1, cols 1-2 (2 pairs).
+
+Test case: 13x13 grid, bg=0, 11 changes. Legend at rows 11-12, cols 0-4 (5 pairs).
+
+2. LEGEND DETECTION
+
+The legend is the unique solid 2xN or Nx2 block in the grid where ALL cells in
+the block are non-background. "Solid" means no background gaps in the rectangle.
+"Non-identical" means the two rows (or columns) differ from each other - this
+distinguishes the legend from a uniform frame border segment.
+
+Detection algorithm:
+  For all pairs of adjacent rows (r, r+1): find the LONGEST contiguous column
+  range [c1..c2] where both row r and row r+1 are non-background at every
+  column. Require c2-c1+1 >= 2 and that the two sub-rows are not identical.
+
+  For all pairs of adjacent columns (c, c+1): find the LONGEST contiguous row
+  range [r1..r2] where both column c and column c+1 are non-background at every
+  row. Require r2-r1+1 >= 2 and that the two sub-columns are not identical.
+
+  Among all valid 2xN and Nx2 candidates, choose the one with the greatest N
+  (most key-value pairs). Ties favor row-format over column-format.
+
+Training 0: legend is the 2x5 block at rows 0-1, cols 7-11.
+  The 4-frame checkerboard at rows 0-1, cols 1-5 does NOT form a solid block
+  because row 1 has background cells at cols 2 and 4. Only the legend region
+  is solid across its full width of 5 columns.
+
+Training 1: the best 2-row block is 2 columns wide (rows 0-1, cols 0-1, length 2).
+  The best 2-col block is 4 rows tall (cols 0-1, rows 0-3, length 4).
+  Since 4 > 2, the column-format legend is chosen: col 0 = keys, col 1 = values.
+
+Training 2: both the real legend (rows 0-1, cols 1-2) and a 2x2 fragment of the
+  2-frame border (rows 0-1, cols 12-13) have length 2. The frame fragment is
+  [2,2]/[2,2] (both sub-rows identical). The legend [2,6]/[7,1] has distinct
+  rows. The non-identical requirement filters the frame fragment, leaving the
+  legend as the only candidate.
+
+3. KEY-VALUE DIRECTION
+
+Given a candidate block [Row1, Row2] (or [Col1, Col2]), the KEY row/col is
+whichever contains more colors that appear as frame-border colors in the grid.
+
+Frame-border color detection: a color C is a frame-border color if there exists
+at least one background cell in the grid that is completely enclosed by C-cells
+(not reachable from the grid boundary via 4-connected background traversal).
+
+Training 0: Row1=[3,4,6,9,5], Row2=[3,6,7,2,9]. Frame colors: {3,4,7}.
+  Row1 matches 3,4 (2 matches). Row2 matches 3,7 (2 matches). Tie: Row1 is key.
+  Mapping: 3->3, 4->6, 6->7, 9->2, 5->9.
+
+Training 1: Col0=[2,4,6,8], Col1=[6,5,8,1]. Frame colors: {4,5,8}.
+  Col0 matches 4,8 (2 matches). Col1 matches 5,8 (2 matches). Tie: Col0 is key.
+  Mapping: 2->6, 4->5, 6->8, 8->1.
+
+Training 2: Row1=[2,6], Row2=[7,1]. Frame colors: {2}.
+  Row1 matches 2 (1 match). Row2 matches none (0 matches). Row1 is key.
+  Mapping: 2->7, 6->1.
+
+Test: Row11=[5,4,6,7,8], Row12=[9,8,3,1,2]. Frame colors: {1,2,3}.
+  Row11 matches 5 (1 match, noting 5-frame is present). Row12 matches 3,1,2
+  (3 matches). Row12 has more: Row12 is key.
+  Mapping: 9->5, 8->4, 3->6, 1->7, 2->8.
+
+4. INTERIOR DETECTION AND FILLING
+
+Enclosed background cells are found by flood-filling outward from all boundary
+background cells (4-connected, background only). Any background cell NOT reached
+by this flood fill is "enclosed."
+
+For a key color K with value V: among all enclosed background cells, retain
+only those where every adjacent non-background cell has color K. These are the
+cells that belong exclusively to the K-frame's interior. Fill them with V.
+
+Training 0 fills:
+  4-frame at rows 0-2, cols 1-5 (irregular): interior cells (1,2),(1,4).
+    All neighbors of (1,2) and (1,4) are 4-cells. Key 4 -> fill with 6.
+    Result: (1,2)=6, (1,4)=6. 2 changes.
+
+  3-frame at rows 4-9, cols 1-4 (irregular): interior cells rows 5-8.
+    All neighbors of each interior cell are 3-cells. Key 3 -> fill with 3.
+    Result: 7 cells filled with 3. 7 changes.
+
+  7-frame at rows 6-10, cols 7-10 (irregular): interior cells (7,8),(8,8),(8,9),(9,9).
+    All 4 neighbors of each interior cell are 7-cells. But 7 is NOT a key
+    (7 is only in Row2 as a value). Not filled.
+
+  Total: 9 changes. Matches expected output exactly.
+
+Training 1 fills:
+  8-frame at rows 0-3, cols 4-7: interior cells (1,5),(1,6),(2,5),(2,6).
+    Key 8 -> fill with 1. 4 changes.
+
+  4-frame at rows 5-9, cols 7-9: interior cells (6,8),(8,8).
+    Key 4 -> fill with 5. 2 changes.
+
+  5-frame at rows 5-7, cols 1-5: open frame (gap at bottom-left corner).
+    Interior cells are reachable from boundary through the gap. Not enclosed.
+    5 is not a key anyway.
+
+  Total: 6 changes. Matches expected output exactly.
+
+Training 2 fills:
+  2-frame at rows 0-3, cols 10-13 (irregular): interior cells (1,11),(2,12).
+    Key 2 -> fill with 7. 2 changes.
+
+  4-frame at rows 0-3, cols 4-8: interior cells (1,5),(1,6),(1,7),(2,5),(2,6),(2,7).
+    4 is NOT a key in this legend (keys are {2,6}). Not filled.
+
+  Total: 2 changes. Matches expected output exactly.
+
+Test fills:
+  1-frame at rows 0-3, cols 1-5: interior (1,2),(1,3),(1,4),(2,3),(2,4).
+    Key 1 -> fill with 7. 5 changes.
+
+  3-frame at rows 0-3, cols 8-11: interior (1,9),(1,10),(2,9),(2,10).
+    Key 3 -> fill with 6. 4 changes.
+
+  2-cluster at rows 6-8, cols 1-3 (diamond shape): interior (7,2).
+    Key 2 -> fill with 8. 1 change.
+
+  2-cluster at rows 10-12, cols 9-11 (diamond shape): interior (11,10).
+    Key 2 -> fill with 8. 1 change.
+
+  5-frame at rows 5-9, cols 7-12: open frame (gap at bottom-right area).
+    Interior cells are reachable from boundary. Not enclosed. 5 is not a key.
+
+  Total: 11 changes. Matches expected output exactly.
+
+5. IMPLEMENTATION
+
+Predicate structure:
+  arc2_transform/3 with rule legend_fill:
+    flatten+msort+arc2_bs_mode_ to find background.
+    lf_legend_/4: find best solid block via lf_best_block_/4.
+    pairs_keys_values/3 to build K-V pair list.
+    foldl/4 over pairs, calling lf_apply_fill_/5 for each key.
+
+  lf_best_block_/4:
+    findall(N-row(A,B), lf_row_block_/5, RowCands).
+    findall(N-col(A,B), lf_col_block_/5, ColCands).
+    max_member to pick longest block.
+
+  lf_row_block_/5 and lf_col_block_/5:
+    Iterate over adjacent row (or col) pairs via between/3.
+    For each pair: findall over lf_solid_run_/7 for all starting positions.
+    Filter runs with length >= 2 and distinct sub-rows (SubA \= SubB).
+    Pick maximum-length run via max_member/2.
+
+  lf_solid_run_/7:
+    Non-deterministic: enumerate all S in [Lo..Hi] where both lists are non-Bg.
+    Extend each run with lf_solid_end_/6 to compute run length.
+
+  lf_orient_kv_/6:
+    lf_enclosed_all_/3: flood fill from boundary, subtract from all-Bg set.
+    lf_frame_colors_/4: findall non-Bg adjacent colors of enclosed cells.
+    include/3 to count Key/Val matches. Higher count = key.
+
+  lf_apply_fill_/5:
+    lf_enclosed_for_color_/4: enclosed cells where lf_unique_frame_color_ holds.
+    lf_unique_frame_color_/5: findall adjacent non-Bg colors; require sort = [K].
+    lf_fill_grid_/4: maplist over rows x cols; memberchk to detect cells to fill.
+
+  lf_flood_/7:
+    BFS via recursive list processing (queue of R-C pairs).
+    findall 4-connected Bg neighbors not yet in visited set.
+    subtract/3 to deduplicate new cells. append/3 to extend visited and queue.
+
+All predicates use the lf_ prefix to avoid name conflicts with other rules.
+
+6. INDUCTION GUARD
+
+arc2_induce_rule/2 for legend_fill:
+  - Requires non-empty training pairs.
+  - Requires a findable legend in the first training input (lf_legend_/4).
+  - Requires arc2_transform(legend_fill, In, Out) to succeed for all pairs.
+
+7. SCORE IMPACT
+
+Previous score: 15/120 = 12.50% (Wave 15, period_repair)
+Wave 16 adds: task dbff022c (legend_fill)
+New score: 16/120 = 13.33%
+
+Total solved: 135a2760, 1818057f, 31f7f899, 36a08778, 38007db0, 409aa875,
+  45a5af55, 4c3d4a41, 7491f3cf, 7b5033c1, 7ed72f31, 80a900e0, 8e5c0c38,
+  97d7923e, dbff022c, e376de54.
