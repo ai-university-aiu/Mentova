@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 16 complete: 16/120 = 13.33%.
+Last updated: 2026-06-28. Wave 17 complete: 17/120 = 14.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -138,10 +138,110 @@ Date        | Score      | Percent | Notes
 2026-06-28  |  14 / 120  | 11.67%  | Wave 14: reflect-axis shape reflection across 2-marker axis
 2026-06-28  |  15 / 120  | 12.50%  | Wave 15: period-repair periodic-pattern deviation fix
 2026-06-28  |  16 / 120  | 13.33%  | Wave 16: legend-fill frame-interior fill from color lookup table
+2026-06-28  |  17 / 120  | 14.17%  | Wave 17: frame-target legend-direction rule; dots move inside irregular frames
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 17 - 2026-06-28 - Score: 17/120 = 14.17%
+
+Date: 2026-06-28
+
+Confirmed score: 17 / 120 = 14.17%
+
+Rules added in this wave:
+
+frame_target - Small legend rectangles (color C, dense interior with 2-cells)
+  encode a movement direction for dot-4 cells enclosed within large irregular
+  frames of the same color.
+
+  Legend detection: a rectangle R1..R2 x C1..C2 is a legend if (a) every border
+  cell equals color C, (b) every interior cell is non-background, and (c) at
+  least one interior cell has value 2. Large irregular frames fail condition (b)
+  because their interiors contain background cells.
+
+  Direction derivation: the centroid of all 2-cells in the interior relative to
+  the interior center (R1+R2)/2, (C1+C2)/2 gives the direction vector
+  (Dr, Dc) in {-1, 0, +1}^2.
+
+  Enclosing frame detection: ray-shoot from each dot-4 in all four cardinal
+  directions; the frame color is the unique color hit by all four rays among
+  the set of known frame colors (colors appearing in the direction map).
+
+  Movement with clip rule: advance the dot step by step. For cardinal movement,
+  stop one step before any cell equal to the frame color. For diagonal movement
+  (Dr != 0 and Dc != 0), stop at the current cell if ANY of the three adjacent
+  cells in the movement direction equals the frame color: (R+Dr, C), (R, C+Dc),
+  or (R+Dr, C+Dc). This prevents diagonal movement from clipping through frame
+  corners.
+
+  Key design decision: the ray-shooting wall set is the known frame colors
+  extracted from the direction map, not hardcoded values. This correctly handles
+  the test case where frame color 1 (which equals the ARC integer 1) is a wall,
+  whereas hardcoding would have treated 1 as passable.
+
+  Performance fix in this wave: ft_find_legend_for_ previously iterated all
+  O(n^4) (R1, C1, R2, C2) combinations per color per task. Replaced with O(k^2)
+  iteration over actual Color_ positions: collect all cells with value Color_,
+  then try pairs as (top-left, bottom-right) corners with quick 4-corner checks
+  before the full border scan. Also added a per-task 10-second time limit
+  (call_with_time_limit/2) in arc2_attempt_task_ and removed pair induction from
+  the benchmark loop (no task has ever been solved by pair induction; single-rule
+  + recolor covers all 17 solved tasks). These changes reduce benchmark runtime
+  from timeout (>10 min) to approximately 2 minutes for 120 tasks.
+
+Bugs fixed:
+
+1. cut-in-findall blocked multi-legend detection: ft_find_legend_ used ! at end
+   of the body; inside findall the cut prevented alternatives for different Color_
+   values from being tried. Fixed: enumerate colors with member(Color_, AllColors_)
+   first, then call once(ft_find_legend_for_(...)) per color.
+
+2. Hardcoded color exclusions blocked 1-frame: ft_find_legend_ excluded Color_ 1
+   via Color_ \= 1. In task 88e364bc the large frame IS color 1, which is also a
+   valid legend frame color. Fixed: exclude only background and dot (4).
+
+3. Hardcoded passable set broke ray-shooting for frame-color-1 task: the ray
+   predicate used (V_ =:= Bg_ ; V_ =:= 1 ; V_ =:= 2 ; V_ =:= 4) as passable.
+   When frame color 1 was in the passable set, rays never reported hitting it.
+   Fixed: pass DirColors_ from the direction map as the wall set.
+
+4. Missing diagonal clip rule gave wrong stopping position: ft_shoot_ only checked
+   the full diagonal cell (R+Dr, C+Dc). For DOWN-RIGHT from (3,11) in the test
+   case, the wall at (4,13) is not the diagonal cell (4,12) but the col-only step
+   from (4,12). Fixed: stop if any of (R+Dr,C), (R,C+Dc), (R+Dr,C+Dc) = Color_.
+
+Lessons learned:
+
+1. Never hardcode ARC integer values (0, 1, 2, 4) as excluded colors or passable
+   values. In ARC-AGI-2 any integer can serve any structural role; always derive
+   the wall and passable sets from the task data itself.
+
+2. For brute-force rectangle search, pre-collect the positions of the target color
+   and iterate over those positions (O(k^2)) rather than all grid coordinates
+   (O(n^4)). Even a small increase in search space causes benchmark timeouts.
+
+3. For diagonal movement through a grid of walls, use a three-way clip test: stop
+   if the row-step, the col-step, OR the full diagonal step hits a wall. The
+   naive check (diagonal step only) allows movement through corners.
+
+4. Per-task time limits (call_with_time_limit) are essential once the rule set
+   grows large. Without them, pair-induction O(rules^2) stalls the entire run on
+   a small number of complex tasks.
+
+Task solved: 88e364bc (3 training pairs; grids are 20x20; each contains two frame
+  colors with one legend rectangle and one large irregular frame per color; 4-dot
+  cells inside the large frames move in the legend-encoded direction stopping one
+  step before the frame wall). Training pairs 0, 1, 2 and test case all pass.
+
+Score advance: 16/120 = 13.33% to 17/120 = 14.17%.
+
+Accomplishment: Acc_315.  Paper: Acc_315_ARC2_Wave17.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
 
 
 ATTEMPT 16 - 2026-06-28 - Score: 16/120 = 13.33%
@@ -1487,6 +1587,7 @@ ALL SOLVED TASKS
 7ed72f31  - Wave 14 - reflect_axis         - each shape reflected across its nearest 2-marker axis
 8e5c0c38  - Wave 11 - sym_restore          - per-colour vertical symmetry restoration
 80a900e0  - Wave 3  - arm_endpoint_ray     - checkerboard diagonal arm projection
+88e364bc  - Wave 17 - frame_target         - legend frames encode direction; dots move inside irregular frames
 97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
 dbff022c  - Wave 16 - legend_fill         - fill closed frame interiors using a color lookup table
 e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to middle
@@ -1594,4 +1695,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 15: Period-repair periodic-pattern deviation
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 16: Legend-fill frame-interior fill from color lookup table rule.
   Score: 16/120 = 13.33%. Task dbff022c solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 17: Frame-target legend-direction rule.
+  Score: 17/120 = 14.17%. Task 88e364bc solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.

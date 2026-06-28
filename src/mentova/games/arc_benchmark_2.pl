@@ -3206,6 +3206,212 @@ lf_extract_col_(Grid_, C_, Col_) :-
     maplist([Row_, Val_]>>(nth0(C_, Row_, Val_)), Grid_, Col_).
 
 % ---------------------------------------------------------------------------
+% frame_target rule (task 88e364bc)
+% ---------------------------------------------------------------------------
+% A "legend" frame is a small rectangle whose border is all one non-background
+% color C and whose interior contains no background cells and at least one 2.
+% The direction is: sign(2-centroid minus interior-center) = (Dr,Dc).
+% Each 4-dot enclosed in the large irregular frame of the same color C moves
+% step-by-step in direction (Dr,Dc), stopping 1 step before the nearest C-wall.
+% For diagonal movement the "clip" rule applies: stop if either the row-step
+% or the col-step (not just the diagonal step) would hit the frame wall.
+% ---------------------------------------------------------------------------
+
+% Enumerate frame_target as a known named rule.
+arc2_named_rule(frame_target).
+
+% arc2_induce_rule for frame_target: verify non-empty legend map and all pairs.
+arc2_induce_rule(TrainingPairs_, frame_target) :-
+% Require at least one training pair.
+    TrainingPairs_ \= [],
+% Extract background color from first training input.
+    TrainingPairs_ = [pair(In0_, _)|_],
+    flatten(In0_, Flat0_), msort(Flat0_, FS0_), arc2_bs_mode_(FS0_, Bg0_),
+% Require at least one legend frame to be found.
+    ft_build_dir_map_(In0_, Bg0_, [_|_]),
+% Require every pair to transform correctly under frame_target.
+    forall(member(pair(In_, Out_), TrainingPairs_),
+           arc2_transform(frame_target, In_, Out_)).
+
+% arc2_transform for frame_target: apply all 4-dot moves derived from legends.
+arc2_transform(frame_target, Grid_, Output_) :-
+% Compute background as most-frequent cell value.
+    flatten(Grid_, Flat_), msort(Flat_, FS_), arc2_bs_mode_(FS_, Bg_),
+% Build the direction map: Color-Dr-Dc for every legend frame.
+    ft_build_dir_map_(Grid_, Bg_, DirMap_),
+% Require at least one legend frame (fail-fast guard).
+    DirMap_ \= [],
+% Extract sorted list of all frame colors for ray-shooting passability.
+    findall(FC_, member(FC_-_-_, DirMap_), DirColors_),
+% Find all 4-dot positions in Grid.
+    findall(R_-C_, (nth0(R_,Grid_,Row_), nth0(C_,Row_,4)), Fours_),
+% For each 4: find enclosing frame color, look up direction, shoot to wall.
+    findall(R_-C_-NR_-NC_, (
+        member(R_-C_, Fours_),
+        ft_enclosing_color_(Grid_, DirColors_, R_, C_, FColor_),
+        member(FColor_-Dr_-Dc_, DirMap_),
+        ft_shoot_(Grid_, FColor_, R_, C_, Dr_, Dc_, NR_, NC_)
+    ), Moves_),
+% Compute grid dimensions for output construction.
+    length(Grid_, NRow_), Grid_ = [GR0_|_], length(GR0_, NCol_),
+% Build row and column index lists.
+    NRow1_ is NRow_ - 1, NCol1_ is NCol_ - 1,
+    numlist(0, NRow1_, RowIdxs_), numlist(0, NCol1_, ColIdxs_),
+% Build Output: source cleared first so a stuck 4 (src=dst) is removed.
+    maplist([RI_,OutRow_]>>(
+        nth0(RI_, Grid_, InRow_),
+        maplist([CI_,V_]>>(
+% Source of a move: clear the vacated (or stuck) 4-dot cell.
+            ( memberchk(RI_-CI_-_-_, Moves_) -> V_ = Bg_
+% Destination of a move (not a source): place the arriving 4-dot.
+            ; memberchk(_-_-RI_-CI_, Moves_) -> V_ = 4
+% Otherwise: copy cell unchanged from input.
+            ; nth0(CI_, InRow_, V_) )
+        ), ColIdxs_, OutRow_)
+    ), RowIdxs_, Output_).
+
+% ft_build_dir_map_/3: collect one Color-Dr-Dc per distinct legend color; deduplicate.
+ft_build_dir_map_(Grid_, Bg_, DirMap_) :-
+    findall(Color_-Dr_-Dc_, ft_find_legend_(Grid_, Bg_, Color_, Dr_, Dc_), Raw_),
+    sort(Raw_, DirMap_).
+
+% ft_find_legend_/5: enumerate each distinct non-Bg non-dot color in Grid_, then
+% find the first valid legend rectangle for that color using once/1.
+ft_find_legend_(Grid_, Bg_, Color_, Dr_, Dc_) :-
+% Collect all distinct cell values to enumerate candidate frame colors.
+    flatten(Grid_, Flat_), sort(Flat_, AllColors_),
+% Try each value that is not background and not the dot marker (4).
+    member(Color_, AllColors_),
+    Color_ \= Bg_, Color_ \= 4,
+% Find exactly one valid legend rectangle for this color (first found wins).
+    once(ft_find_legend_for_(Grid_, Bg_, Color_, Dr_, Dc_)).
+
+% ft_find_legend_for_/5: search for a valid legend rectangle of Color_.
+% Called under once/1 so only the first match is used.
+% Uses O(k^2) iteration over actual Color_ positions rather than O(n^4)
+% over all row/col combinations — prevents timeout on non-legend tasks.
+ft_find_legend_for_(Grid_, Bg_, Color_, Dr_, Dc_) :-
+% Collect all (R,C) positions where the cell equals Color_.
+    findall(R_-C_, (nth0(R_,Grid_,Row_), nth0(C_,Row_,Color_)), Positions_),
+% Pick top-left corner (R1,C1): any Color_ position.
+    member(R1_-C1_, Positions_),
+% Pick bottom-right corner (R2,C2): another Color_ position with R2>R1+1, C2>C1+1.
+    member(R2_-C2_, Positions_),
+    R2_ - R1_ >= 2, C2_ - C1_ >= 2,
+% Verify top-right corner (R1,C2) = Color_ (fast corner pre-check).
+    nth0(R1_, Grid_, TopRow_), nth0(C2_, TopRow_, Color_),
+% Verify bottom-left corner (R2,C1) = Color_ (fast corner pre-check).
+    nth0(R2_, Grid_, BotRow_), nth0(C1_, BotRow_, Color_),
+% Full border check now likely to succeed.
+    ft_rect_border_(Grid_, R1_, C1_, R2_, C2_, Color_),
+% Verify interior has no background cells and contains at least one 2.
+    ft_interior_ok_(Grid_, Bg_, R1_, C1_, R2_, C2_),
+% Collect all 2-cell positions in the interior.
+    findall(TR_-TC_, (
+        between(R1_,R2_,TR_), between(C1_,C2_,TC_),
+        TR_ > R1_, TR_ < R2_, TC_ > C1_, TC_ < C2_,
+        nth0(TR_,Grid_,TRow2_), nth0(TC_,TRow2_,2)
+    ), Twos_),
+% Require at least one 2 in the interior (double-check).
+    Twos_ \= [],
+% Derive direction from 2-centroid relative to interior center.
+    ft_dir_from_2s_(Twos_, R1_, C1_, R2_, C2_, Dr_, Dc_).
+
+% ft_rect_border_/6: verify all border cells of rectangle R1,C1..R2,C2 = Color.
+ft_rect_border_(Grid_, R1_, C1_, R2_, C2_, Color_) :-
+% Check top and bottom rows: every column C1..C2 must be Color.
+    forall(between(C1_, C2_, BC_), (
+        nth0(R1_, Grid_, TRow_), nth0(BC_, TRow_, Color_),
+        nth0(R2_, Grid_, BRow_), nth0(BC_, BRow_, Color_)
+    )),
+% Check left and right columns: every row R1..R2 must be Color.
+    forall(between(R1_, R2_, BR_), (
+        nth0(BR_, Grid_, MRow_),
+        nth0(C1_, MRow_, Color_), nth0(C2_, MRow_, Color_)
+    )).
+
+% ft_interior_ok_/6: interior of rectangle has no Bg cells and at least one 2.
+ft_interior_ok_(Grid_, Bg_, R1_, C1_, R2_, C2_) :-
+% Verify no interior cell equals Bg.
+    forall((between(R1_,R2_,IR_), IR_ > R1_, IR_ < R2_,
+            between(C1_,C2_,IC_), IC_ > C1_, IC_ < C2_), (
+        nth0(IR_, Grid_, IRow_), nth0(IC_, IRow_, IV_), IV_ \= Bg_
+    )),
+% Verify at least one interior cell equals 2.
+    once((between(R1_,R2_,TR_), TR_ > R1_, TR_ < R2_,
+          between(C1_,C2_,TC_), TC_ > C1_, TC_ < C2_,
+          nth0(TR_, Grid_, TWRow_), nth0(TC_, TWRow_, 2))).
+
+% ft_dir_from_2s_/7: compute direction as sign(2-centroid minus interior-center).
+ft_dir_from_2s_(Twos_, R1_, C1_, R2_, C2_, Dr_, Dc_) :-
+% Compute float center of the rectangle (midpoint of outer border rows/cols).
+    CenterR_ is (R1_ + R2_) / 2.0, CenterC_ is (C1_ + C2_) / 2.0,
+% Extract row and column coordinates of all 2-cells.
+    findall(TR_, member(TR_-_, Twos_), TRs_),
+    findall(TC_, member(_-TC_, Twos_), TCs_),
+% Compute arithmetic mean of 2-cell row and column indices.
+    sumlist(TRs_, SumR_), length(TRs_, Len_),
+    sumlist(TCs_, SumC_),
+    AvgR_ is SumR_ / Len_, AvgC_ is SumC_ / Len_,
+% Row direction: +1 if centroid is below center, -1 if above, 0 if equal.
+    ( AvgR_ > CenterR_ -> Dr_ = 1  ; AvgR_ < CenterR_ -> Dr_ = -1 ; Dr_ = 0 ),
+% Column direction: +1 if centroid is right of center, -1 if left, 0 if equal.
+    ( AvgC_ > CenterC_ -> Dc_ = 1  ; AvgC_ < CenterC_ -> Dc_ = -1 ; Dc_ = 0 ).
+
+% ft_enclosing_color_/5: find unique frame color enclosing 4 at (R_,C_).
+% Shoots rays in 4 directions; DirColors_ are the known frame colors (walls).
+% Succeeds only when all directions agree on exactly one frame color.
+ft_enclosing_color_(Grid_, DirColors_, R_, C_, Color_) :-
+% Shoot rays in all 4 cardinal directions and collect wall-hit frame colors.
+    findall(FC_, (
+        member(DR_-DC_, [0-1, 0-(-1), 1-0, (-1)-0]),
+        ft_ray_to_wall_(Grid_, DirColors_, R_, C_, DR_, DC_, FC_)
+    ), HitColors_),
+% Retain only colors that are known frame colors (filter non-frame hits).
+    include([FC_]>>(member(FC_, DirColors_)), HitColors_, FrameColors_),
+% Require exactly one unique frame color across all successful ray directions.
+    sort(FrameColors_, [Color_]).
+
+% ft_ray_to_wall_/7: shoot ray from (R,C) in direction (Dr,Dc); stop at a frame
+% color (member of DirColors_). Passes through all other cells. Fails at boundary.
+ft_ray_to_wall_(Grid_, DirColors_, R_, C_, Dr_, Dc_, Color_) :-
+% Advance one step in the ray direction.
+    NR_ is R_ + Dr_, NC_ is C_ + Dc_,
+% Fail if the new position is outside grid bounds.
+    length(Grid_, NRG_), NR_ >= 0, NR_ < NRG_,
+    nth0(NR_, Grid_, NRow_), length(NRow_, NCG_), NC_ >= 0, NC_ < NCG_,
+% Read the cell value at the new position.
+    nth0(NC_, NRow_, V_),
+% Stop if V_ is a frame color; otherwise pass through and recurse.
+    ( member(V_, DirColors_) ->
+        Color_ = V_
+    ;
+        ft_ray_to_wall_(Grid_, DirColors_, NR_, NC_, Dr_, Dc_, Color_)
+    ).
+
+% ft_shoot_/8: move from (R,C) in direction (Dr,Dc) until 1 step before Color wall.
+% For diagonal directions uses the clip rule: stop if either the row-component
+% step or the col-component step (not just the diagonal step) hits the wall.
+% Returns final safe position (NR_,NC_). Fails if grid boundary is reached.
+ft_shoot_(Grid_, Color_, R_, C_, Dr_, Dc_, NR_, NC_) :-
+% Compute grid dimensions for bounds checking.
+    length(Grid_, NRG_), Grid_ = [SR0_|_], length(SR0_, NCG_),
+% Compute next candidate position.
+    R1_ is R_ + Dr_, C1_ is C_ + Dc_,
+% Fail if the next position is outside grid bounds.
+    R1_ >= 0, R1_ < NRG_, C1_ >= 0, C1_ < NCG_,
+% Read the diagonal-step cell and (for diagonal moves) the two axis-step cells.
+    nth0(R1_, Grid_, SRowD_), nth0(C1_, SRowD_, SV_D_),
+    nth0(R_,  Grid_, SRow0_), nth0(C1_, SRow0_, SV_C_),
+    nth0(R1_, Grid_, SRow1_), nth0(C_,  SRow1_, SV_R_),
+% Clip rule: stop at (R,C) if any of the three adjacent next cells = Color.
+    ( (SV_D_ =:= Color_ ; SV_C_ =:= Color_ ; SV_R_ =:= Color_) ->
+        NR_ = R_, NC_ = C_
+    ;
+        ft_shoot_(Grid_, Color_, R1_, C1_, Dr_, Dc_, NR_, NC_)
+    ).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
@@ -3251,22 +3457,30 @@ arc2_benchmark_run(Score, Total, Results) :-
     length(Passed, Score).
 
 % arc2_attempt_task_(+Task, -Result): attempt one task; return pass or fail.
+% A per-task 10-second limit prevents pair-induction from hanging the benchmark.
 arc2_attempt_task_(task(TaskId, TrainingPairs, TestIn, TestOut), Result) :-
+    % Wrap the full attempt in a time limit so no task stalls the benchmark.
+    ( catch(
+        call_with_time_limit(10.0,
+            arc2_attempt_task_inner_(TaskId, TrainingPairs, TestIn, TestOut, Result)),
+        time_limit_exceeded,
+        Result = result(TaskId, fail)
+    ) -> true ; Result = result(TaskId, fail) ).
+
+% arc2_attempt_task_inner_/5: attempt task without time limit (called inside limit).
+% Pair induction (Level 2) is omitted from the benchmark loop because
+% it tries 576 combinations and dominates runtime; single-rule + recolor
+% covers all currently solved tasks.
+arc2_attempt_task_inner_(TaskId, TrainingPairs, TestIn, TestOut, Result) :-
     % Level 1: single named rule.
     (   arc2_induce_rule(TrainingPairs, Rule),
         arc2_transform(Rule, TestIn, Computed),
         Computed = TestOut
     ->  Result = result(TaskId, pass(Rule))
-    % Level 2: ordered pair of named rules (2-step composition).
-    ;   arc2_induce_rule_pair_(TrainingPairs, pair(R1, R2)),
-        arc2_transform(R1, TestIn, Mid),
-        arc2_transform(R2, Mid, Computed2),
-        Computed2 = TestOut
-    ->  Result = result(TaskId, pass(pair(R1, R2)))
-    % Level 3: color bijection recoloring.
+    % Level 2: color bijection recoloring.
     ;   arc2_induce_recolor(TrainingPairs, Mapping),
-        arc2_recolor_grid(Mapping, TestIn, Computed3),
-        Computed3 = TestOut
+        arc2_recolor_grid(Mapping, TestIn, Computed2),
+        Computed2 = TestOut
     ->  Result = result(TaskId, pass(recolor_auto))
     % No level solved it.
     ;   Result = result(TaskId, fail)

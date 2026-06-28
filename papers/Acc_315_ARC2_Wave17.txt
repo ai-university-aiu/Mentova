@@ -1,0 +1,161 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Accomplishment 315 - ARC-AGI-2 Wave 17: Frame-Target Legend-Direction Rule (frame_target)
+Task 88e364bc - Score Advances to 17/120 = 14.17%
+Date: 2026-06-28
+
+ABSTRACT
+
+Mentova solves ARC-AGI-2 task 88e364bc using a new glass-box named rule called
+frame_target. The rule identifies "legend" frames: small rectangles whose border
+is entirely one color C, whose interior contains no background cells, and whose
+interior has at least one direction-marker cell (value 2). The 2-cell centroid
+relative to the interior center encodes a movement direction (Dr, Dc). Each
+dot-4 enclosed within the large irregular frame of the same color C is then
+moved step-by-step in direction (Dr, Dc) until one step before the nearest
+C-colored wall. For diagonal directions a clip rule applies: the dot stops
+when any of the three adjacent cells in the movement direction (the row step,
+the column step, or the full diagonal step) equals the frame color. The rule
+is verified on all three training pairs and the test case of task 88e364bc,
+raising the ARC-AGI-2 score from 16/120 = 13.33% to 17/120 = 14.17%.
+
+1. PROBLEM STATEMENT
+
+Task 88e364bc presents grids containing two types of colored frames per
+frame-color: a small "legend" rectangle and one or more large irregular closed
+frames. The legend rectangle encodes a direction via the position of value-2
+cells relative to the rectangle center. Value-4 dots inside the large frames
+must move in the legend-encoded direction until they are stopped one step before
+the frame wall. The challenge is to (a) detect legend rectangles and distinguish
+them from large irregular frames, (b) derive the direction vector from 2-cell
+positions, (c) correctly determine which large frame encloses each dot, and
+(d) implement the diagonal clip stopping rule for non-cardinal directions.
+
+Training pair dimensions: 20x20 (3 pairs). Two frame colors per grid: 7 and 5
+in pair 1 (directions RIGHT and LEFT), 5 in pair 2 (direction DOWN-RIGHT),
+5 in pair 3 (direction DOWN). Test grid: 20x20, two frame colors 5 and 1
+(directions DOWN-RIGHT and UP respectively).
+
+2. RULE DERIVATION
+
+Step 1 - Legend frame detection.
+A legend frame is a rectangle R1..R2 x C1..C2 such that:
+(a) every cell on the border equals color C;
+(b) every cell in the interior is non-background;
+(c) at least one interior cell has value 2.
+Large irregular frames fail condition (b) because their interior contains
+background cells. This is the key discriminator.
+
+Step 2 - Direction derivation.
+For a legend frame at R1..R2 x C1..C2:
+- Interior center: CenterR = (R1+R2)/2.0, CenterC = (C1+C2)/2.0.
+- 2-cell centroid: average row and column of all interior cells with value 2.
+- Direction: Dr = sign(AvgR - CenterR), Dc = sign(AvgC - CenterC).
+This gives a direction vector in {-1,0,+1}^2.
+
+Pair 1 examples:
+- 7-legend (rows 0-4, cols 0-4): 2-cells at (1,3) and (3,3). Center=(2,2).
+  Centroid=(2,3). Direction=(0,+1) = RIGHT.
+- 5-legend (rows 0-4, cols 15-19): 2-cells at (1,16) and (3,16). Center=(2,17).
+  Centroid=(2,16). Direction=(0,-1) = LEFT.
+
+Pair 2 example:
+- 5-legend (rows 0-5, cols 13-19): 2-cells at (3,16), (3,18), (4,15), (4,17).
+  Center=(2.5,16). Centroid=(3.5,16.5). Direction=(+1,+1) = DOWN-RIGHT.
+
+Pair 3 example:
+- 5-legend (rows 0-4, cols 15-19): 2-cells at (3,16) and (3,18). Center=(2,17).
+  Centroid=(3,17). Direction=(+1,0) = DOWN.
+
+Test example:
+- 5-legend (rows 0-5, cols 0-6): 2-cells at (3,5) and (4,3). Center=(2.5,3.0).
+  Centroid=(3.5,4.0). Direction=(+1,+1) = DOWN-RIGHT.
+- 1-legend (rows 15-19, cols 0-4): 2-cells at (16,1) and (16,3). Center=(17,2).
+  Centroid=(16,2). Direction=(-1,0) = UP.
+
+Step 3 - Enclosing frame detection.
+For each dot-4, ray-shoot in all 4 cardinal directions. Stop at any known
+frame color (a color that appears in the direction map). If all successful
+rays return the same frame color, that is the dot's enclosing frame.
+
+Step 4 - Dot movement with clip rule.
+To move dot at (R,C) in direction (Dr,Dc) until 1 step before the C-wall:
+For each candidate step to (R+Dr, C+Dc):
+- Cardinal (Dr=0 or Dc=0): stop if cell at next position = FrameColor.
+- Diagonal (Dr!=0 and Dc!=0): stop if ANY of three cells equals FrameColor:
+    (R+Dr, C)    -- row-only step (col unchanged)
+    (R, C+Dc)    -- col-only step (row unchanged)
+    (R+Dr, C+Dc) -- full diagonal step
+The clip rule prevents a dot from moving diagonally through a frame corner.
+
+Test case movements verified:
+- (3,11) via DOWN-RIGHT (+1,+1), 5-frame: stops at (4,12) because (4,13)=5.
+- (6,11) via DOWN-RIGHT (+1,+1), 5-frame: stops at (9,14) because (10,14)=5.
+- (12,9) via UP (-1,0), 1-frame: stops at (11,9) because (10,9)=1.
+- (17,16) via UP (-1,0), 1-frame: stops at (14,16) because (13,16)=1.
+- (18,11) via UP (-1,0), 1-frame: stops at (16,11) because (15,11)=1.
+
+3. IMPLEMENTATION
+
+The rule is implemented in arc_benchmark_2.pl as arc2_named_rule(frame_target),
+arc2_induce_rule/2, and arc2_transform/3. Key helper predicates (ft_ prefix):
+
+- ft_build_dir_map_/3: find all legend frames and build the direction map.
+- ft_find_legend_/5: enumerate distinct non-background non-dot colors;
+  for each, search for a valid legend rectangle using once/1.
+- ft_find_legend_for_/5: brute-force rectangle search for a given color.
+- ft_rect_border_/6: verify all border cells of a rectangle equal one color.
+- ft_interior_ok_/6: verify no background in interior, at least one 2.
+- ft_dir_from_2s_/7: compute direction from 2-centroid vs rectangle center.
+- ft_enclosing_color_/5: ray-shoot from a dot to find its enclosing frame.
+- ft_ray_to_wall_/7: shoot ray until any frame color is hit.
+- ft_shoot_/8: advance dot with clip-rule stopping.
+
+A key design decision: the passable set for ray-shooting uses the known
+frame colors (from DirMap) rather than hardcoded values. This correctly
+handles the test case where frame color 1 is also the content-marker value
+used inside legend rectangles - a case that would have been missed if 1 were
+hardcoded as always passable.
+
+4. SIGNIFICANCE
+
+Wave 17 introduces two new capabilities to the PrologAI platform:
+
+(a) Legend-direction decoding: direction vectors encoded in compact rectangular
+legends with 2-marker positions, extending beyond simple color lookups.
+
+(b) Diagonal clip movement: step-by-step movement with the clip stopping rule,
+correctly stopping at frame corners for diagonal directions. This extends the
+platform's movement repertoire from axis-aligned to fully 8-directional.
+
+These capabilities expand Mentova's spatial reasoning vocabulary and are directly
+applicable to future ARC-AGI-2 tasks involving direction-encoded movement.
+
+5. SCORE PROGRESSION
+
+Wave 1:  1/120 =  0.83%  (recolor_plus)
+Wave 2:  2/120 =  1.67%  (chain_strip)
+Wave 3:  3/120 =  2.50%  (arm_endpoint_ray)
+Wave 4:  4/120 =  3.33%  (segment_equalize)
+Wave 5:  5/120 =  4.17%  (stub_rank_fill)
+Wave 6:  6/120 =  5.00%  (band_wrap)
+Wave 7:  7/120 =  5.83%  (staircase_lift)
+Wave 8:  8/120 =  6.67%  (bar_sort)
+Wave 9:  9/120 =  7.50%  (panel_overlay)
+Wave 10: 10/120 =  8.33%  (apex_shadow)
+Wave 11: 11/120 =  9.17%  (sym_restore)
+Wave 12: 12/120 = 10.00%  (waterfall)
+Wave 13: 13/120 = 10.83%  (odd_col)
+Wave 14: 14/120 = 11.67%  (reflect_axis)
+Wave 15: 15/120 = 12.50%  (period_repair)
+Wave 16: 16/120 = 13.33%  (legend_fill)
+Wave 17: 17/120 = 14.17%  (frame_target)
+
+REFERENCES
+
+Dison, D. R. (2026). PrologAI ARC-AGI-2 benchmark climbing log.
+  Mentova repository, papers/Climbing_ARC-AGI-2.txt, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 17: Frame-target legend-direction rule.
+  Score: 17/120 = 14.17%. Task 88e364bc solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
