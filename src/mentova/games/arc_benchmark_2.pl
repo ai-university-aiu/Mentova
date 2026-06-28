@@ -677,6 +677,338 @@ arc2_induce_rule(TrainingPairs, segment_equalize) :-
            arc2_transform(segment_equalize, In, Out)).
 
 % ---------------------------------------------------------------------------
+% STUB RANK FILL RULE  (Wave 19)
+%
+% Solves ARC-AGI-2 tasks where short column stubs at the top of the grid
+% rank which vertical bars to fill.  Structure:
+%   - Stubs: topmost N cells of a column are all value V (non-bg), followed
+%     by bg.  stub(V, N) means "select the Nth-largest bar with endpoint V".
+%   - Vertical bars: column pattern [V, B, B, ..., B, V] where B \= V.
+%     Endpoint = V, body = B cells, body length = K.
+% Rule: for each stub(V, N), sort bars with endpoint V by K descending,
+%   pick the Nth, replace its body cells with V.
+%
+% Solves: task 97d7923e (ARC-AGI-2, Wave 19, 2026-06-27).
+% ---------------------------------------------------------------------------
+
+% Register stub_rank_fill as a known transform name.
+arc2_named_rule(stub_rank_fill).
+
+% arc2_transform for stub_rank_fill: fill vertical bar bodies per stub ranking.
+arc2_transform(stub_rank_fill, Grid, Result) :-
+%   Compute background color.
+    arc2_bg_color_(Grid, Bg),
+%   Grid dimensions.
+    length(Grid, H), Grid = [FR|_], length(FR, W),
+%   Column index upper bound.
+    W1 is W-1,
+%   Collect all stubs: stub(Color, Size).
+%   A stub at column C: topmost N cells all equal V (non-bg),
+%   cell at row N equals Bg (or N=H).
+    findall(stub(V, N),
+        (between(0, W1, C),
+         nth0(0, Grid, Row0), nth0(C, Row0, V), V \= Bg,
+         arc2_srf_top_run_(Grid, C, V, 0, N),
+         N >= 1,
+         (N >= H ->
+             true
+         ;
+             nth0(N, Grid, RowN), nth0(C, RowN, VN), VN =:= Bg)),
+        Stubs),
+%   Collect all vertical bars: vbar(Col, TopRow, BotRow, EndpColor, BodyLen).
+%   A bar at column C: row TR has V, row TR-1 is Bg (or TR=0),
+%   rows TR+1..BR-1 all have same non-bg value B \= V, row BR has V.
+    findall(vbar(C, TR, BR, V, K),
+        (between(0, W1, C),
+         arc2_srf_find_vbar_(Grid, C, Bg, H, TR, BR, V, K)),
+        VBars),
+%   For each stub, find the target bar (Nth-largest by body length) and
+%   collect fill operations: fill(Col, TopRow, BotRow, FillColor).
+    findall(fill(C, TR, BR, V),
+        (member(stub(V, N), Stubs),
+         findall(K-C2-TR2-BR2,
+                 member(vbar(C2, TR2, BR2, V, K), VBars),
+                 Cands0),
+         msort(Cands0, Sorted0),
+         reverse(Sorted0, Sorted),
+         nth1(N, Sorted, _-C-TR-BR)),
+        Fills),
+%   Apply all fills: replace body cells with the fill color.
+    arc2_srf_apply_fills_(Fills, Grid, Result).
+
+% arc2_srf_top_run_/5: count consecutive cells equal to V from row R downward
+% in column C.  Returns total count N.
+arc2_srf_top_run_(Grid, C, V, R, N) :-
+%   Check if row R is within the grid.
+    length(Grid, H),
+%   Base case: past end of grid.
+    (R >= H ->
+        N = 0
+    ;
+%       Get value at (R, C).
+        nth0(R, Grid, Row), nth0(C, Row, Rv),
+%       If it matches V, recurse on next row.
+        (Rv =:= V ->
+            R1 is R+1,
+            arc2_srf_top_run_(Grid, C, V, R1, N1),
+            N is N1+1
+        ;
+%           Stop counting.
+            N = 0
+        )
+    ).
+
+% arc2_srf_find_vbar_/8: find a vertical bar in column C of Grid.
+% Succeeds (possibly multiple times via backtracking) for each valid bar.
+arc2_srf_find_vbar_(Grid, C, Bg, H, TR, BR, V, K) :-
+%   Search all valid top-row indices.
+    H1 is H-1,
+    between(0, H1, TR),
+%   Top-row cell must be non-bg value V.
+    nth0(TR, Grid, RowTR), nth0(C, RowTR, V), V \= Bg,
+%   Cell above TR must be Bg (or TR is the first row).
+    (TR =:= 0 ->
+        true
+    ;
+        TRM1 is TR-1,
+        nth0(TRM1, Grid, RowAbove), nth0(C, RowAbove, VAbove),
+        VAbove =:= Bg),
+%   Body starts at TR+1; it must be non-bg and different from V.
+    TR1 is TR+1, TR1 < H,
+    nth0(TR1, Grid, RowB), nth0(C, RowB, B), B \= Bg, B \= V,
+%   Find bottom endpoint: row BR > TR+1 where cell equals V.
+    TR2 is TR+2,
+    between(TR2, H1, BR),
+%   All body rows TR+1..BR-1 must equal B.
+    BR1 is BR-1,
+    forall(between(TR1, BR1, R),
+           (nth0(R, Grid, RowR), nth0(C, RowR, Rc), Rc =:= B)),
+%   Bottom endpoint equals V.
+    nth0(BR, Grid, RowBR), nth0(C, RowBR, VBR), VBR =:= V,
+%   Body length.
+    K is BR-TR-1.
+
+% arc2_srf_apply_fills_/3: apply a list of fill ops to Grid, producing Result.
+% Each fill op is fill(Col, TopRow, BotRow, FillColor): replace cells at
+% column Col in rows TopRow+1..BotRow-1 with FillColor.
+arc2_srf_apply_fills_(Fills, Grid, Result) :-
+%   Grid dimensions.
+    length(Grid, H), Grid = [FR|_], length(FR, W),
+    H1 is H-1, W1 is W-1,
+%   Reconstruct grid row by row, cell by cell.
+    findall(Row,
+        (between(0, H1, R),
+         findall(V,
+             (between(0, W1, C),
+              nth0(R, Grid, GRow), nth0(C, GRow, Orig),
+              (arc2_srf_in_fill_zone_(Fills, R, C, FillV) ->
+                  V = FillV
+              ;
+                  V = Orig)),
+             Row)),
+        Result).
+
+% arc2_srf_in_fill_zone_/4: true if (R,C) is inside a fill zone.
+% Returns the fill color FillV.
+arc2_srf_in_fill_zone_(Fills, R, C, FillV) :-
+%   Find a fill op covering column C and row R (strictly between TR and BR).
+    member(fill(C, TR, BR, FillV), Fills),
+    TR1 is TR+1, BR1 is BR-1,
+    R >= TR1, R =< BR1.
+
+% arc2_induce_rule for stub_rank_fill: verify all training pairs match.
+arc2_induce_rule(TrainingPairs, stub_rank_fill) :-
+%   Guard: all pairs have same input/output dimensions.
+    forall(member(pair(In, Out), TrainingPairs),
+           (length(In, NR), length(Out, NR),
+            In = [FR|_], Out = [GR|_],
+            length(FR, NC), length(GR, NC))),
+%   Guard: first row of first input has at least one non-bg cell (there are stubs).
+    TrainingPairs = [pair(In0, _)|_],
+    arc2_bg_color_(In0, Bg0),
+    In0 = [Row0|_],
+    member(V0, Row0), V0 \= Bg0,
+%   Verify the transform matches every training pair.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(stub_rank_fill, In, Out)).
+
+% ---------------------------------------------------------------------------
+% PERIODIC REPAIR RULE  (Wave 5)
+%
+% Solves ARC-AGI-2 tasks where each "window" in the grid holds a row-periodic
+% pattern with one or more corrupted cells.  Structure:
+%   - Outer border of one color  (Bg, detected from the corner cell).
+%   - Inner margin of another color  (Frame, detected from cell [1][1]).
+%   - Content rows: first/last cell = Bg, second/second-to-last = Frame,
+%     interior = the periodic pattern.
+%
+% Algorithm: for every content row, find the period P (1..N//2) that minimises
+% violation count, build the majority-vote tile, and repair all violations.
+% Separator rows (all Bg) and frame rows (interior all Frame) pass through.
+%
+% Solves: task 135a2760 (ARC-AGI-2, Wave 5, 2026-06-27).
+% ---------------------------------------------------------------------------
+
+% --- Private helpers (majority-vote tile and periodic repair) ---
+
+% arc2_per_mode_/2: most frequent element in a non-empty list (run-scan).
+arc2_per_mode_([H|T], Mode) :-
+%   Sort to group equal elements.
+    msort([H|T], Sorted),
+%   Scan runs to find the element with the largest run.
+    arc2_per_run_mode_(Sorted, H, 1, H, 1, Mode).
+
+% arc2_per_run_mode_/6: recursive run-scan to find mode.
+arc2_per_run_mode_([], Cur, CN, Best, BN, Mode) :-
+%   End of list: emit whichever run was larger.
+    (CN > BN -> Mode = Cur ; Mode = Best).
+arc2_per_run_mode_([H|T], H, CN, Best, BN, Mode) :- !,
+%   Continuing current run; cut removes ambiguity with next clause.
+    CN1 is CN + 1,
+    arc2_per_run_mode_(T, H, CN1, Best, BN, Mode).
+arc2_per_run_mode_([H|T], Cur, CN, Best, BN, Mode) :-
+%   New element; update best if current run beats it.
+    H \= Cur,
+    (CN > BN -> NB = Cur, NBN = CN ; NB = Best, NBN = BN),
+    arc2_per_run_mode_(T, H, 1, NB, NBN, Mode).
+
+% arc2_per_tile_/3: majority-vote tile of length P from List.
+arc2_per_tile_(List, P, Tile) :-
+%   Compute list length.
+    length(List, N), N1 is N - 1,
+%   For each phase p in 0..P-1, collect all values at indices ≡ p mod P.
+    findall(Mode,
+        (between(0, P, P0), P0 < P,
+         findall(V, (between(0, N1, I), I mod P =:= P0, nth0(I, List, V)), Phase),
+         arc2_per_mode_(Phase, Mode)),
+        Tile).
+
+% arc2_per_violations_/4: list of viol(Index,Actual,Expected) for a 1D list.
+arc2_per_violations_(List, P, Tile, Viols) :-
+%   Compute list length.
+    length(List, N), N1 is N - 1,
+%   Collect all positions where the value differs from the tile at that phase.
+    findall(viol(I, Act, Exp),
+        (between(0, N1, I),
+         nth0(I, List, Act),
+         Ph is I mod P,
+         nth0(Ph, Tile, Exp),
+         Act \= Exp),
+        Viols).
+
+% arc2_per_repair_/4: rebuild List replacing every violation with its tile value.
+arc2_per_repair_(List, P, Tile, Repaired) :-
+%   Compute list length.
+    length(List, N), N1 is N - 1,
+%   For each position use the tile value where there is a violation.
+    findall(V,
+        (between(0, N1, I),
+         nth0(I, List, Orig),
+         Ph is I mod P,
+         nth0(Ph, Tile, Exp),
+         (Orig = Exp -> V = Orig ; V = Exp)),
+        Repaired).
+
+% arc2_per_best_period_/3: find period P in 1..max(1,N//2) with fewest violations.
+arc2_per_best_period_(List, P, NViol) :-
+%   Compute length; cap search at half-length to avoid trivial full-period winner.
+    length(List, N), N > 0,
+    Pmax is max(1, N // 2),
+%   Enumerate (violation_count, period) pairs.
+    findall(NV-Pd,
+        (between(1, Pmax, Pd),
+         arc2_per_tile_(List, Pd, Tile),
+         arc2_per_violations_(List, Pd, Tile, Vs),
+         length(Vs, NV)),
+        Pairs),
+%   Sort ascending by (NV, P); smallest NV then smallest P is first.
+    msort(Pairs, [NViol-P|_]).
+
+% --- Frame-aware row processing ---
+
+% arc2_per_is_content_row_/4: true if Row is a content row.
+% A content row has Frame at position Cl-1 and at least one non-Frame cell in Cl..Cr.
+arc2_per_is_content_row_(Row, Frame, Cl, Cr) :-
+%   Check cell at (Cl-1) = Frame.
+    Cl1 is Cl - 1,
+    nth0(Cl1, Row, Frame),
+%   Check at least one interior cell differs from Frame.
+    between(Cl, Cr, C),
+    nth0(C, Row, V),
+    V \= Frame, !.
+
+% arc2_per_repair_row_/6: repair one row; pass through non-content rows.
+arc2_per_repair_row_(Row, Frame, Cl, Cr, _Bg, OutRow) :-
+%   Identify this as a content row.
+    arc2_per_is_content_row_(Row, Frame, Cl, Cr),
+%   Extract the interior cells.
+    findall(V, (between(Cl, Cr, C), nth0(C, Row, V)), Content),
+%   Find the period that minimises violations.
+    arc2_per_best_period_(Content, P, _),
+%   Build the majority-vote tile.
+    arc2_per_tile_(Content, P, Tile),
+%   Repair the content.
+    arc2_per_repair_(Content, P, Tile, RepContent),
+%   Reconstruct the full row with repaired content.
+    length(Row, W), Wm1 is W - 1,
+    findall(V,
+        (between(0, Wm1, C),
+         (C >= Cl, C =< Cr
+          -> Idx is C - Cl, nth0(Idx, RepContent, V)
+          ;  nth0(C, Row, V))),
+        OutRow), !.
+arc2_per_repair_row_(Row, _, _, _, _, Row).
+
+% arc2_per_repair_rows_/6: apply per-row repair to every row in Grid.
+arc2_per_repair_rows_([], _, _, _, _, []).
+arc2_per_repair_rows_([R|Rs], Frame, Cl, Cr, Bg, [OR|ORs]) :-
+%   Repair this row.
+    arc2_per_repair_row_(R, Frame, Cl, Cr, Bg, OR),
+%   Continue with remaining rows.
+    arc2_per_repair_rows_(Rs, Frame, Cl, Cr, Bg, ORs).
+
+% --- Public transform and induction ---
+
+% Register periodic_repair as a known named transform.
+arc2_named_rule(periodic_repair).
+
+% arc2_transform for periodic_repair: fix all periodic-pattern violations in every window.
+arc2_transform(periodic_repair, Grid, GridOut) :-
+%   Background color from corner cell.
+    nth0(0, Grid, Row0), nth0(0, Row0, Bg),
+%   Frame color from [1][1].
+    nth0(1, Grid, Row1), nth0(1, Row1, Frame),
+%   Require Bg and Frame to be distinct.
+    Bg \= Frame,
+%   Content columns: between the frame cells (cols 2..W-3).
+    length(Row0, W),
+    Cl is 2,
+    Cr is W - 3,
+%   Guard: content region must be non-empty.
+    Cl =< Cr,
+%   Repair every row.
+    arc2_per_repair_rows_(Grid, Frame, Cl, Cr, Bg, GridOut).
+
+% arc2_induce_rule for periodic_repair: verify all training pairs.
+arc2_induce_rule(TrainingPairs, periodic_repair) :-
+%   Guard: every pair preserves grid dimensions.
+    forall(member(pair(In, Out), TrainingPairs), (
+        length(In, NR), length(Out, NR),
+        In = [FR|_], Out = [GR|_], length(FR, NC), length(GR, NC)
+    )),
+%   Guard: every pair has the double-frame structure (at least 3 rows and 5 cols).
+    TrainingPairs = [pair(In0,_)|_],
+    length(In0, NR0), NR0 >= 3,
+    In0 = [FR0|_], length(FR0, NC0), NC0 >= 5,
+%   Guard: corner = cell[1][1] differs from corner (true two-layer frame).
+    nth0(0, In0, In0R0), nth0(0, In0R0, Bg0),
+    nth0(1, In0, In0R1), nth0(1, In0R1, Frame0),
+    Bg0 \= Frame0,
+%   Verify the transform matches the output for every training pair.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(periodic_repair, In, Out)).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------

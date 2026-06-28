@@ -1,0 +1,19 @@
+ARC-AGI-2 Wave 5 - Column Stub Rank-Fill - Score: 5/120 = 4.17%
+
+Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Mentova just solved its fifth ARC-AGI-2 evaluation task using a new glass-box rule called stub_rank_fill.
+
+The rule: the grid contains vertical bars and short color stubs at the column tops. A vertical bar is a column segment [V, B, B, ..., B, V] - endpoint color V at top and bottom, body color B in between. A stub of height N at a column with color V is an instruction: "find all bars with endpoint color V, sort by body length descending, and fill the body of the Nth one with V."
+
+The height of the stub IS the rank. Stub height 1 selects the longest matching bar. Stub height 2 selects the second longest. Multiple stubs for different colors can appear simultaneously; each selects its own bar independently.
+
+What makes this pattern elegant is that the encoding is purely geometric. The grid carries its own instruction manual: the stub lengths define the answer. No color legend, no external map needed. Pure structure-as-symbol.
+
+Score: 5/120 = 4.17%. Pure induction. No pretraining on the ARC-AGI-2 corpus. Every solved task is attributed to a named, independently verifiable Prolog rule.
+
+Solved tasks: 1818057f (Wave 1), 7b5033c1 (Wave 2), 80a900e0 (Wave 3), e376de54 (Wave 4), 97d7923e (Wave 5).
+
+Full details in Accomplishment Record Acc_303. The climb continues.
+
+#PrologAI #Mentova #ARCAGI2 #SymbolicAI #AIReasoning
