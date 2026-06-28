@@ -1004,6 +1004,9 @@ arc2_induce_rule(TrainingPairs, periodic_repair) :-
     nth0(0, In0, In0R0), nth0(0, In0R0, Bg0),
     nth0(1, In0, In0R1), nth0(1, In0R1, Frame0),
     Bg0 \= Frame0,
+%   Yield to period_repair if it also solves all training pairs.
+    \+ forall(member(pair(In_yr, Out_yr), TrainingPairs),
+              arc2_transform(period_repair, In_yr, Out_yr)),
 %   Verify the transform matches the output for every training pair.
     forall(member(pair(In, Out), TrainingPairs),
            arc2_transform(periodic_repair, In, Out)).
@@ -2755,6 +2758,218 @@ arc2_transform(reflect_axis, In, Out) :-
     ra_shape_comps_(In, Bg_, NR, NC, ShapeComps_),
 % Reflect each shape across its nearest 2-cluster axis.
     ra_apply_refls_(ShapeComps_, TwoClusters_, NR, NC, In, Out).
+
+% ---------------------------------------------------------------------------
+% WAVE 15: period_repair — task 135a2760
+% Each inner sequence (between wall markers in a row or column) follows a
+% repeating period-P pattern. Up to three cells break the pattern; repair them.
+% Strategy: among all P from 2..N//2 whose majority base has min support >= 0.75,
+% find the P with fewest errors (1..3); break ties by smallest P.
+% Rows and columns are both processed (columns via grid transpose).
+% ---------------------------------------------------------------------------
+
+% Register period_repair as a known named rule.
+arc2_named_rule(period_repair).
+
+% arc2_transform for period_repair: row repair pass then column repair pass.
+% arc2_transform(+period_repair, +Grid, -Out)
+arc2_transform(period_repair, In, Out) :-
+% Flatten grid to list and sort for background mode computation.
+    flatten(In, PrFlat_), msort(PrFlat_, PrFlatS_),
+% Find background color as the most common value.
+    arc2_bs_mode_(PrFlatS_, PrBg_),
+% Apply period repair to every row.
+    maplist(pr2_repair_row_(PrBg_), In, PrStep1_),
+% Transpose for column-wise repair pass.
+    arc2_transform(transpose, PrStep1_, PrT1_),
+% Apply period repair to every column (as a row in the transposed grid).
+    maplist(pr2_repair_row_(PrBg_), PrT1_, PrT2_),
+% Transpose back to restore original orientation.
+    arc2_transform(transpose, PrT2_, Out).
+
+% pr2_repair_row_(+Bg, +Row, -Fixed)
+% Repair one row: find wall marker, then fix each inner segment between walls.
+pr2_repair_row_(Bg, Row, Fixed) :-
+% Find wall = first non-background element; if none, row is all background.
+    ( member(W_, Row), W_ \= Bg -> Wall_ = W_ ; Wall_ = none ), !,
+% If no wall found, the row needs no repair.
+    ( Wall_ = none ->
+        Fixed = Row
+    ;
+% Collect positions of all occurrences of the wall marker.
+        findall(I_, (nth0(I_, Row, Wall_)), WPs_),
+% At least two wall positions are needed to form an inner segment.
+        length(WPs_, NWall_),
+        ( NWall_ >= 2 ->
+            pr2_fix_segs_(Row, WPs_, Fixed)
+        ;   Fixed = Row )
+    ).
+
+% pr2_fix_segs_(+Row, +WallPositions, -Fixed)
+% Iterate over consecutive wall-position pairs and repair each inner segment.
+pr2_fix_segs_(Row, [], Row).
+pr2_fix_segs_(Row, [_], Row).
+pr2_fix_segs_(Row, [S_,E_|WRest_], Fixed) :-
+% Compute inner segment length between wall positions S and E.
+    InLen_ is E_ - S_ - 1,
+% Only process segments with at least 5 inner cells (shorter ones are ambiguous).
+    ( InLen_ >= 5 ->
+% Compute start of inner segment.
+        S1_ is S_ + 1,
+% Extract the inner sub-list.
+        pr2_extract_(Row, S1_, InLen_, Inner_),
+% Find the best period for this inner sequence.
+        (   pr2_best_period_(Inner_, _P_, _Base_, Errs_),
+            Errs_ \= []
+        ->  pr2_apply_fixes_(Row, S1_, Errs_, Row1_)
+        ;   Row1_ = Row )
+    ; Row1_ = Row ),
+% Process remaining wall pairs on the (possibly modified) row.
+    pr2_fix_segs_(Row1_, [E_|WRest_], Fixed).
+
+% pr2_extract_(+List, +Offset, +Len, -Sub)
+% Extract sub-list of length Len starting at index Offset.
+pr2_extract_(List_, Offset_, Len_, Sub_) :-
+% Build prefix list of length Offset.
+    length(Pfx_, Offset_),
+% Split List at Offset.
+    append(Pfx_, Rest_, List_),
+% Take Len cells from the remainder.
+    length(Sub_, Len_),
+% Discard the tail after Sub.
+    append(Sub_, _, Rest_).
+
+% pr2_apply_fixes_(+Row, +Offset, +Errors, -Fixed)
+% Replace cells at error positions with the expected values.
+pr2_apply_fixes_(Row, _, [], Row).
+pr2_apply_fixes_(Row, Off_, [err(I_,_,E_)|Rest_], Fixed) :-
+% Absolute position = offset + inner index.
+    Pos_ is Off_ + I_,
+% Replace element at absolute position Pos with expected value E.
+    pr2_replace_nth0_(Row, Pos_, E_, Row1_),
+% Continue with remaining errors.
+    pr2_apply_fixes_(Row1_, Off_, Rest_, Fixed).
+
+% pr2_replace_nth0_(+List, +N, +V, -Out)
+% Replace the element at index N (0-based) in List with V.
+pr2_replace_nth0_([_|T_], 0, V_, [V_|T_]) :- !.
+pr2_replace_nth0_([H_|T_], N_, V_, [H_|T2_]) :-
+% Decrement index and recurse.
+    N1_ is N_ - 1,
+    pr2_replace_nth0_(T_, N1_, V_, T2_).
+
+% pr2_best_period_(+Seq, -P, -Base, -Errors)
+% Among all periods P in 2..N//2 whose majority base has min support >= 0.75,
+% find the one with the fewest errors (1..3); break ties by smallest P.
+pr2_best_period_(Seq_, P_, Base_, Errors_) :-
+% Sequence length; maximum period = half that length.
+    length(Seq_, N_),
+    MaxP_ is N_ // 2,
+% Collect all (ErrorCount - P - Base - Errors) candidates that pass support filter.
+    findall(Ec_-Pp_-Bb_-Ee_,
+            (between(2, MaxP_, Pp_),
+             pr2_majority_base_(Seq_, Pp_, Bb_),
+             pr2_min_support_(Seq_, Pp_, Bb_, MS_),
+             MS_ >= 0.75,
+             pr2_errors_(Seq_, Pp_, Bb_, Ee_),
+             length(Ee_, Ec_),
+             Ec_ >= 1, Ec_ =< 3),
+            Cands_),
+    Cands_ \= [],
+% sort/2 sorts lexicographically: fewest errors first, then smallest P.
+    sort(Cands_, Sorted_),
+    Sorted_ = [_-P_-Base_-Errors_|_].
+
+% pr2_majority_base_(+Seq, +P, -Base)
+% Compute the majority-vote base list for period P (all residues 0..P-1).
+pr2_majority_base_(Seq_, P_, Base_) :-
+% Last valid index.
+    length(Seq_, N_), N1_ is N_ - 1,
+% Residue positions 0..P-1.
+    P1_ is P_ - 1,
+    numlist(0, P1_, Positions_),
+% For each residue, collect all values at that position mod P, then take mode.
+    maplist([Pos_,MV_]>>(
+        findall(V_, (between(0, N1_, I_),
+                     I_ mod P_ =:= Pos_,
+                     nth0(I_, Seq_, V_)), Vals_),
+        pr2_mode_(Vals_, MV_)
+    ), Positions_, Base_).
+
+% pr2_min_support_(+Seq, +P, +Base, -MinSupp)
+% Minimum fraction of sequence elements that agree with Base across residues.
+pr2_min_support_(Seq_, P_, Base_, MinSupp_) :-
+    length(Seq_, N_), N1_ is N_ - 1,
+    P1_ is P_ - 1,
+    numlist(0, P1_, Positions_),
+    maplist([Pos_,Supp_]>>(
+        findall(V_, (between(0, N1_, I_),
+                     I_ mod P_ =:= Pos_,
+                     nth0(I_, Seq_, V_)), Vals_),
+        length(Vals_, Total_),
+        nth0(Pos_, Base_, Exp_),
+        include(==(Exp_), Vals_, Match_),
+        length(Match_, MC_),
+        Supp_ is MC_ / Total_
+    ), Positions_, Supps_),
+    min_list(Supps_, MinSupp_).
+
+% pr2_errors_(+Seq, +P, +Base, -Errors)
+% Collect err(I, Got, Expected) for every element that deviates from Base.
+pr2_errors_(Seq_, P_, Base_, Errors_) :-
+    length(Seq_, N_), N1_ is N_ - 1,
+    findall(err(I_,V_,E_),
+            (between(0, N1_, I_),
+             nth0(I_, Seq_, V_),
+             PI_ is I_ mod P_,
+             nth0(PI_, Base_, E_),
+             V_ \= E_),
+            Errors_).
+
+% pr2_mode_(+List, -Mode)
+% Find the most common element in List (mode).
+pr2_mode_([X_|Xs_], Mode_) :-
+% Sort list to group equal elements together.
+    msort([X_|Xs_], Sorted_),
+% Find mode using accumulator.
+    Sorted_ = [First_|SRest_],
+    pr2_mode_acc_(SRest_, First_, 1, First_, 1, Mode_).
+
+% pr2_mode_acc_(+Rest, +Cur, +CurN, +BestV, +BestN, -Mode)
+% Accumulate mode: track current run and best (highest count) value.
+pr2_mode_acc_([], _, _, BV_, _, BV_).
+pr2_mode_acc_([X_|Xs_], X_, N_, BV_, BN_, Mode_) :-
+% Extend current run.
+    N1_ is N_ + 1,
+    ( N1_ > BN_ ->
+% New best: current value takes the lead.
+        pr2_mode_acc_(Xs_, X_, N1_, X_, N1_, Mode_)
+    ;
+% No new best: keep current best.
+        pr2_mode_acc_(Xs_, X_, N1_, BV_, BN_, Mode_) ).
+pr2_mode_acc_([Y_|Xs_], X_, _N_, BV_, BN_, Mode_) :-
+% Run ended: start new run for Y.
+    X_ \= Y_,
+    pr2_mode_acc_(Xs_, Y_, 1, BV_, BN_, Mode_).
+
+% arc2_induce_rule clause for period_repair: verify all training pairs.
+arc2_induce_rule(TrainingPairs, period_repair) :-
+% Require at least 1 training pair.
+    TrainingPairs \= [],
+% Require all pairs to have the same grid dimensions.
+    forall(member(pair(In_, Out_), TrainingPairs), (
+        length(In_, NR_), length(Out_, NR_),
+        In_ = [FR_|_], Out_ = [GR_|_],
+        length(FR_, NC_), length(GR_, NC_) )),
+% Require a clear wall marker in first training input row.
+    TrainingPairs = [pair(In0_,_)|_],
+    flatten(In0_, Flat0_), msort(Flat0_, FS0_),
+    arc2_bs_mode_(FS0_, Bg0_),
+    In0_ = [_,Row1_0_|_],
+    once((member(Wall0_, Row1_0_), Wall0_ \= Bg0_)),
+% Require every pair to be solved by arc2_transform(period_repair, ...).
+    forall(member(pair(In_, Out_), TrainingPairs),
+           arc2_transform(period_repair, In_, Out_)).
 
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
