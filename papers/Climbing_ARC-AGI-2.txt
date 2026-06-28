@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 11 complete: 11/120 = 9.17%.
+Last updated: 2026-06-28. Wave 12 complete: 12/120 = 10.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -132,10 +132,47 @@ Date        | Score      | Percent | Notes
 2026-06-28  |   9 / 120  |  7.50%  | Wave 9: panel-overlay s1-seeded flood-fill split
 2026-06-28  |  10 / 120  |  8.33%  | Wave 10: apex-shadow arm-vector projection rule
 2026-06-28  |  11 / 120  |  9.17%  | Wave 11: sym-restore per-colour vertical symmetry
+2026-06-28  |  12 / 120  | 10.00%  | Wave 12: waterfall gravity-flow around obstacles
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 12 - 2026-06-28 - Score: 12/120 = 10.00%
+
+Date: 2026-06-28
+
+Confirmed score: 12 / 120 = 10.00%
+
+Rules added in this wave:
+
+waterfall - Gravity-flow of 6-seeds through background, spreading around
+  obstacles. Seeds flow down; when blocked by an in-grid obstacle, spread
+  left and right to the nearest drain point (bg below) or barrier. OOB
+  below does NOT trigger spreading. All changes are bg to 6.
+
+Task solved: 36a08778 (6 training pairs, 28-65 changes each; all bg to 6)
+
+Bugs fixed: none.
+
+Lessons learned:
+  - OOB-below vs in-grid-obstacle distinction is critical: OOB means halt,
+    obstacle means spread.
+  - Water simulation must use a row-major priority queue (top-first) so that
+    newly spread cells in row R are processed before any row R+1 cells.
+  - Existing 6-cells (including newly marked ones) act as barriers during
+    spreading; using an effective-value function (wf_eff_) that checks the
+    visited set solves this cleanly without grid mutation.
+  - The drain cell (first bg cell with bg below it) IS included in the
+    spread range, not treated as the stopping point before it.
+
+Score advance: 11/120 = 9.17% to 12/120 = 10.00% (first double-digit %).
+
+Accomplishment: Acc_310.  Paper: Acc_310_ARC2_Wave12.txt.
+
+Mentova PR: #322
+PrologAI PR: #376
 
 
 ATTEMPT 11 - 2026-06-28 - Score: 11/120 = 9.17%
@@ -1191,6 +1228,7 @@ ALL SOLVED TASKS
 
 1818057f  - Wave 1  - recolor_plus(4,8)   - plus shapes of 4 become 8
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
+36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
 409aa875  - Wave 10 - apex_shadow         - arm-vector projection places shadow-9 or collision-1
 45a5af55  - Wave 6  - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
@@ -1284,4 +1322,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 10: Apex-shadow arm-vector projection rule.
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 11: Sym-restore per-colour vertical symmetry rule.
   Score: 11/120 = 9.17%. Task 8e5c0c38 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 12: Waterfall gravity-flow around obstacles rule.
+  Score: 12/120 = 10.00%. Task 36a08778 solved. First double-digit milestone.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.
