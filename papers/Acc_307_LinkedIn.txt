@@ -1,0 +1,25 @@
+ARC-AGI-2 Wave 9: Panel Overlay Rule - 9/120 = 7.50%
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI just solved its 9th ARC-AGI-2 task.
+
+Wave 9 adds the panel_overlay rule. The task (7491f3cf) shows a grid split into four
+5x5 panels. Panel 1 contains a dividing wall (5 cells, 8-connected) plus one isolated
+seed cell. The rule: flood-fill (4-connected) from the seed, treating the wall as
+blocked. Cells reachable from the seed take values from panel 2; unreachable cells
+take values from panel 3; wall cells prefer panel 2, fall back to panel 3.
+
+The seed is always isolated from the wall (no 8-neighbor in common), pointing the
+algorithm to the correct side. The wall shapes across the four training pairs include
+an anti-diagonal, a vertical line, a main diagonal, and a horizontal bar. The test
+uses an L-shape. One rule handles all of them.
+
+No neural network. No pretraining. One glass-box named rule, verified against every
+training pair before the benchmark runs.
+
+Running total: 9 / 120 = 7.50%.
+
+Next: searching the remaining 111 failing tasks for Wave 10.
+
+#PrologAI #ARCAGI2 #AIReasoning #SymbolicAI #GlassBoxAI

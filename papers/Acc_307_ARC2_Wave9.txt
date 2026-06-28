@@ -1,0 +1,169 @@
+Accomplishment 307: ARC-AGI-2 Wave 9 - Panel Overlay Rule
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-28
+
+Score: 9 / 120 = 7.50%
+Previous score: 8 / 120 = 6.67%
+Gain: +1 task, +0.83 percentage points
+
+
+SUMMARY
+
+Wave 9 of the ARC-AGI-2 benchmark climb adds the panel_overlay named glass-box
+rule, solving task 7491f3cf and bringing the running total to 9 out of 120 tasks
+(7.50%).
+
+The panel_overlay rule works on grids with four adjacent 5x5 content panels. The
+first panel (s1) encodes a dividing wall and a seed cell. A flood fill from the seed
+labels cells as belonging to the s2 region or the s3 region. The fourth panel is
+then assembled: s2-region cells take their values from panel 2 (s2), s3-region cells
+take from panel 3 (s3), and wall cells prefer s2 then s3.
+
+
+TASK ANALYSIS: 7491f3cf
+
+Grid dimensions: 7 rows x 25 columns (fixed across all pairs).
+Training pairs: 4.
+Test case: 1.
+
+The grid is divided into four 5x5 content panels by single-column strips of the
+outer background color. The panels are at column ranges 1-5, 7-11, 13-17, 19-23
+(0-indexed) in content rows 1-5.
+
+Panel 1 (s1) always contains exactly 6 non-inner-background cells:
+  - 5 cells forming the main 8-connected component (the wall).
+  - 1 isolated cell with no 8-neighbor also in s1 (the seed).
+
+Panel 2 (s2) contains one colored pattern.
+Panel 3 (s3) contains a second colored pattern.
+Panel 4 (s4) is blank (all inner-background) in the input and must be filled.
+
+The rule:
+  1. Find InBg = mode of all content cells across panels 1-3.
+  2. Collect S1Nz = positions r(R,C) in s1 with value != InBg.
+  3. Seed = the member of S1Nz with no 8-connected neighbor in S1Nz.
+  4. Wall = S1Nz minus Seed.
+  5. Reachable = 4-connected flood fill from Seed avoiding Wall cells.
+  6. For each position (R,C) in s4:
+       - Wall cell:           output s2[R][C] if non-bg, else s3[R][C].
+       - Reachable (L-region): output s2[R][C].
+       - Otherwise (R-region): output s3[R][C].
+
+In plain terms: s1 defines a boundary (e.g., anti-diagonal, vertical line, diagonal,
+horizontal bar, or L-shape) plus a pointer (the seed) to the s2 side. The boundary
+and pointer together uniquely determine which cells of s4 come from s2 and which
+come from s3.
+
+
+TRAINING PAIR ANALYSIS
+
+Train 0 (7x25): inner_bg=4 (dark teal).
+  s1 wall = anti-diagonal (5 cells from (0,4) to (4,0) via Chebyshev-1 steps).
+  Seed = (0,0) (top-left corner, isolated, in the lower-left / s2 region).
+  L-region = lower-left triangle (10 cells). R-region = upper-right (10 cells).
+  s2 = X-shape (color 2). s3 = plus-shape (color 3).
+  Output panel 4: anti-diagonal = 2; lower-left gets X values; upper-right gets
+  plus values. Exact match: True.
+
+Train 1 (7x25): inner_bg=8 (azure).
+  s1 wall = vertical line at column 2 (5 cells, rows 0-4).
+  Seed = (2,0) (middle-left, isolated, in the left / s2 region).
+  L-region = left two columns (10 cells). R-region = right two columns (10 cells).
+  s2 = X-shape (color 2). s3 = two-vertical-bars pattern (color 3).
+  Output panel 4: s2 on left, s3 on right. Exact match: True.
+
+Train 2 (7x25): inner_bg=9 (light gray).
+  s1 wall = main diagonal (5 cells from (0,0) to (4,4)).
+  Seed = (4,0) (bottom-left, isolated, in the lower-left / s2 region).
+  L-region = lower-left triangle (10 cells). R-region = upper-right (10 cells).
+  s2 = 2x2 block pattern (color 4). s3 = checkerboard (color 1).
+  Output panel 4: lower-left = 4-blocks, upper-right = checkerboard. Exact match: True.
+
+Train 3 (7x25): inner_bg=0 (black).
+  s1 wall = horizontal bar at row 2 (5 cells, cols 0-4).
+  Seed = (0,2) (top-center, isolated, in the upper / s2 region).
+  L-region = top two rows (10 cells). R-region = bottom two rows (10 cells).
+  s2 = X-shape (color 2). s3 = plus-shape (color 3).
+  Output panel 4: top = X, bottom = plus, row 2 = mixed. Exact match: True.
+
+Test (7x25): inner_bg=5 (light gray).
+  s1 wall = L-shape: vertical at col 2 rows 0-2, arm extends right at row 2 cols 2-4.
+  Seed = (0,4) (top-right corner, isolated, in the right / s3 flipped region).
+  L-region = {(0,3),(0,4),(1,3),(1,4)} (upper-right quadrant of panel).
+  R-region = all other 16 non-wall cells.
+  s2 = frame-like pattern (color 3). s3 = ring-like pattern (color 7).
+  Computed output panel 4: s2 in upper-right, s3 everywhere else.
+
+
+RULE IMPLEMENTATION
+
+Rule name: panel_overlay
+Prolog predicate: arc2_transform(panel_overlay, Grid, Result)
+
+Algorithm:
+  1. OuterBg = Grid[0][0].
+  2. Extract panels: arc2_po_panels_(Grid, [S1,S2,S3,_]).
+  3. InBg = arc2_bs_mode_(msort(arc2_po_flat3_(S1,S2,S3))).
+  4. S1Nz = arc2_po_nonbg_pos_(S1, InBg).
+  5. Seed = arc2_po_seed_(S1Nz).  [isolated = no 8-neighbor in S1Nz]
+  6. Wall = S1Nz \ {Seed}.
+  7. Reachable = arc2_po_flood4_(Seed, Wall).  [4-connected BFS]
+  8. For each cell: arc2_po_cell_val_(R,C,S2,S3,InBg,Wall,Reachable,V).
+  9. Replace cols 19-23 rows 1-5 with computed values.
+
+New helper predicates:
+  arc2_po_panels_/2       extract four 5x5 panels from 7x25 grid.
+  arc2_po_slice_/4        extract column range From..To from a row.
+  arc2_po_flat3_/4        flatten three 5x5 panels to a flat cell list.
+  arc2_po_nonbg_pos_/3    collect r(R,C) positions where value differs from bg.
+  arc2_po_seed_/2         find the isolated cell (8-unconnected to all others).
+  arc2_po_flood4_/3       launch 4-connected BFS flood fill.
+  arc2_po_bfs4_/4         iterative BFS queue expansion with visited tracking.
+  arc2_po_build_result_/8 copy grid and replace s4 section with computed values.
+  arc2_po_cell_val_/8     compute output cell color from region membership.
+
+Verification: arc2_transform(panel_overlay, In, Out) succeeds for all 4 training
+pairs and the test case of task 7491f3cf.
+
+
+CUMULATIVE SOLVED TASKS (after Wave 9)
+
+  1818057f  Wave 1  recolor_plus(4,8)  - plus shapes of 4 become 8
+  7b5033c1  Wave 2  chain_strip        - connected-blob chain traversal strip
+  80a900e0  Wave 3  arm_endpoint_ray   - checkerboard diagonal arm projection
+  e376de54  Wave 4  segment_equalize   - equalize all segment lengths to middle
+  97d7923e  Wave 5  stub_rank_fill     - column stubs rank which vertical bar to fill
+  45a5af55  Wave 6  band_wrap          - concentric rectangular rings from row-color bands
+  4c3d4a41  Wave 7  staircase_lift     - staircase heights reposition right-half color bars
+  31f7f899  Wave 8  bar_sort           - sort vertical bar heights, reassign colors to slots
+  7491f3cf  Wave 9  panel_overlay      - s1-seeded flood-fill splits s2/s3 into panel 4
+
+
+LESSONS LEARNED
+
+1. The isolated extra cell in s1 is the pointer to the s2 side. Without it, the wall
+alone is symmetric and cannot distinguish which half should receive s2 vs s3. The seed
+breaks the symmetry and makes the rule deterministic.
+
+2. The combination of 8-connectivity for wall component detection and 4-connectivity
+for flood fill is essential. Diagonal walls (anti-diagonal, main diagonal) are
+8-connected but block 4-connected flood fill through their diagonal gaps. Using
+4-connectivity for component detection would incorrectly fragment diagonal walls into
+isolated points.
+
+3. The seed is always the cell in s1 that has zero 8-connected neighbors in s1. This
+provides a clean algorithmic definition: no heuristic or geometric rule needed.
+
+4. Flood fill on a 5x5 grid with list-based BFS (25 cells, at most 4 neighbors each)
+is fast enough for Prolog without any specialized data structures. The entire solve
+runs in well under one second.
+
+5. The task generalizes to any dividing shape that separates a 5x5 grid into exactly
+two non-wall regions. The four training pairs cover anti-diagonal, vertical, main
+diagonal, and horizontal lines; the test uses an L-shape. The algorithm handles all
+of these uniformly.
+
+
+Score: 9/120 = 7.50%

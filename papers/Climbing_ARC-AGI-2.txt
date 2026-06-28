@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 8 complete: 8/120 = 6.67%.
+Last updated: 2026-06-28. Wave 9 complete: 9/120 = 7.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -129,10 +129,102 @@ Date        | Score      | Percent | Notes
 2026-06-27  |   6 / 120  |  5.00%  | Wave 6: band-wrap concentric rectangular rings
 2026-06-27  |   7 / 120  |  5.83%  | Wave 7: staircase-lift bar repositioning rule
 2026-06-28  |   8 / 120  |  6.67%  | Wave 8: bar-sort vertical bar height ordering
+2026-06-28  |   9 / 120  |  7.50%  | Wave 9: panel-overlay s1-seeded flood-fill split
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 9 - 2026-06-28 - Score: 9/120 = 7.50%
+
+Date: 2026-06-28
+
+Confirmed score: 9 / 120 = 7.50%
+
+Rules added in this wave:
+
+panel_overlay - Four-panel grid where s1 defines a flood-fill boundary; s4 = s2 on
+  the seed side, s3 on the other side.
+
+Description: The grid is 7 rows x 25 columns, divided into four 5x5 content panels
+by single-column background strips. Panel 1 (s1) contains exactly 6 non-background
+cells: 5 forming the main 8-connected component (the wall) and 1 isolated extra cell
+(the seed). A 4-connected flood fill from the seed, treating the wall cells as
+blocked, labels cells as L-region (reachable) or R-region (unreachable). Panel 4 is
+filled: L-region cells take panel 2 (s2) values, R-region cells take panel 3 (s3)
+values, wall cells prefer s2 then fall back to s3.
+
+panel_overlay algorithm:
+  1. OuterBg = Grid[0][0] (border color).
+  2. Extract four 5x5 panels S1,S2,S3,S4 from rows 1-5 at col offsets 1-5,
+     7-11, 13-17, 19-23.
+  3. InBg = mode(all cells in S1+S2+S3).
+  4. S1Nz = positions r(R,C) in S1 where S1[R][C] != InBg.
+  5. Seed = the member of S1Nz with no 8-neighbor also in S1Nz.
+  6. Wall = S1Nz \ {Seed}.
+  7. Reachable = 4-connected flood fill from Seed, wall cells blocked.
+  8. For each (R,C) in S4 (0-indexed 5x5):
+       if r(R,C) in Wall: V = S2[R][C] if non-bg else S3[R][C]
+       elif r(R,C) in Reachable: V = S2[R][C]
+       else: V = S3[R][C]
+
+Wall shapes seen in training pairs:
+  anti-diagonal (top-right to bottom-left) - train 0
+  vertical line at column 2                - train 1
+  main diagonal (top-left to bottom-right) - train 2
+  horizontal bar at row 2                  - train 3
+
+The seed is always in the s2 region (the flood-fill reachable side), pointing the
+algorithm to the correct half. The 8-connectivity for component detection handles
+diagonal walls; 4-connectivity for flood fill keeps diagonal gaps impassable.
+
+New helper predicates:
+  arc2_po_panels_/2       extract four 5x5 panels from 7x25 grid.
+  arc2_po_slice_/4        extract a column range from a row.
+  arc2_po_flat3_/4        flatten three 5x5 panels to a cell list.
+  arc2_po_nonbg_pos_/3    collect r(R,C) positions where value != bg.
+  arc2_po_seed_/2         find the isolated (8-unconnected) cell.
+  arc2_po_flood4_/3       4-connected BFS from seed avoiding wall.
+  arc2_po_bfs4_/4         iterative BFS queue expansion.
+  arc2_po_build_result_/8 rebuild full grid with computed s4.
+  arc2_po_cell_val_/8     compute output cell from region labels.
+
+Task solved: 7491f3cf
+
+Description: A 7x25 grid with four 5x5 panels. Panel 1 defines an L-shaped or
+diagonal or line-shaped wall plus an isolated seed cell. Panel 4 is empty in the
+input and must be filled by the flood-fill rule described above.
+
+Training pair 0 (7x25): s1=anti-diagonal + seed at (0,0). L-region=lower-left
+  triangle. R-region=upper-right triangle. Exact match: True.
+
+Training pair 1 (7x25): s1=vertical line at col 2 + seed at (2,0). L-region=
+  left two columns. R-region=right two columns. Exact match: True.
+
+Training pair 2 (7x25): s1=main diagonal + seed at (4,0). L-region=lower-left
+  triangle. R-region=upper-right triangle. Exact match: True.
+
+Training pair 3 (7x25): s1=horizontal bar at row 2 + seed at (0,2). L-region=
+  top two rows. R-region=bottom two rows. Exact match: True.
+
+Test case (7x25): s1=L-shape (vertical col 2 rows 0-2, arm row 2 cols 2-4) + seed
+  at (0,4). L-region={(0,3),(0,4),(1,3),(1,4)}. R-region=all other non-wall.
+
+Bugs fixed: None.
+
+Lessons learned:
+
+1. The seed cell (the isolated extra cell in s1) encodes WHICH SIDE of the wall
+corresponds to s2. Without it, the wall alone would not distinguish which half
+shows s2 and which shows s3. The seed makes the rule asymmetric and deterministic.
+
+2. Using 8-connectivity for component detection but 4-connectivity for flood fill
+is the correct combination: diagonal walls (anti-diagonal, main diagonal) are
+8-connected but leave 4-connected gaps that block the flood fill correctly.
+
+3. Small grids (5x5 panels, 25 cells) make BFS with list-based visited sets fast
+enough for Prolog. No special data structures are needed.
 
 
 ATTEMPT 8 - 2026-06-28 - Score: 8/120 = 6.67%
@@ -931,6 +1023,7 @@ ALL SOLVED TASKS
 31f7f899  - Wave 8 - bar_sort            - sort vertical bar heights, reassign colors to slots
 45a5af55  - Wave 6 - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7 - staircase_lift      - staircase heights reposition right-half color bars
+7491f3cf  - Wave 9 - panel_overlay       - s1-seeded flood-fill splits s2/s3 into panel 4
 7b5033c1  - Wave 2 - chain_strip          - connected-blob chain traversal strip
 80a900e0  - Wave 3 - arm_endpoint_ray     - checkerboard diagonal arm projection
 97d7923e  - Wave 5 - stub_rank_fill       - column stubs rank which vertical bar to fill
@@ -1004,3 +1097,11 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 6: Band-wrap concentric rectangular rings ru
 Dison, D. R. (2026). ARC-AGI-2 Wave 7: Staircase-lift bar repositioning rule.
   Score: 7/120 = 5.83%. Task 4c3d4a41 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-27.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 8: Bar-sort vertical bar height ordering rule.
+  Score: 8/120 = 6.67%. Task 31f7f899 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 9: Panel-overlay s1-seeded flood-fill rule.
+  Score: 9/120 = 7.50%. Task 7491f3cf solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
