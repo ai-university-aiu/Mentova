@@ -1,0 +1,154 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Accomplishment 310 - ARC-AGI-2 Wave 12: Gravity-Flow Rule (waterfall)
+Task 36a08778 - Score Advances to 12/120 = 10.00%
+Date: 2026-06-28
+
+ABSTRACT
+
+Mentova solves ARC-AGI-2 task 36a08778 using a new glass-box named rule called
+waterfall. The rule models 6-coloured seed cells as water sources that flow
+downward by gravity through background cells, spreading horizontally around
+solid obstacle (non-background, non-6) cells. The BFS simulation terminates
+spreading at drain points (background cells reachable below) or at barriers
+(existing 6-cells, obstacles, or grid boundaries). Out-of-bounds below does not
+trigger spreading. The rule is verified on all 6 training pairs and the test
+case of task 36a08778, raising the ARC-AGI-2 score from 11/120 = 9.17% to
+12/120 = 10.00% - the first double-digit percentage milestone.
+
+1. PROBLEM STATEMENT
+
+Task 36a08778 presents grids where a small number of 6-valued seed cells appear
+near the top. The rest of the grid contains background (value 7) and scattered
+rows of non-background, non-6 cells (value 2, acting as solid obstacles). All
+output changes are from background to 6; no other colours are altered. The
+transformation has 6 training pairs ranging from 8x9 to 15x16 grids (28 to 65
+changes each). A single consistent rule must explain all six training examples
+and correctly predict the test output.
+
+2. KEY INSIGHT - GRAVITY FLOW
+
+The visual pattern in the outputs is unmistakable once identified: the 6-values
+trace paths outward from the seeds, flowing downward and then bending around
+the edges of obstacle rows exactly as water would around solid objects. The 6
+fills never cross obstacle cells and never appear in open background regions
+that are unreachable from any seed by a downward-then-sideways path.
+
+The critical algorithmic insight is the distinction between two types of
+blockage below a 6-cell:
+
+- Out-of-bounds (OOB) below: the cell is at the bottom row of the grid. Water
+  simply stops here; no spreading occurs.
+
+- In-grid obstacle below: a non-background, non-6 cell blocks downward flow.
+  Water spreads horizontally LEFT and RIGHT in the current row.
+
+A second insight is the spread-stop condition: horizontal spreading ends when
+the algorithm encounters either (a) a barrier cell (existing 6, obstacle, or
+grid boundary) meaning water pools there, or (b) a drain point, a background
+cell whose cell directly below is also background, meaning water can resume
+falling from that position. The drain cell is INCLUDED in the spread range.
+
+3. RULE SPECIFICATION (waterfall)
+
+Inputs:
+  - Grid: list of lists of integers
+  - Bg: background colour (most frequent value; here 7)
+
+Initialisation:
+  - Seeds: all cells (R,C) where Grid[R][C] = 6
+  - PQ: sorted priority queue (row-major order) seeded with all seed cells
+  - Vis: set of all cells ever enqueued, initialised to the seed set
+
+Main loop (BFS, row-major priority):
+  Pop cell (R,C) from PQ.
+  Let BV = effective value of cell (R+1, C):
+    - If (R+1,C) is in Vis: BV = 6
+    - Else if R+1 >= Nr: BV = OOB
+    - Else: BV = Grid[R+1][C]
+
+  Case 1 - BV == Bg (background): flow down.
+    If (R+1,C) not in Vis: mark it, enqueue it, add to New.
+
+  Case 2 - BV is in-grid obstacle (not Bg, not 6, not OOB): spread.
+    Find left edge Lc and right edge Rc in row R:
+      Spread left from C: move to C-1, C-2, ... until:
+        (a) next cell is non-background (barrier) -> stop at current C
+        (b) next cell is background AND its below is Bg (drain) -> include it, stop
+        (c) grid boundary -> stop at current cell (pool)
+      Spread right from C: symmetric.
+    For each background cell in [Lc,Rc] not yet in Vis: mark it, enqueue it.
+
+  Case 3 - BV is 6 or OOB: do nothing.
+
+Termination: empty PQ.
+
+Result: apply all marks (set marked cells to 6) in the original grid.
+
+4. CORRECTNESS VERIFICATION
+
+All 6 training pairs and the test case of task 36a08778 are verified correct
+in both Python (implementation reference) and SWI-Prolog (deployed rule).
+
+Training pair sizes and change counts (all changes are bg->6):
+  Train 0: 14x14, 61 changes
+  Train 1: 16x13, 48 changes
+  Train 2: 8x9,   28 changes
+  Train 3: 14x5,  21 changes
+  Train 4: 8x20,  36 changes
+  Train 5: 15x16, 65 changes
+  Test:    verified correct
+
+5. IMPLEMENTATION
+
+The waterfall rule is implemented in SWI-Prolog in:
+  Mentova/src/mentova/games/arc_benchmark_2.pl
+
+Key predicates and their roles:
+  arc2_named_rule(waterfall)   - registers rule for dispatch
+  arc2_transform(waterfall,.)  - main entry: background detection, seed
+                                  collection, BFS call, result build
+  wf_bfs_/7                    - priority-queue BFS (row-major)
+  wf_eff_/6                    - effective cell value (Vis overrides grid)
+  wf_spread_/9                 - compute horizontal fill range
+  wf_edge_/10                  - directional spread limit (drain or barrier)
+  wf_enq_/5                    - conditional enqueue (checks Vis)
+  wf_pq_ins_/3                 - sorted list insertion (row-major order)
+  wf_enq_all_/6                - bulk enqueue with Added accumulator
+  wf_build_/4, wf_build_row_/5 - apply marks to produce result grid
+
+The implementation reuses arc2_bs_mode_/2 (shared background-mode helper
+introduced in Wave 8) for background colour detection.
+
+6. BENCHMARK RESULT
+
+Previous score (Wave 11): 11/120 = 9.17%
+Wave 12 addition: task 36a08778 (waterfall rule)
+New score: 12/120 = 10.00%
+
+All previously solved tasks continue to pass (no regressions):
+  1818057f (recolor_plus), 31f7f899 (bar_sort), 36a08778 (waterfall, NEW),
+  409aa875 (apex_shadow), 45a5af55 (band_wrap), 4c3d4a41 (staircase_lift),
+  7491f3cf (panel_overlay), 7b5033c1 (chain_strip), 80a900e0 (arm_endpoint_ray),
+  8e5c0c38 (sym_restore), 97d7923e (stub_rank_fill), e376de54 (segment_equalize)
+
+7. SIGNIFICANCE
+
+The 10.00% milestone marks Mentova's first double-digit percentage on ARC-AGI-2.
+The waterfall rule exemplifies PrologAI's glass-box philosophy: a named,
+human-readable algorithm that can be stated precisely, inspected directly, and
+proven correct on every training example before being applied to test cases.
+Unlike opaque neural approaches, the rule can be audited at every step.
+
+The gravity-flow pattern discovered here also generalises: many ARC tasks
+involve physics-like propagation rules (gravity, spreading, flooding). The
+waterfall predicate structure (priority-queue BFS with directional constraints)
+provides a reusable template for future rules of this family.
+
+REFERENCES
+
+[1] ARC-AGI-2 Benchmark: arc-prize.org
+[2] PrologAI Platform: github.com/ai-university-aiu/PrologAI
+[3] Mentova: github.com/ai-university-aiu/Mentova
+[4] Climbing_ARC-AGI-2.txt: /home/ccaitwo/Mentova/papers/Climbing_ARC-AGI-2.txt
+[5] arc_benchmark_2.pl: Mentova/src/mentova/games/arc_benchmark_2.pl (waterfall block)

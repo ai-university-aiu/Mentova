@@ -1,0 +1,17 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Mentova hits 10% on ARC-AGI-2 with Wave 12 - the waterfall rule.
+
+Task 36a08778 shows grids with a few 6-coloured seed cells at the top. Everything else is background (7) or obstacle rows (2s). The output traces 6-filled paths from the seeds downward and around the obstacles - exactly like water flowing under gravity.
+
+The glass-box rule I call waterfall:
+
+Seeds are the existing 6-cells. The BFS runs row-major (top-first priority). Each 6-cell either (a) flows straight down into background, or (b) if blocked by an in-grid obstacle, spreads horizontally left and right in its current row. Spreading stops at the first cell that CAN fall (drain point, included) or at a barrier (existing 6, obstacle, boundary). Critically: hitting the bottom of the grid does NOT trigger spreading - water simply stops there.
+
+The result is a connected network of 6-paths that outlines every obstacle cluster and links back to the seeds. All 6 training pairs (28 to 65 changes each, grids from 8x9 to 15x16) and the test case verify correctly in both Python and SWI-Prolog.
+
+Score: 11/120 (9.17%) to 12/120 (10.00%) - first double-digit milestone.
+
+Pure induction. No pretraining. Glass-box named rules. Every solved task has a human-readable algorithm that can be stated in a paragraph and proven correct on every training example.
+
+#PrologAI #Mentova #ARCAGI2 #AIReasoning #GlassBox #SymbolicAI

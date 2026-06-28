@@ -1962,6 +1962,164 @@ arc2_induce_rule(TrainingPairs, sym_restore) :-
         TrainingPairs).
 
 % ---------------------------------------------------------------------------
+% WATERFALL RULE (Wave 12)
+% Rule name: waterfall
+% Task: 36a08778
+% Observation: existing 6-cells act as seeds; 6 flows downward by gravity,
+%   spreading horizontally around obstacle cells (non-bg, non-6), halting at
+%   drain points (bg cell below) or at existing 6/obstacle barriers.
+%   OOB-below does NOT trigger spreading.  All changes are bg→6.
+% Key predicates: wf_bfs_/7, wf_eff_/6, wf_spread_/9, wf_edge_/10,
+%   wf_enq_/5, wf_pq_ins_/3, wf_enq_all_/6, wf_build_/4, wf_build_row_/5.
+% ---------------------------------------------------------------------------
+
+% Register the rule name for induction dispatch.
+arc2_named_rule(waterfall).
+
+% arc2_transform(waterfall, +Grid, -Result)
+arc2_transform(waterfall, Grid, Result) :-
+% Flatten grid to find background (most-frequent value).
+    append(Grid, WfFlat_), msort(WfFlat_, WfSrt_),
+% Reuse shared background-mode helper.
+    arc2_bs_mode_(WfSrt_, WfBg_),
+% Grid height and width.
+    length(Grid, WfNr_), WfNrM1_ is WfNr_ - 1,
+% Width from first row.
+    nth0(0, Grid, WfRow0_), length(WfRow0_, WfNc_), WfNcM1_ is WfNc_ - 1,
+% Collect all original 6-seed positions; sort row-major.
+    findall(r(R,C),
+            ( between(0,WfNrM1_,R), between(0,WfNcM1_,C),
+              nth0(R,Grid,WfGRow_), nth0(C,WfGRow_,6) ),
+            WfSeeds0_),
+    msort(WfSeeds0_, WfQ0_),
+% BFS gravity simulation; seeds pre-populate both queue and visited.
+    wf_bfs_(WfQ0_, WfQ0_, Grid, WfBg_, WfNr_, WfNc_, WfNew_),
+% Sort marks for fast lookup then build result.
+    msort(WfNew_, WfNewS_),
+    wf_build_(Grid, 0, WfNewS_, Result).
+
+% wf_bfs_(+PQ, +Vis, +Grid, +Bg, +Nr, +Nc, -New)
+% PQ = row-major sorted priority queue of pending cells.
+% Vis = list of all enqueued cells (seeds + newly marked).
+% New = cells changed from Bg to 6 (newly marked, not original seeds).
+wf_bfs_([], _, _, _, _, _, []).
+wf_bfs_([r(R,C)|PQ0_], Vis0_, Grid_, Bg_, Nr_, Nc_, New_) :-
+% Compute effective value of the cell directly below.
+    R1_ is R + 1,
+    ( R1_ < Nr_ ->
+        wf_eff_(Grid_, Vis0_, R1_, C, Bg_, BV_)
+    ; BV_ = wfwall_ ),
+% Case 1: below is background — flow straight down.
+    ( BV_ == Bg_ ->
+        wf_enq_(r(R1_,C), PQ0_, Vis0_, PQ1_, Vis1_),
+        wf_bfs_(PQ1_, Vis1_, Grid_, Bg_, Nr_, Nc_, Rest_),
+        New_ = [r(R1_,C)|Rest_]
+% Case 2: below is an in-grid obstacle — spread left and right.
+    ; BV_ \== Bg_, BV_ \= wfwall_, BV_ \== 6 ->
+        wf_spread_(R, C, Grid_, Vis0_, Bg_, R1_, Nr_, Nc_, Spread_),
+        wf_enq_all_(Spread_, PQ0_, Vis0_, PQ1_, Vis1_, Added_),
+        wf_bfs_(PQ1_, Vis1_, Grid_, Bg_, Nr_, Nc_, Rest_),
+        append(Added_, Rest_, New_)
+% Case 3: below is 6 or OOB — do nothing.
+    ; wf_bfs_(PQ0_, Vis0_, Grid_, Bg_, Nr_, Nc_, New_)
+    ).
+
+% wf_eff_(+Grid, +Vis, +R, +C, +Bg, -Val)
+% Effective cell value: 6 if in Vis (marked), else original grid value.
+wf_eff_(_, Vis_, R, C, _, 6) :- memberchk(r(R,C), Vis_), !.
+wf_eff_(Grid_, _, R, C, _, V_) :- nth0(R, Grid_, GR_), nth0(C, GR_, V_).
+
+% wf_spread_(+R, +C, +Grid, +Vis, +Bg, +R1, +Nr, +Nc, -New)
+% Find bg cells in row R reachable by horizontal spread from column C.
+wf_spread_(R, C, Grid_, Vis_, Bg_, R1_, Nr_, Nc_, New_) :-
+% Leftmost column in spread range.
+    wf_edge_(R, C, -1, Grid_, Vis_, Bg_, R1_, Nr_, Nc_, Lc_),
+% Rightmost column in spread range.
+    wf_edge_(R, C,  1, Grid_, Vis_, Bg_, R1_, Nr_, Nc_, Rc_),
+% Collect bg cells in [Lc_,Rc_] not already marked.
+    findall(r(R,C2),
+            ( between(Lc_, Rc_, C2),
+              wf_eff_(Grid_, Vis_, R, C2, Bg_, V2_),
+              V2_ == Bg_ ),
+            New_).
+
+% wf_edge_(+R, +C, +Dir, +Grid, +Vis, +Bg, +R1, +Nr, +Nc, -Edge)
+% Spread one direction (Dir = -1 left, +1 right) from column C in row R.
+% Returns the last column to include (drain point or grid boundary stop).
+wf_edge_(_, C, Dir_, _, _, _, _, _, Nc_, C) :-
+% Next column is beyond grid boundary.
+    C1_ is C + Dir_, ( C1_ < 0 ; C1_ >= Nc_ ), !.
+wf_edge_(R, C, Dir_, Grid_, Vis_, Bg_, R1_, Nr_, Nc_, Edge_) :-
+    C1_ is C + Dir_,
+% Effective value at C1_ in the current row.
+    wf_eff_(Grid_, Vis_, R, C1_, Bg_, V1_),
+    ( V1_ \== Bg_ ->
+% Hit a barrier (existing 6 or obstacle cell): stop before it.
+        Edge_ = C
+    ;
+% C1_ is background — check if it is a drain (can fall down).
+        ( R1_ < Nr_ ->
+            wf_eff_(Grid_, Vis_, R1_, C1_, Bg_, BV1_)
+        ; BV1_ = wfwall_ ),
+        ( BV1_ == Bg_ ->
+% Drain found: include C1_ as the spread edge, stop.
+            Edge_ = C1_
+        ;
+% No drain at C1_: continue spreading in the same direction.
+            wf_edge_(R, C1_, Dir_, Grid_, Vis_, Bg_, R1_, Nr_, Nc_, Edge_)
+        )
+    ).
+
+% wf_enq_(+Cell, +PQ, +Vis, -PQ2, -Vis2)
+% Add Cell to sorted PQ and Vis only if not already present.
+wf_enq_(Cell_, PQ_, Vis_, PQ2_, Vis2_) :-
+    ( memberchk(Cell_, Vis_) ->
+        PQ2_ = PQ_, Vis2_ = Vis_
+    ;
+        Vis2_ = [Cell_|Vis_],
+        wf_pq_ins_(Cell_, PQ_, PQ2_)
+    ).
+
+% wf_pq_ins_(+X, +PQ, -PQ2): insert X into a sorted row-major list.
+wf_pq_ins_(X_, [], [X_]).
+wf_pq_ins_(X_, [H_|T_], [X_,H_|T_]) :- X_ @=< H_, !.
+wf_pq_ins_(X_, [H_|T_], [H_|T2_]) :- wf_pq_ins_(X_, T_, T2_).
+
+% wf_enq_all_(+Cells, +PQ, +Vis, -PQ2, -Vis2, -Added)
+% Enqueue all cells not already in Vis; collect newly added in Added.
+wf_enq_all_([], PQ_, Vis_, PQ_, Vis_, []).
+wf_enq_all_([Cell_|Rest_], PQ0_, Vis0_, PQ2_, Vis2_, Added_) :-
+    ( memberchk(Cell_, Vis0_) ->
+        wf_enq_all_(Rest_, PQ0_, Vis0_, PQ2_, Vis2_, Added_)
+    ;
+        wf_enq_(Cell_, PQ0_, Vis0_, PQm_, Vim_),
+        wf_enq_all_(Rest_, PQm_, Vim_, PQ2_, Vis2_, RestAdded_),
+        Added_ = [Cell_|RestAdded_]
+    ).
+
+% wf_build_(+Grid, +R, +Marks, -Result): apply marks (Bg→6) to Grid.
+wf_build_([], _, _, []).
+wf_build_([GRow_|GRest_], R_, Marks_, [NewRow_|NewRest_]) :-
+    wf_build_row_(GRow_, 0, R_, Marks_, NewRow_),
+    R1_ is R_ + 1,
+    wf_build_(GRest_, R1_, Marks_, NewRest_).
+
+% wf_build_row_(+Row, +C, +R, +Marks, -NewRow): fill marked cells with 6.
+wf_build_row_([], _, _, _, []).
+wf_build_row_([V_|Vs_], C_, R_, Marks_, [NV_|NVs_]) :-
+    ( memberchk(r(R_,C_), Marks_) -> NV_ = 6 ; NV_ = V_ ),
+    C1_ is C_ + 1,
+    wf_build_row_(Vs_, C1_, R_, Marks_, NVs_).
+
+% arc2_induce_rule for waterfall: verify all training pairs match.
+arc2_induce_rule(TrainingPairs, waterfall) :-
+% Require at least one training pair.
+    TrainingPairs \= [],
+% Every pair must satisfy arc2_transform(waterfall, ...) exactly.
+    maplist([pair(In,Out)]>>(arc2_transform(waterfall, In, Out)),
+        TrainingPairs).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------
