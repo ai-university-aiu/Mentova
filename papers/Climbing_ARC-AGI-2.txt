@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-27. Wave 5 complete: 5/120 = 4.17%.
+Last updated: 2026-06-27. Wave 6 complete: 6/120 = 5.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -126,10 +126,112 @@ Date        | Score      | Percent | Notes
 2026-06-27  |   3 / 120  |  2.50%  | Wave 3: checkerboard diagonal arm projection
 2026-06-27  |   4 / 120  |  3.33%  | Wave 4: segment length equalization rule
 2026-06-27  |   5 / 120  |  4.17%  | Wave 5: stub-rank-fill vertical bar selection
+2026-06-27  |   6 / 120  |  5.00%  | Wave 6: band-wrap concentric rectangular rings
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 6 - 2026-06-27 - Score: 6/120 = 5.00%
+
+Date: 2026-06-27
+
+Confirmed score: 6 / 120 = 5.00%
+
+Rules added in this wave:
+
+band_wrap - Concentric rectangular rings from row-color bands.
+
+Description: The input is a grid in which every row is a uniform solid color.
+The color sequence of rows (read top to bottom) is run-length encoded into a
+list of (Color, Count) bands. The output is a square grid of side length
+S = 2 * TotalCount - LastCount, where TotalCount is the sum of all band counts
+and LastCount is the count of the final band. The output is filled with
+concentric rectangular rings: ring index i (the distance min(R, C, S-1-R,
+S-1-C) from the nearest edge) receives the color of the band whose cumulative
+count bracket contains i. The first band paints the outermost ring, the last
+band fills a solid square at the center, and each intermediate band forms a
+rectangular ring of its specified thickness.
+
+band_wrap algorithm:
+  1. Guard: every row in the input is uniform (all cells identical).
+  2. Extract per-row colors: one color per row (first cell of each row).
+  3. Run-length encode the color sequence into [(C1,T1), ..., (Cn,Tn)].
+  4. Guard: at least 2 bands (otherwise no ring structure is possible).
+  5. TotalCount = T1 + T2 + ... + Tn.
+  6. LastCount = Tn.
+  7. S = 2 * TotalCount - LastCount.
+  8. For each cell (R, C) in the S x S output grid:
+       ring = min(R, C, S-1-R, S-1-C).
+       Find the band owning ring: the smallest k such that
+         T1 + ... + T_{k-1} <= ring < T1 + ... + Tk.
+       Color = Ck.
+  9. Result = S x S grid with cells colored as above.
+
+New helper predicates:
+  arc2_bw_uniform_/2: verify all elements of a list are identical.
+  arc2_bw_rle_rows_/2: run-length encode a flat color list into (Color,Count)
+    pairs by iterating through runs of identical values.
+  arc2_bw_rle_same_/5: accumulate a single run (recursive helper for rle_rows_).
+  arc2_bw_sum_counts_/2: sum all count fields from a (Color,Count) band list.
+  arc2_bw_ring_color_/3: look up the color for a ring index by subtracting
+    band counts until the index falls within the current band.
+
+Task solved: 45a5af55
+
+Description: Input grids have 14 to 16 uniform-color rows (each row is one
+solid color). The row colors form a repeating-then-unique band sequence.
+The output is a large square grid containing nested concentric rectangular
+rings; each ring thickness equals its band's row count from the input.
+
+Training pair 0 (input 14x11, output 26x26):
+Bands: [(8,2),(2,5),(6,1),(8,2),(1,2),(2,2)]. TotalCount=14, LastCount=2.
+S = 2*14 - 2 = 26. Output: outermost 2 rows/cols = 8, next 5 = 2, next 1 = 6,
+next 2 = 8, next 2 = 1, center 2x2 = 2. Exact match: True.
+
+Training pair 1 (input 13x12, output 24x24):
+Bands: [(2,1),(3,1),(2,2),(3,1),(2,1),(1,1),(2,4),(8,2)]. TotalCount=13, LastCount=2.
+S = 2*13 - 2 = 24. Output builds rings from band sequence outward to center.
+Exact match: True.
+
+Test case (input 14x11, output 26x26):
+Bands: [(3,2),(8,3),(2,1),(8,2),(3,1),(7,2),(5,1),(8,2)]. TotalCount=14, LastCount=2.
+S = 2*14 - 2 = 26. Ring structure:
+  ring 0-1 (thickness 2): color 3 (outermost frame).
+  ring 2-4 (thickness 3): color 8.
+  ring 5 (thickness 1): color 2.
+  ring 6-7 (thickness 2): color 8.
+  ring 8 (thickness 1): color 3.
+  ring 9-10 (thickness 2): color 7.
+  ring 11 (thickness 1): color 5.
+  ring 12 (center, 2x2): color 8.
+Verified: row 0 = [3,3,...,3], row 12 cols 12-13 = [8,8]. Exact match: True.
+
+Bugs fixed: None.
+
+Lessons learned:
+
+1. The ring index formula min(R, C, S-1-R, S-1-C) is the key insight. This is
+the taxicab distance from the nearest edge, and it correctly maps every cell to
+its band in one operation. No explicit loop or ring-building needed.
+
+2. The output size formula S = 2*TotalCount - LastCount comes from the fact that
+the last band fills a center square of LastCount x LastCount. The 8 outer bands
+contribute 2*T each (top + bottom / left + right), except the last which is just
+T (the center itself). So S = 2*(TotalCount - LastCount) + LastCount.
+
+3. Uniform-row detection as the induction guard is strict and effective. Any
+grid with a non-uniform row is immediately rejected, making false positives
+unlikely because random grids rarely have all-uniform rows.
+
+4. arc2_bw_ring_color_/3 uses simple count subtraction rather than maintaining
+cumulative sums. This keeps the predicate readable and avoids a separate
+accumulation step.
+
+5. The rule is exact: there is exactly one valid output for any given band
+sequence. This made verification trivial - if the output dimension matches the
+formula, the rule is almost certainly correct.
 
 
 ATTEMPT 5 - 2026-06-27 - Score: 5/120 = 4.17%
@@ -655,6 +757,7 @@ ALL SOLVED TASKS
 (Task IDs added in alphabetical order after each wave)
 
 1818057f  - Wave 1 - recolor_plus(4,8)   - plus shapes of 4 become 8
+45a5af55  - Wave 6 - band_wrap           - concentric rectangular rings from row-color bands
 7b5033c1  - Wave 2 - chain_strip          - connected-blob chain traversal strip
 80a900e0  - Wave 3 - arm_endpoint_ray     - checkerboard diagonal arm projection
 97d7923e  - Wave 5 - stub_rank_fill       - column stubs rank which vertical bar to fill
@@ -719,4 +822,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 4: Segment length equalization rule.
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 5: Column stub rank-fill rule.
   Score: 5/120 = 4.17%. Task 97d7923e solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-27.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 6: Band-wrap concentric rectangular rings rule.
+  Score: 6/120 = 5.00%. Task 45a5af55 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-27.
