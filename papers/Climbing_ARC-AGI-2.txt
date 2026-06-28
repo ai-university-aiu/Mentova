@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 12 complete: 12/120 = 10.00%.
+Last updated: 2026-06-28. Wave 13 complete: 13/120 = 10.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -133,10 +133,60 @@ Date        | Score      | Percent | Notes
 2026-06-28  |  10 / 120  |  8.33%  | Wave 10: apex-shadow arm-vector projection rule
 2026-06-28  |  11 / 120  |  9.17%  | Wave 11: sym-restore per-colour vertical symmetry
 2026-06-28  |  12 / 120  | 10.00%  | Wave 12: waterfall gravity-flow around obstacles
+2026-06-28  |  13 / 120  | 10.83%  | Wave 13: odd-col unique col section extraction
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 13 - 2026-06-28 - Score: 13/120 = 10.83%
+
+Date: 2026-06-28
+
+Confirmed score: 13 / 120 = 10.83%
+
+Rules added in this wave:
+
+odd_col - Unique col section extraction per row section in a tiled grid.
+
+Description: The input grid is a tiling of N row sections by M col sections,
+separated by uniform-value rows and uniform-value cols. Within each row section,
+all col sections contain nearly-identical interior patterns except for exactly
+one col section (the odd col). The output collapses the grid to one col-section
+wide by extracting the unique col section for each row section.
+
+Identification algorithm: For each content row (non-separator row) within a
+row section, compare the strip values of all col sections. The col section
+whose strip differs from the majority of strips in that row casts one vote.
+After processing all content rows, the col section with the most votes is the
+unique (odd) one for that row section. If no votes are cast (all col sections
+are identical), the first col section is used as the canonical representative.
+
+Task solved: 38007db0 (2 training pairs; train 0 is 19x19 with 3x3 cell grid
+  and 2 changes; train 1 is 19x25 with 3x4 cell grid and 3 changes).
+
+Bugs fixed: none. Rule induced and verified correctly on first implementation.
+
+Lessons learned:
+- The output grid has a DIFFERENT COLUMN WIDTH than the input: input is N col
+  sections wide, output is one col section wide. Both grids have the same row
+  count. The arc2_induce_rule verification correctly handles unequal grid sizes
+  because it compares transform output to the expected output pair-by-pair.
+- The key search strategy was to look for tasks with very few changes (max
+  changes across training pairs). Task 38007db0 had max 3 changes, making it
+  the easiest unresolved task. Only 2 training pairs needed to characterize
+  the full rule.
+- Majority voting per content row position is more robust than simple pattern
+  matching because it handles the case where all-separator rows (which vary
+  between col sections only in a trivial way) do not distort the vote.
+
+Score advance: 12/120 = 10.00% to 13/120 = 10.83%.
+
+Accomplishment: Acc_311.  Paper: Acc_311_ARC2_Wave13.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
 
 
 ATTEMPT 12 - 2026-06-28 - Score: 12/120 = 10.00%
@@ -1229,6 +1279,7 @@ ALL SOLVED TASKS
 1818057f  - Wave 1  - recolor_plus(4,8)   - plus shapes of 4 become 8
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
+38007db0  - Wave 13 - odd_col            - unique col section extraction per row section
 409aa875  - Wave 10 - apex_shadow         - arm-vector projection places shadow-9 or collision-1
 45a5af55  - Wave 6  - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
@@ -1326,4 +1377,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 11: Sym-restore per-colour vertical symmetry
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 12: Waterfall gravity-flow around obstacles rule.
   Score: 12/120 = 10.00%. Task 36a08778 solved. First double-digit milestone.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 13: Odd-col unique col section extraction rule.
+  Score: 13/120 = 10.83%. Task 38007db0 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.
