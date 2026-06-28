@@ -1,6 +1,6 @@
 Acc_264: gridgrav Pack - Grid Gravity Simulation (gv_*, Layer 223)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 244 with the gridgrav pack (Layer 223): fourteen gv_* predicates for gravity simulation within a raw grid.
 

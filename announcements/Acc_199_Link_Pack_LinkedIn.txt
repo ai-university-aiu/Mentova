@@ -38,5 +38,5 @@ the link pack answers "which objects in scene A correspond to scene B, and how?"
 
 53/53 PLUnit tests pass. PR 264 merged to PrologAI main.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

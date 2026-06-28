@@ -1,6 +1,6 @@
 PrologAI Work Package 273: Task Type Classification (taskcat pack, tc_*, Layer 252)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 Before searching for a rule, classify the task. That one step reduces the search space dramatically.
 

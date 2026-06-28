@@ -1,6 +1,6 @@
 Acc_261: gridseg Pack - Grid Segmentation by Separator Rows and Columns (gsg_*, Layer 220)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 241 with the gridseg pack (Layer 220): fourteen gsg_* predicates for detecting separator rows and columns and splitting grids into panels.
 

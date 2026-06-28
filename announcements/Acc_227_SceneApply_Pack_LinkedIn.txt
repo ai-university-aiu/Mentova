@@ -1,6 +1,6 @@
 Accomplishment 227: Scene-Level Rule Term Evaluation Engine (sceneapply Pack, sa_*, Layer 186)
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI now has a sceneapply pack - 14 sa_* predicates that apply symbolic
@@ -30,6 +30,6 @@ This is WP 207, Mentova's 227th accomplishment.
 
 D. R. Dison
 Founder of AIU
-Creator of PrologAI and Mentova
+Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

@@ -14,4 +14,4 @@ This is Mentova's 100th documented accomplishment and PrologAI's 78th work packa
 
 The platform can now observe, measure, compare, and induce. The next step is to apply induced rules to generate and verify candidate outputs.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

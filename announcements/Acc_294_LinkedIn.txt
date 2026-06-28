@@ -1,3 +1,3 @@
 PrologAI WP-274: seqinfer gets sq_arc2_candidates/1 - 66 integer-color rule candidates for ARC-AGI-2 multi-step search. The harder compositional tasks require a richer candidate pool; now seqinfer's 2-step and 3-step search engines have exactly that. 52/52 tests pass.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

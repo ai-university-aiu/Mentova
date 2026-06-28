@@ -1,6 +1,6 @@
 Acc_254: gridconv Pack - Sliding Window, Pattern Matching, Density Maps, and Square Morphology (gcv_*, Layer 213)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 234 with the gridconv pack (Layer 213): fourteen gcv_* predicates for grid convolution operations.
 

@@ -17,4 +17,4 @@ These tools close the hypothesis-verification loop. Mentova can now induce a rul
 
 This is Mentova's 103rd documented accomplishment and PrologAI's 81st work package.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

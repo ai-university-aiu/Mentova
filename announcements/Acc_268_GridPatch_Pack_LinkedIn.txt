@@ -1,6 +1,6 @@
 Acc_268: gridpatch Pack - Grid Patch Operations (gpt_*, Layer 227)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 248 with the gridpatch pack (Layer 227): fourteen gpt_* predicates for working with sub-grid patterns.
 

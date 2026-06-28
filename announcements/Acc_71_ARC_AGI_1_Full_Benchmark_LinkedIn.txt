@@ -1,6 +1,6 @@
 ACCOMPLISHMENT: Acc_71 - Mentova Completes the Full ARC-AGI-1 Benchmark: 17/400 Tasks, Every Answer Glass-Box
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 Honest number first: 17 out of 400. That is 4.25%.
 
@@ -29,6 +29,6 @@ Mentova repository: https://github.com/ai-university-aiu/Mentova
 This is Acc_71.
 
 D. R. Dison
-Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova.
 ORCID: 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

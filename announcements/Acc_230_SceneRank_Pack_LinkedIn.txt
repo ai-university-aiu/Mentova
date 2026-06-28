@@ -1,6 +1,6 @@
 Accomplishment 230: Rule Hypothesis Ranking for Scene Lists (scenerank Pack, rk_*, Layer 189)
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI now has a scenerank pack - 14 rk_* predicates that rank candidate
@@ -30,6 +30,6 @@ This is WP 210, Mentova's 230th accomplishment.
 
 D. R. Dison
 Founder of AIU
-Creator of PrologAI and Mentova
+Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

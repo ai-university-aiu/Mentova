@@ -755,5 +755,17 @@ Mentova depends on [PrologAI](https://github.com/ai-university-aiu/PrologAI):
 ## Author
 
 **D. R. Dison**  
-Founder of AIU (Artificial Intelligence University) · Creator of PrologAI and Mentova  
+Founder of AIU (Artificial Intelligence University) · Creator and Owner of PrologAI and Mentova  
 ORCID: 0009-0001-9246-5758 · [LinkedIn](https://www.linkedin.com/in/d-r-dison/)
+
+---
+
+## License
+
+**The Attribution. No Profit, No Problem License** — see [LICENSE.txt](LICENSE.txt)
+
+Free for non-commercial use (individuals, students, educators, non-profits, academic researchers) with required attribution to PrologAI, Mentova, and D. R. Dison.
+
+Commercial and profit-making use requires a negotiated license including a percentage-of-profits royalty. Contact [ai.university.aiu@gmail.com](mailto:ai.university.aiu@gmail.com) before any commercial use begins.
+
+See [COMMERCIAL.txt](COMMERCIAL.txt) for the full commercial licensing process.

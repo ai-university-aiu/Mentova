@@ -1,6 +1,6 @@
 PrologAI Work Package 272: Multi-Pair Object Tracking (multipair pack, mp_*, Layer 251)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 To understand an ARC task, you need to track the same object across all training examples, not just within one.
 

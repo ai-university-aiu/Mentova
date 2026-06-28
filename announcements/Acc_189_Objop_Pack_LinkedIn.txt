@@ -1,6 +1,6 @@
 Accomplishment 189: PrologAI adds the objop pack - object-level grid manipulation in 14 predicates.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 The pattern "find the colored object and transform it" is fundamental to visual reasoning.

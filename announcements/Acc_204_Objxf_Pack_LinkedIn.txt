@@ -51,5 +51,5 @@ Key example - double an object's size:
 Together with scene (extraction), sizeop (size ranking), and posop (position
 ranking), objxf completes the core object-centric reasoning suite for ARC-AGI-2.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

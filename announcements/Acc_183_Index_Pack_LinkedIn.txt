@@ -1,6 +1,6 @@
 Accomplishment 183: Coordinate-Valued Grid Generation for Spatial Reasoning
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI gains its 163rd work package: the index pack (ix_*, Layer 142).

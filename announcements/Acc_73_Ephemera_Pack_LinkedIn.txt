@@ -1,6 +1,6 @@
 ACCOMPLISHMENT: Acc_73 - Mentova Now Writes and Runs Short-Lived Programs
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 PrologAI can now write a small program, run it, read the output, and move on.
 
@@ -38,6 +38,6 @@ Repository: https://github.com/ai-university-aiu/Mentova
 This is Acc_73.
 
 D. R. Dison
-Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova.
 ORCID: 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

@@ -1,6 +1,6 @@
 ACCOMPLISHMENT: Acc_74 - Mentova Now Pursues Goals with a Formal Agentic Loop
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 PrologAI can now pursue a goal over many steps, track every thought and action, detect when it is stuck, and safely ask for human help.
 
@@ -47,6 +47,6 @@ Repository: https://github.com/ai-university-aiu/Mentova
 This is Acc_74.
 
 D. R. Dison
-Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova.
 ORCID: 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

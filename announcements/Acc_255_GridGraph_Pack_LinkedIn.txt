@@ -1,6 +1,6 @@
 Acc_255: gridgraph Pack - Region Adjacency Graph Analysis (ggr_*, Layer 214)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 235 with the gridgraph pack (Layer 214): fourteen ggr_* predicates for region adjacency graph (RAG) analysis of symbolic grids.
 

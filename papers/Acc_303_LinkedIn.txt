@@ -1,6 +1,6 @@
 ARC-AGI-2 Wave 5 - Column Stub Rank-Fill - Score: 5/120 = 4.17%
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 Mentova just solved its fifth ARC-AGI-2 evaluation task using a new glass-box rule called stub_rank_fill.
 

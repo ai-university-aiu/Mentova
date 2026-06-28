@@ -1,6 +1,6 @@
 Accomplishment 187: Concentric Ring Analysis for 2D Grids
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI gains its 167th work package: the border pack (br_*, Layer 146).

@@ -4,7 +4,7 @@ A Complete Scientific Chronicle of Every Attempt, Every Score,
 Every Algorithm, Every Lesson, and the Real-World Meaning of It All
 
 Author: D. R. Dison, Founder of AIU (Artificial Intelligence University).
-Creator of PrologAI and Mentova.
+Creator and Owner of PrologAI and Mentova.
 Open Researcher and Contributor ID (ORCID): 0009-0001-9246-5758.
 LinkedIn: https://www.linkedin.com/in/d-r-dison/
 Repository: https://github.com/ai-university-aiu/Mentova

@@ -1,6 +1,6 @@
 Acc_253: gridmorph Pack - Morphological Operations on Symbolic Grids (gmo_*, Layer 212)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 233 with the gridmorph pack (Layer 212): fourteen gmo_* predicates for binary morphological operations on symbolic grids.
 

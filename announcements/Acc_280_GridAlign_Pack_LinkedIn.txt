@@ -1,6 +1,6 @@
 Acc_280: gridalign Pack - Grid Alignment and Shift Matching (gal_*, Layer 239)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 260 with the gridalign pack (Layer 239): fourteen gal_* predicates for computing how symbolic grid patterns relate to each other spatially.
 

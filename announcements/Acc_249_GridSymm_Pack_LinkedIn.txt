@@ -1,6 +1,6 @@
 Acc_249: gridsymm Pack - Symmetry Detection, Completion, Violations, and Score (gsm_*, Layer 208)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI Work Package 229 adds the gridsymm pack at Layer 208: fourteen gsm_* predicates for symmetry analysis of symbolic grids.
 

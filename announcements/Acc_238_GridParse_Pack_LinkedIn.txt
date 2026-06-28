@@ -1,6 +1,6 @@
 Accomplishment 238: Grid Parse and Object Extraction (gridparse Pack, gp_*, Layer 197)
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI now has a gridparse pack - 14 gp_* predicates that convert ARC's raw
@@ -31,6 +31,6 @@ This is WP 218, Mentova's 238th accomplishment.
 
 D. R. Dison
 Founder of AIU
-Creator of PrologAI and Mentova
+Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

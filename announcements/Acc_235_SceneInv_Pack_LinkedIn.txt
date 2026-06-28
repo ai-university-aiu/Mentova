@@ -1,6 +1,6 @@
 Accomplishment 235: Scene Invariant Detection (sceneinv Pack, si_*, Layer 194)
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI now has a sceneinv pack - 14 si_* predicates that detect what stays
@@ -26,6 +26,6 @@ This is WP 215, Mentova's 235th accomplishment.
 
 D. R. Dison
 Founder of AIU
-Creator of PrologAI and Mentova
+Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

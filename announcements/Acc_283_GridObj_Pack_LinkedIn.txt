@@ -14,7 +14,7 @@ reachable - the enclosed regions.
 
 44/44 tests pass. 263 work packages total. Layer 242 in the Data Layer.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/
 

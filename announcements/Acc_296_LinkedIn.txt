@@ -1,3 +1,3 @@
 PrologAI WP-276: condxf gets xc_infer_gate/3 - automatic context gate inference. Give it training pairs; it finds the object color that switches between rule variants. Context-gated tasks are one of ARC-AGI-2's four hard flavors. Now Mentova can detect the gate automatically. 45/45 tests pass.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
