@@ -1845,6 +1845,122 @@ arc2_induce_rule(TrainingPairs, apex_shadow) :-
     maplist([pair(In,Out)]>>(arc2_transform(apex_shadow, In, Out)),
             TrainingPairs).
 
+% ===========================================================================
+% WAVE 11: SYM_RESTORE (task 8e5c0c38)
+% Each non-background colour group has a vertical mirror axis.  Cells whose
+% column-mirror is absent from the group are orphans that break the symmetry.
+% The rule finds the vertical axis (integer or half-integer column) that
+% minimises orphan count for each colour, then removes those orphans by
+% setting them to background, restoring left-right symmetry per colour.
+% Reference: ARC-AGI-2 task 8e5c0c38.
+% ===========================================================================
+
+% Register sym_restore as a known named rule.
+arc2_named_rule(sym_restore).
+
+% arc2_transform for sym_restore: restore per-colour vertical symmetry.
+arc2_transform(sym_restore, Grid, Result) :-
+% Flatten grid to a single list for modal counting.
+    append(Grid, SrFlat_), msort(SrFlat_, SrSorted_),
+% Find background colour (most-frequent value).
+    arc2_bs_mode_(SrSorted_, SrBg_),
+% Group non-background cells by colour.
+    sr_color_groups_(Grid, SrBg_, SrGroups_),
+% For every colour group find the V-axis with fewest orphans.
+    sr_all_orphans_(SrGroups_, SrOrphans_),
+% Build result by replacing each orphan cell with background.
+    sr_remove_rows_(Grid, 0, SrBg_, SrOrphans_, Result).
+
+% sr_color_groups_(+Grid, +Bg, -Groups)
+% Groups = list of Color-Cells pairs; Cells = [rc(R,C),...].
+sr_color_groups_(Grid, Bg, Groups) :-
+% Get row and column counts.
+    length(Grid, SrNR_), SrNR1_ is SrNR_ - 1,
+    nth0(0, Grid, SrRow0_), length(SrRow0_, SrNC_), SrNC1_ is SrNC_ - 1,
+% Enumerate all non-background (Value, R, C) triples.
+    findall(V-rc(R,C),
+        (between(0,SrNR1_,R), between(0,SrNC1_,C),
+         nth0(R,Grid,SrRowG__), nth0(C,SrRowG__,V), V \= Bg),
+        SrPairs_),
+% Collect distinct colours.
+    findall(V, member(V-_, SrPairs_), SrVs0_),
+    sort(SrVs0_, SrVs_),
+% Group all rc(R,C) for each distinct colour.
+    maplist([V,V-Cells]>>(findall(rc(R,C), member(V-rc(R,C), SrPairs_), Cells)),
+        SrVs_, Groups).
+
+% sr_all_orphans_(+Groups, -Orphans)
+% Concatenate orphan cell lists across all colour groups.
+sr_all_orphans_([], []).
+sr_all_orphans_([_-Cells|Rest], Orphans) :-
+% Find orphans for this colour group.
+    sr_best_v_orphans_(Cells, MyOrphans),
+% Recurse over remaining groups.
+    sr_all_orphans_(Rest, RestOrphans),
+% Merge orphan lists.
+    append(MyOrphans, RestOrphans, Orphans).
+
+% sr_best_v_orphans_(+Cells, -Orphans)
+% Find the vertical axis Ax2 (= 2*axis, enabling half-column axes) that
+% minimises the orphan count; return those orphan cells.
+sr_best_v_orphans_(Cells, Orphans) :-
+% Extract column indices and find column range.
+    maplist([rc(_,C),C]>>true, Cells, SrCols_),
+    min_list(SrCols_, SrMinC_), max_list(SrCols_, SrMaxC_),
+% Build list of candidate doubled-axis values.
+    SrMinAx2_ is SrMinC_ * 2, SrMaxAx2_ is SrMaxC_ * 2,
+    numlist(SrMinAx2_, SrMaxAx2_, SrAxes_),
+% Select axis with fewest orphan cells.
+    sr_min_orphans_(SrAxes_, Cells, Orphans).
+
+% sr_min_orphans_(+Axes, +Cells, -BestOrphans)
+% Iterate over doubled-axis list; return orphans for the best axis.
+sr_min_orphans_([Ax2], Cells, Orphans) :-
+% Base case: single remaining axis.
+    sr_orphans_for_axis_(Cells, Ax2, Orphans).
+sr_min_orphans_([Ax2|Rest], Cells, Orphans) :-
+% Compute orphans for this axis.
+    sr_orphans_for_axis_(Cells, Ax2, MyOrphans),
+    length(MyOrphans, MyN),
+% Find best orphan set among remaining axes.
+    sr_min_orphans_(Rest, Cells, CandOrphans),
+    length(CandOrphans, CandN),
+% Keep whichever axis produces fewer orphans.
+    ( MyN =< CandN -> Orphans = MyOrphans ; Orphans = CandOrphans ).
+
+% sr_orphans_for_axis_(+Cells, +Ax2, -Orphans)
+% Cell rc(R,C) is an orphan when rc(R, Ax2-C) is absent from Cells.
+sr_orphans_for_axis_(Cells, Ax2, Orphans) :-
+% Filter to cells whose column mirror is not present.
+    include([rc(R,C)]>>(MirC is Ax2 - C, \+ member(rc(R,MirC), Cells)),
+        Cells, Orphans).
+
+% sr_remove_rows_(+Grid, +R, +Bg, +Orphans, -Result)
+% Walk rows; replace each orphan cell with Bg.
+sr_remove_rows_([], _, _, _, []).
+sr_remove_rows_([Row|Rest], R, Bg, Orphans, [NewRow|NewRest]) :-
+% Process all cells in one row.
+    sr_remove_row_(Row, R, 0, Bg, Orphans, NewRow),
+    R1 is R + 1,
+    sr_remove_rows_(Rest, R1, Bg, Orphans, NewRest).
+
+% sr_remove_row_(+Row, +R, +C, +Bg, +Orphans, -NewRow)
+% Walk one row cell by cell; replace orphan positions with Bg.
+sr_remove_row_([], _, _, _, _, []).
+sr_remove_row_([V|Rest], R, C, Bg, Orphans, [NewV|NewRest]) :-
+% Replace with Bg if this (R,C) is in the orphan set.
+    ( member(rc(R,C), Orphans) -> NewV = Bg ; NewV = V ),
+    C1 is C + 1,
+    sr_remove_row_(Rest, R, C1, Bg, Orphans, NewRest).
+
+% arc2_induce_rule for sym_restore: verify all training pairs match.
+arc2_induce_rule(TrainingPairs, sym_restore) :-
+% Require at least one training pair.
+    TrainingPairs \= [],
+% Every pair must satisfy arc2_transform exactly.
+    maplist([pair(In,Out)]>>(arc2_transform(sym_restore, In, Out)),
+        TrainingPairs).
+
 % ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
