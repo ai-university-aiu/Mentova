@@ -1,6 +1,6 @@
 ACCOMPLISHMENT: Acc_75 - Mentova Now Critiques and Improves Its Own Outputs
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 PrologAI can now evaluate whether its own outputs are good enough, identify exactly what is wrong, drive structured improvement until quality criteria are satisfied, and record lessons from past failures.
 
@@ -44,6 +44,6 @@ Repository: https://github.com/ai-university-aiu/Mentova
 This is Acc_75.
 
 D. R. Dison
-Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova.
 ORCID: 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

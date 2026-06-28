@@ -1,6 +1,6 @@
 Accomplishment 232: End-to-End Scene Puzzle Solver (gridsolve Pack, gs_*, Layer 191)
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI now has a gridsolve pack - 14 gs_* predicates that wrap the full
@@ -30,6 +30,6 @@ This is WP 212, Mentova's 232nd accomplishment.
 
 D. R. Dison
 Founder of AIU
-Creator of PrologAI and Mentova
+Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

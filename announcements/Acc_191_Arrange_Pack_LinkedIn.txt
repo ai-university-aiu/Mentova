@@ -22,5 +22,5 @@ a pattern that appears throughout grid-based visual reasoning.
 
 42/42 PLUnit tests pass. PR 256 merged to PrologAI main.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

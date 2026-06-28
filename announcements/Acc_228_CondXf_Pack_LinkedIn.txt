@@ -1,6 +1,6 @@
 Accomplishment 228: Conditional and Selective Scene Transformation (condxf Pack, xc_*, Layer 187)
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI now has a condxf pack - 14 xc_* predicates that apply transformations
@@ -33,6 +33,6 @@ This is WP 208, Mentova's 228th accomplishment.
 
 D. R. Dison
 Founder of AIU
-Creator of PrologAI and Mentova
+Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

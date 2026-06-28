@@ -2,7 +2,7 @@ MENTOVA TUTORIAL
 
 Chapter 1: What Is Mentova?
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 
 WELCOME
@@ -104,7 +104,7 @@ MENTOVA TUTORIAL
 
 Chapter 2: Starting a Session
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 
 BEFORE YOU BEGIN
@@ -294,7 +294,7 @@ MENTOVA TUTORIAL
 
 Chapter 3: The Reasoning Ladder - A Complete Tour
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 
 THE REASONING LADDER
@@ -905,7 +905,7 @@ MENTOVA TUTORIAL
 
 Chapter 4: Memory, Growth, Bodies, and Protocols
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 
 MENTOVA'S MEMORY: THE LATTICE

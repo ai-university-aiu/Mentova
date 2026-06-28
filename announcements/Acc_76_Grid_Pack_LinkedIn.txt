@@ -42,6 +42,6 @@ The grid pack is the perceptual foundation. The next step is inference.
 
 PrologAI: 53 work packages, 35 layers, glass-box all the way down.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 #PrologAI #Mentova #ARC_AGI #SymbolicAI #LogicProgramming #GlassBox #PerceptualReasoning #SyntheticMind #AIU #Prolog

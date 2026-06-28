@@ -1,6 +1,6 @@
 Acc_247: gridmask Pack - Boolean Mask Operations for Symbolic Grid Reasoning (gm_*, Layer 206)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI Work Package 227 adds the gridmask pack at Layer 206: fourteen gm_* predicates for boolean mask operations on symbolic grids.
 

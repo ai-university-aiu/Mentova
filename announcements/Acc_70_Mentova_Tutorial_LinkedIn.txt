@@ -1,6 +1,6 @@
 ACCOMPLISHMENT: Acc_70 - Mentova Tutorial Now Available for Complete Beginners
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 You do not need to know programming to use Mentova.
 
@@ -33,6 +33,6 @@ Mentova repository: https://github.com/ai-university-aiu/Mentova
 This is Acc_70 - the seventieth documented accomplishment on Mentova.
 
 D. R. Dison
-Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova.
 ORCID: 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

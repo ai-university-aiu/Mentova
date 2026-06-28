@@ -1,6 +1,6 @@
 Accomplishment 240: Grid Neighbor Analysis (gridnbr Pack, gn_*, Layer 199)
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI now has a gridnbr pack - 14 gn_* predicates for analyzing cell
@@ -28,6 +28,6 @@ This is WP 220, Mentova's 240th accomplishment.
 
 D. R. Dison
 Founder of AIU
-Creator of PrologAI and Mentova
+Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

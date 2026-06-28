@@ -1,6 +1,6 @@
 Mentova Has a Decentralized W3C DID and Participates in the Agent Network Protocol — All Five ACs Pass (Acc_65)
 
-D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 ANP (Agent Network Protocol) — the peer-to-peer decentralized agent discovery standard using W3C DIDs — has been promoted from the research track to a production work package in PrologAI v13 (PR 48). Mentova now verifies its ANP participation with five passing acceptance criteria.
 

@@ -25,6 +25,6 @@ All 14 predicates work directly on obj terms - no grid conversion required.
 
 This is WP 186, Mentova's 206th accomplishment.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova
 ORCID 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

@@ -1,6 +1,6 @@
 Acc_270: gridwave Pack - Grid Wave Propagation (gwv_*, Layer 229)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 250 with the gridwave pack (Layer 229): fourteen gwv_* predicates for wave-based reasoning on symbolic grids.
 

@@ -1,6 +1,6 @@
 Accomplishment 246: gridpath Pack Added to PrologAI (gpa_*, Layer 205)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI Work Package 226 is merged: the gridpath pack (gpa_*, Layer 205) adds
 fourteen predicates for BFS pathfinding, distance mapping, flood expansion,

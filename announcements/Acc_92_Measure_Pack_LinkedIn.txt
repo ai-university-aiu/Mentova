@@ -30,5 +30,5 @@ The measure pack is Layer 51, work package 72 in the PrologAI platform.
 
 57 tests. All pass.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

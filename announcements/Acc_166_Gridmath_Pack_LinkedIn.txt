@@ -34,7 +34,7 @@ Architecture v105, Refinement v159, Completion v162.
 
 Tutorial Chapter 107 added.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova,
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
 ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 #PrologAI #Mentova #AIU #SymbolicAI #CognitiveArchitecture

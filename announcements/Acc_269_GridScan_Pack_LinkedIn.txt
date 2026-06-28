@@ -1,6 +1,6 @@
 Acc_269: gridscan Pack - Grid Ray Scanning (gsn_*, Layer 228)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI reaches Work Package 249 with the gridscan pack (Layer 228): fourteen gsn_* predicates for scanning a grid in four directions to find non-background cells.
 

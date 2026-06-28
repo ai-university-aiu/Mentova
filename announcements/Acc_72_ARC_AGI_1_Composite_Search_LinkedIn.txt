@@ -1,6 +1,6 @@
 ACCOMPLISHMENT: Acc_72 - What the 383 Failing ARC-AGI-1 Tasks Actually Need
 
-Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 The score is still 17 out of 400. That is the honest result, and it is the point.
 
@@ -33,6 +33,6 @@ Mentova repository: https://github.com/ai-university-aiu/Mentova
 This is Acc_72.
 
 D. R. Dison
-Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova.
+Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova.
 ORCID: 0009-0001-9246-5758
 linkedin.com/in/d-r-dison/

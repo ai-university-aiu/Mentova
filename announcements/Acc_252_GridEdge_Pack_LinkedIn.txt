@@ -1,6 +1,6 @@
 Acc_252: gridedge Pack - Grid Edge Detection, Boundary Analysis, Corners, Endpoints, and Transition Maps (ge_*, Layer 211)
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 PrologAI Work Package 232 adds the gridedge pack at Layer 211: fourteen ge_* predicates for detecting edges and structural features of symbolic grids.
 

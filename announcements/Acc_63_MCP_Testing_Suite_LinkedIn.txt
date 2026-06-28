@@ -1,6 +1,6 @@
 Mentova Is Now Accessible via the Model Context Protocol — All Five ACs Pass (Acc_63)
 
-D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU (Artificial Intelligence University). Creator and Owner of PrologAI and Mentova. ORCID: 0009-0001-9246-5758. linkedin.com/in/d-r-dison/
 
 We just verified that Mentova — a Synthetic Mind built on PrologAI — is fully accessible via the Model Context Protocol (MCP), the open tool-calling standard for the AI agent ecosystem.
 

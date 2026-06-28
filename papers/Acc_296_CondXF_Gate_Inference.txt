@@ -2,7 +2,7 @@ ACCOMPLISHMENT RECORD Acc_296
 
 Title: condxf Pack Enhancement - xc_infer_gate/3 for Context Gate Inference (WP-276)
 
-Author: D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
 
 Date: 2026-06-27
 

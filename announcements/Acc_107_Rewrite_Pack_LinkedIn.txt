@@ -17,4 +17,4 @@ Combined with the connect pack (find objects), the morph pack (reshape objects),
 
 This is Mentova's 107th documented accomplishment and PrologAI's 85th work package.
 
-D. R. Dison, Founder of AIU, Creator of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
