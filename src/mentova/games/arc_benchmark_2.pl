@@ -1501,6 +1501,154 @@ arc2_bs_bar_covers_(CI, RI, DivIdx, Bars, SortedPairs, Color) :-
     ; RI > DivIdx -> Dist is RI - DivIdx, Dist =< HB ).
 
 % ---------------------------------------------------------------------------
+% PANEL OVERLAY
+% Four adjacent 5x5 panels; s1 defines a wall (8-connected main component)
+% and a seed (isolated extra cell); 4-connected flood fill from the seed
+% labels cells as s2-region; remainder is s3-region; wall cells prefer s2.
+% Reference: ARC-AGI-2 task 7491f3cf.
+% ---------------------------------------------------------------------------
+
+% Register panel_overlay as a known named transform.
+arc2_named_rule(panel_overlay).
+
+% arc2_transform for panel_overlay: split s4 via s1-seeded flood boundary.
+arc2_transform(panel_overlay, Grid, Result) :-
+% Outer background = first cell in first row (border color).
+    Grid = [Row0|_], Row0 = [OuterBg|_],
+% Extract the four 5x5 content panels from the 7-row x 25-col grid.
+    arc2_po_panels_(Grid, Panels),
+% Bind panels: s1=divider, s2=left-region, s3=right-region, s4=blank target.
+    Panels = [S1, S2, S3, _],
+% Inner background = mode of all content cells from panels 1-3.
+    arc2_po_flat3_(S1, S2, S3, AllCells),
+    msort(AllCells, SortedCells),
+    arc2_bs_mode_(SortedCells, InBg),
+% Collect r(R,C) positions in s1 that differ from InBg.
+    arc2_po_nonbg_pos_(S1, InBg, S1Nz),
+% Seed = the isolated s1 cell (no 8-neighbor also in s1 non-bg set).
+    arc2_po_seed_(S1Nz, Seed),
+% Wall = all non-bg s1 cells except the seed.
+    subtract(S1Nz, [Seed], Wall),
+% 4-connected flood fill from seed through non-wall cells to label s2 region.
+    arc2_po_flood4_(Seed, Wall, Reachable),
+% Build output: copy grid, replace s4 section (cols 19-23, rows 1-5).
+    arc2_po_build_result_(Grid, OuterBg, S2, S3, InBg, Wall, Reachable, Result).
+
+% arc2_po_panels_(+Grid, -Panels): extract four 5x5 content panels from a 7x25 grid.
+% Content rows are 1-5 (0-indexed); col ranges are 1-5, 7-11, 13-17, 19-23.
+arc2_po_panels_(Grid, Panels) :-
+% Collect the five content rows (skip border rows 0 and 6).
+    findall(Row, (nth0(R, Grid, Row), R >= 1, R =< 5), ContentRows),
+% Slice each content row into four sub-rows, one per panel column block.
+    maplist([Full, [P1R,P2R,P3R,P4R]]>>(
+        arc2_po_slice_(Full, 1, 5, P1R),
+        arc2_po_slice_(Full, 7, 11, P2R),
+        arc2_po_slice_(Full, 13, 17, P3R),
+        arc2_po_slice_(Full, 19, 23, P4R)
+    ), ContentRows, Sliced),
+% Transpose: gather per-panel row lists from the per-content-row slices.
+    maplist([PIdx, Panel]>>(
+        maplist([QuadRow, PRow]>>(nth0(PIdx, QuadRow, PRow)), Sliced, Panel)
+    ), [0,1,2,3], Panels).
+
+% arc2_po_slice_(+Row, +From, +To, -Sub): extract columns From..To (0-indexed, inclusive).
+arc2_po_slice_(Row, From, To, Sub) :-
+% Generate column index list From..To.
+    numlist(From, To, Cols),
+% Extract the value at each column index from Row.
+    maplist([C, V]>>(nth0(C, Row, V)), Cols, Sub).
+
+% arc2_po_flat3_(+S1, +S2, +S3, -Cells): all cells from three 5x5 panels as a flat list.
+arc2_po_flat3_(S1, S2, S3, Cells) :-
+% Flatten each panel's rows into a single list.
+    append(S1, Flat1), append(S2, Flat2), append(S3, Flat3),
+% Concatenate the three flat lists.
+    append(Flat1, Flat2, Tmp), append(Tmp, Flat3, Cells).
+
+% arc2_po_nonbg_pos_(+Panel, +Bg, -Positions): r(R,C) pairs where Panel[R][C] != Bg.
+arc2_po_nonbg_pos_(Panel, Bg, Positions) :-
+% Collect all panel positions whose value is not the background color.
+    findall(r(R,C),
+        (nth0(R, Panel, PRow), nth0(C, PRow, V), V \= Bg),
+        Positions).
+
+% arc2_po_seed_(+Positions, -Seed): find the isolated position in a set of r(R,C) terms.
+% A position is isolated if none of its 8-connected neighbors is also in Positions.
+arc2_po_seed_(Positions, Seed) :-
+% Enumerate each candidate from Positions.
+    member(Seed, Positions),
+    Seed = r(SR, SC),
+% Confirm no other member is 8-adjacent (Chebyshev distance 1) to Seed.
+    \+ (member(r(NR,NC), Positions),
+        r(NR,NC) \= r(SR,SC),
+        DR is abs(NR - SR), DC is abs(NC - SC),
+        DR =< 1, DC =< 1).
+
+% arc2_po_flood4_(+Seed, +Wall, -Reachable): 4-connected BFS from Seed avoiding Wall.
+arc2_po_flood4_(Seed, Wall, Reachable) :-
+% Start the BFS with Seed as the only queued cell and an empty visited set.
+    arc2_po_bfs4_([Seed], Wall, [], Reachable).
+
+% arc2_po_bfs4_(+Queue, +Wall, +Visited, -Reachable): expand BFS queue one step at a time.
+% Base case: empty queue — visited set is the complete reachable set.
+arc2_po_bfs4_([], _, Visited, Visited).
+% If the queue head is already visited, skip it.
+arc2_po_bfs4_([H|T], Wall, Vis0, Reachable) :-
+    member(H, Vis0), !,
+    arc2_po_bfs4_(T, Wall, Vis0, Reachable).
+% Otherwise, add the head to visited and enqueue its unvisited non-wall 4-neighbors.
+arc2_po_bfs4_([r(R,C)|T], Wall, Vis0, Reachable) :-
+    Vis1 = [r(R,C)|Vis0],
+    findall(r(NR,NC),
+        ( member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1]),
+          NR is R + DR, NC is C + DC,
+          NR >= 0, NR < 5, NC >= 0, NC < 5,
+          \+ member(r(NR,NC), Wall),
+          \+ member(r(NR,NC), Vis1) ),
+        Neighbors),
+    append(T, Neighbors, Q1),
+    arc2_po_bfs4_(Q1, Wall, Vis1, Reachable).
+
+% arc2_po_build_result_(+Grid,+OBg,+S2,+S3,+InBg,+Wall,+Reachable,-Result):
+% Copy the full input grid, replacing cols 19-23 rows 1-5 with computed s4 values.
+arc2_po_build_result_(Grid, OBg, S2, S3, InBg, Wall, Reachable, Result) :-
+% Compute grid dimensions for index iteration.
+    length(Grid, NR), NR1 is NR - 1, numlist(0, NR1, RIdxs),
+    nth0(0, Grid, Row0g), length(Row0g, NC), NC1 is NC - 1, numlist(0, NC1, CIdxs),
+% Build each output row.
+    maplist([RI, OutRow]>>(
+        maplist([CI, Cell]>>(
+% Columns 19-23 in content rows (RI 1-5) are filled from s2/s3/wall/reachable.
+            ( CI >= 19, CI =< 23 ->
+                PR is RI - 1, PC is CI - 19,
+                ( PR >= 0, PR =< 4 ->
+                    arc2_po_cell_val_(PR, PC, S2, S3, InBg, Wall, Reachable, Cell)
+% Border rows for the s4 section get the outer background.
+                ;   Cell = OBg
+                )
+% All other columns are copied unchanged from the input grid.
+            ;   nth0(RI, Grid, GRow), nth0(CI, GRow, Cell)
+            )
+        ), CIdxs, OutRow)
+    ), RIdxs, Result).
+
+% arc2_po_cell_val_(+PR,+PC,+S2,+S3,+InBg,+Wall,+Reachable,-V):
+% Choose the output color for panel-4 cell (PR, PC) based on flood-fill regions.
+arc2_po_cell_val_(PR, PC, S2, S3, InBg, Wall, Reachable, V) :-
+% Retrieve s2 and s3 values at this panel position.
+    nth0(PR, S2, S2Row), nth0(PC, S2Row, V2),
+    nth0(PR, S3, S3Row), nth0(PC, S3Row, V3),
+% Wall cells prefer s2; if s2 is background, fall back to s3.
+    ( member(r(PR,PC), Wall) ->
+        ( V2 \= InBg -> V = V2 ; V = V3 )
+% Flood-reachable cells (s2 region) take the s2 value.
+    ; member(r(PR,PC), Reachable) ->
+        V = V2
+% All other cells (s3 region) take the s3 value.
+    ;   V = V3
+    ).
+
+% ---------------------------------------------------------------------------
 % RECOLOR RULES
 % arc2_recolor_grid/3: apply a color substitution map to an entire grid.
 % ---------------------------------------------------------------------------
