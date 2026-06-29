@@ -6,8 +6,8 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-317-FF6B35?style=for-the-badge" alt="317 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-19%2F120%20%3D%2015.83%25-orange?style=for-the-badge" alt="ARC-AGI-2: 19/120 = 15.83%">
+  <img src="https://img.shields.io/badge/accomplishments-318-FF6B35?style=for-the-badge" alt="318 Accomplishments">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-20%2F120%20%3D%2016.67%25-orange?style=for-the-badge" alt="ARC-AGI-2: 20/120 = 16.67%">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **19/120 = 15.83%** — Wave 19; climbing underway |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **20/120 = 16.67%** — Wave 20; climbing underway |
 | Documented accomplishments | **310 accomplished** |
 | Scientific papers | **307 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 19 complete (19/120 = 15.83%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 20 complete (20/120 = 16.67%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -563,6 +563,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_300` | ARC-AGI-2 Wave 2 — BFS flood-fill connected-component analysis implemented; chain_strip rule solves task 7b5033c1. Score: 2/120 = 1.67%. |
 | `Acc_301` | ARC-AGI-2 Wave 3 — checkerboard diagonal arm projection; arm_endpoint_ray rule solves task 80a900e0. Score: 3/120 = 2.50%. |
 | `Acc_312` | ARC-AGI-2 Wave 14 — reflect-axis shape reflection across 2-marker axis; reflect_axis rule solves task 7ed72f31 (each shape reflected across nearest 2-cluster axis: point, vertical, or horizontal). Score: 14/120 = 11.67%. |
+| `Acc_318` | ARC-AGI-2 Wave 20 — section_tile rule solves task b0039139 (input divided by all-1 row/col dividers into sections; shape1 inner bbox tiled N times with solid-color mapping; N = total non-zeros in shape2 / 2; early induction placement before frame_target prevents timeout). Score: 20/120 = 16.67%. |
 | `Acc_317` | ARC-AGI-2 Wave 19 — segment_ext rule solves task faa9f03d (4-corner stub removal, opposite-direction arm extension, pure-vertical gap fill guard, and extension-direction conflict tiebreaker). Score: 19/120 = 15.83%. |
 | `Acc_316` | ARC-AGI-2 Wave 18 — tip-escape rule; tip_escape rule solves task 3dc255db (8-connected shape markers escape through the shape's single-cell tip; apex detection or projection method selects escape direction). Score: 18/120 = 15.00%. |
 | `Acc_315` | ARC-AGI-2 Wave 17 — frame-target legend-direction rule; frame_target rule solves task 88e364bc (legend rectangles encode movement directions for dot-4 cells inside irregular frames; diagonal clip rule stops movement at frame corners). Score: 17/120 = 14.17%. |
