@@ -264,6 +264,40 @@ Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
 
 
+ATTEMPT 25 - 2026-06-29 - Score: 25/120 = 20.83%
+
+Date: 2026-06-29
+
+Confirmed score: 25 / 120 = 20.83%
+
+Rules added in this wave:
+
+1. bar_extend (task 1ae2feb7) - a vertical divider column (every row shares
+   the same non-BG value there) divides the grid into a left bar region and
+   a right empty region. Each row carries a bar of 1-2 non-BG colors to the
+   left of the divider. The rightmost non-BG cell in the bar is the primary
+   color P with count CP. Any other non-BG color is the secondary S with
+   count CS (defaulting to 1 when absent). The right side is filled by
+   repeating a period of length CP*CS: P at every CP-multiple position;
+   S at every CS-multiple position not already primary; BG elsewhere.
+   Examples: bar [1,1,1,1,0] gives period 4, pattern [1,0,0,0]; bar
+   [6,6,6,6,8] gives period 1, all-8 fill (8 adjacent to divider, count 1);
+   bar [3,3,3,4,4] gives period 6, pattern [4,0,4,3,4,0].
+
+Bugs fixed: none.
+
+Lessons learned: detecting the divider as the unique constant non-BG column
+(ignoring BG rows) is reliable; primary = rightmost non-BG in bar encodes
+the dominant direction; the LCM-style period = CP*CS with the modular
+position rule elegantly handles all 1- and 2-color cases.
+
+Score advance: 24/120 = 20.00% to 25/120 = 20.83%.
+Accomplishment: Acc_323.  Paper: Acc_323_ARC2_Wave25.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
 ATTEMPT 24 - 2026-06-29 - Score: 24/120 = 20.00%
 
 Date: 2026-06-29
@@ -2146,6 +2180,7 @@ ALL SOLVED TASKS
 135a2760  - Wave 15 - period_repair        - fix period-P pattern deviations in inner row/col sequences
 16de56c4  - Wave 23 - period_extend       - anchor-pair step detection; stop/recolor; row or col mode
 1818057f  - Wave 1  - recolor_plus(4,8)   - plus shapes of 4 become 8
+1ae2feb7  - Wave 25 - bar_extend          - divider splits grid; bar colors project periodic pattern right
 2ba387bc  - Wave 24 - shape_sort          - hollow/solid 4x4 block separation; paired by reading order; zero-block padding
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
@@ -2300,4 +2335,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 23: Period-extend anchor-pair step detection
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.
 Dison, D. R. (2026). ARC-AGI-2 Wave 24: Shape-sort hollow/solid 4x4 block classification and pairing.
   Score: 24/120 = 20.00%. Task 2ba387bc solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-29.
+Dison, D. R. (2026). ARC-AGI-2 Wave 25: Bar-extend divider-based periodic right-side fill rule.
+  Score: 25/120 = 20.83%. Task 1ae2feb7 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.

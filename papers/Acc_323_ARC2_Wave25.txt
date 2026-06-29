@@ -1,0 +1,113 @@
+Acc_323: ARC-AGI-2 Wave 25 - Bar-Extend Periodic Fill Rule
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-29
+
+ABSTRACT
+
+Wave 25 adds the bar_extend named rule to the PrologAI ARC-AGI-2 solver,
+solving task 1ae2feb7 and advancing the score from 24/120 = 20.00% to
+25/120 = 20.83%.
+
+The rule decodes a periodic projection pattern hidden in a left-side bar:
+the bar's primary and secondary colors encode a period and a cell-position
+formula that governs exactly how the right side of the grid is filled.
+
+TASK DESCRIPTION
+
+Task 1ae2feb7 presents grids split by a vertical divider column.
+To the left of the divider, each row optionally carries a horizontal bar
+of 1 or 2 non-background colors.
+
+The right side of the divider is initially empty (all background).
+
+The transformation fills the right side according to a rule derived entirely
+from the bar.
+
+RULE: BAR-EXTEND
+
+Step 1 - find the divider column.
+
+The divider is the unique column where every non-blank row carries the same
+non-background value.
+
+Step 2 - identify bar colors.
+
+For each row with bar content, the rightmost non-background cell is the
+primary color P with count CP (how many times P appears in the bar).
+Any other non-background color is the secondary S with count CS.
+If there is no secondary, CS defaults to 1.
+
+Step 3 - compute period and pattern.
+
+Period = CP times CS.
+
+Within one period of positions 0 through Period-1:
+
+• P appears at every position that is a multiple of CP.
+• S appears at every position that is a multiple of CS and not already
+  occupied by P.
+• Background (0) fills all remaining positions.
+
+Step 4 - fill right side.
+
+The right side (all columns after the divider) is filled by repeating the
+one-period pattern cyclically.
+
+WORKED EXAMPLES
+
+Single-color bar:
+
+Bar [1,1,1,1,0]: P=1, CP=4, no secondary so CS=1, Period=4.
+One period: [1,0,0,0] (P at pos 0; BG at 1,2,3).
+Right side (10 wide): [1,0,0,0,1,0,0,0,1,0].
+
+Bar [6,6,6,6,8]: P=8 (adjacent to divider), CP=1, secondary=6, CS=4.
+Period=1. One period: [8] (P at 0 occupies everything).
+Right side: all 8s.
+
+Bar [3,3,3,3,3]: P=3, CP=5, no secondary, CS=1, Period=5.
+One period: [3,0,0,0,0].
+Right side: [3,0,0,0,0,3,0,0,0,0].
+
+Two-color bars:
+
+Bar [0,2,1,1,0]: P=1 (rightmost non-BG), CP=2; S=2, CS=1. Period=2.
+One period: P at pos 0 (multiple of 2); S at pos 1 (multiple of 1, not P).
+Period = [1,2]. Right side: [1,2,1,2,1,2,...].
+
+Bar [3,3,3,4,4]: P=4, CP=2; S=3, CS=3. Period=6.
+P at 0,2,4 (multiples of 2). S at 3 (multiple of 3, not at 0,2,4).
+Period = [4,0,4,3,4,0]. Right side: [4,0,4,3,4,0,4,0,4,3].
+
+Bar [6,6,8,8,8]: P=8, CP=3; S=6, CS=2. Period=6.
+P at 0,3 (multiples of 3). S at 2,4 (multiples of 2, not at 0,3).
+Period = [8,0,6,8,6,0]. Right side: [8,0,6,8,6,0,8,0,6,8,6,0,...].
+
+IMPLEMENTATION
+
+The rule is implemented as arc2_transform(bar_extend, Grid, Out) in
+arc_benchmark_2.pl (WP-283, Layer 258). Key predicates:
+
+arc2_be_divider_(Grid, D) - finds the divider column.
+arc2_be_row_(D, InRow, OutRow) - processes one row.
+arc2_be_primary_(Bar, PC, CP) - finds primary color and count.
+arc2_be_secondary_(Bar, PC, SC, CS) - finds secondary and count.
+arc2_be_cell_(PC, CP, SC, CS, Idx, Val) - computes one period cell value.
+
+BENCHMARK RESULT
+
+Task solved: 1ae2feb7.
+Score: 24/120 = 20.00% to 25/120 = 20.83%.
+Rule registered: bar_extend (WP-283, Layer 258).
+
+INSIGHT
+
+The period = CP times CS formula creates a kind of least-common-multiple
+interleaving: the primary color marks every CP-th slot and the secondary
+marks every CS-th slot. When CP and CS are coprime, the pattern is maximally
+interleaved. When one is a multiple of the other, one color dominates and
+the other appears sparsely (or not at all). The bar itself is a compact
+encoding of both the color palette and the rhythm of the fill.
