@@ -4546,6 +4546,123 @@ st_tile_horiz_(Mapped_, C2_, N_, Acc_, Output_) :-
     ),
     st_tile_horiz_(Mapped_, C2_, N1_, Acc1_, Output_).
 
+% ===========================================================================
+% WAVE 22 — legend_veto (WP-280, Layer 255)
+% Task d59b0160
+% Rule: The 4×4 top-left frame has 3s on its right column (col 3, rows 0-3)
+% and bottom row (row 3, cols 0-3). The three non-3, non-7, non-0 values in
+% this 4×4 area form the "legend set" S. Each 4-connected component of
+% non-7 cells outside the legend area is ERASED (replaced by 7) if it
+% contains ALL values of S; otherwise kept unchanged.
+% ===========================================================================
+
+% arc2_named_rule: register legend_veto as a known rule name.
+arc2_named_rule(legend_veto).
+
+% arc2_transform(legend_veto, +Grid, -Out): apply legend_veto rule.
+arc2_transform(legend_veto, Grid, Out) :-
+% Extract the three legend values from the 4×4 top-left frame.
+    arc2_lv_legend_set_(Grid, S),
+% Require at least one legend value to guard against false triggers.
+    S \= [],
+% Find all 4-connected components of non-7 cells in the entire grid.
+    arc2_lv_any_comps_(Grid, 7, AllComps),
+% Separate legend components (any cell at row ≤ 3 AND col ≤ 3) from data.
+    exclude(arc2_lv_is_leg_comp_, AllComps, DataComps),
+% Erase each data component whose values cover all of S; keep the rest.
+    foldl([Comp, GIn, GOut]>>(
+        arc2_lv_comp_vals_(Comp, GIn, 7, Vals),
+        (   arc2_lv_all_in_(S, Vals)
+        ->  arc2_lv_erase_comp_(Comp, GIn, 7, GOut)
+        ;   GOut = GIn
+        )
+    ), DataComps, Grid, Out).
+
+% arc2_lv_legend_set_(+Grid, -S): extract the sorted set of non-3, non-7,
+% non-0 values from the 4×4 top-left legend frame (rows 0-3, cols 0-3).
+arc2_lv_legend_set_(Grid, S) :-
+% Collect all qualifying values from the 4×4 area.
+    findall(V,
+        (between(0, 3, R), between(0, 3, C),
+         arc2_cell_(Grid, R, C, V),
+         V \= 7, V \= 3, V \= 0),
+        Vs),
+% Sort to deduplicate; result is the legend set.
+    sort(Vs, S).
+
+% arc2_lv_is_leg_comp_(+Comp): true when Comp overlaps the legend area
+% (any cell with row ≤ 3 AND col ≤ 3).
+arc2_lv_is_leg_comp_(Comp) :-
+% A single overlapping cell is sufficient; cut after first match.
+    member(R-C, Comp), R =< 3, C =< 3, !.
+
+% arc2_lv_any_comps_(+Grid, +BG, -Comps): find all 4-connected components
+% of non-BG cells regardless of color. Each Comp is a list of R-C coords.
+arc2_lv_any_comps_(Grid, BG, Comps) :-
+% Determine grid dimensions.
+    length(Grid, NR), Grid = [FR|_], length(FR, NC),
+    MaxR is NR-1, MaxC is NC-1,
+% Collect all non-background cell coordinates in reading order.
+    findall(R-C,
+        (between(0, MaxR, R), between(0, MaxC, C),
+         arc2_cell_(Grid, R, C, V), V \= BG),
+        Seeds),
+% Process seeds left-to-right, top-to-bottom; skip already-visited cells.
+    arc2_lv_comps_(Grid, BG, Seeds, [], Comps).
+
+% arc2_lv_comps_(+Grid, +BG, +Seeds, +Vis, -Comps): iterate over seeds,
+% flood-filling each unvisited cell to find its full component.
+arc2_lv_comps_(_, _, [], _, []).
+arc2_lv_comps_(Grid, BG, [R-C|Rest], Vis0, Comps) :-
+% If already visited, skip; otherwise flood-fill to find the component.
+    (   memberchk(R-C, Vis0)
+    ->  arc2_lv_comps_(Grid, BG, Rest, Vis0, Comps)
+    ;   arc2_lv_bfs_(Grid, BG, [R-C], Vis0, [], Cells, Vis1),
+        Comps = [Cells|Tail],
+        arc2_lv_comps_(Grid, BG, Rest, Vis1, Tail)
+    ).
+
+% arc2_lv_bfs_(+Grid, +BG, +Queue, +Vis0, +Acc0, -Comp, -Vis):
+% BFS flood-fill through any non-BG cells (color-agnostic).
+arc2_lv_bfs_(_, _, [], Vis, Acc, Acc, Vis).
+arc2_lv_bfs_(Grid, BG, [R-C|Q], Vis0, Acc0, Comp, Vis) :-
+% Already visited: skip without adding to component.
+    (   memberchk(R-C, Vis0)
+    ->  arc2_lv_bfs_(Grid, BG, Q, Vis0, Acc0, Comp, Vis)
+% New non-BG cell: record it, expand its 4-connected non-BG neighbors.
+    ;   arc2_cell_(Grid, R, C, V), V \= BG,
+        R1 is R+1, R0 is R-1, C1 is C+1, C0 is C-1,
+        findall(NR-NC,
+            (member(NR-NC, [R1-C, R0-C, R-C1, R-C0]),
+             arc2_cell_(Grid, NR, NC, NV), NV \= BG),
+            Nbrs),
+        append(Nbrs, Q, Q1),
+        arc2_lv_bfs_(Grid, BG, Q1, [R-C|Vis0], [R-C|Acc0], Comp, Vis)
+    ).
+
+% arc2_lv_comp_vals_(+Comp, +Grid, +BG, -Vals): collect the sorted set of
+% non-BG, non-0 values present in the component's cells.
+arc2_lv_comp_vals_(Comp, Grid, BG, Vals) :-
+% Gather all qualifying values from the component cells.
+    findall(V,
+        (member(R-C, Comp),
+         arc2_cell_(Grid, R, C, V),
+         V \= BG, V \= 0),
+        Vs),
+% Sort to deduplicate.
+    sort(Vs, Vals).
+
+% arc2_lv_all_in_(+S, +Vals): true when every element of S appears in Vals.
+arc2_lv_all_in_(S, Vals) :-
+% Check each legend value is present in the component's value set.
+    forall(member(X, S), memberchk(X, Vals)).
+
+% arc2_lv_erase_comp_(+Comp, +Grid, +BG, -Out): set every cell in Comp to BG.
+arc2_lv_erase_comp_(Comp, Grid, BG, Out) :-
+% Apply arc2_set_cell_ for each cell in the component, threading the grid.
+    foldl([R-C, GIn, GOut]>>(arc2_set_cell_(GIn, R, C, BG, GOut)),
+          Comp, Grid, Out).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.

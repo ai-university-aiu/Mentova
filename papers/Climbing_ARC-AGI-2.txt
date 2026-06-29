@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-29. Wave 20 complete: 20/120 = 16.67%.
+Last updated: 2026-06-29. Wave 22 complete: 22/120 = 18.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -143,6 +143,7 @@ Date        | Score      | Percent | Notes
 2026-06-28  |  19 / 120  | 15.83%  | Wave 19: segment-ext 4-corner stub removal and arm-gap fill rule
 2026-06-29  |  20 / 120  | 16.67%  | Wave 20: section-tile divider-split sections mapped to tiled solid colors
 2026-06-29  |  21 / 120  | 17.50%  | Wave 21: chain-link legend-sequence box connector with BG-scan and chain tracking
+2026-06-29  |  22 / 120  | 18.33%  | Wave 22: legend-veto 4x4 legend set; erase components that cover all legend values
 
 
 COMPLETE SCORE PROGRESSION
@@ -257,6 +258,55 @@ Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
 
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 22 - 2026-06-29 - Score: 22/120 = 18.33%
+
+Date: 2026-06-29
+
+Confirmed score: 22 / 120 = 18.33%
+
+Rules added in this wave:
+
+legend_veto - The top-left 4x4 area of the grid is a legend frame bordered by
+  3s on its right column (col 3, rows 0-3) and bottom row (row 3, cols 0-3).
+  The non-3, non-7, non-0 values in this 4x4 area form the legend set S.
+  All 4-connected components of non-7 cells are identified using a
+  color-agnostic BFS: cells of any non-7 color count as connected to adjacent
+  non-7 cells regardless of whether they share the same color. Components
+  that overlap the legend area (any cell with row <= 3 AND col <= 3) are
+  excluded. Each remaining data component is vetted: if its value set (all
+  non-7, non-0 colors present in the component) is a superset of S, the
+  entire component is erased by setting all its cells to 7. Components whose
+  value sets are missing at least one S value are kept unchanged.
+
+Bugs fixed: none. The rule was correctly derived from scratch by analyzing
+all 3 training pairs of task d59b0160. Key insight recognized on first pass:
+the existing arc2_all_comps_ helper uses same-color adjacency and cannot find
+these components; a new color-agnostic BFS (arc2_lv_any_comps_) was required.
+
+Lessons learned:
+
+1. Color-agnostic BFS is a distinct and useful primitive. The existing
+   arc2_all_comps_ / arc2_bfs_ pair requires same-color adjacency. When
+   tasks group multi-color cells into a single functional region, a
+   color-agnostic variant (any non-BG cell is in-scope) must be used.
+   Future analysis should classify tasks by "same-color components" vs
+   "any-non-BG components" early in the pattern search.
+
+2. Legend frames do not have to encode a direct color mapping. The legend
+   in this task encodes a SET of values; the rule checks COVERAGE (superset
+   relationship) rather than equality or lookup. This is a richer pattern
+   than the earlier legend_fill rule.
+
+3. The exclusion of legend-area components is the correct scoping mechanism.
+   Rather than masking the legend before finding components, letting BFS find
+   all components and then filtering by overlap is simpler and avoids
+   off-by-one errors in masking.
+
+Task solved: d59b0160
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
 
@@ -2052,6 +2102,7 @@ ALL SOLVED TASKS
 88e364bc  - Wave 17 - frame_target         - legend frames encode direction; dots move inside irregular frames
 97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
 b0039139  - Wave 20 - section_tile        - divider-split sections tiled N times with solid-color mapping
+d59b0160  - Wave 22 - legend_veto         - 4x4 legend set; erase mixed-color components covering all legend values
 dbff022c  - Wave 16 - legend_fill         - fill closed frame interiors using a color lookup table
 e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to middle
 faa9f03d  - Wave 19 - segment_ext         - 4-corner stub removal; arm extended; gap fill with pure-vertical guard
@@ -2179,4 +2230,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 21: Chain-link legend-sequence box connector
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 20: Section-tile divider-split sections mapped to tiled solid colors.
   Score: 20/120 = 16.67%. Task b0039139 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-29.
+Dison, D. R. (2026). ARC-AGI-2 Wave 22: Legend-veto 4x4 legend set coverage erases mixed-color components.
+  Score: 22/120 = 18.33%. Task d59b0160 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.
