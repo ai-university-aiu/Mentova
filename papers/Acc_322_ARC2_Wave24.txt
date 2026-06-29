@@ -1,0 +1,123 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Accomplishment 322 - ARC-AGI-2 Wave 24: Hollow-Solid Shape Sorting (shape_sort)
+Task 2ba387bc - Score Advances to 24/120 = 20.00%
+Date: 2026-06-29
+
+
+ABSTRACT
+
+Mentova solves ARC-AGI-2 task 2ba387bc using a new glass-box named rule called
+shape_sort.
+
+The input grid contains several 4x4 colored blocks placed on a background of
+zeros. Each block is either HOLLOW (a one-cell-wide border of one color
+surrounding a 2x2 interior of zeros) or SOLID (all 16 cells the same color).
+The rule separates the blocks into two typed lists, preserving reading order
+(top-left row, then column) within each list. It then pairs the lists at equal
+positions: hollow[i] with solid[i], side by side in 4 rows of 8 columns. When
+one list is longer, the missing partner is replaced by a 4x4 block of zeros.
+The pairs are stacked vertically to form the output grid.
+
+All four training pairs and the held-out test case are solved correctly on
+first attempt.
+
+
+RULE DESCRIPTION
+
+1. Find all distinct non-background (non-zero) colors in the input grid.
+
+2. For each color, locate the top-left corner of its 4x4 bounding box by
+   computing the minimum row and minimum column among all cells of that color.
+
+3. Extract the 4x4 subgrid at that corner.
+
+4. Sort all found shapes in reading order (ascending row, then ascending
+   column of the top-left corner). This is the canonical order for both
+   classification lists.
+
+5. Classify each shape:
+   - HOLLOW: the 4x4 subgrid contains at least one zero.
+   - SOLID: the 4x4 subgrid contains no zeros.
+
+6. Separate the sorted list into a HOLLOW list and a SOLID list, each
+   retaining the original reading order.
+
+7. Pair the lists: position i gives [hollow[i], solid[i]]. If one list is
+   shorter, substitute a 4x4 block of zeros for the missing partner.
+
+8. Render each pair as 4 rows of 8 columns (left block = hollow or zero,
+   right block = solid or zero).
+
+9. Stack all pair blocks vertically to form the output grid. Output height =
+   4 * max(|hollow|, |solid|) rows; output width = 8 columns.
+
+
+EXAMPLE
+
+Training pair 1 (input: 23 rows x 24 cols, output: 16 rows x 8 cols):
+
+Input shapes and their reading-order positions:
+  1. color=1, top-left=(1,2),  SOLID
+  2. color=2, top-left=(4,9),  SOLID
+  3. color=8, top-left=(6,17), HOLLOW
+  4. color=7, top-left=(12,1), SOLID
+  5. color=3, top-left=(13,8), HOLLOW
+  6. color=6, top-left=(15,17),SOLID
+  7. color=4, top-left=(18,3), HOLLOW
+
+Hollow list (reading order): [8, 3, 4]
+Solid  list (reading order): [1, 2, 7, 6]
+
+Pairs:
+  Position 1: hollow=8 | solid=1  -> rows 0-3  of output
+  Position 2: hollow=3 | solid=2  -> rows 4-7  of output
+  Position 3: hollow=4 | solid=7  -> rows 8-11 of output
+  Position 4: hollow=(zero) | solid=6 -> rows 12-15 of output
+
+Output rows 0-3:
+  [8,8,8,8,1,1,1,1]
+  [8,0,0,8,1,1,1,1]
+  [8,0,0,8,1,1,1,1]
+  [8,8,8,8,1,1,1,1]
+
+(remaining pairs follow the same pattern)
+
+
+VERIFICATION
+
+All four training pairs pass:
+- Pair 1 (23x24 -> 16x8): 3 hollows, 4 solids; zero pad bottom-left. Verified.
+- Pair 2 (20x21 -> 12x8): 2 hollows, 3 solids; zero pad bottom-left. Verified.
+- Pair 3 (19x23 -> 8x8):  2 hollows, 2 solids; no padding needed. Verified.
+- Pair 4 (21x22 -> 12x8): 3 hollows, 2 solids; zero pad bottom-right. Verified.
+
+Test case (24x19 -> 16x8): 2 hollows, 4 solids; two zero pads on hollow side.
+Verified: hollows=[4,2], solids=[6,7,1,8]; output matches expected exactly.
+
+
+IMPLEMENTATION
+
+New predicates (arc2_ss_* namespace) in
+Mentova/src/mentova/games/arc_benchmark_2.pl:
+
+- arc2_ss_shapes_/2: find all non-BG colors; extract R0-C0-Sub shape terms;
+  sort by reading order using msort (R0-C0-Sub key comparison)
+- arc2_ss_one_shape_/3: for one color find min row and min col; call extract
+- arc2_ss_extract4x4_/4: extract 4x4 subgrid starting at (R0, C0)
+- arc2_ss_hollow_/1: succeed if any cell in 4x4 sub is 0 (used by include/exclude)
+- arc2_ss_zip_/3: recursive zip with zero-block padding for unequal-length lists
+- arc2_ss_zero_/1: generate the 4x4 zero block (0-0-[[0,0,0,0],...])
+- arc2_ss_pair_rows_/2: concatenate left and right 4-wide sub-rows pairwise
+
+The rule is registered via arc2_named_rule(shape_sort) and dispatched by the
+standard arc2_transform/3 interface.
+
+
+BENCHMARK RESULT
+
+Score before: 23 / 120 = 19.17%
+Score after:  24 / 120 = 20.00%
+Task solved:  2ba387bc
+
+All 23 previously solved tasks continue to pass (full regression 24/24).

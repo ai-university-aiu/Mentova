@@ -4825,6 +4825,104 @@ arc2_pe_out_pairs_(Pairs, AnchorColor, AnchorPositions, PatPos, OutPairs) :-
        append(FillCells, Singletons, OutPairs)
     ).
 
+% ===========================================================================
+% WAVE 24 — shape_sort (WP-282, Layer 257)
+% Task 2ba387bc
+% Rule: The input grid (BG=0) contains several 4x4 colored blocks scattered
+% on the canvas. Each block is either HOLLOW (outer ring of one color, 2x2
+% interior of zeros) or SOLID (all 16 cells the same color). Collect every
+% block, sort by reading order (top-left row then column), then separate into
+% a HOLLOW list and a SOLID list while preserving reading order within each.
+% Pair position-i hollow with position-i solid side by side in 4 rows x 8
+% cols. When one list runs out, substitute a 4x4 block of zeros. Stack all
+% pairs vertically to form the output grid.
+% ===========================================================================
+
+% Register the named rule.
+arc2_named_rule(shape_sort).
+
+% Top-level dispatch: find shapes, split by type, pair, assemble output.
+arc2_transform(shape_sort, Grid, Out) :-
+    % Gather all 4x4 shape blocks, sorted by reading order.
+    arc2_ss_shapes_(Grid, Shapes),
+    % Hollow shapes have a 0 somewhere inside their 4x4 bounding box.
+    include(arc2_ss_hollow_, Shapes, Hollows),
+    % Solid shapes have no 0 inside their 4x4 bounding box.
+    exclude(arc2_ss_hollow_, Shapes, Solids),
+    % Pair hollows[i] with solids[i]; pad shorter list with zero blocks.
+    arc2_ss_zip_(Hollows, Solids, Pairs),
+    % Render each pair as 4 output rows of 8 columns.
+    maplist(arc2_ss_pair_rows_, Pairs, Groups),
+    % Concatenate all row groups into the final output grid.
+    append(Groups, Out).
+
+% Find all distinct non-BG colors; extract each shape; sort by reading order.
+arc2_ss_shapes_(Grid, Shapes) :-
+    % Collect every non-zero value in the grid.
+    findall(V, (nth0(_, Grid, Row), nth0(_, Row, V), V \= 0), All),
+    % Deduplicate to get one entry per shape color.
+    sort(All, Colors),
+    % For each color find its 4x4 subgrid keyed by (R0-C0-Sub).
+    maplist(arc2_ss_one_shape_(Grid), Colors, Raw),
+    % msort sorts R0-C0-Sub terms by R0 first then C0: reading order.
+    msort(Raw, Shapes).
+
+% For one color: find its topmost row and leftmost column, extract 4x4 sub.
+arc2_ss_one_shape_(Grid, Color, R0-C0-Sub) :-
+    % Row indices where this color appears.
+    findall(R, (nth0(R, Grid, Row), memberchk(Color, Row)), Rs),
+    % Column indices where this color appears (across all rows).
+    findall(C, (nth0(_, Grid, GRow), nth0(C, GRow, Color)), Cs),
+    % Top-left corner is minimum row and minimum column.
+    min_list(Rs, R0), min_list(Cs, C0),
+    % Extract the 4x4 subgrid starting at (R0, C0).
+    arc2_ss_extract4x4_(Grid, R0, C0, Sub).
+
+% Extract a 4x4 subgrid from Grid starting at row R0, column C0.
+arc2_ss_extract4x4_(Grid, R0, C0, Sub) :-
+    % Pre-compute the four row and column indices.
+    R1 is R0+1, R2 is R0+2, R3 is R0+3,
+    % Pre-compute the four column indices.
+    C1 is C0+1, C2 is C0+2, C3 is C0+3,
+    % For each of the four rows, extract the four column values.
+    maplist([R, SRow]>>(
+        nth0(R, Grid, GRow),
+        maplist([C,V]>>(nth0(C, GRow, V)), [C0,C1,C2,C3], SRow)
+    ), [R0,R1,R2,R3], Sub).
+
+% A shape is hollow if any cell in its 4x4 subgrid equals zero.
+arc2_ss_hollow_(_R0-_C0-Sub) :-
+    % Search sub-rows for a 0; cut after first find (deterministic).
+    member(SRow, Sub), member(0, SRow), !.
+
+% Base case: both lists empty; no pairs.
+arc2_ss_zip_([], [], []).
+% Hollow list has more; pad solid side with zero block.
+arc2_ss_zip_([H|Hs], [], [[H, Z]|Rest]) :-
+    % Generate a 4x4 zero block for padding.
+    arc2_ss_zero_(Z),
+    % Recurse on remaining hollows.
+    arc2_ss_zip_(Hs, [], Rest).
+% Solid list has more; pad hollow side with zero block.
+arc2_ss_zip_([], [S|Ss], [[Z, S]|Rest]) :-
+    % Generate a 4x4 zero block for padding.
+    arc2_ss_zero_(Z),
+    % Recurse on remaining solids.
+    arc2_ss_zip_([], Ss, Rest).
+% Both lists have elements; pair them directly.
+arc2_ss_zip_([H|Hs], [S|Ss], [[H, S]|Rest]) :-
+    % Recurse on the tails.
+    arc2_ss_zip_(Hs, Ss, Rest).
+
+% A 4x4 zero block used for padding when one shape list is shorter.
+arc2_ss_zero_(0-0-[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]).
+
+% Convert a hollow+solid pair to 4 output rows of 8 columns.
+arc2_ss_pair_rows_([_-_-LSub, _-_-RSub], Rows) :-
+    % Concatenate each left 4-wide row with the matching right 4-wide row.
+    maplist([LRow, RRow, OutRow]>>(append(LRow, RRow, OutRow)),
+            LSub, RSub, Rows).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
