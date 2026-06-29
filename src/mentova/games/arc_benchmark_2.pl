@@ -3217,6 +3217,241 @@ lf_extract_col_(Grid_, C_, Col_) :-
 % or the col-step (not just the diagonal step) would hit the frame wall.
 % ---------------------------------------------------------------------------
 
+% ---------------------------------------------------------------------------
+% chain_link: connect adjacent box pairs in legend-sequence order
+% BG is detected from the top-left cell.  Boxes are rectangular non-BG
+% regions identified by scanning from each non-BG cell until hitting BG.
+% For each consecutive legend pair (Va,Vb) the gap between the adjacent
+% Va-box and Vb-box (same row-block or same col-block) is filled with Va.
+% The gap extent uses "inner-extent" scanning: last non-BG cell going toward
+% the adjacent box, so connector = inner_ext_A+1 .. inner_ext_B-1.
+% Works for training (BG=8, border=1 explicit) and test (BG=1, filler=2).
+% Solves task 3e6067c3.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule: register chain_link as a known rule name.
+arc2_named_rule(chain_link).
+
+% arc2_induce_rule for chain_link: detect BG, check legend, verify all pairs.
+arc2_induce_rule(TrainingPairs, chain_link) :-
+% Guard: detect background from top-left cell of first training input.
+    TrainingPairs = [pair(In0, _)|_],
+    nth1(1, In0, R0), nth1(1, R0, BG0),
+% Guard: first training input must have a valid legend row with >= 2 entries.
+    cl_legend_(In0, BG0, LegSeq0), LegSeq0 = [_,_|_],
+% Verify: transform produces correct output for every training pair.
+    forall(member(pair(In_, Out_), TrainingPairs),
+           arc2_transform(chain_link, In_, Out_)).
+
+% arc2_transform for chain_link: detect BG, parse legend, find boxes, draw connectors.
+arc2_transform(chain_link, Grid, Output) :-
+% Detect background color from top-left cell.
+    nth1(1, Grid, TopRow), nth1(1, TopRow, BG),
+% Find legend sequence from the alternating-BG row.
+    cl_legend_(Grid, BG, LegSeq),
+% Enumerate all non-BG rectangular regions as boxes with BG-boundary coordinates.
+    cl_boxes_(Grid, BG, Boxes),
+% Walk legend chain from start box, tracking visited boxes, to collect changes.
+    cl_link_chain_(LegSeq, Boxes, Grid, BG, Changes),
+% Apply the collected changes to produce the output grid.
+    cl_apply_changes_(Grid, Changes, Output).
+
+% cl_legend_(+Grid, +BG, -Seq): find the alternating-BG legend row and parse it.
+cl_legend_(Grid, BG, Seq) :-
+% Try each row as a candidate legend row.
+    member(Row, Grid),
+% Legend row must start with background value.
+    Row = [BG|Rest],
+% Parse the alternating V,BG,V,BG,... tail.
+    cl_alt_parse_(Rest, BG, Seq),
+% Require at least two legend entries to draw at least one link.
+    Seq = [_,_|_].
+
+% cl_alt_parse_/3: parse BG-separated value list from row tail.
+cl_alt_parse_([], _, []).
+% Base case: trailing BG followed by all-BG ends the legend.
+cl_alt_parse_([BG|Tail], BG, []) :-
+    maplist(=(BG), Tail).
+% Recursive: read value V, skip BG separator, recurse.
+cl_alt_parse_([V, BG|Tail], BG, [V|Seq]) :-
+    V \== BG,
+    cl_alt_parse_(Tail, BG, Seq).
+
+% cl_boxes_(+Grid, +BG, -Boxes): find all non-BG rectangular regions.
+% BT/BB/BL/BR are the first BG-valued row/col reached in each direction.
+cl_boxes_(Grid, BG, Boxes) :-
+    findall(box(V, BT, BB, BL, BR),
+        (nth1(R, Grid, Row),
+         nth1(C, Row, V),
+         V \= BG,
+         cl_bg_up_(Grid, R, C, BG, BT),
+         cl_bg_dn_(Grid, R, C, BG, BB),
+         cl_bg_lt_(Row, C, BG, BL),
+         cl_bg_rt_(Row, C, BG, BR)),
+    Raw),
+    sort(Raw, Boxes).
+
+% cl_bg_up_/5: first BG-valued row going upward from (R,C).
+cl_bg_up_(Grid, R, C, BG, BT) :-
+    R1 is R-1,
+    (R1 < 1 -> BT = 0
+    ; nth1(R1, Grid, Row1), nth1(C, Row1, V1),
+      (V1 =:= BG -> BT = R1 ; cl_bg_up_(Grid, R1, C, BG, BT))).
+
+% cl_bg_dn_/5: first BG-valued row going downward from (R,C).
+cl_bg_dn_(Grid, R, C, BG, BB) :-
+    length(Grid, NR), R1 is R+1,
+    (R1 > NR -> BB is NR+1
+    ; nth1(R1, Grid, Row1), nth1(C, Row1, V1),
+      (V1 =:= BG -> BB = R1 ; cl_bg_dn_(Grid, R1, C, BG, BB))).
+
+% cl_bg_lt_/4: first BG-valued col going leftward in Row from col C.
+cl_bg_lt_(Row, C, BG, BL) :-
+    C1 is C-1,
+    (C1 < 1 -> BL = 0
+    ; nth1(C1, Row, V1),
+      (V1 =:= BG -> BL = C1 ; cl_bg_lt_(Row, C1, BG, BL))).
+
+% cl_bg_rt_/4: first BG-valued col going rightward in Row from col C.
+cl_bg_rt_(Row, C, BG, BR) :-
+    length(Row, NC), C1 is C+1,
+    (C1 > NC -> BR is NC+1
+    ; nth1(C1, Row, V1),
+      (V1 =:= BG -> BR = C1 ; cl_bg_rt_(Row, C1, BG, BR))).
+
+% cl_link_chain_/5: find the starting box and walk the entire legend chain once.
+% Tries each candidate box of the first legend color until the full chain
+% completes without contradiction. The cut commits to the first valid walk.
+cl_link_chain_(LegSeq, Boxes, Grid, BG, AllCh) :-
+    LegSeq = [V0|_],
+% Try each V0-colored box as the chain start; take first valid chain.
+    member(StartBox, Boxes),
+    StartBox = box(V0, _, _, _, _),
+    cl_walk_(LegSeq, StartBox, Boxes, Grid, BG, [StartBox], AllCh), !.
+
+% cl_walk_/7: recursive legend-chain walker; Visited tracks all boxes seen so far.
+cl_walk_([], _, _, _, _, _, []).
+cl_walk_([_], _, _, _, _, _, []).
+cl_walk_([Va, Vb|Rest], CurBox, Boxes, Grid, BG, Visited, AllCh) :-
+% Find the unique Vb-box adjacent to CurBox, not yet visited, gap clear.
+    cl_step_(CurBox, Va, Vb, Boxes, Grid, BG, Visited, NextBox, Ch),
+% Recurse with NextBox as the new current and add it to Visited.
+    cl_walk_([Vb|Rest], NextBox, Boxes, Grid, BG, [NextBox|Visited], RestCh),
+    append(Ch, RestCh, AllCh).
+
+% cl_step_/9: from CurBox (color Va) find adjacent NextBox (color Vb) with clear gap.
+% NextBox must not be in Visited. Succeeds with connector changes Ch.
+cl_step_(box(Va, BTA, BBA, BLA, BRA), Va, Vb, Boxes, Grid, BG, Visited, NextBox, Ch) :-
+    member(NextBox, Boxes),
+    NextBox = box(Vb, BTB, BBB, BLB, BRB),
+% Reject any box already in the chain.
+    \+ member(NextBox, Visited),
+    (   BLA =:= BLB, BRA =:= BRB
+% Same col block: vertical adjacency (A above B or A below B).
+    ->  cl_cr_(Va, BTA, BBA, BLA, BRA, Grid, CC1, CC2, CR1A, CR2A),
+        (BBA =< BTB, BTA < BTB
+% A above B: scan down from bottom of A, up from top of B.
+        ->  cl_cr_(Vb, BTB, BBB, BLB, BRB, Grid, _, _, CR1B, _),
+            cl_inner_dn_(Grid, CR2A, CC1, BG, FRA),
+            cl_inner_up_(Grid, CR1B, CC1, BG, FLB),
+            R1 is FRA+1, R2 is FLB-1, R1 =< R2,
+            cl_gap_clear_(Grid, BG, R1, R2, CC1, CC2),
+            findall(R-C-Va, (between(R1,R2,R), between(CC1,CC2,C)), Ch)
+        ;   BBB =< BTA, BTB < BTA
+% A below B: scan up from top of A, down from bottom of B.
+        ->  cl_cr_(Vb, BTB, BBB, BLB, BRB, Grid, _, _, _, CR2B),
+            cl_inner_up_(Grid, CR1A, CC1, BG, FRA),
+            cl_inner_dn_(Grid, CR2B, CC1, BG, FLB),
+            R1 is FLB+1, R2 is FRA-1, R1 =< R2,
+            cl_gap_clear_(Grid, BG, R1, R2, CC1, CC2),
+            findall(R-C-Va, (between(R1,R2,R), between(CC1,CC2,C)), Ch)
+        ;   fail
+        )
+    ;   BTA =:= BTB, BBA =:= BBB
+% Same row block: horizontal adjacency (A left of B or A right of B).
+    ->  cl_cr_(Va, BTA, BBA, BLA, BRA, Grid, CC1A, CC2A, CR1A, CR2A),
+        (BRA =< BLB, BLA < BLB
+% A left of B: scan right from A, left from B.
+        ->  cl_cr_(Vb, BTB, BBB, BLB, BRB, Grid, CC1B, _, _, _),
+            cl_inner_rt_(Grid, CR1A, CC2A, BG, FRA),
+            cl_inner_lt_(Grid, CR1A, CC1B, BG, FLB),
+            C1 is FRA+1, C2 is FLB-1, C1 =< C2,
+            cl_gap_clear_(Grid, BG, CR1A, CR2A, C1, C2),
+            findall(R-C-Va, (between(CR1A,CR2A,R), between(C1,C2,C)), Ch)
+        ;   BLA >= BRB, BRA > BRB
+% A right of B: scan left from A, right from B.
+        ->  cl_cr_(Vb, BTB, BBB, BLB, BRB, Grid, _, CC2B, CR1B, _),
+            cl_inner_lt_(Grid, CR1A, CC1A, BG, FRA),
+            cl_inner_rt_(Grid, CR1B, CC2B, BG, FLB),
+            C1 is FLB+1, C2 is FRA-1, C1 =< C2,
+            cl_gap_clear_(Grid, BG, CR1A, CR2A, C1, C2),
+            findall(R-C-Va, (between(CR1A,CR2A,R), between(C1,C2,C)), Ch)
+        ;   fail
+        )
+    ;   fail
+    ),
+    Ch \= [].
+
+% cl_gap_clear_/6: all cells in rows R1-R2 x cols C1-C2 must be BG in original grid.
+% Rejects connectors that would pass through an intervening non-BG box region.
+cl_gap_clear_(Grid, BG, R1, R2, C1, C2) :-
+    forall((between(R1, R2, R), between(C1, C2, C)),
+           (nth1(R, Grid, Row), nth1(C, Row, V), V =:= BG)).
+
+% cl_cr_/9: find col-range (CC1,CC2) and row-range (CR1,CR2) of Va-colored cells in box interior.
+cl_cr_(Va, BT, BB, BL, BR, Grid, CC1, CC2, CR1, CR2) :-
+    IR1 is BT+1, IR2 is BB-1, IC1 is BL+1, IC2 is BR-1,
+    findall(C, (between(IC1,IC2,C), between(IR1,IR2,R),
+                nth1(R,Grid,Row), nth1(C,Row,VC), VC=:=Va), Cols),
+    sort(Cols, SortedCols), SortedCols = [CC1|_], last(SortedCols, CC2),
+    findall(R, (between(IR1,IR2,R), between(IC1,IC2,C),
+                nth1(R,Grid,Row), nth1(C,Row,VC), VC=:=Va), Rows),
+    sort(Rows, SortedRows), SortedRows = [CR1|_], last(SortedRows, CR2).
+
+% cl_inner_dn_/5: last non-BG row going downward from (R,C) in Grid.
+cl_inner_dn_(Grid, R, C, BG, Ext) :-
+    length(Grid, NR), R1 is R+1,
+    (R1 > NR -> Ext = R
+    ; nth1(R1, Grid, Row1), nth1(C, Row1, V1),
+      (V1 =:= BG -> Ext = R ; cl_inner_dn_(Grid, R1, C, BG, Ext))).
+
+% cl_inner_up_/5: last non-BG row going upward from (R,C) in Grid.
+cl_inner_up_(Grid, R, C, BG, Ext) :-
+    R1 is R-1,
+    (R1 < 1 -> Ext = R
+    ; nth1(R1, Grid, Row1), nth1(C, Row1, V1),
+      (V1 =:= BG -> Ext = R ; cl_inner_up_(Grid, R1, C, BG, Ext))).
+
+% cl_inner_rt_/5: last non-BG col going rightward from (R,C) in Grid.
+cl_inner_rt_(Grid, R, C, BG, Ext) :-
+    nth1(R, Grid, Row), length(Row, NC), C1 is C+1,
+    (C1 > NC -> Ext = C
+    ; nth1(C1, Row, V1),
+      (V1 =:= BG -> Ext = C ; cl_inner_rt_(Grid, R, C1, BG, Ext))).
+
+% cl_inner_lt_/5: last non-BG col going leftward from (R,C) in Grid.
+cl_inner_lt_(Grid, R, C, BG, Ext) :-
+    nth1(R, Grid, Row), C1 is C-1,
+    (C1 < 1 -> Ext = C
+    ; nth1(C1, Row, V1),
+      (V1 =:= BG -> Ext = C ; cl_inner_lt_(Grid, R, C1, BG, Ext))).
+
+% cl_apply_changes_/3: build output grid by overlaying Changes onto Grid.
+cl_apply_changes_(Grid, Changes, Output) :-
+    length(Grid, NR), numlist(1, NR, RowNums),
+    maplist(cl_new_row_(Grid, Changes), RowNums, Output).
+
+% cl_new_row_/4: build one output row R, applying any changes at that row.
+cl_new_row_(Grid, Changes, R, NewRow) :-
+    nth1(R, Grid, OldRow),
+    length(OldRow, NC), numlist(1, NC, ColNums),
+    maplist(cl_new_cell_(OldRow, Changes, R), ColNums, NewRow).
+
+% cl_new_cell_/5: cell (R,C) gets new value V if a change exists, else keeps old value.
+cl_new_cell_(OldRow, Changes, R, C, NV) :-
+    nth1(C, OldRow, OV),
+    (member(R-C-V, Changes) -> NV = V ; NV = OV).
+
 % Early placement of section_tile induction so its fast guard fires before the
 % slower frame_target guard; helpers (st_*) are defined further down the file.
 arc2_induce_rule(TrainingPairs, section_tile) :-
