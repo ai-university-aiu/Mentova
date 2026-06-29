@@ -1,0 +1,135 @@
+Acc_324: ARC-AGI-2 Wave 26 - Straighten-Diag Orthogonal Repair Rule
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-29
+
+ABSTRACT
+
+Wave 26 adds the straighten_diag named rule to the PrologAI ARC-AGI-2 solver,
+solving task 7b80bb43 and advancing the score from 25/120 = 20.83% to
+26/120 = 21.67%.
+
+The rule identifies diagonal-only cells in an otherwise orthogonal line
+network, removes them, fills the gaps they bridged, and prunes any stub
+artifacts left behind. The result is a clean orthogonal tree with all diagonal
+shortcuts removed.
+
+TASK DESCRIPTION
+
+Task 7b80bb43 presents two-color grids: a background color BG (the majority
+color) and a single line color LV. The line cells form a network of horizontal
+and vertical segments arranged in a tree structure. However, some cells are
+diagonal-only: they are non-BG but have no 4-connected non-BG neighbor.
+Instead they connect to the line network only through diagonal (8-connected)
+neighbors.
+
+These diagonal-only cells form shortcuts that corrupt the orthogonal structure.
+The transformation produces a version of the grid with all such shortcuts
+removed and the orthogonal paths properly bridged.
+
+RULE: STRAIGHTEN-DIAG
+
+The rule proceeds in three phases.
+
+Phase 1 - Identify diagonal cells and compute gap fills.
+
+A diagonal cell is any non-BG cell with no 4-connected non-BG neighbor but
+at least one 8-connected (diagonal) non-BG neighbor.
+
+Find all 8-connected components of diagonal cells. For each component:
+
+Find anchor cells: non-diagonal non-BG cells that are 8-adjacent to any
+cell in the component. These are where the diagonal arm connects to the
+orthogonal network.
+
+For each anchor, find the farthest diagonal tip: the component cell with
+the greatest Manhattan distance from the anchor.
+
+Determine the anchor's axis:
+- Horizontal if the anchor has a 4-connected non-diagonal non-BG neighbor
+  in the same row (left or right).
+- Vertical if it has one in the same column (above or below).
+
+Compute the unit direction from anchor to tip: (DDR, DDC) where each is -1,
+0, or 1.
+
+Scan from the anchor in the direction that matches the anchor's axis (H scan
+if anchor is H and DDC != 0; V scan if anchor is V and DDR != 0):
+- Skip diagonal cells encountered during the scan.
+- Collect BG cells into a fill gap.
+- Stop and record the gap when a non-BG non-diagonal terminus is found.
+- Fail the scan (no gap) if the boundary is reached without a terminus.
+
+Phase 2 - Apply changes.
+
+Remove all diagonal cells (set to BG). Apply all fill gap cells (set to LV).
+
+Phase 3 - Prune perpendicular stubs.
+
+Track DiagNbr: the set of non-diagonal non-BG cells that are 8-adjacent to
+any original diagonal cell. This is the only set of cells that could be
+artifacts left by diagonal removal.
+
+Iteratively find and remove perpendicular degree-1 stubs:
+- A stub is a DiagNbr cell with exactly one 4-connected non-BG neighbor
+  (its anchor).
+- The stub's direction to its anchor must be perpendicular to the anchor's
+  line axis (i.e., the anchor has no other neighbor in the same direction as
+  the stub approaches it).
+- Remove the stub (set to BG).
+
+Repeat until no DiagNbr cell qualifies as a stub.
+
+Key design decision: restricting pruning to DiagNbr is critical. Without this
+restriction, legitimate degree-1 line endpoints (genuine ends of orthogonal
+branches) would also be removed. Only cells that were 8-adjacent to diagonal
+cells can be artifacts; all others are protected.
+
+IMPLEMENTATION
+
+The implementation uses these key predicates:
+
+arc2_sd_find_diag_(Grid, BG, Diag)
+    Scans all cells; a cell qualifies as diagonal if: (1) non-BG, (2) no
+    4-connected non-BG neighbor, (3) at least one of the 4 diagonal
+    neighbors is non-BG.
+
+arc2_sd_comps8_(Cells, Comps)
+    DFS flood-fill over 8-connectivity produces a list of component lists.
+
+arc2_sd_scan_(Grid, BG, Diag, AR, AC, FDR, FDC, NRows, NCols, Gap)
+    Walks from (AR+FDR, AC+FDC) in direction (FDR, FDC). BG cells are
+    collected into Gap; diagonal cells are skipped; a non-BG non-diagonal
+    cell signals success; boundary signals failure.
+
+arc2_sd_build_(Grid, BG, LV, Diag, Fills, NRows, NCols, Out)
+    Produces the modified grid: diagonal cells become BG; fill cells become
+    LV; all other cells are unchanged.
+
+arc2_sd_prune_loop_(Grid, BG, DiagNbr, Out)
+    Calls arc2_sd_find_stub_/4 repeatedly until no stub remains.
+    Uses arc2_set_cell_/5 to remove each stub.
+
+arc2_sd_perp_check_(ANeighbors, AR, AC, DDR, _DDC)
+    Horizontal stub (DDR=0): prune if anchor has no same-row other neighbor
+    (anchor is V-only line). Vertical stub (DDR!=0): prune if anchor has no
+    same-col other neighbor (anchor is H-only line).
+
+VERIFICATION
+
+P0 (16x30): 7 diagonal cells in two components; gap fill at row 7 cols 15-17;
+  no stub pruning required. All changes match expected output.
+
+P1 (28x24): multiple diagonal chains removed; multiple H and V gap fills
+  applied; no stub pruning required. All changes match expected output.
+
+TEST (29x17): diagonal chain removed; gap fills applied; one cell pruned
+  as a perpendicular stub. Output matches expected.
+
+BENCHMARK RESULT
+
+Score: 25/120 = 20.83% to 26/120 = 21.67%.
+Task solved: 7b80bb43.
+Rule name: straighten_diag.
