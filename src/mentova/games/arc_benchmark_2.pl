@@ -5035,6 +5035,286 @@ arc2_be_cell_(PC, CP, SC, CS, Idx, Val) :-
     ).
 
 % ---------------------------------------------------------------------------
+% WAVE 26 — straighten_diag (WP-284, Layer 259)
+% Task 7b80bb43
+% Rule: A two-color grid (BG + one line color) contains diagonal-only cells:
+% non-BG cells with no 4-connected non-BG neighbor but at least one 8-connected
+% non-BG neighbor. These diagonal shortcuts corrupt an orthogonal line network.
+% Phase 1: find 8-connected components of diagonal cells; for each, find anchor
+% cells (non-diagonal non-BG cells 8-adjacent to the component) and fill the
+% H/V gap from anchor in the direction of the farthest diagonal tip.
+% Phase 2: remove all diagonal cells, apply gap fills.
+% Phase 3: iteratively prune perpendicular degree-1 stubs that are 8-adjacent
+% to a diagonal cell (restricted to DiagNbr so real line endpoints are kept).
+% ===========================================================================
+
+% Register the straighten_diag rule.
+arc2_named_rule(straighten_diag).
+
+% arc2_transform(straighten_diag, +Grid, -Out): top-level transform.
+arc2_transform(straighten_diag, Grid, Out) :-
+% Find background (most common) color.
+    arc2_bg_color_(Grid, BG),
+% Find line value: any non-BG cell value in the grid.
+    arc2_sd_line_val_(Grid, BG, LV),
+% Collect all diagonal-only cell positions.
+    arc2_sd_find_diag_(Grid, BG, Diag),
+% Must have at least one diagonal cell to apply this rule.
+    Diag \= [],
+% Collect cells 8-adjacent to any diagonal (eligible for stub pruning).
+    arc2_sd_diag_nbr_(Grid, BG, Diag, DiagNbr),
+% Find 8-connected components of diagonal cells.
+    arc2_sd_comps8_(Diag, Comps),
+% Compute fill positions from each diagonal component.
+    length(Grid, NRows), nth0(0, Grid, Row0), length(Row0, NCols),
+    foldl(arc2_sd_comp_fills_(Grid, BG, Diag, NRows, NCols), Comps, [], FillAcc),
+% Deduplicate fill list.
+    sort(FillAcc, Fills),
+% Build intermediate grid: remove diagonals, apply fills.
+    arc2_sd_build_(Grid, BG, LV, Diag, Fills, NRows, NCols, Grid2),
+% Iteratively prune perpendicular degree-1 stubs in DiagNbr.
+    arc2_sd_prune_loop_(Grid2, BG, DiagNbr, Out).
+
+% arc2_sd_line_val_(+Grid, +BG, -LV): first non-BG value found in the grid.
+arc2_sd_line_val_(Grid, BG, LV) :-
+% Flatten grid to a single list.
+    append(Grid, Flat),
+% Scan for first non-BG element.
+    member(LV, Flat), LV \= BG, !.
+
+% arc2_sd_find_diag_(+Grid, +BG, -Diag): collect all diagonal-only cell positions.
+arc2_sd_find_diag_(Grid, BG, Diag) :-
+% Determine grid bounds.
+    length(Grid, NR), NR1 is NR-1,
+    nth0(0, Grid, R0), length(R0, NC), NC1 is NC-1,
+    findall(R-C, (
+        between(0, NR1, R), between(0, NC1, C),
+% Cell must be non-BG.
+        arc2_cell_(Grid, R, C, V), V \= BG,
+% Cell must have no 4-connected non-BG neighbor.
+        \+ arc2_sd_has4nonbg_(Grid, R, C, BG),
+% Cell must have at least one diagonal non-BG neighbor.
+        arc2_sd_has_diag_nonbg_(Grid, R, C, BG)
+    ), Diag).
+
+% arc2_sd_has4nonbg_(+Grid, +R, +C, +BG): true if any 4-conn neighbor is non-BG.
+arc2_sd_has4nonbg_(Grid, R, C, BG) :-
+    ( R1 is R-1, arc2_cell_(Grid, R1, C, V1), V1 \= BG -> true
+    ; R2 is R+1, arc2_cell_(Grid, R2, C, V2), V2 \= BG -> true
+    ; C1 is C-1, arc2_cell_(Grid, R, C1, V3), V3 \= BG -> true
+    ; C2 is C+1, arc2_cell_(Grid, R, C2, V4), V4 \= BG -> true
+    ).
+
+% arc2_sd_has_diag_nonbg_(+Grid, +R, +C, +BG): true if any diagonal neighbor is non-BG.
+arc2_sd_has_diag_nonbg_(Grid, R, C, BG) :-
+% Check 4 diagonal neighbors (cardinal neighbors already verified all BG for diag cells).
+    ( R1 is R-1, C1 is C-1, arc2_cell_(Grid, R1, C1, V1), V1 \= BG -> true
+    ; R1 is R-1, C2 is C+1, arc2_cell_(Grid, R1, C2, V2), V2 \= BG -> true
+    ; R2 is R+1, C1 is C-1, arc2_cell_(Grid, R2, C1, V3), V3 \= BG -> true
+    ; R2 is R+1, C2 is C+1, arc2_cell_(Grid, R2, C2, V4), V4 \= BG -> true
+    ).
+
+% arc2_sd_diag_nbr_(+Grid, +BG, +Diag, -DiagNbr):
+% Collect non-diagonal non-BG cells 8-adjacent to any diagonal cell.
+arc2_sd_diag_nbr_(Grid, BG, Diag, DiagNbr) :-
+    findall(NR-NC, (
+        member(R-C, Diag),
+% Check all 8 neighbors of each diagonal cell.
+        member(DR-DC, [-1-(-1),-1-0,-1-1,0-(-1),0-1,1-(-1),1-0,1-1]),
+        NR is R+DR, NC is C+DC,
+% Exclude other diagonal cells and BG cells.
+        \+ memberchk(NR-NC, Diag),
+        arc2_cell_(Grid, NR, NC, V), V \= BG
+    ), DiagNbrList),
+    sort(DiagNbrList, DiagNbr).
+
+% arc2_sd_comps8_(+Cells, -Comps): partition Cells into 8-connected components.
+arc2_sd_comps8_(Cells, Comps) :-
+    arc2_sd_comps8_iter_(Cells, Cells, [], Comps).
+
+% arc2_sd_comps8_iter_/4: iterate seeds, skipping already-visited cells.
+arc2_sd_comps8_iter_([], _, _, []).
+arc2_sd_comps8_iter_([H|T], AllCells, Vis0, Comps) :-
+    ( memberchk(H, Vis0) ->
+% Already assigned to a component: skip.
+        arc2_sd_comps8_iter_(T, AllCells, Vis0, Comps)
+    ;
+% New seed: flood-fill to build its component.
+        arc2_sd_flood8_(AllCells, [H], Vis0, [], Comp, Vis1),
+        Comps = [Comp|Tail],
+        arc2_sd_comps8_iter_(T, AllCells, Vis1, Tail)
+    ).
+
+% arc2_sd_flood8_(+AllCells, +Stack, +Vis0, +Acc, -Comp, -Vis):
+% DFS flood-fill within AllCells over 8-connectivity.
+arc2_sd_flood8_(_, [], Vis, Acc, Acc, Vis).
+arc2_sd_flood8_(AllCells, [H|Stack], Vis0, Acc0, Comp, Vis) :-
+    ( memberchk(H, Vis0) ->
+% Already visited: skip without expanding.
+        arc2_sd_flood8_(AllCells, Stack, Vis0, Acc0, Comp, Vis)
+    ;
+% Mark visited, expand all 8-connected AllCells neighbors.
+        H = R-C,
+        findall(NR-NC, (
+            member(DR-DC, [-1-(-1),-1-0,-1-1,0-(-1),0-1,1-(-1),1-0,1-1]),
+            NR is R+DR, NC is C+DC,
+            memberchk(NR-NC, AllCells),
+            \+ memberchk(NR-NC, Vis0)
+        ), New),
+        append(New, Stack, Stack1),
+        arc2_sd_flood8_(AllCells, Stack1, [H|Vis0], [H|Acc0], Comp, Vis)
+    ).
+
+% arc2_sd_comp_fills_(+Grid,+BG,+Diag,+NRows,+NCols,+Comp,+Acc,-Acc1):
+% Compute fill cells for one diagonal component; append to accumulator.
+arc2_sd_comp_fills_(Grid, BG, Diag, NRows, NCols, Comp, Acc, Acc1) :-
+% Find anchor cells: non-diagonal non-BG cells 8-adjacent to this component.
+    findall(AR-AC, (
+        member(R-C, Comp),
+        member(DR-DC, [-1-(-1),-1-0,-1-1,0-(-1),0-1,1-(-1),1-0,1-1]),
+        AR is R+DR, AC is C+DC,
+        AR >= 0, AR < NRows, AC >= 0, AC < NCols,
+        \+ memberchk(AR-AC, Diag),
+        arc2_cell_(Grid, AR, AC, AV), AV \= BG
+    ), AList),
+    sort(AList, Anchors),
+% For each anchor, compute fill cells and accumulate.
+    foldl(arc2_sd_anchor_fill_(Grid, BG, Diag, Comp, NRows, NCols), Anchors, Acc, Acc1).
+
+% arc2_sd_anchor_fill_(+Grid,+BG,+Diag,+Comp,+NRows,+NCols,+AR-AC,+Acc,-Acc1):
+% Find gap fill cells for one anchor and add to accumulator.
+arc2_sd_anchor_fill_(Grid, BG, Diag, Comp, NRows, NCols, AR-AC, Acc, Acc1) :-
+% Find farthest diagonal tip from anchor (Manhattan distance).
+    findall(Dist-TR-TC, (
+        member(TR-TC, Comp),
+        Dist is abs(TR-AR) + abs(TC-AC)
+    ), DRCs),
+    sort(0, @>=, DRCs, [_-TipR-TipC|_]),
+% Signed delta from anchor to tip.
+    DeltaR is TipR-AR, DeltaC is TipC-AC,
+% Unit direction toward tip.
+    ( DeltaR > 0 -> DDR = 1 ; DeltaR < 0 -> DDR = -1 ; DDR = 0 ),
+    ( DeltaC > 0 -> DDC = 1 ; DeltaC < 0 -> DDC = -1 ; DDC = 0 ),
+% Check if anchor has a horizontal line connection (non-diagonal same-row 4-conn non-BG).
+    ( arc2_sd_anchor_axis_(Grid, BG, Diag, AR, AC, h) -> IsH = true ; IsH = false ),
+% Check if anchor has a vertical line connection.
+    ( arc2_sd_anchor_axis_(Grid, BG, Diag, AR, AC, v) -> IsV = true ; IsV = false ),
+% Scan horizontally if anchor is H-type and tip has horizontal displacement.
+    ( IsH = true, DDC \= 0,
+      arc2_sd_scan_(Grid, BG, Diag, AR, AC, 0, DDC, NRows, NCols, Fill1)
+    -> true ; Fill1 = [] ),
+% Scan vertically if anchor is V-type and tip has vertical displacement.
+    ( IsV = true, DDR \= 0,
+      arc2_sd_scan_(Grid, BG, Diag, AR, AC, DDR, 0, NRows, NCols, Fill2)
+    -> true ; Fill2 = [] ),
+% Accumulate both fill sets.
+    append(Fill1, Acc, Acc2),
+    append(Fill2, Acc2, Acc1).
+
+% arc2_sd_anchor_axis_(+Grid,+BG,+Diag,+AR,+AC,+Axis):
+% True if anchor has a 4-connected non-diagonal non-BG neighbor in Axis direction.
+arc2_sd_anchor_axis_(Grid, BG, Diag, AR, AC, h) :-
+% Check left or right for a non-diagonal non-BG cell.
+    ( AC1 is AC-1, arc2_cell_(Grid, AR, AC1, V1), V1 \= BG, \+ memberchk(AR-AC1, Diag) -> true
+    ; AC2 is AC+1, arc2_cell_(Grid, AR, AC2, V2), V2 \= BG, \+ memberchk(AR-AC2, Diag) -> true
+    ).
+arc2_sd_anchor_axis_(Grid, BG, Diag, AR, AC, v) :-
+% Check above or below for a non-diagonal non-BG cell.
+    ( AR1 is AR-1, arc2_cell_(Grid, AR1, AC, V1), V1 \= BG, \+ memberchk(AR1-AC, Diag) -> true
+    ; AR2 is AR+1, arc2_cell_(Grid, AR2, AC, V2), V2 \= BG, \+ memberchk(AR2-AC, Diag) -> true
+    ).
+
+% arc2_sd_scan_(+Grid,+BG,+Diag,+AR,+AC,+FDR,+FDC,+NRows,+NCols,-Gap):
+% Scan from (AR+FDR, AC+FDC) in direction (FDR,FDC).
+% BG cells are collected into Gap. Diagonal cells are skipped.
+% Succeeds with Gap when a non-BG non-diagonal terminus is found.
+% Fails when the scan goes out of bounds.
+arc2_sd_scan_(Grid, BG, Diag, AR, AC, FDR, FDC, NRows, NCols, Gap) :-
+    R0 is AR+FDR, C0 is AC+FDC,
+    arc2_sd_scan_step_(Grid, BG, Diag, R0, C0, FDR, FDC, NRows, NCols, [], Gap).
+
+% arc2_sd_scan_step_/10: one step of the gap scan.
+arc2_sd_scan_step_(_, _, _, R, C, _, _, NRows, NCols, _, _) :-
+% Out of bounds: gap is not closed; fail.
+    ( R < 0 ; R >= NRows ; C < 0 ; C >= NCols ), !, fail.
+arc2_sd_scan_step_(Grid, BG, Diag, R, C, FDR, FDC, NRows, NCols, Acc, Gap) :-
+    arc2_cell_(Grid, R, C, V),
+    R1 is R+FDR, C1 is C+FDC,
+    ( V =:= BG ->
+% BG cell: add to gap accumulator and continue.
+        arc2_sd_scan_step_(Grid, BG, Diag, R1, C1, FDR, FDC, NRows, NCols, [R-C|Acc], Gap)
+    ; memberchk(R-C, Diag) ->
+% Diagonal cell: skip without adding to gap, continue.
+        arc2_sd_scan_step_(Grid, BG, Diag, R1, C1, FDR, FDC, NRows, NCols, Acc, Gap)
+    ;
+% Non-BG non-diagonal terminus: gap is closed; return accumulated gap.
+        Gap = Acc
+    ).
+
+% arc2_sd_build_(+Grid,+BG,+LV,+Diag,+Fills,+NRows,+NCols,-Out):
+% Produce output grid: diagonal cells → BG; fill cells → LV; others unchanged.
+arc2_sd_build_(Grid, BG, LV, Diag, Fills, NRows, NCols, Out) :-
+    NR1 is NRows-1, NC1 is NCols-1,
+    numlist(0, NR1, RIdxs), numlist(0, NC1, CIdxs),
+    maplist([R, OutRow]>>(
+        maplist([C, V]>>(
+            ( memberchk(R-C, Diag)  -> V = BG
+            ; memberchk(R-C, Fills) -> V = LV
+            ; arc2_cell_(Grid, R, C, V)
+            )
+        ), CIdxs, OutRow)
+    ), RIdxs, Out).
+
+% arc2_sd_4nbrs_nonbg_(+Grid,+R,+C,+BG,-Nbrs):
+% Collect all 4-connected non-BG neighbors of (R,C).
+arc2_sd_4nbrs_nonbg_(Grid, R, C, BG, Nbrs) :-
+    findall(NR-NC, (
+        member(DR-DC, [-1-0,1-0,0-(-1),0-1]),
+        NR is R+DR, NC is C+DC,
+        arc2_cell_(Grid, NR, NC, NV), NV \= BG
+    ), Nbrs).
+
+% arc2_sd_prune_loop_(+Grid,+BG,+DiagNbr,-Out):
+% Iteratively remove perpendicular degree-1 stubs from DiagNbr cells.
+arc2_sd_prune_loop_(Grid, BG, DiagNbr, Out) :-
+    ( arc2_sd_find_stub_(Grid, BG, DiagNbr, R-C) ->
+% Found a stub: remove it (set to BG) and continue looping.
+        arc2_set_cell_(Grid, R, C, BG, Grid1),
+        arc2_sd_prune_loop_(Grid1, BG, DiagNbr, Out)
+    ;
+% No stub found: pruning complete.
+        Out = Grid
+    ).
+
+% arc2_sd_find_stub_(+Grid,+BG,+DiagNbr,-R-C):
+% Find a DiagNbr cell that qualifies as a perpendicular degree-1 stub.
+arc2_sd_find_stub_(Grid, BG, DiagNbr, R-C) :-
+    member(R-C, DiagNbr),
+% Cell must still be non-BG (not already pruned).
+    arc2_cell_(Grid, R, C, SV), SV \= BG,
+% Must have exactly one 4-connected non-BG neighbor (degree-1).
+    arc2_sd_4nbrs_nonbg_(Grid, R, C, BG, [AR-AC]),
+% Direction from stub to its sole anchor.
+    DDR is AR-R, DDC is AC-C,
+% Anchor must have other 4-connected non-BG neighbors (not just this stub).
+    arc2_sd_4nbrs_nonbg_(Grid, AR, AC, BG, ANeighbors0),
+    exclude(==(R-C), ANeighbors0, ANeighbors),
+    ANeighbors \= [],
+% Stub direction must be perpendicular to anchor's line axis.
+    arc2_sd_perp_check_(ANeighbors, AR, AC, DDR, DDC).
+
+% arc2_sd_perp_check_(+ANeighbors,+AR,+AC,+DDR,+_DDC):
+% True when stub direction (DDR,_) is perpendicular to anchor's line axis.
+arc2_sd_perp_check_(ANeighbors, AR, AC, DDR, _DDC) :-
+    ( DDR =:= 0 ->
+% Horizontal stub: prune when anchor has no other neighbor in same row (anchor is V-only).
+        \+ (member(NR-_, ANeighbors), NR =:= AR)
+    ;
+% Vertical stub: prune when anchor has no other neighbor in same col (anchor is H-only).
+        \+ (member(_-NC, ANeighbors), NC =:= AC)
+    ).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
