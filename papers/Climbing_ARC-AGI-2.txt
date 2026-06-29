@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-29. Wave 22 complete: 22/120 = 18.33%.
+Last updated: 2026-06-29. Wave 23 complete: 23/120 = 19.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -144,6 +144,7 @@ Date        | Score      | Percent | Notes
 2026-06-29  |  20 / 120  | 16.67%  | Wave 20: section-tile divider-split sections mapped to tiled solid colors
 2026-06-29  |  21 / 120  | 17.50%  | Wave 21: chain-link legend-sequence box connector with BG-scan and chain tracking
 2026-06-29  |  22 / 120  | 18.33%  | Wave 22: legend-veto 4x4 legend set; erase components that cover all legend values
+2026-06-29  |  23 / 120  | 19.17%  | Wave 23: period-extend anchor-pair step detection with stop/recolor; row or col mode
 
 
 COMPLETE SCORE PROGRESSION
@@ -258,6 +259,34 @@ Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
 
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 23 - 2026-06-29 - Score: 23/120 = 19.17%
+
+Date: 2026-06-29
+
+Confirmed score: 23 / 120 = 19.17%
+
+Rules added in this wave:
+
+1. period_extend (task 16de56c4) - detect anchor pairs in rows or columns,
+   derive the step D, extend the periodic pattern to all in-bounds positions
+   sharing the same residue mod D. A stop/recolor cell at a pattern position
+   redirects the fill: use the stop color and fill only from the anchor end
+   to the stop (inclusive). Singletons at non-pattern positions are
+   preserved unchanged. Direction (row vs col) chosen by counting active
+   lines in each dimension.
+
+Bugs fixed: none.
+
+Lessons learned: counting active lines (lines with 2+ same-color cells) is
+a robust way to choose direction; the stop/recolor case generalises the
+"no stop" case cleanly; singletons at non-pattern positions need explicit
+preservation.
+
+Score advance: 22/120 = 18.33% to 23/120 = 19.17%.
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
 
@@ -2085,6 +2114,7 @@ ALL SOLVED TASKS
 (Task IDs added in alphabetical order after each wave)
 
 135a2760  - Wave 15 - period_repair        - fix period-P pattern deviations in inner row/col sequences
+16de56c4  - Wave 23 - period_extend       - anchor-pair step detection; stop/recolor; row or col mode
 1818057f  - Wave 1  - recolor_plus(4,8)   - plus shapes of 4 become 8
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
@@ -2233,4 +2263,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 20: Section-tile divider-split sections mapp
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.
 Dison, D. R. (2026). ARC-AGI-2 Wave 22: Legend-veto 4x4 legend set coverage erases mixed-color components.
   Score: 22/120 = 18.33%. Task d59b0160 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-29.
+Dison, D. R. (2026). ARC-AGI-2 Wave 23: Period-extend anchor-pair step detection with stop/recolor.
+  Score: 23/120 = 19.17%. Task 16de56c4 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.

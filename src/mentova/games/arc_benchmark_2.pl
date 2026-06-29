@@ -4663,6 +4663,168 @@ arc2_lv_erase_comp_(Comp, Grid, BG, Out) :-
     foldl([R-C, GIn, GOut]>>(arc2_set_cell_(GIn, R, C, BG, GOut)),
           Comp, Grid, Out).
 
+% ===========================================================================
+% WAVE 23 — period_extend (WP-281, Layer 256)
+% Task 16de56c4
+% Rule: Find the dominant direction (row or column) by counting how many
+% lines have 2+ cells of the same non-BG color. For each such "active"
+% line, identify the anchor pair (two same-color cells), derive the step D,
+% and compute all in-bounds pattern positions (multiples of D from the
+% anchor). If a DIFFERENT non-BG color sits at a pattern position, it is
+% the stop/recolor cell: fill pattern positions from the anchor side to the
+% stop (inclusive) with the stop color. Otherwise fill all pattern positions
+% with the anchor color. Non-BG singleton cells at non-pattern positions are
+% preserved unchanged. BG = 0 throughout.
+% ===========================================================================
+
+% arc2_named_rule: register period_extend as a known rule name.
+arc2_named_rule(period_extend).
+
+% arc2_transform(period_extend, +Grid, -Out): apply the period_extend rule.
+arc2_transform(period_extend, Grid, Out) :-
+% Determine grid dimensions from the input.
+    length(Grid, NR), Grid = [FR|_], length(FR, NC),
+    MaxR is NR - 1, MaxC is NC - 1,
+% Count active rows and cols (lines with 2+ same-color non-BG cells).
+    arc2_pe_count_active_(Grid, MaxR, MaxC, RowCount, ColCount),
+% Build a blank all-zero output grid of the same dimensions.
+    arc2_pe_blank_grid_(NR, NC, Blank),
+% Apply extensions in the direction with more active lines.
+    ( RowCount >= ColCount
+    -> arc2_pe_apply_rows_(Grid, MaxR, MaxC, Blank, Out)
+    ;  arc2_pe_apply_cols_(Grid, MaxR, MaxC, Blank, Out)
+    ).
+
+% arc2_pe_count_active_(+Grid, +MaxR, +MaxC, -RowCount, -ColCount):
+% RowCount = number of rows that have 2+ non-BG cells of the same color;
+% ColCount = analogous count for columns.
+arc2_pe_count_active_(Grid, MaxR, MaxC, RowCount, ColCount) :-
+% Collect each row index that has a same-color pair.
+    findall(R, (between(0, MaxR, R),
+        findall(C-V, (between(0, MaxC, C),
+                      arc2_cell_(Grid, R, C, V), V \= 0), RCells),
+        member(C1-V, RCells), member(C2-V, RCells), C1 \= C2),
+        RowList),
+    sort(RowList, UniqueRows), length(UniqueRows, RowCount),
+% Collect each col index that has a same-color pair.
+    findall(C, (between(0, MaxC, C),
+        findall(R-V, (between(0, MaxR, R),
+                      arc2_cell_(Grid, R, C, V), V \= 0), CCells),
+        member(R1-V, CCells), member(R2-V, CCells), R1 \= R2),
+        ColList),
+    sort(ColList, UniqueCols), length(UniqueCols, ColCount).
+
+% arc2_pe_blank_grid_(+NR, +NC, -Grid): create an NR x NC grid of all zeros.
+arc2_pe_blank_grid_(NR, NC, Grid) :-
+% Build a single zero row of width NC.
+    length(BlankRow, NC), maplist(=(0), BlankRow),
+% Build NR rows all unified with the same blank row.
+    length(Grid, NR), maplist(=(BlankRow), Grid).
+
+% arc2_pe_apply_rows_(+InputGrid, +MaxR, +MaxC, +Blank, -Out):
+% process each row in the InputGrid and fill the Blank grid row-wise.
+arc2_pe_apply_rows_(InputGrid, MaxR, MaxC, Blank, Out) :-
+% Thread the blank grid through each row index 0..MaxR.
+    numlist(0, MaxR, Rows),
+    foldl([R, GIn, GOut]>>(
+        arc2_pe_one_row_(InputGrid, R, MaxC, GIn, GOut)
+    ), Rows, Blank, Out).
+
+% arc2_pe_apply_cols_(+InputGrid, +MaxR, +MaxC, +Blank, -Out):
+% process each column in the InputGrid and fill the Blank grid col-wise.
+arc2_pe_apply_cols_(InputGrid, MaxR, MaxC, Blank, Out) :-
+% Thread the blank grid through each column index 0..MaxC.
+    numlist(0, MaxC, Cols),
+    foldl([C, GIn, GOut]>>(
+        arc2_pe_one_col_(InputGrid, C, MaxR, GIn, GOut)
+    ), Cols, Blank, Out).
+
+% arc2_pe_one_row_(+InputGrid, +R, +MaxC, +GIn, -GOut):
+% apply period_extend logic to row R of InputGrid, writing into GIn.
+arc2_pe_one_row_(InputGrid, R, MaxC, GIn, GOut) :-
+% Extract all non-BG cells from row R: list of Pos-Val pairs.
+    findall(P-V, (between(0, MaxC, P),
+                  arc2_cell_(InputGrid, R, P, V), V \= 0), Pairs),
+    ( arc2_pe_find_anchor_(Pairs, AC, APos, Step)
+    -> % Generate all in-bounds pattern positions for this anchor/step.
+       arc2_pe_pat_pos_(APos, Step, MaxC, PatPos),
+       % Compute which cells to write in the output row.
+       arc2_pe_out_pairs_(Pairs, AC, APos, PatPos, OutPairs),
+       % Write each output cell into the grid at row R.
+       foldl([CP-CV, GI, GO]>>(arc2_set_cell_(GI, R, CP, CV, GO)),
+             OutPairs, GIn, GOut)
+    ; % No anchor pair: preserve all non-BG cells as singletons.
+       foldl([CP-CV, GI, GO]>>(arc2_set_cell_(GI, R, CP, CV, GO)),
+             Pairs, GIn, GOut)
+    ).
+
+% arc2_pe_one_col_(+InputGrid, +C, +MaxR, +GIn, -GOut):
+% apply period_extend logic to column C of InputGrid, writing into GIn.
+arc2_pe_one_col_(InputGrid, C, MaxR, GIn, GOut) :-
+% Extract all non-BG cells from column C: list of Pos-Val pairs.
+    findall(P-V, (between(0, MaxR, P),
+                  arc2_cell_(InputGrid, P, C, V), V \= 0), Pairs),
+    ( arc2_pe_find_anchor_(Pairs, AC, APos, Step)
+    -> % Generate all in-bounds pattern positions for this anchor/step.
+       arc2_pe_pat_pos_(APos, Step, MaxR, PatPos),
+       % Compute which cells to write in the output column.
+       arc2_pe_out_pairs_(Pairs, AC, APos, PatPos, OutPairs),
+       % Write each output cell into the grid at column C.
+       foldl([CP-CV, GI, GO]>>(arc2_set_cell_(GI, CP, C, CV, GO)),
+             OutPairs, GIn, GOut)
+    ; % No anchor pair: preserve all non-BG cells as singletons.
+       foldl([CP-CV, GI, GO]>>(arc2_set_cell_(GI, CP, C, CV, GO)),
+             Pairs, GIn, GOut)
+    ).
+
+% arc2_pe_find_anchor_(+Pairs, -AnchorColor, -AnchorPositions, -Step):
+% find the pair of same-color cells with the smallest separation (step D).
+% Fails if no same-color pair exists.
+arc2_pe_find_anchor_(Pairs, AnchorColor, AnchorPositions, Step) :-
+% Build list of (step, color) for every same-color pair in Pairs.
+    findall(D-V, (member(P1-V, Pairs), member(P2-V, Pairs),
+                  P2 > P1, D is P2 - P1), StepVals),
+    StepVals \= [],
+% Sort ascending; the smallest step comes first.
+    sort(StepVals, [Step-AnchorColor|_]),
+% Collect all positions of the chosen anchor color.
+    findall(P, member(P-AnchorColor, Pairs), AnchorPositions).
+
+% arc2_pe_pat_pos_(+AnchorPositions, +Step, +MaxPos, -PatPos):
+% generate all in-bounds positions sharing the same remainder mod Step
+% as the anchor positions (i.e., all P with P mod Step = AnchorPos1 mod Step).
+arc2_pe_pat_pos_(AnchorPositions, Step, MaxPos, PatPos) :-
+% Use the first anchor position to determine the remainder class.
+    AnchorPositions = [P1|_],
+    R is P1 mod Step,
+% Collect every position in [0, MaxPos] with that remainder.
+    findall(P, (between(0, MaxPos, P), P mod Step =:= R), PatPos).
+
+% arc2_pe_out_pairs_(+Pairs, +AnchorColor, +AnchorPositions, +PatPos, -OutPairs):
+% determine the list of Pos-Val cells to write into the output line.
+% Singletons (non-BG, non-anchor, not at a pattern position) are preserved.
+arc2_pe_out_pairs_(Pairs, AnchorColor, AnchorPositions, PatPos, OutPairs) :-
+% Collect singletons: non-BG, different color from anchor, NOT at a pattern position.
+    findall(P-V, (member(P-V, Pairs), V \= AnchorColor,
+                  \+ member(P, PatPos)), Singletons),
+% Collect stop candidates: different color from anchor, AT a pattern position.
+    findall(P-V, (member(P-V, Pairs), V \= AnchorColor,
+                  member(P, PatPos)), Stops),
+    ( Stops = [StopP-StopC|_]
+    -> % Determine fill range: from anchor side to stop (inclusive).
+       min_list(AnchorPositions, AMin), max_list(AnchorPositions, AMax),
+       ( StopP < AMin -> MinFill = StopP, MaxFill = AMax
+       ;                 MinFill = AMin, MaxFill = StopP
+       ),
+% Fill pattern positions within [MinFill, MaxFill] with stop color.
+       findall(P-StopC, (member(P, PatPos), P >= MinFill, P =< MaxFill),
+               FillCells),
+       append(FillCells, Singletons, OutPairs)
+    ; % No stop: fill all pattern positions with the anchor color.
+       findall(P-AnchorColor, member(P, PatPos), FillCells),
+       append(FillCells, Singletons, OutPairs)
+    ).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
