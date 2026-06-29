@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 17 complete: 17/120 = 14.17%.
+Last updated: 2026-06-28. Wave 18 complete: 18/120 = 15.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -139,10 +139,106 @@ Date        | Score      | Percent | Notes
 2026-06-28  |  15 / 120  | 12.50%  | Wave 15: period-repair periodic-pattern deviation fix
 2026-06-28  |  16 / 120  | 13.33%  | Wave 16: legend-fill frame-interior fill from color lookup table
 2026-06-28  |  17 / 120  | 14.17%  | Wave 17: frame-target legend-direction rule; dots move inside irregular frames
+2026-06-28  |  18 / 120  | 15.00%  | Wave 18: tip-escape marker-through-shape-tip escape rule (8-connected, apex or projection)
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 18 - 2026-06-28 - Score: 18/120 = 15.00%
+
+Date: 2026-06-28
+
+Confirmed score: 18 / 120 = 15.00%
+
+Rules added in this wave:
+
+tip_escape - Each grid contains one or more "shape" components (8-connected
+  non-background color regions) that enclose "marker" components (a different
+  non-background color, strictly smaller, bounding box contained inside the
+  shape's bounding box).  The shape has a "tip" — a unique single cell at an
+  extreme row or column direction.  In the output all marker cells are removed
+  and min(N_markers, dist_to_grid_edge) new marker cells are placed just past
+  the tip, filling outward toward the nearest grid boundary.
+
+  8-connectivity: all component detection uses 8-adjacency (diagonal cells
+  count as neighbors).  This distinguishes enclosed markers from stray cells
+  that appear at the same grid position but are separate components.
+
+  Escape direction — apex detection (primary):
+    For each direction with a single-cell extreme (the only cell at MinRow,
+    MaxRow, MinCol, or MaxCol), test whether that tip is an "apex" — a point
+    where perpendicular shape-cell arms diverge.  For a left or right tip:
+    the 8-adjacent shape-cell neighborhood must contain at least one cell
+    ABOVE the tip row and one cell BELOW the tip row.  For an up or down tip:
+    the neighborhood must contain at least one cell LEFT of the tip column and
+    one cell RIGHT of the tip column.  The first such apex wins.
+
+  Escape direction — projection fallback (used when no apex exists):
+    Compute shape centroid (SR, SC) and marker centroid (MR, MC).  The escape
+    vector is (SR - MR, SC - MC), which points from the markers toward the
+    opposite side of the shape.  Project each candidate tip onto this vector:
+    Proj = (TipR - SR) * (SR - MR) + (TipC - SC) * (SC - MC).  The tip with
+    the largest projection is chosen as the escape direction.
+
+  Marker removal and placement:
+    All marker cells are set to background 0.  The escape zone is the ordered
+    sequence of grid positions from just past the tip toward the grid boundary
+    in the escape direction.  min(N_markers, zone_length) new marker-color
+    cells are placed starting at the position nearest to the tip.
+
+  Verification on task 3dc255db:
+    Training pair 0 — two shapes: 4-shape (staircase) with 6-markers escapes
+      RIGHT via right apex; 3-shape (concave hook) with 7-markers escapes LEFT
+      via projection (left tip has highest projection against (SR - MR, SC - MC)).
+    Training pair 1 — two shapes: 3-shape (arrow-left) with 9-markers escapes
+      UP via projection; 6-shape (V-up) with 9-markers escapes UP via up apex.
+    Training pair 2 — 6-frame (funnel) with 7-markers escapes UP via up apex
+      (top-cell tip at (3,5) has neighbors (4,4) and (4,6) diverging left/right).
+    Test case — three shapes: 9-shape (U-bracket) with 7-markers escapes UP
+      via projection (only one candidate tip); 2-shape (H-bars) with 4-markers
+      escapes RIGHT via right apex; 8-shape (bent-chain) with 2-markers escapes
+      RIGHT via right apex at (9,11).  Stray 2-cell at (9,7) is outside all
+      shape bounding boxes and is left unchanged.  Score: 18/120.
+
+  Implementation notes:
+    - BFS uses 8-adjacency so diagonal-chain shapes are recognized as one component.
+    - te_ prefix on all helper predicates.
+    - Bounding-box containment distinguishes shape from marker:
+      smaller component whose BB is fully inside larger component's BB.
+    - `max_member/2` on float projections selects the highest-projection tip.
+
+Bugs fixed: none (first clean attempt).
+
+Lessons learned:
+
+1. 8-connectivity is essential for concave and chain-like shapes in ARC-AGI-2.
+   Using 4-connectivity would split diagonal chains into separate components and
+   misidentify markers as shape fragments.
+
+2. Apex detection handles V-shape and funnel tips more reliably than the
+   projection method, because the projection vector can be nearly perpendicular
+   to the escape direction when markers are centered inside the shape.
+
+3. When the projection fallback is needed, the escape vector must point AWAY from
+   the markers (shape_centroid - marker_centroid), not toward them.  Reversing
+   the vector selects the wrong tip.
+
+4. Bounding-box containment for marker detection handles both "fully enclosed"
+   markers (inside a frame) and "adjacent-enclosed" markers (inside the concavity
+   of a hook or arrow shape) without any additional geometry.
+
+Task solved: 3dc255db (3 training pairs; grids are 13x13; shapes are 8-connected
+  non-background regions with enclosed markers that escape through the shape's tip).
+  Training pairs 0, 1, 2 and test case all pass.
+
+Score advance: 17/120 = 14.17% to 18/120 = 15.00%.
+
+Accomplishment: Acc_316.  Paper: Acc_316_ARC2_Wave18.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
 
 
 ATTEMPT 17 - 2026-06-28 - Score: 17/120 = 14.17%
@@ -1579,6 +1675,7 @@ ALL SOLVED TASKS
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
 38007db0  - Wave 13 - odd_col            - unique col section extraction per row section
+3dc255db  - Wave 18 - tip_escape          - 8-connected shape markers escape through the shape tip
 409aa875  - Wave 10 - apex_shadow         - arm-vector projection places shadow-9 or collision-1
 45a5af55  - Wave 6  - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
@@ -1699,4 +1796,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 16: Legend-fill frame-interior fill from col
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 17: Frame-target legend-direction rule.
   Score: 17/120 = 14.17%. Task 88e364bc solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 18: Tip-escape marker-through-shape-tip escape rule.
+  Score: 18/120 = 15.00%. Task 3dc255db solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.

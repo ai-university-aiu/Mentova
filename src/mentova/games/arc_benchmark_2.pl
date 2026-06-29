@@ -3411,6 +3411,326 @@ ft_shoot_(Grid_, Color_, R_, C_, Dr_, Dc_, NR_, NC_) :-
         ft_shoot_(Grid_, Color_, R1_, C1_, Dr_, Dc_, NR_, NC_)
     ).
 
+% ===========================================================================
+% TIP_ESCAPE rule (Wave 18) — Task 3dc255db
+% Each grid has one or more "shape" components (8-connected non-background)
+% that enclose "marker" components (different color, smaller, inside the
+% shape's bounding box).  The shape has a "tip" — the unique single cell
+% at an extreme row or column direction.  In the output: all markers are
+% removed and min(N_markers, dist_to_grid_edge) new marker cells are placed
+% just past the tip, filling outward toward the grid boundary.
+% Escape direction: apex detection first (tip with perpendicular diverging
+% arms), then projection method (escape = shape_centroid - marker_centroid).
+% ===========================================================================
+
+% Register tip_escape with the named-rule induction dispatcher.
+arc2_named_rule(tip_escape).
+
+% arc2_transform for tip_escape: delegate to te_transform_.
+arc2_transform(tip_escape, Grid, GridOut) :-
+% Apply the marker-escape transformation to the grid.
+    te_transform_(Grid, GridOut).
+
+% arc2_induce_rule for tip_escape: verify all training pairs match.
+arc2_induce_rule(TrainingPairs, tip_escape) :-
+% Training set must be non-empty.
+    TrainingPairs \= [],
+% Every training pair must produce the expected output.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(tip_escape, In, Out)).
+
+% te_transform_(+Grid, -GridOut)
+% Find shape+marker pairs and apply each escape transformation.
+te_transform_(Grid, GridOut) :-
+% Find all 8-connected non-background components.
+    te_all_comps_(Grid, 0, AllComps),
+% Pair shapes with their enclosed marker components.
+    te_find_pairs_(AllComps, Pairs),
+% Fail unless at least one valid pair exists.
+    Pairs \= [],
+% Apply each pair's transformation sequentially via foldl.
+    foldl(te_apply_pair_, Pairs, Grid, GridOut).
+
+% ---------------------------------------------------------------------------
+% 8-connected component finder
+% ---------------------------------------------------------------------------
+
+% te_all_comps_(+Grid, +Bg, -Comps)
+% Comps = list of comp(Color, Cells) where Cells = list of R-C pairs.
+te_all_comps_(Grid, Bg, Comps) :-
+% Get row count.
+    length(Grid, NR), NR1 is NR - 1,
+% Get column count from the first row.
+    nth0(0, Grid, Row0_), length(Row0_, NC), NC1 is NC - 1,
+% Collect all non-background cell positions.
+    findall(R-C,
+        (between(0,NR1,R), between(0,NC1,C),
+         nth0(R,Grid,GRow_), nth0(C,GRow_,V_), V_ \= Bg),
+        AllCells),
+% Group cells into 8-connected same-color components.
+    te_group_comps_(AllCells, Grid, NR, NC, Comps).
+
+% te_group_comps_(+Pending, +Grid, +NR, +NC, -Comps)
+% Iteratively extract BFS components from the head of the pending cell list.
+te_group_comps_([], _, _, _, []).
+te_group_comps_([R-C|Pending], Grid, NR, NC,
+                [comp(Color,CompCells)|RestComps]) :-
+% Look up the seed cell's color.
+    nth0(R, Grid, SRow_), nth0(C, SRow_, Color),
+% BFS-expand all 8-connected cells of this color from the seed.
+    te_bfs8_(Grid, Color, NR, NC, [R-C], [R-C], CompCells),
+% Remove all component cells from the pending list.
+    subtract(Pending, CompCells, Pending2),
+% Recurse for remaining cells.
+    te_group_comps_(Pending2, Grid, NR, NC, RestComps).
+
+% te_bfs8_(+Grid, +Color, +NR, +NC, +Queue, +Visited, -Component)
+% BFS over 8-adjacent same-Color cells; Component = final visited set.
+te_bfs8_(_, _, _, _, [], Visited, Visited).
+te_bfs8_(Grid, Color, NR, NC, [R-C|Queue], Visited, Component) :-
+% Compute adjacent row and column offsets.
+    R1_ is R-1, R2_ is R+1, C1_ is C-1, C2_ is C+1,
+% Collect in-bounds, same-color, unvisited 8-neighbors.
+    findall(Nr-Nc,
+        (member(Nr,[R1_,R,R2_]), member(Nc,[C1_,C,C2_]),
+         \+((Nr=:=R, Nc=:=C)),
+         Nr >= 0, Nr < NR, Nc >= 0, Nc < NC,
+         nth0(Nr,Grid,NRow_), nth0(Nc,NRow_,Color),
+         \+ member(Nr-Nc,Visited)),
+        NewCells),
+% Append new cells to the BFS frontier queue.
+    append(Queue, NewCells, Queue2),
+% Add new cells to the visited set.
+    append(Visited, NewCells, Visited2),
+% Continue BFS with updated queue and visited set.
+    te_bfs8_(Grid, Color, NR, NC, Queue2, Visited2, Component).
+
+% ---------------------------------------------------------------------------
+% Shape-marker pairing
+% ---------------------------------------------------------------------------
+
+% te_find_pairs_(+AllComps, -Pairs)
+% Pairs = list of pair(comp(SC,SCells), comp(MC,MCells)) where MC-cells
+% are enclosed inside the SC-cells bounding box and strictly fewer in count.
+te_find_pairs_(AllComps, Pairs) :-
+% Collect all valid shape+marker component pairs via findall.
+    findall(pair(Shape,Marker),
+        (member(Shape, AllComps),
+         member(Marker, AllComps),
+         Shape \= Marker,
+         te_is_marker_(Shape, Marker)),
+        Pairs).
+
+% te_is_marker_(+Shape, +Candidate)
+% Candidate qualifies as a marker: different color, fewer cells, BB inside Shape BB.
+te_is_marker_(comp(SC_,SCells), comp(MC_,MCells)) :-
+% Colors must differ.
+    SC_ \= MC_,
+% Marker must be strictly smaller than the shape.
+    length(SCells, SN_), length(MCells, MN_), MN_ < SN_,
+% Compute shape bounding box.
+    te_bb_(SCells, SMinR, SMaxR, SMinC, SMaxC),
+% Compute marker bounding box.
+    te_bb_(MCells, MMinR, MMaxR, MMinC, MMaxC),
+% Marker BB must fit entirely within shape BB.
+    MMinR >= SMinR, MMaxR =< SMaxR,
+    MMinC >= SMinC, MMaxC =< SMaxC.
+
+% te_bb_(+Cells, -MinR, -MaxR, -MinC, -MaxC)
+% Compute the bounding box of a list of R-C cell coordinates.
+te_bb_(Cells, MinR, MaxR, MinC, MaxC) :-
+% Separate row and column lists via pairs decomposition.
+    pairs_keys_values(Cells, Rs, Cs),
+% Find min and max of rows and columns.
+    min_list(Rs, MinR), max_list(Rs, MaxR),
+    min_list(Cs, MinC), max_list(Cs, MaxC).
+
+% ---------------------------------------------------------------------------
+% Apply one shape+marker pair transformation
+% ---------------------------------------------------------------------------
+
+% te_apply_pair_(+Pair, +GIn, -GOut)
+% Remove marker cells from GIn; place min(N,Z) new marker cells past the tip.
+te_apply_pair_(pair(comp(_,SCells), comp(MC,MCells)), GIn, GOut) :-
+% Find the escape direction and tip cell coordinates.
+    te_select_escape_(SCells, MCells, TipR, TipC, EscDir),
+% Get grid dimensions for boundary calculations.
+    te_grid_dims_(GIn, NRows, NCols),
+% Build the ordered escape-zone list past the tip toward grid edge.
+    te_escape_zone_(TipR, TipC, EscDir, NRows, NCols, EscZone),
+% Count markers and available zone positions.
+    length(MCells, N), length(EscZone, ZSize),
+% Number of markers to place is capped by zone capacity.
+    PlaceN is min(N, ZSize),
+% Remove all marker cells by setting them to background 0.
+    te_set_cells_(GIn, MCells, 0, G1),
+% Take the first PlaceN zone positions (closest to tip first).
+    length(PlaceZone, PlaceN),
+    append(PlaceZone, _, EscZone),
+% Write marker color to the selected escape positions.
+    te_set_cells_(G1, PlaceZone, MC, GOut).
+
+% ---------------------------------------------------------------------------
+% Escape direction selection
+% ---------------------------------------------------------------------------
+
+% te_select_escape_(+SCells, +MCells, -TipR, -TipC, -EscDir)
+% Determine the tip cell and escape direction for one shape+marker pair.
+te_select_escape_(SCells, MCells, TipR, TipC, EscDir) :-
+% Compute shape bounding box for extreme detection.
+    te_bb_(SCells, MinR, MaxR, MinC, MaxC),
+% Find all directions that have a single-cell extreme.
+    findall(Dir-TR-TC,
+        te_single_extreme_(SCells, MinR, MaxR, MinC, MaxC, Dir, TR, TC),
+        Tips),
+% At least one tip must exist.
+    Tips \= [],
+% Apex detection takes priority; fall back to projection if no apex.
+    ( te_apex_tip_(Tips, SCells, TipR, TipC, EscDir) -> true
+    ; te_projection_tip_(Tips, SCells, MCells, TipR, TipC, EscDir) ).
+
+% te_single_extreme_(+SCells, +MinR, +MaxR, +MinC, +MaxC, ?Dir, -TipR, -TipC)
+% Succeed when exactly ONE shape cell is at the extreme row/col in direction Dir.
+te_single_extreme_(SCells, _, _, MinC, _, left, TipR, MinC) :-
+% Filter cells at the leftmost column.
+    include([_-C_]>>(C_ =:= MinC), SCells, Ext),
+% Exactly one cell must be at that column.
+    Ext = [TipR-MinC].
+te_single_extreme_(SCells, _, _, _, MaxC, right, TipR, MaxC) :-
+% Filter cells at the rightmost column.
+    include([_-C_]>>(C_ =:= MaxC), SCells, Ext),
+% Exactly one cell must be at that column.
+    Ext = [TipR-MaxC].
+te_single_extreme_(SCells, MinR, _, _, _, up, MinR, TipC) :-
+% Filter cells at the topmost row.
+    include([R_-_]>>(R_ =:= MinR), SCells, Ext),
+% Exactly one cell must be at that row.
+    Ext = [MinR-TipC].
+te_single_extreme_(SCells, _, MaxR, _, _, down, MaxR, TipC) :-
+% Filter cells at the bottommost row.
+    include([R_-_]>>(R_ =:= MaxR), SCells, Ext),
+% Exactly one cell must be at that row.
+    Ext = [MaxR-TipC].
+
+% te_apex_tip_(+Tips, +SCells, -TipR, -TipC, -EscDir)
+% Find the first tip that qualifies as an apex with diverging perpendicular arms.
+te_apex_tip_(Tips, SCells, TipR, TipC, EscDir) :-
+% Try each candidate tip in order.
+    member(EscDir-TipR-TipC, Tips),
+% Verify it has diverging perpendicular shape-cell arms.
+    te_is_apex_(TipR, TipC, EscDir, SCells).
+
+% te_apex_nbrs_(+TipR, +TipC, +SCells, -Nbrs)
+% Collect 8-adjacent shape cells of the tip, excluding the tip itself.
+te_apex_nbrs_(TipR, TipC, SCells, Nbrs) :-
+% Find all shape cells within 1 step of the tip that are not the tip.
+    findall(R-C,
+        (member(R-C, SCells),
+         DR_ is abs(R - TipR), DC_ is abs(C - TipC),
+         DR_ =< 1, DC_ =< 1,
+         \+((R =:= TipR, C =:= TipC))),
+        Nbrs).
+
+% te_is_apex_(+TipR, +TipC, +Dir, +SCells)
+% Horizontal escape (left/right): arms diverge both above and below the tip row.
+% Vertical escape (up/down): arms diverge both left and right of the tip col.
+te_is_apex_(TipR, TipC, right, SCells) :-
+    te_apex_nbrs_(TipR, TipC, SCells, Nbrs),
+    member(AR-_, Nbrs), AR < TipR,
+    member(BR-_, Nbrs), BR > TipR.
+te_is_apex_(TipR, TipC, left, SCells) :-
+    te_apex_nbrs_(TipR, TipC, SCells, Nbrs),
+    member(AR-_, Nbrs), AR < TipR,
+    member(BR-_, Nbrs), BR > TipR.
+te_is_apex_(TipR, TipC, up, SCells) :-
+    te_apex_nbrs_(TipR, TipC, SCells, Nbrs),
+    member(_-LC, Nbrs), LC < TipC,
+    member(_-RC, Nbrs), RC > TipC.
+te_is_apex_(TipR, TipC, down, SCells) :-
+    te_apex_nbrs_(TipR, TipC, SCells, Nbrs),
+    member(_-LC, Nbrs), LC < TipC,
+    member(_-RC, Nbrs), RC > TipC.
+
+% te_projection_tip_(+Tips, +SCells, +MCells, -TipR, -TipC, -EscDir)
+% Select the tip with the greatest projection onto the escape vector.
+% Escape vector = shape_centroid - marker_centroid (points away from markers).
+te_projection_tip_(Tips, SCells, MCells, TipR, TipC, EscDir) :-
+% Compute shape centroid.
+    te_centroid_(SCells, SR, SC),
+% Compute marker centroid.
+    te_centroid_(MCells, MR, MCol),
+% Escape vector from marker centroid toward the opposite side of the shape.
+    EscVR is SR - MR, EscVC is SC - MCol,
+% Project each tip onto the escape vector.
+    findall(Proj-Dir-TR-TC,
+        (member(Dir-TR-TC, Tips),
+         Proj is float((TR - SR) * EscVR + (TC - SC) * EscVC)),
+        ProjList),
+% Choose the tip with the maximum projection value.
+    max_member(_-EscDir-TipR-TipC, ProjList).
+
+% te_centroid_(+Cells, -AvgR, -AvgC)
+% Floating-point centroid (average row and col) of a list of R-C cells.
+te_centroid_(Cells, AvgR, AvgC) :-
+% Decompose into separate row and column lists.
+    pairs_keys_values(Cells, Rs, Cs),
+% Sum rows and columns.
+    sum_list(Rs, SumR), sum_list(Cs, SumC),
+% Compute cell count.
+    length(Cells, N),
+% Use float division to avoid integer truncation.
+    AvgR is SumR / float(N), AvgC is SumC / float(N).
+
+% ---------------------------------------------------------------------------
+% Escape zone and grid mutation helpers
+% ---------------------------------------------------------------------------
+
+% te_escape_zone_(+TipR, +TipC, +Dir, +NR, +NC, -Zone)
+% Zone = ordered list of R-C positions from just past the tip to the grid edge.
+te_escape_zone_(TipR, TipC, right, _NR, NC, Zone) :-
+% Zone extends rightward from TipC+1 to the last column.
+    S_ is TipC + 1, E_ is NC - 1,
+    ( S_ > E_ -> Zone = []
+    ; numlist(S_, E_, Cs_), maplist([C_,TipR-C_]>>true, Cs_, Zone) ).
+te_escape_zone_(TipR, TipC, left, _NR, _NC, Zone) :-
+% Zone extends leftward from TipC-1 to column 0 (closest position first).
+    S_ is TipC - 1,
+    ( S_ < 0 -> Zone = []
+    ; numlist(0, S_, Cs0_), reverse(Cs0_, Cs_),
+      maplist([C_,TipR-C_]>>true, Cs_, Zone) ).
+te_escape_zone_(TipR, TipC, up, _NR, _NC, Zone) :-
+% Zone extends upward from TipR-1 to row 0 (closest position first).
+    S_ is TipR - 1,
+    ( S_ < 0 -> Zone = []
+    ; numlist(0, S_, Rs0_), reverse(Rs0_, Rs_),
+      maplist([R_,R_-TipC]>>true, Rs_, Zone) ).
+te_escape_zone_(TipR, TipC, down, NR, _NC, Zone) :-
+% Zone extends downward from TipR+1 to the last row.
+    S_ is TipR + 1, E_ is NR - 1,
+    ( S_ > E_ -> Zone = []
+    ; numlist(S_, E_, Rs_), maplist([R_,R_-TipC]>>true, Rs_, Zone) ).
+
+% te_grid_dims_(+Grid, -NRows, -NCols)
+% Return the number of rows and columns of a grid.
+te_grid_dims_(Grid, NRows, NCols) :-
+    length(Grid, NRows),
+    ( Grid = [R0_|_] -> length(R0_, NCols) ; NCols = 0 ).
+
+% te_set_cell_(+Grid, +R, +C, +V, -GridOut)
+% Return a new grid identical to Grid but with cell (R,C) set to V.
+te_set_cell_(Grid, R, C, V, GridOut) :-
+    nth0(R, Grid, Row_, RestRows),
+    nth0(C, Row_, _, RestCols),
+    nth0(C, NewRow_, V, RestCols),
+    nth0(R, GridOut, NewRow_, RestRows).
+
+% te_set_cells_(+Grid, +Cells, +V, -GridOut)
+% Set every listed R-C cell to value V, recursing over the cell list.
+te_set_cells_(Grid, [], _, Grid).
+te_set_cells_(Grid, [R-C|Rest], V, GridOut) :-
+    te_set_cell_(Grid, R, C, V, Grid1),
+    te_set_cells_(Grid1, Rest, V, GridOut).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
