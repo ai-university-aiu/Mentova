@@ -5,9 +5,9 @@
 <p align="center">
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
-  <img src="https://img.shields.io/badge/reasoning%20rungs-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Rungs">
-  <img src="https://img.shields.io/badge/accomplishments-320-FF6B35?style=for-the-badge" alt="320 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-22%2F120%20%3D%2018.33%25-orange?style=for-the-badge" alt="ARC-AGI-2: 22/120 = 18.33%">
+  <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Types">
+  <img src="https://img.shields.io/badge/accomplishments-321-FF6B35?style=for-the-badge" alt="321 Accomplishments">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-23%2F120%20%3D%2019.17%25-orange?style=for-the-badge" alt="ARC-AGI-2: 23/120 = 19.17%">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **22/120 = 18.33%** — Wave 22; climbing underway |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **23/120 = 19.17%** — Wave 23; climbing underway |
 | Documented accomplishments | **310 accomplished** |
 | Scientific papers | **307 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 22 complete (22/120 = 18.33%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 23 complete (23/120 = 19.17%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -563,6 +563,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_300` | ARC-AGI-2 Wave 2 — BFS flood-fill connected-component analysis implemented; chain_strip rule solves task 7b5033c1. Score: 2/120 = 1.67%. |
 | `Acc_301` | ARC-AGI-2 Wave 3 — checkerboard diagonal arm projection; arm_endpoint_ray rule solves task 80a900e0. Score: 3/120 = 2.50%. |
 | `Acc_312` | ARC-AGI-2 Wave 14 — reflect-axis shape reflection across 2-marker axis; reflect_axis rule solves task 7ed72f31 (each shape reflected across nearest 2-cluster axis: point, vertical, or horizontal). Score: 14/120 = 11.67%. |
+| `Acc_321` | ARC-AGI-2 Wave 23 — period_extend rule solves task 16de56c4 (anchor-pair step detection; stop/recolor cell at a pattern position; row or column mode chosen by active-line count). Score: 23/120 = 19.17%. |
 | `Acc_320` | ARC-AGI-2 Wave 22 — legend_veto rule solves task d59b0160 (color-agnostic 4-connected components; erase any component whose value set covers all legend values extracted from the 4x4 top-left frame). Score: 22/120 = 18.33%. |
 | `Acc_319` | ARC-AGI-2 Wave 21 — chain_link rule solves task 3e6067c3 (legend chain connects adjacent boxes by filling gaps; BG detected from top-left cell; boxes found by BG-scanning; chain walked with visited set for repeated colors; gap-clear check rejects non-adjacent pairs). Score: 21/120 = 17.50%. |
 | `Acc_318` | ARC-AGI-2 Wave 20 — section_tile rule solves task b0039139 (input divided by all-1 row/col dividers into sections; shape1 inner bbox tiled N times with solid-color mapping; N = total non-zeros in shape2 / 2; early induction placement before frame_target prevents timeout). Score: 20/120 = 16.67%. |

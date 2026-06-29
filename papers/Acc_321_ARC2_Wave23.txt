@@ -1,0 +1,118 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Accomplishment 321 - ARC-AGI-2 Wave 23: Periodic Pattern Extension (period_extend)
+Task 16de56c4 - Score Advances to 23/120 = 19.17%
+Date: 2026-06-29
+
+
+ABSTRACT
+
+Mentova solves ARC-AGI-2 task 16de56c4 using a new glass-box named rule called
+period_extend.
+
+The input grid contains sparse non-background cells arranged in periodic patterns
+along rows or columns. Each active line holds an "anchor pair" - two cells of the
+same color separated by some step D. Extending the pattern to all positions sharing
+the same residue modulo D fills the line. When a cell of a different color appears
+at a pattern position, it acts as a stop-and-recolor marker: the fill uses the
+marker's color and stops at the marker position rather than continuing to the grid
+boundary. Non-background cells at non-pattern positions (singletons) are preserved
+unchanged.
+
+The rule determines automatically whether to operate row-wise or column-wise by
+counting active lines in each dimension and using the direction with more.
+
+All three training pairs and the held-out test case are solved correctly on first
+attempt.
+
+
+RULE DESCRIPTION
+
+An active line is any row or column that contains two or more cells of the same
+non-background (0) color. For each active line:
+
+1. Find the anchor pair: the two closest cells of the same color. Their separation
+   is the step D.
+
+2. Compute all pattern positions: every index P in the line such that
+   P mod D equals the anchor positions modulo D.
+
+3. If a cell at a pattern position holds a different non-zero color, it is
+   the stop/recolor cell. Fill all pattern positions from the anchor side
+   to the stop (inclusive) with the stop color; leave positions beyond the
+   stop as background.
+
+4. If no stop cell exists, fill every in-bounds pattern position with the
+   anchor color.
+
+5. Non-background cells at non-pattern positions (singletons) are copied
+   to the output unchanged.
+
+Direction (row vs column) is determined by counting how many rows have same-color
+pairs versus how many columns have same-color pairs. The dimension with more active
+lines wins.
+
+
+EXAMPLE
+
+Training pair 1 (row mode, 12 x 9):
+
+Row 8 in the input: [9, 0, 9, 0, 0, 0, 6, 0, 0]
+- Anchor: 9s at columns 0 and 2, step D = 2
+- Pattern positions: 0, 2, 4, 6, 8
+- Stop/recolor cell: 6 at column 6 (a pattern position, different color from 9)
+- Fill range: columns 0 to 6 (anchor is at left, stop at right)
+- Fill color: 6 (the stop color)
+- Output row 8: [6, 0, 6, 0, 6, 0, 6, 0, 0]
+
+Row 11 in the input: [8, 8, 0, 0, 0, 0, 0, 3, 0]
+- Anchor: 8s at columns 0 and 1, step D = 1
+- Pattern positions: 0, 1, 2, ..., 8 (every column)
+- Stop/recolor cell: 3 at column 7 (a pattern position, different color from 8)
+- Fill range: columns 0 to 7 (anchor at left, stop at right)
+- Fill color: 3
+- Output row 11: [3, 3, 3, 3, 3, 3, 3, 3, 0]
+
+
+VERIFICATION
+
+All three training pairs pass:
+- Pair 1 (12 x 9, row mode): 4 active rows, 1 active col - row mode chosen.
+  Four distinct pattern fills verified including two stop/recolor cases.
+- Pair 2 (9 x 20, col mode): 4 active cols, 1 active row - col mode chosen.
+  Four distinct column fills verified including one stop/recolor and one
+  non-pattern singleton (5 at row 3, col 18 preserved unchanged).
+- Pair 3 (7 x 15, col mode): 4 active cols, 1 active row - col mode chosen.
+  Four distinct column fills verified, all extension-only (no stop cells).
+
+Test case (9 x 21, row mode): 6 active rows, 1 active col - row mode chosen.
+Six distinct row fills verified including stop/recolor cases (rows 2, 3) and
+preserved singletons (7 at row 1 col 9; 1 at row 5 col 13; 4 at row 8 col 7).
+
+
+IMPLEMENTATION
+
+New predicates (arc2_pe_* namespace) in
+Mentova/src/mentova/games/arc_benchmark_2.pl:
+
+- arc2_pe_count_active_/5: count active rows and columns in the grid
+- arc2_pe_blank_grid_/3: create a zero-filled output grid
+- arc2_pe_apply_rows_/5: apply period_extend to every row
+- arc2_pe_apply_cols_/5: apply period_extend to every column
+- arc2_pe_one_row_/5: process a single row
+- arc2_pe_one_col_/5: process a single column
+- arc2_pe_find_anchor_/4: locate the anchor pair and derive step D
+- arc2_pe_pat_pos_/4: generate all in-bounds pattern positions
+- arc2_pe_out_pairs_/5: compute output cell list with stop/recolor logic
+
+The rule is registered via arc2_named_rule(period_extend) and dispatched
+by the standard arc2_transform/3 interface.
+
+
+BENCHMARK RESULT
+
+Score before: 22 / 120 = 18.33%
+Score after:  23 / 120 = 19.17%
+Task solved:  16de56c4
+
+All 22 previously solved tasks continue to pass (full regression 23/23).
