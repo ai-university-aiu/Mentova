@@ -4923,6 +4923,117 @@ arc2_ss_pair_rows_([_-_-LSub, _-_-RSub], Rows) :-
     maplist([LRow, RRow, OutRow]>>(append(LRow, RRow, OutRow)),
             LSub, RSub, Rows).
 
+% ===========================================================================
+% WAVE 25 — bar_extend (WP-283, Layer 258)
+% Task 1ae2feb7
+% Rule: A vertical divider column (all non-BG cells in that column share one
+% value) separates a left-side bar region from a right-side empty region.
+% Each row optionally carries a bar of 1-2 non-BG colors to the left of the
+% divider. The rightmost non-BG cell in the bar is the primary color P with
+% count CP. Any other non-BG color is the secondary S with count CS (default
+% CS=1 if absent). Period = CP*CS. Within one period: P at every CP-multiple
+% position; S at every CS-multiple position not already occupied by P; BG
+% elsewhere. The right side is filled by repeating the period cyclically.
+% ===========================================================================
+
+% Register the bar_extend rule name.
+arc2_named_rule(bar_extend).
+
+% Top-level transform: find divider, apply per-row extension.
+arc2_transform(bar_extend, Grid, Out) :-
+    % Find the divider column index.
+    arc2_be_divider_(Grid, D),
+    % Extend each row independently.
+    maplist(arc2_be_row_(D), Grid, Out).
+
+% Find divider column D: the column where all non-BG values are identical
+% and at least 3 rows carry that value.
+arc2_be_divider_(Grid, D) :-
+    % Use the first row to determine grid width.
+    nth0(0, Grid, R0),
+    % Compute last valid column index.
+    length(R0, W),
+    W1 is W - 1,
+    % Try columns from left to right; cut on first match.
+    between(1, W1, D),
+    % Collect the value at column D across all rows.
+    maplist([Row, C]>>(nth0(D, Row, C)), Grid, ColVals),
+    % Keep only non-BG values.
+    include(\=(0), ColVals, NonBG),
+    % Require at least 3 rows have non-BG here.
+    length(NonBG, NB), NB >= 3,
+    % All non-BG values must be the same (one unique value).
+    sort(NonBG, [_]),
+    !.
+
+% Process one row: extend the right side based on the bar pattern.
+arc2_be_row_(D, InRow, OutRow) :-
+    % Compute total row width.
+    length(InRow, W),
+    % Slice bar (cols 0..D-1) and divider cell.
+    length(Bar, D),
+    append(Bar, [Div|_], InRow),
+    % Find primary color and its count in the bar.
+    arc2_be_primary_(Bar, PC, CP),
+    % Blank row: copy unchanged.
+    ( PC =:= 0
+    -> OutRow = InRow
+    % Active row: compute period and fill right side.
+    ;  arc2_be_secondary_(Bar, PC, SC, CS),
+       Period is CP * CS,
+       % Build the repeating period cell list.
+       Period1 is Period - 1,
+       numlist(0, Period1, PIxs),
+       maplist(arc2_be_cell_(PC, CP, SC, CS), PIxs, PeriodCells),
+       % Compute right-side width.
+       RW is W - D - 1,
+       % Fill right side by cycling through PeriodCells.
+       ( RW =:= 0
+       -> RFill = []
+       ;  RW1 is RW - 1,
+          numlist(0, RW1, RIxs),
+          length(PeriodCells, PLen),
+          maplist([I, C]>>(J is I mod PLen, nth0(J, PeriodCells, C)),
+                  RIxs, RFill)
+       ),
+       % Reconstruct row: original bar + divider + new right fill.
+       append(Bar, [Div|RFill], OutRow)
+    ).
+
+% Find primary color: the rightmost non-BG cell in the bar.
+arc2_be_primary_(Bar, PC, CP) :-
+    ( arc2_be_last_nonbg_(Bar, PC)
+    -> include(==(PC), Bar, PCs), length(PCs, CP)
+    ;  PC = 0, CP = 0
+    ).
+
+% Return the last non-BG element of a list.
+arc2_be_last_nonbg_(List, V) :-
+    % Reverse so we search from the right end.
+    reverse(List, Rev),
+    % Find the first non-BG member (= rightmost original).
+    member(V, Rev), V \= 0, !.
+
+% Find secondary color: non-BG and different from primary.
+arc2_be_secondary_(Bar, PC, SC, CS) :-
+    ( member(SC, Bar), SC \= 0, SC \= PC, !
+    -> include(==(SC), Bar, SCs), length(SCs, CS)
+    % No secondary: treat as virtual secondary with CS=1.
+    ;  SC = 0, CS = 1
+    ).
+
+% Determine the cell value at period position Idx.
+arc2_be_cell_(PC, CP, SC, CS, Idx, Val) :-
+    % Primary occupies multiples of CP.
+    ( 0 is Idx mod CP
+    -> Val = PC
+    % Secondary occupies multiples of CS (when not already primary).
+    ; SC \= 0, 0 is Idx mod CS
+    -> Val = SC
+    % Everything else is BG.
+    ;  Val = 0
+    ).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
