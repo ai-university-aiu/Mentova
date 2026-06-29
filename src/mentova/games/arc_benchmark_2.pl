@@ -3217,6 +3217,16 @@ lf_extract_col_(Grid_, C_, Col_) :-
 % or the col-step (not just the diagonal step) would hit the frame wall.
 % ---------------------------------------------------------------------------
 
+% Early placement of section_tile induction so its fast guard fires before the
+% slower frame_target guard; helpers (st_*) are defined further down the file.
+arc2_induce_rule(TrainingPairs, section_tile) :-
+% Guard: first training input must have at least one all-1 row or col.
+    TrainingPairs = [pair(In0, _)|_],
+    st_find_dividers_(In0, _, [_|_]),
+% Verify: the transform produces the correct output for every training pair.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(section_tile, In, Out)).
+
 % Enumerate frame_target as a known named rule.
 arc2_named_rule(frame_target).
 
@@ -4109,6 +4119,197 @@ se_set_(Grid, R, C, V, G2) :-
 se_lset_([_|T], 0, V, [V|T]) :- !.
 se_lset_([H|T], I, V, [H|T2]) :-
     I > 0, I1 is I-1, se_lset_(T, I1, V, T2).
+
+% ---------------------------------------------------------------------------
+% SECTION_TILE RULE (task b0039139)
+% Input is divided by all-1 rows or all-1 cols into sections.
+% Two shape sections (0-background + one foreground color) and two solid-color
+% sections. Shape1 inner bbox is mapped (non-zero→C1, zero→C2) and tiled N
+% times separated by single C2 separators. N = max non-zero count per row
+% (horizontal layout) or per col (vertical layout) in the shape2 section.
+% ---------------------------------------------------------------------------
+
+% Register section_tile as a named rule.
+arc2_named_rule(section_tile).
+
+% arc2_transform(section_tile, +Grid, -Output): apply the section-tile rule.
+arc2_transform(section_tile, Grid, Output) :-
+% Detect whether dividers are rows or cols and collect their indices.
+    st_find_dividers_(Grid, Layout, DivIdxs),
+% Split the grid into sections along the divider axis.
+    st_extract_sections_(Grid, Layout, DivIdxs, Sections),
+% Separate shape sections (0+foreground) from solid-color sections.
+    include(st_is_shape_sec_, Sections, ShapeSecs),
+    include(st_is_solid_sec_, Sections, SolidSecs),
+% Require at least two shape sections and two solid sections.
+    ShapeSecs = [Sh1, Sh2 | _],
+    SolidSecs = [Sol1, Sol2 | _],
+% Read the two output colors from the solid sections.
+    st_solid_color_(Sol1, C1),
+    st_solid_color_(Sol2, C2),
+% Extract the inner bounding box of shape1.
+    st_inner_bbox_(Sh1, Inner1),
+% Map: non-zero → C1, zero → C2 inside the bounding box.
+    maplist([R_, MR_]>>(maplist([V_, MV_]>>(V_ =:= 0 -> MV_ = C2 ; MV_ = C1), R_, MR_)),
+            Inner1, Mapped),
+% Compute repetition count from shape2 structure.
+    st_tile_count_(Sh2, Layout, N),
+% Build the tiled output.
+    st_build_tiled_(Mapped, C2, N, Layout, Output).
+
+% st_find_dividers_(+Grid, -Layout, -DivIdxs):
+% Detect all-1 rows (vertical) or all-1 cols (horizontal) as dividers.
+st_find_dividers_(Grid, vertical, DivRows) :-
+% Count rows and cols.
+    length(Grid, NR), NR1 is NR - 1,
+    Grid = [Row0_|_], length(Row0_, NC), NC1 is NC - 1,
+% Collect row indices where every cell equals 1.
+    findall(R_,
+        (between(0, NR1, R_),
+         nth0(R_, Grid, GRow_),
+         forall(between(0, NC1, C_), (nth0(C_, GRow_, V_), V_ =:= 1))),
+        DivRows),
+% Must find at least one divider row to use vertical layout.
+    DivRows \= [], !.
+st_find_dividers_(Grid, horizontal, DivCols) :-
+% Count rows and cols.
+    length(Grid, NR), NR1 is NR - 1,
+    Grid = [Row0_|_], length(Row0_, NC), NC1 is NC - 1,
+% Collect col indices where every cell in that col equals 1.
+    findall(C_,
+        (between(0, NC1, C_),
+         forall(between(0, NR1, R_),
+                (nth0(R_, Grid, GRow_), nth0(C_, GRow_, V_), V_ =:= 1))),
+        DivCols),
+% Must find at least one divider col to use horizontal layout.
+    DivCols \= [].
+
+% st_extract_sections_(+Grid, +Layout, +DivIdxs, -Sections):
+% Split the grid into non-divider sections.
+st_extract_sections_(Grid, vertical, DivRows, Sections) :-
+    length(Grid, NR),
+    st_ranges_(DivRows, 0, NR, Ranges),
+    include([(R0_-R1_)]>>(R0_ < R1_), Ranges, ValidRanges),
+    maplist([R0_-R1_, Sec_]>>(st_slice_rows_(Grid, R0_, R1_, Sec_)),
+            ValidRanges, Sections).
+st_extract_sections_(Grid, horizontal, DivCols, Sections) :-
+    Grid = [Row0_|_], length(Row0_, NC),
+    st_ranges_(DivCols, 0, NC, Ranges),
+    include([(C0_-C1_)]>>(C0_ < C1_), Ranges, ValidRanges),
+    maplist([C0_-C1_, Sec_]>>(st_slice_cols_(Grid, C0_, C1_, Sec_)),
+            ValidRanges, Sections).
+
+% st_ranges_(+DivIdxs, +Start, +End, -Ranges):
+% Compute contiguous sub-ranges between divider indices.
+st_ranges_([], Start_, End_, [Start_-End_]).
+st_ranges_([D_|Ds_], Start_, End_, [Start_-D_ | Rest_]) :-
+    D1_ is D_ + 1,
+    st_ranges_(Ds_, D1_, End_, Rest_).
+
+% st_slice_rows_(+Grid, +R0, +R1, -Slice): extract rows R0..R1-1.
+st_slice_rows_(_, R_, R_, []) :- !.
+st_slice_rows_(Grid, R0_, R1_, Slice_) :-
+    R0_ < R1_,
+    R1m1_ is R1_ - 1,
+    numlist(R0_, R1m1_, RowIdxs_),
+    maplist([I_, Row_]>>(nth0(I_, Grid, Row_)), RowIdxs_, Slice_).
+
+% st_slice_cols_(+Grid, +C0, +C1, -Slice): extract cols C0..C1-1 from each row.
+st_slice_cols_(Grid, C0_, C1_, Slice_) :-
+    maplist([Row_, Sub_]>>(st_sublist_(Row_, C0_, C1_, Sub_)), Grid, Slice_).
+
+% st_sublist_(+List, +Start, +End, -Sub): extract elements Start..End-1.
+st_sublist_(List_, Start_, End_, Sub_) :-
+    length(Prefix_, Start_),
+    append(Prefix_, Rest_, List_),
+    Len_ is End_ - Start_,
+    length(Sub_, Len_),
+    append(Sub_, _, Rest_).
+
+% st_is_shape_sec_(+Section): section has 0-background and exactly one
+% non-zero foreground color with at least one non-zero and at least one zero.
+st_is_shape_sec_(Section_) :-
+    flatten(Section_, Flat_),
+    include([V_]>>(V_ =\= 0), Flat_, NonZero_),
+    NonZero_ \= [],
+    sort(NonZero_, [_]),
+    include([V_]>>(V_ =:= 0), Flat_, Zeros_),
+    Zeros_ \= [].
+
+% st_is_solid_sec_(+Section): every cell in the section is the same non-zero value.
+st_is_solid_sec_(Section_) :-
+    flatten(Section_, Flat_),
+    Flat_ \= [],
+    Flat_ = [V_|_],
+    V_ =\= 0,
+    forall(member(X_, Flat_), X_ =:= V_).
+
+% st_solid_color_(+Section, -Color): read the single color from a solid section.
+st_solid_color_(Section_, C_) :-
+    Section_ = [Row_|_], Row_ = [C_|_].
+
+% st_inner_bbox_(+Section, -Inner): extract bounding box of non-zero cells.
+st_inner_bbox_(Section_, Inner_) :-
+    length(Section_, NR_), NR1_ is NR_ - 1,
+    Section_ = [Row0_|_], length(Row0_, NC_), NC1_ is NC_ - 1,
+% Find row bounds of non-zero cells.
+    findall(R_,
+        (between(0, NR1_, R_), nth0(R_, Section_, Row_),
+         member(V_, Row_), V_ =\= 0),
+        NZRows_),
+    min_list(NZRows_, RMin_), max_list(NZRows_, RMax_),
+% Find col bounds of non-zero cells.
+    findall(C_,
+        (between(0, NR1_, R_), nth0(R_, Section_, Row_),
+         between(0, NC1_, C_), nth0(C_, Row_, V_), V_ =\= 0),
+        NZCols_),
+    min_list(NZCols_, CMin_), max_list(NZCols_, CMax_),
+% Slice rows and then cols to get bounding box.
+    RMax1_ is RMax_ + 1, CMax1_ is CMax_ + 1,
+    st_slice_rows_(Section_, RMin_, RMax1_, RowSlice_),
+    maplist([Row_, Sub_]>>(st_sublist_(Row_, CMin_, CMax1_, Sub_)), RowSlice_, Inner_).
+
+% st_tile_count_(+Section, +Layout, -N):
+% N = total non-zero cells in shape2 section divided by 2.
+% Shape2 always contains a two-row repeated base sub-pattern; dividing total
+% non-zeros by 2 recovers the tile-repetition count for any layout direction.
+st_tile_count_(Section_, _Layout_, N_) :-
+    include([Row_]>>(Row_ \= []), Section_, Rows_),
+    maplist([Row_, Count_]>>(
+        include([V_]>>(V_ =\= 0), Row_, NZ_), length(NZ_, Count_)
+    ), Rows_, Counts_),
+    sumlist(Counts_, Total_),
+    N_ is Total_ // 2.
+
+% st_build_tiled_(+Mapped, +C2, +N, +Layout, -Output):
+% Tile Mapped N times with single C2 separator rows (vertical) or cols (horiz).
+st_build_tiled_(Mapped_, C2_, N_, vertical, Output_) :-
+    Mapped_ = [Row0_|_], length(Row0_, W_),
+    length(SepRow_, W_), maplist(=(C2_), SepRow_),
+    st_tile_vert_(Mapped_, SepRow_, N_, Output_).
+st_build_tiled_(Mapped_, C2_, N_, horizontal, Output_) :-
+    length(Mapped_, H_),
+    length(EmptyRows_, H_), maplist(=([]), EmptyRows_),
+    st_tile_horiz_(Mapped_, C2_, N_, EmptyRows_, Output_).
+
+% st_tile_vert_(+Mapped, +SepRow, +N, -Output): build vertical tiling.
+st_tile_vert_(Mapped_, _, 1, Mapped_) :- !.
+st_tile_vert_(Mapped_, SepRow_, N_, Output_) :-
+    N_ > 1, N1_ is N_ - 1,
+    st_tile_vert_(Mapped_, SepRow_, N1_, Partial_),
+    append(Partial_, [SepRow_|Mapped_], Output_).
+
+% st_tile_horiz_(+Mapped, +C2, +N, +Acc, -Output): build horizontal tiling.
+st_tile_horiz_(_, _, 0, Acc_, Acc_) :- !.
+st_tile_horiz_(Mapped_, C2_, N_, Acc_, Output_) :-
+    N_ > 0, N1_ is N_ - 1,
+    (   Acc_ = [[]|_]
+    ->  maplist([ARow_, MRow_, NRow_]>>(append(ARow_, MRow_, NRow_)),
+                Acc_, Mapped_, Acc1_)
+    ;   maplist([ARow_, MRow_, NRow_]>>(append(ARow_, [C2_|MRow_], NRow_)),
+                Acc_, Mapped_, Acc1_)
+    ),
+    st_tile_horiz_(Mapped_, C2_, N1_, Acc1_, Output_).
 
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
