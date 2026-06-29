@@ -142,6 +142,7 @@ Date        | Score      | Percent | Notes
 2026-06-28  |  18 / 120  | 15.00%  | Wave 18: tip-escape marker-through-shape-tip escape rule (8-connected, apex or projection)
 2026-06-28  |  19 / 120  | 15.83%  | Wave 19: segment-ext 4-corner stub removal and arm-gap fill rule
 2026-06-29  |  20 / 120  | 16.67%  | Wave 20: section-tile divider-split sections mapped to tiled solid colors
+2026-06-29  |  21 / 120  | 17.50%  | Wave 21: chain-link legend-sequence box connector with BG-scan and chain tracking
 
 
 COMPLETE SCORE PROGRESSION
@@ -255,6 +256,138 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 21 - 2026-06-29 - Score: 21/120 = 17.50%
+
+Date: 2026-06-29
+
+Confirmed score: 21 / 120 = 17.50%
+
+Rules added in this wave:
+
+chain_link - The input grid contains a set of rectangular boxes arranged in a
+  grid layout. A background color (BG) is detected from the top-left cell.
+  Each box is a contiguous non-BG region; its boundary coordinates (BT,BB,BL,BR)
+  are the first BG-valued row or column found going up, down, left, right from
+  any cell inside the box. A legend row alternates BG,V1,BG,V2,...,Vn giving
+  the connection chain. For each consecutive pair (Va,Vb) in the chain, the
+  two adjacent boxes (one of color Va, one of color Vb) sharing a col-block
+  (same BL,BR) or row-block (same BT,BB) are identified, and the gap cells
+  between them are filled with color Va.
+
+  Key algorithmic details:
+
+  1. Dynamic BG detection: BG = top-left cell value. In training, BG=8; in
+     the test case, BG=1. All BG-boundary scans and legend parsing use this
+     detected value, not a hardcoded constant.
+
+  2. Box detection by BG-scanning: from each non-BG cell, scan in each of
+     the four cardinal directions until the first BG cell. BT = first BG row
+     going up; BB = first BG row going down; BL = first BG col going left;
+     BR = first BG col going right. Cells with the same (V,BT,BB,BL,BR) are
+     the same box; sort+unique removes duplicates.
+
+  3. Inner-extent gap formula: for adjacent boxes A and B, the connector
+     spans from the last non-BG cell on A's side going toward B (FRA) plus 1,
+     to the last non-BG cell on B's side going toward A (FLB) minus 1.
+     This correctly handles multi-cell-width interior fillers (color 2 in the
+     test case) that lie between the center color and the BG boundary.
+
+  4. Chain tracking with visited set: the legend may repeat colors (e.g., 4
+     appears three times in the test legend). A naive search that independently
+     finds any (Va-box, Vb-box) pair for each legend step would match the wrong
+     box pair for repeated colors. Instead, the rule walks the legend chain
+     sequentially, tracking which boxes have already been visited. At each step,
+     only unvisited Vb-boxes are candidates for the next link. The chain start
+     is found by trying each V0-box and checking whether the full chain
+     completes without contradiction.
+
+  5. Gap clear check: two boxes may be in the same row-block or col-block but
+     not be directly adjacent (an intervening box may lie between them). The
+     gap clear check verifies that every cell in the proposed connector region
+     equals BG in the original grid. If a cell is non-BG (part of an
+     intervening box), the candidate pair is rejected and backtracking finds
+     the next candidate.
+
+Bugs fixed:
+
+1. Hardcoded BG=8 caused cl_legend_ to fail on test input:
+   The original implementation passed BG=8 to cl_legend_ regardless of the
+   actual grid background. The test case has BG=1, so cl_legend_(Grid, 8, Seq)
+   could not find the legend row and the transform failed immediately.
+   Fixed: BG detected dynamically as nth1(1, Grid, R0), nth1(1, R0, BG).
+
+2. cl_ext_* predicates caused overlapping box boundaries:
+   The original box scanner extended through contiguous border (1-valued) cells,
+   finding the outermost border layer. For double-width separators in the test
+   (BG=1, filler=2), extending through 1-cells caused box boundaries to cross
+   each other (BRA > BLB for adjacent boxes), making the gap formula C1 > C2
+   (empty connector). Fixed: replaced cl_ext_* with cl_bg_* (scan until first
+   BG cell only; no extension) so boundaries are always the first BG row/col.
+
+3. Wrong gap formula gave empty connector range:
+   Original formula: C1 = BRA+1, C2 = BLB-1. For test boxes with BRA=7 and
+   BLB=8, C1=8 and C2=7: an empty range and no connector cells.
+   Fixed: inner-extent formula scans from the center color outward until BG;
+   C1 = FRA+1, C2 = FLB-1 where FRA and FLB are last non-BG cells.
+
+4. No chain tracking caused wrong box pairs for repeated legend colors:
+   The test legend [4,8,9,4,7,6,9,4,5,3,7] has color 4 three times and color 9
+   twice. Without chain tracking, the third legend pair (9->4) would match the
+   top-right 9-box to the top-left 4-box (same row block), producing a connector
+   spanning cols 7-20 of row 4 and overwriting correct connectors. The seventh
+   pair (9->4 again) would repeat the same wrong match instead of finding the
+   third-row 9-box adjacent to the third-row 4-box.
+   Fixed: walk the chain sequentially with a visited set; the start box is found
+   by trying candidates and checking that the full chain can be followed.
+
+5. No gap clear check caused connectors through intervening boxes:
+   The wrong (9->4) horizontal match passes the "same row block" and "A right of
+   B" conditions because the top-right 9-box IS in the same row block as the
+   top-left 4-box and IS to its right. The gap cells (cols 8-13 of row 4) belong
+   to the 8-box interior (filler color 2, not BG=1), so the connector should be
+   rejected. Without the gap clear check, this wrong connector was silently drawn.
+   Fixed: cl_gap_clear_ verifies that all proposed connector cells equal BG in
+   the original grid before accepting a candidate pair.
+
+Lessons learned:
+
+1. Dynamic BG detection is not optional: ARC-AGI-2 tasks may use any color as
+   the background. The training-set background (often 8) is NOT necessarily the
+   test-case background (1 in task 3e6067c3). Any hardcoded BG constant produces
+   wrong behavior on the test case even when training passes.
+
+2. Chain tracking with a visited set is necessary for repeated legend colors:
+   When the same color appears multiple times in the legend chain, a greedy
+   "find any adjacent pair" approach finds the same (wrong) pair at every
+   occurrence. The chain must be walked in order, maintaining the current box
+   and excluding already-visited boxes from the search.
+
+3. A gap clear check is the correct way to enforce direct adjacency:
+   "Same block" means the boxes share boundary coordinates, but there may be
+   other boxes between them. Checking that the connector region is all-BG in
+   the original grid efficiently rejects non-adjacent pairs without requiring
+   an explicit enumeration of all boxes between A and B.
+
+4. Inner-extent scanning is more robust than boundary-coordinate arithmetic:
+   The simple formula C1 = BRA+1, C2 = BLB-1 assumes single-cell separator
+   regions and fails for multi-cell interior fillers. Scanning from the center
+   color outward until BG correctly identifies the last non-BG cell on each
+   side and naturally handles any separator width.
+
+Task solved: 3e6067c3 (3 training pairs; boxes arranged in a 4x3 grid with BG=8
+  in training and BG=1 in test; legend row [4,8,9,4,7,6,9,4,5,3,7]; 10 link
+  pairs connecting 11 boxes along a boustrophedon snake path; connector width
+  matches interior filler-cell width; test case solved correctly).
+  All 3 training pairs and test case pass.
+
+Score advance: 20/120 = 16.67% to 21/120 = 17.50%.
+
+Accomplishment: Acc_319.  Paper: Acc_319_ARC2_Wave21.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -1907,6 +2040,7 @@ ALL SOLVED TASKS
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
 38007db0  - Wave 13 - odd_col            - unique col section extraction per row section
 3dc255db  - Wave 18 - tip_escape          - 8-connected shape markers escape through the shape tip
+3e6067c3  - Wave 21 - chain_link          - legend chain connects adjacent boxes; BG-scan; visited-set; gap-clear
 409aa875  - Wave 10 - apex_shadow         - arm-vector projection places shadow-9 or collision-1
 45a5af55  - Wave 6  - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
@@ -2038,6 +2172,10 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 18: Tip-escape marker-through-shape-tip esca
 Dison, D. R. (2026). ARC-AGI-2 Wave 19: Segment-ext 4-corner stub removal and arm-gap fill rule.
   Score: 19/120 = 15.83%. Task faa9f03d solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 21: Chain-link legend-sequence box connector rule.
+  Score: 21/120 = 17.50%. Task 3e6067c3 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-29.
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 20: Section-tile divider-split sections mapped to tiled solid colors.
   Score: 20/120 = 16.67%. Task b0039139 solved.
