@@ -205,7 +205,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 
 | # | Milestone | Status |
 |---|---|---|
-| 1 | Piagetian 8/8 cognitive levels | ✅ Complete |
+| 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
 | 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 18 complete (18/120 = 15.00%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
