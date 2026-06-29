@@ -3732,6 +3732,385 @@ te_set_cells_(Grid, [R-C|Rest], V, GridOut) :-
     te_set_cells_(Grid1, Rest, V, GridOut).
 
 % ---------------------------------------------------------------------------
+% SEGMENT_EXT RULE (task faa9f03d)
+% 4-corner markers: stub arm removed, 4-corner becomes arm color, extends opposite.
+% 2-corner markers: convert to adjacent arm color.
+% Fill rule: H and V fills applied; V wins conflicts; uses original Vin as reference.
+% ---------------------------------------------------------------------------
+
+% Register the segment_ext rule name.
+arc2_named_rule(segment_ext).
+
+% arc2_transform(segment_ext, +Grid, -GridOut): full 3-phase transformation.
+arc2_transform(segment_ext, Grid, GridOut) :-
+% Dispatch to main transform helper.
+    se_tr_(Grid, GridOut).
+
+% arc2_induce_rule for segment_ext: succeeds when all pairs transform correctly.
+arc2_induce_rule(TrainingPairs, segment_ext) :-
+% Reject empty training set.
+    TrainingPairs \= [],
+% Verify every training pair.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(segment_ext, In, Out)).
+
+% se_tr_(+Grid, -GridOut): phases 1-3 in sequence.
+se_tr_(Grid, GridOut) :-
+% Get grid dimensions.
+    length(Grid, NR), NR1 is NR - 1,
+% Get column count from first row.
+    nth0(0, Grid, Row0_), length(Row0_, NC), NC1 is NC - 1,
+% Collect all 4-corner positions.
+    findall(R-C,
+        (between(0,NR1,R), between(0,NC1,C), se_get_(Grid,R,C,4)),
+        C4s),
+% Determine conflict-resolution direction from 4-corner extensions.
+    se_ext_dir_(Grid, C4s, NR, NC, ExtDir),
+% Phase 1: process each 4-corner, threading the grid.
+    foldl(se_proc4_(NR,NC), C4s, Grid, G1),
+% Phase 2: convert all remaining 2-corners to arm color.
+    se_conv2all_(G1, NR1, NC1, G2),
+% Phase 3: apply fill rule to every cell using original Grid as reference.
+    numlist(0, NR1, RowIdxs), numlist(0, NC1, ColIdxs),
+    maplist([R, OutRow]>>(
+        maplist([C, V]>>(se_fill_cell_(G2, Grid, NR, NC, ExtDir, R, C, V)),
+                ColIdxs, OutRow)
+    ), RowIdxs, GridOut).
+
+% se_ext_dir_(+Grid, +C4s, +NR, +NC, -Prio): resolve fill priority from 4-corners.
+% none = no 4-corners (H can overwrite non-bg frame cells; V wins conflicts).
+% v    = vertical extension (V wins conflicts; frame cannot overwrite existing arm cells).
+% h    = horizontal extension (H wins conflicts; frame cannot overwrite existing arm cells).
+se_ext_dir_(Grid, C4s, NR, NC, Prio) :-
+    ( C4s = [] ->
+        Prio = none
+    ;   findall(EDR-EDC, (
+            member(R-C, C4s),
+            se_stub_dir_(Grid, R, C, NR, NC, DR, DC),
+            EDR is -DR, EDC is -DC
+        ), ExtDirs),
+        ( member(EDR-_, ExtDirs), EDR \= 0 -> Prio = v
+        ; Prio = h
+        )
+    ).
+
+% se_proc4_(+NR, +NC, +R-C, +G0, -GOut): process one 4-corner.
+se_proc4_(NR, NC, R-C, G0, GOut) :-
+% Determine stub direction: toward the longest same-color adjacent arm segment.
+    se_stub_dir_(G0, R, C, NR, NC, DR, DC),
+% Find arm color by walking in stub direction past 2-corners.
+    se_arm_col_(G0, R, C, DR, DC, NR, NC, Color),
+% Kept junction is the cell immediately in stub direction (never removed).
+    KR is R + DR, KC is C + DC,
+% First stub cell is two steps in stub direction.
+    FR is KR + DR, FC is KC + DC,
+% Collect immediate contiguous stub cells in stub direction.
+    se_contig_(G0, FR, FC, DR, DC, NR, NC, IStub),
+% Blocked set: 4-corner + kept junction + immediate stub.
+    Blocked0 = [R-C, KR-KC | IStub],
+% Cascade: BFS from neighbors of 2-corners in IStub.
+    se_cascade_(G0, IStub, Blocked0, NR, NC, CasStub),
+% All removed so far.
+    append(IStub, CasStub, AllRemSoFar),
+% Update blocked set to include cascade.
+    append(Blocked0, CasStub, Blocked1),
+% Far segment removal: segments beyond first gap with no perpendicular arm connection.
+    se_far_rem_(G0, FR, FC, DR, DC, NR, NC, Color, Blocked1, FarRem),
+% Full remove list: immediate stub + cascade + far segments.
+    append(AllRemSoFar, FarRem, ToRemove),
+% Apply removals (set to 0).
+    foldl([Rs-Cs, G, G2]>>(se_set_(G, Rs, Cs, 0, G2)), ToRemove, G0, G1),
+% Set the 4-corner cell itself to arm Color.
+    se_set_(G1, R, C, Color, G2),
+% Extension direction is opposite to stub direction.
+    ExtDR is -DR, ExtDC is -DC,
+% Extend from one step past 4-corner in extension direction.
+    se_extend_(G2, R, C, ExtDR, ExtDC, Color, NR, NC, GOut).
+
+% se_stub_dir_(+Grid, +R, +C, +NR, +NC, -DR, -DC): direction of the approach arm.
+% Prefers adjacent 2-corner; otherwise picks the direction with the longest same-color run.
+se_stub_dir_(Grid, R, C, NR, NC, DR, DC) :-
+% If adjacent 2-corner exists that direction is unambiguously the stub.
+    member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+    R2 is R + DR, C2 is C + DC,
+    R2 >= 0, R2 < NR, C2 >= 0, C2 < NC,
+    se_get_(Grid, R2, C2, 2), !.
+se_stub_dir_(Grid, R, C, NR, NC, DR, DC) :-
+% Otherwise count how many same-color cells lie in each adjacent direction.
+    findall(Len-DR1-DC1,
+        ( member(DR1-DC1, [-1-0, 1-0, 0-(-1), 0-1]),
+          R2 is R+DR1, C2 is C+DC1,
+          R2 >= 0, R2 < NR, C2 >= 0, C2 < NC,
+          se_get_(Grid, R2, C2, V), V \= 0, V \= 4,
+          se_count_run_(Grid, R2, C2, DR1, DC1, NR, NC, V, Len)
+        ),
+        Cands),
+% Pick the direction with the longest run.
+    Cands \= [],
+    sort(0, @>=, Cands, [_-DR-DC|_]).
+
+% se_count_run_(+Grid, +R, +C, +DR, +DC, +NR, +NC, +Color, -N): count consecutive Color cells.
+se_count_run_(Grid, R, C, DR, DC, NR, NC, Color, N) :-
+    se_count_run_walk_(Grid, R, C, DR, DC, NR, NC, Color, 0, N).
+% se_count_run_walk_: walk accumulating count; stop at OOB or non-color.
+se_count_run_walk_(Grid, R, C, DR, DC, NR, NC, Color, Acc, N) :-
+    R >= 0, R < NR, C >= 0, C < NC,
+    se_get_(Grid, R, C, V),
+    ( V =:= Color ; V =:= 2 ), !,
+    R2 is R + DR, C2 is C + DC,
+    Acc1 is Acc + 1,
+    se_count_run_walk_(Grid, R2, C2, DR, DC, NR, NC, Color, Acc1, N).
+se_count_run_walk_(_, _, _, _, _, _, _, _, Acc, Acc).
+
+% se_arm_col_(+Grid, +R, +C, +DR, +DC, +NR, +NC, -Color): arm color along stub direction.
+se_arm_col_(Grid, R, C, DR, DC, NR, NC, Color) :-
+    R2 is R + DR, C2 is C + DC,
+    se_arm_col_walk_(Grid, R2, C2, DR, DC, NR, NC, Color).
+
+% se_arm_col_walk_: walk past 2-corners to find first true arm color.
+se_arm_col_walk_(Grid, R, C, DR, DC, NR, NC, Color) :-
+    R >= 0, R < NR, C >= 0, C < NC,
+    se_get_(Grid, R, C, V),
+    ( V \= 0, V \= 2, V \= 4 -> Color = V
+    ; V =:= 2 ->
+        R2 is R + DR, C2 is C + DC,
+        se_arm_col_walk_(Grid, R2, C2, DR, DC, NR, NC, Color)
+    ; fail
+    ).
+
+% se_contig_(+Grid, +R, +C, +DR, +DC, +NR, +NC, -Cells): immediate contiguous stub cells.
+% Collects non-0 cells in direction (DR,DC) stopping at first 0 or OOB.
+se_contig_(Grid, R, C, DR, DC, NR, NC, Cells) :-
+    ( R < 0 ; R >= NR ; C < 0 ; C >= NC ), !, Cells = [].
+se_contig_(Grid, R, C, DR, DC, NR, NC, Cells) :-
+    se_get_(Grid, R, C, V),
+    ( V =:= 0 -> Cells = []
+    ;
+        R2 is R + DR, C2 is C + DC,
+        se_contig_(Grid, R2, C2, DR, DC, NR, NC, Rest),
+        Cells = [R-C | Rest]
+    ).
+
+% se_cascade_(+Grid, +Stub, +Blocked, +NR, +NC, -Cascade): cells reachable from 2-corner neighbors.
+se_cascade_(Grid, Stub, Blocked, NR, NC, Cascade) :-
+% Find 2-corner cells within the immediate stub.
+    include([Pos]>>(Pos = R-C, se_get_(Grid,R,C,2)), Stub, TwoCorners),
+% BFS from each 2-corner's neighbors (not the 2-corner itself, which is in Blocked).
+    foldl(se_cas_from_nbrs_(Grid, Blocked, NR, NC), TwoCorners, [], Cascade).
+
+% se_cas_from_nbrs_: add BFS results from neighbors of a 2-corner.
+se_cas_from_nbrs_(Grid, Blocked, NR, NC, R-C, Acc, NewAcc) :-
+    se_nbrs_(R, C, NR, NC, Nbrs),
+    foldl(se_cas_bfs_(Grid, Blocked, NR, NC), Nbrs, Acc, NewAcc).
+
+% se_cas_bfs_: BFS from one start cell accumulating reachable non-blocked content cells.
+se_cas_bfs_(Grid, Blocked, NR, NC, Start, Acc, NewAcc) :-
+    ( memberchk(Start, Acc) -> NewAcc = Acc
+    ; se_bfs_step_(Grid, Blocked, NR, NC, [Start], Acc, NewAcc)
+    ).
+
+% se_bfs_step_: BFS kernel.
+se_bfs_step_(_, _, _, _, [], Vis, Vis).
+se_bfs_step_(Grid, Blocked, NR, NC, [H|T], Vis, Result) :-
+    ( memberchk(H, Blocked) ->
+        se_bfs_step_(Grid, Blocked, NR, NC, T, Vis, Result)
+    ; memberchk(H, Vis) ->
+        se_bfs_step_(Grid, Blocked, NR, NC, T, Vis, Result)
+    ;
+        H = R-C,
+        se_get_(Grid, R, C, V),
+        ( V =:= 0 ->
+            se_bfs_step_(Grid, Blocked, NR, NC, T, Vis, Result)
+        ;
+            Vis2 = [H|Vis],
+            se_nbrs_(R, C, NR, NC, Nbrs),
+            append(T, Nbrs, Q2),
+            se_bfs_step_(Grid, Blocked, NR, NC, Q2, Vis2, Result)
+        )
+    ).
+
+% se_nbrs_: four orthogonal neighbors within bounds.
+se_nbrs_(R, C, NR, NC, Nbrs) :-
+    findall(R2-C2,
+        (member(DR-DC, [-1-0,1-0,0-(-1),0-1]),
+         R2 is R+DR, C2 is C+DC,
+         R2 >= 0, R2 < NR, C2 >= 0, C2 < NC),
+        Nbrs).
+
+% se_far_rem_(+Grid, +FR, +FC, +DR, +DC, +NR, +NC, +Color, +Removed, -FarCells):
+% Segments beyond first gap; remove those with no perpendicular Color-neighbor.
+se_far_rem_(Grid, FR, FC, DR, DC, NR, NC, Color, Removed, FarCells) :-
+% Walk stub direction to find first background (gap) cell.
+    se_first_gap_(Grid, FR, FC, DR, DC, NR, NC, GR, GC),
+% Start one step past the gap.
+    GR2 is GR + DR, GC2 is GC + DC,
+% Collect all sub-segments beyond the first gap.
+    se_collect_segs_(Grid, GR2, GC2, DR, DC, NR, NC, Segs),
+% Keep only segments with no perpendicular same-Color neighbor outside Removed.
+    include({Grid,Color,Removed,NR,NC,DR,DC}/[Seg]>>(
+        \+ se_seg_has_perp_(Grid, Seg, Color, Removed, NR, NC, DR, DC)
+    ), Segs, BadSegs),
+    flatten(BadSegs, FarCells).
+
+% se_first_gap_: find first 0 or OOB cell walking from (R,C) in direction (DR,DC).
+se_first_gap_(Grid, R, C, DR, DC, NR, NC, GR, GC) :-
+    ( R < 0 ; R >= NR ; C < 0 ; C >= NC ),
+    !, GR = R, GC = C.
+se_first_gap_(Grid, R, C, DR, DC, NR, NC, GR, GC) :-
+    se_get_(Grid, R, C, V),
+    ( V =:= 0 -> GR = R, GC = C
+    ;
+        R2 is R + DR, C2 is C + DC,
+        se_first_gap_(Grid, R2, C2, DR, DC, NR, NC, GR, GC)
+    ).
+
+% se_collect_segs_: collect contiguous sub-segments from (R,C) onward, skipping gaps.
+se_collect_segs_(Grid, R, C, DR, DC, NR, NC, Segs) :-
+    ( R < 0 ; R >= NR ; C < 0 ; C >= NC ),
+    !, Segs = [].
+se_collect_segs_(Grid, R, C, DR, DC, NR, NC, Segs) :-
+    se_get_(Grid, R, C, V),
+    ( V =:= 0 ->
+        R2 is R + DR, C2 is C + DC,
+        se_collect_segs_(Grid, R2, C2, DR, DC, NR, NC, Segs)
+    ;
+        se_contig_(Grid, R, C, DR, DC, NR, NC, Seg),
+        length(Seg, SL),
+        R2 is R + SL * DR, C2 is C + SL * DC,
+        se_collect_segs_(Grid, R2, C2, DR, DC, NR, NC, RestSegs),
+        Segs = [Seg | RestSegs]
+    ).
+
+% se_seg_has_perp_: true if any Seg cell has a perpendicular Color-neighbor not in Removed.
+% Only checks directions perpendicular to the stub (not along the stub line itself).
+se_seg_has_perp_(Grid, Seg, Color, Removed, NR, NC, StubDR, StubDC) :-
+    ( StubDR =:= 0
+    % Horizontal stub: check only UP and DOWN (perpendicular).
+    -> PDirs = [-1-0, 1-0]
+    % Vertical stub: check only LEFT and RIGHT (perpendicular).
+    ;  PDirs = [0-(-1), 0-1]
+    ),
+    member(R-C, Seg),
+    member(PDR-PDC, PDirs),
+    PR is R + PDR, PC is C + PDC,
+    PR >= 0, PR < NR, PC >= 0, PC < NC,
+    se_get_(Grid, PR, PC, Color),
+    \+ memberchk(PR-PC, Removed).
+
+% se_extend_(+G, +R, +C, +DR, +DC, +Color, +NR, +NC, -GOut):
+% Walk from one step past (R,C) in extension direction, setting each cell to Color.
+se_extend_(G, R, C, DR, DC, Color, NR, NC, GOut) :-
+    R2 is R + DR, C2 is C + DC,
+    se_ext_walk_(G, R2, C2, DR, DC, Color, NR, NC, GOut).
+
+% se_ext_walk_: extension walk kernel; stops at OOB.
+se_ext_walk_(G, R, C, _, _, _, NR, NC, G) :-
+    ( R < 0 ; R >= NR ; C < 0 ; C >= NC ), !.
+se_ext_walk_(G, R, C, DR, DC, Color, NR, NC, GOut) :-
+    se_set_(G, R, C, Color, G1),
+    R2 is R + DR, C2 is C + DC,
+    se_ext_walk_(G1, R2, C2, DR, DC, Color, NR, NC, GOut).
+
+% se_conv2all_(+G, +NR1, +NC1, -G2): convert all remaining 2-corners to adjacent arm color.
+se_conv2all_(G, NR1, NC1, G2) :-
+    findall(R-C,
+        (between(0,NR1,R), between(0,NC1,C), se_get_(G,R,C,2)),
+        C2s),
+    foldl(se_conv2one_, C2s, G, G2).
+
+% se_conv2one_: convert one 2-corner to the color of first non-bg, non-special neighbor.
+se_conv2one_(R-C, G, G2) :-
+    ( member(DR-DC, [-1-0,1-0,0-(-1),0-1]),
+      R2 is R+DR, C2 is C+DC,
+      se_get_(G, R2, C2, V),
+      V \= 0, V \= 2, V \= 4
+    -> Color = V
+    ;  Color = 0
+    ), !,
+    se_set_(G, R, C, Color, G2).
+
+% se_fill_cell_(+G, +Orig, +NR, +NC, +ExtDir, +R, +C, -V): fill-rule output for one cell.
+% ExtDir (h or v) is the 4-corner extension direction used to break H-vs-V conflicts.
+se_fill_cell_(G, Orig, NR, NC, ExtDir, R, C, V) :-
+% Pre-processed value and original input value.
+    se_get_(G, R, C, Vpp),
+    se_get_(Orig, R, C, Vin),
+% Compute horizontal fill: both left and right same non-bg color.
+    ( se_hfill_(G, R, C, NR, NC, H) -> true ; H = none ),
+% Compute vertical fill: both above and below same non-bg color.
+    ( se_vfill_(G, R, C, NR, NC, VV) -> true ; VV = none ),
+    se_fill_rule_(ExtDir, Vpp, Vin, H, VV, V).
+
+% se_hfill_: horizontal fill value; both left and right must be same non-bg Color.
+se_hfill_(G, R, C, _NR, NC, Color) :-
+    C1 is C - 1, C2 is C + 1,
+    C1 >= 0, C2 < NC,
+    se_get_(G, R, C1, Color),
+    se_get_(G, R, C2, Color),
+    Color \= 0.
+
+% se_vfill_: vertical fill; both above and below same non-bg Color, and at least one
+% V-neighbor is a pure-vertical arm cell (no same-color horizontal neighbor), so
+% V fill only bridges gaps within an arm, not between separate horizontal arm segments.
+se_vfill_(G, R, C, NR, NC, Color) :-
+    R1 is R - 1, R2 is R + 1,
+    R1 >= 0, R2 < NR,
+    se_get_(G, R1, C, Color),
+    se_get_(G, R2, C, Color),
+    Color \= 0,
+    ( se_pure_vert_(G, R1, C, NC, Color)
+    ; se_pure_vert_(G, R2, C, NC, Color)
+    ).
+
+% se_pure_vert_: cell (R,C) has no same-color horizontal neighbor in G.
+se_pure_vert_(G, R, C, NC, Color) :-
+    \+ ( C1 is C-1, C1 >= 0, se_get_(G, R, C1, Color) ),
+    \+ ( C2 is C+1, C2 < NC, se_get_(G, R, C2, Color) ).
+
+% se_fill_rule_(+Prio, +Vpp, +Vin, +H, +VV, -Out): determine output value from fills.
+% Prio = none  → no 4-corners: H can overwrite non-bg frame cells; V wins true conflicts.
+% Prio = h     → horizontal 4-corner ext: H wins true conflicts; frame cannot overwrite arm.
+% Prio = v     → vertical 4-corner ext: V wins true conflicts; frame cannot overwrite arm.
+se_fill_rule_(Prio, Vpp, Vin, H, VV, Out) :-
+% No fills: keep pre-processed value.
+    ( H = none, VV = none ->
+        Out = Vpp
+% Only vertical fill and it differs from Vin: apply V.
+    ; H = none ->
+        ( VV \= Vin -> Out = VV ; Out = Vpp )
+% Only horizontal fill and it differs from Vin: apply H.
+    ; VV = none ->
+        ( H \= Vin -> Out = H ; Out = Vpp )
+% Both fills are the same color: apply if different from Vin.
+    ; H = VV ->
+        ( H \= Vin -> Out = H ; Out = Vpp )
+% H differs from Vin; V equals Vin: H wins for bg or no-4-corner grids; else keep Vpp.
+    ; H \= Vin, VV = Vin ->
+        ( (Vin =:= 0 ; Prio = none) -> Out = H ; Out = Vpp )
+% V differs from Vin; H equals Vin: apply V.
+    ; VV \= Vin, H = Vin ->
+        Out = VV
+% Both differ from Vin and disagree: extension direction breaks tie (h → H wins, else V).
+    ;
+        ( Prio = h -> Out = H ; Out = VV )
+    ).
+
+% se_get_(+Grid, +R, +C, -V): cell accessor.
+se_get_(Grid, R, C, V) :-
+    nth0(R, Grid, Row), nth0(C, Row, V).
+
+% se_set_(+Grid, +R, +C, +V, -G2): return new grid with cell (R,C) set to V.
+se_set_(Grid, R, C, V, G2) :-
+    nth0(R, Grid, OldRow),
+    se_lset_(OldRow, C, V, NewRow),
+    se_lset_(Grid, R, NewRow, G2).
+
+% se_lset_(+List, +I, +V, -List2): list element replacement.
+se_lset_([_|T], 0, V, [V|T]) :- !.
+se_lset_([H|T], I, V, [H|T2]) :-
+    I > 0, I1 is I-1, se_lset_(T, I1, V, T2).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

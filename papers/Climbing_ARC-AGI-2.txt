@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-28. Wave 18 complete: 18/120 = 15.00%.
+Last updated: 2026-06-28. Wave 19 complete: 19/120 = 15.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -140,10 +140,123 @@ Date        | Score      | Percent | Notes
 2026-06-28  |  16 / 120  | 13.33%  | Wave 16: legend-fill frame-interior fill from color lookup table
 2026-06-28  |  17 / 120  | 14.17%  | Wave 17: frame-target legend-direction rule; dots move inside irregular frames
 2026-06-28  |  18 / 120  | 15.00%  | Wave 18: tip-escape marker-through-shape-tip escape rule (8-connected, apex or projection)
+2026-06-28  |  19 / 120  | 15.83%  | Wave 19: segment-ext 4-corner stub removal and arm-gap fill rule
 
 
 COMPLETE SCORE PROGRESSION
 (Narrative entries added after each wave)
+
+
+ATTEMPT 19 - 2026-06-28 - Score: 19/120 = 15.83%
+
+Date: 2026-06-28
+
+Confirmed score: 19 / 120 = 15.83%
+
+Rules added in this wave:
+
+segment_ext - Each grid encodes a 2-color arm structure with 4-corner junction
+  cells (value 4) and optional 2-corner junction cells (value 2). The 4-corner
+  marks where the "stub arm" meets the main arm and a new arm segment should
+  extend in the opposite direction. The transformation has three phases:
+
+  Phase 1 - 4-corner processing:
+    For each 4-corner cell, determine the stub direction (the direction with the
+    longest contiguous same-color run, or the direction of an adjacent 2-corner).
+    Remove the stub arm (the cells beyond the immediate junction, including any
+    cascade reachable through 2-corner neighbors, and any far segments beyond
+    the first gap that have no perpendicular arm connections). Convert the
+    4-corner to the arm color. Extend the arm in the opposite (non-stub)
+    direction, filling cells until the grid boundary.
+
+  Phase 2 - 2-corner conversion:
+    Convert all remaining 2-corner cells to the color of the nearest non-bg,
+    non-special neighbor.
+
+  Phase 3 - Gap fill rule:
+    For each cell, compute H fill (same non-bg color on both left and right in
+    the pre-processed grid) and V fill (same non-bg color both above and below
+    the pre-processed grid, with at least one V-neighbor being a pure-vertical
+    arm cell - no same-color horizontal neighbors). Apply:
+    - V fill only if at least one vertical neighbor is "pure vertical" (no
+      same-color horizontal neighbors). This prevents bridging between separate
+      horizontal arm segments that happen to share a column.
+    - Conflict resolution when both H and V fills differ from the original:
+      if the 4-corner extension is horizontal, H wins; if vertical, V wins.
+    - Non-background cells existing in a 4-corner grid are protected: H fill
+      does not overwrite an existing non-bg arm cell (only background cells
+      and arm cells in no-4-corner grids can be overwritten by H fill).
+
+  Key correctness insight: the "pure vertical arm cell" guard on V fill is
+  essential. Without it, V fill bridges separate horizontal arm segments that
+  share a column position (e.g., the left end of arm at row 5 and the interior
+  of arm at row 7 share column 3, but they are separate structures that must
+  not be connected). The guard distinguishes junction cells (which have
+  horizontal same-color neighbors) from pure spine cells (which do not).
+
+  Verification on task faa9f03d:
+    4 training pairs (12x12 grids), each with 4-corner junction at different
+    grid positions and different stub/extension directions.
+    Pair 0: no 4-corners; only 2-corner conversion and H/V gap fill.
+    Pair 1: 4-corner at (2,9), stub=LEFT (8-cell 3-arm), extension=RIGHT;
+      cells (2,10)-(2,11) set to 3; arm gap cells (2,3),(4,3),(5,10) filled.
+    Pair 2: no 4-corners; 2-corner conversion at (3,5) and gap fill.
+    Pair 3: 4-corner at (3,10), stub=UP (2-cell 6-arm), extension=DOWN;
+      arm gap fill at (2,6); frame crossing arm cells preserved.
+    Test case: two 4-corners at (3,0) and (4,10); stub cells removed;
+      arm extended down from (4,10); 2-corners converted; gap fills applied.
+    All 4 training pairs and the test case pass.
+
+Bugs fixed:
+
+1. V fill bridging across arm boundaries:
+   se_vfill_ previously applied V fill to any 0-cell whose above and below
+   neighbors both had the same non-bg color. This caused spurious 7-fills
+   at row 6 columns 3-5 in pair 1 (bridging row-5 arm to row-7 arm via
+   col 3-5). Fixed by requiring at least one V-neighbor to be "pure vertical"
+   (no same-color horizontal neighbor in the pre-processed grid).
+
+2. H-vs-V conflict resolution in 4-corner grids:
+   When H=frame and V=arm both differed from Vin=background, the old rule
+   unconditionally chose V. This was wrong for pair 1 cell (9,2) where H=3
+   (frame extending horizontally) should win because the 4-corner extension
+   is horizontal. Fixed by tracking the 4-corner extension direction (h or v)
+   and using it as the tiebreaker.
+
+3. Frame color overwriting existing arm cells in 4-corner grids:
+   When Vin=arm-color (non-bg), V=Vin (confirming), and H=frame-color (not Vin),
+   the old rule applied H and overwrote the existing arm cell. This incorrectly
+   changed pair 3 cell (2,1) from 1 (arm) to 6 (frame). Fixed by protecting
+   existing non-bg cells in 4-corner grids: H can only overwrite non-bg cells
+   when the grid has no 4-corners (Prio=none) or when Vin=background.
+
+Lessons learned:
+
+1. Gap fill for arm structures must respect arm topology. A "pure vertical arm
+   cell" test (no horizontal same-color neighbors) correctly identifies cells
+   that lie on the spine of a vertical arm, distinguishing them from cells at
+   junction points that happen to share a column with separate arm segments.
+
+2. Conflict resolution at grid crossings depends on the global extension
+   direction established by the 4-corner. Tracking ExtDir per-4-corner and
+   aggregating to a grid-level priority (h or v) gives the correct winner.
+
+3. Non-background arm cells must be protected from frame-color overwrite in
+   4-corner grids. The fill rule must distinguish "no-4-corner grid" (where
+   H can overwrite frame cells at arm crossings) from "4-corner grid" (where
+   existing arm cells should never be replaced by the frame fill).
+
+Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
+  mark stub-arm endpoints; stub removed, arm extended opposite; gap fill closes
+  arm structure; pure-vertical guard prevents cross-arm bridging).
+  Training pairs 0, 1, 2, 3 and test case all pass.
+
+Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
+
+Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
 
 
 ATTEMPT 18 - 2026-06-28 - Score: 18/120 = 15.00%
@@ -1688,6 +1801,7 @@ ALL SOLVED TASKS
 97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
 dbff022c  - Wave 16 - legend_fill         - fill closed frame interiors using a color lookup table
 e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to middle
+faa9f03d  - Wave 19 - segment_ext         - 4-corner stub removal; arm extended; gap fill with pure-vertical guard
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -1800,4 +1914,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 17: Frame-target legend-direction rule.
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 18: Tip-escape marker-through-shape-tip escape rule.
   Score: 18/120 = 15.00%. Task 3dc255db solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-28.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 19: Segment-ext 4-corner stub removal and arm-gap fill rule.
+  Score: 19/120 = 15.83%. Task faa9f03d solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-28.
