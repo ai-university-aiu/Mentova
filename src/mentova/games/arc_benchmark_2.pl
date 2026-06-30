@@ -5659,6 +5659,106 @@ arc2_so_fill_open_(Grid, NRows, NCols, DC, Out) :-
     ), RList0, Grid, Out).
 
 % ---------------------------------------------------------------------------
+% WAVE 29 — diag_beam (WP-287, Layer 262)
+% Task db695cfb
+% Rule: Pairs of 1s that are exactly 45 degrees apart (|row_diff|=|col_diff|)
+% shoot a diagonal beam between them. The beam fills intermediate background
+% cells with 1. Where the beam hits an existing 6, it bounces: two
+% perpendicular 45-degree rays radiate from that obstacle cell, filling
+% background cells with 6 until the grid boundary or another existing 6.
+% ---------------------------------------------------------------------------
+
+% Register the diag_beam rule.
+arc2_named_rule(diag_beam).
+
+% arc2_transform(diag_beam, +Grid, -Out): top-level transform.
+arc2_transform(diag_beam, Grid, Out) :-
+    % Background is the value at position (0,0).
+    Grid = [[BG|_]|_],
+    % Verify all non-background cells are 1 or 6.
+    forall(
+        (nth0(_R, Grid, Row), member(V, Row), V \= BG),
+        member(V, [1, 6])
+    ),
+    % Collect positions of all 1-cells.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, 1)), Ones),
+    % At least one 1 must exist.
+    Ones = [_|_],
+    % Collect positions of all existing 6-obstacles.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, 6)), Sixes),
+    % Grid dimensions for boundary checks.
+    length(Grid, NRows),
+    Grid = [FRow|_], length(FRow, NCols),
+    % Find all unordered diagonal pairs of 1s (|dr|=|dc|>0).
+    findall(P1-P2,
+        (member(P1, Ones), member(P2, Ones), P1 @< P2,
+         P1 = R1-C1, P2 = R2-C2,
+         AbsR is abs(R1 - R2), AbsC is abs(C1 - C2),
+         AbsR =:= AbsC, AbsR > 0),
+        Pairs),
+    % At least one diagonal pair must exist.
+    Pairs = [_|_],
+    % Apply beams in sequence, threading the grid state.
+    foldl(arc2_db_pair_(Sixes, NRows, NCols), Pairs, Grid, Out).
+
+% arc2_db_pair_(+Sixes, +NRows, +NCols, +Pair, +G0, -G1):
+% fire a beam from the first 1 of the pair toward the second.
+arc2_db_pair_(Sixes, NRows, NCols, (R1-C1)-(R2-C2), G0, G1) :-
+    % Step direction: +1 or -1 for each axis.
+    ( R2 > R1 -> DR = 1 ; DR = -1 ),
+    ( C2 > C1 -> DC = 1 ; DC = -1 ),
+    % Start one step past the source (skip the source 1-cell).
+    RS is R1 + DR, CS is C1 + DC,
+    % March toward the destination.
+    arc2_db_march_(RS, CS, DR, DC, R2, C2, Sixes, NRows, NCols, G0, G1).
+
+% arc2_db_march_(+R, +C, +DR, +DC, +R2, +C2, ...):
+% step along the diagonal; stop when the destination 1-cell is reached.
+arc2_db_march_(R2, C2, _, _, R2, C2, _, _, _, G, G) :- !.
+arc2_db_march_(R, C, DR, DC, R2, C2, Sixes, NRows, NCols, G0, G1) :-
+    % Check whether this cell is an existing 6-obstacle.
+    ( memberchk(R-C, Sixes) ->
+        % Obstacle: bounce perpendicular rays without touching the 6-cell.
+        arc2_db_bounce_(R, C, DR, DC, Sixes, NRows, NCols, G0, Gtmp)
+    ;
+        % Background cell: fill with 1.
+        arc2_set_cell_(G0, R, C, 1, Gtmp)
+    ),
+    % Advance one step and continue.
+    NR is R + DR, NC is C + DC,
+    arc2_db_march_(NR, NC, DR, DC, R2, C2, Sixes, NRows, NCols, Gtmp, G1).
+
+% arc2_db_bounce_(+R, +C, +DR, +DC, +Sixes, +NRows, +NCols, +G0, -G1):
+% send two perpendicular rays from obstacle cell (R,C), filling cells with 6.
+arc2_db_bounce_(R, C, DR, DC, Sixes, NRows, NCols, G0, G1) :-
+    % Perpendicular to (DR,DC) in 2D: rotate 90 degrees both ways.
+    PR1 is  DR, PC1 is -DC,
+    PR2 is -DR, PC2 is  DC,
+    % Fire first perpendicular ray.
+    arc2_db_ray_(R, C, PR1, PC1, Sixes, NRows, NCols, G0, Gtmp),
+    % Fire second perpendicular ray.
+    arc2_db_ray_(R, C, PR2, PC2, Sixes, NRows, NCols, Gtmp, G1).
+
+% arc2_db_ray_(+R, +C, +DR, +DC, +Sixes, +NRows, +NCols, +G0, -G1):
+% extend a 6-filling ray step by step; stop at boundary or existing 6.
+arc2_db_ray_(R, C, DR, DC, Sixes, NRows, NCols, G0, G1) :-
+    % Compute the next cell position.
+    NR is R + DR, NC is C + DC,
+    ( NR >= 0, NR < NRows, NC >= 0, NC < NCols ->
+        ( memberchk(NR-NC, Sixes) ->
+            % Existing 6-obstacle: stop the ray here (no secondary bounce).
+            G1 = G0
+        ;
+            % Background cell: fill with 6 and continue the ray.
+            arc2_set_cell_(G0, NR, NC, 6, Gtmp),
+            arc2_db_ray_(NR, NC, DR, DC, Sixes, NRows, NCols, Gtmp, G1)
+        )
+    ;
+        % Out of bounds: stop.
+        G1 = G0
+    ).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
