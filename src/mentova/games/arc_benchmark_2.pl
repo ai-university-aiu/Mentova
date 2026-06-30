@@ -6994,6 +6994,212 @@ arc2_transform(bbox_fill, Grid, Out) :-
 % Register the slide_void named rule.
 arc2_named_rule(slide_void).
 
+% ---------------------------------------------------------------------------
+% WAVE 37: concentric_rings (task 13e47133)
+% Grid background BG (most frequent) and divider Div (most frequent non-BG)
+% partition into connected regions via flood-fill. Each region fills with
+% concentric rectangular rings: ring 0 = cells on grid boundary or adjacent
+% to any Div cell; ring K = BFS distance K from ring-0 sources (cannot cross
+% Div). Non-BG, non-Div single-cell markers define the color cycle: cycle[R]
+% = marker.color if a marker sits at ring R, else BG. The cycle repeats.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule fact registers concentric_rings for induction.
+arc2_named_rule(concentric_rings).
+
+% arc2_cri_bg_: background = most frequent color across all grid cells.
+arc2_cri_bg_(Grid, BG) :-
+% Flatten the 2-D grid into one flat list.
+    flatten(Grid, Cells),
+% Collect distinct values present in the grid.
+    list_to_set(Cells, Vals),
+% Count occurrences; produce Count-Value pairs.
+    maplist({Cells}/[V, N-V]>>(include(=(V), Cells, Cs), length(Cs, N)),
+            Vals, Counts),
+% Sort ascending by count so the last element is the maximum.
+    msort(Counts, Sorted),
+% Extract the most frequent value as background.
+    last(Sorted, _-BG).
+
+% arc2_cri_div_: divider = most frequent non-BG color (forms wall structure).
+arc2_cri_div_(Grid, BG, Div) :-
+% Flatten and remove all BG cells.
+    flatten(Grid, Cells),
+% Keep only cells whose value differs from BG.
+    exclude(=(BG), Cells, NonBG),
+% Must have at least one non-BG value.
+    NonBG \= [],
+% Collect distinct non-BG values.
+    list_to_set(NonBG, Vals),
+% Count occurrences of each non-BG value.
+    maplist({NonBG}/[V, N-V]>>(include(=(V), NonBG, Cs), length(Cs, N)),
+            Vals, Counts),
+% Sort ascending; last entry is the most frequent = divider.
+    msort(Counts, Sorted),
+% Extract divider color.
+    last(Sorted, _-Div).
+
+% arc2_cri_nbrs_: 4-connected grid neighbours of (R,C) within bounds.
+arc2_cri_nbrs_(NR1, NC1, R, C, Nbrs) :-
+% Generate the four directional offsets and filter for valid positions.
+    findall(NR2-NC2, (
+        member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1]),
+        NR2 is R + DR, NC2 is C + DC,
+        between(0, NR1, NR2), between(0, NC1, NC2)
+    ), Nbrs).
+
+% arc2_cri_nbrs8_: 8-connected (4-ortho + 4-diagonal) grid neighbours of (R,C).
+arc2_cri_nbrs8_(NR1, NC1, R, C, Nbrs) :-
+% Generate all eight directional offsets and filter for valid positions.
+    findall(NR2-NC2, (
+        member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1,
+                       (-1)-(-1), (-1)-1, 1-(-1), 1-1]),
+        NR2 is R + DR, NC2 is C + DC,
+        between(0, NR1, NR2), between(0, NC1, NC2)
+    ), Nbrs).
+
+% arc2_cri_is_bnd_: cell (R,C) is ring-0 if on grid boundary or 8-adjacent to Div.
+% Using 8-connectivity for Div-adjacency correctly handles L-shaped component
+% corners where a diagonal Div neighbour marks a concavity boundary cell.
+arc2_cri_is_bnd_(_, NR1, NC1, _, R, C) :-
+% Grid boundary check: top, bottom, left, or right edge.
+    (R =:= 0 ; R =:= NR1 ; C =:= 0 ; C =:= NC1), !.
+arc2_cri_is_bnd_(Grid, NR1, NC1, Div, R, C) :-
+% Adjacency-to-Div check: at least one 8-neighbour has the Div value.
+    arc2_cri_nbrs8_(NR1, NC1, R, C, Nbrs),
+    member(NR2-NC2, Nbrs),
+    nth0(NR2, Grid, GRow), nth0(NC2, GRow, Div), !.
+
+% arc2_cri_flood_: BFS flood-fill collecting all non-Div cells reachable from Queue.
+% Vis is the accumulated visited set; Comp is returned as the final component.
+arc2_cri_flood_(_, _, _, _, [], Vis, Vis) :- !.
+arc2_cri_flood_(Grid, NR1, NC1, Div, [R-C | Q], Vis, Comp) :-
+% Find 4-neighbours that are non-Div and not yet visited.
+    arc2_cri_nbrs_(NR1, NC1, R, C, Nbrs),
+    findall(NR2-NC2, (
+        member(NR2-NC2, Nbrs),
+        nth0(NR2, Grid, GRow), nth0(NC2, GRow, V), V =\= Div,
+        \+ member(NR2-NC2, Vis)
+    ), New),
+% Merge new cells into the queue and deduplicate.
+    append(Q, New, Q2), sort(Q2, Q3),
+% Extend the visited set with newly discovered cells.
+    append(Vis, New, Vis2),
+% Continue BFS with updated queue and visited set.
+    arc2_cri_flood_(Grid, NR1, NC1, Div, Q3, Vis2, Comp).
+
+% arc2_cri_comps_: partition non-Div cell list NDCs into connected components.
+% Seen tracks cells already assigned; Comps is the resulting component list.
+arc2_cri_comps_(_, _, _, _, [], _, []) :- !.
+arc2_cri_comps_(Grid, NR1, NC1, Div, [RC | Rest], Seen, Comps) :-
+% Cell already belongs to a previous component; skip it.
+    member(RC, Seen), !,
+    arc2_cri_comps_(Grid, NR1, NC1, Div, Rest, Seen, Comps).
+arc2_cri_comps_(Grid, NR1, NC1, Div, [R-C | Rest], Seen, [Comp | Comps]) :-
+% Start a new component via flood-fill from this unvisited cell.
+    arc2_cri_flood_(Grid, NR1, NC1, Div, [R-C], [R-C], Comp),
+% Mark all component cells as seen to avoid re-processing.
+    append(Seen, Comp, Seen2),
+% Recurse over the remaining cells.
+    arc2_cri_comps_(Grid, NR1, NC1, Div, Rest, Seen2, Comps).
+
+% arc2_cri_bfs_: multi-source BFS expanding ring distances from Frontier.
+% Acc is the accumulated list of R-C-Dist triples; Res is the final map.
+arc2_cri_bfs_(_, _, _, _, [], Acc, Acc) :- !.
+arc2_cri_bfs_(Grid, NR1, NC1, Div, Frontier, Acc, Res) :-
+% Expand each frontier cell: find non-Div neighbours not yet in Acc.
+    findall(NR2-NC2-D1, (
+        member(R-C-D, Frontier),
+        D1 is D + 1,
+        arc2_cri_nbrs_(NR1, NC1, R, C, Nbrs),
+        member(NR2-NC2, Nbrs),
+        nth0(NR2, Grid, GRow), nth0(NC2, GRow, V), V =\= Div,
+        \+ member(NR2-NC2-_, Acc)
+    ), New0),
+% Deduplicate newly discovered cells.
+    sort(New0, New),
+% Append new cells to the accumulator.
+    append(Acc, New, Acc2),
+% Continue BFS with new frontier and updated accumulator.
+    arc2_cri_bfs_(Grid, NR1, NC1, Div, New, Acc2, Res).
+
+% arc2_cri_build_cycle_: build color cycle from sorted Ring-Color pairs and BG.
+% Empty marker list yields a single-element BG cycle.
+arc2_cri_build_cycle_([], BG, [BG]) :- !.
+arc2_cri_build_cycle_(RCPairs, BG, Cycle) :-
+% Find the maximum ring index among all markers.
+    last(RCPairs, MaxD-_),
+% Enumerate all rings from 0 to MaxD.
+    numlist(0, MaxD, Rings),
+% For each ring: use the marker color if one exists there, otherwise BG.
+    maplist({BG, RCPairs}/[Ring, Color]>>(
+        (member(Ring-Color0, RCPairs) -> Color = Color0 ; Color = BG)
+    ), Rings, Cycle).
+
+% arc2_transform/3: concentric_rings entry point.
+arc2_transform(concentric_rings, Grid, Out) :-
+% Extract grid row count and column count.
+    length(Grid, NR), NR1 is NR - 1,
+    Grid = [Row0 | _], length(Row0, NC), NC1 is NC - 1,
+% Detect background color (most frequent) and divider color (most frequent non-BG).
+    arc2_cri_bg_(Grid, BG),
+    arc2_cri_div_(Grid, BG, Div),
+% Collect coordinates of all non-Div cells.
+    findall(R-C, (
+        between(0, NR1, R), between(0, NC1, C),
+        nth0(R, Grid, GRow), nth0(C, GRow, V), V =\= Div
+    ), NDCs),
+% Partition non-Div cells into connected components via flood-fill.
+    arc2_cri_comps_(Grid, NR1, NC1, Div, NDCs, [], Comps),
+% For each component compute ring-distance map and color cycle.
+    maplist({Grid, NR1, NC1, Div, BG}/[Comp, RM-Cycle]>>(
+% Select ring-0 boundary cells: grid edge or adjacent to Div.
+        include({Grid, NR1, NC1, Div}/[R-C]>>(
+            arc2_cri_is_bnd_(Grid, NR1, NC1, Div, R, C)
+        ), Comp, Bdry),
+% Seed the BFS frontier with boundary cells at distance 0.
+        maplist([RC, RC-0]>>true, Bdry, Bdry0),
+% Run multi-source BFS to compute ring distance for every component cell.
+        arc2_cri_bfs_(Grid, NR1, NC1, Div, Bdry0, Bdry0, RM),
+% Identify marker cells: non-BG, non-Div cells in this component.
+        include({Grid, BG, Div}/[R-C]>>(
+            nth0(R, Grid, GRow), nth0(C, GRow, V),
+            V =\= BG, V =\= Div
+        ), Comp, MRCs),
+% Map each marker to its ring distance and original color.
+        maplist({Grid, RM}/[R-C, D-V]>>(
+            member(R-C-D, RM),
+            nth0(R, Grid, GRow), nth0(C, GRow, V)
+        ), MRCs, RCPairs0),
+% Sort Ring-Color pairs by ring distance ascending.
+        msort(RCPairs0, RCPairs),
+% Build cycling color list from marker positions.
+        arc2_cri_build_cycle_(RCPairs, BG, Cycle)
+    ), Comps, CompData),
+% Build output grid row by row.
+    numlist(0, NR1, RowIs),
+    maplist({Grid, NC1, Div, Comps, CompData}/[R, OR]>>(
+        numlist(0, NC1, ColIs),
+        maplist({Grid, Div, Comps, CompData, R}/[C, V]>>(
+            nth0(R, Grid, GRow), nth0(C, GRow, CV),
+% Divider cells pass through unchanged.
+            (CV =:= Div -> V = Div
+            ;
+% Find which component this cell belongs to.
+                nth0(CI, Comps, Comp),
+                member(R-C, Comp), !,
+% Retrieve the ring map and cycle for this component.
+                nth0(CI, CompData, RM-Cycle),
+% Look up this cell's ring distance.
+                member(R-C-D, RM),
+% Apply cycling: color = Cycle[ring mod cycle_length].
+                length(Cycle, CLen),
+                Idx is D mod CLen,
+                nth0(Idx, Cycle, V)
+            )
+        ), ColIs, OR)
+    ), RowIs, Out).
+
 % arc2_svo_bg_: background is the top-left corner cell value.
 arc2_svo_bg_([[BG | _] | _], BG).
 
