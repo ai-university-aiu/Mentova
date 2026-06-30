@@ -297,8 +297,8 @@ Key bugs fixed:
 
 Accomplishment: Acc_332.  Paper: Acc_332_ARC2_Wave34.txt.
 
-Mentova PR: TBD
-PrologAI PR: TBD
+Mentova PR: #347
+PrologAI PR: #403
 
 
 ATTEMPT 33 - 2026-06-30 - Score: 33/120 = 27.50%
