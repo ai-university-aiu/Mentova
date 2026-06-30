@@ -1,0 +1,52 @@
+Acc_335: ARC-AGI-2 Wave 37 - concentric_rings - 37/120 = 30.83%
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-30
+
+Wave 37 of the PrologAI ARC-AGI-2 climb is complete.
+
+Rule: concentric_rings
+Task solved: 13e47133
+New score: 37/120 = 30.83% (up from 36/120 = 30.00%)
+
+THE RULE
+
+Grid background BG (most frequent value) and divider Div (most frequent non-BG
+value) partition the non-Div cells into 4-connected components via flood-fill.
+Each component fills with concentric rectangular rings. Ring 0 is the outermost
+layer; ring K is all cells at 4-connected BFS distance K from the ring-0 source
+set. Single-cell non-BG non-Div markers at specific ring positions define a
+color cycle that repeats across rings.
+
+THE KEY INSIGHT
+
+Ring-0 detection requires 8-connected Div-adjacency, not 4-connected. When a
+Div wall forms an L-shape with a corner cell, cells diagonally adjacent to that
+corner are inside the inner concavity of the L-shaped component. With only
+4-connected Div-adjacency these cells are ring-1. But they are physically
+adjacent to the Div wall corner, so they must be ring-0 for the ring distances
+in the concavity region to be correct.
+
+The fix: classify a cell as ring-0 if any of its 8 neighbours is Div (instead
+of any of its 4 neighbours). BFS propagation stays 4-connected. This two-mode
+connectivity approach - 8-connected for ring-0 boundary, 4-connected for BFS -
+is the minimal change that handles L-shaped components without breaking the
+rectangular ring structure in simpler components.
+
+Only two new ring-0 cells are added in the entire task (cells at the two
+concavity corners of the outer L-shaped component in pair 1). Pairs 2 and 3
+have only rectangular components and are completely unaffected.
+
+WHAT THIS PROVES
+
+PrologAI can identify when two different connectivity modes are needed within
+the same algorithm - one mode for boundary classification, a different mode for
+distance propagation - and express this as a compact named rule that generalizes
+correctly across all training pairs and the test case.
+
+37 of 120 ARC-AGI-2 tasks solved. The climb continues.
+
+PrologAI: https://github.com/ai-university-aiu/PrologAI
+Mentova: https://github.com/ai-university-aiu/Mentova
+Paper: Mentova/papers/Acc_335_ARC2_Wave37.txt
