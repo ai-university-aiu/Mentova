@@ -1,0 +1,56 @@
+PrologAI ARC-AGI-2 Wave 35: bbox_fill - Bounding-Box Legend Fill with Priority Override
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-30
+
+Score: 35/120 = 29.17% (up from 34/120 = 28.33%)
+
+Wave 35 of the PrologAI ARC-AGI-2 climb adds the bbox_fill named rule, solving
+task 9385bd28 using pure Prolog with no machine learning.
+
+THE TASK
+
+Each input grid contains colored objects and a 2-column legend in the lower-left.
+The legend maps object color K to fill color V. The rule fills the bounding box
+of each K-color's cells with V. When bounding boxes overlap, the smaller (tighter)
+box's fill takes priority.
+
+THE CREATIVE INSIGHT
+
+Three fill modes coexist in a single legend:
+
+- Standard fill: V is a normal color. Fill the bbox, preserve K-cells (sparse)
+  or convert them to V (dense).
+
+- Background fill (V = BG): Fill the bbox with the background color. This
+  "punches through" any larger fill beneath it - essentially carving a hole in
+  the bigger box's fill region.
+
+- Erase (V = 0, BG != 0): No fill drawn. K-cells become transparent, letting
+  whatever fill exists in an enclosing box show through.
+
+The punch-through case (pair 1) was the most subtle: color-1 maps to 0 (= BG
+in this grid), creating a hole inside the larger color-2 fill region. This
+required detecting that V=0 means "fill with BG" (not erase) when BG is also 0.
+
+THE ELEGANT TRICK
+
+Instead of a multi-pass paint algorithm, all bounding boxes are sorted by area
+ascending. The fill_for predicate scans this sorted list and returns the first
+matching fill. Since smaller boxes come first, they automatically override larger
+ones - no explicit priority management needed.
+
+WAVE 35 FACTS
+
+Rule: bbox_fill
+Task: 9385bd28 (4 training pairs, all passing)
+Score: 35/120 = 29.17%
+Accomplishment: Acc_333
+Rule count: 35 named Prolog rules
+Implementation: pure SWI-Prolog, arc_benchmark_2.pl
+
+PrologAI continues climbing ARC-AGI-2 one named rule at a time, building a
+glass-box library of human-readable spatial reasoning patterns.
+
+#PrologAI #ARCAGI2 #AIBenchmark #SymbolicAI #Prolog #AIReasoning

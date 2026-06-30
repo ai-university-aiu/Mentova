@@ -6830,6 +6830,158 @@ arc2_transform(rail_fill, Grid, Out) :-
     ), RowIdxs, Out).
 
 % ---------------------------------------------------------------------------
+% WAVE 35: bbox_fill (Layer 268)
+% Task 9385bd28.  A 2-column legend block at the bottom-left maps each object
+% color K to a fill color V.  For every (K,V) pair in the legend (excluding
+% erase entries where V=0 and BG≠0): collect all K-cells outside the legend,
+% compute their bounding box, fill the entire box with V, then re-paint the
+% original K-cells at their positions if the box is sparse (< 100% density).
+% Smaller boxes are drawn last so they override larger overlapping boxes.
+% When V = BG (not zero), the fill is the background value, which effectively
+% blocks any earlier fill from a larger enclosing box.
+% ---------------------------------------------------------------------------
+
+% Register the bbox_fill named rule.
+arc2_named_rule(bbox_fill).
+
+% arc2_bxf_scan_up_: collect consecutive rows upward from R where col C is non-BG.
+arc2_bxf_scan_up_(_, _, R, _, []) :-
+% Stop if we go above the grid.
+    R < 0, !.
+arc2_bxf_scan_up_(Grid, BG, R, C, Block) :-
+% Include row R if Grid[R][C] is not BG; continue upward.
+    nth0(R, Grid, Row),
+% Check that col C in this row is a non-background value.
+    nth0(C, Row, V0), V0 =\= BG, !,
+% Move one row up.
+    R1 is R - 1,
+% Recurse upward to collect more consecutive legend rows.
+    arc2_bxf_scan_up_(Grid, BG, R1, C, Rest),
+% Prepend current row to the block.
+    Block = [R | Rest].
+arc2_bxf_scan_up_(_, _, _, _, []).
+
+% arc2_bxf_legend_: detect the 2-column legend block.
+% Scans leftmost column pair (LC, LC+1) in the bottom half that has a
+% contiguous block of rows where Grid[R][LC] ≠ BG.
+% LC     = left legend column index.
+% LegRows = ascending list of legend row indices.
+% LegMap  = list of K-V pairs (may include K->BG entries).
+arc2_bxf_legend_(Grid, BG, LC, LegRows, LegMap) :-
+% Compute grid dimensions and lower search boundary.
+    length(Grid, NR), Grid = [R0 | _], length(R0, NC),
+    HalfNR is NR // 2, NR1 is NR - 1, NC2 is NC - 2,
+% Try column pairs left-to-right; stop at the first valid legend block.
+    (between(0, NC2, LC),
+     findall(R, (between(HalfNR, NR1, R),
+         nth0(R, Grid, Row),
+         nth0(LC, Row, V0), V0 =\= BG), Cands),
+     Cands \= [],
+     last(Cands, LastR),
+     arc2_bxf_scan_up_(Grid, BG, LastR, LC, Block),
+     Block \= [] -> true ; fail), !,
+% Reverse scan order to get ascending row order.
+    reverse(Block, LegRows),
+% Build K-V map from legend rows.
+    LC1 is LC + 1,
+    findall(K-V, (member(R, LegRows),
+        nth0(R, Grid, Row),
+        nth0(LC, Row, K),
+        nth0(LC1, Row, V)), LegMap).
+
+% arc2_bxf_update_bbox_: fold helper to expand bounding box.
+arc2_bxf_update_bbox_(R-C, Ra-Ca-Rb-Cb, Nr1-Nc1-Nr2-Nc2) :-
+% Expand min/max in both dimensions.
+    Nr1 is min(R, Ra), Nc1 is min(C, Ca),
+    Nr2 is max(R, Rb), Nc2 is max(C, Cb).
+
+% arc2_bxf_bbox_: compute bounding box of a non-empty list of R-C cells.
+arc2_bxf_bbox_([R0-C0 | Rest], R1, C1, R2, C2) :-
+% Fold over remaining cells to find min/max extents.
+    foldl(arc2_bxf_update_bbox_, Rest, R0-C0-R0-C0, R1-C1-R2-C2).
+
+% arc2_bxf_is_erase_: true when V=0 and BG≠0 (erase sentinel).
+arc2_bxf_is_erase_(V, BG) :-
+% Value 0 with non-zero background signals "erase K-cells, no fill".
+    V =:= 0, BG =\= 0.
+
+% arc2_bxf_fill_for_: find fill value for (R,C) from smallest containing bbox.
+% InfosAsc is sorted ascending by bbox area, so first match = smallest box.
+arc2_bxf_fill_for_(R, C, [inf(_, V, BR1, BC1, BR2, BC2, _) | _], V) :-
+% First matching (smallest) bbox wins.
+    between(BR1, BR2, R), between(BC1, BC2, C), !.
+arc2_bxf_fill_for_(R, C, [_ | Rest], V) :-
+% Try the next bbox if this one does not contain (R,C).
+    arc2_bxf_fill_for_(R, C, Rest, V).
+
+% arc2_bxf_cell_val_: compute output value at (R,C) given all fills.
+% Priority: legend cell > BG cell (fill lookup) > erase K-cell (fill lookup)
+%           > mapped K-cell (dense→V ; sparse→K) > unmapped non-BG (preserve).
+arc2_bxf_cell_val_(R, C, OrigV, _, LegCells, _, _, OrigV) :-
+% Legend cells are always preserved verbatim.
+    member(R-C, LegCells), !.
+arc2_bxf_cell_val_(R, C, OrigV, BG, _, _, InfosAsc, V) :-
+% Background cell: fill from smallest enclosing bbox, or keep BG.
+    OrigV =:= BG, !,
+    (arc2_bxf_fill_for_(R, C, InfosAsc, FV) -> V = FV ; V = BG).
+arc2_bxf_cell_val_(R, C, OrigV, BG, _, LegMap, InfosAsc, V) :-
+% Erase K-cell (V=0, BG≠0): treat same as background—no repaint.
+    member(OrigV-MapV, LegMap), arc2_bxf_is_erase_(MapV, BG), !,
+    (arc2_bxf_fill_for_(R, C, InfosAsc, FV) -> V = FV ; V = BG).
+arc2_bxf_cell_val_(R, C, OrigV, _, _, LegMap, InfosAsc, V) :-
+% Mapped K-cell with real fill: dense bbox → V; sparse bbox → keep K.
+    member(OrigV-MapV, LegMap), !,
+    (member(inf(OrigV, MapV, BR1, BC1, BR2, BC2, Dense), InfosAsc),
+     between(BR1, BR2, R), between(BC1, BC2, C) ->
+        (Dense = true -> V = MapV ; V = OrigV)
+    ; V = OrigV).
+arc2_bxf_cell_val_(_, _, OrigV, _, _, _, _, OrigV).
+
+% arc2_bxf_build_row_: build one output row for row index R.
+arc2_bxf_build_row_(Grid, R, NC, BG, LegCells, LegMap, InfosAsc, Row) :-
+% Iterate over all column indices in this row.
+    NC1p is NC - 1, numlist(0, NC1p, ColIs),
+    maplist([C, V]>>(
+        nth0(R, Grid, GRow), nth0(C, GRow, OrigV),
+        arc2_bxf_cell_val_(R, C, OrigV, BG, LegCells, LegMap, InfosAsc, V)
+    ), ColIs, Row).
+
+% arc2_transform(bbox_fill, +Grid, -Out): entry point for Wave 35.
+arc2_transform(bbox_fill, Grid, Out) :-
+% Extract grid dimensions and background color.
+    length(Grid, NR), Grid = [R0 | _], length(R0, NC),
+    R0 = [BG | _], NR1 is NR - 1, NC1p is NC - 1,
+% Detect legend: leftmost 2-col block in the bottom half.
+    arc2_bxf_legend_(Grid, BG, LC, LegRows, LegMap),
+% Collect all legend cell positions (both col LC and LC+1).
+    LC1 is LC + 1,
+    findall(R-C, (member(R, LegRows), (C = LC ; C = LC1)), LegCells),
+% Build sorted info list (ascending by area) for non-erase fills.
+    findall(Area-inf(K, V, BR1, BC1, BR2, BC2, Dense), (
+        member(K-V, LegMap),
+        \+ arc2_bxf_is_erase_(V, BG),
+% Collect all non-legend K-cells in the grid.
+        findall(R-C, (
+            between(0, NR1, R), between(0, NC1p, C),
+            nth0(R, Grid, Row), nth0(C, Row, K),
+            \+ member(R-C, LegCells)
+        ), KCells),
+        KCells \= [],
+% Compute bounding box and density.
+        arc2_bxf_bbox_(KCells, BR1, BC1, BR2, BC2),
+        H is BR2 - BR1 + 1, W is BC2 - BC1 + 1, Area is H * W,
+        length(KCells, NK),
+        (NK =:= Area -> Dense = true ; Dense = false)
+    ), Pairs),
+% Sort ascending by area so smallest bbox is first (fill_for finds smallest).
+    keysort(Pairs, SortedAsc), pairs_values(SortedAsc, InfosAsc),
+% Build output grid row by row.
+    numlist(0, NR1, RowIs),
+    maplist([R, Row]>>(
+        arc2_bxf_build_row_(Grid, R, NC, BG, LegCells, LegMap, InfosAsc, Row)
+    ), RowIs, Out).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
