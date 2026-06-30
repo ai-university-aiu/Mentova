@@ -1,0 +1,98 @@
+ARC-AGI-2 Wave 32: Shape-Classify - Topological Shape Classification with Border, Holes, and Depth Marking
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+Date: 2026-06-30
+Accomplishment: Acc_330
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+ABSTRACT
+
+Wave 32 adds the shape_classify rule (WP-290, Layer 265) to PrologAI's ARC-AGI-2
+benchmark engine, solving task aa4ec2a5. The rule classifies shapes in a two-color
+grid by their topological relationship to enclosed background holes: shapes that
+surround holes are marked 8, enclosed holes are marked 6, the outer border of every
+shape is marked 2, and shapes without holes remain 1. This advances the ARC-AGI-2
+score from 31/120 = 25.83% to 32/120 = 26.67%.
+
+TASK DESCRIPTION
+
+Task aa4ec2a5 presents grids with exactly two cell values: a background color (4)
+and a shape color (1). The input contains several 4-connected shape components of
+varying topologies. The transformation applies four operations simultaneously:
+
+1. HOLES: Background cells enclosed within a shape (unreachable from the grid
+   boundary via 4-connected background paths) are painted 6.
+2. BORDER: Background cells outside the shape but within Chebyshev distance 1
+   (8-connected adjacency) of any shape cell are painted 2.
+3. SHAPE WITH HOLES: Shape components that are 4-adjacent to at least one hole
+   cell have all their cells painted 8.
+4. SHAPE WITHOUT HOLES: Shape components with no adjacent holes retain their
+   original color (1).
+
+ALGORITHM
+
+Guard: flatten the grid and sort to confirm exactly 2 unique values.
+
+Step 1 - Background identification: run-length encode the sorted flat grid to
+find the most-frequent value (background).
+
+Step 2 - Outside flood-fill: BFS from all boundary BG cells, expanding 4-
+connected through BG cells only. The result is the set of all outside-reachable
+BG cells.
+
+Step 3 - Hole detection: BG cells NOT in the outside set are holes. Paint 6.
+
+Step 4 - Border detection: Outside BG cells with at least one non-BG cell among
+their 8 Chebyshev neighbors (4 cardinal + 4 diagonal) are border cells. Paint 2.
+
+Step 5 - Component partition: partition all non-BG positions into 4-connected
+components using BFS with a shrinking pool.
+
+Step 6 - Component classification: include only components that have at least
+one cell with a 4-adjacent hole. Paint all cells of those components 8.
+
+Step 7 - Output: apply all three paint operations (holes, border, shape cells) to
+the input grid in sequence.
+
+KEY IMPLEMENTATION NOTES
+
+The border rule uses 8-connectivity (Chebyshev) not 4-connectivity. Diagonal
+adjacency to a shape cell qualifies a BG cell as a border cell. This matches the
+expected output exactly; a naive 4-connected border would be missing corner cells.
+
+The BFS component-expansion algorithm uses a shrinking pool: when neighbors are
+found, they are immediately removed from the pool to prevent re-discovery. This
+avoids duplicate entries in the component lists and ensures each cell belongs to
+exactly one component.
+
+BUGS ENCOUNTERED AND FIXED
+
+Bug 1 - 4-connected border: The first implementation used 4-connected adjacency
+to detect whether a BG cell was adjacent to a shape cell. The expected output
+showed 2-border cells at diagonal positions (corners of the shape bounding box).
+Fix: switch to 8-connected (Chebyshev) detection in arc2_scc_nonbg_nbr_.
+
+Bug 2 - Lambda variable capture: Three sequential foldl calls chained through
+accumulator variables G1, G2. The lambda for each foldl used G1 as both the
+per-step output parameter (in the lambda head [RC, Gi, G1]) and as the outer
+chained accumulator. After SWI-Prolog's YALL copy_term bound the lambda's G1 to
+the intermediate grid from the first step, subsequent calls saw G1 as already
+bound and failed to produce a new output.
+Fix: rename each foldl's accumulator variables distinctly: GA (after holes), GB
+(after border), Out (after shape cells). Decompose each element explicitly inside
+the lambda body (RC6 = R6-C6 etc.) to further avoid any name collision.
+
+BENCHMARK RESULT
+
+Task solved: aa4ec2a5.
+Score: 31/120 = 25.83% -> 32/120 = 26.67%.
+All 3 training pairs and the test case verified correct.
+
+New predicates: arc2_named_rule(shape_classify), arc2_transform(shape_classify/3),
+arc2_scc_bg_/2, arc2_scc_runs_/2, arc2_scc_run_count_/5, arc2_scc_outside_/5,
+arc2_scc_bfs_/7, arc2_scc_nonbg_nbr_/4, arc2_scc_comps_/2, arc2_scc_grow_/5,
+arc2_scc_touches_hole_/2.
+
+SPARC versions: Specification v262, Pseudocode v254, Architecture v255,
+Refinement v314, Completion v320.

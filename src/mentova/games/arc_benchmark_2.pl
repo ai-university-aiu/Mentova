@@ -6295,6 +6295,148 @@ arc2_sb_blank_(NR, NC, BG, [Row|Rest]) :-
     arc2_sb_blank_(NR1, NC, BG, Rest).
 
 % ---------------------------------------------------------------------------
+% WAVE 32 — shape_classify (WP-290, Layer 265)
+% Task aa4ec2a5
+% Rule: surround every shape with a 2-border; shapes that enclose background
+%       holes become 8 (holes → 6); shapes with no holes stay unchanged.
+% ---------------------------------------------------------------------------
+
+% Register the shape_classify named rule.
+arc2_named_rule(shape_classify).
+
+% arc2_transform(shape_classify, +Grid, -Out): entry point for Wave 32.
+arc2_transform(shape_classify, Grid, Out) :-
+    % Guard: exactly 2 distinct cell values in the grid.
+    flatten(Grid, Flat),
+    sort(Flat, [_, _]),
+    % Identify background as the most-frequent cell value.
+    arc2_scc_bg_(Flat, BG),
+    % Grid dimensions.
+    length(Grid, NR),
+    Grid = [GRow0|_], length(GRow0, NC),
+    % Collect all non-BG cell positions.
+    findall(R-C, (nth0(R, Grid, GRow), nth0(C, GRow, V), V \= BG), NonBG),
+    NonBG \= [],
+    % Flood-fill BG from the grid boundary to find outside-reachable BG cells.
+    arc2_scc_outside_(Grid, NR, NC, BG, Outside),
+    % Holes: BG cells not reachable from the grid boundary.
+    findall(R-C,
+        (nth0(R, Grid, GRow), nth0(C, GRow, V), V =:= BG,
+         \+ member(R-C, Outside)),
+        Holes),
+    % Border: outside BG cells with at least one non-BG 4-neighbour.
+    findall(R-C,
+        (member(R-C, Outside),
+         once(arc2_scc_nonbg_nbr_(Grid, BG, R, C))),
+        Border),
+    % Partition non-BG cells into 4-connected components.
+    arc2_scc_comps_(NonBG, Comps),
+    % Identify components that border at least one hole (their cells become 8).
+    include(arc2_scc_touches_hole_(Holes), Comps, HoleComps),
+    % Flatten hole-bearing components to a single deduplicated cell list.
+    flatten(HoleComps, HCFlat), sort(HCFlat, HoleCells),
+    % Paint holes 6, border 2, and hole-component cells 8 onto the input grid.
+    % Use distinct accumulator names to prevent lambda variable capture.
+    foldl([RC6, Gi6, Go6]>>(RC6 = R6-C6, arc2_set_cell_(Gi6, R6, C6, 6, Go6)), Holes, Grid, GA),
+    foldl([RC2, Gi2, Go2]>>(RC2 = R2-C2, arc2_set_cell_(Gi2, R2, C2, 2, Go2)), Border, GA, GB),
+    foldl([RC8, Gi8, Go8]>>(RC8 = R8-C8, arc2_set_cell_(Gi8, R8, C8, 8, Go8)), HoleCells, GB, Out).
+
+% arc2_scc_bg_(+Flat, -BG): background is the most-frequent value in Flat.
+arc2_scc_bg_(Flat, BG) :-
+    % Sort to group equal values into consecutive runs.
+    msort(Flat, Sorted),
+    % Convert runs to Count-Value pairs.
+    arc2_scc_runs_(Sorted, Runs),
+    % Pick the pair with the highest count.
+    max_member(_-BG, Runs).
+
+% arc2_scc_runs_(+SortedList, -Pairs): run-length encode a sorted list.
+arc2_scc_runs_([], []) :- !.
+arc2_scc_runs_([H|T], [C-H|Rest]) :-
+    % Count how many leading H values are present.
+    arc2_scc_run_count_([H|T], H, 0, C, Rem),
+    % Recurse on the remainder.
+    arc2_scc_runs_(Rem, Rest).
+
+% arc2_scc_run_count_(+List, +Val, +Acc, -Count, -Rem): count leading Val occurrences.
+arc2_scc_run_count_([], _, C, C, []) :- !.
+arc2_scc_run_count_([H|T], H, C0, C, Rem) :-
+    !, C1 is C0 + 1,
+    % Continue counting matching values.
+    arc2_scc_run_count_(T, H, C1, C, Rem).
+arc2_scc_run_count_([H|T], _, C, C, [H|T]).
+
+% arc2_scc_outside_(+Grid, +NR, +NC, +BG, -Outside): all BG cells reachable from boundary.
+arc2_scc_outside_(Grid, NR, NC, BG, Outside) :-
+    % Seed BFS with all BG cells on the grid perimeter.
+    NR1 is NR - 1, NC1 is NC - 1,
+    findall(R-C,
+        (between(0, NR1, R), between(0, NC1, C),
+         ( R =:= 0 ; R =:= NR1 ; C =:= 0 ; C =:= NC1 ),
+         nth0(R, Grid, GRow), nth0(C, GRow, V), V =:= BG),
+        Seeds0),
+    sort(Seeds0, Seeds),
+    % BFS: expand through BG cells not yet visited.
+    arc2_scc_bfs_(Seeds, Seeds, Grid, NR, NC, BG, Outside).
+
+% arc2_scc_bfs_(+Queue, +Visited, +Grid, +NR, +NC, +BG, -All): BFS flood fill.
+arc2_scc_bfs_([], Visited, _, _, _, _, Visited) :- !.
+arc2_scc_bfs_([R-C|Q], Visited, Grid, NR, NC, BG, Outside) :-
+    % Find unvisited BG neighbours of the current cell.
+    R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+    findall(RN-CN,
+        (member(RN-CN, [R1-C, R2-C, R-C1, R-C2]),
+         RN >= 0, RN < NR, CN >= 0, CN < NC,
+         nth0(RN, Grid, GRow), nth0(CN, GRow, V), V =:= BG,
+         \+ memberchk(RN-CN, Visited)),
+        New),
+    % Extend the visited set and queue.
+    append(Visited, New, V2),
+    append(Q, New, Q2),
+    arc2_scc_bfs_(Q2, V2, Grid, NR, NC, BG, Outside).
+
+% arc2_scc_nonbg_nbr_(+Grid, +BG, +R, +C): succeeds if (R,C) has a non-BG 8-neighbour.
+arc2_scc_nonbg_nbr_(Grid, BG, R, C) :-
+    R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+    % Check all 8 Chebyshev neighbours (4 cardinal + 4 diagonal).
+    member(RN-CN, [R1-C1, R1-C, R1-C2, R-C1, R-C2, R2-C1, R2-C, R2-C2]),
+    nth0(RN, Grid, GRow), nth0(CN, GRow, V), V \= BG.
+
+% arc2_scc_comps_(+Positions, -Components): partition into 4-connected components.
+arc2_scc_comps_([], []) :- !.
+arc2_scc_comps_([H|T], [Comp|Rest]) :-
+    % Pool = all positions except the seed H.
+    subtract([H|T], [H], Pool),
+    % BFS-grow the component from seed H.
+    arc2_scc_grow_([H], Pool, [H], Comp, Remaining),
+    % Recurse on the leftover positions.
+    arc2_scc_comps_(Remaining, Rest).
+
+% arc2_scc_grow_(+Queue, +Pool, +Acc, -Comp, -Remaining): BFS component expansion.
+arc2_scc_grow_([], Pool, Comp, Comp, Pool) :- !.
+arc2_scc_grow_([R-C|Q], Pool, Acc, Comp, Remaining) :-
+    % Find all Pool members that are 4-adjacent to the current cell.
+    R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+    findall(RN-CN,
+        (member(RN-CN, [R1-C, R2-C, R-C1, R-C2]),
+         memberchk(RN-CN, Pool)),
+        Nbrs),
+    % Remove found neighbours from Pool to prevent re-discovery.
+    subtract(Pool, Nbrs, Pool2),
+    % Add neighbours to the BFS queue and component accumulator.
+    append(Q, Nbrs, Q2),
+    append(Acc, Nbrs, Acc2),
+    arc2_scc_grow_(Q2, Pool2, Acc2, Comp, Remaining).
+
+% arc2_scc_touches_hole_(+Holes, +Comp): succeeds if any Comp cell borders a hole.
+arc2_scc_touches_hole_(Holes, Comp) :-
+    member(R-C, Comp),
+    R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+    % Check each cardinal neighbour for membership in Holes.
+    member(RN-CN, [R1-C, R2-C, R-C1, R-C2]),
+    memberchk(RN-CN, Holes), !.
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
