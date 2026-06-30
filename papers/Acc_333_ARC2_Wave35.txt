@@ -1,0 +1,173 @@
+Acc_333: ARC-AGI-2 Wave 35 - bbox_fill Rule - Task 9385bd28
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-30
+
+
+ABSTRACT
+
+Wave 35 of the PrologAI ARC-AGI-2 benchmark climb adds the bbox_fill named
+rule, which solves task 9385bd28. This rule reads a 2-column legend in the
+bottom-left of the input grid, where each row maps an object color K to a
+fill color V. The rule computes the bounding box of each K-color's cells,
+fills that box with V, and resolves overlapping fills by giving priority to
+smaller (tighter) boxes. Three fill modes are distinguished: regular fill,
+background-value fill (which creates punch-through regions), and erase mode.
+After Wave 35, PrologAI solves 35 of 120 ARC-AGI-2 tasks (29.17%) using
+pure Prolog named rules with no machine learning.
+
+
+1. TASK DESCRIPTION
+
+Task 9385bd28 presents input grids containing colored objects and a 2-column
+legend in the lower-left. The legend rows encode a color mapping: left column
+holds an object color K, right column holds a fill color V. The transformation
+fills the bounding box of each K-color's cells with V.
+
+The task requires four non-trivial capabilities working together:
+
+(a) Legend detection: identify the 2-column block by scanning the leftmost
+column pairs in the bottom half of the grid.
+
+(b) Fill override: when two bounding boxes overlap, the smaller (tighter)
+box takes priority - its fill color replaces the larger box's fill in the
+overlap region.
+
+(c) Three-way fill semantics: (1) V != 0 and V != BG: standard fill; (2)
+V == BG: fill with background, which blocks any outer fill from showing
+through; (3) V == 0 and BG != 0: erase, treating K-cells as background and
+letting outer fills show through.
+
+(d) Dense vs. sparse bboxes: a bbox is dense when all its cells are K-cells.
+In dense bboxes, K-cells become V. In sparse bboxes (mixed K and non-K), the
+K-cells are preserved and only the non-K cells in the bbox get filled with V.
+
+
+2. RULE DESIGN
+
+2.1 Legend Detection Pipeline
+
+Legend detection proceeds in two phases. First, arc2_bxf_legend_ scans
+column pairs (LC, LC+1) left-to-right starting at column 0. For each
+candidate LC, it finds all rows in the bottom half (rows >= NR//2) where
+Grid[R][LC] is non-BG. The right column (LC+1) may hold BG - this is not
+a disqualifier, since V=BG is a valid fill mode encoding.
+
+Second, arc2_bxf_scan_up_ collects a contiguous block of rows upward from
+the lowest non-BG row. This block becomes the legend rows. The predicate
+uses the cut-committed "try LC, if Block != [] accept, else fail" idiom with
+a deterministic commit once any valid legend is found.
+
+2.2 Fill Priority via Ascending Sort
+
+Rather than a multi-pass paint algorithm, the rule sorts all bounding box
+info terms (inf/7) by area in ascending order. When computing the output
+value for any cell (R,C), arc2_bxf_fill_for_ iterates through InfosAsc and
+returns the fill color of the first (smallest) bbox that contains (R,C). This
+automatically implements "smallest bbox wins" with a single linear scan.
+
+2.3 Cell Value Dispatch
+
+arc2_bxf_cell_val_ uses a six-way dispatch:
+
+(1) Legend cells: return original value unchanged.
+(2) BG cells: query fill_for; if a bbox covers (R,C) return its fill, else BG.
+(3) Erase K-cells (V=0, BG!=0): same logic as BG cells - the K-cell is
+treated as transparent, allowing outer fills to show through.
+(4) Mapped K-cell, Dense=true: return V (K becomes V).
+(5) Mapped K-cell, Dense=false: return K (K preserved; BG cells in the bbox
+have already been filled by clause 2).
+(6) Unmapped non-BG cell: return original value.
+
+2.4 V=BG Fill and Punch-Through
+
+The most subtle case is V=BG (pair 1, color 1 -> 0). The bbox of color-1
+cells is filled with BG (=0), which overrides the larger color-2 fill (=3)
+inside the color-1 bbox. Because color-1's bbox is smaller than color-2's
+bbox and InfosAsc is sorted ascending, fill_for returns BG for any BG cell
+inside the color-1 region. The color-1 cells themselves are preserved (sparse,
+not erase mode). The result is a "hole" punched into the larger fill region.
+
+2.5 Dense Bbox Case
+
+Pair 4 has color-7 cells forming a solid rectangular block (all cells in the
+bbox are color-7). Dense=true is detected when length(KCells) == bbox area.
+In this case, K-cells become V in clause (4) above, effectively repainting
+the entire block.
+
+
+3. IMPLEMENTATION
+
+The rule is implemented in arc_benchmark_2.pl as arc2_named_rule(bbox_fill)
+and arc2_transform(bbox_fill, +Grid, -Out), with helper predicates all
+namespaced arc2_bxf_*. All lines carry ERC % comments per project rule.
+
+Key predicates:
+
+  arc2_bxf_legend_/5     - detect legend column pair and build K->V map
+  arc2_bxf_scan_up_/5    - collect contiguous non-BG rows upward
+  arc2_bxf_bbox_/5       - compute bounding box of cell list via foldl
+  arc2_bxf_update_bbox_/3 - foldl helper for bbox expansion
+  arc2_bxf_is_erase_/2   - test for erase sentinel (V=0, BG!=0)
+  arc2_bxf_fill_for_/4   - first-match fill from ascending-sorted infos
+  arc2_bxf_cell_val_/8   - six-clause cell value dispatch
+  arc2_bxf_build_row_/8  - build one output row via maplist
+  arc2_transform/3        - entry point: orchestrates the full pipeline
+
+
+4. BUGS ENCOUNTERED AND FIXED
+
+Bug 1: lambda compound term in foldl. SWI-Prolog rejected a compound
+`[R-C, ra-ca-rb-cb ^ (...) ^ (...)]>>true` lambda as unknown procedure.
+Fixed by extracting to arc2_bxf_update_bbox_/3 named predicate.
+
+Bug 2: inf/7 vs inf/8 arity mismatch. fill_for pattern-matched inf/8 but
+infos were inf/7 (Area is the keysort key, not inside inf). Fixed by using
+inf/7 in all fill_for clauses.
+
+Bug 3: Cut placement in legend detection. The original `between(0,NC2,LC), !`
+cut fired immediately after the first between call, forcing LC=0 and failing
+pairs 2 and 3 where LC > 0. Fixed using the commit idiom:
+`(between(0,NC2,LC), ..., Block \= [] -> true ; fail), !`.
+
+Bug 4: Missing legend rows. Pair 1 has two legend rows: (8,0)=1,(8,1)=0=BG
+and (9,0)=2,(9,1)=3. The original code required both columns to be non-BG,
+excluding row 8. Fixed by requiring only col LC != BG in scan_up_ and the
+Cands findall.
+
+
+5. VERIFICATION
+
+All four training pairs of task 9385bd28 pass. The test case is solved by
+arc2_induce_rule correctly inducing Rule=bbox_fill.
+
+
+6. WAVE 35 SCORE
+
+Previous score: 34/120 = 28.33% (Wave 34, rail_fill, task 271d71e2).
+Wave 35 score: 35/120 = 29.17%.
+Task solved: 9385bd28.
+Rule: bbox_fill.
+
+
+7. RELATED WORK
+
+Previous fill-based rules in this climb:
+
+  Wave 13 (odd_col): unique column section extraction.
+  Wave 16 (legend_fill): fill closed frame interiors using color lookup table.
+  Wave 21 (chain_link): legend-driven chain connection with BG-scan.
+  Wave 24 (shape_sort): hollow/solid shape classification and pairing.
+
+bbox_fill extends the legend-driven fill paradigm to bounding-box regions
+with a priority override system and three-way fill semantics.
+
+
+8. CONCLUSION
+
+Wave 35 demonstrates that even tasks requiring multi-modal fill semantics
+(standard, BG-value punch-through, erase) and priority-ordered overlap
+resolution can be captured by a compact Prolog rule. The ascending-sort trick
+for fill_for is particularly elegant: sorting once eliminates the need for
+multiple paint passes while naturally implementing "tighter box wins."

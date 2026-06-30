@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-30. Wave 32 complete: 32/120 = 26.67%.
+Last updated: 2026-06-30. Wave 35 complete: 35/120 = 29.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -154,6 +154,9 @@ Date        | Score      | Percent | Notes
 2026-06-30  |  30 / 120  | 25.00%  | Wave 30: frame-absorb frame block absorption graph; monochrome-first priority; chain-start processing
 2026-06-30  |  31 / 120  | 25.83%  | Wave 31: shape-beam rod fires beam through 1/3-shape chains; exit direction = open BG face of collinear 3-markers
 2026-06-30  |  32 / 120  | 26.67%  | Wave 32: shape-classify 2-color grid; holes=6; 8-connected border=2; hole-touching shapes=8; no-hole shapes=1
+2026-06-30  |  33 / 120  | 27.50%  | Wave 33: tile-stamp compact multi-color kernel tiled at each non-BG indicator cell position
+2026-06-30  |  34 / 120  | 28.33%  | Wave 34: rail-fill 0-bordered boxes with 9-rail arms fill 7s from arm side and shift toward outer rail
+2026-06-30  |  35 / 120  | 29.17%  | Wave 35: bbox-fill legend maps K->V; fill bounding box of K-cells with V; smaller bbox overrides larger
 
 
 COMPLETE SCORE PROGRESSION
@@ -267,6 +270,43 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 35 - 2026-06-30 - Score: 35/120 = 29.17%
+
+Date: 2026-06-30
+
+Confirmed score: 35 / 120 = 29.17%
+
+Rules added in this wave:
+  bbox_fill (WP-293, Layer 268)
+
+Task solved: 9385bd28 (4 training pairs; 2-column legend in bottom-left maps
+  object color K to fill color V; rule computes bounding box of each K-color's
+  cells and fills with V; smaller bboxes override larger ones in overlap regions;
+  three fill modes: standard fill, BG-value fill (punch-through), and erase;
+  sparse bboxes preserve K-cells, dense bboxes convert K-cells to V).
+  All 4 training pairs and test case pass.
+
+Score advance: 34/120 = 28.33% to 35/120 = 29.17%.
+
+Key bugs fixed:
+  Bug 1: foldl lambda compound term rejected; extracted to arc2_bxf_update_bbox_/3.
+  Bug 2: inf/7 vs inf/8 arity mismatch in fill_for; fixed by using inf/7.
+  Bug 3: Cut in legend detection forced LC=0; fixed with commit idiom.
+  Bug 4: Missing legend rows when right col = BG; fixed by requiring only
+    left col != BG in scan_up_ and Cands findall.
+
+Lessons:
+  The ascending-sort trick for fill priority avoids multi-pass painting.
+  Three-way fill semantics (standard/BG-fill/erase) all flow through the
+  same cell dispatch with different clauses.
+  Legend right-column can be BG - this encodes "fill with BG" (punch-through).
+
+Accomplishment: Acc_333.  Paper: Acc_333_ARC2_Wave35.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2496,6 +2536,7 @@ ALL SOLVED TASKS
 1818057f  - Wave 1  - recolor_plus(4,8)   - plus shapes of 4 become 8
 1ae2feb7  - Wave 25 - bar_extend          - divider splits grid; bar colors project periodic pattern right
 271d71e2  - Wave 34 - rail_fill           - 0-bordered boxes with 9-rail arms; 7s fill from arm side; box shifts toward outer rail
+9385bd28  - Wave 35 - bbox_fill           - legend maps K->V; fill bounding box of K-cells with V; smaller bbox overrides larger
 2ba387bc  - Wave 24 - shape_sort          - hollow/solid 4x4 block separation; paired by reading order; zero-block padding
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
@@ -2693,4 +2734,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 33: Tile-stamp compact multi-color kernel ti
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 34: Rail-fill 0-bordered boxes with 9-rail arms fill 7s from arm side and shift toward outer rail.
   Score: 34/120 = 28.33%. Task 271d71e2 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-30.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 35: Bbox-fill legend maps K->V; fill bounding box of K-cells with V; smaller bbox overrides larger.
+  Score: 35/120 = 29.17%. Task 9385bd28 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-30.
