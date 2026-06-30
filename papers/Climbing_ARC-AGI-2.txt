@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-30. Wave 35 complete: 35/120 = 29.17%.
+Last updated: 2026-06-30. Wave 36 complete: 36/120 = 30.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -157,6 +157,7 @@ Date        | Score      | Percent | Notes
 2026-06-30  |  33 / 120  | 27.50%  | Wave 33: tile-stamp compact multi-color kernel tiled at each non-BG indicator cell position
 2026-06-30  |  34 / 120  | 28.33%  | Wave 34: rail-fill 0-bordered boxes with 9-rail arms fill 7s from arm side and shift toward outer rail
 2026-06-30  |  35 / 120  | 29.17%  | Wave 35: bbox-fill legend maps K->V; fill bounding box of K-cells with V; smaller bbox overrides larger
+2026-06-30  |  36 / 120  | 30.00%  | Wave 36: slide-void block-movement BFS; void slides to farthest dead-end; adj-marker check moves void to marker pocket
 
 
 COMPLETE SCORE PROGRESSION
@@ -270,6 +271,46 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 36 - 2026-06-30 - Score: 36/120 = 30.00%
+
+Date: 2026-06-30
+
+Confirmed score: 36 / 120 = 30.00%
+
+Rules added in this wave:
+  slide_void (WP-294, Layer 269)
+
+Task solved: 332f06d7 (4 training pairs; void H x W block slides along river
+  of 1-cells to farthest dead-end in block-movement graph; dead-end = block
+  position with exactly 1 slide neighbour; if farthest dead-end is adjacent
+  to the 2-marker, void moves to marker position instead; all 4 training pairs
+  and test case pass).
+
+Score advance: 35/120 = 29.17% to 36/120 = 30.00%.
+
+Key bugs fixed:
+  Bug 1: Initial implementation used cell-level BFS instead of block-movement
+    BFS; distances were in grid hops, not block-movement hops.
+  Bug 2: Initial dead-end detection used face analysis (1 river face + 1 BG
+    face); correct criterion is exactly 1 slide neighbour in graph.
+  Bug 3: Initial rule selected NEAREST dead-end; correct rule selects FARTHEST.
+  Bug 4: Passability check required value == 1 only; correct is value in {0,1}
+    so block can traverse the original void footprint.
+
+Lessons:
+  Block-movement BFS is essential for rigid-block maze navigation tasks.
+  Farthest dead-end = far end of maze; nearest dead-end is misleading.
+  Graph-degree dead-end check (count slide neighbours == 1) is more robust
+  than face-type analysis (river/BG classification per face).
+  Treating 0-cells as passable allows the block to re-enter its starting
+  footprint, which is necessary when a maze path loops back through the void.
+
+Accomplishment: Acc_334.  Paper: Acc_334_ARC2_Wave36.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2538,6 +2579,7 @@ ALL SOLVED TASKS
 271d71e2  - Wave 34 - rail_fill           - 0-bordered boxes with 9-rail arms; 7s fill from arm side; box shifts toward outer rail
 9385bd28  - Wave 35 - bbox_fill           - legend maps K->V; fill bounding box of K-cells with V; smaller bbox overrides larger
 2ba387bc  - Wave 24 - shape_sort          - hollow/solid 4x4 block separation; paired by reading order; zero-block padding
+332f06d7  - Wave 36 - slide_void          - block-movement BFS; void slides to farthest dead-end; adj-marker moves to marker pocket
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
 38007db0  - Wave 13 - odd_col            - unique col section extraction per row section
@@ -2738,4 +2780,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 34: Rail-fill 0-bordered boxes with 9-rail a
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 35: Bbox-fill legend maps K->V; fill bounding box of K-cells with V; smaller bbox overrides larger.
   Score: 35/120 = 29.17%. Task 9385bd28 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-30.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 36: Slide-void block-movement BFS; void slides to farthest dead-end in block-movement graph; adjacency to 2-marker moves void to marker pocket.
+  Score: 36/120 = 30.00%. Task 332f06d7 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-30.
