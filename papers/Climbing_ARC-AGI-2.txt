@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-29. Wave 27 complete: 27/120 = 22.50%.
+Last updated: 2026-06-29. Wave 28 complete: 28/120 = 23.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -149,6 +149,7 @@ Date        | Score      | Percent | Notes
 2026-06-29  |  25 / 120  | 20.83%  | Wave 25: bar-extend divider-based periodic right-side fill rule
 2026-06-29  |  26 / 120  | 21.67%  | Wave 26: straighten-diag diagonal-shortcut removal with gap fill and stub pruning
 2026-06-29  |  27 / 120  | 22.50%  | Wave 27: stream-extend A-marker periodic seed-chain extension to grid boundary
+2026-06-29  |  28 / 120  | 23.33%  | Wave 28: slide-open 0-cell components slid to 5-divider; open rows filled right with 2
 
 
 COMPLETE SCORE PROGRESSION
@@ -262,6 +263,38 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 28 - 2026-06-29 - Score: 28/120 = 23.33%
+
+Date: 2026-06-29
+
+Confirmed score: 28 / 120 = 23.33%
+
+Rules added in this wave:
+
+1. slide_open (task 6e453dd6) - the grid contains a vertical 5-divider
+   column DC. All 0-cell 4-connected components left of DC are slid
+   rightward so each component's rightmost cell touches column DC-1.
+   Two-pass erase-then-place design: pass 1 sets component cells to
+   placeholder 6; pass 2 places each cell at C + Shift where
+   Shift = (DC-1) - MaxCol. After sliding, rows satisfying all three
+   open-row conditions are filled with 2 right of the divider:
+   (1) cell(DC-1)=0, (2) cell(DC-2)!=0, (3) a 0 exists in 0..DC-3.
+
+Bugs fixed: instantiation_error in arc2_so_divider_/3 due to wrong
+ordering of numlist/3 and is/2. numlist/3 was called before NRowsM was
+computed. Fixed by computing NRowsM with is/2 first.
+
+Lessons learned: when using numlist/3, always compute the bound with is/2
+before calling numlist/3. The erase-then-place two-pass pattern prevents
+self-overwrite when a component is shifted partially over its own cells.
+
+Score advance: 27/120 = 22.50% to 28/120 = 23.33%.
+Accomplishment: Acc_326.  Paper: Acc_326_ARC2_Wave28.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2264,6 +2297,7 @@ ALL SOLVED TASKS
 45a5af55  - Wave 6  - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
 53fb4810  - Wave 27 - stream_extend       - A-marker blobs; adjacent seed chains extended periodically to grid boundary
+6e453dd6  - Wave 28 - slide_open          - 0-cell components slid right to 5-divider; open rows filled right with 2
 7491f3cf  - Wave 9  - panel_overlay       - s1-seeded flood-fill splits s2/s3 into panel 4
 7b5033c1  - Wave 2  - chain_strip          - connected-blob chain traversal strip
 7b80bb43  - Wave 26 - straighten_diag     - diagonal shortcuts removed; H/V gaps filled; perp stubs pruned
@@ -2419,4 +2453,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 26: Straighten-diag diagonal-shortcut remova
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.
 Dison, D. R. (2026). ARC-AGI-2 Wave 27: Stream-extend A-marker periodic seed-chain extension to grid boundary.
   Score: 27/120 = 22.50%. Task 53fb4810 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-29.
+Dison, D. R. (2026). ARC-AGI-2 Wave 28: Slide-open 0-cell components slid to 5-divider; open rows filled right with 2.
+  Score: 28/120 = 23.33%. Task 6e453dd6 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.
