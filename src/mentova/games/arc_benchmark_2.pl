@@ -5550,6 +5550,115 @@ arc2_sx_flood4_(All, [H|Stack], Vis0, Acc0, Comp, Vis) :-
     ).
 
 % ---------------------------------------------------------------------------
+% WAVE 28 — slide_open (WP-286, Layer 261)
+% Task 6e453dd6
+% Rule: A vertical 5-divider splits the grid. Zero-shapes (0-colored blobs)
+% on the left of the divider slide right until their rightmost column touches
+% the divider (DC-1). After sliding, any row where: (1) the cell immediately
+% left of the divider is 0, (2) the cell one step further left is BG, and
+% (3) there is another 0 to the left of that gap, is an "open" row — fill
+% all cells to the right of the divider with 2 in that row.
+% ---------------------------------------------------------------------------
+
+% Register the slide_open rule.
+arc2_named_rule(slide_open).
+
+% arc2_transform(slide_open, +Grid, -Out): top-level transform.
+arc2_transform(slide_open, Grid, Out) :-
+    length(Grid, NRows),
+    Grid = [FR|_], length(FR, NCols),
+    % Find the 5-divider column (all 5s in that column).
+    arc2_so_divider_(Grid, NRows, DC),
+    % Collect all 0-cells left of the divider.
+    findall(R-C,
+        (nth0(R, Grid, Row), nth0(C, Row, 0), C < DC),
+        ZeroCells),
+    % Find 4-connected components of zero cells.
+    arc2_so_comps4_(ZeroCells, Comps),
+    % Slide each component right to touch divider, thread through grid.
+    foldl(arc2_so_slide_(DC, NRows, NCols), Comps, Grid, Shifted),
+    % Fill right of divider with 2 at open rows.
+    arc2_so_fill_open_(Shifted, NRows, NCols, DC, Out).
+
+% arc2_so_divider_(+Grid, +NRows, -DC): find the column where all values are 5.
+arc2_so_divider_(Grid, NRows, DC) :-
+    Grid = [Row|_], length(Row, NCols),
+    NCols1 is NCols - 1,
+    between(0, NCols1, DC),
+    NRowsM is NRows - 1,
+    numlist(0, NRowsM, RList),
+    forall(member(R, RList),
+           (nth0(R, Grid, Row2), nth0(DC, Row2, 5))).
+
+% arc2_so_comps4_(+Cells, -Comps): partition cells into 4-connected components.
+arc2_so_comps4_(Cells, Comps) :-
+    arc2_so_comps4_iter_(Cells, Cells, [], Comps).
+
+arc2_so_comps4_iter_([], _, _, []).
+arc2_so_comps4_iter_([H|T], All, Vis0, Comps) :-
+    ( memberchk(H, Vis0) ->
+        arc2_so_comps4_iter_(T, All, Vis0, Comps)
+    ;
+        arc2_so_flood4_(All, [H], Vis0, [], Comp, Vis1),
+        Comps = [Comp|Tail],
+        arc2_so_comps4_iter_(T, All, Vis1, Tail)
+    ).
+
+arc2_so_flood4_(_, [], Vis, Acc, Acc, Vis).
+arc2_so_flood4_(All, [H|Stack], Vis0, Acc0, Comp, Vis) :-
+    ( memberchk(H, Vis0) ->
+        arc2_so_flood4_(All, Stack, Vis0, Acc0, Comp, Vis)
+    ;
+        H = R-Co,
+        findall(NR-NC,
+            (member(DR-DC2, [-1-0, 0-(-1), 0-1, 1-0]),
+             NR is R  + DR, NC is Co + DC2,
+             memberchk(NR-NC, All),
+             \+ memberchk(NR-NC, Vis0)),
+            New),
+        append(New, Stack, Stack1),
+        arc2_so_flood4_(All, Stack1, [H|Vis0], [H|Acc0], Comp, Vis)
+    ).
+
+% arc2_so_slide_(+DC, +NRows, +NCols, +Comp, +G0, -G1):
+% slide component right so max col = DC-1.
+arc2_so_slide_(DC, _NRows, _NCols, Comp, G0, G1) :-
+    findall(C, member(_-C, Comp), Cols),
+    max_list(Cols, MaxCol),
+    Shift is (DC - 1) - MaxCol,
+    % Clear original positions.
+    foldl([R-C, GI, GO]>>(arc2_set_cell_(GI, R, C, 6, GO)), Comp, G0, G2),
+    % Place shifted positions.
+    foldl([R-C, GI, GO]>>(
+        C2 is C + Shift,
+        arc2_set_cell_(GI, R, C2, 0, GO)
+    ), Comp, G2, G1).
+
+% arc2_so_fill_open_(+Grid, +NRows, +NCols, +DC, -Out):
+% for each row where cell(DC-1)=0, cell(DC-2)!=0, and another 0 exists
+% left of DC-2, fill the entire right side (DC+1..NCols-1) with 2.
+arc2_so_fill_open_(Grid, NRows, NCols, DC, Out) :-
+    DC1 is DC - 1,
+    DC2 is DC - 2,
+    NRowsM is NRows - 1,
+    numlist(0, NRowsM, RList0),
+    foldl([R, GI, GO]>>(
+        arc2_cell_(GI, R, DC1, VRight),
+        arc2_cell_(GI, R, DC2, VGap),
+        ( VRight =:= 0, VGap =\= 0,
+          findall(C, (between(0, DC2, C), C =\= DC2,
+                      arc2_cell_(GI, R, C, 0)), Lefts),
+          Lefts \= [] ->
+            DC1s is DC + 1, NCols1 is NCols - 1,
+            numlist(DC1s, NCols1, FillCols),
+            foldl([FC, GII, GOO]>>(arc2_set_cell_(GII, R, FC, 2, GOO)),
+                  FillCols, GI, GO)
+        ;
+            GO = GI
+        )
+    ), RList0, Grid, Out).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

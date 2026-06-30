@@ -6,8 +6,8 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Types">
-  <img src="https://img.shields.io/badge/accomplishments-325-FF6B35?style=for-the-badge" alt="325 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-27%2F120%20%3D%2022.50%25-orange?style=for-the-badge" alt="ARC-AGI-2: 27/120 = 22.50%">
+  <img src="https://img.shields.io/badge/accomplishments-326-FF6B35?style=for-the-badge" alt="326 Accomplishments">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-28%2F120%20%3D%2023.33%25-orange?style=for-the-badge" alt="ARC-AGI-2: 28/120 = 23.33%">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,9 +99,9 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **27/120 = 22.50%** — Wave 27; climbing underway |
-| Documented accomplishments | **325 accomplished** |
-| Scientific papers | **325 published** — one per accomplishment |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **28/120 = 23.33%** — Wave 28; climbing underway |
+| Documented accomplishments | **326 accomplished** |
+| Scientific papers | **326 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 27 complete (27/120 = 22.50%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 28 complete (28/120 = 23.33%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -235,7 +235,7 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         307 scientific papers — one per accomplishment and benchmark milestone
+├── papers/         326 scientific papers — one per accomplishment and benchmark milestone
 ├── announcements/  304 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
@@ -369,7 +369,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-307 scientific papers, one per accomplished milestone.
+326 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -563,6 +563,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_300` | ARC-AGI-2 Wave 2 — BFS flood-fill connected-component analysis implemented; chain_strip rule solves task 7b5033c1. Score: 2/120 = 1.67%. |
 | `Acc_301` | ARC-AGI-2 Wave 3 — checkerboard diagonal arm projection; arm_endpoint_ray rule solves task 80a900e0. Score: 3/120 = 2.50%. |
 | `Acc_312` | ARC-AGI-2 Wave 14 — reflect-axis shape reflection across 2-marker axis; reflect_axis rule solves task 7ed72f31 (each shape reflected across nearest 2-cluster axis: point, vertical, or horizontal). Score: 14/120 = 11.67%. |
+| `Acc_326` | ARC-AGI-2 Wave 28 — slide_open rule solves task 6e453dd6 (0-cell components slide right to 5-divider; two-pass erase-then-place; open rows filled right of divider with 2). Score: 28/120 = 23.33%. |
 | `Acc_325` | ARC-AGI-2 Wave 27 — stream_extend rule solves task 53fb4810 (A-marker blobs serve as anchors; adjacent seed chains extended periodically to grid boundary; tiling formula: Chain[D mod P]). Score: 27/120 = 22.50%. |
 | `Acc_324` | ARC-AGI-2 Wave 26 — straighten_diag rule solves task 7b80bb43 (diagonal-only cells removed; orthogonal gaps bridged by scanning from anchors; perpendicular stubs in DiagNbr pruned iteratively). Score: 26/120 = 21.67%. |
 | `Acc_323` | ARC-AGI-2 Wave 25 — bar_extend rule solves task 1ae2feb7 (divider column splits grid; bar primary color period CP and secondary CS define a period-CP*CS fill pattern for the right side). Score: 25/120 = 20.83%. |
@@ -782,9 +783,9 @@ ORCID: 0009-0001-9246-5758 · [LinkedIn](https://www.linkedin.com/in/d-r-dison/)
 
 ## License
 
-**The Attribution. No Profit, No Problem License** — see [LICENSE.txt](LICENSE.txt)
+**The Attribution Always; No Profit, No Problem License.** — see [LICENSE.txt](LICENSE.txt)
 
-Free for non-commercial use (individuals, students, educators, non-profits, academic researchers) with required attribution to PrologAI, Mentova, and D. R. Dison.
+Free for non-commercial use (individuals, students, educators, non-profits, academic researchers) with required attribution to Mentova, PrologAI, AIU (Artificial Intelligence University), and D. R. Dison.
 
 Commercial and profit-making use requires a negotiated license including a percentage-of-profits royalty. Contact [ai.university.aiu@gmail.com](mailto:ai.university.aiu@gmail.com) before any commercial use begins.
 
