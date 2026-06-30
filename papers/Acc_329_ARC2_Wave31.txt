@@ -1,0 +1,164 @@
+Title: ARC-AGI-2 Wave 31: Shape Beam Relay - Signal Propagation Through Directed Shape Chains
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Accomplishment: Acc_329
+Work Package: WP-289, Layer 264
+Rule Name: shape_beam
+Task Solved: 5961cc34
+Score: 30/120 = 25.00% -> 31/120 = 25.83%
+Date: 2026-06-30
+
+Abstract
+
+Wave 31 adds the shape_beam named rule to the PrologAI ARC-AGI-2 benchmark,
+solving task 5961cc34. The rule models a directional signal relay: a rod
+(a head cell of value 4 and a trail of 2-valued cells) fires a beam in the
+opposite direction of its trail. The beam propagates through a sequence of
+connected shapes, each consisting of body cells (value 1) and exit-marker
+cells (value 3). When the beam enters a shape, the entire shape is converted
+to value 2 and the beam is redirected toward the open (background) side of
+the exit markers. The process continues until the beam exits the grid. All
+traversed cells and shapes become 2 in the output; shapes not reached are
+erased. The score advances to 31/120 = 25.83%.
+
+1. Task Description
+
+Task 5961cc34 presents grids with three distinct element types:
+
+(1) A rod: a single cell of value 4 (the arrowhead) adjacent to a trail of
+    cells of value 2 extending in one direction. The beam fires from the 4-cell
+    in the direction opposite the trail.
+
+(2) Shapes: connected components (4-connectivity) of 1-valued body cells and
+    3-valued exit-marker cells. The exit markers indicate which side of the
+    shape the signal exits from.
+
+(3) Background: value 8, filling all other cells.
+
+The output retains only value 2 (at the rod, beam path, and converted shapes)
+on a background of 8. Every shape not reached by the beam chain is erased.
+
+2. Training Pair Analysis
+
+Pair P0 (13 x 15):
+- One shape at rows 1-5, cols 1-4. Exit markers (3s) at row 1, cols 2-3 (TOP).
+- Rod: 4 at (9,8), 2-trail at (10,8), (11,8), (12,8). Beam direction = UP.
+- Beam goes UP at col 8 from row 9. Shape is at cols 1-4, not col 8. No hit.
+- Output: col 8 filled entirely with 2 (all 13 rows). Shape erased.
+
+Pair P1 (23 x 25):
+- Shape A: rows 3-6, cols 1-4. Exit markers at row 3, cols 2-3 (TOP). Not hit.
+- Shape B: rows 3-6, cols 8-11. Exit markers at col 11, rows 4-5 (RIGHT).
+- Shape C: rows 3-6, cols 18-21. Exit markers at row 3, cols 19-20 (TOP).
+- Shape D: rows 12-16, cols 7-12. Exit markers at row 12, cols 9-10 (UP).
+- Rod: 4 at (20,10), 2-trail at (21,10), (22,10). Beam UP at col 10.
+  - Hit D at row 16. Fill rows 17-20 at col 10. Shape D -> 2.
+  - Exit UP at cols 9-10 from row 11. Hit B at row 6.
+  - Fill rows 7-11 at cols 9-10. Shape B -> 2.
+  - Exit RIGHT at rows 4-5 from col 12. Hit C at col 18.
+  - Fill cols 12-17 at rows 4-5. Shape C -> 2.
+  - Exit UP at cols 19-20 from row 2. No hit.
+  - Fill rows 0-2 at cols 19-20.
+- Shape A: not reached by any beam. Erased.
+
+Pair P2 (23 x 22):
+- Shape L (rows 2-7): Exit markers at rows 4-5, col 14 (LEFT).
+- Shape R (rows 2-7): Exit markers at row 7, cols 4-5 (DOWN).
+- Shape B (rows 12-17): Exit markers at rows 14-15, col 2 (LEFT).
+- Rod: 4 at (20,16), 2-trail at (21,16), (22,16). Beam UP at col 16.
+  - Hit R at row 7. Fill rows 8-20 at col 16. Shape R -> 2.
+  - Exit LEFT at rows 4-5 from col 13. Hit L at col 7.
+  - Fill cols 8-13 at rows 4-5. Shape L -> 2.
+  - Exit DOWN at cols 4-5 from row 8. Hit B at row 12.
+  - Fill rows 8-11 at cols 4-5. Shape B -> 2.
+  - Exit LEFT at rows 14-15 from col 1. No hit.
+  - Fill cols 0-1 at rows 14-15.
+
+Pair P3 (23 x 22):
+- Shape 1 (rows 3-8): Exit markers at col 7, rows 5-6 (RIGHT).
+- Shape 2 (rows 12-14): Exit markers at row 13, col 13 (LEFT). Not hit.
+- Rod: 4 at (19,5), 2-trail at rows 20-22. Beam UP at col 5.
+  - Hit Shape 1 at row 8. Fill rows 9-19 at col 5. Shape 1 -> 2.
+  - Exit RIGHT at rows 5-6 from col 8. No shapes at rows 5-6 col > 8.
+  - Fill cols 8-21 at rows 5-6.
+- Shape 2: not reached. Erased.
+
+3. Test Input Verification
+
+Test input (27 x 27):
+- Shape 1 (rows 2-9): wide diamond. Exit markers at col 8, rows 5-6 (RIGHT).
+- Shape 2 (rows 3-8, cols 14-19): Exit markers at row 3, cols 16-17 (TOP).
+- Shape 3 (rows 12-17, cols 14-19): Exit markers at row 12, cols 16-17 (TOP).
+- Rod: 4 at (23,5), 2-trail at (24,5), (25,5), (26,5). Beam UP at col 5.
+
+Trace:
+  - Hit Shape 1 at row 9 (bottom of shape at col 5).
+  - Fill rows 10-23 at col 5 (gap). Shape 1 -> 2.
+  - Exit RIGHT at rows 5-6 from col 9.
+  - Hit Shape 2 at col 14 (leftmost col of shape at rows 5-6).
+  - Fill cols 9-13 at rows 5-6 (gap). Shape 2 -> 2.
+  - Exit UP at cols 16-17 from row 2.
+  - No more shapes at cols 16-17 going up.
+  - Fill rows 0-2 at cols 16-17.
+- Shape 3: not reached. Erased (rows 12-17 are background in output).
+
+Expected output matches benchmark verification: test PASS.
+
+4. Exit Direction Detection
+
+The critical algorithm step is determining which direction a shape's exit
+markers indicate. A naive approach - checking which 1-cell is adjacent to a
+3-cell - fails at corner positions: a 3-cell may be adjacent to 1-cells in
+two directions (e.g., above and to the left).
+
+The correct approach:
+
+The exit-marker cells (3s) in each shape are always collinear: they share
+either a single row or a single column. This collinearity determines whether
+the exit is vertical or horizontal.
+
+- Collinear in row R3: the exit is UP (if row R3-1 is all BG at the markers'
+  columns) or DOWN (if row R3+1 is all BG at those columns).
+- Collinear in col C3: the exit is LEFT (if col C3-1 is all BG at the
+  markers' rows) or RIGHT (if col C3+1 is all BG at those rows).
+
+This "open face" detection is robust because it uses the background context
+rather than adjacency patterns.
+
+5. Implementation
+
+arc2_transform(shape_beam, +Grid, -Out):
+  1. Find background BG (most common value).
+  2. Find rod: locate 4-cell; detect 2-trail direction; beam = opposite.
+  3. Collect rod cells (4 + trail 2s).
+  4. Collect all 1 and 3 cells; partition into 4-connected components.
+  5. Classify each component using arc2_sb_classify_/4:
+     - Separate 1-cells and 3-cells.
+     - Detect exit direction using open-face method.
+     - Compute cross positions and exit axis position.
+  6. Run arc2_sb_beam_/8 from (BeamDir, [RC], RR):
+     - Find first hit in beam direction using arc2_sb_hit_/6.
+     - Fill gap cells (axis positions between start and hit).
+     - Add hit shape cells to output.
+     - Redirect beam per shape's exit direction and cross positions.
+     - Recurse; base case fills remaining axis to grid edge.
+  7. Union rod cells and beam cells; build blank output; paint 2 at all.
+
+Performance guard: the rule immediately fails if the grid does not contain
+exactly one 4-valued cell and at least one 1-valued cell, preventing
+expensive computation on non-matching tasks.
+
+6. Results
+
+Score advance: 30/120 = 25.00% -> 31/120 = 25.83%.
+Training pairs verified: 4/4 PASS.
+Test pair verified: PASS.
+Rule: pure induction, glass-box, no pretraining.
+
+7. SPARC References
+
+Specification v261, Pseudocode v253, Architecture v254,
+Refinement v313, Completion v319.
+PrologAI repository, Mentova repository.

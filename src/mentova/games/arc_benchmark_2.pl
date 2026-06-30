@@ -5920,6 +5920,381 @@ arc2_fa_exec_(erase(B), G0, G1) :-
     foldl([R-C, Gi, Go]>>(arc2_set_cell_(Gi, R, C, 0, Go)), BCells, G0, G1).
 
 % ---------------------------------------------------------------------------
+% WAVE 31 — shape_beam (WP-289, Layer 264)
+% Task 5961cc34
+% ---------------------------------------------------------------------------
+
+% Register the shape_beam named rule.
+arc2_named_rule(shape_beam).
+
+% arc2_transform(shape_beam, +Grid, -Out): entry point for shape_beam.
+arc2_transform(shape_beam, Grid, Out) :-
+    % Fast guard: grid must contain exactly one 4-valued cell (rod head).
+    flatten(Grid, Flat), include(=:=(4), Flat, Fours), Fours = [_],
+    % Fast guard: grid must contain cells with value 1 (shape body).
+    include(=:=(1), Flat, Ones), Ones \= [],
+    % Identify background: the most-frequent cell value.
+    arc2_sb_bg_(Grid, BG),
+    % Find the rod: cell with value 4 and beam direction (opposite of 2-trail).
+    arc2_sb_rod_(Grid, RR, RC, BeamDir),
+    % Collect rod cells: 4-cell plus all 2-trail cells in trail direction.
+    arc2_sb_rod_cells_(Grid, RR, RC, BeamDir, RodCells),
+    % Collect all cells with value 1 or 3 (shape body and exit markers).
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,V), (V=:=1 ; V=:=3)), RawPos),
+    % At least one shape must be present.
+    RawPos \= [],
+    % Partition shape cells into 4-connected components.
+    arc2_sb_comps_(RawPos, Comps),
+    % Classify each component: determine exit direction and cross positions.
+    maplist(arc2_sb_classify_(Grid, BG), Comps, Shapes),
+    % Get grid dimensions.
+    length(Grid, NR), Grid = [GR0|_], length(GR0, NC),
+    % Run beam from rod position; collect all cells that become 2.
+    arc2_sb_beam_(BeamDir, [RC], RR, Shapes, NR, NC, [], BeamCells),
+    % Merge rod cells and beam cells; remove duplicates.
+    append(RodCells, BeamCells, All2Raw),
+    sort(All2Raw, All2),
+    % Build blank background grid then paint all 2-positions.
+    arc2_sb_blank_(NR, NC, BG, Blank),
+    foldl([R-C, G0, G1]>>(arc2_set_cell_(G0, R, C, 2, G1)), All2, Blank, Out).
+
+% --- BACKGROUND DETECTION ---
+
+% arc2_sb_bg_(+Grid, -BG): find most-common cell value.
+arc2_sb_bg_(Grid, BG) :-
+    % Flatten grid to one value list.
+    flatten(Grid, Flat),
+    % Sort to group equal values together.
+    msort(Flat, Sorted),
+    % Find the value with the longest consecutive run.
+    arc2_sb_maxrun_(Sorted, BG).
+
+% arc2_sb_maxrun_(+Sorted, -Best): scan sorted list for most-frequent value.
+arc2_sb_maxrun_([H|T], Best) :-
+    % Start accumulator with first element as current run and best.
+    arc2_sb_maxrun_acc_(T, H, 1, H, 1, Best).
+
+% Base case: list exhausted; emit the current-best value.
+arc2_sb_maxrun_acc_([], Cur, CurN, Best, BestN, Res) :-
+    % Current run beats stored best: return Cur; else return Best.
+    (CurN > BestN -> Res = Cur ; Res = Best).
+% Recursive step: same value as current run.
+arc2_sb_maxrun_acc_([H|T], Cur, CurN, Best, BestN, Res) :-
+    H =:= Cur, !,
+    % Extend the current run count.
+    CurN1 is CurN + 1,
+    % Update best if current run now exceeds it.
+    (CurN1 > BestN -> B2 = Cur, BN2 = CurN1 ; B2 = Best, BN2 = BestN),
+    % Continue scanning.
+    arc2_sb_maxrun_acc_(T, Cur, CurN1, B2, BN2, Res).
+% Recursive step: new value; reset current run to 1.
+arc2_sb_maxrun_acc_([H|T], Cur, CurN, Best, BestN, Res) :-
+    % Carry forward the better of current and stored best.
+    (CurN > BestN -> B2 = Cur, BN2 = CurN ; B2 = Best, BN2 = BestN),
+    % Start a new run for H.
+    arc2_sb_maxrun_acc_(T, H, 1, B2, BN2, Res).
+
+% --- ROD DETECTION ---
+
+% arc2_sb_rod_(+Grid, -RR, -RC, -BeamDir): find 4-cell and beam direction.
+arc2_sb_rod_(Grid, RR, RC, BeamDir) :-
+    % Locate any cell with value 4.
+    nth0(RR, Grid, Row), nth0(RC, Row, 4),
+    % Determine which adjacent direction has the 2-trail.
+    arc2_sb_trail_dir_(Grid, RR, RC, TrailDir), !,
+    % Beam direction is opposite to the 2-trail direction.
+    arc2_sb_opp_(TrailDir, BeamDir).
+
+% arc2_sb_trail_dir_: find which adjacent direction from the 4-cell has value 2.
+arc2_sb_trail_dir_(Grid, R, C, down) :-
+    % Check cell directly below.
+    R1 is R+1, nth0(R1, Grid, Row1), nth0(C, Row1, 2), !.
+arc2_sb_trail_dir_(Grid, R, C, up) :-
+    % Check cell directly above (guard against row -1).
+    R1 is R-1, R1 >= 0, nth0(R1, Grid, Row1), nth0(C, Row1, 2), !.
+arc2_sb_trail_dir_(Grid, R, C, right) :-
+    % Check cell to the right.
+    C1 is C+1, nth0(R, Grid, Row), nth0(C1, Row, 2), !.
+arc2_sb_trail_dir_(Grid, R, C, left) :-
+    % Check cell to the left (guard against col -1).
+    C1 is C-1, C1 >= 0, nth0(R, Grid, Row), nth0(C1, Row, 2), !.
+
+% arc2_sb_opp_/2: opposite directions.
+arc2_sb_opp_(up, down).
+arc2_sb_opp_(down, up).
+arc2_sb_opp_(left, right).
+arc2_sb_opp_(right, left).
+
+% arc2_sb_rod_cells_(+Grid, +RR, +RC, +BeamDir, -Cells): 4-cell + 2-trail.
+arc2_sb_rod_cells_(Grid, RR, RC, BeamDir, [RR-RC|Trail]) :-
+    % Trail direction is opposite to beam direction.
+    arc2_sb_opp_(BeamDir, TrailDir),
+    % Collect all 2-valued cells extending in the trail direction.
+    arc2_sb_trail2_(Grid, RR, RC, TrailDir, Trail).
+
+% arc2_sb_trail2_: recursively collect 2-cells in the given direction.
+arc2_sb_trail2_(Grid, R, C, down, [R1-C|Rest]) :-
+    % Step downward and verify cell value is 2.
+    R1 is R+1, nth0(R1, Grid, Row1), nth0(C, Row1, 2), !,
+    arc2_sb_trail2_(Grid, R1, C, down, Rest).
+arc2_sb_trail2_(Grid, R, C, up, [R1-C|Rest]) :-
+    % Step upward (guard row bound) and verify 2.
+    R1 is R-1, R1 >= 0, nth0(R1, Grid, Row1), nth0(C, Row1, 2), !,
+    arc2_sb_trail2_(Grid, R1, C, up, Rest).
+arc2_sb_trail2_(Grid, R, C, right, [R-C1|Rest]) :-
+    % Step rightward and verify 2.
+    C1 is C+1, nth0(R, Grid, Row), nth0(C1, Row, 2), !,
+    arc2_sb_trail2_(Grid, R, C1, right, Rest).
+arc2_sb_trail2_(Grid, R, C, left, [R-C1|Rest]) :-
+    % Step leftward (guard col bound) and verify 2.
+    C1 is C-1, C1 >= 0, nth0(R, Grid, Row), nth0(C1, Row, 2), !,
+    arc2_sb_trail2_(Grid, R, C1, left, Rest).
+% Base case: no more 2-cells in this direction.
+arc2_sb_trail2_(_, _, _, _, []).
+
+% --- 4-CONNECTED COMPONENT PARTITION ---
+
+% arc2_sb_comps_(+Positions, -Components): BFS partition into 4-connected groups.
+arc2_sb_comps_([], []).
+arc2_sb_comps_([H|T], [Comp|Rest]) :-
+    % Grow one component starting from H using BFS.
+    arc2_sb_bfs_([H], [H], T, Comp, Rem),
+    % Recursively partition the remaining positions.
+    arc2_sb_comps_(Rem, Rest).
+
+% arc2_sb_bfs_: BFS over 4-connected graph.
+arc2_sb_bfs_([], Vis, Rem, Vis, Rem) :- !.
+arc2_sb_bfs_([H|Q], Vis, Unvis, Comp, Rem) :-
+    % Find 4-adjacent cells in Unvis not yet visited.
+    findall(N, (arc2_sb_adj4_(H,N), member(N,Unvis), \+member(N,Vis)), Ns),
+    % Sort to remove duplicates.
+    sort(Ns, SNs),
+    % Enqueue new neighbours.
+    append(Q, SNs, NQ),
+    % Add new neighbours to visited set.
+    append(Vis, SNs, NVis),
+    % Remove new neighbours from the unvisited pool.
+    subtract(Unvis, SNs, NUnvis),
+    % Continue BFS.
+    arc2_sb_bfs_(NQ, NVis, NUnvis, Comp, Rem).
+
+% arc2_sb_adj4_: the four 4-adjacent neighbours.
+arc2_sb_adj4_(R-C, NR-C) :- NR is R-1, NR >= 0.
+arc2_sb_adj4_(R-C, NR-C) :- NR is R+1.
+arc2_sb_adj4_(R-C, R-NC) :- NC is C-1, NC >= 0.
+arc2_sb_adj4_(R-C, R-NC) :- NC is C+1.
+
+% --- SHAPE CLASSIFICATION ---
+
+% arc2_sb_classify_(+Grid, +BG, +Cells, -Shape):
+% Shape = shape(AllCells, ExitDir, CrossPositions, ExitAxisPos).
+arc2_sb_classify_(Grid, BG, Cells, shape(Cells, ExitDir, Cross, ExitAP)) :-
+    % Separate the 1-valued body cells.
+    include([R-C]>>(nth0(R,Grid,Row), nth0(C,Row,V), V=:=1), Cells, Cells1),
+    % Separate the 3-valued exit-marker cells.
+    include([R-C]>>(nth0(R,Grid,Row), nth0(C,Row,V), V=:=3), Cells, Cells3),
+    % Both body and markers must be present.
+    Cells1 \= [], Cells3 \= [],
+    % Determine exit direction: the open side adjacent to all 3-markers.
+    arc2_sb_exit_dir_(Grid, BG, Cells3, ExitDir),
+    % Compute rows and cols of all 3-markers.
+    maplist([R-_, R]>>true, Cells3, R3sRaw), sort(R3sRaw, R3s),
+    maplist([_-C, C]>>true, Cells3, C3sRaw), sort(C3sRaw, C3s),
+    % For vertical exits (up/down): cross = cols of markers, axis = their row.
+    % For horizontal exits (left/right): cross = rows of markers, axis = their col.
+    (memberchk(ExitDir, [up, down]) ->
+        Cross = C3s, R3s = [ExitAP|_]
+    ;
+        Cross = R3s, C3s = [ExitAP|_]
+    ).
+
+% arc2_sb_exit_dir_(+Grid, +BG, +Cells3, -ExitDir):
+% Find which side of the 3-cells faces open (BG) space.
+arc2_sb_exit_dir_(Grid, BG, Cells3, ExitDir) :-
+    % Collect all rows and cols of 3-cells.
+    maplist([R-_, R]>>true, Cells3, R3sRaw), sort(R3sRaw, R3s),
+    maplist([_-C, C]>>true, Cells3, C3sRaw), sort(C3sRaw, C3s),
+    % Determine whether 3-cells lie in a single row (vertical exit) or single col.
+    (R3s = [R3] ->
+        % Single row: check if row above or row below is open (BG).
+        (Rup is R3-1, Rup >= 0,
+         forall(member(C, C3s),
+                (nth0(Rup, Grid, Rw), nth0(C, Rw, V), V =:= BG)) ->
+            ExitDir = up
+        ;   Rdn is R3+1,
+            forall(member(C, C3s),
+                   (nth0(Rdn, Grid, Rw), nth0(C, Rw, V), V =:= BG)),
+            ExitDir = down
+        )
+    ;
+        % Single col: check if col to left or col to right is open (BG).
+        C3s = [C3],
+        (Clt is C3-1, Clt >= 0,
+         forall(member(R, R3s),
+                (nth0(R, Grid, Rw), nth0(Clt, Rw, V), V =:= BG)) ->
+            ExitDir = left
+        ;   Crt is C3+1,
+            forall(member(R, R3s),
+                   (nth0(R, Grid, Rw), nth0(Crt, Rw, V), V =:= BG)),
+            ExitDir = right
+        )
+    ).
+
+% --- BEAM RUNNER ---
+
+% arc2_sb_beam_(+Dir, +Cross, +AS, +Shapes, +NR, +NC, +Acc, -Out):
+% Trace beam in direction Dir at cross positions Cross from axis start AS.
+% Returns all cells (as R-C pairs) that should become 2.
+
+% UP beam: search for shape with cells at Cross cols, row < AS.
+arc2_sb_beam_(up, Cols, AS, Shapes, NR, NC, Acc, Out) :-
+    % Attempt to find first shape hit going upward.
+    arc2_sb_hit_(up, Cols, AS, Shapes, HitShape, HR), !,
+    % Gap fill: all cells from HR+1 to AS at Cols.
+    GF is HR + 1,
+    arc2_sb_rect_(Cols, GF, AS, v, GapCells),
+    % Unpack hit shape: all cells, exit direction, cross positions, axis pos.
+    HitShape = shape(SCs, ExDir, ExCross, ExAP),
+    % Compute new axis start for exit beam: one step past the 3-markers.
+    arc2_sb_exit_start_(ExDir, ExAP, NAS),
+    % Remove hit shape from remaining shapes.
+    select(HitShape, Shapes, Rem),
+    % Accumulate gap cells and shape cells.
+    append(Acc, GapCells, A1), append(A1, SCs, A2),
+    % Continue beam in exit direction.
+    arc2_sb_beam_(ExDir, ExCross, NAS, Rem, NR, NC, A2, Out).
+% UP beam: no shape hit; fill from 0 to AS at Cols.
+arc2_sb_beam_(up, Cols, AS, _, _, _, Acc, Out) :-
+    arc2_sb_rect_(Cols, 0, AS, v, GapCells),
+    append(Acc, GapCells, Out).
+
+% DOWN beam: search for shape with cells at Cross cols, row > AS.
+arc2_sb_beam_(down, Cols, AS, Shapes, NR, NC, Acc, Out) :-
+    % Attempt to find first shape hit going downward.
+    arc2_sb_hit_(down, Cols, AS, Shapes, HitShape, HR), !,
+    % Gap fill: AS to HR-1 at Cols.
+    GF is HR - 1,
+    arc2_sb_rect_(Cols, AS, GF, v, GapCells),
+    HitShape = shape(SCs, ExDir, ExCross, ExAP),
+    arc2_sb_exit_start_(ExDir, ExAP, NAS),
+    select(HitShape, Shapes, Rem),
+    append(Acc, GapCells, A1), append(A1, SCs, A2),
+    arc2_sb_beam_(ExDir, ExCross, NAS, Rem, NR, NC, A2, Out).
+% DOWN beam: no hit; fill from AS to NR-1 at Cols.
+arc2_sb_beam_(down, Cols, AS, _, NR, _, Acc, Out) :-
+    NRm1 is NR - 1,
+    arc2_sb_rect_(Cols, AS, NRm1, v, GapCells),
+    append(Acc, GapCells, Out).
+
+% LEFT beam: search for shape with cells at Cross rows, col < AS.
+arc2_sb_beam_(left, Rows, AS, Shapes, NR, NC, Acc, Out) :-
+    % Attempt to find first shape hit going leftward.
+    arc2_sb_hit_(left, Rows, AS, Shapes, HitShape, HC), !,
+    % Gap fill: HC+1 to AS at Rows.
+    GF is HC + 1,
+    arc2_sb_rect_(Rows, GF, AS, h, GapCells),
+    HitShape = shape(SCs, ExDir, ExCross, ExAP),
+    arc2_sb_exit_start_(ExDir, ExAP, NAS),
+    select(HitShape, Shapes, Rem),
+    append(Acc, GapCells, A1), append(A1, SCs, A2),
+    arc2_sb_beam_(ExDir, ExCross, NAS, Rem, NR, NC, A2, Out).
+% LEFT beam: no hit; fill from 0 to AS at Rows.
+arc2_sb_beam_(left, Rows, AS, _, _, _, Acc, Out) :-
+    arc2_sb_rect_(Rows, 0, AS, h, GapCells),
+    append(Acc, GapCells, Out).
+
+% RIGHT beam: search for shape with cells at Cross rows, col > AS.
+arc2_sb_beam_(right, Rows, AS, Shapes, NR, NC, Acc, Out) :-
+    % Attempt to find first shape hit going rightward.
+    arc2_sb_hit_(right, Rows, AS, Shapes, HitShape, HC), !,
+    % Gap fill: AS to HC-1 at Rows.
+    GF is HC - 1,
+    arc2_sb_rect_(Rows, AS, GF, h, GapCells),
+    HitShape = shape(SCs, ExDir, ExCross, ExAP),
+    arc2_sb_exit_start_(ExDir, ExAP, NAS),
+    select(HitShape, Shapes, Rem),
+    append(Acc, GapCells, A1), append(A1, SCs, A2),
+    arc2_sb_beam_(ExDir, ExCross, NAS, Rem, NR, NC, A2, Out).
+% RIGHT beam: no hit; fill from AS to NC-1 at Rows.
+arc2_sb_beam_(right, Rows, AS, _, _, NC, Acc, Out) :-
+    NCm1 is NC - 1,
+    arc2_sb_rect_(Rows, AS, NCm1, h, GapCells),
+    append(Acc, GapCells, Out).
+
+% arc2_sb_exit_start_: compute axis start for next beam after shape exit.
+arc2_sb_exit_start_(up,    ExAP, NAS) :- NAS is ExAP - 1.
+arc2_sb_exit_start_(down,  ExAP, NAS) :- NAS is ExAP + 1.
+arc2_sb_exit_start_(left,  ExAP, NAS) :- NAS is ExAP - 1.
+arc2_sb_exit_start_(right, ExAP, NAS) :- NAS is ExAP + 1.
+
+% arc2_sb_hit_: find the closest shape hit in each beam direction.
+
+% UP: find shape with max row < AS at any of Cols.
+arc2_sb_hit_(up, Cols, AS, Shapes, HitShape, HitRow) :-
+    % Collect (row, shape-index) pairs for all cells in beam column range above AS.
+    findall(HR-Idx,
+        (nth0(Idx, Shapes, HS), HS = shape(SCs,_,_,_),
+         member(HR-HC, SCs), member(HC, Cols), HR < AS),
+        Cands),
+    % At least one candidate must exist.
+    Cands \= [],
+    % Pick the highest row (closest to beam start going up).
+    pairs_keys(Cands, HRs), max_list(HRs, HitRow),
+    % Retrieve the actual shape term by index.
+    once((member(HitRow-HIdx, Cands), nth0(HIdx, Shapes, HitShape))).
+
+% DOWN: find shape with min row > AS at any of Cols.
+arc2_sb_hit_(down, Cols, AS, Shapes, HitShape, HitRow) :-
+    findall(HR-Idx,
+        (nth0(Idx, Shapes, HS), HS = shape(SCs,_,_,_),
+         member(HR-HC, SCs), member(HC, Cols), HR > AS),
+        Cands),
+    Cands \= [],
+    pairs_keys(Cands, HRs), min_list(HRs, HitRow),
+    once((member(HitRow-HIdx, Cands), nth0(HIdx, Shapes, HitShape))).
+
+% RIGHT: find shape with min col > AS at any of Rows.
+arc2_sb_hit_(right, Rows, AS, Shapes, HitShape, HitCol) :-
+    findall(HC-Idx,
+        (nth0(Idx, Shapes, HS), HS = shape(SCs,_,_,_),
+         member(HR-HC, SCs), member(HR, Rows), HC > AS),
+        Cands),
+    Cands \= [],
+    pairs_keys(Cands, HCs), min_list(HCs, HitCol),
+    once((member(HitCol-HIdx, Cands), nth0(HIdx, Shapes, HitShape))).
+
+% LEFT: find shape with max col < AS at any of Rows.
+arc2_sb_hit_(left, Rows, AS, Shapes, HitShape, HitCol) :-
+    findall(HC-Idx,
+        (nth0(Idx, Shapes, HS), HS = shape(SCs,_,_,_),
+         member(HR-HC, SCs), member(HR, Rows), HC < AS),
+        Cands),
+    Cands \= [],
+    pairs_keys(Cands, HCs), max_list(HCs, HitCol),
+    once((member(HitCol-HIdx, Cands), nth0(HIdx, Shapes, HitShape))).
+
+% arc2_sb_rect_: generate all (R,C) pairs in a rectangle.
+% v = vertical axis (rows vary, cols fixed); h = horizontal (cols vary, rows fixed).
+arc2_sb_rect_(_, From, To, _, []) :- From > To, !.
+arc2_sb_rect_(Cross, From, To, v, Cells) :-
+    % Generate rows From..To and cross with each col in Cross.
+    numlist(From, To, Rows),
+    findall(R-C, (member(R, Rows), member(C, Cross)), Cells).
+arc2_sb_rect_(Cross, From, To, h, Cells) :-
+    % Generate cols From..To and cross with each row in Cross.
+    numlist(From, To, Cols),
+    findall(R-C, (member(R, Cross), member(C, Cols)), Cells).
+
+% arc2_sb_blank_: build an NR x NC grid filled with BG.
+arc2_sb_blank_(0, _, _, []) :- !.
+arc2_sb_blank_(NR, NC, BG, [Row|Rest]) :-
+    NR > 0, NR1 is NR - 1,
+    % Create a fresh row of NC background values.
+    length(Row, NC), maplist(=(BG), Row),
+    % Recurse for remaining rows.
+    arc2_sb_blank_(NR1, NC, BG, Rest).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

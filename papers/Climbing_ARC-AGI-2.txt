@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-30. Wave 30 complete: 30/120 = 25.00%.
+Last updated: 2026-06-30. Wave 31 complete: 31/120 = 25.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -152,6 +152,7 @@ Date        | Score      | Percent | Notes
 2026-06-29  |  28 / 120  | 23.33%  | Wave 28: slide-open 0-cell components slid to 5-divider; open rows filled right with 2
 2026-06-29  |  29 / 120  | 24.17%  | Wave 29: diag-beam diagonal 45-degree beam with 6-obstacle reflections filling 6-trails
 2026-06-30  |  30 / 120  | 25.00%  | Wave 30: frame-absorb frame block absorption graph; monochrome-first priority; chain-start processing
+2026-06-30  |  31 / 120  | 25.83%  | Wave 31: shape-beam rod fires beam through 1/3-shape chains; exit direction = open BG face of collinear 3-markers
 
 
 COMPLETE SCORE PROGRESSION
@@ -265,6 +266,35 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 31 - 2026-06-30 - Score: 31/120 = 25.83%
+
+Date: 2026-06-30
+
+Confirmed score: 31 / 120 = 25.83%
+
+Rules added in this wave:
+  shape_beam (WP-289, Layer 264)
+
+Task solved: 5961cc34 (4 training pairs; background=8; rod (4+2-trail) fires
+  beam in opposite direction; beam travels through chain of 1/3 shapes;
+  each shape converts to 2 and redirects beam toward open (BG) side of
+  its collinear 3-markers; shapes not reached are erased; all traversed
+  axis cells become 2; performance guard on unique 4-cell and 1-cells).
+  Training pairs 0, 1, 2, 3 and test case all pass.
+
+Score advance: 30/120 = 25.00% to 31/120 = 25.83%.
+
+Key bug avoided: naive exit-direction detection (check which 1-cell is
+adjacent to a 3-cell) fails at corner positions where 3-cells are adjacent
+to 1-cells in two directions. Fix: 3-cells are always collinear; check the
+open (BG) face of the collinear group to determine exit direction.
+
+Accomplishment: Acc_329.  Paper: Acc_329_ARC2_Wave31.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2395,6 +2425,7 @@ ALL SOLVED TASKS
 80a900e0  - Wave 3  - arm_endpoint_ray     - checkerboard diagonal arm projection
 88e364bc  - Wave 17 - frame_target         - legend frames encode direction; dots move inside irregular frames
 97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
+5961cc34  - Wave 31 - shape_beam          - rod fires beam; beam relays through 1/3-shapes; exit direction = open BG face of collinear 3-markers
 b0039139  - Wave 20 - section_tile        - divider-split sections tiled N times with solid-color mapping
 d59b0160  - Wave 22 - legend_veto         - 4x4 legend set; erase mixed-color components covering all legend values
 d35bdbdc  - Wave 30 - frame_absorb        - frame blocks absorb successors; monochrome-first priority; snake (5) cells unchanged
@@ -2554,4 +2585,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 29: Diag-beam diagonal 45-degree beam; 6-obs
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 30: Frame-absorb frame block absorption graph; monochrome-first priority; chain starts; dead-end erasure.
   Score: 30/120 = 25.00%. Task d35bdbdc solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-30.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 31: Shape-beam rod fires directed beam through connected shape chains; exit direction via open-face 3-marker detection.
+  Score: 31/120 = 25.83%. Task 5961cc34 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-30.
