@@ -1,0 +1,7 @@
+ARC-AGI-2 Wave 34: PrologAI solves task 271d71e2 with the rail-fill rule. Score advances to 34/120 = 28.33%.
+
+The rule: each input sub-object is a 0-bordered box with a 5/7 interior and two parallel 9-rails on one side (the arm). The arm gap (distance between inner and outer rail) determines how many new 7-cells the box gains. The box shifts toward the outer rail by that same count. The fill follows a direction-specific traversal where the existing 7s already occupy the first positions, so the output is determined solely by the new total 7-count.
+
+Pure Prolog, no machine learning, 3 training pairs.
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

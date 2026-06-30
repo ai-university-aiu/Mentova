@@ -6547,6 +6547,289 @@ arc2_stamp_row_(TR, DR, PatCells, PR1, PC1, PNC, KC, BG, Kern, Row) :-
     flatten(Segs, Row).
 
 % ---------------------------------------------------------------------------
+% Wave 34 - rail_fill (271d71e2)
+% Rule: each sub-object is a 0-bordered box with two parallel 9-rails (arm).
+%       arm_gap = distance between inner and outer rail.
+%       The box gains min(arm_gap, free_interior_cells) new 7-cells,
+%       filling from the arm side in column(or row)-major order, then
+%       moves toward the outer rail by the same amount.
+%       The inner rail merges into the box; arm_gap shrinks accordingly.
+% ---------------------------------------------------------------------------
+
+% Register the rail_fill named rule.
+arc2_named_rule(rail_fill).
+
+% arc2_rf_row_val_: check row R cols C1..C2 all equal V.
+arc2_rf_row_val_(Grid, R, C1, C2, V) :-
+% Retrieve row R from the grid.
+    nth0(R, Grid, Row),
+% Every column in C1..C2 must hold value V.
+    forall(between(C1, C2, C), (nth0(C, Row, X), X =:= V)).
+
+% arc2_rf_col_val_: check column C rows R1..R2 all equal V.
+arc2_rf_col_val_(Grid, C, R1, R2, V) :-
+% Every row in R1..R2 must hold value V at column C.
+    forall(between(R1, R2, R), (nth0(R, Grid, Row), nth0(C, Row, X), X =:= V)).
+
+% arc2_rf_zero_border_: box (R1,C1)..(R2,C2) has a 0-valued border.
+arc2_rf_zero_border_(Grid, R1, C1, R2, C2) :-
+% Top border row all 0.
+    arc2_rf_row_val_(Grid, R1, C1, C2, 0),
+% Bottom border row all 0.
+    arc2_rf_row_val_(Grid, R2, C1, C2, 0),
+% Left border column all 0.
+    arc2_rf_col_val_(Grid, C1, R1, R2, 0),
+% Right border column all 0.
+    arc2_rf_col_val_(Grid, C2, R1, R2, 0).
+
+% arc2_rf_valid_interior_: interior of box contains only cells valued 5 or 7.
+arc2_rf_valid_interior_(Grid, R1, C1, R2, C2) :-
+% Compute interior index bounds.
+    RI1 is R1 + 1, RI2 is R2 - 1, CI1 is C1 + 1, CI2 is C2 - 1,
+% Interior must be non-empty.
+    RI1 =< RI2, CI1 =< CI2,
+% Every interior cell must be 5 or 7.
+    forall(between(RI1, RI2, R),
+        forall(between(CI1, CI2, C), (
+            nth0(R, Grid, Row), nth0(C, Row, V),
+            (V =:= 5 ; V =:= 7)
+        ))).
+
+% arc2_rf_find_9col_l_: first 9-column at or left of C spanning rows R1..R2.
+arc2_rf_find_9col_l_(_, C, _, _, _) :- C < 0, !, fail.
+arc2_rf_find_9col_l_(Grid, C, R1, R2, C) :-
+% This column is all-9 in R1..R2; found it.
+    arc2_rf_col_val_(Grid, C, R1, R2, 9), !.
+arc2_rf_find_9col_l_(Grid, C, R1, R2, F) :-
+% Move one column left and continue searching.
+    C1 is C - 1, arc2_rf_find_9col_l_(Grid, C1, R1, R2, F).
+
+% arc2_rf_find_9col_r_: first 9-column at or right of C, within NC.
+arc2_rf_find_9col_r_(_, C, NC, _, _, _) :- C >= NC, !, fail.
+arc2_rf_find_9col_r_(Grid, C, NC, R1, R2, C) :-
+% This column is all-9 in R1..R2; found it.
+    arc2_rf_col_val_(Grid, C, R1, R2, 9), !.
+arc2_rf_find_9col_r_(Grid, C, NC, R1, R2, F) :-
+% Move one column right and continue searching.
+    C1 is C + 1, arc2_rf_find_9col_r_(Grid, C1, NC, R1, R2, F).
+
+% arc2_rf_find_9row_u_: first 9-row at or above R spanning cols C1..C2.
+arc2_rf_find_9row_u_(_, R, _, _, _) :- R < 0, !, fail.
+arc2_rf_find_9row_u_(Grid, R, C1, C2, R) :-
+% This row is all-9 in C1..C2; found it.
+    arc2_rf_row_val_(Grid, R, C1, C2, 9), !.
+arc2_rf_find_9row_u_(Grid, R, C1, C2, F) :-
+% Move one row up and continue searching.
+    R1 is R - 1, arc2_rf_find_9row_u_(Grid, R1, C1, C2, F).
+
+% arc2_rf_find_9row_d_: first 9-row at or below R, within NR.
+arc2_rf_find_9row_d_(_, R, NR, _, _, _) :- R >= NR, !, fail.
+arc2_rf_find_9row_d_(Grid, R, NR, C1, C2, R) :-
+% This row is all-9 in C1..C2; found it.
+    arc2_rf_row_val_(Grid, R, C1, C2, 9), !.
+arc2_rf_find_9row_d_(Grid, R, NR, C1, C2, F) :-
+% Move one row down and continue searching.
+    R1 is R + 1, arc2_rf_find_9row_d_(Grid, R1, NR, C1, C2, F).
+
+% arc2_rf_arm_: detect arm direction and locate inner/outer rails.
+arc2_rf_arm_(Grid, NR, NC, R1, C1, R2, C2, Dir, Inner, Outer) :-
+% Try left arm: two 9-columns to the left of the box.
+    (   C1 > 0, IL is C1 - 1,
+        arc2_rf_find_9col_l_(Grid, IL, R1, R2, Inner),
+        OL is Inner - 1, OL >= 0,
+        arc2_rf_find_9col_l_(Grid, OL, R1, R2, Outer),
+        Dir = arm_left
+% Try right arm: two 9-columns to the right of the box.
+    ;   IR is C2 + 1,
+        arc2_rf_find_9col_r_(Grid, IR, NC, R1, R2, Inner),
+        OR2 is Inner + 1,
+        arc2_rf_find_9col_r_(Grid, OR2, NC, R1, R2, Outer),
+        Dir = arm_right
+% Try top arm: two 9-rows above the box.
+    ;   R1 > 0, IU is R1 - 1,
+        arc2_rf_find_9row_u_(Grid, IU, C1, C2, Inner),
+        OU is Inner - 1, OU >= 0,
+        arc2_rf_find_9row_u_(Grid, OU, C1, C2, Outer),
+        Dir = arm_top
+% Try bottom arm: two 9-rows below the box.
+    ;   ID is R2 + 1,
+        arc2_rf_find_9row_d_(Grid, ID, NR, C1, C2, Inner),
+        OD is Inner + 1,
+        arc2_rf_find_9row_d_(Grid, OD, NR, C1, C2, Outer),
+        Dir = arm_bottom
+    ), !.
+
+% arc2_rf_arm_gap_: distance between inner and outer rail.
+arc2_rf_arm_gap_(arm_left,   Inner, Outer, Gap) :- Gap is Inner - Outer.
+arc2_rf_arm_gap_(arm_right,  Inner, Outer, Gap) :- Gap is Outer - Inner.
+arc2_rf_arm_gap_(arm_top,    Inner, Outer, Gap) :- Gap is Inner - Outer.
+arc2_rf_arm_gap_(arm_bottom, Inner, Outer, Gap) :- Gap is Outer - Inner.
+
+% arc2_rf_fill_order_: R-C pairs in fill order for H x W interior, given arm direction.
+% arm_left: column-by-column left-to-right, bottom-to-top within each column.
+arc2_rf_fill_order_(arm_left, H, W, Order) :-
+    H1 is H - 1, W1 is W - 1,
+    numlist(0, W1, Cols), numlist(0, H1, RowsFwd), reverse(RowsFwd, Rows),
+    findall(R-C, (member(C, Cols), member(R, Rows)), Order).
+% arm_right: column-by-column right-to-left, top-to-bottom within each column.
+arc2_rf_fill_order_(arm_right, H, W, Order) :-
+    H1 is H - 1, W1 is W - 1,
+    numlist(0, W1, ColsFwd), reverse(ColsFwd, Cols), numlist(0, H1, Rows),
+    findall(R-C, (member(C, Cols), member(R, Rows)), Order).
+% arm_top: row-by-row top-to-bottom, left-to-right within each row.
+arc2_rf_fill_order_(arm_top, H, W, Order) :-
+    H1 is H - 1, W1 is W - 1,
+    numlist(0, H1, Rows), numlist(0, W1, Cols),
+    findall(R-C, (member(R, Rows), member(C, Cols)), Order).
+% arm_bottom: row-by-row bottom-to-top, right-to-left within each row.
+arc2_rf_fill_order_(arm_bottom, H, W, Order) :-
+    H1 is H - 1, W1 is W - 1,
+    numlist(0, H1, RowsFwd), reverse(RowsFwd, Rows),
+    numlist(0, W1, ColsFwd), reverse(ColsFwd, Cols),
+    findall(R-C, (member(R, Rows), member(C, Cols)), Order).
+
+% arc2_rf_take_n_: first N elements of a list, or all if N >= length.
+arc2_rf_take_n_(N, List, Taken) :-
+    length(List, Len),
+% If N exceeds list length take everything; else take exactly N.
+    ( N >= Len -> Taken = List
+    ; length(Taken, N), append(Taken, _, List)
+    ).
+
+% arc2_rf_make_interior_: build H x W grid with first N7 cells in Order as 7, rest 5.
+arc2_rf_make_interior_(H, W, N7, Order, Interior) :-
+% Collect the positions that will become 7.
+    arc2_rf_take_n_(N7, Order, SevenCells),
+    H1 is H - 1, W1 is W - 1,
+    numlist(0, H1, RowIdxs), numlist(0, W1, ColIdxs),
+% Build each row, assigning 7 or 5 to each cell.
+    maplist([Ri, Row]>>(
+        maplist([Ci, V]>>(
+            ( memberchk(Ri-Ci, SevenCells) -> V = 7 ; V = 5 )
+        ), ColIdxs, Row)
+    ), RowIdxs, Interior).
+
+% arc2_rf_new_box_pos_: shift the box N steps toward the outer rail.
+arc2_rf_new_box_pos_(arm_left,   R1, C1, R2, C2, N, R1, NC1, R2, NC2) :-
+    NC1 is C1 - N, NC2 is C2 - N.
+arc2_rf_new_box_pos_(arm_right,  R1, C1, R2, C2, N, R1, NC1, R2, NC2) :-
+    NC1 is C1 + N, NC2 is C2 + N.
+arc2_rf_new_box_pos_(arm_top,    R1, C1, R2, C2, N, NR1, C1, NR2, C2) :-
+    NR1 is R1 - N, NR2 is R2 - N.
+arc2_rf_new_box_pos_(arm_bottom, R1, C1, R2, C2, N, NR1, C1, NR2, C2) :-
+    NR1 is R1 + N, NR2 is R2 + N.
+
+% arc2_rf_new_inner_: new inner rail position; none when gap collapses to 0.
+arc2_rf_new_inner_(_, _, 0, none) :- !.
+arc2_rf_new_inner_(arm_left,   Outer, NewGap, NInner) :- NInner is Outer + NewGap.
+arc2_rf_new_inner_(arm_right,  Outer, NewGap, NInner) :- NInner is Outer - NewGap.
+arc2_rf_new_inner_(arm_top,    Outer, NewGap, NInner) :- NInner is Outer + NewGap.
+arc2_rf_new_inner_(arm_bottom, Outer, NewGap, NInner) :- NInner is Outer - NewGap.
+
+% arc2_rf_count_sevens_: count 7-valued cells in the interior of a box.
+arc2_rf_count_sevens_(Grid, R1, C1, R2, C2, N7) :-
+    RI1 is R1 + 1, RI2 is R2 - 1, CI1 is C1 + 1, CI2 is C2 - 1,
+    findall(_, (
+        between(RI1, RI2, R), between(CI1, CI2, C),
+        nth0(R, Grid, Row), nth0(C, Row, 7)
+    ), Sevens),
+    length(Sevens, N7).
+
+% arc2_rf_box_transform_: compute full output plan for one box.
+arc2_rf_box_transform_(Grid, NR, NC, box(R1,C1,R2,C2),
+        plan(NR1b,NC1b,NR2b,NC2b, Interior,
+             Dir, Outer, RngR1,RngR2,RngC1,RngC2, NewInner)) :-
+% Locate the arm direction and both rail positions.
+    arc2_rf_arm_(Grid, NR, NC, R1, C1, R2, C2, Dir, Inner, Outer),
+% Compute the gap between the two rails.
+    arc2_rf_arm_gap_(Dir, Inner, Outer, Gap),
+% Interior height and width.
+    H is R2 - R1 - 1, W is C2 - C1 - 1,
+% Count existing 7-cells.
+    arc2_rf_count_sevens_(Grid, R1, C1, R2, C2, N7in),
+% Gain = min(gap, free interior cells).
+    FreeCells is H * W - N7in,
+    N7gained is min(Gap, FreeCells),
+% New total 7-count.
+    N7new is N7in + N7gained,
+% Build the fill order and new interior.
+    arc2_rf_fill_order_(Dir, H, W, Order),
+    arc2_rf_make_interior_(H, W, N7new, Order, Interior),
+% New box position (shifted by N7gained toward outer rail).
+    arc2_rf_new_box_pos_(Dir, R1, C1, R2, C2, N7gained, NR1b, NC1b, NR2b, NC2b),
+% New inner rail position (none if gap collapses).
+    NewGap is Gap - N7gained,
+    arc2_rf_new_inner_(Dir, Outer, NewGap, NewInner),
+% Rail spans the same row/col range as the (stationary-axis) box bounds.
+    (   (Dir = arm_left ; Dir = arm_right)
+    ->  RngR1 = R1, RngR2 = R2, RngC1 = Outer, RngC2 = Outer
+    ;   RngR1 = Outer, RngR2 = Outer, RngC1 = C1, RngC2 = C2
+    ).
+
+% arc2_rf_cell_in_plan_: deduce output value at (R,C) from a single box plan.
+arc2_rf_cell_in_plan_(R, C,
+        plan(NR1b,NC1b,NR2b,NC2b,Interior,Dir,Outer,RngR1,RngR2,RngC1,RngC2,NewInner), V) :-
+% Pre-compute interior row/col bounds to avoid arithmetic in between/3.
+    NR1i is NR1b + 1, NR2i is NR2b - 1, NC1i is NC1b + 1, NC2i is NC2b - 1,
+    (   (Dir = arm_left ; Dir = arm_right)
+% Outer rail column.
+    ->  (   C =:= Outer, between(RngR1, RngR2, R), V = 9
+% New inner rail column (if it exists).
+        ;   NewInner \= none, C =:= NewInner, between(RngR1, RngR2, R), V = 9
+% Top and bottom box border rows.
+        ;   (R =:= NR1b ; R =:= NR2b), between(NC1b, NC2b, C), V = 0
+% Left and right box border columns.
+        ;   (C =:= NC1b ; C =:= NC2b), between(NR1b, NR2b, R), V = 0
+% Interior cell: look up value in the transformed interior grid.
+        ;   between(NR1i, NR2i, R), between(NC1i, NC2i, C),
+            Ri is R - NR1b - 1, Ci is C - NC1b - 1,
+            nth0(Ri, Interior, IRow), nth0(Ci, IRow, V)
+        )
+% Same cases for top/bottom arm (outer rail is a row, not a column).
+    ;   (   R =:= Outer, between(RngC1, RngC2, C), V = 9
+        ;   NewInner \= none, R =:= NewInner, between(RngC1, RngC2, C), V = 9
+        ;   (R =:= NR1b ; R =:= NR2b), between(NC1b, NC2b, C), V = 0
+        ;   (C =:= NC1b ; C =:= NC2b), between(NR1b, NR2b, R), V = 0
+        ;   between(NR1i, NR2i, R), between(NC1i, NC2i, C),
+            Ri is R - NR1b - 1, Ci is C - NC1b - 1,
+            nth0(Ri, Interior, IRow), nth0(Ci, IRow, V)
+        )
+    ), !.
+
+% arc2_rf_cell_val_: output value at (R,C): first matching plan wins, else BG.
+arc2_rf_cell_val_(R, C, BG, Plans, V) :-
+    (   member(Plan, Plans), arc2_rf_cell_in_plan_(R, C, Plan, V), !
+    ;   V = BG
+    ).
+
+% arc2_transform(rail_fill, +Grid, -Out): entry point for Wave 34.
+arc2_transform(rail_fill, Grid, Out) :-
+% Determine grid dimensions.
+    length(Grid, NR), Grid = [FirstRow|_], length(FirstRow, NC),
+% Background = value at top-left corner.
+    FirstRow = [BG|_],
+% Collect all 0-valued cells as candidate box-corner positions.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, 0)), ZeroCells),
+% Find every valid 0-bordered box with a 5/7 interior.
+    findall(box(R1,C1,R2,C2), (
+        member(R1-C1, ZeroCells),
+        member(R2-C2, ZeroCells),
+        R2 > R1 + 1, C2 > C1 + 1,
+        arc2_rf_zero_border_(Grid, R1, C1, R2, C2),
+        arc2_rf_valid_interior_(Grid, R1, C1, R2, C2)
+    ), Boxes),
+% Compute a transformation plan for each box.
+    maplist(arc2_rf_box_transform_(Grid, NR, NC), Boxes, Plans),
+% Build the output grid: BG everywhere unless overridden by a plan.
+    NR1 is NR - 1, NC1 is NC - 1,
+    numlist(0, NR1, RowIdxs), numlist(0, NC1, ColIdxs),
+    maplist([R, Row]>>(
+        maplist([C, V]>>(
+            arc2_rf_cell_val_(R, C, BG, Plans, V)
+        ), ColIdxs, Row)
+    ), RowIdxs, Out).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
