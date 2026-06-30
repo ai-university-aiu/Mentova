@@ -6,8 +6,8 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Types">
-  <img src="https://img.shields.io/badge/accomplishments-328-FF6B35?style=for-the-badge" alt="328 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-30%2F120%20%3D%2025.00%25-orange?style=for-the-badge" alt="ARC-AGI-2: 30/120 = 25.00%">
+  <img src="https://img.shields.io/badge/accomplishments-329-FF6B35?style=for-the-badge" alt="329 Accomplishments">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-31%2F120%20%3D%2025.83%25-orange?style=for-the-badge" alt="ARC-AGI-2: 31/120 = 25.83%">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,9 +99,9 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **30/120 = 25.00%** — Wave 30; climbing underway |
-| Documented accomplishments | **326 accomplished** |
-| Scientific papers | **326 published** — one per accomplishment |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **31/120 = 25.83%** — Wave 31; climbing underway |
+| Documented accomplishments | **329 accomplished** |
+| Scientific papers | **329 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 30 complete (30/120 = 25.00%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 31 complete (31/120 = 25.83%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -235,7 +235,7 @@ Mentova/
 ├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
-├── papers/         327 scientific papers — one per accomplishment and benchmark milestone
+├── papers/         329 scientific papers — one per accomplishment and benchmark milestone
 ├── announcements/  305 announcements — one per accomplishment
 ├── data/           Benchmark task data (ARC-AGI-1 complete; ARC-AGI-2 underway)
 ├── demos/          26 demonstration scripts — one per major capability track
@@ -369,7 +369,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-327 scientific papers, one per accomplished milestone.
+329 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -564,6 +564,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_301` | ARC-AGI-2 Wave 3 — checkerboard diagonal arm projection; arm_endpoint_ray rule solves task 80a900e0. Score: 3/120 = 2.50%. |
 | `Acc_312` | ARC-AGI-2 Wave 14 — reflect-axis shape reflection across 2-marker axis; reflect_axis rule solves task 7ed72f31 (each shape reflected across nearest 2-cluster axis: point, vertical, or horizontal). Score: 14/120 = 11.67%. |
 | `Acc_326` | ARC-AGI-2 Wave 28 — slide_open rule solves task 6e453dd6 (0-cell components slide right to 5-divider; two-pass erase-then-place; open rows filled right of divider with 2). Score: 28/120 = 23.33%. |
+| `Acc_329` | ARC-AGI-2 Wave 31 — shape_beam rule solves task 5961cc34; rod fires beam through 1/3-shape chains; exit direction detected via open BG face of collinear 3-markers. Score: 31/120 = 25.83%. |
 | `Acc_328` | ARC-AGI-2 Wave 30 — frame_absorb rule solves task d35bdbdc; frame blocks absorb successors via center/arm color graph, monochrome-first priority. Score: 30/120 = 25.00%. |
 | `Acc_327` | ARC-AGI-2 Wave 29 — diag_beam rule solves task db695cfb (diagonal 1-pairs shoot 45-degree beams filling 1s; 6-obstacles reflect two perpendicular 6-rays). Score: 29/120 = 24.17%. |
 | `Acc_325` | ARC-AGI-2 Wave 27 — stream_extend rule solves task 53fb4810 (A-marker blobs serve as anchors; adjacent seed chains extended periodically to grid boundary; tiling formula: Chain[D mod P]). Score: 27/120 = 22.50%. |

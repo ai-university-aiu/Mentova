@@ -1,0 +1,16 @@
+ARC-AGI-2 Wave 31: Shape Beam Relay (25.83%)
+
+PrologAI has solved ARC-AGI-2 task 5961cc34 with a new glass-box named rule: shape_beam.
+
+The rule models directed signal propagation. A rod (a value-4 arrowhead with a value-2 trail) fires a beam in the opposite direction of its trail. The beam travels along an axis until it hits a connected shape made of body cells (value 1) and exit-marker cells (value 3). When hit, the shape is converted entirely to value 2 and the beam is redirected toward the open (background) side of the exit markers. The process repeats through a chain of shapes. Shapes not reached by any beam are erased from the output.
+
+The critical insight was exit-direction detection. A naive approach checking which 1-cell is adjacent to a 3-cell fails at corner positions. The correct method: the exit markers are always collinear (same row or same column). Check which side of that line faces open background - that is the exit direction.
+
+Score: 30/120 = 25.00% -> 31/120 = 25.83%.
+
+Pure induction. No pretraining. Glass-box named rules throughout.
+
+Acc_329. WP-289, Layer 264.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
