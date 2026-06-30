@@ -1,0 +1,104 @@
+ARC-AGI-2 Wave 33: Tile-Stamp Kernel Tiling at Indicator Cell Positions
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-30
+
+ABSTRACT
+
+Wave 33 of the ARC-AGI-2 benchmark climb adds the tile_stamp rule, which
+solves task bf45cf4b. The rule identifies a compact multi-color kernel
+rectangle and a scattered single-color indicator pattern in the input grid,
+then tiles the kernel at each non-background position in the indicator
+pattern's bounding-box grid. All 3 training pairs and the test case pass.
+Score advances from 32/120 = 26.67% to 33/120 = 27.50%.
+
+
+TASK DESCRIPTION
+
+Task bf45cf4b presents 3 training pairs and 1 test case. Each input contains
+exactly two non-background objects. The background is the most-frequent cell
+value.
+
+Object 1 - KERNEL: a compact rectangular tile with more than one distinct
+non-background color (e.g., a 3 x 3 cross pattern with values 8 and 3, or a
+4 x 4 diamond frame with values 8, 9, and 4).
+
+Object 2 - INDICATOR PATTERN: scattered cells that all share a single
+non-background color. The bounding box of these scattered cells defines an
+NR x NC binary grid, where each position is T (non-background cell = stamp
+here) or F (background cell within the bounding box = leave empty).
+
+The output grid has NR * KR rows and NC * KC columns, where KR and KC are
+the kernel height and width. For each tile position (r, c) in the NR x NC
+grid, a copy of the kernel is placed if the indicator cell at that position
+is non-background; otherwise a block of background cells fills that position.
+
+Training pair dimensions:
+  Pair 1: 12 x 12 input (BG=4, kernel 3x3, indicator 3x4) -> 9 x 12 output.
+  Pair 2: 12 x 17 input (BG=3, kernel 3x3, indicator 4x3) -> 12 x 9 output.
+  Pair 3: 12 x 12 input (BG=1, kernel 4x4, indicator 3x3) -> 12 x 12 output.
+  Test:   14 x 13 input (BG=8, kernel 5x5, indicator 5x5) -> 25 x 25 output.
+
+
+RULE: tile_stamp
+
+Identification of the kernel:
+
+The kernel is the unique 4-connected component of non-background cells whose
+cells use more than one distinct value when looked up in the input grid.
+Single-color components are indicator pattern cells.
+
+This identification handles an edge case in pair 1: the kernel's center cell
+has value 4, which equals the background value BG=4. That center cell is
+excluded from the non-background cell set, so the kernel component consists
+only of the ring cells (values 3 and 8), which correctly yields 2 distinct
+values and passes the multi-value test. The bounding box of those ring cells
+then covers the full 3 x 3 region, and arc2_stamp_subgrid_ extracts it
+verbatim including the interior BG cell.
+
+Tiling logic:
+
+The indicator pattern's bounding box (PR1..PR2, PC1..PC2) defines a PNR x PNC
+tile grid. For output row index ROut:
+  TR = ROut // KR (which tile row)
+  DR = ROut mod KR (which kernel row within the tile)
+For each tile column TC in 0..PNC-1:
+  The absolute indicator position is (PR1+TR, PC1+TC).
+  If that position is in the pattern cell set, emit the kernel row at DR.
+  Otherwise emit KC background values.
+Concatenating the segments produces the full output row.
+
+
+IMPLEMENTATION
+
+Predicates added to Mentova/src/mentova/games/arc_benchmark_2.pl:
+
+  arc2_named_rule(tile_stamp).
+  arc2_transform(tile_stamp, +Grid, -Out)
+  arc2_stamp_nonbg_(+Grid, +BG, -Cells)
+  arc2_stamp_kern_(+Comps, +Grid, -KR1, -KC1, -KR, -KC, -PatCells)
+  arc2_stamp_multi_val_(+Comp, +Grid)
+  arc2_stamp_bbox_(+Cells, -R1, -C1, -R2, -C2)
+  arc2_stamp_subgrid_(+Grid, +R1, +C1, +KR, +KC, -SubGrid)
+  arc2_stamp_out_(+PatCells, +PR1, +PC1, +PNR, +PNC, +BG, +Kern, +KR, +KC, -Out)
+  arc2_stamp_row_(+TR, +DR, +PatCells, +PR1, +PC1, +PNC, +KC, +BG, +Kern, -Row)
+
+All predicates follow the ERC (English Readable Code) commenting standard:
+one descriptive comment immediately above each line of code.
+
+
+RESULT
+
+  Task solved: bf45cf4b.
+  Training pairs: 3 of 3 pass.
+  Test case: pass.
+  Score: 32/120 = 26.67% to 33/120 = 27.50%.
+  Rule: tile_stamp.
+  Work Package: WP-291, Layer 266.
+  Accomplishment: Acc_331.
+  Mentova PR: #346.
+  PrologAI PR: #402.
+  SPARC: Specification v263, Pseudocode v255, Architecture v256,
+         Refinement v315, Completion v321.
