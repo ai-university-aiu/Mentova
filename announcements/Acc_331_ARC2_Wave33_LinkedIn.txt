@@ -1,0 +1,24 @@
+ARC-AGI-2 Wave 33 complete: 33/120 = 27.50%
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Mentova solved ARC-AGI-2 task bf45cf4b with a named glass-box rule called
+tile_stamp.
+
+The rule: every input grid contains exactly two non-background objects - a
+compact multi-color kernel rectangle and a scattered single-color indicator
+pattern. The indicator pattern's bounding box defines a binary tile map. The
+output tiles the kernel at each non-background indicator position and places
+background at each background indicator position.
+
+The kernel is identified automatically: it is the unique 4-connected component
+of non-background cells whose cells use more than one distinct value. The
+indicator pattern uses exactly one value. No training, no weights, no heuristics
+- pure symbolic pattern recognition.
+
+Score advances from 32/120 = 26.67% to 33/120 = 27.50%.
+
+331 accomplishments. Still climbing.
+
+#ARC #AGI #PrologAI #SymbolicAI #AIU

@@ -6437,6 +6437,116 @@ arc2_scc_touches_hole_(Holes, Comp) :-
     memberchk(RN-CN, Holes), !.
 
 % ---------------------------------------------------------------------------
+% Wave 33 - tile_stamp (bf45cf4b)
+% Rule: find the compact multi-color kernel rectangle and the scattered
+%       single-color indicator pattern; tile the kernel at each non-BG
+%       position of the pattern grid.
+% ---------------------------------------------------------------------------
+
+% Register the tile_stamp named rule.
+arc2_named_rule(tile_stamp).
+
+% arc2_transform(tile_stamp, +Grid, -Out): stamp kernel at each indicator cell.
+arc2_transform(tile_stamp, Grid, Out) :-
+% Flatten grid to feed into the most-frequent-value background detector.
+    flatten(Grid, Flat),
+% Identify background as the most-frequent cell value.
+    arc2_scc_bg_(Flat, BG),
+% Collect all non-background R-C positions.
+    arc2_stamp_nonbg_(Grid, BG, Cells),
+% Partition non-background cells into 4-connected components.
+    arc2_scc_comps_(Cells, Comps),
+% Split: kernel component uses >1 distinct value; pattern components use 1.
+    arc2_stamp_kern_(Comps, Grid, KR1, KC1, KR, KC, PatCells),
+% Extract the kernel sub-grid (interior BG cells are kept verbatim).
+    arc2_stamp_subgrid_(Grid, KR1, KC1, KR, KC, Kern),
+% Compute bounding box of all pattern indicator cells.
+    arc2_stamp_bbox_(PatCells, PR1, PC1, PR2, PC2),
+% Compute pattern grid dimensions.
+    PNR is PR2 - PR1 + 1, PNC is PC2 - PC1 + 1,
+% Build tiled output: PNR*KR rows x PNC*KC cols.
+    arc2_stamp_out_(PatCells, PR1, PC1, PNR, PNC, BG, Kern, KR, KC, Out).
+
+% arc2_stamp_nonbg_(+Grid, +BG, -Cells): collect all non-BG R-C positions.
+arc2_stamp_nonbg_(Grid, BG, Cells) :-
+% Enumerate every row and column; keep only non-background cells.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, V), V \= BG), Cells).
+
+% arc2_stamp_kern_(+Comps, +Grid, -KR1, -KC1, -KR, -KC, -PatCells):
+% Identify kernel component (>1 distinct value) and collect pattern cells.
+arc2_stamp_kern_(Comps, Grid, KR1, KC1, KR, KC, PatCells) :-
+% Separate the one kernel component from all pattern components.
+    partition([Comp]>>(arc2_stamp_multi_val_(Comp, Grid)), Comps, [KernComp], Pats),
+% Compute kernel bounding box.
+    arc2_stamp_bbox_(KernComp, KR1, KC1, KR2, KC2),
+% Compute kernel height and width.
+    KR is KR2 - KR1 + 1, KC is KC2 - KC1 + 1,
+% Merge all pattern components into one flat position list.
+    flatten(Pats, PatCells).
+
+% arc2_stamp_multi_val_(+Comp, +Grid): succeed if Comp cells use >1 distinct value.
+arc2_stamp_multi_val_(Comp, Grid) :-
+% Collect all cell values at component positions.
+    findall(V, (member(R-C, Comp), nth0(R, Grid, Row), nth0(C, Row, V)), Vals),
+% Convert to a set and require at least 2 distinct values.
+    list_to_set(Vals, VSet), length(VSet, NV), NV > 1.
+
+% arc2_stamp_bbox_(+Cells, -R1, -C1, -R2, -C2): bounding box of an R-C list.
+arc2_stamp_bbox_(Cells, R1, C1, R2, C2) :-
+% Extract all row indices.
+    findall(R, member(R-_, Cells), Rs),
+% Extract all column indices.
+    findall(C, member(_-C, Cells), Cs),
+% Min and max rows; min and max columns.
+    min_list(Rs, R1), max_list(Rs, R2),
+    min_list(Cs, C1), max_list(Cs, C2).
+
+% arc2_stamp_subgrid_(+Grid, +R1, +C1, +KR, +KC, -SubGrid):
+% Extract a KR x KC sub-grid starting at absolute position (R1, C1).
+arc2_stamp_subgrid_(Grid, R1, C1, KR, KC, SubGrid) :-
+% Build row-offset list 0..KR-1.
+    KRm is KR - 1, numlist(0, KRm, DRs),
+% Build column-offset list 0..KC-1.
+    KCm is KC - 1, numlist(0, KCm, DCs),
+% For each row offset fetch the corresponding kernel row.
+    maplist([DR, KRow]>>(
+        R is R1 + DR, nth0(R, Grid, FullRow),
+        maplist([DC, V]>>(C is C1 + DC, nth0(C, FullRow, V)), DCs, KRow)
+    ), DRs, SubGrid).
+
+% arc2_stamp_out_(+PatCells, +PR1, +PC1, +PNR, +PNC, +BG, +Kern, +KR, +KC, -Out):
+% Build output grid of PNR*KR rows x PNC*KC cols by tiling the kernel.
+arc2_stamp_out_(PatCells, PR1, PC1, PNR, PNC, BG, Kern, KR, KC, Out) :-
+% Total output rows.
+    OutNR is PNR * KR, OutNRm is OutNR - 1,
+% Build each output row from its flat row index.
+    numlist(0, OutNRm, RowIdxs),
+    maplist([ROut, Row]>>(
+        TR is ROut // KR, DR is ROut mod KR,
+        arc2_stamp_row_(TR, DR, PatCells, PR1, PC1, PNC, KC, BG, Kern, Row)
+    ), RowIdxs, Out).
+
+% arc2_stamp_row_(+TR, +DR, +PatCells, +PR1, +PC1, +PNC, +KC, +BG, +Kern, -Row):
+% Build one output row for tile row TR at kernel row offset DR.
+arc2_stamp_row_(TR, DR, PatCells, PR1, PC1, PNC, KC, BG, Kern, Row) :-
+% Get the kernel row for this vertical offset.
+    nth0(DR, Kern, KernRow),
+% Tile column indices 0..PNC-1.
+    PNCm is PNC - 1, numlist(0, PNCm, TCs),
+% Kernel column offset indices 0..KC-1.
+    KCm is KC - 1, numlist(0, KCm, DCs),
+% For each tile column produce a kernel segment or a BG segment.
+    maplist([TC, Seg]>>(
+        R is PR1 + TR, C is PC1 + TC,
+        ( memberchk(R-C, PatCells) ->
+            maplist([DC, V]>>(nth0(DC, KernRow, V)), DCs, Seg)
+        ;   length(Seg, KC), maplist(=(BG), Seg)
+        )
+    ), TCs, Segs),
+% Concatenate tile segments into a single flat row list.
+    flatten(Segs, Row).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
