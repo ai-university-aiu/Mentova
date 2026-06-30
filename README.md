@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/mentova_banner.svg" alt="Mentova — The World's First Glass-Box Synthetic Mind" width="100%">
+  <img src="assets/Mentova_754x176_New.png" alt="Mentova — The World's First Glass-Box Synthetic Mind" width="100%">
 </p>
 
 <p align="center">
