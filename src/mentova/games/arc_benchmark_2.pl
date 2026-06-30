@@ -5315,6 +5315,241 @@ arc2_sd_perp_check_(ANeighbors, AR, AC, DDR, _DDC) :-
     ).
 
 % ---------------------------------------------------------------------------
+% WAVE 27 — stream_extend (WP-285, Layer 260)
+% Task 53fb4810
+% Rule: The grid contains one or more "A-marker" components (4-connected blobs
+% of value 1). Each A-marker component has at most one direction that carries a
+% contiguous non-BG non-marker "seed chain" of cells adjacent to the component.
+% The seed chain terminates at a BG cell (not a grid boundary), indicating that
+% the pattern must be extended. The chain establishes a periodic sequence with
+% period P = chain length. That period is extended outward (away from the
+% A-marker) to the grid boundary, overwriting whatever was there. Multiple
+% parallel chains (e.g. two adjacent columns both seeded) are each extended
+% independently using the same direction and period mechanism.
+% ===========================================================================
+
+% Register the stream_extend rule.
+arc2_named_rule(stream_extend).
+
+% arc2_transform(stream_extend, +Grid, -Out): top-level transform.
+arc2_transform(stream_extend, Grid, Out) :-
+% Compute grid row count.
+    length(Grid, NRows),
+% Extract first row to compute column count.
+    Grid = [FirstRow_|_], length(FirstRow_, NCols),
+% Identify background value as the most common cell value.
+    arc2_bg_color_(Grid, BG),
+% A-marker value is 1 for this task family.
+    AVal = 1,
+% Collect all cell positions whose value equals AVal.
+    findall(R-C, (nth0(R, Grid, Row_), nth0(C, Row_, AVal)), ACells),
+% If no A-markers exist the grid is already correct.
+    ACells \= [],
+% Partition AVal cells into 4-connected components.
+    arc2_sx_comps4_(ACells, Comps),
+% Process each component in turn, threading the grid through each step.
+    foldl(arc2_sx_comp_(BG, AVal, NRows, NCols), Comps, Grid, Out).
+
+% arc2_sx_comp_: try each of the four cardinal directions for one component.
+arc2_sx_comp_(BG, AVal, NRows, NCols, Comp, G0, G1) :-
+% Try upward extension.
+    arc2_sx_try_dir_(up,    BG, AVal, NRows, NCols, Comp, G0,  G01),
+% Try downward extension.
+    arc2_sx_try_dir_(down,  BG, AVal, NRows, NCols, Comp, G01, G02),
+% Try leftward extension.
+    arc2_sx_try_dir_(left,  BG, AVal, NRows, NCols, Comp, G02, G03),
+% Try rightward extension.
+    arc2_sx_try_dir_(right, BG, AVal, NRows, NCols, Comp, G03, G1).
+
+% arc2_sx_try_dir_: find seed chains in one direction and apply extension fills.
+% Falls through silently (returns G0 unchanged) if no extension is needed.
+arc2_sx_try_dir_(Dir, BG, AVal, NRows, NCols, Comp, G0, G1) :-
+% Collect all valid seed chains from border cells in direction Dir.
+    findall(Chain,
+        arc2_sx_seed_chain_(G0, BG, AVal, NRows, NCols, Comp, Dir, Chain),
+        Chains),
+% Proceed only when at least one non-empty chain was found.
+    Chains \= [],
+% Compute all extension fill cells from every chain.
+    findall(R-C-V,
+        (member(Chain, Chains),
+         arc2_sx_ext_fill_(Chain, Dir, NRows, NCols, R-C-V)),
+        Fills),
+% Proceed only when at least one fill cell was produced.
+    Fills \= [],
+% Apply every fill cell to the grid, threading updates sequentially.
+    foldl([RF-CF-VF, GI, GO]>>(arc2_set_cell_(GI, RF, CF, VF, GO)),
+          Fills, G0, G1), !.
+% Catch-all: no extension in this direction; return grid unchanged.
+arc2_sx_try_dir_(_, _, _, _, _, _, G, G).
+
+% arc2_sx_seed_chain_: produce one valid seed chain from one border cell.
+% Succeeds with a non-empty list Chain = [R-C-Val, ...] (closest to A-marker
+% first). Fails if: the neighbor is already in the component, the first step
+% hits BG (no seed), the first step hits another A-marker, or the scan reaches
+% the grid boundary before BG (extension would go off-grid = already complete).
+arc2_sx_seed_chain_(Grid, BG, AVal, NRows, NCols, Comp, Dir, Chain) :-
+% Pick any cell in the component.
+    member(R-C, Comp),
+% Compute the step vector for Dir.
+    arc2_sx_step_(Dir, DR, DC),
+% Compute the immediate neighbor in direction Dir.
+    R2 is R + DR, C2 is C + DC,
+% (R,C) is a border cell only if its Dir-neighbor is not in the component.
+    \+ memberchk(R2-C2, Comp),
+% Scan outward from (R2,C2), collecting non-BG non-AVal cells into Chain.
+    arc2_sx_collect_(Grid, BG, AVal, NRows, NCols, R2, C2, Dir, [], Chain),
+% Discard empty chains (border cell's neighbor was BG; no seed).
+    Chain \= [].
+
+% arc2_sx_collect_: recursive scan from (R,C) in direction Dir.
+% Accumulates non-BG non-AVal cells into Acc (prepended, reversed at end).
+% Succeeds with Chain = reverse(Acc) when the next cell is BG.
+% Fails when: (a) (R,C) is out of bounds (scan reached grid boundary),
+%             (b) (R,C) holds value AVal (hit another marker component).
+arc2_sx_collect_(Grid, BG, AVal, NRows, NCols, R, C, Dir, Acc, Chain) :-
+% Fail immediately if current position is outside grid bounds.
+    R >= 0, R < NRows, C >= 0, C < NCols,
+% Retrieve the value at the current cell.
+    arc2_cell_(Grid, R, C, V),
+% Dispatch based on the current value.
+    ( V =:= BG ->
+% BG reached: the accumulated chain is complete; reverse to get front-first.
+        reverse(Acc, Chain)
+    ; V =:= AVal ->
+% Hit another marker: this scan path is invalid.
+        fail
+    ;
+% Non-BG non-AVal: add to accumulator and advance one step.
+        arc2_sx_step_(Dir, DR, DC),
+        R3 is R + DR, C3 is C + DC,
+        arc2_sx_collect_(Grid, BG, AVal, NRows, NCols, R3, C3, Dir, [R-C-V|Acc], Chain)
+    ).
+
+% arc2_sx_ext_fill_: generate one extension fill cell from a chain.
+% The seed chain has period P = length(Chain). For extension position at
+% distance D from chain start (D >= P), value = Chain[D mod P].
+
+% Up direction: chain rows decrease from R0 toward 0; extend rows 0..R0-P.
+arc2_sx_ext_fill_(Chain, up, _NRows, _NCols, R-C-Val) :-
+% Extract first chain element to get anchor row R0 and column C.
+    Chain = [R0-C-_|_],
+% Period equals chain length.
+    length(Chain, P),
+% Extension covers rows 0 through R0-P (the cell just before the chain).
+    RLast is R0 - P,
+    RLast >= 0,
+% Generate each extension row in that range.
+    between(0, RLast, R),
+% Offset from anchor = distance from R0 going upward.
+    Offset is R0 - R,
+% Pattern index cycles with period P.
+    Idx is Offset mod P,
+% Look up the value at this index in the chain.
+    nth0(Idx, Chain, _-_-Val).
+
+% Down direction: chain rows increase from R0; extend rows R0+P..NRows-1.
+arc2_sx_ext_fill_(Chain, down, NRows, _NCols, R-C-Val) :-
+% Extract first chain element for anchor row R0 and column C.
+    Chain = [R0-C-_|_],
+% Period equals chain length.
+    length(Chain, P),
+% Extension starts at R0+P.
+    RStart is R0 + P,
+    RStart < NRows,
+% Last row index.
+    NRows1 is NRows - 1,
+% Generate each extension row.
+    between(RStart, NRows1, R),
+% Offset increases downward from anchor.
+    Offset is R - R0,
+% Pattern index.
+    Idx is Offset mod P,
+% Value from chain.
+    nth0(Idx, Chain, _-_-Val).
+
+% Left direction: chain cols decrease from C0 toward 0; extend cols 0..C0-P.
+arc2_sx_ext_fill_(Chain, left, _NRows, _NCols, R-C-Val) :-
+% Extract first chain element for row R and anchor col C0.
+    Chain = [R-C0-_|_],
+% Period.
+    length(Chain, P),
+% Extension covers cols 0 through C0-P.
+    CLast is C0 - P,
+    CLast >= 0,
+% Generate each extension column.
+    between(0, CLast, C),
+% Offset from anchor going leftward.
+    Offset is C0 - C,
+% Pattern index.
+    Idx is Offset mod P,
+% Value from chain.
+    nth0(Idx, Chain, _-_-Val).
+
+% Right direction: chain cols increase from C0; extend cols C0+P..NCols-1.
+arc2_sx_ext_fill_(Chain, right, _NRows, NCols, R-C-Val) :-
+% Extract first chain element for row R and anchor col C0.
+    Chain = [R-C0-_|_],
+% Period.
+    length(Chain, P),
+% Extension starts at C0+P.
+    CStart is C0 + P,
+    CStart < NCols,
+% Last column index.
+    NCols1 is NCols - 1,
+% Generate each extension column.
+    between(CStart, NCols1, C),
+% Offset increases rightward from anchor.
+    Offset is C - C0,
+% Pattern index.
+    Idx is Offset mod P,
+% Value from chain.
+    nth0(Idx, Chain, _-_-Val).
+
+% arc2_sx_step_/3: direction vector (DeltaRow, DeltaCol) for each direction.
+arc2_sx_step_(up,    -1,  0).
+arc2_sx_step_(down,   1,  0).
+arc2_sx_step_(left,   0, -1).
+arc2_sx_step_(right,  0,  1).
+
+% arc2_sx_comps4_: partition a cell list into 4-connected components via DFS.
+arc2_sx_comps4_(Cells, Comps) :-
+% Iterate over seeds; skip already-visited cells.
+    arc2_sx_comps4_iter_(Cells, Cells, [], Comps).
+
+% arc2_sx_comps4_iter_: seed-driven component iterator.
+arc2_sx_comps4_iter_([], _, _, []).
+arc2_sx_comps4_iter_([H|T], All, Vis0, Comps) :-
+    ( memberchk(H, Vis0) ->
+% Already assigned to a component: skip this seed.
+        arc2_sx_comps4_iter_(T, All, Vis0, Comps)
+    ;
+% New seed: flood-fill to discover its full component.
+        arc2_sx_flood4_(All, [H], Vis0, [], Comp, Vis1),
+        Comps = [Comp|Tail],
+        arc2_sx_comps4_iter_(T, All, Vis1, Tail)
+    ).
+
+% arc2_sx_flood4_: DFS flood-fill over 4-connected neighbors within All.
+arc2_sx_flood4_(_, [], Vis, Acc, Acc, Vis).
+arc2_sx_flood4_(All, [H|Stack], Vis0, Acc0, Comp, Vis) :-
+    ( memberchk(H, Vis0) ->
+% Already visited: skip without expanding.
+        arc2_sx_flood4_(All, Stack, Vis0, Acc0, Comp, Vis)
+    ;
+% Mark as visited and expand 4-connected neighbors within All.
+        H = R-Co,
+        findall(NR-NC,
+            (member(DR-DC, [-1-0, 0-(-1), 0-1, 1-0]),
+             NR is R  + DR, NC is Co + DC,
+             memberchk(NR-NC, All),
+             \+ memberchk(NR-NC, Vis0)),
+            New),
+        append(New, Stack, Stack1),
+        arc2_sx_flood4_(All, Stack1, [H|Vis0], [H|Acc0], Comp, Vis)
+    ).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

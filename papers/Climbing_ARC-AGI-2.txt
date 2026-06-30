@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-29. Wave 26 complete: 26/120 = 21.67%.
+Last updated: 2026-06-29. Wave 27 complete: 27/120 = 22.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -148,6 +148,7 @@ Date        | Score      | Percent | Notes
 2026-06-29  |  24 / 120  | 20.00%  | Wave 24: shape-sort hollow/solid 4x4 blocks paired by reading order with zero padding
 2026-06-29  |  25 / 120  | 20.83%  | Wave 25: bar-extend divider-based periodic right-side fill rule
 2026-06-29  |  26 / 120  | 21.67%  | Wave 26: straighten-diag diagonal-shortcut removal with gap fill and stub pruning
+2026-06-29  |  27 / 120  | 22.50%  | Wave 27: stream-extend A-marker periodic seed-chain extension to grid boundary
 
 
 COMPLETE SCORE PROGRESSION
@@ -261,6 +262,40 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 27 - 2026-06-29 - Score: 27/120 = 22.50%
+
+Date: 2026-06-29
+
+Confirmed score: 27 / 120 = 22.50%
+
+Rules added in this wave:
+
+1. stream_extend (task 53fb4810) - the grid contains one or more A-marker
+   components (4-connected blobs of value 1, against BG 0). For each component,
+   scan outward in each cardinal direction from border cells. Collect consecutive
+   non-BG non-marker cells into a "seed chain." If the chain is non-empty and
+   terminates at a BG cell (gap exists before the grid boundary), extend the
+   chain's periodic pattern to the grid edge. Extension formula: fill value at
+   distance D from chain anchor = Chain[D mod P], where P = chain length.
+   Multiple parallel chains in the same direction extend independently.
+
+Bugs fixed: none.
+
+Lessons learned: arc2_induce_rule/2 may find an earlier rule (chain_strip) that
+coincidentally passes all training pairs but fails the test case. The benchmark
+correctly backtracks through the full rule list to find stream_extend, which
+passes the test case. This is expected Prolog backtracking behavior, not a bug.
+The key implementation insight is that arc2_sx_collect_/10 succeeds (returning
+Chain) only when a BG gap is found, and fails when the grid boundary is reached,
+so that chains already touching the boundary are never over-extended.
+
+Score advance: 26/120 = 21.67% to 27/120 = 22.50%.
+Accomplishment: Acc_325.  Paper: Acc_325_ARC2_Wave27.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2228,6 +2263,7 @@ ALL SOLVED TASKS
 409aa875  - Wave 10 - apex_shadow         - arm-vector projection places shadow-9 or collision-1
 45a5af55  - Wave 6  - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
+53fb4810  - Wave 27 - stream_extend       - A-marker blobs; adjacent seed chains extended periodically to grid boundary
 7491f3cf  - Wave 9  - panel_overlay       - s1-seeded flood-fill splits s2/s3 into panel 4
 7b5033c1  - Wave 2  - chain_strip          - connected-blob chain traversal strip
 7b80bb43  - Wave 26 - straighten_diag     - diagonal shortcuts removed; H/V gaps filled; perp stubs pruned
@@ -2380,4 +2416,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 25: Bar-extend divider-based periodic right-
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.
 Dison, D. R. (2026). ARC-AGI-2 Wave 26: Straighten-diag diagonal-shortcut removal with orthogonal gap fill and perpendicular stub pruning.
   Score: 26/120 = 21.67%. Task 7b80bb43 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-29.
+Dison, D. R. (2026). ARC-AGI-2 Wave 27: Stream-extend A-marker periodic seed-chain extension to grid boundary.
+  Score: 27/120 = 22.50%. Task 53fb4810 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.

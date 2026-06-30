@@ -1,0 +1,115 @@
+Acc_325: ARC-AGI-2 Wave 27 - Stream-Extend Periodic Seed-Chain Rule
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-29
+
+ABSTRACT
+
+Wave 27 adds the stream_extend named rule to the PrologAI ARC-AGI-2 solver,
+solving task 53fb4810 and advancing the score from 26/120 = 21.67% to
+27/120 = 22.50%.
+
+The rule identifies A-marker blobs (4-connected components of value 1) and
+extends periodic color sequences adjacent to each blob outward to the grid
+boundary by tiling the seed chain pattern.
+
+TASK DESCRIPTION
+
+Task 53fb4810 presents grids containing a background color BG (value 0) and
+A-marker cells of value 1 that form 4-connected blobs. Adjacent to each blob,
+in one or more cardinal directions, a sequence of colored (non-BG, non-marker)
+cells appears. Beyond this sequence, BG cells fill the rest of the row or column
+to the grid boundary. The transformation fills those BG cells by repeating the
+color sequence periodically until the grid edge is reached.
+
+RULE: STREAM-EXTEND
+
+Step 1 - Locate A-marker components.
+
+Find all cells of value 1 (AVal). Partition them into 4-connected components
+using flood-fill.
+
+Step 2 - For each component, scan each cardinal direction.
+
+For each component cell whose neighbor in direction Dir is not in the component
+(a border cell), walk outward from that neighbor. Collect consecutive non-BG,
+non-marker cells into a seed chain. The walk ends in one of three ways:
+- A BG cell is found: the chain is non-empty and a gap exists. Return the chain.
+- The grid boundary is reached without a BG cell: the chain already extends to
+  the edge; no extension needed. Fail.
+- An AVal cell is hit: extension blocked by another marker. Fail.
+
+Step 3 - Extend the seed chain.
+
+If a chain of length P was collected and a BG gap follows it, fill all BG
+positions from the end of the chain to the grid boundary using the periodic
+tiling formula:
+
+    Value at position X = Chain[ distance(X, chain_anchor) mod P ]
+
+where distance is computed in the direction Dir from the chain anchor (the first
+chain cell beyond the component border).
+
+Step 4 - Apply all fills.
+
+Use foldl over the set of (row, col, value) fill triples to accumulate all
+changes into the output grid.
+
+IMPLEMENTATION
+
+The implementation uses these key predicates:
+
+arc2_sx_comps4_(ACells, Comps)
+    Partitions all A-marker cells into 4-connected components by iterative
+    DFS flood-fill (arc2_sx_flood4_/6).
+
+arc2_sx_comp_(BG, AVal, NRows, NCols, Comp, G0, G1)
+    Processes one component in all four directions by threading the grid
+    through four calls to arc2_sx_try_dir_/8.
+
+arc2_sx_try_dir_(Dir, BG, AVal, NRows, NCols, Comp, G0, G1)
+    Collects seed chains for all border cells of Comp in direction Dir.
+    Computes fill cells for each valid chain via arc2_sx_ext_fill_/5.
+    Applies fills with foldl + arc2_set_cell_/5.
+    Fails cleanly (returns G0 unchanged) when no valid chains exist.
+
+arc2_sx_seed_chain_(Grid, BG, AVal, NRows, NCols, Comp, Dir, Chain)
+    For a border cell of Comp in direction Dir, calls arc2_sx_collect_/10
+    and succeeds when the collected chain is non-empty.
+
+arc2_sx_collect_(Grid, BG, AVal, NRows, NCols, R, C, Dir, Acc, Chain)
+    Walks from (R,C) in direction Dir. If a BG cell is found, reverses
+    Acc to return Chain (the pattern to tile). Fails when the grid boundary
+    is reached (no gap) or an AVal cell is encountered.
+
+arc2_sx_ext_fill_(Chain, Dir, NRows, NCols, R-C-Val)
+    Generates one fill triple for each position in the extension region.
+    Uses between/3 to enumerate the region. Computes Offset = distance from
+    the chain anchor; Val = Chain[Offset mod P] using nth0/3.
+
+arc2_sx_step_(Dir, DR, DC)
+    Maps each direction to its row/column delta:
+    up = (-1,0), down = (1,0), left = (0,-1), right = (0,1).
+
+VERIFICATION
+
+Training pair 0: A-marker column in the center. To the right of the column, a
+3-cell seed chain [color A, color B, color C] appears in some rows. BG follows.
+stream_extend tiles [A,B,C,A,B,C,...] from the chain to the right boundary.
+All cells match expected output.
+
+Training pair 1: A-marker row. Above the row, a 2-cell seed chain appears in
+some columns. BG fills the column above the chain. stream_extend tiles the
+2-color pattern upward to the top boundary. All cells match expected output.
+
+Test case: both patterns appear simultaneously. The rule extends both vertically
+and horizontally from the A-marker region, filling the full output with tiled
+periodic patterns. Output matches expected.
+
+BENCHMARK RESULT
+
+Score: 26/120 = 21.67% to 27/120 = 22.50%.
+Task solved: 53fb4810.
+Rule name: stream_extend.
