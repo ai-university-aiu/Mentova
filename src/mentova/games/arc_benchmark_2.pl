@@ -5759,6 +5759,167 @@ arc2_db_ray_(R, C, DR, DC, Sixes, NRows, NCols, G0, G1) :-
     ).
 
 % ---------------------------------------------------------------------------
+% WAVE 30 — frame_absorb (WP-288, Layer 263)
+% Task d35bdbdc
+% ---------------------------------------------------------------------------
+
+% Register the frame_absorb rule.
+arc2_named_rule(frame_absorb).
+
+% arc2_transform(frame_absorb, +Grid, -Out): top-level entry point.
+arc2_transform(frame_absorb, Grid, Out) :-
+    % Collect all non-background (0), non-snake (5) cell positions.
+    findall(R-C,
+        (nth0(R, Grid, Row), nth0(C, Row, V), V \= 0, V \= 5),
+        Positions),
+    % At least one non-background position must exist.
+    Positions \= [],
+    % Partition positions into 4-connected components.
+    arc2_fa_comps_(Positions, Comps),
+    % At least two components (blocks) must be present.
+    Comps = [_,_|_],
+    % Classify each component as a frame block term.
+    maplist(arc2_fa_block_(Grid), Comps, Blocks),
+    % Compute the absorption action sequence.
+    arc2_fa_solve_(Blocks, Actions),
+    % At least one action must result from solving.
+    Actions \= [],
+    % Apply all actions to produce the output grid.
+    foldl(arc2_fa_exec_, Actions, Grid, Out).
+
+% arc2_fa_adj_(+Pos, -Neighbour): the four 4-adjacent neighbours of Pos.
+arc2_fa_adj_(R-C, NR-C) :- NR is R - 1, NR >= 0.
+% Step south.
+arc2_fa_adj_(R-C, NR-C) :- NR is R + 1.
+% Step west.
+arc2_fa_adj_(R-C, R-NC) :- NC is C - 1, NC >= 0.
+% Step east.
+arc2_fa_adj_(R-C, R-NC) :- NC is C + 1.
+
+% arc2_fa_comps_(+Positions, -Components): BFS-partition into 4-connected groups.
+arc2_fa_comps_([], []).
+arc2_fa_comps_([H|T], [Comp|Rest]) :-
+    % Grow one component starting from H.
+    arc2_fa_bfs_([H], [H], T, Comp, Remaining),
+    % Recursively partition the remaining positions.
+    arc2_fa_comps_(Remaining, Rest).
+
+% arc2_fa_bfs_(+Queue, +Visited, +Unvisited, -Component, -Remaining): BFS step.
+arc2_fa_bfs_([], Visited, Remaining, Visited, Remaining) :- !.
+arc2_fa_bfs_([H|Q], Visited, Unvisited, Comp, Remaining) :-
+    % Find 4-adjacent neighbours in the unvisited pool not yet visited.
+    findall(N,
+        (arc2_fa_adj_(H, N), member(N, Unvisited), \+ member(N, Visited)),
+        Ns),
+    % Sort to remove duplicates and maintain determinism.
+    sort(Ns, SortedNs),
+    % Enqueue new neighbours.
+    append(Q, SortedNs, NewQ),
+    % Add new neighbours to the visited set.
+    append(Visited, SortedNs, NewVisited),
+    % Remove new neighbours from the unvisited pool.
+    subtract(Unvisited, SortedNs, NewUnvisited),
+    % Continue BFS with updated state.
+    arc2_fa_bfs_(NewQ, NewVisited, NewUnvisited, Comp, Remaining).
+
+% arc2_fa_block_(+Grid, +Cells, -Block): classify a component as a frame block.
+% Block = block(CenterRow, CenterCol, CenterColor, ArmColor, Cells).
+arc2_fa_block_(Grid, Cells, block(CR, CC, CV, AV, Cells)) :-
+    % Collect the color value of each cell in the component.
+    maplist([R-C, V]>>(nth0(R, Grid, Row), nth0(C, Row, V)), Cells, Vals),
+    % Compute the distinct color set.
+    list_to_set(Vals, Colors),
+    (   Colors = [C1, C2]
+    ->  % Two-color block: the singleton color is CV (center), majority is AV (arm).
+        (include(=(C1), Vals, [_]) -> CV = C1, AV = C2 ; CV = C2, AV = C1),
+        % Find the cell whose color matches CV: that is the center cell.
+        member(CR-CC, Cells),
+        % Verify this cell's grid value is CV.
+        nth0(CR, Grid, Row0), nth0(CC, Row0, CV)
+    ;   % Monochrome block: CV and AV are equal; center = max-degree cell.
+        Colors = [AV], CV = AV,
+        % Select the most 4-connected cell as the center.
+        arc2_fa_max_deg_(Cells, CR-CC)
+    ).
+
+% arc2_fa_max_deg_(+Cells, -Best): cell with the highest 4-connectivity degree.
+arc2_fa_max_deg_([R-C], R-C) :- !.
+arc2_fa_max_deg_(Cells, Best) :-
+    % For each cell, count its in-component 4-neighbours.
+    maplist([Cell, Deg-Cell]>>(
+        findall(N, (arc2_fa_adj_(Cell, N), member(N, Cells)), Ns),
+        length(Ns, Deg)
+    ), Cells, DegCells),
+    % Sort ascending so the last element has the highest degree.
+    msort(DegCells, Sorted),
+    % Extract the cell paired with the highest degree.
+    last(Sorted, _-Best).
+
+% arc2_fa_solve_(+Blocks, -Actions): entry wrapper adds empty accumulator.
+arc2_fa_solve_(Blocks, Actions) :-
+    % Initialise the accumulator and dispatch to the recursive worker.
+    arc2_fa_solve_(Blocks, [], Actions).
+
+% Base case: no blocks left; return the accumulated actions.
+arc2_fa_solve_([], Acc, Acc) :- !.
+arc2_fa_solve_(Available, Acc, Actions) :-
+    % Priority 1: find a monochrome block Y (CV = AV) and process it first.
+    member(Y, Available),
+    % Unpack Y's center and arm colors.
+    Y = block(_, _, YCV, YAV, _),
+    % Monochrome check: center equals arm.
+    YCV =:= YAV,
+    (   % Try to find a predecessor X whose CV matches Y's AV.
+        member(X, Available), X \= Y,
+        X = block(_, _, XCV, _, _), XCV =:= YAV
+    ->  % X absorbs Y: remove both and record the action.
+        select(X, Available, Av1), select(Y, Av1, Av2),
+        arc2_fa_solve_(Av2, [absorb(X, Y)|Acc], Actions)
+    ;   % No predecessor exists; Y is a dead end: erase it.
+        select(Y, Available, Av2),
+        arc2_fa_solve_(Av2, [erase(Y)|Acc], Actions)
+    ), !.
+arc2_fa_solve_(Available, Acc, Actions) :-
+    % Priority 2: find a chain start X (no block Z has Z.CV = X.AV).
+    member(X, Available),
+    % Unpack X's arm color.
+    X = block(_, _, _, XAV, _),
+    % Confirm no other block's center color equals X's arm color.
+    \+ (member(Z, Available), Z \= X,
+        Z = block(_, _, ZCV, _, _), ZCV =:= XAV),
+    (   % Try to find X's successor Y (X.CV = Y.AV).
+        X = block(_, _, XCV, _, _),
+        member(Y, Available), Y \= X,
+        Y = block(_, _, _, YAV, _), XCV =:= YAV
+    ->  % X absorbs Y: remove both and record the action.
+        select(X, Available, Av1), select(Y, Av1, Av2),
+        arc2_fa_solve_(Av2, [absorb(X, Y)|Acc], Actions)
+    ;   % X has no successor; it is a dead end: erase it.
+        select(X, Available, Av2),
+        arc2_fa_solve_(Av2, [erase(X)|Acc], Actions)
+    ), !.
+arc2_fa_solve_(Available, Acc, Actions) :-
+    % No start found (cyclic dependency): erase all remaining blocks.
+    foldl([B, A0, [erase(B)|A0]]>>true, Available, Acc, Actions).
+
+% arc2_fa_exec_(absorb(X,Y), +G0, -G1): erase Y; set X's center to Y's CV.
+arc2_fa_exec_(absorb(X, Y), G0, G1) :-
+    % Unpack Y's center color and cell set.
+    Y = block(_, _, YCV, _, YCells),
+    % Unpack X's center row and column.
+    X = block(XR, XC, _, _, _),
+    % Erase every cell of Y by setting it to background (0).
+    foldl([R-C, Gi, Go]>>(arc2_set_cell_(Gi, R, C, 0, Go)), YCells, G0, Gtmp),
+    % Paint X's center cell with Y's center color.
+    arc2_set_cell_(Gtmp, XR, XC, YCV, G1).
+% arc2_fa_exec_(erase(B), +G0, -G1): erase all cells of block B.
+arc2_fa_exec_(erase(B), G0, G1) :-
+    % Unpack B's cell set.
+    B = block(_, _, _, _, BCells),
+    % Set every cell of B to background (0).
+    foldl([R-C, Gi, Go]>>(arc2_set_cell_(Gi, R, C, 0, Go)), BCells, G0, G1).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

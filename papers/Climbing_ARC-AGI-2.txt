@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-29. Wave 29 complete: 29/120 = 24.17%.
+Last updated: 2026-06-30. Wave 30 complete: 30/120 = 25.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -151,6 +151,7 @@ Date        | Score      | Percent | Notes
 2026-06-29  |  27 / 120  | 22.50%  | Wave 27: stream-extend A-marker periodic seed-chain extension to grid boundary
 2026-06-29  |  28 / 120  | 23.33%  | Wave 28: slide-open 0-cell components slid to 5-divider; open rows filled right with 2
 2026-06-29  |  29 / 120  | 24.17%  | Wave 29: diag-beam diagonal 45-degree beam with 6-obstacle reflections filling 6-trails
+2026-06-30  |  30 / 120  | 25.00%  | Wave 30: frame-absorb frame block absorption graph; monochrome-first priority; chain-start processing
 
 
 COMPLETE SCORE PROGRESSION
@@ -264,6 +265,52 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 30 - 2026-06-30 - Score: 30/120 = 25.00%
+
+Date: 2026-06-30
+
+Confirmed score: 30 / 120 = 25.00%
+
+Rules added in this wave:
+
+1. frame_absorb (task d35bdbdc) - grids contain a persistent snake path of
+   5-valued cells and a set of frame blocks: either 3x3 squares (8 border
+   cells + 1 center) or cross shapes (4 arm cells + 1 center). Each block
+   has a center color CV and an arm color AV (equal for monochrome blocks).
+   The rule builds an absorption graph where edge X -> Y means X.CV = Y.AV.
+   Processing order:
+   (1) Monochrome first: find any block Y with CV = AV. If a predecessor X
+       exists (X.CV = Y.AV), X absorbs Y: Y erased, X center repainted Y.CV.
+       If no predecessor, Y is erased.
+   (2) Chain starts: find a block X with no predecessor. If X has a successor
+       Y (X.CV = Y.AV), X absorbs Y. If no successor, X is erased.
+   (3) Cycle fallback: remaining blocks in a cycle are all erased.
+   Snake (5) cells and background (0) cells are never touched.
+
+Bugs fixed:
+  1. Initial code collected all non-zero positions. Snake path (5-valued)
+     formed a large monochrome component with no predecessor and was being
+     erased, corrupting the grid. Fix: exclude 5-valued cells from position
+     collection.
+
+Lessons learned:
+  1. When a task has a structural element that is invariant (the snake path),
+     it must be explicitly excluded from the component-finding step.
+  2. The monochrome-first priority is essential: in the TEST case, block D
+     (monochrome cross) must be processed before block B so that B's
+     absorption target (D) is correctly consumed first, leaving B as a
+     dead end rather than an absorber.
+  3. The absorption chain is directional (X.CV = Y.AV means X absorbs Y,
+     not Y absorbs X). The terminology "center color" and "arm color"
+     encodes the directionality of the edge in the absorption graph.
+
+Score advance: 29/120 = 24.17% to 30/120 = 25.00%.
+Accomplishment: Acc_328.  Paper: Acc_328_ARC2_Wave30.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2350,6 +2397,7 @@ ALL SOLVED TASKS
 97d7923e  - Wave 5  - stub_rank_fill       - column stubs rank which vertical bar to fill
 b0039139  - Wave 20 - section_tile        - divider-split sections tiled N times with solid-color mapping
 d59b0160  - Wave 22 - legend_veto         - 4x4 legend set; erase mixed-color components covering all legend values
+d35bdbdc  - Wave 30 - frame_absorb        - frame blocks absorb successors; monochrome-first priority; snake (5) cells unchanged
 db695cfb  - Wave 29 - diag_beam          - 45-degree beam between 1-pairs fills 1s; 6-obstacles reflect perpendicular 6-rays
 dbff022c  - Wave 16 - legend_fill         - fill closed frame interiors using a color lookup table
 e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to middle
@@ -2503,3 +2551,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 28: Slide-open 0-cell components slid to 5-d
 Dison, D. R. (2026). ARC-AGI-2 Wave 29: Diag-beam diagonal 45-degree beam; 6-obstacles reflect perpendicular 6-rays.
   Score: 29/120 = 24.17%. Task db695cfb solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-29.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 30: Frame-absorb frame block absorption graph; monochrome-first priority; chain starts; dead-end erasure.
+  Score: 30/120 = 25.00%. Task d35bdbdc solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-30.

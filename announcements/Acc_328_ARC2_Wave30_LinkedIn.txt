@@ -1,0 +1,31 @@
+Wave 30 of climbing ARC-AGI-2 is complete.
+
+Task solved: d35bdbdc
+Rule: frame_absorb
+Score: 30/120 = 25.00%
+
+This task involves frame blocks: rectangular 3x3 squares or cross shapes,
+each with a center color and an arm color. A snake path of 5-valued cells
+threads through the grid and is left unchanged.
+
+The frame_absorb rule builds an absorption graph: if block X's center color
+equals block Y's arm color, then X can absorb Y. Absorbing means Y's cells
+are erased and X's center cell is repainted with Y's original center color.
+
+The solver processes this graph in a strict priority order:
+- Monochrome blocks (center = arm color) are processed first.
+- Then chain-start blocks (blocks with no incoming absorption edge) are processed.
+- Any remaining blocks in a cycle are erased.
+
+For the TEST case the rule handles a cross-shaped monochrome block, a
+dead-end block, and a two-step absorption chain -- all in pure Prolog with
+no machine learning and no pretraining.
+
+30 of 120 ARC-AGI-2 evaluation tasks solved. 90 remain.
+
+Glass-box. Named rules. Pure induction.
+
+#ARC_AGI #PrologAI #Mentova #AIReasoning #SymbolicAI #AGI
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
