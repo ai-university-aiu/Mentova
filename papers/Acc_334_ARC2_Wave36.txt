@@ -1,0 +1,204 @@
+Acc_334: ARC-AGI-2 Wave 36 - slide_void Rule - Task 332f06d7
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-30
+
+
+ABSTRACT
+
+Wave 36 of the PrologAI ARC-AGI-2 benchmark climb adds the slide_void named
+rule, which solves task 332f06d7. This rule captures the behavior of a rigid
+H x W void block (0-cells) that slides along a river of 1-cells to the
+farthest reachable dead-end in the block-movement graph. A dead-end is a
+block position with exactly one slide neighbour in the full block-movement
+graph. If the farthest dead-end is adjacent to the 2-marker (same H x W
+block), the void moves to the marker position instead. After Wave 36,
+PrologAI solves 36 of 120 ARC-AGI-2 tasks (30.00%) using pure Prolog named
+rules with no machine learning.
+
+
+1. TASK DESCRIPTION
+
+Task 332f06d7 presents input grids that contain three elements: an H x W
+block of 0-cells (the void), an H x W block of 2-cells (the marker), and a
+river of 1-cells connecting them on a background of other non-0/1 values.
+The void must navigate the river maze to reach the far end, and sometimes the
+far end is the marker's pocket.
+
+The task requires four non-trivial capabilities working together:
+
+(a) Block-movement understanding: the void is a rigid H x W unit that moves
+as a whole, not cell by cell. A slide is only valid if the new cells entering
+the block's leading face are all passable (value 0 or 1).
+
+(b) Maze graph construction: the block-movement graph has nodes at all
+reachable block positions (top-left coordinates) and edges between positions
+reachable by one valid slide.
+
+(c) Farthest dead-end selection: a dead-end is a block position with exactly
+1 slide neighbour. The rule selects the one with maximum BFS distance from
+the void's starting position -- not the nearest.
+
+(d) Marker adjacency fallback: if the farthest dead-end is adjacent to the
+2-marker (any face cell of the dead-end block is a 2-cell), the void moves
+to the marker position itself rather than the dead-end.
+
+
+2. RULE DESIGN
+
+2.1 Block-Movement BFS
+
+The BFS operates over block positions (top-left coordinates of the H x W
+block), not over individual grid cells. From any block position (R, C):
+
+  Slide UP:    new top-left (R-1, C); entering cells = row R-1, cols C..C+W-1
+  Slide DOWN:  new top-left (R+1, C); entering cells = row R+H, cols C..C+W-1
+  Slide LEFT:  new top-left (R, C-1); entering cells = col C-1, rows R..R+H-1
+  Slide RIGHT: new top-left (R, C+1); entering cells = col C+W, rows R..R+H-1
+
+A slide is valid if all entering cells have value 0 or 1 in the original
+grid (not the intermediate state). Treating 0 as passable is critical: it
+allows the block to traverse its own starting footprint when a maze path
+loops back through the original void position.
+
+2.2 Dead-End Detection by Graph Degree
+
+A dead-end is defined by graph topology, not by visual inspection. A block
+position P is a dead-end when the count of its slide neighbours (across all
+four directions) equals exactly 1. This is computed by arc2_svo_is_deadend_
+using findall to collect all valid slide destinations and checking length == 1.
+
+This definition is more robust than face-type analysis (checking whether faces
+are all-river or all-background), which fails at positions where the face
+composition does not reliably signal topology.
+
+2.3 Farthest Dead-End Selection
+
+BFS from the void's starting position records the distance to every reachable
+block position. Among all reachable non-start dead-ends, the one with maximum
+BFS distance is selected. This is the far end of the river maze.
+
+msort/2 sorts candidate (Dist-R-C) triples in ascending order; last/2 takes
+the maximum. Ties in distance are broken by row then column (arbitrary but
+deterministic).
+
+2.4 Marker Adjacency Fallback
+
+If the selected farthest dead-end is adjacent to the 2-marker -- meaning any
+face cell of the H x W block at the dead-end position is a 2-cell -- then the
+target is set to the marker's top-left (MR, MC) rather than the dead-end.
+
+This handles the case where the maze's far corner IS the marker's pocket: the
+void slides into the marker exactly rather than stopping at the cell one step
+before it.
+
+2.5 Output Construction
+
+Old void cells (the H x W block at the starting position) become 1 (river
+restored). Target cells (the H x W block at the selected target position)
+become 0 (new void position). All other cells remain unchanged.
+
+
+3. IMPLEMENTATION
+
+The rule is implemented in arc_benchmark_2.pl as arc2_named_rule(slide_void)
+and arc2_transform(slide_void, +Grid, -Out), with helper predicates all
+namespaced arc2_svo_*. All lines carry ERC % comments per project rule.
+
+Key predicates:
+
+  arc2_svo_void_/7        - locate void via bounding box of 0-cells
+  arc2_svo_marker_/7      - locate marker via bounding box of 2-cells
+  arc2_svo_row_passable_/4 - check row of entering cells is all passable
+  arc2_svo_col_passable_/4 - check col of entering cells is all passable
+  arc2_svo_one_nbr_/9     - one slide neighbour (4 clauses, one per direction)
+  arc2_svo_block_bfs_/8   - BFS over block positions from void start
+  arc2_svo_bfs_blk_iter_/9 - BFS iteration accumulating R-C-Dist triples
+  arc2_svo_block_bfs_step_/8 - one BFS expansion level
+  arc2_svo_is_deadend_/7  - check graph degree == 1
+  arc2_svo_farthest_end_/10 - select maximum-distance dead-end
+  arc2_svo_adj_marker_/7  - check face cells for 2-values
+  arc2_svo_cell_out_/6    - output value dispatch
+  arc2_transform/3         - entry point
+
+
+4. BUGS ENCOUNTERED AND FIXED
+
+Bug 1: Cell-level BFS instead of block-movement BFS. The initial
+implementation ran BFS over individual grid cells (value 0 or 1) rather than
+over block positions. Cell BFS gives wrong distances because the block moves
+as a rigid unit: the distance to a block position is the number of block
+slides, not the number of cell hops.
+  Fixed by rewriting BFS to operate on (R,C) block top-left coordinates, with
+  arc2_svo_one_nbr_ checking only the entering cells for each slide direction.
+
+Bug 2: Nearest dead-end instead of farthest. The initial implementation
+selected the dead-end with MINIMUM BFS distance from the void. This produced
+incorrect outputs for all training pairs.
+  Fixed by using msort ascending and last/2 to pick the MAXIMUM distance
+  dead-end.
+
+Bug 3: Face-based dead-end detection. The initial implementation classified
+dead-ends by checking that exactly 1 face is all-river and at least 1 face
+is all-background. This misidentified non-dead-end block positions as dead-ends
+and excluded genuine dead-ends that happened to have mixed faces.
+  Fixed by counting slide neighbours directly (findall + length == 1).
+
+Bug 4: Passability required value == 1 only. The initial passability check
+required the entering cell value to be exactly 1. This prevented the block
+from traversing its own starting footprint (which has value 0 in the original
+grid).
+  Fixed by requiring value in {0, 1} (V =:= 0 ; V =:= 1).
+
+
+5. VERIFICATION
+
+All four training pairs of task 332f06d7 pass. The test case is solved by
+arc2_induce_rule correctly inducing Rule=slide_void.
+
+Pair-by-pair verification:
+  Pair 1 (12x12): void 2x2 at (9,8); marker 2x2 at (0,1); farthest dead-end
+    (2,1) at dist 22, adjacent to marker -> move to marker (0,1). PASS.
+  Pair 2 (14x14): void 2x2 at (2,10); marker 2x2 at (12,1); farthest dead-end
+    (7,8) at dist 13, not adjacent to marker -> move to (7,8). PASS.
+  Pair 3 (16x16): void 3x3 at (12,1); marker 3x3 at (1,0); farthest dead-end
+    (6,7) at dist 14, not adjacent to marker -> move to (6,7). PASS.
+  Pair 4 (10x10): void 1x1 at (1,1); marker 1x1 at (9,4); farthest dead-end
+    (8,4) at dist 20, adjacent to marker -> move to marker (9,4). PASS.
+  Test (20x20): void 4x4 at (11,1); marker 4x4 at (14,16); farthest dead-end
+    (1,4) at dist 37, not adjacent to marker -> move to (1,4). PASS.
+
+
+6. WAVE 36 SCORE
+
+Previous score: 35/120 = 29.17% (Wave 35, bbox_fill, task 9385bd28).
+Wave 36 score: 36/120 = 30.00%.
+Task solved: 332f06d7.
+Rule: slide_void.
+
+
+7. RELATED WORK
+
+Previous movement-based rules in this climb:
+
+  Wave 28 (slide_open): 0-cell components slid right to a 5-divider.
+  Wave 31 (shape_beam): rod fires beam through connected shape chains.
+  Wave 34 (rail_fill): 0-bordered boxes shift toward outer 9-rail.
+
+slide_void extends the movement paradigm to rigid block navigation in a maze
+defined by the block-movement graph topology.
+
+
+8. CONCLUSION
+
+Wave 36 demonstrates that rigid-block maze navigation can be expressed as a
+compact Prolog rule when the correct graph abstraction is chosen. The
+block-movement BFS, graph-degree dead-end detection, and farthest-end
+selection each replace an incorrect intuition (cell BFS, face-based dead-ends,
+nearest end) with a more precise graph-theoretic formulation. The rule is
+general: it handles voids of any dimension (1x1 through 4x4 in training) and
+mazes of any size (10x10 through 20x20 in training).
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

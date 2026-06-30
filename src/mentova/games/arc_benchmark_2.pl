@@ -6982,6 +6982,215 @@ arc2_transform(bbox_fill, Grid, Out) :-
     ), RowIs, Out).
 
 % ---------------------------------------------------------------------------
+% WAVE 36: slide_void (task 332f06d7)
+% A void rectangle (0-cells, H x W) slides along a river of 1-cells toward a
+% 2-marker (same H x W). The void moves to the FARTHEST reachable dead-end in
+% the block-movement graph, where dead-end = block position with exactly one
+% slide neighbour. If the farthest dead-end is adjacent to the 2-marker the
+% void instead moves directly to the 2-marker position.
+% Block passability: a cell is passable (value 0 or 1) in the original grid.
+% ---------------------------------------------------------------------------
+
+% Register the slide_void named rule.
+arc2_named_rule(slide_void).
+
+% arc2_svo_bg_: background is the top-left corner cell value.
+arc2_svo_bg_([[BG | _] | _], BG).
+
+% arc2_svo_bbox_upd_: foldl helper that expands a bounding box by one R-C cell.
+arc2_svo_bbox_upd_(R-C, Ra-Ca-Rb-Cb, R1-C1-R2-C2) :-
+% Update min-row, min-col, max-row, max-col extents.
+    R1 is min(R, Ra), C1 is min(C, Ca),
+    R2 is max(R, Rb), C2 is max(C, Cb).
+
+% arc2_svo_bbox_: bounding box of a non-empty list of R-C cells.
+arc2_svo_bbox_([R0-C0 | Rest], R1, C1, R2, C2) :-
+% Fold over all remaining cells expanding from the first seed.
+    foldl(arc2_svo_bbox_upd_, Rest, R0-C0-R0-C0, R1-C1-R2-C2).
+
+% arc2_svo_void_: locate the H x W block of 0-cells (the void).
+arc2_svo_void_(Grid, NR1, NC1, VR, VC, H, W) :-
+% Collect all zero-valued cell coordinates in the grid.
+    findall(R-C, (between(0, NR1, R), between(0, NC1, C),
+                  nth0(R, Grid, Row), nth0(C, Row, 0)), Cs),
+    Cs \= [],
+% Compute bounding box; H and W follow from the extents.
+    arc2_svo_bbox_(Cs, VR, VC, R2, C2),
+    H is R2 - VR + 1, W is C2 - VC + 1.
+
+% arc2_svo_marker_: locate the H x W block of 2-cells (the marker).
+arc2_svo_marker_(Grid, NR1, NC1, MR, MC, H, W) :-
+% Collect all 2-valued cell coordinates in the grid.
+    findall(R-C, (between(0, NR1, R), between(0, NC1, C),
+                  nth0(R, Grid, Row), nth0(C, Row, 2)), Cs),
+    Cs \= [],
+% Bounding box; when H and W are already bound they must equal void dimensions.
+    arc2_svo_bbox_(Cs, MR, MC, R2, C2),
+    H is R2 - MR + 1, W is C2 - MC + 1.
+
+% arc2_svo_face_cells_/9: collect cell values on one directional face of block (R,C,H,W).
+% Returns [] for out-of-bounds faces (treated as background by the caller).
+arc2_svo_face_cells_(Grid, _NR1, _NC1, R, C, _H, W, top, Vals) :-
+% Top face: the row immediately above the block.
+    FR is R - 1,
+    (FR < 0 -> Vals = []
+    ; C2 is C + W - 1,
+      findall(V, (between(C, C2, FC), nth0(FR, Grid, FRow), nth0(FC, FRow, V)), Vals)).
+arc2_svo_face_cells_(Grid, NR1, _NC1, R, C, H, W, bottom, Vals) :-
+% Bottom face: the row immediately below the block.
+    FR is R + H,
+    (FR > NR1 -> Vals = []
+    ; C2 is C + W - 1,
+      findall(V, (between(C, C2, FC), nth0(FR, Grid, FRow), nth0(FC, FRow, V)), Vals)).
+arc2_svo_face_cells_(Grid, _NR1, _NC1, R, C, H, _W, left, Vals) :-
+% Left face: the column immediately to the left of the block.
+    FC is C - 1,
+    (FC < 0 -> Vals = []
+    ; R2 is R + H - 1,
+      findall(V, (between(R, R2, FR), nth0(FR, Grid, FRow), nth0(FC, FRow, V)), Vals)).
+arc2_svo_face_cells_(Grid, _NR1, NC1, R, C, H, W, right, Vals) :-
+% Right face: the column immediately to the right of the block.
+    FC is C + W,
+    (FC > NC1 -> Vals = []
+    ; R2 is R + H - 1,
+      findall(V, (between(R, R2, FR), nth0(FR, Grid, FRow), nth0(FC, FRow, V)), Vals)).
+
+% arc2_svo_adj_marker_: succeed if any face of the block at (R,C,H,W) touches a 2-cell.
+arc2_svo_adj_marker_(Grid, NR1, NC1, R, C, H, W) :-
+% Scan each face for a 2-valued cell; cut on first match.
+    member(D, [top, bottom, left, right]),
+    arc2_svo_face_cells_(Grid, NR1, NC1, R, C, H, W, D, Vals),
+    member(2, Vals), !.
+
+% arc2_svo_row_passable_: row FR, columns C to C+W-1 are all passable (value 0 or 1).
+arc2_svo_row_passable_(Grid, FR, C, W) :-
+% Span columns from C to C+W-1; every cell must be 0 or 1.
+    C2 is C + W - 1,
+    forall(between(C, C2, IC),
+           (nth0(FR, Grid, FRow), nth0(IC, FRow, V), (V =:= 0 ; V =:= 1))).
+
+% arc2_svo_col_passable_: column FC, rows R to R+H-1 are all passable (value 0 or 1).
+arc2_svo_col_passable_(Grid, R, FC, H) :-
+% Span rows from R to R+H-1; every cell must be 0 or 1.
+    R2 is R + H - 1,
+    forall(between(R, R2, IR),
+           (nth0(IR, Grid, GRow), nth0(FC, GRow, V), (V =:= 0 ; V =:= 1))).
+
+% arc2_svo_one_nbr_/9: one block-movement neighbour of the H x W block at (R,C).
+% Slide UP: new top-left (R-1,C); entering cells are row R-1, cols C..C+W-1.
+arc2_svo_one_nbr_(Grid, _NR1, _NC1, R, C, _H, W, NR2, C) :-
+% New position row is R-1; must stay in-bounds; new top row must be passable.
+    NR2 is R - 1, NR2 >= 0,
+    arc2_svo_row_passable_(Grid, NR2, C, W).
+% Slide DOWN: new top-left (R+1,C); entering cells are row R+H, cols C..C+W-1.
+arc2_svo_one_nbr_(Grid, NR1, _NC1, R, C, H, W, NR2, C) :-
+% New position row is R+1; entering row is R+H; must stay in-bounds.
+    FR is R + H, FR =< NR1,
+    NR2 is R + 1,
+    arc2_svo_row_passable_(Grid, FR, C, W).
+% Slide LEFT: new top-left (R,C-1); entering cells are col C-1, rows R..R+H-1.
+arc2_svo_one_nbr_(Grid, _NR1, _NC1, R, C, H, _W, R, NC2) :-
+% New position col is C-1; must stay in-bounds; new left col must be passable.
+    NC2 is C - 1, NC2 >= 0,
+    arc2_svo_col_passable_(Grid, R, NC2, H).
+% Slide RIGHT: new top-left (R,C+1); entering cells are col C+W, rows R..R+H-1.
+arc2_svo_one_nbr_(Grid, _NR1, NC1, R, C, H, W, R, NC2) :-
+% New position col is C+1; entering col is C+W; must stay in-bounds.
+    FC is C + W, FC =< NC1,
+    NC2 is C + 1,
+    arc2_svo_col_passable_(Grid, R, FC, H).
+
+% arc2_svo_block_bfs_step_: expand one BFS level over block positions.
+arc2_svo_block_bfs_step_(Grid, NR1, NC1, H, W, Frontier, Visited, NextFrontier) :-
+% Collect all unvisited block-movement neighbours from the current frontier.
+    findall(NR2-NC2-D1, (
+        member(R-C-D, Frontier),
+        D1 is D + 1,
+        arc2_svo_one_nbr_(Grid, NR1, NC1, R, C, H, W, NR2, NC2),
+        \+ member(NR2-NC2, Visited)
+    ), Raw),
+% Deduplicate so each block position appears at most once per BFS level.
+    sort(Raw, NextFrontier).
+
+% arc2_svo_block_bfs_: BFS over block positions from void top-left (VR,VC).
+% Returns Reached = list of R-C-Dist triples covering all reachable positions.
+arc2_svo_block_bfs_(Grid, NR1, NC1, VR, VC, H, W, Reached) :-
+% Seed BFS with the void's starting block position at distance 0.
+    arc2_svo_bfs_blk_iter_(Grid, NR1, NC1, H, W,
+        [VR-VC-0], [VR-VC], [VR-VC-0], Reached).
+
+% arc2_svo_bfs_blk_iter_: iterative block BFS accumulating R-C-Dist entries.
+arc2_svo_bfs_blk_iter_(_, _, _, _, _, [], _, Acc, Acc) :- !.
+arc2_svo_bfs_blk_iter_(Grid, NR1, NC1, H, W, Frontier, Visited, Acc, Reached) :-
+% Expand frontier to next BFS level.
+    arc2_svo_block_bfs_step_(Grid, NR1, NC1, H, W, Frontier, Visited, NextF),
+% Extract R-C pairs from next frontier for visited tracking.
+    maplist([R-C-_, R-C]>>true, NextF, NextRCs),
+    append(Visited, NextRCs, Visited2),
+% Accumulate new triples and continue.
+    append(Acc, NextF, Acc2),
+    arc2_svo_bfs_blk_iter_(Grid, NR1, NC1, H, W, NextF, Visited2, Acc2, Reached).
+
+% arc2_svo_is_deadend_: block at (R,C,H,W) is a dead-end — exactly 1 slide neighbour.
+arc2_svo_is_deadend_(Grid, NR1, NC1, R, C, H, W) :-
+% Count all slide neighbours in the full block-movement graph (not just BFS tree).
+    findall(NR2-NC2, arc2_svo_one_nbr_(Grid, NR1, NC1, R, C, H, W, NR2, NC2), Nbrs),
+    length(Nbrs, 1).
+
+% arc2_svo_farthest_end_: find the farthest reachable dead-end from the void start.
+% FR-FC is the top-left of the dead-end block with maximum BFS distance.
+arc2_svo_farthest_end_(Grid, NR1, NC1, H, W, VR, VC, Reached, FR, FC) :-
+% Collect all reachable non-start positions that are dead-ends.
+    findall(D-R-C, (
+        member(R-C-D, Reached),
+        \+ (R =:= VR, C =:= VC),
+        arc2_svo_is_deadend_(Grid, NR1, NC1, R, C, H, W)
+    ), Cands),
+    Cands \= [],
+% msort gives ascending order; last element has the maximum distance.
+    msort(Cands, Sorted),
+    last(Sorted, _-FR-FC).
+
+% arc2_svo_cell_out_: output value for one cell during void slide.
+arc2_svo_cell_out_(OldCells, NewCells, R, C, Orig, Out) :-
+% Old void cells become river (1); new target cells become void (0).
+    (member(R-C, OldCells) -> Out = 1
+    ; member(R-C, NewCells) -> Out = 0
+    ; Out = Orig).
+
+% arc2_transform(slide_void, +Grid, -Out): entry point for Wave 36.
+arc2_transform(slide_void, Grid, Out) :-
+% Compute grid dimensions.
+    length(Grid, NR), Grid = [R0 | _], length(R0, NC),
+    NR1 is NR - 1, NC1 is NC - 1,
+% Locate void (0-cells) and marker (2-cells); both must be H x W.
+    arc2_svo_void_(Grid, NR1, NC1, VR, VC, H, W),
+    arc2_svo_marker_(Grid, NR1, NC1, MR, MC, H, W),
+% Run block-movement BFS from the void's starting position.
+    arc2_svo_block_bfs_(Grid, NR1, NC1, VR, VC, H, W, Reached),
+% Find the farthest dead-end; if it touches the marker, move to marker instead.
+    (arc2_svo_farthest_end_(Grid, NR1, NC1, H, W, VR, VC, Reached, TE_R, TE_C) ->
+        (arc2_svo_adj_marker_(Grid, NR1, NC1, TE_R, TE_C, H, W) ->
+            NR3 = MR, NC3 = MC
+        ;   NR3 = TE_R, NC3 = TE_C)
+    ;   NR3 = MR, NC3 = MC),
+% Collect old void cell coordinates.
+    VR2 is VR + H - 1, VC2 is VC + W - 1,
+    findall(R-C, (between(VR, VR2, R), between(VC, VC2, C)), VoidCells),
+% Collect new target cell coordinates.
+    NR4 is NR3 + H - 1, NC4 is NC3 + W - 1,
+    findall(R-C, (between(NR3, NR4, R), between(NC3, NC4, C)), NewCells),
+% Build output grid: old void cells become 1, new cells become 0, rest unchanged.
+    numlist(0, NR1, RowIs),
+    maplist([R, Row]>>(
+        numlist(0, NC1, ColIs),
+        maplist([C, V]>>(
+            nth0(R, Grid, GRow), nth0(C, GRow, Orig),
+            arc2_svo_cell_out_(VoidCells, NewCells, R, C, Orig, V)
+        ), ColIs, Row)
+    ), RowIs, Out).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

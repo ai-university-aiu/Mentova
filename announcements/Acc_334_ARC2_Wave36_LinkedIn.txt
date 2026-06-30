@@ -1,0 +1,51 @@
+Acc_334: ARC-AGI-2 Wave 36 - slide_void - 36/120 = 30.00%
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-06-30
+
+Wave 36 of the PrologAI ARC-AGI-2 climb is complete.
+
+Rule: slide_void
+Task solved: 332f06d7
+New score: 36/120 = 30.00% (up from 35/120 = 29.17%)
+
+THE RULE
+
+The void (an H x W block of 0-cells) slides along a river of 1-cells to the
+FARTHEST reachable dead-end in the block-movement graph. A dead-end is a block
+position with exactly one slide neighbour. If that dead-end is adjacent to the
+2-marker, the void enters the marker pocket.
+
+THE KEY INSIGHT
+
+This task looks like "move the void toward the marker." It is not. The void
+moves to the FAR END of the maze, away from the marker. Only when the far end
+IS adjacent to the marker does the void enter the marker's pocket.
+
+Getting this right required three corrections to my initial implementation:
+
+1. Block-movement BFS, not cell BFS. The void is a rigid H x W block. Its
+   distance is measured in block slides, not cell hops. A cell-level BFS gives
+   completely wrong distances and selects the wrong dead-end.
+
+2. Farthest dead-end, not nearest. The void travels to the most remote
+   corner of the maze. Selecting the nearest dead-end sends the void to the
+   first pocket it can reach, which is wrong for all four training pairs.
+
+3. Graph-degree dead-end detection. A dead-end is defined by having exactly
+   1 slide neighbour in the full block-movement graph -- not by the visual
+   appearance of the block's faces (which face is river, which is background).
+   Graph degree gives the correct answer; face classification does not.
+
+WHAT THIS PROVES
+
+PrologAI can reason about rigid-body maze navigation using pure Prolog and
+graph-theoretic abstractions. No machine learning, no pretraining, no neural
+weights -- just named rules derived from the structure of the task itself.
+
+36 of 120 ARC-AGI-2 tasks solved. The climb continues.
+
+PrologAI: https://github.com/ai-university-aiu/PrologAI
+Mentova: https://github.com/ai-university-aiu/Mentova
+Paper: Mentova/papers/Acc_334_ARC2_Wave36.txt
