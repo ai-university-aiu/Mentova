@@ -8134,6 +8134,189 @@ arc2_ss_hstack_([SR|SRs], Out) :-
     append(SR, [6|Rest], Out).
 
 % ---------------------------------------------------------------------------
+% WP-301 Layer 276: frame_stamp — stamp left-side shapes into a bordered room
+% Task: 247ef758. Rule: a bordered room (cols 4+) is framed by a border whose
+% dominant color is BdrBG. Anomalies in the top row (col K → color C) and
+% right column (row R → color C) encode stamp positions. Each color with
+% anomalies in both the top row and right column AND a left-side shape (cols
+% 0-3) is stamped at every (R,K) center inside the room. Stamps applied
+% largest-cell-count first so smaller shapes overwrite. Stamped left shapes
+% are erased to BG; unmarked left shapes are kept unchanged.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule fact registers frame_stamp for the generic induction loop.
+arc2_named_rule(frame_stamp).
+
+% arc2_transform(frame_stamp, +Grid, -Out): detect and stamp left shapes.
+arc2_transform(frame_stamp, Grid, Out) :-
+    % Determine grid background from cell-frequency mode.
+    arc2_bg_color_(Grid, BG),
+    % Get row count and column count from grid.
+    length(Grid, NR), nth0(0, Grid, Row0), length(Row0, NC),
+    % Compute last-column index for border access.
+    LastCol is NC - 1,
+    % Find border background: mode of top row values cols 4..LastCol, excl BG.
+    arc2_fst_bdr_bg_(Row0, 4, LastCol, BG, BdrBG),
+    % Collect column anomalies from top row: Color->[Cols] association list.
+    arc2_fst_col_anoms_(Row0, 4, LastCol, BdrBG, BG, ColAnoms),
+    % Collect row anomalies from right border column: Color->[Rows].
+    arc2_fst_row_anoms_(Grid, NR, LastCol, BdrBG, BG, RowAnoms),
+    % Collect left-side shapes (cols 0-3) per color: Color->[R-C cells].
+    arc2_fst_lshapes_(Grid, NR, BG, LShapes),
+    % Build stamp specs for colors with anomalies in both borders and a shape.
+    arc2_fst_stamps_(LShapes, ColAnoms, RowAnoms, Stamps),
+    % Sort stamps descending by cell count: largest stamped first.
+    msort(Stamps, AscStamps), reverse(AscStamps, SortedS),
+    % Erase stamped left shapes then place all stamps in order.
+    arc2_fst_apply_(Grid, NR, NC, SortedS, LShapes, BG, Out).
+
+% arc2_fst_bdr_bg_: find mode of top row values in cols From..To excl BG.
+arc2_fst_bdr_bg_(Row, From, To, BG, BdrBG) :-
+    % Generate column indices for the room area.
+    numlist(From, To, Cs),
+    % Extract values at each column.
+    maplist([C, V]>>(nth0(C, Row, V)), Cs, Vals),
+    % Drop task-BG cells before computing mode.
+    exclude(=(BG), Vals, Vals1),
+    % Sort to group equal values into runs.
+    msort(Vals1, Sorted),
+    % Find the most frequent value via run accumulation.
+    arc2_fst_mode_(Sorted, BdrBG).
+
+% arc2_fst_mode_: mode of a sorted non-empty list via run-length accumulation.
+arc2_fst_mode_([H|T], Mode) :-
+    % Initialise current run and best run both at H with count 1.
+    arc2_fst_mode_h_(T, H, 1, H, 1, Mode).
+
+% arc2_fst_mode_h_: tail-recursive run accumulator; emits best-run value.
+arc2_fst_mode_h_([], C, N, B, BN, M) :-
+    % End of list: emit whichever run had the higher count.
+    ( N > BN -> M = C ; M = B ).
+arc2_fst_mode_h_([H|T], H, N, B, BN, M) :-
+    % Same value: extend current run count.
+    N1 is N + 1, arc2_fst_mode_h_(T, H, N1, B, BN, M).
+arc2_fst_mode_h_([H|T], C, N, B, BN, M) :-
+    % New value: update best if current run surpassed it; reset current run.
+    H \= C,
+    ( N > BN -> NB = C, NBN = N ; NB = B, NBN = BN ),
+    arc2_fst_mode_h_(T, H, 1, NB, NBN, M).
+
+% arc2_fst_col_anoms_: build Color->[Col] alist from top-row anomalies.
+arc2_fst_col_anoms_(Row, From, To, BdrBG, BG, Anoms) :-
+    % Generate column indices.
+    numlist(From, To, Cs),
+    % Fold over columns accumulating anomaly pairs.
+    foldl(arc2_fst_col_step_(Row, BdrBG, BG), Cs, [], Anoms).
+
+% arc2_fst_col_step_: process one column for top-border anomaly collection.
+arc2_fst_col_step_(Row, BdrBG, BG, C, Acc, Acc2) :-
+    % Fetch cell value at column C.
+    nth0(C, Row, V),
+    % Record anomaly only for values differing from BdrBG and BG.
+    ( V \= BdrBG, V \= BG
+    -> arc2_fst_assoc_add_(V, C, Acc, Acc2)
+    ;  Acc2 = Acc ).
+
+% arc2_fst_row_anoms_: build Color->[Row] alist from right-border anomalies.
+arc2_fst_row_anoms_(Grid, NR, LastCol, BdrBG, BG, Anoms) :-
+    % Generate row indices.
+    NR1 is NR - 1, numlist(0, NR1, Rs),
+    % Fold over rows accumulating anomaly pairs.
+    foldl(arc2_fst_row_step_(Grid, LastCol, BdrBG, BG), Rs, [], Anoms).
+
+% arc2_fst_row_step_: process one row for right-border anomaly collection.
+arc2_fst_row_step_(Grid, LastCol, BdrBG, BG, R, Acc, Acc2) :-
+    % Fetch the row at index R.
+    nth0(R, Grid, Row),
+    % Fetch the rightmost cell.
+    nth0(LastCol, Row, V),
+    % Record anomaly only for values differing from BdrBG and BG.
+    ( V \= BdrBG, V \= BG
+    -> arc2_fst_assoc_add_(V, R, Acc, Acc2)
+    ;  Acc2 = Acc ).
+
+% arc2_fst_assoc_add_: insert Pos into the Color->Positions pair in an alist.
+arc2_fst_assoc_add_(Color, Pos, [], [(Color, [Pos])]).
+arc2_fst_assoc_add_(Color, Pos, [(Color, Ps)|T], [(Color, [Pos|Ps])|T]) :- !.
+arc2_fst_assoc_add_(Color, Pos, [H|T], [H|T2]) :-
+    % Recurse past entries for other colors.
+    arc2_fst_assoc_add_(Color, Pos, T, T2).
+
+% arc2_fst_lshapes_: collect left-side (cols 0-3) non-BG cells per color.
+arc2_fst_lshapes_(Grid, NR, BG, LShapes) :-
+    % Generate row indices.
+    NR1 is NR - 1, numlist(0, NR1, Rs),
+    % Fold over all rows scanning cols 0-3.
+    foldl([R, Ac, Ac2]>>(
+        % Fetch row R from the grid.
+        nth0(R, Grid, Row),
+        % Fold over left-side columns 0-3.
+        foldl([C, Ai, Ao]>>(
+            % Fetch cell value.
+            nth0(C, Row, V),
+            % Accumulate non-BG cells keyed by color; store as R-C pair.
+            ( V \= BG
+            -> arc2_fst_assoc_add_(V, R-C, Ai, Ao)
+            ;  Ao = Ai )
+        ), [0, 1, 2, 3], Ac, Ac2)
+    ), Rs, [], LShapes).
+
+% arc2_fst_stamps_: build N-stamp(Color,Cells,SumR,SumC,N,Pls) terms.
+arc2_fst_stamps_(LShapes, ColAnoms, RowAnoms, Stamps) :-
+    % One stamp per color with left shape, col anomaly, and row anomaly.
+    findall(N-stamp(Color, Cells, SumR, SumC, N, Pls), (
+        % Require a left-side shape for this color.
+        member((Color, Cells), LShapes),
+        % Require column anomalies for this color in the top border.
+        member((Color, Ks), ColAnoms),
+        % Require row anomalies for this color in the right border.
+        member((Color, Rs), RowAnoms),
+        % Count shape cells for size ordering.
+        length(Cells, N),
+        % Decompose R-C pairs into separate row and col lists.
+        pairs_keys_values(Cells, CellRs, CellCs),
+        % Sum row indices for centroid computation.
+        sumlist(CellRs, SumR),
+        % Sum col indices for centroid computation.
+        sumlist(CellCs, SumC),
+        % Generate all (NewRow, NewCol) placement pairs.
+        findall(R-K, (member(R, Rs), member(K, Ks)), Pls)
+    ), Stamps).
+
+% arc2_fst_apply_: erase stamped left shapes then place stamps in sorted order.
+arc2_fst_apply_(Grid, NR, NC, SortedS, LShapes, BG, Out) :-
+    % Collect colors that will be placed (to erase their left shapes).
+    findall(Color, member(_-stamp(Color,_,_,_,_,_), SortedS), PlacedColors),
+    % Remove duplicate color entries.
+    list_to_set(PlacedColors, PlacedSet),
+    % Erase each placed color's left-side cells from the grid.
+    foldl([Color, G0, G1]>>(
+        % Find the cell list for this color.
+        member((Color, Cells), LShapes),
+        % Set each left-side cell to BG.
+        foldl([R-C, Gi, Go]>>(arc2_set_cell_(Gi, R, C, BG, Go)), Cells, G0, G1)
+    ), PlacedSet, Grid, G1),
+    % Apply each stamp in size-descending order (smaller stamps overwrite).
+    foldl([_N-stamp(Color, Cells, SumR, SumC, N, Pls), Gi, Go]>>(
+        % Process each (NewRow, NewCol) placement center.
+        foldl([NewR-NewK, Gii, Goo]>>(
+            % Compute integer row offset: round((NewR - SumR/N)).
+            DR is round(float(NewR * N - SumR) / float(N)),
+            % Compute integer col offset: round((NewK - SumC/N)).
+            DC is round(float(NewK * N - SumC) / float(N)),
+            % Place each shape cell at its shifted position.
+            foldl([R-C, Gj, Gk]>>(
+                % Compute the target row and column.
+                Nr is R + DR, Nc is C + DC,
+                % Stamp only if target is within grid bounds.
+                ( Nr >= 0, Nr < NR, Nc >= 0, Nc < NC
+                -> arc2_set_cell_(Gj, Nr, Nc, Color, Gk)
+                ;  Gk = Gj )
+            ), Cells, Gii, Goo)
+        ), Pls, Gi, Go)
+    ), SortedS, G1, Out).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
