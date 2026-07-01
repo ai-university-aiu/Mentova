@@ -2916,3 +2916,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 40: Grid-tile shape-driven periodic tiling; 
 Dison, D. R. (2026). ARC-AGI-2 Wave 41: Box-absorb FIFO BFS from 3x3 box absorbs nearest 9-cells first; absorbed 9s fill box in reading order; 6-frame walls control reachability.
   Score: 39/120 = 32.50%. Task dd6b8c4b solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 42: Section-sort all-6 divider partitioning; ascending cell-count sort; direction transposition (V->H, H->V); 2D bbox height-vs-width direction detection.
+  Score: 40/120 = 33.33%. Task 78332cb0 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-01.
