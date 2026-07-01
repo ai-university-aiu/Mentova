@@ -1,0 +1,119 @@
+Acc_339: ARC-AGI-2 Wave 41 - box_absorb Rule - Task dd6b8c4b
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-01
+
+
+ABSTRACT
+
+Wave 41 of the PrologAI ARC-AGI-2 benchmark climb adds the box_absorb named
+rule, which solves task dd6b8c4b. The rule locates a 3x3 box of 3-cells
+(with the value 2 at its centre) inside a partially or fully enclosing 6-frame,
+then runs a strict FIFO breadth-first search outward from the box through all
+non-6 cells. Each 9-cell discovered adjacent to the BFS frontier is absorbed
+(removed from its original position and consumed by the box) until either 9
+cells have been absorbed or no more 9-cells are reachable. The first N absorbed
+9-cells fill the box from the top-left corner in reading order. After Wave 41,
+PrologAI solves 39 of 120 ARC-AGI-2 tasks (32.50%) using pure Prolog named
+rules with no machine learning.
+
+
+1. TASK DESCRIPTION
+
+Task dd6b8c4b presents 11x11 input grids with background value 7. Each input
+contains a 3x3 box consisting of 3-cells on the eight border positions and the
+value 2 at the centre. One or two layers of 6-cells form a frame that partially
+or fully encloses the box. Scattered 9-cells appear throughout the grid, both
+inside and outside the 6-frame.
+
+The output is identical to the input except that some 9-cells have been removed
+(replaced by 7) and some cells of the 3x3 box have been overwritten with 9.
+The number of cells overwritten equals the number of 9-cells removed. The box
+is filled from the top-left corner in reading order (row-major, ascending).
+
+
+2. PATTERN ANALYSIS
+
+2.1 Conservation of 9s
+
+The total count of 9s is conserved: for every 9 removed from a scattered
+position, exactly one box cell gains the value 9. This holds across all three
+training pairs and the test case.
+
+2.2 BFS Distance Determines Absorption Order
+
+The 9-cells absorbed are exactly those reachable from the box by a FIFO
+breadth-first search through all non-6 cells (background 7, absorbed 9s,
+and box interior 3s and 2). Cells discovered earlier in BFS order (closer to
+the box in hops) are absorbed before those discovered later. The absorption
+halts when 9 cells have been absorbed (the box capacity) or when no more
+9-cells are reachable.
+
+2.3 The 6-Frame Controls Reachability
+
+The 6-frame acts as a wall that makes certain 9-cells unreachable from the
+box. A row or column of 6-cells completely separating a region from the box
+prevents BFS from reaching 9-cells in that region; those cells remain unchanged
+in the output. Examples:
+
+Pair 1: The frame has a single gap at (7,5). Only the two 9-cells in the
+  enclosed bottom room are reachable. 2 absorbed.
+
+Pair 2: The U-shaped frame is open at the bottom. All 9-cells are reachable
+  eventually, but the cap of 9 stops absorption before the six 9-cells in
+  the upper-left area are reached (they are farther in BFS distance).
+
+Pair 3: No 6-frame exists. All four 9-cells are reachable. 4 absorbed (cap
+  not reached since 4 < 9).
+
+Test: The outer 6-frame has a complete top bar (row 1 all 6s) and a complete
+  right wall (col 9 all 6s). The five 9-cells at row 0 and column 10 are
+  blocked from the box. 6 are absorbed (cap not reached).
+
+2.4 Reading-Order Fill
+
+The N absorbed 9-cells fill the first N positions of the box in reading order:
+(CR-1,CC-1), (CR-1,CC), (CR-1,CC+1), (CR,CC-1), (CR,CC), (CR,CC+1),
+(CR+1,CC-1), (CR+1,CC), (CR+1,CC+1). The centre value 2 is overwritten if N
+reaches position 5 of reading order.
+
+
+3. IMPLEMENTATION
+
+The rule is implemented in arc_benchmark_2.pl (Mentova repository) as six
+predicates all prefixed arc2_bxa_:
+
+arc2_bxa_find2_ scans rows top-to-bottom with nth0 and returns the row and
+column of the unique 2-cell. A cut after the first match prevents backtracking.
+
+arc2_bxa_bfs_ runs the FIFO BFS loop. The queue is a list; new cells are
+appended to the back (BFS order). The predicate maintains a capacity counter
+that decrements by the number of 9-cells absorbed at each step and halts when
+the counter reaches zero or the queue empties.
+
+arc2_bxa_expand_ uses findall with four cardinal-direction offsets to collect
+all valid, unvisited, non-6 neighbours of the current cell. include with the
+partial-application arc2_bxa_is9_(Grid) filters this set to the 9-valued subset.
+
+arc2_bxa_build_ uses a double maplist over row and column indices to construct
+the output grid. For each cell, a three-way conditional selects 9 (if the cell
+is in the slot list), 7 (if the cell is in the absorbed set), or the original
+value.
+
+The BFS order (FIFO, not DFS) is essential for correctness. A depth-first
+expansion visits the upper-left cluster of 9-cells before reaching the
+frame-adjacent 9-cells at greater depth, producing wrong absorption counts.
+Breadth-first expansion respects distance from the box and matches the expected
+output for all pairs.
+
+
+4. RESULTS
+
+All three training pairs and the test case pass.
+
+Task dd6b8c4b is solved. ARC-AGI-2 score advances from 38/120 = 31.67% to
+39/120 = 32.50%.
+
+SPARC documentation updated: Specification v271, Pseudocode v263,
+Architecture v264, Refinement v323, Completion v329.

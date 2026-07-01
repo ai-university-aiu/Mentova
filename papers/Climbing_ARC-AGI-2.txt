@@ -2912,3 +2912,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 39: Room-outline 4-connected accessible-room
 Dison, D. R. (2026). ARC-AGI-2 Wave 40: Grid-tile shape-driven periodic tiling; 3x3 bounding-box pattern defines four tiling constants (block, h_edge, v_edge, corner); centre 6x6 of 16x16 output highlighted with 9.
   Score: 38/120 = 31.67%. Task eee78d87 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 41: Box-absorb FIFO BFS from 3x3 box absorbs nearest 9-cells first; absorbed 9s fill box in reading order; 6-frame walls control reachability.
+  Score: 39/120 = 32.50%. Task dd6b8c4b solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-01.
