@@ -7868,6 +7868,100 @@ arc2_gt_cell_(R, C, Block, HEdge, VEdge, Corner, V) :-
     (R >= 5, R =< 10, C >= 5, C =< 10, BaseV =:= 0 -> V = 9 ; V = BaseV).
 
 % ---------------------------------------------------------------------------
+% WP-299 Layer 274: box_absorb — BFS from 3x3 box absorbs nearby 9s into box
+% Task: dd6b8c4b.  Rule: BFS from [3,3,3;3,2,3;3,3,3] box through non-6 cells;
+% each 9 adjacent to the flood is absorbed (cap = 9); absorbed 9s removed from
+% grid and the first N box cells (reading order) filled with 9 in output.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule fact registers box_absorb for the generic induction fallback.
+arc2_named_rule(box_absorb).
+
+% arc2_transform(box_absorb, +Grid, -Out) — entry point.
+arc2_transform(box_absorb, Grid, Out) :-
+    % locate the 2 (box centre) by scanning rows top-to-bottom
+    arc2_bxa_find2_(Grid, CR, CC),
+    % compute box row/col extents (3x3 centred on CR,CC)
+    R0 is CR-1, R2 is CR+1, C0 is CC-1, C2 is CC+1,
+    % enumerate box cells in reading order (row-major, ascending)
+    numlist(R0,R2,BRs), numlist(C0,C2,BCs),
+    findall(R-C,(member(R,BRs),member(C,BCs)),BoxCells),
+    % BFS from box through non-6 cells; cap absorptions at 9 (box size)
+    length(BoxCells,Cap),
+    arc2_bxa_bfs_(Grid, BoxCells, BoxCells, Cap, [], Absorbed),
+    % fill first N box cells with 9, remove absorbed 9s from their positions
+    length(Absorbed,N),
+    length(Slots,N), append(Slots,_,BoxCells),
+    arc2_bxa_build_(Grid, Absorbed, Slots, Out).
+
+% arc2_bxa_find2_(+Grid, -R, -C) — find the unique 2 cell in Grid.
+arc2_bxa_find2_(Grid, R, C) :-
+    % scan each row for the value 2; cut on first match
+    nth0(R, Grid, Row), nth0(C, Row, 2), !.
+
+% arc2_bxa_bfs_(+Grid, +Queue, +Visited, +Cap, +AccIn, -Absorbed)
+% BFS (FIFO queue) expanding through non-6 cells; absorbs 9s up to Cap.
+arc2_bxa_bfs_(_, _, _, 0, Abs, Abs) :- !.
+arc2_bxa_bfs_(_, [], _, _, Abs, Abs) :- !.
+arc2_bxa_bfs_(Grid, [H|Queue], Visited, Cap, Acc, Abs) :-
+    % expand current cell to reachable unvisited non-6 neighbours
+    arc2_bxa_expand_(H, Grid, Visited, New, Nine),
+    % absorb 9s from New up to remaining capacity
+    length(Nine,NL),
+    ( NL =< Cap ->
+        % all Nine fit within cap
+        append(Acc, Nine, Acc2), Cap2 is Cap-NL
+    ;
+        % take only first Cap elements of Nine to hit exact cap
+        length(Take,Cap), append(Take,_,Nine),
+        append(Acc, Take, Acc2), Cap2 = 0
+    ),
+    % enqueue all new cells (BFS: append to back)
+    append(Queue, New, Queue2),
+    % mark all new cells visited
+    append(New, Visited, Vis2),
+    arc2_bxa_bfs_(Grid, Queue2, Vis2, Cap2, Acc2, Abs).
+
+% arc2_bxa_expand_(+RC, +Grid, +Visited, -New, -Nine)
+% Returns unvisited non-6 neighbours (New); Nine = subset of New that are 9.
+arc2_bxa_expand_(R-C, Grid, Visited, New, Nine) :-
+    % get grid dimensions for bounds checking
+    length(Grid,NR), nth0(0,Grid,Row0), length(Row0,NC),
+    % collect all valid unvisited non-6 cardinal neighbours
+    findall(NR2-NC2,(
+        member(DR-DC, [-1-0,1-0,0-(-1),0-1]),
+        NR2 is R+DR, NC2 is C+DC,
+        NR2 >= 0, NR2 < NR, NC2 >= 0, NC2 < NC,
+        \+ member(NR2-NC2, Visited),
+        nth0(NR2,Grid,NRow2), nth0(NC2,NRow2,V2), V2 =\= 6
+    ), New),
+    % isolate those neighbours whose grid value is 9
+    include(arc2_bxa_is9_(Grid), New, Nine).
+
+% arc2_bxa_is9_(+Grid, +RC) — true iff grid cell at RC has value 9.
+arc2_bxa_is9_(Grid, R-C) :-
+    % fetch row then cell; succeed only for value 9
+    nth0(R, Grid, Row), nth0(C, Row, 9).
+
+% arc2_bxa_build_(+Grid, +Absorbed, +Slots, -Out)
+% Build output: Slots cells become 9; Absorbed cells become 7; rest unchanged.
+arc2_bxa_build_(Grid, Absorbed, Slots, Out) :-
+    % enumerate all row indices
+    length(Grid,NR), NR1 is NR-1, numlist(0,NR1,Rs),
+    % enumerate all column indices
+    nth0(0,Grid,Row0g), length(Row0g,NC), NC1 is NC-1, numlist(0,NC1,Cs),
+    % build output row by row, cell by cell
+    maplist([R,OutRow]>>(
+        maplist([C,V]>>(
+            nth0(R,Grid,GRow), nth0(C,GRow,OV),
+            % box slot → 9; absorbed position → 7 (BG); else keep original
+            ( member(R-C,Slots)    -> V = 9
+            ; member(R-C,Absorbed) -> V = 7
+            ; V = OV )
+        ), Cs, OutRow)
+    ), Rs, Out).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
