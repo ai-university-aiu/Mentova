@@ -7636,6 +7636,150 @@ arc2_fec_fill_row_([V | Vs], Fills, R, C, [W | Ws]) :-
     arc2_fec_fill_row_(Vs, Fills, R, C1, Ws).
 
 % ---------------------------------------------------------------------------
+% WAVE 39 — room_outline (task 8f3a5a89, Layer 272)
+% ---------------------------------------------------------------------------
+% arc2_named_rule registers room_outline for the generic induction fallback.
+arc2_named_rule(room_outline).
+
+% arc2_transform(room_outline, +Grid, -Out): trace accessible-room boundary with 7.
+% BG=8 (background), Wall=non-8 non-6 cells, Seed=6 (unique marker), Perim=7.
+% Step 1: find the 6-cell seed.
+% Step 2: 4-connected BFS from seed through 8-cells to build accessible set Vis.
+% Step 3: compute wall 4-connected components; WallKeep = components touching Vis.
+% Step 4: BdryWalls = WallKeep components that include a grid-boundary cell.
+% Step 5: accessible BG on grid edge OR 8-adj to BdryWalls gets 7 (perimeter).
+%   Accessible BG not perimeter gets 8 (interior).  Seed stays 6.
+% Step 6: WallKeep cell preserves original value; non-WallKeep wall becomes 8.
+arc2_transform(room_outline, Grid, Out) :-
+% Compute 0-based max row and column indices NR1 and NC1.
+    length(Grid, NR), NR1 is NR - 1,
+    Grid = [GR0_|_], length(GR0_, NC), NC1 is NC - 1,
+% Find the unique 6-cell (seed) position SR, SC in row-major order.
+    arc2_ro_seed_(Grid, SR, SC),
+% BFS flood-fill from (SR,SC) through 8-cells to build accessible set Vis.
+    arc2_ro_flood_(Grid, NR1, NC1, SR, SC, Vis),
+% Compute which wall cells to preserve: components that touch Vis.
+    arc2_ro_keep_walls_(Grid, NR1, NC1, Vis, WallKeep),
+% Compute boundary-connected walls: WallKeep components that include a grid-edge cell.
+    arc2_ro_bdry_walls_(WallKeep, NR1, NC1, BdryWalls),
+% Build output grid by classifying each cell against the rules above.
+    numlist(0, NR1, RowIs), numlist(0, NC1, ColIs),
+    maplist([R, OutRow]>>(
+        maplist([C, V]>>(
+            arc2_ro_cell_out_(Grid, NR1, NC1, SR, SC, Vis, WallKeep, BdryWalls, R, C, V)
+        ), ColIs, OutRow)
+    ), RowIs, Out).
+
+% arc2_ro_seed_/3: find first 6-cell in row-major order via nth0 backtracking.
+arc2_ro_seed_(Grid, SR, SC) :-
+    nth0(SR, Grid, Row), nth0(SC, Row, 6), !.
+
+% arc2_ro_flood_/6: 4-connected BFS from (SR,SC) through 8-cells; result sorted.
+arc2_ro_flood_(Grid, NR1, NC1, SR, SC, Vis) :-
+% Seed primes queue and visited; BFS expands 8-valued unvisited in-bounds cells.
+    arc2_ro_bfs_([SR-SC], [SR-SC], Grid, NR1, NC1, Raw),
+    msort(Raw, Vis).
+% Empty queue: BFS complete; Vis is the full accessible set.
+arc2_ro_bfs_([], Vis, _, _, _, Vis) :- !.
+% Expand 4-neighbours of (R,C) that are unvisited in-bounds 8-cells; recurse.
+arc2_ro_bfs_([R-C|Q], Vis, Grid, NR1, NC1, Final) :-
+    R0 is R-1, R1 is R+1, C0 is C-1, C1 is C+1,
+    include([NR-NC]>>(
+        NR >= 0, NR =< NR1, NC >= 0, NC =< NC1,
+        \+ memberchk(NR-NC, Vis),
+        nth0(NR, Grid, Row), nth0(NC, Row, 8)
+    ), [R0-C, R1-C, R-C0, R-C1], New),
+    append(Q, New, Q2), append(Vis, New, Vis2),
+    arc2_ro_bfs_(Q2, Vis2, Grid, NR1, NC1, Final).
+
+% arc2_ro_keep_walls_/5: WallKeep = all wall cells whose 4-connected component touches Vis.
+arc2_ro_keep_walls_(Grid, NR1, NC1, Vis, WallKeep) :-
+% Collect all non-8 non-6 wall cell positions from the grid.
+    findall(R-C, (
+        between(0, NR1, R), nth0(R, Grid, GRow),
+        between(0, NC1, C), nth0(C, GRow, V),
+        V \= 8, V \= 6
+    ), WallCells),
+% Partition wall cells into 4-connected components.
+    arc2_ro_wall_comps_(WallCells, NR1, NC1, Comps),
+% Retain only components where some cell is 4-adjacent to an accessible cell.
+    include([Comp]>>(
+        once((member(R-C, Comp), arc2_ro_adj4_vis_(R, C, NR1, NC1, Vis)))
+    ), Comps, GoodComps),
+% Flatten retained components into a single keep-list.
+    append(GoodComps, WallKeep).
+
+% arc2_ro_bdry_walls_/4: BdryWalls = WallKeep cells in components with a grid-edge cell.
+% Perimeter cells are 8-adj only to boundary-connected walls, not floating island walls.
+arc2_ro_bdry_walls_(WallKeep, NR1, NC1, BdryWalls) :-
+% Partition WallKeep cells into 4-connected components.
+    arc2_ro_wall_comps_(WallKeep, NR1, NC1, Comps),
+% Keep only components that contain at least one grid-boundary cell.
+    include([Comp]>>(
+        once((member(R-C, Comp), (R =:= 0 ; R =:= NR1 ; C =:= 0 ; C =:= NC1)))
+    ), Comps, BdryComps),
+% Flatten to get all boundary-connected wall cells.
+    append(BdryComps, BdryWalls).
+
+% arc2_ro_wall_comps_/4: partition WallCells into 4-connected components.
+% No remaining wall cells: done.
+arc2_ro_wall_comps_([], _, _, []) :- !.
+% Seed BFS from first unassigned cell; recurse on remaining unassigned cells.
+arc2_ro_wall_comps_([RC|Rest], NR1, NC1, [Comp|Comps]) :-
+    arc2_ro_wbfs_([RC], [RC], Rest, NR1, NC1, Comp, Remaining),
+    arc2_ro_wall_comps_(Remaining, NR1, NC1, Comps).
+
+% arc2_ro_wbfs_/7: BFS through wall cells; returns component and unconsumed Avail list.
+% Empty queue: component done; Rem = unassigned wall cells.
+arc2_ro_wbfs_([], Comp, Rem, _, _, Comp, Rem) :- !.
+% Expand 4-neighbours present in Avail; remove them from Avail to avoid revisit.
+arc2_ro_wbfs_([R-C|Q], Comp, Avail, NR1, NC1, FComp, FRem) :-
+    R0 is R-1, R1 is R+1, C0 is C-1, C1 is C+1,
+    include([NR-NC]>>(
+        NR >= 0, NR =< NR1, NC >= 0, NC =< NC1,
+        memberchk(NR-NC, Avail)
+    ), [R0-C, R1-C, R-C0, R-C1], New),
+    subtract(Avail, New, Avail2),
+    append(Q, New, Q2), append(Comp, New, Comp2),
+    arc2_ro_wbfs_(Q2, Comp2, Avail2, NR1, NC1, FComp, FRem).
+
+% arc2_ro_cell_out_/11: compute output value V for cell at (R,C).
+arc2_ro_cell_out_(Grid, NR1, NC1, SR, SC, Vis, WallKeep, BdryWalls, R, C, V) :-
+    nth0(R, Grid, Row), nth0(C, Row, Orig),
+% Seed cell always emits 6.
+    (   R =:= SR, C =:= SC -> V = 6
+% Accessible BG cell: perimeter (7) or interior (8).
+    ;   Orig =:= 8, memberchk(R-C, Vis)
+    ->  (arc2_ro_is_perim_(BdryWalls, NR1, NC1, R, C) -> V = 7 ; V = 8)
+% Inaccessible BG cell stays 8.
+    ;   Orig =:= 8 -> V = 8
+% Wall cell in a kept component preserves original; non-kept wall becomes 8.
+    ;   (memberchk(R-C, WallKeep) -> V = Orig ; V = 8)
+    ).
+
+% arc2_ro_is_perim_/5: cell is perimeter if on grid edge or 8-adj to BdryWalls.
+% Floating island walls (not boundary-connected) do not generate perimeter cells.
+% Grid-edge cells (first or last row or column) are always perimeter.
+arc2_ro_is_perim_(_, NR1, NC1, R, C) :-
+    (R =:= 0 ; R =:= NR1 ; C =:= 0 ; C =:= NC1), !.
+% Interior cell: perimeter if any of the 8 surrounding positions is in BdryWalls.
+arc2_ro_is_perim_(BdryWalls, NR1, NC1, R, C) :-
+    R0 is R-1, R1 is R+1, C0 is C-1, C1 is C+1,
+    member(NR-NC, [R0-C0,R0-C,R0-C1,R-C0,R-C1,R1-C0,R1-C,R1-C1]),
+    NR >= 0, NR =< NR1, NC >= 0, NC =< NC1,
+    memberchk(NR-NC, BdryWalls), !.
+
+% arc2_ro_adj4_vis_/5: true if any 4-neighbour of (R,C) is in the accessible set Vis.
+% Check up (R0), down (R1), left (C0), right (C1); cut after first hit.
+arc2_ro_adj4_vis_(R, C, NR1, NC1, Vis) :-
+    R0 is R-1, R1 is R+1, C0 is C-1, C1 is C+1,
+    (   (R0 >= 0,   memberchk(R0-C,  Vis))
+    ;   (R1 =< NR1, memberchk(R1-C,  Vis))
+    ;   (C0 >= 0,   memberchk(R-C0,  Vis))
+    ;   (C1 =< NC1, memberchk(R-C1,  Vis))
+    ), !.
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

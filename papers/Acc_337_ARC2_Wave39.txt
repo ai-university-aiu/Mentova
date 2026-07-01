@@ -1,0 +1,163 @@
+Acc_337: ARC-AGI-2 Wave 39 - room_outline Rule - Task 8f3a5a89
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-01
+
+
+ABSTRACT
+
+Wave 39 of the PrologAI ARC-AGI-2 benchmark climb adds the room_outline named
+rule, which solves task 8f3a5a89. The rule identifies the accessible room
+containing a seed cell (value 6) by 4-connected BFS flood-fill through background
+cells (value 8), then traces the room perimeter with value 7. The perimeter is
+defined by grid-boundary accessibility and 8-connected adjacency to
+boundary-connected wall components. Floating island walls inside the room do not
+generate perimeter cells. Wall cell preservation uses a component-based rule:
+an entire wall component is kept if any of its members is 4-adjacent to the
+accessible region; otherwise the entire component is erased to background. After
+Wave 39, PrologAI solves 37 of 120 ARC-AGI-2 tasks (30.83%) using pure Prolog
+named rules with no machine learning.
+
+
+1. TASK DESCRIPTION
+
+Task 8f3a5a89 presents input grids containing background cells (value 8),
+wall cells (value 1), and a unique seed cell (value 6). The seed sits inside
+an accessible room: a 4-connected region of background cells reachable from the
+seed without crossing any wall. The task requires producing an output grid that:
+
+(a) Traces the room perimeter with value 7. Perimeter cells are accessible
+background cells that lie on the grid boundary or are 8-connected adjacent to
+a wall component attached to the grid boundary.
+
+(b) Preserves wall cells that belong to wall components touching the accessible
+region, and erases wall cells whose component has no accessible neighbor.
+
+(c) Leaves interior accessible cells as background (8), the seed as 6, and
+inaccessible background cells as 8.
+
+The task has three training pairs (varying grid sizes: 10x10, 10x10, 20x20)
+and one test case (12x12).
+
+
+2. KEY INSIGHTS
+
+2.1 Perimeter and Boundary-Connected Walls
+
+The perimeter does not trace every wall cell 8-adjacent to the accessible
+region. It traces only walls that are connected (through 4-connected wall paths)
+to the grid boundary. A wall cluster floating inside the room - not attached to
+any grid-edge cell - does not generate perimeter cells around it.
+
+Training pair 3 illustrates this: a small cluster of 1-cells at rows 9-11
+cols 9-10 is completely interior and generates no perimeter ring. The staircase
+at rows 3-8 cols 0-4 (attached to col 0 = left edge) and the partial divider
+at col 12 rows 0-4 (attached to row 0 = top edge) both generate perimeter cells.
+The 6x6 block at rows 14-19 cols 14-19 (attached to bottom and right edges)
+also generates perimeter.
+
+Training pair 2 (10x10 grid) further confirms this: the cluster at rows 8-9
+cols 5-6 has cells at row 9 (bottom boundary) and thus IS boundary-connected,
+generating perimeter. A hypothetical interior-only cluster would not.
+
+2.2 Component-Based Wall Preservation
+
+Wall cells are preserved or erased as whole components, not individually. A
+wall component is preserved if ANY of its member cells is 4-adjacent to the
+accessible region. This correctly handles deep staircase cells that have no
+direct accessible neighbor but belong to a component that does.
+
+Training pair 3 staircase: cell (4,0) has only wall 4-neighbors. But (3,0)
+and (3,1) in the same staircase component ARE 4-adjacent to accessible cells.
+The entire staircase is preserved. Training pair 1 right-side blobs: their
+components have no accessible neighbors anywhere; all are erased.
+
+
+3. ALGORITHM
+
+Step 1. Find the unique 6-cell (seed) by row-major nth0 scan. Record position
+SR, SC.
+
+Step 2. 4-connected BFS flood-fill from (SR,SC) through cells with value 8
+(background). The BFS expands to unvisited in-bounds 8-cells via a standard
+queue. Result: Vis = sorted list of all accessible (R,C) positions.
+
+Step 3. Collect all non-8 non-6 positions as WallCells via findall.
+Partition WallCells into 4-connected components via arc2_ro_wall_comps_
+(iterative BFS per component, maintaining an Avail list of unassigned cells).
+WallKeep = cells in components where at least one member is 4-adjacent to Vis
+(checked with arc2_ro_adj4_vis_).
+
+Step 4. Re-partition WallKeep into 4-connected components (same algorithm).
+BdryWalls = cells in components where at least one member is on the grid
+boundary (row 0, row H-1, col 0, or col W-1).
+
+Step 5. Build output grid cell by cell:
+- (SR,SC): emit 6.
+- Accessible BG cell (in Vis, value 8): emit 7 if on grid boundary or
+  8-adjacent to any BdryWall cell; else emit 8.
+- Inaccessible BG cell: emit 8.
+- WallKeep cell: emit original value (preserved wall).
+- Non-WallKeep wall cell: emit 8 (erased wall).
+
+
+4. BUG SEQUENCE AND FIXES
+
+Bug 1: Per-cell adjacency check for wall preservation.
+
+Initial implementation: wall cell preserved if it is 4-adjacent to any Vis
+cell. This passes pair 1 (divider directly adjacent to accessible cells) and
+pair 2 (all walls directly adjacent to accessible cells). But pair 3 staircase
+fails: (4,0) has no accessible 4-neighbor, so it is incorrectly erased. Expected
+output shows (4,0)=1 (preserved).
+
+Fix: component-based preservation (described in section 2.2). Wall components
+whose members collectively touch Vis are entirely preserved.
+
+Bug 2: Perimeter traced for all wall-adjacent accessible cells.
+
+Initial implementation: accessible BG cell on grid edge OR 8-adjacent to ANY
+wall cell gets value 7. This incorrectly marks cells around the floating cluster
+at rows 9-11 cols 9-10 in pair 3. Expected output shows (9,9)=8, (10,8)=8,
+(11,8)=8 (interior), not 7.
+
+Fix: restrict perimeter generation to cells 8-adjacent to BdryWalls (boundary-
+connected wall components). Floating island walls do not generate perimeter.
+
+
+5. IMPLEMENTATION
+
+The implementation in Mentova/src/mentova/games/arc_benchmark_2.pl uses
+list-based BFS throughout (no dynamic facts), consistent with the existing
+file style.
+
+arc2_ro_seed_/3: nth0 backtracking scan for value 6; cut after first match.
+
+arc2_ro_bfs_/6: BFS queue loop; include/2 filters unvisited in-bounds 8-cells
+for expansion; append/2 extends queue and visited set.
+
+arc2_ro_keep_walls_/5: findall collects wall positions; wall_comps_ partitions;
+include/3 with once/1 retains touching components; append/2 flattens.
+
+arc2_ro_wall_comps_/4 and arc2_ro_wbfs_/7: iterative component BFS. The wbfs_
+predicate maintains an Avail list; subtract/3 removes newly found cells from
+Avail at each step to prevent revisiting across iterations.
+
+arc2_ro_bdry_walls_/4: same component algorithm on WallKeep, filtered to
+components containing at least one grid-edge cell.
+
+arc2_ro_cell_out_/11: five-way classification: seed, perimeter, interior BG,
+kept wall, erased wall.
+
+arc2_ro_is_perim_/5: grid-edge check with cut; then member/2 search through
+8-connected neighbors to find any BdryWall cell.
+
+
+6. RESULTS
+
+All 3 training pairs and the test case of task 8f3a5a89 pass.
+Score: 36/120 = 30.00% advancing to 37/120 = 30.83%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
