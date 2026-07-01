@@ -7780,6 +7780,94 @@ arc2_ro_adj4_vis_(R, C, NR1, NC1, Vis) :-
     ), !.
 
 % ---------------------------------------------------------------------------
+% WP-298 Layer 273: grid_tile — shape-driven periodic tiling with centre highlight
+% Task: eee78d87  BG=7  non-BG cells fill a 3x3 bounding box that defines a tile.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule registers grid_tile for the generic induction fallback.
+arc2_named_rule(grid_tile).
+
+% arc2_transform(grid_tile, +Grid, -Out)
+% 1. Locate 3x3 bounding box of non-7 cells in the 6x6 input.
+% 2. Derive 4 tiling values from the box: block, h_edge, v_edge, corner.
+% 3. Tile a 16x16 output: f(r,c) = tile[r mod 3][c mod 3].
+% 4. In centre region rows 5-10, cols 5-10: replace tile-0 cells with 9.
+arc2_transform(grid_tile, Grid, Out) :-
+    % locate bounding box top-left of non-7 region
+    arc2_gt_bbox_(Grid, R0, C0),
+    % derive tiling constants from the 3x3 sub-grid
+    arc2_gt_tile_(Grid, R0, C0, Block, HEdge, VEdge, Corner),
+    % build 16x16 output grid
+    arc2_gt_build_(Block, HEdge, VEdge, Corner, Out).
+
+% arc2_gt_bbox_(+Grid, -Rmin, -Cmin): bounding box top-left of non-7 cells.
+arc2_gt_bbox_(Grid, Rmin, Cmin) :-
+    % enumerate all rows and cols of the input grid
+    length(Grid, NR), NR1 is NR - 1, numlist(0, NR1, Rs),
+    % derive column count from first row
+    nth0(0, Grid, Row0), length(Row0, NC), NC1 is NC - 1, numlist(0, NC1, Cs),
+    % collect positions of all non-background (non-7) cells
+    findall(R-C, (
+        member(R, Rs), nth0(R, Grid, Row),
+        member(C, Cs), nth0(C, Row, V), V =\= 7
+    ), Cells),
+    % extract minimum row and minimum column
+    maplist([R-_, R]>>true, Cells, CRs), min_list(CRs, Rmin),
+    maplist([_-C, C]>>true, Cells, CCs), min_list(CCs, Cmin).
+
+% arc2_gt_tile_(+Grid, +R0, +C0, -Block, -HEdge, -VEdge, -Corner)
+% Reads the nine cells of the 3x3 sub-grid at (R0,C0) and maps them to
+% the four periodic tiling constants.
+arc2_gt_tile_(Grid, R0, C0, Block, HEdge, VEdge, Corner) :-
+    % precompute row and col indices for the three rows/cols
+    R1 is R0 + 1, R2 is R0 + 2, C1 is C0 + 1, C2 is C0 + 2,
+    % fetch all nine sub-grid values
+    arc2_gt_gv_(Grid, R0, C0, S00), arc2_gt_gv_(Grid, R0, C1, S01),
+    arc2_gt_gv_(Grid, R0, C2, S02),
+    arc2_gt_gv_(Grid, R1, C0, S10), arc2_gt_gv_(Grid, R1, C1, S11),
+    arc2_gt_gv_(Grid, R1, C2, S12),
+    arc2_gt_gv_(Grid, R2, C0, S20), arc2_gt_gv_(Grid, R2, C1, S21),
+    arc2_gt_gv_(Grid, R2, C2, S22),
+    % center (1,1) determines corner (divider-row + divider-col intersection)
+    (S11 =:= 7 -> Corner = 7 ; Corner = 0),
+    % top+bottom midpoints (0,1)+(2,1) determine v_edge (vertical divider stripe)
+    (S01 =:= 7, S21 =:= 7 -> VEdge = 7 ; VEdge = 0),
+    % left+right midpoints (1,0)+(1,2) determine h_edge (horizontal divider stripe)
+    (S10 =:= 7, S12 =:= 7 -> HEdge = 7 ; HEdge = 0),
+    % all four corners determine block (2x2 interior of each tile cell)
+    (S00 =:= 7, S02 =:= 7, S20 =:= 7, S22 =:= 7 -> Block = 7 ; Block = 0).
+
+% arc2_gt_gv_(+Grid, +R, +C, -V): value at row R, col C.
+arc2_gt_gv_(Grid, R, C, V) :-
+    % index row then column
+    nth0(R, Grid, Row), nth0(C, Row, V).
+
+% arc2_gt_build_(+Block, +HEdge, +VEdge, +Corner, -Out)
+% Builds a 16x16 list-of-lists from the four tiling constants.
+arc2_gt_build_(Block, HEdge, VEdge, Corner, Out) :-
+    % iterate over all 16 row indices
+    numlist(0, 15, Rs),
+    maplist([R, Row]>>(
+        % iterate over all 16 column indices
+        numlist(0, 15, Cs),
+        maplist([C, V]>>arc2_gt_cell_(R, C, Block, HEdge, VEdge, Corner, V),
+                Cs, Row)
+    ), Rs, Out).
+
+% arc2_gt_cell_(+R, +C, +Block, +HEdge, +VEdge, +Corner, -V)
+% Compute the output value at (R,C) from tiling constants and active region.
+arc2_gt_cell_(R, C, Block, HEdge, VEdge, Corner, V) :-
+    % classify position by modular period-3 index
+    RM is R mod 3, CM is C mod 3,
+    % select base tiling value by position type
+    (RM =:= 0, CM =:= 0 -> BaseV = Corner
+    ; RM =:= 0            -> BaseV = HEdge
+    ; CM =:= 0            -> BaseV = VEdge
+    ;                        BaseV = Block),
+    % active region (centre 6x6 of 16x16): replace background-0 with 9
+    (R >= 5, R =< 10, C >= 5, C =< 10, BaseV =:= 0 -> V = 9 ; V = BaseV).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
