@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/powered%20by-PrologAI-lightyellow?style=for-the-badge" alt="Powered by PrologAI">
+  <img src="https://img.shields.io/badge/powered%20by-PrologAI-lemonchiffon?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-yellow?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-goldenrod?style=for-the-badge" alt="48/48 Reasoning Types">
   <img src="https://img.shields.io/badge/accomplishments-339-red?style=for-the-badge" alt="339 Accomplishments">
