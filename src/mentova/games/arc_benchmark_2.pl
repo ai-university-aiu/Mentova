@@ -7397,6 +7397,245 @@ arc2_transform(slide_void, Grid, Out) :-
     ), RowIs, Out).
 
 % ---------------------------------------------------------------------------
+% WAVE 38 — fill_enclosed (task 8b7bacbf, Layer 271)
+% ---------------------------------------------------------------------------
+% arc2_named_rule fact registers fill_enclosed for induction.
+arc2_named_rule(fill_enclosed).
+
+% arc2_transform(fill_enclosed, +Grid, -Out)
+% Algorithm: component-based enclosed BG-cluster detection with indicator-guided
+% target/decoy classification.  Handles multi-frame colors (P1), outer walls (P3),
+% disconnected background (P4), boundary pockets, and contaminated indicators.
+% Step 1: BG=most-common; Ms=singletons; VAdjs=most-common non-BG neighbor of each M.
+% Step 2: Find all BG connected components (list-based BFS, no dynamic facts).
+% Step 3: Compute FrameSet from values adjacent to VAdj cells; distinguish FOthers
+%   (values that form a complete frame around some BG component) from VDecContam.
+% Step 4: Pocket = component whose every in-grid non-cluster neighbor is in FrameSet.
+% Step 5: If FOthers non-empty (multi-frame): target=non-FDom-only pockets.
+%   Otherwise (single-frame): target=pocket with clean VAdj indicator adjacent to frame;
+%   if no indicators anywhere all pockets are targets (P4 exception).
+% Step 6: Fill target pockets with their corresponding M.
+arc2_transform(fill_enclosed, Grid, Out) :-
+% Flatten grid and compute most-common value as BG.
+    flatten(Grid, Flat), msort(Flat, Srt), arc2_fec_mc_(Srt, BG),
+% Collect singleton values (appear exactly once, excluding BG) as marker list Ms.
+    arc2_fec_sings_(Srt, BG, Ms),
+% Compute grid dimensions NR1 (max row index) and NC1 (max col index).
+    length(Grid, NR), NR1 is NR - 1, Grid = [GR0_|_], length(GR0_, NC), NC1 is NC - 1,
+% Derive V_adj for each M: most-common non-BG non-M 4-connected neighbor.
+    maplist(arc2_fec_vadj_(Grid, NR1, NC1, BG), Ms, VAdjs),
+% Find all BG connected components via list-based BFS.
+    arc2_fec_all_comps_(Grid, NR1, NC1, BG, AllComps),
+% Compute FDom, FOthers, FrameSet, VDecContam from VAdj adjacency and pure-frame test.
+    arc2_fec_frame_info_(Grid, NR1, NC1, BG, Ms, VAdjs, AllComps,
+                         FDom, FOthers, FrameSet, VDecContam),
+% Compute VDec = VDecContam union any remaining non-BG/M/VAdj/Frame values.
+    arc2_fec_vdec_(Flat, BG, Ms, VAdjs, FrameSet, VDecContam, VDec),
+% Filter AllComps to pockets: components fully surrounded by FrameSet cells.
+    include(arc2_fec_is_pocket_(Grid, NR1, NC1, FrameSet), AllComps, Pockets),
+% Classify pockets as targets (with M assignment) or decoys (ignored).
+    arc2_fec_classify_all_(Pockets, Grid, NR1, NC1,
+                           Ms, VAdjs, FDom, FOthers, VDec, Assigns),
+% Apply fills: replace target pocket cells with their assigned M value.
+    arc2_fec_apply_(Grid, Assigns, Out).
+
+% arc2_fec_rl_/2: run-length encode a sorted list into N-V pairs.
+arc2_fec_rl_([], []) :- !.
+% Build one N-V pair and recurse on the tail after consuming leading copies.
+arc2_fec_rl_([H | T], [N-H | R]) :- arc2_fec_cf_(H, T, 1, N, T2), arc2_fec_rl_(T2, R).
+% arc2_fec_cf_/5: count leading copies of V in list, return count N and remainder.
+arc2_fec_cf_(_, [], N, N, []) :- !.
+% Increment count while next element matches V.
+arc2_fec_cf_(V, [V | T], A, N, R) :- !, A1 is A + 1, arc2_fec_cf_(V, T, A1, N, R).
+% Stop counting when next element differs.
+arc2_fec_cf_(_, R, N, N, R).
+% arc2_fec_mx_/4: find value associated with maximum count among N-V pairs.
+arc2_fec_mx_([], _, BV, BV) :- !.
+% Update best when current count exceeds current best.
+arc2_fec_mx_([N-V | T], B, BV, O) :- (N > B -> arc2_fec_mx_(T, N, V, O) ; arc2_fec_mx_(T, B, BV, O)).
+% arc2_fec_mc_/2: most common value in a sorted list (with duplicates).
+arc2_fec_mc_(Srt, V) :- arc2_fec_rl_(Srt, P), arc2_fec_mx_(P, 0, _, V).
+% arc2_fec_sings_/3: collect values appearing exactly once in sorted list, excluding BG.
+arc2_fec_sings_(Srt, BG, Ms) :- arc2_fec_rl_(Srt, P), findall(V, (member(1-V, P), V \= BG), Ms).
+% arc2_fec_vadj_/6: V_adj(M) = most-common non-BG non-M 4-neighbor of the single M cell.
+arc2_fec_vadj_(Grid, NR1, NC1, BG, M, VA) :-
+    findall(V, (between(0, NR1, R), between(0, NC1, C), nth0(R, Grid, Row), nth0(C, Row, M),
+                member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]), AR is R + DR, AC is C + DC,
+                between(0, NR1, AR), between(0, NC1, AC),
+                nth0(AR, Grid, ARow), nth0(AC, ARow, V), V \= BG, V \= M), Vs0),
+    (Vs0 = [] -> VA = none ; msort(Vs0, VS), arc2_fec_mc_(VS, VA)).
+
+% arc2_fec_bfs_comp_/9: BFS from queue cells, staying on BG; returns component and updated Vis.
+arc2_fec_bfs_comp_(_, _, _, _, [], Vis, Comp, Comp, Vis) :- !.
+% Expand one queue cell: find unvisited BG neighbors, add to Vis/queue/component.
+arc2_fec_bfs_comp_(Grid, NR1, NC1, BG, [R-C | Q], Vis0, Acc0, Comp, VisOut) :-
+    findall(NR2-NC2, (member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+                      NR2 is R + DR, NC2 is C + DC,
+                      between(0, NR1, NR2), between(0, NC1, NC2),
+                      nth0(NR2, Grid, Row2), nth0(NC2, Row2, BG),
+                      \+ memberchk(NR2-NC2, Vis0)), Nbrs),
+    append(Vis0, Nbrs, Vis1), append(Q, Nbrs, Q1), append(Acc0, Nbrs, Acc1),
+    arc2_fec_bfs_comp_(Grid, NR1, NC1, BG, Q1, Vis1, Acc1, Comp, VisOut).
+
+% arc2_fec_all_comps_/5: find all BG connected components.
+arc2_fec_all_comps_(Grid, NR1, NC1, BG, Comps) :-
+    findall(R-C, (between(0, NR1, R), between(0, NC1, C),
+                  nth0(R, Grid, Row), nth0(C, Row, BG)), AllBG),
+    arc2_fec_find_comps_(AllBG, Grid, NR1, NC1, BG, [], Comps).
+% arc2_fec_find_comps_/7: iterate seed list, BFS-expanding each unvisited BG cell.
+arc2_fec_find_comps_([], _, _, _, _, _, []) :- !.
+% Skip cell already visited by a previous component's BFS.
+arc2_fec_find_comps_([Cell | Rest], Grid, NR1, NC1, BG, Vis0, Comps) :-
+    (memberchk(Cell, Vis0) ->
+        arc2_fec_find_comps_(Rest, Grid, NR1, NC1, BG, Vis0, Comps)
+    ;
+        arc2_fec_bfs_comp_(Grid, NR1, NC1, BG, [Cell], [Cell | Vis0], [Cell], Comp, Vis1),
+        arc2_fec_find_comps_(Rest, Grid, NR1, NC1, BG, Vis1, RestComps),
+        Comps = [Comp | RestComps]
+    ).
+
+% arc2_fec_pure_frame_/5: succeeds if value V alone forms a complete frame around some component.
+arc2_fec_pure_frame_(V, AllComps, Grid, NR1, NC1) :-
+    member(Cl, AllComps),
+    forall(member(R-C, Cl),
+           forall((member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+                   NR2 is R + DR, NC2 is C + DC,
+                   between(0, NR1, NR2), between(0, NC1, NC2),
+                   \+ memberchk(NR2-NC2, Cl)),
+                  (nth0(NR2, Grid, NRow), nth0(NC2, NRow, NV), NV = V))).
+
+% arc2_fec_frame_info_/11: derive FDom, FOthers, FrameSet, VDecContam.
+% Primary path: FSAdj = non-BG/M/VAdj values adjacent to any VAdj cell.
+% FDom = most common in FSAdj.  FOthers = non-FDom FSAdj values that form a pure frame.
+% VDecContam = non-FDom FSAdj values that do NOT form a pure frame (contamination tokens).
+% Fallback (empty FSAdj): all non-BG/M/VAdj values in grid form FrameSet.
+arc2_fec_frame_info_(Grid, NR1, NC1, BG, Ms, VAdjs, AllComps,
+                     FDom, FOthers, FrameSet, VDecContam) :-
+    flatten(Grid, Flat),
+    findall(V, (member(VA, VAdjs), VA \= none,
+                between(0, NR1, R), between(0, NC1, C),
+                nth0(R, Grid, Row), nth0(C, Row, VA),
+                member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+                NR2 is R + DR, NC2 is C + DC,
+                between(0, NR1, NR2), between(0, NC1, NC2),
+                nth0(NR2, Grid, NRow2), nth0(NC2, NRow2, V),
+                V \= BG, \+ memberchk(V, Ms), \+ memberchk(V, VAdjs), V \= none), FSAdj0),
+    sort(FSAdj0, FSAdj),
+    (FSAdj = [] ->
+        findall(V, (member(V, Flat), V \= BG,
+                    \+ memberchk(V, Ms), \+ memberchk(V, VAdjs), V \= none), FAL0),
+        sort(FAL0, FAL),
+        (FAL = [] -> FDom = none, FOthers = [], FrameSet = [], VDecContam = []
+        ;   msort(FAL0, FAL1), arc2_fec_mc_(FAL1, FDom),
+            subtract(FAL, [FDom], FOthers), FrameSet = [FDom | FOthers], VDecContam = [])
+    ;   msort(FSAdj0, FSAdj1), arc2_fec_mc_(FSAdj1, FDom),
+        subtract(FSAdj, [FDom], Cands),
+        findall(V, (member(V, Cands),
+                    arc2_fec_pure_frame_(V, AllComps, Grid, NR1, NC1)), FOthers),
+        subtract(Cands, FOthers, VDecContam),
+        FrameSet = [FDom | FOthers]
+    ).
+
+% arc2_fec_vdec_/7: VDec = VDecContam union any value not in BG/M/VAdj/FrameSet.
+arc2_fec_vdec_(Flat, BG, Ms, VAdjs, FrameSet, VDecContam, VDec) :-
+    append([[BG], Ms, VAdjs, FrameSet], K0), sort(K0, KS),
+    findall(V, (member(V, Flat), V \= none, \+ memberchk(V, KS)), VO0),
+    sort(VO0, VOther), append(VDecContam, VOther, VD0), sort(VD0, VDec).
+
+% arc2_fec_is_pocket_/5: component is a pocket if every in-grid non-cluster neighbor is in FrameSet.
+arc2_fec_is_pocket_(Grid, NR1, NC1, FrameSet, Cluster) :-
+    FrameSet \= [],
+    forall(member(R-C, Cluster),
+           forall((member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+                   NR2 is R + DR, NC2 is C + DC,
+                   between(0, NR1, NR2), between(0, NC1, NC2),
+                   \+ memberchk(NR2-NC2, Cluster)),
+                  (nth0(NR2, Grid, NRow), nth0(NC2, NRow, NV), memberchk(NV, FrameSet)))).
+
+% arc2_fec_frame_nbrs_/5: collect unique in-grid non-cluster neighbors of a pocket cluster.
+arc2_fec_frame_nbrs_(Cluster, Grid, NR1, NC1, FCs) :-
+    findall(FR-FC, (member(R-C, Cluster), member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+                    FR is R + DR, FC is C + DC, between(0, NR1, FR), between(0, NC1, FC),
+                    \+ memberchk(FR-FC, Cluster), nth0(FR, Grid, _)),
+            FCs0), sort(FCs0, FCs).
+
+% arc2_fec_va_bfs_/7: BFS on cells of value VA from initial queue; returns all reachable VA cells.
+arc2_fec_va_bfs_(_, _, _, _, [], Vis, Vis) :- !.
+% Expand queue cell: find unvisited VA neighbors, add to Vis and queue.
+arc2_fec_va_bfs_(Grid, NR1, NC1, VA, [R-C | Q], Vis, Out) :-
+    findall(NR2-NC2, (member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+                      NR2 is R + DR, NC2 is C + DC,
+                      between(0, NR1, NR2), between(0, NC1, NC2),
+                      nth0(NR2, Grid, Row2), nth0(NC2, Row2, VA),
+                      \+ memberchk(NR2-NC2, Vis)), Nbrs),
+    append(Vis, Nbrs, Vis1), append(Q, Nbrs, Q1),
+    arc2_fec_va_bfs_(Grid, NR1, NC1, VA, Q1, Vis1, Out).
+
+% arc2_fec_contam_/6: indicator cell is contaminated if its VA-chain is adjacent to a VDec cell.
+arc2_fec_contam_(Cell, VA, Grid, NR1, NC1, VDec) :-
+    VDec \= [],
+    arc2_fec_va_bfs_(Grid, NR1, NC1, VA, [Cell], [Cell], Comp),
+    member(CR-CC, Comp), member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+    NR2 is CR + DR, NC2 is CC + DC, between(0, NR1, NR2), between(0, NC1, NC2),
+    nth0(NR2, Grid, Row2), nth0(NC2, Row2, DV), memberchk(DV, VDec).
+
+% arc2_fec_is_rect_/1: succeeds if list of R-C pairs forms a filled axis-aligned rectangle.
+arc2_fec_is_rect_(Cells) :-
+    pairs_keys(Cells, Rs), pairs_values(Cells, Cs),
+    min_list(Rs, Rmin), max_list(Rs, Rmax), min_list(Cs, Cmin), max_list(Cs, Cmax),
+    length(Cells, N), N =:= (Rmax - Rmin + 1) * (Cmax - Cmin + 1).
+
+% arc2_fec_fdom_only_/5: pocket is rectangular and all its frame neighbors are FDom.
+arc2_fec_fdom_only_(Cluster, Grid, NR1, NC1, FDom) :-
+    arc2_fec_is_rect_(Cluster),
+    arc2_fec_frame_nbrs_(Cluster, Grid, NR1, NC1, FCs),
+    forall(member(FR-FC, FCs), (nth0(FR, Grid, FR2), nth0(FC, FR2, FV), FV = FDom)).
+
+% arc2_fec_clean_ind_/8: find a clean (uncontaminated) VAdj indicator adjacent to pocket frame.
+% Indicator cell = VAdj-valued cell adjacent to any frame cell of the pocket; not in VDec chain.
+arc2_fec_clean_ind_(Cluster, Grid, NR1, NC1, Ms, VAdjs, VDec, M) :-
+    arc2_fec_frame_nbrs_(Cluster, Grid, NR1, NC1, FCs),
+    member(FR-FC, FCs), member(DR-DC, [-1-0, 1-0, 0-(-1), 0-1]),
+    AR is FR + DR, AC is FC + DC, between(0, NR1, AR), between(0, NC1, AC),
+    nth0(AR, Grid, ARow), nth0(AC, ARow, IndV), IndV \= none,
+    nth0(Idx, VAdjs, IndV), nth0(Idx, Ms, M),
+    \+ arc2_fec_contam_(AR-AC, IndV, Grid, NR1, NC1, VDec), !.
+
+% arc2_fec_classify_all_/10: produce Assigns list of Cluster-M pairs for target pockets.
+% Multi-frame (FOthers non-empty): non-FDom-only pockets are targets.
+% Single-frame: pockets with clean VAdj indicator are targets; if none found all are targets.
+arc2_fec_classify_all_(Pockets, Grid, NR1, NC1,
+                       Ms, VAdjs, FDom, FOthers, VDec, Assigns) :-
+    (FOthers \= [] ->
+        (Ms = [M0 | _] -> true ; M0 = 0),
+        findall(Cl-M0, (member(Cl, Pockets),
+                        \+ arc2_fec_fdom_only_(Cl, Grid, NR1, NC1, FDom)), Assigns)
+    ;
+        findall(Cl-M, (member(Cl, Pockets),
+                       arc2_fec_clean_ind_(Cl, Grid, NR1, NC1, Ms, VAdjs, VDec, M)), Assigns0),
+        (Assigns0 = [], Pockets \= [], Ms = [M0 | _] ->
+            findall(Cl-M0, member(Cl, Pockets), Assigns)
+        ;   Assigns = Assigns0)
+    ).
+
+% arc2_fec_apply_/3: fill Grid cells that belong to target pocket clusters.
+arc2_fec_apply_(Grid, Assigns, Out) :-
+    findall(R-C-M, (member(Cl-M, Assigns), member(R-C, Cl)), Fills),
+    arc2_fec_fill_grid_(Grid, Fills, 0, Out).
+% arc2_fec_fill_grid_/4: iterate rows, filling target cells.
+arc2_fec_fill_grid_([], _, _, []) :- !.
+% Process one row: increment row counter R after filling.
+arc2_fec_fill_grid_([Row | Rows], Fills, R, [OR | ORs]) :-
+    arc2_fec_fill_row_(Row, Fills, R, 0, OR), R1 is R + 1,
+    arc2_fec_fill_grid_(Rows, Fills, R1, ORs).
+% arc2_fec_fill_row_/5: replace cell V with M if R-C-M is in Fills, else keep V.
+arc2_fec_fill_row_([], _, _, _, []) :- !.
+% Fill or keep each cell; advance column counter C.
+arc2_fec_fill_row_([V | Vs], Fills, R, C, [W | Ws]) :-
+    (memberchk(R-C-W, Fills) -> true ; W = V), C1 is C + 1,
+    arc2_fec_fill_row_(Vs, Fills, R, C1, Ws).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

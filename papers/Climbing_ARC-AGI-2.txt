@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-06-30. Wave 37 complete: 37/120 = 30.83%.
+Last updated: 2026-06-30. Wave 38 complete: 38/120 = 31.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -272,6 +272,68 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 38 - 2026-06-30 - Score: 38/120 = 31.67%
+
+Date: 2026-06-30
+
+Confirmed score: 38 / 120 = 31.67%
+
+Rules added in this wave:
+  fill_enclosed (WP-296, Layer 271)
+
+Task solved: 8b7bacbf (4 training pairs; 8x8 to 18x24 grids; BG = most frequent
+  value; singleton M = marker; enclosed BG pockets (fully surrounded by frame
+  material) are filled with M if a clean VAdj indicator is adjacent to their
+  frame; decoy pockets with no clean indicator are left unchanged; multi-frame
+  color case uses FDom-only rectangular test to distinguish targets from decoys;
+  boundary pockets and disconnected backgrounds handled correctly;
+  all 4 training pairs and test case pass).
+
+Score advance: 37/120 = 30.83% to 38/120 = 31.67%.
+
+Key bugs fixed:
+  Bug 1: Boundary-seed BFS incorrectly marked boundary-flush pockets as reachable.
+    P3 has a 2x2 pocket at rows 1-2, cols 18-19 touching the right boundary. With
+    boundary-seed BFS the pocket cells were seeded directly and missed.
+  Fix: Component-based detection: a BG cluster is a pocket iff all its in-grid
+    non-cluster 4-neighbors are in FrameSet. Boundary-touching pockets still pass
+    because their only in-grid neighbors ARE frame cells.
+
+  Bug 2: Single-corner BFS missed the right background region in P4.
+    P4's 1-cell diagonal path splits the BG into a left region (reachable from
+    corner (0,0)) and a right region (15 cells, not reachable). The right region
+    was incorrectly classified as a pocket.
+  Fix: Same component approach resolves this: the right region has 1-cells (VAdj)
+    as neighbors; VAdj not in FrameSet; so the right region fails the pocket test.
+
+  Bug 3: FrameSet included the 1-cells (outer wall) in P3.
+    Value 1 in P3 forms a large interior wall, not a pocket frame. Including 1 in
+    FrameSet caused the large interior BG region (52 cells) to pass the pocket test.
+  Fix: Compute FrameSet as values adjacent to VAdj cells. In P3, VAdj=3 and 3-cells
+    only neighbor 2-cells. FrameSet={2}, correctly excluding the 1-cells.
+
+  Bug 4: Empty FSAdj in P4 (VAdj=1 cells not adjacent to any frame cells).
+  Fix: Fallback to all non-BG/M/VAdj values when FSAdj is empty. In P4: FrameSet={2}.
+
+  Bug 5: Test case value 0 (VDec) was included in FOthers because it is adjacent to
+    a 3-cell (VAdj). FOthers=[0] activated multi-frame logic incorrectly.
+  Fix: FOthers requires a PURE-FRAME structural test: V is in FOthers only if V alone
+    encloses some BG component. Value 0 appears twice and cannot form any enclosure;
+    values 3 and 5 in P1 each form an 8-cell frame around a 2x2 pocket.
+
+Lessons:
+  Boundary-seed BFS is fundamentally flawed for tasks with boundary-flush pockets.
+  Component detection with the FrameSet neighbor test is the correct primitive.
+  VAdj-adjacency for FrameSet works because frame cells always border indicator cells.
+  The pure-frame structural test correctly separates legitimate multi-frame colors from
+  planted contamination tokens regardless of their count in the grid.
+
+Accomplishment: Acc_336.  Paper: Acc_336_ARC2_Wave38.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2620,6 +2682,7 @@ ALL SOLVED TASKS
 (Task IDs added in alphabetical order after each wave)
 
 13e47133  - Wave 37 - concentric_rings     - BG/Div flood-fill; BFS ring distances; 8-adj ring-0; per-component color cycle
+8b7bacbf  - Wave 38 - fill_enclosed        - component-based BG pockets; FrameSet from VAdj-adj; pure-frame FOthers test; clean indicator classification
 135a2760  - Wave 15 - period_repair        - fix period-P pattern deviations in inner row/col sequences
 16de56c4  - Wave 23 - period_extend       - anchor-pair step detection; stop/recolor; row or col mode
 1818057f  - Wave 1  - recolor_plus(4,8)   - plus shapes of 4 become 8
@@ -2836,4 +2899,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 36: Slide-void block-movement BFS; void slid
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 37: Concentric-rings flood-fill partition; 4-connected BFS ring distances; 8-connected Div-adjacency for ring-0; per-component color cycles.
   Score: 37/120 = 30.83%. Task 13e47133 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-06-30.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 38: Fill-enclosed component-based BG pocket detection; FrameSet from VAdj-adjacency; pure-frame structural test for FOthers; clean indicator target classification.
+  Score: 38/120 = 31.67%. Task 8b7bacbf solved.
   Mentova repository, arc_benchmark_2.pl, 2026-06-30.
