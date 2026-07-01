@@ -151,3 +151,6 @@ arc2_fec_classify_all_/10: dispatches to multi-frame or single-frame logic.
 All 4 training pairs and the test case of task 8b7bacbf pass.
 Runtime: approximately 0.64 seconds for all 5 cases.
 Score: 37/120 = 30.83% advancing to 38/120 = 31.67%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
