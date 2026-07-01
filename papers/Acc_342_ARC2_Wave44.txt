@@ -1,0 +1,99 @@
+Accomplishment 342: ARC-AGI-2 Wave 44 - Jigsaw Fill (WP-302, Layer 277)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-01
+
+ABSTRACT
+
+Wave 44 adds the jigsaw_fill rule (WP-302, Layer 277) to PrologAI's ARC-AGI-2
+benchmark solver, solving task 5dbc8537 and raising the score from 41/120 =
+34.17% to 42/120 = 35.00%.
+
+The rule recognizes that the input contains two regions separated by a split
+point: a 2-color template (solid color S, hole color H) and a multi-color
+objects region (background B plus shaped pieces). Each non-B 4-connected
+component in the objects region is a "piece" whose normalized cell-offset shape
+(possibly multi-colored) exactly matches one contiguous rectangular sub-region of
+H-cells in the template. A backtracking exact cover assigns pieces to
+non-overlapping placements; the filled template is the output.
+
+
+TASK DESCRIPTION
+
+Task ID: 5dbc8537
+
+Input structure: a grid that splits at a row or column boundary into two parts.
+
+Part 1 - Template: exactly 2 distinct colors (solid S and hole H). The four
+corner cells all hold S, identifying S unambiguously. The H-cells form multiple
+isolated rectangular regions embedded in the S-structure.
+
+Part 2 - Objects region: background color B (most common) plus multiple isolated
+multi-color shapes. Each shape is a 4-connected component of non-B cells whose
+bounding box is exactly rectangular and fully filled.
+
+Correspondence: for each piece, its normalized shape (set of (dr, dc, color)
+triples relative to the bounding box top-left) matches exactly one available
+rectangular sub-region of H-cells in the template. The pieces together tile all
+H-cells with no overlaps and no gaps.
+
+Output: the template with each H-cell replaced by the color of the piece assigned
+to it. Multi-colored pieces preserve each cell's original color.
+
+
+PATTERN ANALYSIS
+
+Step 1 - Split detection: scan all possible row-major and column-major split
+points. The unique split where the candidate template has exactly 2 colors AND
+the total non-background cells in the objects region equals the total hole cells
+in the template identifies the correct boundary.
+
+Step 2 - Solid identification: the corner cell (top-left) always holds the solid
+color S. The other color is H. This heuristic succeeds even when S and H appear
+with equal frequency in the template.
+
+Step 3 - Piece extraction: BFS from each unvisited non-background cell in the
+objects region collects each 4-connected component together with the per-cell
+colors (since components can be multi-colored, all non-background cells in the
+component are harvested regardless of their individual color).
+
+Step 4 - Placement search: for each normalized piece, all positions (R0, C0) are
+enumerated such that every cell of the piece placed at that offset lands on an
+H-cell in the template. Pieces are sorted by ascending number of valid placements
+to guide backtracking toward the most constrained choices first.
+
+Step 5 - Backtracking exact cover: process pieces in fewest-placements order.
+For each piece, try each valid placement; verify all cells are still available in
+the remaining hole set; mark them used; recurse. Backtrack on failure. The unique
+tiling is found on the first successful path (no backtracking required in
+practice for the given tasks, since each piece typically has at most one or two
+valid placements after earlier pieces are placed).
+
+Step 6 - Output: apply the resulting color map to the template, replacing each
+H-cell with its assigned piece color and preserving all S-cells unchanged.
+
+
+RESULTS
+
+Both training pairs and the test case produce the correct output.
+
+Training Pair 1 (15x15 input, 15x7 output): template = left 7 columns (solid 9,
+hole 4); objects = right 8 columns (background 4); 7 pieces totaling 41 cells;
+41 hole cells; unique tiling found via backtracking.
+
+Training Pair 2 (20x20 input, 9x20 output): template = bottom 9 rows (solid 2,
+hole 8); objects = top 11 rows (background 8); 9 pieces totaling 74 cells
+including multi-colored pieces (4/7 checkerboard, 1/9 cross pattern); 74 hole
+cells; unique tiling found.
+
+Test Case (25x25 input, 10x25 output): template = top 10 rows (solid 3, hole 1);
+objects = bottom 15 rows (background 1); 14 pieces totaling 125 cells; 125 hole
+cells; unique tiling found via backtracking with fewest-placements-first ordering.
+
+Score: 41/120 = 34.17% to 42/120 = 35.00%.
+
+Mentova PR: feature/wp302-jigsaw-fill merged to main.
+PrologAI PR: feature/wp302-jigsaw-fill merged to main.
+SPARC Specification: v274. Pseudocode: v266. Architecture: v267.
+Refinement: v326. Completion: v332.

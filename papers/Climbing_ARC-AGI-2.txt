@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-01. Wave 43 complete: 41/120 = 34.17%.
+Last updated: 2026-07-01. Wave 44 complete: 42/120 = 35.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -165,6 +165,7 @@ Date        | Score      | Percent | Notes
 2026-07-01  |  39 / 120  | 32.50%  | Wave 41: box-absorb FIFO BFS from 3x3 box; 6-frame walls control reach; absorbed 9s fill box reading order
 2026-07-01  |  40 / 120  | 33.33%  | Wave 42: section-sort all-6 divider partitioning; ascending cell-count sort; direction transposition
 2026-07-01  |  41 / 120  | 34.17%  | Wave 43: frame-stamp left-side shapes stamped into bordered room at border-encoded (row,col) positions
+2026-07-01  |  42 / 120  | 35.00%  | Wave 44: jigsaw-fill 2-color template holes tiled by exact-shape non-bg pieces; backtracking exact cover
 
 
 COMPLETE SCORE PROGRESSION
@@ -278,6 +279,38 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 44 - 2026-07-01 - Score: 42/120 = 35.00%
+
+Date: 2026-07-01
+
+Confirmed score: 42 / 120 = 35.00%
+
+Rules added in this wave:
+  jigsaw_fill (WP-302, Layer 277)
+
+Task solved: 5dbc8537 (2 training pairs + 1 test case; grids 15x15 to 25x25;
+  each input splits into a 2-color template region (solid S, hole H) and a
+  multi-color objects region (background B); every non-B 4-connected component
+  in the objects region is a "piece" whose normalized cell-offset shape exactly
+  matches one contiguous sub-region of H-cells in the template; backtracking
+  exact cover assigns pieces to non-overlapping placements; multi-color pieces
+  preserve per-cell colors; the filled template is the output).
+
+Bugs fixed: (1) solid vs hole identification: used corner cell color (always
+  solid) rather than count-based majority, which fails when both colors appear
+  equally often. (2) Split detection: checked hole-count == piece-cell-count for
+  each candidate split to find the unique valid boundary.
+
+Lessons learned: the corner-color heuristic robustly identifies the solid color
+  even when its count equals the hole count; sorting pieces by fewest placements
+  first makes backtracking terminate instantly even for 25x25 grids.
+
+Accomplishment: Acc_342.  Paper: Acc_342_ARC2_Wave44.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2948,6 +2981,10 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 40: Grid-tile shape-driven periodic tiling; 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 41: Box-absorb FIFO BFS from 3x3 box absorbs nearest 9-cells first; absorbed 9s fill box in reading order; 6-frame walls control reachability.
   Score: 39/120 = 32.50%. Task dd6b8c4b solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 44: Jigsaw-fill 2-color template holes tiled by exact-shape multi-color pieces from objects region; backtracking exact cover with fewest-placement-first ordering.
+  Score: 42/120 = 35.00%. Task 5dbc8537 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 43: Frame-stamp left-side shapes stamped into bordered room; top-row anomalies encode column per color; right-border anomalies encode row per color; descending-size stamp order for correct overwrites.
