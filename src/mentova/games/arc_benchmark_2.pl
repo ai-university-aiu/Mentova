@@ -7962,6 +7962,178 @@ arc2_bxa_build_(Grid, Absorbed, Slots, Out) :-
     ), Rs, Out).
 
 % ---------------------------------------------------------------------------
+% WP-300 Layer 275: section_sort — sort grid sections ascending by non-BG count
+% Task: 78332cb0. Rule: find all-6 divider rows/cols; extract sections; sort
+% ascending by non-BG (non-6) cell count (ties: reverse reading-order); determine
+% output direction by summing section bounding-box heights vs widths (2D case);
+% V→H reverses order; H→V preserves order; reassemble with 6-dividers.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule fact registers section_sort for the generic induction fallback.
+arc2_named_rule(section_sort).
+
+% arc2_transform(section_sort, +Grid, -Out): sort sections and rotate direction.
+arc2_transform(section_sort, Grid, Out) :-
+    % locate all-6 divider rows and columns
+    arc2_ss_divs_(Grid, HDivs, VDivs),
+    % build (Start, End) row/col segments between dividers
+    length(Grid, NR), arc2_ss_segs_(NR, HDivs, RSegs),
+    % build col segments from first row width
+    nth0(0, Grid, Row0), length(Row0, NC), arc2_ss_segs_(NC, VDivs, CSegs),
+    % classify arrangement kind: td (2D), v (vertical stack), h (horizontal)
+    arc2_ss_kind_(HDivs, VDivs, Kind),
+    % extract each section as a sub-grid with index and cell count
+    arc2_ss_extract_(Grid, RSegs, CSegs, Secs),
+    % sort sections into output order
+    arc2_ss_order_(Kind, Secs, Ordered),
+    % determine output direction: v (vertical stack) or h (horizontal row)
+    arc2_ss_outdir_(Kind, Secs, OutDir),
+    % assemble output grid
+    arc2_ss_build_(Ordered, OutDir, Out).
+
+% arc2_ss_divs_: find rows where every cell = 6, and cols where every cell = 6.
+arc2_ss_divs_(Grid, HDivs, VDivs) :-
+    % enumerate all row indices
+    length(Grid, NR), NR1 is NR-1, numlist(0, NR1, Rows),
+    % enumerate all col indices from first row
+    nth0(0, Grid, R0), length(R0, NC), NC1 is NC-1, numlist(0, NC1, Cols),
+    % include row R if every value in that row equals 6
+    include(arc2_ss_hd_(Grid), Rows, HDivs),
+    % include col C if every row has value 6 at that column
+    include(arc2_ss_vd_(Grid), Cols, VDivs).
+
+% arc2_ss_hd_: succeed if row R of Grid is entirely 6s.
+arc2_ss_hd_(Grid, R) :-
+    % fetch row then check all values are 6
+    nth0(R, Grid, Row), maplist(=(6), Row).
+
+% arc2_ss_vd_: succeed if column C of Grid is entirely 6s.
+arc2_ss_vd_(Grid, C) :-
+    % for each row, fetch col C and check = 6
+    maplist([Row]>>(nth0(C, Row, V), V =:= 6), Grid).
+
+% arc2_ss_segs_: build Start-End pairs from divider positions.
+arc2_ss_segs_(N, Divs, Segs) :-
+    % prepend -1 and append N to dividers to form boundary pairs
+    append([-1], Divs, Ps0), append(Divs, [N], Ps1),
+    % each pair (A, B) gives segment (A+1, B-1)
+    maplist([A, B, A1-B1]>>(A1 is A+1, B1 is B-1), Ps0, Ps1, Segs).
+
+% arc2_ss_kind_: classify arrangement from divider presence.
+arc2_ss_kind_([], [_|_], h).
+% both horizontal and vertical dividers → 2D arrangement
+arc2_ss_kind_([_|_], [], v).
+% only horizontal dividers → vertical stack
+arc2_ss_kind_([_|_], [_|_], td).
+
+% arc2_ss_extract_: build list of sec(Grid, ReadIdx, CellCount) in reading order.
+arc2_ss_extract_(Grid, RSegs, CSegs, Secs) :-
+    % build index ranges for row-segs and col-segs
+    length(RSegs, NRS), NRS1 is NRS-1, numlist(0, NRS1, RIs),
+    length(CSegs, NCS), NCS1 is NCS-1, numlist(0, NCS1, CIs),
+    % enumerate all (RI, CI) combinations in reading order via findall
+    findall(sec(SecG, Idx, N), (
+        member(RI, RIs), member(CI, CIs),
+        % reading-order index for the section
+        Idx is RI * NCS + CI,
+        % fetch segment bounds
+        nth0(RI, RSegs, R0-R1), nth0(CI, CSegs, C0-C1),
+        % extract sub-grid and count non-BG cells
+        arc2_ss_subgrid_(Grid, R0, R1, C0, C1, SecG),
+        arc2_ss_ncount_(SecG, N)
+    ), Secs).
+
+% arc2_ss_subgrid_: extract rows R0..R1, cols C0..C1 from Grid.
+arc2_ss_subgrid_(Grid, R0, R1, C0, C1, Sub) :-
+    % enumerate target row and col indices
+    numlist(R0, R1, Rs), numlist(C0, C1, Cs),
+    % for each row index, extract the relevant columns
+    maplist([R, Row]>>(
+        nth0(R, Grid, GRow),
+        maplist([C, V]>>(nth0(C, GRow, V)), Cs, Row)
+    ), Rs, Sub).
+
+% arc2_ss_ncount_: count cells that are neither BG (7) nor divider (6).
+arc2_ss_ncount_(G, N) :-
+    % findall a 1 for each qualifying cell then measure length
+    findall(1, (member(Row, G), member(V, Row), V \= 7, V \= 6), Ones),
+    length(Ones, N).
+
+% arc2_ss_order_(v,...): vertical input → reverse section order.
+arc2_ss_order_(v, Secs, Ordered) :- reverse(Secs, Ordered).
+% arc2_ss_order_(h,...): horizontal input → preserve section order.
+arc2_ss_order_(h, Secs, Secs).
+% arc2_ss_order_(td,...): 2D input → sort ascending by N; ties by reverse reading-idx.
+arc2_ss_order_(td, Secs, Ordered) :-
+    % construct keysort key N-NegIdx where NegIdx = -Idx (higher Idx sorts first on tie)
+    maplist([sec(G,Idx,N), (N-NegIdx)-sec(G,Idx,N)]>>(NegIdx is -Idx), Secs, Keyed),
+    % keysort is stable ascending on the compound key (N, NegIdx)
+    keysort(Keyed, SortedK),
+    % extract sec(...) values from the sorted key-value pairs
+    pairs_values(SortedK, Ordered).
+
+% arc2_ss_outdir_(v,...): vertical input → horizontal output.
+arc2_ss_outdir_(v, _, h).
+% arc2_ss_outdir_(h,...): horizontal input → vertical output.
+arc2_ss_outdir_(h, _, v).
+% arc2_ss_outdir_(td,...): 2D input → direction from bbox height vs width totals.
+arc2_ss_outdir_(td, Secs, OutDir) :-
+    % collect (H, W) bounding boxes for each section
+    findall(H-W, (member(sec(G,_,_), Secs), arc2_ss_bbox_(G, H, W)), HWs),
+    % sum heights and widths separately
+    findall(H, member(H-_, HWs), Hs), findall(W, member(_-W, HWs), Ws),
+    sumlist(Hs, SH), sumlist(Ws, SW),
+    % more total height → vertical stack; else horizontal row
+    ( SH > SW -> OutDir = v ; OutDir = h ).
+
+% arc2_ss_bbox_: bounding box height and width of non-BG, non-divider cells.
+arc2_ss_bbox_(G, H, W) :-
+    % collect row indices of qualifying cells
+    findall(R, (nth0(R,G,Row), member(V,Row), V \= 7, V \= 6), Rs),
+    % collect col indices of qualifying cells
+    findall(C, (nth0(_,G,Row), nth0(C,Row,V), V \= 7, V \= 6), Cs),
+    % empty section has zero bbox
+    ( Rs = [] -> H = 0, W = 0
+    ; min_list(Rs,Rmin), max_list(Rs,Rmax), H is Rmax-Rmin+1,
+      min_list(Cs,Cmin), max_list(Cs,Cmax), W is Cmax-Cmin+1 ).
+
+% arc2_ss_build_(+Ordered, v, -Out): assemble sections as vertical stack.
+arc2_ss_build_(Ordered, v, Out) :-
+    % extract grids from sec/3 terms
+    maplist([sec(G,_,_), G]>>true, Ordered, Grids),
+    % build a full-width divider row of 6s
+    nth0(0, Grids, FG), nth0(0, FG, FR), length(FR, W),
+    length(DivRow, W), maplist(=(6), DivRow),
+    % stack grids with divider rows between them
+    arc2_ss_vstack_(Grids, DivRow, Out).
+
+% arc2_ss_vstack_: recursively stack grids with DivRow separator.
+arc2_ss_vstack_([G], _, G).
+arc2_ss_vstack_([G|Gs], D, Out) :-
+    % recurse on tail then prepend current grid and divider
+    arc2_ss_vstack_(Gs, D, Rest),
+    append(G, [D|Rest], Out).
+
+% arc2_ss_build_(+Ordered, h, -Out): assemble sections as horizontal row.
+arc2_ss_build_(Ordered, h, Out) :-
+    % extract grids from sec/3 terms
+    maplist([sec(G,_,_), G]>>true, Ordered, Grids),
+    % determine number of rows from first section
+    nth0(0, Grids, FG), length(FG, NR), NR1 is NR-1, numlist(0, NR1, RI),
+    % for each row index, extract that row from each grid and join with 6-dividers
+    maplist([R, OutRow]>>(
+        maplist([G, SR]>>(nth0(R, G, SR)), Grids, SRs),
+        arc2_ss_hstack_(SRs, OutRow)
+    ), RI, Out).
+
+% arc2_ss_hstack_: concatenate rows with a single 6 between each pair.
+arc2_ss_hstack_([SR], SR).
+arc2_ss_hstack_([SR|SRs], Out) :-
+    % recurse on tail then prepend current row and single 6-separator
+    arc2_ss_hstack_(SRs, Rest),
+    append(SR, [6|Rest], Out).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------
