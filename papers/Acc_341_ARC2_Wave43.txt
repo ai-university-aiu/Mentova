@@ -1,0 +1,140 @@
+Acc_341: ARC-AGI-2 Wave 43 - frame_stamp Rule - Task 247ef758
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-01
+
+
+ABSTRACT
+
+Wave 43 of the PrologAI ARC-AGI-2 benchmark climb adds the frame_stamp named
+rule, which solves task 247ef758. A bordered room occupies the right portion of
+each grid (columns 4 and beyond). The room's frame has a dominant background
+color. Anomalous values in the top row of the frame encode a stamp column per
+color; anomalous values in the rightmost column encode a stamp row per color.
+Each left-side shape (cols 0-3) whose color appears in both anomaly sets is
+stamped inside the room at every (row, col) intersection. Shapes are stamped
+in descending cell-count order so smaller shapes overwrite larger ones where
+they overlap. After Wave 43, PrologAI solves 41 of 120 ARC-AGI-2 tasks
+(34.17%) using pure Prolog named rules with no machine learning.
+
+
+1. TASK DESCRIPTION
+
+Task 247ef758 presents a grid with two regions. The left side (cols 0-3)
+contains one or more colored shapes against a black background. The right
+portion (cols 4+) contains a bordered room whose frame uses a single dominant
+color (BdrBG). Certain frame cells deviate from BdrBG: in the top row these
+deviations encode a column position (K) for each anomalous color C; in the
+rightmost column these deviations encode a row position (R) for each color C.
+
+The output moves each left-side shape (for colors appearing in both anomaly
+sets) inside the room, centered at every (R, K) intersection decoded from the
+frame. Multiple (R, K) pairs are supported per color. Shapes with more cells
+are placed first so smaller shapes overwrite them where they overlap. Left-side
+shapes whose colors are not mentioned in the frame remain on the left side
+unchanged. The room interior is otherwise background.
+
+
+2. PATTERN ANALYSIS
+
+2.1 Border Background Detection
+
+The dominant value in the top row of the room area (cols 4 to NC-1, excluding
+the task background value 0) is the border background BdrBG. Typical values
+are 3, 4, 9. All other non-zero, non-BdrBG values in the frame are anomalies.
+
+2.2 Column Anomaly Extraction
+
+For each column K in the top row where the value C differs from both BdrBG
+and the task background, record the pair (C, K). These pairs are grouped by
+color to form a Color -> [K] mapping.
+
+2.3 Row Anomaly Extraction
+
+For each row R where the rightmost column value C differs from both BdrBG
+and the task background, record the pair (C, R). These pairs are grouped by
+color to form a Color -> [R] mapping.
+
+2.4 Left-Side Shape Extraction
+
+All non-background cells in columns 0-3 are grouped by color to form a
+Color -> Cells mapping, where each cell is an (R, C) coordinate pair.
+
+2.5 Stamp Placement
+
+For each color C with a left-side shape AND column anomaly columns [K1,K2,...]
+AND row anomaly rows [R1,R2,...]: create placement centers at every (Ri, Kj)
+cross-product pair. The shape is translated so its centroid moves from the
+original (SumR/N, SumC/N) to each new center (Ri, Kj). Integer offsets are
+computed as DR = round((Ri*N - SumR) / N) and DC = round((Kj*N - SumC) / N).
+
+2.6 Overwrite Ordering
+
+Stamps are applied from largest to smallest cell count. Each subsequent stamp
+overwrites any cells from earlier stamps at the same position. This resolves
+conflicts where shapes overlap inside the room.
+
+2.7 Left-Side Erasure
+
+After placing all stamps, the left-side cells for stamped colors are set to
+background. Left-side shapes for colors without frame anomalies are unchanged.
+
+Pair 1 (12x18, BdrBG=3): 4-plus and 7-block on left; col9=4, col10=7 in top row;
+  row4=4, row6=7 in right column. 4-plus stamped at (4,9); 7-block at (6,10)
+  with one cell overwritten by the 4-plus at (5,9).
+
+Pair 2 (10x15, BdrBG=4): 5-hollow-plus and 7-plus on left; col7=7, col9=5,
+  col11=7 in top; row2=7, row5=5, row7=7 in right. 5-hollow-plus placed at
+  (5,9); 7-plus placed at four centers (2,7), (2,11), (7,7), (7,11).
+
+Pair 3 (10x14, BdrBG=2): 3-plus and 6-hollow-plus on left; col7=3, col11=6
+  in top; row3=3, row6=6 in right. 3-plus at (3,7); 6-hollow-plus at (6,11).
+
+Test (15x20, BdrBG=9): 1-plus, 4-diagonal, 6-block on left; 7-shape stays.
+  Color 1 at (3,7) and (12,7); color 4 at (7,14) and (8,14); color 6 at
+  (9,15) with cells overwritten by color 4 where they overlap.
+
+
+3. IMPLEMENTATION
+
+The rule is implemented in arc_benchmark_2.pl (Mentova repository) as ten
+predicates all prefixed arc2_fst_:
+
+arc2_fst_bdr_bg_ collects top-row values (cols 4..NC-1) excluding BG, sorts
+them, then uses arc2_fst_mode_ to find the most frequent value.
+
+arc2_fst_mode_ / arc2_fst_mode_h_ implement a tail-recursive run-length
+accumulator that scans a sorted list to find the mode.
+
+arc2_fst_col_anoms_ folds over cols 4..LastCol via arc2_fst_col_step_, adding
+each anomalous (Color, Col) pair to a Color->[Cols] association list.
+
+arc2_fst_row_anoms_ folds over all rows via arc2_fst_row_step_, reading the
+rightmost column and accumulating each anomalous (Color, Row) pair.
+
+arc2_fst_assoc_add_ inserts a position into the list for a given key in the
+association list, creating a new entry if the key is absent.
+
+arc2_fst_lshapes_ performs a nested foldl over rows (0..NR-1) and cols (0..3),
+accumulating all non-BG cells as R-C pairs under their color key.
+
+arc2_fst_stamps_ uses findall to build one stamp/6 term per placed color:
+stamp(Color, Cells, SumR, SumC, N, Pls) where Pls is the cross-product of
+row and column anomaly positions. pairs_keys_values decomposes R-C cells.
+
+arc2_fst_apply_ first erases placed left shapes to BG using foldl and
+arc2_set_cell_, then applies each stamp in order (sorted descending by N using
+msort + reverse). Each placement center computes DR and DC using round/1 with
+float division, then places each cell if within bounds.
+
+
+4. RESULTS
+
+All three training pairs and the test case pass.
+
+Task 247ef758 is solved. ARC-AGI-2 score advances from 40/120 = 33.33% to
+41/120 = 34.17%.
+
+SPARC documentation updated: Specification v273, Pseudocode v265,
+Architecture v266, Refinement v325, Completion v331.
