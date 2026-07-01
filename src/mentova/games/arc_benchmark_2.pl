@@ -8402,6 +8402,275 @@ arc2_induce_rule_pair_(TrainingPairs, pair(R1, R2)) :-
             arc2_transform(R2, Mid, Out))).
 
 % ---------------------------------------------------------------------------
+% WP-302 Layer 277: jigsaw_fill — slot-shaped object pieces tile template holes
+% Task: 5dbc8537. Rule: the input splits into a 2-color template (solid S,
+% hole H) and a multi-color objects region (background B). Every non-B
+% connected component in the objects region is a "piece" whose shape (set of
+% relative cell offsets, possibly multi-color) exactly matches one contiguous
+% sub-region of H-cells in the template. Backtracking exact cover finds the
+% unique non-overlapping assignment; the filled template is the output.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule registers jigsaw_fill for the generic induction loop.
+arc2_named_rule(jigsaw_fill).
+
+% arc2_transform(jigsaw_fill, +Grid, -Out): split, piece, cover, fill.
+arc2_transform(jigsaw_fill, Grid, Out) :-
+% Find template (2-color) / objects split; Hole is the fill-me color.
+    arc2_jf_find_split_(Grid, Tmpl, Hole, ObjGrid, ObjBg),
+% Collect every (R,C) in the template where the cell holds Hole.
+    arc2_jf_holes_(Tmpl, Hole, Holes),
+% Collect every non-ObjBg connected component from the objects region.
+    arc2_jf_pieces_(ObjGrid, ObjBg, Pieces),
+% Template row and column counts needed for placement bounds.
+    length(Tmpl, TR),
+% Extract first row to learn column count.
+    Tmpl = [TRow|_],
+% Column count of the template.
+    length(TRow, TC),
+% Augment each piece with its list of valid placements in the hole set.
+    arc2_jf_augment_(Pieces, Holes, TR, TC, PiecesWP),
+% Sort ascending by number of placements: fewest first for fast backtracking.
+    msort(PiecesWP, Sorted),
+% Backtracking exact cover: assign each piece to one non-overlapping placement.
+    arc2_jf_cover_(Sorted, Holes, [], ColorMap),
+% Rewrite template: each hole cell gets its assigned color from ColorMap.
+    arc2_jf_apply_(Tmpl, ColorMap, Out).
+
+% arc2_jf_find_split_(+Grid, -Tmpl, -Hole, -ObjGrid, -ObjBg)
+% Try all row and column split points; pick the unique one where the template
+% side has exactly 2 colors and total piece cells equal total hole cells.
+arc2_jf_find_split_(Grid, Tmpl, Hole, ObjGrid, ObjBg) :-
+% Try row splits (template = top rows, then bottom rows).
+    (   arc2_jf_row_split_(Grid, Tmpl, Hole, ObjGrid, ObjBg)
+    ;   arc2_jf_row_split_bot_(Grid, Tmpl, Hole, ObjGrid, ObjBg)
+% Try column splits (template = left cols, then right cols).
+    ;   arc2_jf_col_split_(Grid, Tmpl, Hole, ObjGrid, ObjBg)
+    ;   arc2_jf_col_split_right_(Grid, Tmpl, Hole, ObjGrid, ObjBg)
+    ), !.
+
+% arc2_jf_row_split_: template = first N rows; objects = remaining rows.
+arc2_jf_row_split_(Grid, Tmpl, Hole, Obj, ObjBg) :-
+% Nondeterministically split Grid into a non-empty prefix and suffix.
+    append(Tmpl, Obj, Grid),
+% Both parts must be non-empty.
+    Tmpl = [_|_], Obj = [_|_],
+% Validate template structure and matching piece count.
+    arc2_jf_check_tmpl_obj_(Tmpl, Obj, Hole, ObjBg).
+
+% arc2_jf_row_split_bot_: template = last N rows; objects = first rows.
+arc2_jf_row_split_bot_(Grid, Tmpl, Hole, Obj, ObjBg) :-
+% Nondeterministically split with template at the end.
+    append(Obj, Tmpl, Grid),
+% Both parts must be non-empty.
+    Tmpl = [_|_], Obj = [_|_],
+% Validate.
+    arc2_jf_check_tmpl_obj_(Tmpl, Obj, Hole, ObjBg).
+
+% arc2_jf_col_split_: template = first N columns; objects = remaining columns.
+arc2_jf_col_split_(Grid, Tmpl, Hole, Obj, ObjBg) :-
+% Derive maximum column split index from the first row.
+    Grid = [FR|_], length(FR, C), N is C - 1,
+% Try each possible split point from 1 to N-1.
+    between(1, N, Split),
+% Slice every row at Split: left part becomes template row, right part object row.
+    maplist(arc2_jf_split_row_at_(Split), Grid, Tmpl, Obj),
+% Validate.
+    arc2_jf_check_tmpl_obj_(Tmpl, Obj, Hole, ObjBg), !.
+
+% arc2_jf_col_split_right_: template = last N columns; objects = first columns.
+arc2_jf_col_split_right_(Grid, Tmpl, Hole, Obj, ObjBg) :-
+% Derive maximum column split index.
+    Grid = [FR|_], length(FR, C), N is C - 1,
+% Try each split point; now right part is the template.
+    between(1, N, M),
+% Slice every row at M: left part is objects, right part is template.
+    maplist(arc2_jf_split_row_at_(M), Grid, Obj, Tmpl),
+% Validate.
+    arc2_jf_check_tmpl_obj_(Tmpl, Obj, Hole, ObjBg), !.
+
+% arc2_jf_split_row_at_(+N, +Row, -Left, -Right)
+% Split a single row into its first N elements and the remainder.
+arc2_jf_split_row_at_(N, Row, Left, Right) :-
+% Constrain Left to length N then derive Right via append.
+    length(Left, N), append(Left, Right, Row).
+
+% arc2_jf_check_tmpl_obj_(+Tmpl, +Obj, -Hole, -ObjBg)
+% Template must have exactly 2 colors; corner cell = solid; objects region
+% must have > 2 colors; total non-bg cells in objects = total hole cells.
+arc2_jf_check_tmpl_obj_(Tmpl, Obj, Hole, ObjBg) :-
+% Flatten template to a single list of values.
+    append(Tmpl, TFlat),
+% Distinct colors in the template.
+    list_to_set(TFlat, TColors),
+% Must be exactly 2 (solid and hole).
+    TColors = [_, _],
+% Corner cell (top-left) determines the solid color.
+    Tmpl = [TRow0|_], TRow0 = [Solid|_],
+% The hole color is whichever template color is not the solid.
+    TColors = [TC1, TC2],
+    (TC1 =:= Solid -> Hole = TC2 ; Hole = TC1),
+% Count hole cells in template.
+    include(=(Hole), TFlat, HoleCells), length(HoleCells, HC), HC > 0,
+% Flatten objects region.
+    append(Obj, OFlat),
+% Objects must carry more than 2 distinct colors (bg + multiple object colors).
+    list_to_set(OFlat, OColors), length(OColors, NOC), NOC > 2,
+% Most-common color in objects region is its background.
+    arc2_jf_mode_(OFlat, ObjBg),
+% Count non-bg cells in objects.
+    exclude(=(ObjBg), OFlat, PCells), length(PCells, PC),
+% The piece cell total must exactly equal the hole cell total.
+    PC =:= HC.
+
+% arc2_jf_mode_(+List, -Mode)
+% Return the most frequently occurring element of a non-empty list.
+arc2_jf_mode_(List, Mode) :-
+% Get distinct values.
+    list_to_set(List, Vals),
+% Build count-value pairs for every distinct value.
+    findall(N-V, (member(V, Vals), include(=(V), List, Ms), length(Ms, N)), Pairs),
+% Sort ascending by count; the last element has the highest count.
+    msort(Pairs, Sorted), last(Sorted, _-Mode).
+
+% arc2_jf_holes_(+Grid, +Hole, -Pairs)
+% Return list of R-C pairs for every cell in Grid that equals Hole.
+arc2_jf_holes_(Grid, Hole, Pairs) :-
+% findall collects every (R,C) at which Grid[R][C] = Hole.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, Hole)), Pairs).
+
+% arc2_jf_pieces_(+Grid, +Bg, -Pieces)
+% Find all 4-connected non-Bg components; each piece is a list of R-C-V triples.
+arc2_jf_pieces_(Grid, Bg, Pieces) :-
+% Grid dimensions for BFS bounds.
+    length(Grid, Rows), Grid = [R0|_], length(R0, Cols),
+% Loop through every cell; launch BFS from unvisited non-Bg cells.
+    arc2_jf_pieces_loop_(Grid, Bg, Rows, Cols, 0, 0, [], [], Pieces).
+
+% arc2_jf_pieces_loop_: row-major scan; base case when row index exceeds grid.
+arc2_jf_pieces_loop_(_, _, Rows, _, R, _, _, Acc, Pieces) :-
+% All rows processed; reverse accumulator to get canonical order.
+    R >= Rows, !, reverse(Acc, Pieces).
+% End of current row: advance to next row, reset column to 0.
+arc2_jf_pieces_loop_(Grid, Bg, Rows, Cols, R, C, Vis0, Acc0, Pieces) :-
+    C >= Cols, !, R1 is R + 1,
+    arc2_jf_pieces_loop_(Grid, Bg, Rows, Cols, R1, 0, Vis0, Acc0, Pieces).
+% Normal cell: skip if already visited or background; else launch BFS.
+arc2_jf_pieces_loop_(Grid, Bg, Rows, Cols, R, C, Vis0, Acc0, Pieces) :-
+    C1 is C + 1,
+    (   memberchk(R-C, Vis0)
+% Already visited: skip.
+    ->  arc2_jf_pieces_loop_(Grid, Bg, Rows, Cols, R, C1, Vis0, Acc0, Pieces)
+    ;   nth0(R, Grid, Row), nth0(C, Row, V), V =:= Bg
+% Background cell: skip.
+    ->  arc2_jf_pieces_loop_(Grid, Bg, Rows, Cols, R, C1, Vis0, Acc0, Pieces)
+% New non-bg unvisited cell: BFS to collect entire component.
+    ;   arc2_jf_bfs_([R-C], Grid, Bg, Rows, Cols, Vis0, [], Comp, Vis1),
+        arc2_jf_pieces_loop_(Grid, Bg, Rows, Cols, R, C1, Vis1, [Comp|Acc0], Pieces)
+    ).
+
+% arc2_jf_bfs_: queue-based BFS; Acc accumulates R-C-V triples for component.
+arc2_jf_bfs_([], _, _, _, _, Vis, Acc, Acc, Vis).
+arc2_jf_bfs_([R-C|Queue], Grid, Bg, Rows, Cols, Vis0, Acc0, Comp, Vis) :-
+    (   memberchk(R-C, Vis0)
+% Already visited in this BFS: discard and continue queue.
+    ->  arc2_jf_bfs_(Queue, Grid, Bg, Rows, Cols, Vis0, Acc0, Comp, Vis)
+    ;   R >= 0, R < Rows, C >= 0, C < Cols,
+        nth0(R, Grid, Row), nth0(C, Row, V), V \= Bg
+% Valid unvisited non-bg cell: mark, record, enqueue 4-neighbours.
+    ->  Vis1 = [R-C|Vis0],
+        R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+        append([R1-C, R2-C, R-C1, R-C2], Queue, NewQ),
+        arc2_jf_bfs_(NewQ, Grid, Bg, Rows, Cols, Vis1, [R-C-V|Acc0], Comp, Vis)
+% Out-of-bounds or background: skip.
+    ;   arc2_jf_bfs_(Queue, Grid, Bg, Rows, Cols, Vis0, Acc0, Comp, Vis)
+    ).
+
+% arc2_jf_normalize_(+Piece, -Norm)
+% Translate piece coords so the bounding box starts at (0,0).
+arc2_jf_normalize_(Piece, Norm) :-
+% Collect all row indices.
+    findall(R, member(R-_-_, Piece), Rs),
+% Collect all column indices.
+    findall(C, member(_-C-_, Piece), Cs),
+% Top-left offset.
+    min_list(Rs, MinR), min_list(Cs, MinC),
+% Shift every cell by the negative of the top-left offset.
+    maplist(arc2_jf_shift_(MinR, MinC), Piece, Norm).
+
+% arc2_jf_shift_(+MinR, +MinC, +Cell, -ShiftedCell)
+arc2_jf_shift_(MinR, MinC, R-C-V, DR-DC-V) :-
+% Compute relative row and column from bounding-box origin.
+    DR is R - MinR, DC is C - MinC.
+
+% arc2_jf_valid_placements_(+Norm, +Holes, +TR, +TC, -Placements)
+% Find all (R0,C0) offsets at which placing Norm covers only hole cells.
+arc2_jf_valid_placements_(Norm, Holes, TR, TC, Placements) :-
+% Bounding box height and width of the piece.
+    findall(DR, member(DR-_-_, Norm), DRs),
+    findall(DC, member(_-DC-_, Norm), DCs),
+    max_list(DRs, MaxDR), max_list(DCs, MaxDC),
+% Maximum valid top-left row and column for the placement.
+    MaxR0 is TR - MaxDR - 1, MaxC0 is TC - MaxDC - 1,
+% Collect all (R0,C0) where every piece cell lands on a hole.
+    findall(R0-C0, (
+        between(0, MaxR0, R0),
+        between(0, MaxC0, C0),
+        forall(member(DR-DC-_, Norm),
+               (R is R0+DR, C is C0+DC, memberchk(R-C, Holes)))
+    ), Placements).
+
+% arc2_jf_augment_(+Pieces, +Holes, +TR, +TC, -PiecesWP)
+% Build N-Norm-Placements triples where N = length(Placements) for msort key.
+arc2_jf_augment_(Pieces, Holes, TR, TC, PiecesWP) :-
+    maplist([Piece, N-Norm-Placements]>>(
+% Normalize piece to (0,0) origin.
+        arc2_jf_normalize_(Piece, Norm),
+% Find all valid placements for this normalized shape.
+        arc2_jf_valid_placements_(Norm, Holes, TR, TC, Placements),
+% N drives msort: fewest placements first in backtracking.
+        length(Placements, N)
+    ), Pieces, PiecesWP).
+
+% arc2_jf_cover_(+PiecesWP, +RemHoles, +Map0, -Map)
+% Backtracking exact cover: assign each piece to a non-overlapping placement.
+arc2_jf_cover_([], [], Map, Map).
+arc2_jf_cover_([_N-Norm-Placements|Rest], RemHoles, Map0, Map) :-
+% Try each valid placement for this piece.
+    member(R0-C0, Placements),
+% Compute absolute cell positions for this placement.
+    arc2_jf_place_(Norm, R0, C0, Cells),
+% All cells must still be available in the remaining hole set.
+    maplist([R-C-_]>>(memberchk(R-C, RemHoles)), Cells),
+% Remove placed cells from the remaining hole set.
+    maplist([R-C-_, R-C]>>(true), Cells, Placed),
+    subtract(RemHoles, Placed, NewRem),
+% Add (R-C)-Color entries to the color map.
+    maplist([R-C-V, (R-C)-V]>>(true), Cells, NewEntries),
+    append(Map0, NewEntries, Map1),
+% Recurse on remaining pieces and remaining holes.
+    arc2_jf_cover_(Rest, NewRem, Map1, Map).
+
+% arc2_jf_place_(+Norm, +R0, +C0, -Cells)
+% Translate normalized piece offsets to absolute (R,C,Color) triples.
+arc2_jf_place_(Norm, R0, C0, Cells) :-
+    maplist([DR-DC-V, R-C-V]>>(R is R0+DR, C is C0+DC), Norm, Cells).
+
+% arc2_jf_apply_(+Tmpl, +ColorMap, -Out)
+% Rewrite every hole cell in Tmpl with its assigned color from ColorMap.
+arc2_jf_apply_(Tmpl, ColorMap, Out) :-
+% Enumerate row indices.
+    length(Tmpl, NR), NR1 is NR - 1, numlist(0, NR1, RowIs),
+% For each row, rewrite cells using ColorMap.
+    maplist([Row, OutRow, R]>>(
+        length(Row, NC), NC1 is NC - 1, numlist(0, NC1, ColIs),
+        maplist([V, OutV, C]>>(
+% If ColorMap has an entry for (R,C), use it; otherwise keep original value.
+            (memberchk((R-C)-OutV, ColorMap) -> true ; OutV = V)
+        ), Row, OutRow, ColIs)
+    ), Tmpl, Out, RowIs).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
