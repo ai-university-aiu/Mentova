@@ -6,8 +6,8 @@
   <img src="https://img.shields.io/badge/powered%20by-PrologAI-8A2BE2?style=for-the-badge" alt="Powered by PrologAI">
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-brightgreen?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-5865F2?style=for-the-badge" alt="48/48 Reasoning Types">
-  <img src="https://img.shields.io/badge/accomplishments-336-FF6B35?style=for-the-badge" alt="336 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-38%2F120%20%3D%2031.67%25-orange?style=for-the-badge" alt="ARC-AGI-2: 38/120 = 31.67%">
+  <img src="https://img.shields.io/badge/accomplishments-337-FF6B35?style=for-the-badge" alt="337 Accomplishments">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-37%2F120%20%3D%2030.83%25-orange?style=for-the-badge" alt="ARC-AGI-2: 37/120 = 30.83%">
   <img src="https://img.shields.io/badge/glass--box-yes-00C8AA?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **38/120 = 31.67%** — Wave 38; climbing underway |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **37/120 = 30.83%** — Wave 39; climbing underway |
 | Documented accomplishments | **333 accomplished** |
 | Scientific papers | **333 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 38 complete (38/120 = 31.67%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 39 complete (37/120 = 30.83%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -566,6 +566,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_326` | ARC-AGI-2 Wave 28 — slide_open rule solves task 6e453dd6 (0-cell components slide right to 5-divider; two-pass erase-then-place; open rows filled right of divider with 2). Score: 28/120 = 23.33%. |
 | `Acc_330` | ARC-AGI-2 Wave 32 — shape_classify rule solves task aa4ec2a5; 2-color grid; holes=6; 8-connected border=2; hole-touching shapes=8; no-hole shapes=1. Score: 32/120 = 26.67%. |
 | `Acc_333` | ARC-AGI-2 Wave 35 — bbox_fill rule solves task 9385bd28; 2-column legend maps K->V; fill bounding box of each K-color with V; smaller bbox overrides larger. Score: 35/120 = 29.17%. |
+| `Acc_337` | ARC-AGI-2 Wave 39 — room_outline rule solves task 8f3a5a89; 4-connected BFS accessible room; boundary-connected wall components generate perimeter (7); floating island walls do not. Score: 37/120 = 30.83%. |
 | `Acc_336` | ARC-AGI-2 Wave 38 — fill_enclosed rule solves task 8b7bacbf; component-based BG pocket detection; FrameSet from VAdj-adjacency; pure-frame structural FOthers test; clean indicator target classification. Score: 38/120 = 31.67%. |
 | `Acc_335` | ARC-AGI-2 Wave 37 — concentric_rings rule solves task 13e47133; BG/Div frequency detection; flood-fill components; 4-connected BFS ring distances with 8-connected ring-0 Div-adjacency; per-component color cycles. Score: 37/120 = 30.83%. |
 | `Acc_334` | ARC-AGI-2 Wave 36 — slide_void rule solves task 332f06d7; void block slides to farthest dead-end in block-movement graph; adjacency to marker moves void to marker pocket. Score: 36/120 = 30.00%. |
