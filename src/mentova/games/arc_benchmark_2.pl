@@ -11274,6 +11274,197 @@ arc2_induce_rule(TrainingPairs, frame_reflect) :-
            arc2_transform(frame_reflect, In, Out)).
 
 % ---------------------------------------------------------------------------
+% WP-316: cross_reflect (Layer 291) — cross-quadrant satellite reflection
+% Task: b10624e5
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule: register cross_reflect for the generic induction loop.
+arc2_named_rule(cross_reflect).
+
+% arc2_cr_cross_/4: find cross row R and cross col C (all-same non-BG lines).
+arc2_cr_cross_(Grid, BG, R, C) :-
+% Compute grid height for row enumeration.
+    length(Grid, H), H1 is H - 1,
+% Find R where the entire row has a single non-BG value V.
+    between(0, H1, R),
+    nth0(R, Grid, Row),
+    sort(Row, [V]),
+    V \= BG, !,
+% Compute grid width for col enumeration.
+    Grid = [Row0|_], length(Row0, W), W1 is W - 1,
+% Find C where every cell in col C also equals V.
+    between(0, W1, C),
+    findall(VV, (nth0(RR, Grid, RRow), nth0(C, RRow, VV)), ColVals),
+    sort(ColVals, [V]), !.
+
+% arc2_cr_bbox_q_/10: bounding box of value V within quadrant RLo..RHi x CLo..CHi.
+arc2_cr_bbox_q_(Grid, V, RLo, RHi, CLo, CHi, MinR, MaxR, MinC, MaxC) :-
+% Collect all (Row,Col) positions of value V in the quadrant.
+    findall(Row-Col, (between(RLo, RHi, Row), between(CLo, CHi, Col),
+                      arc2_cell_(Grid, Row, Col, V)), Cells),
+% Require at least one matching cell.
+    Cells \= [],
+% Separate row and col lists for min/max computation.
+    findall(Row, member(Row-_, Cells), Rs),
+    findall(Col, member(_-Col, Cells), Cs),
+% Compute tight bounding box.
+    min_list(Rs, MinR), max_list(Rs, MaxR),
+    min_list(Cs, MinC), max_list(Cs, MaxC).
+
+% arc2_cr_anchor_/5: anchor = first non-BG value found in top-right (TR) quadrant.
+arc2_cr_anchor_(Grid, BG, R, C, Anchor) :-
+% TR quadrant: rows 0..R-1, cols C+1..W-1.
+    R1 is R - 1,
+    Grid = [Row0|_], length(Row0, W), W1 is W - 1, C1 is C + 1,
+% Scan TR in row-major order; take first non-BG value as the anchor.
+    between(0, R1, RR), between(C1, W1, CC),
+    arc2_cell_(Grid, RR, CC, V),
+    V \= BG,
+    Anchor = V, !.
+
+% arc2_cr_sats_/6: list of distinct non-BG non-anchor values in TL quadrant.
+arc2_cr_sats_(Grid, BG, Anchor, R, C, Sats) :-
+% TL quadrant: rows 0..R-1, cols 0..C-1.
+    R1 is R - 1, C1 is C - 1,
+% Collect all non-BG non-anchor values in TL.
+    findall(V, (between(0, R1, RR), between(0, C1, CC),
+                arc2_cell_(Grid, RR, CC, V),
+                V \= BG, V \= Anchor), Vals),
+% Deduplicate: one entry per satellite colour.
+    sort(Vals, Sats).
+
+% arc2_cr_sat_info_/7: offset (DR,DC) and size (SH,SW) of satellite SV in TL.
+% AR, AC = top-left of TL anchor block; returned as SV-DR-DC-SH-SW term.
+arc2_cr_sat_info_(Grid, CrossR, CrossC, AR, AC, SV, SV-DR-DC-SH-SW) :-
+% TL quadrant boundaries for bounding box search.
+    R1 is CrossR - 1, C1 is CrossC - 1,
+% Find tight bounding box of SV in TL quadrant.
+    arc2_cr_bbox_q_(Grid, SV, 0, R1, 0, C1, MinR, MaxR, MinC, MaxC),
+% Satellite block height and width in cells.
+    SH is MaxR - MinR + 1, SW is MaxC - MinC + 1,
+% Cell offsets from TL anchor top-left to satellite top-left.
+    DR is MinR - AR, DC is MinC - AC.
+
+% arc2_cr_mods_(tr,...): LR-reflected satellite mods for top-right quadrant.
+arc2_cr_mods_(tr, SV, DR, DC, SH, SW, N_tl, N_q, AR, AC, Mods) :-
+% LR reflection: dr unchanged; dc flips across the anchor's width N_tl.
+    NewDC is N_tl - DC - SW,
+% Scale all dimensions and offsets by N_q/N_tl.
+    DR_q is (DR * N_q) // N_tl,
+    DC_q is (NewDC * N_q) // N_tl,
+    H_q  is (SH * N_q) // N_tl,
+    W_q  is (SW * N_q) // N_tl,
+% Compute placed block corners in absolute grid coordinates.
+    MinR is AR + DR_q, MaxR is MinR + H_q - 1,
+    MinC is AC + DC_q, MaxC is MinC + W_q - 1,
+% Generate one R-C-SV triple per cell of the placed block.
+    findall(R-C-SV, (between(MinR, MaxR, R), between(MinC, MaxC, C)), Mods).
+
+% arc2_cr_mods_(br,...): 180-degree-rotated satellite mods for bottom-right quadrant.
+arc2_cr_mods_(br, SV, DR, DC, SH, SW, N_tl, N_q, AR, AC, Mods) :-
+% 180-degree rotation: both dr and dc flip across anchor dimensions.
+    NewDR is N_tl - DR - SH, NewDC is N_tl - DC - SW,
+% Scale all dimensions and offsets.
+    DR_q is (NewDR * N_q) // N_tl,
+    DC_q is (NewDC * N_q) // N_tl,
+    H_q  is (SH * N_q) // N_tl,
+    W_q  is (SW * N_q) // N_tl,
+% Placed block corners.
+    MinR is AR + DR_q, MaxR is MinR + H_q - 1,
+    MinC is AC + DC_q, MaxC is MinC + W_q - 1,
+% One R-C-SV triple per placed cell.
+    findall(R-C-SV, (between(MinR, MaxR, R), between(MinC, MaxC, C)), Mods).
+
+% arc2_cr_mods_(bl,...): TB-reflected satellite mods for bottom-left quadrant.
+arc2_cr_mods_(bl, SV, DR, DC, SH, SW, N_tl, N_q, AR, AC, Mods) :-
+% TB reflection: dr flips; dc unchanged.
+    NewDR is N_tl - DR - SH,
+% Scale all dimensions and offsets.
+    DR_q is (NewDR * N_q) // N_tl,
+    DC_q is (DC * N_q) // N_tl,
+    H_q  is (SH * N_q) // N_tl,
+    W_q  is (SW * N_q) // N_tl,
+% Placed block corners.
+    MinR is AR + DR_q, MaxR is MinR + H_q - 1,
+    MinC is AC + DC_q, MaxC is MinC + W_q - 1,
+% One R-C-SV triple per placed cell.
+    findall(R-C-SV, (between(MinR, MaxR, R), between(MinC, MaxC, C)), Mods).
+
+% arc2_transform(cross_reflect): add reflected satellites to TR, BR, and BL quadrants.
+arc2_transform(cross_reflect, Grid, Out) :-
+% Background from top-left corner cell.
+    arc2_cell_(Grid, 0, 0, BG),
+% Locate the cross row R and cross col C.
+    arc2_cr_cross_(Grid, BG, R, C),
+% Anchor value = only non-BG value present in TR quadrant.
+    arc2_cr_anchor_(Grid, BG, R, C, Anchor),
+% Grid dimensions for quadrant boundary computation.
+    length(Grid, H), H1 is H - 1,
+    Grid = [GRow0|_], length(GRow0, W), W1 is W - 1,
+    R1 is R - 1, C1 is C - 1, C2 is C + 1, R2 is R + 1,
+% TL anchor bounding box.
+    arc2_cr_bbox_q_(Grid, Anchor, 0, R1, 0, C1,
+                    TL_MinR, TL_MaxR, TL_MinC, _TL_MaxC),
+% TL anchor size N_tl (square anchor, so height = width).
+    N_tl is TL_MaxR - TL_MinR + 1,
+% Satellite colours in TL (non-BG, non-anchor).
+    arc2_cr_sats_(Grid, BG, Anchor, R, C, Sats),
+% For each satellite, compute offset and size relative to TL anchor top-left.
+    maplist(arc2_cr_sat_info_(Grid, R, C, TL_MinR, TL_MinC), Sats, SatInfos),
+% TR anchor bounding box and size.
+    arc2_cr_bbox_q_(Grid, Anchor, 0, R1, C2, W1,
+                    TR_MinR, TR_MaxR, TR_MinC, _TR_MaxC),
+    N_tr is TR_MaxR - TR_MinR + 1,
+% BR anchor bounding box and size.
+    arc2_cr_bbox_q_(Grid, Anchor, R2, H1, C2, W1,
+                    BR_MinR, BR_MaxR, BR_MinC, _BR_MaxC),
+    N_br is BR_MaxR - BR_MinR + 1,
+% BL anchor bounding box and size.
+    arc2_cr_bbox_q_(Grid, Anchor, R2, H1, 0, C1,
+                    BL_MinR, BL_MaxR, BL_MinC, _BL_MaxC),
+    N_bl is BL_MaxR - BL_MinR + 1,
+% TR mods: LR-reflect each TL satellite at TR anchor, scaled to N_tr.
+    findall(Mods, (member(SV-DR-DC-SH-SW, SatInfos),
+                   arc2_cr_mods_(tr, SV, DR, DC, SH, SW,
+                                 N_tl, N_tr, TR_MinR, TR_MinC, Mods)),
+            TrLists),
+% BR mods: 180-rotate each TL satellite at BR anchor, scaled to N_br.
+    findall(Mods, (member(SV-DR-DC-SH-SW, SatInfos),
+                   arc2_cr_mods_(br, SV, DR, DC, SH, SW,
+                                 N_tl, N_br, BR_MinR, BR_MinC, Mods)),
+            BrLists),
+% BL mods: TB-reflect each TL satellite at BL anchor, scaled to N_bl.
+    findall(Mods, (member(SV-DR-DC-SH-SW, SatInfos),
+                   arc2_cr_mods_(bl, SV, DR, DC, SH, SW,
+                                 N_tl, N_bl, BL_MinR, BL_MinC, Mods)),
+            BlLists),
+% Flatten nested mod lists into flat R-C-V triple lists.
+    append(TrLists, TrMods), append(BrLists, BrMods), append(BlLists, BlMods),
+% Combine all quadrant mods into one lookup list.
+    append([TrMods, BrMods, BlMods], AllMods),
+% Output: grid dimensions for row/col enumeration.
+    numlist(0, H1, Rs), numlist(0, W1, Cs),
+% Build each output row: use mod value when present, else copy input cell.
+    maplist([Row, OutRow]>>(
+        maplist([CC, V]>>(
+% Use the modification value if this cell was modified.
+            ( member(Row-CC-V0, AllMods) -> V = V0
+% Otherwise copy the original input cell.
+            ; arc2_cell_(Grid, Row, CC, V) )
+        ), Cs, OutRow)
+    ), Rs, Out).
+
+% arc2_induce_rule(cross_reflect): fast pre-filter + full training verification.
+arc2_induce_rule(TrainingPairs, cross_reflect) :-
+% Pre-filter: first training input must contain a complete cross row.
+    TrainingPairs = [pair(First, _)|_],
+    arc2_cell_(First, 0, 0, BG0),
+    arc2_cr_cross_(First, BG0, _, _),
+% Full verification: every training pair must transform correctly.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(cross_reflect, In, Out)).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
