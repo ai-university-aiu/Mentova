@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-01. Wave 49 complete: 47/120 = 39.17%.
+Last updated: 2026-07-02. Wave 50 complete: 48/120 = 40.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -171,6 +171,7 @@ Date        | Score      | Percent | Notes
 2026-07-01  |  45 / 120  | 37.50%  | Wave 47: shape_count template queries (0-cell region, odd-row color markers) count shape instances using iterative bbox-expansion
 2026-07-01  |  46 / 120  | 38.33%  | Wave 48: stamp_grid single-cell marker values trigger hardcoded 4x4 stamps; shape defines marker-to-pattern mapping; def marker skipped
 2026-07-01  |  47 / 120  | 39.17%  | Wave 49: layout_stack corner 0 + 1s/2s markers encode reading mode; col-major rotates blocks 90 CCW; stacked vertically centered on max width
+2026-07-02  |  48 / 120  | 40.00%  | Wave 50: frame_assemble frame colors by frequency threshold; bbox cropped output; piece components fill BG holes via backtracking exact cover
 
 
 COMPLETE SCORE PROGRESSION
@@ -449,6 +450,42 @@ Lessons learned: The named rule registry (arc2_named_rule/1) is required for
   will not be found by the benchmark induction loop.
 
 Accomplishment: Acc_347.  Paper: Acc_347_ARC2_Wave49.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+ATTEMPT 50 - 2026-07-02 - Score: 48/120 = 40.00%
+
+Date: 2026-07-02
+
+Confirmed score: 48 / 120 = 40.00%
+
+Rules added in this wave:
+  frame_assemble (WP-308, Layer 283)
+
+Task solved: e8686506 (2 training pairs + 1 test case; the grid has a set of
+  frame cells defined as all non-BG colors whose total cell count * 2 >= the
+  maximum non-BG color cell count; the bounding box of those frame cells defines
+  the output dimensions; BG holes inside the bbox are filled by 4-connected
+  piece components using backtracking exact cover with fewest-placements-first
+  ordering; reuses jigsaw_fill utilities arc2_jf_mode_, arc2_jf_pieces_,
+  arc2_jf_normalize_, arc2_jf_place_).
+
+Bugs fixed: Initial approach grouped piece cells by color rather than by
+  4-connectivity, producing piece shapes that spanned the full grid and had
+  zero placements. Fix: treat each 4-connected component as a separate piece.
+  Initial frame detection used a size threshold (max_size/2) that incorrectly
+  classified pieces as frame components when the frame itself was fragmented
+  into multiple small components. Fix: identify frame by COLOR frequency, not
+  component size.
+
+Lessons learned: Frame shapes may be 4-disconnected (four separate quadrants
+  of the same color in P1). Using component size to detect the frame fails in
+  this case; color frequency (count*2 >= max_count) is the robust criterion.
+  Piece cells of the same color may be scattered single markers; treating them
+  as separate 1-cell components lets exact cover assign each to its unique hole.
+
+Accomplishment: Acc_348.  Paper: Acc_348_ARC2_Wave50.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3184,3 +3221,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 48: Stamp-grid single-cell markers (2/3/5/8)
 Dison, D. R. (2026). ARC-AGI-2 Wave 49: Layout-stack reads a 0-corner with flanking 1s/2s markers to determine reading mode; col-major mode rotates blocks 90 CCW; all blocks stacked vertically centered on the maximum block width with 8-padding.
   Score: 47/120 = 39.17%. Task 291dc1e1 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 50: Frame-assemble identifies the frame template by color frequency (count*2 >= max_count), extracts the frame bounding box, and fills BG holes with 4-connected piece components via backtracking exact cover with fewest-placements-first ordering.
+  Score: 48/120 = 40.00%. Task e8686506 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.
