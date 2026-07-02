@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-02. Wave 50 complete: 48/120 = 40.00%.
+Last updated: 2026-07-02. Wave 51 complete: 49/120 = 40.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -3224,4 +3224,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 49: Layout-stack reads a 0-corner with flank
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 50: Frame-assemble identifies the frame template by color frequency (count*2 >= max_count), extracts the frame bounding box, and fills BG holes with 4-connected piece components via backtracking exact cover with fewest-placements-first ordering.
   Score: 48/120 = 40.00%. Task e8686506 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 51: Quadrant-tile reads four quadrants of a 2N x 2N grid; top halves count output dimensions; bottom-left is fill template; bottom-right is tile template with zeros filled by BL at tile-block-row index.
+  Score: 49/120 = 40.83%. Task f931b4a8 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
