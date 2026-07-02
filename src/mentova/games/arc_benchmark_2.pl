@@ -9918,6 +9918,142 @@ arc2_transform(layout_stack, Grid, Out) :-
     append(CBlks, Out).
 
 % ---------------------------------------------------------------------------
+% WP-308  frame_assemble  (Layer 283)  Task e8686506
+% The input has frame cells (most-common non-BG color(s)) forming a template
+% with BG holes inside its bounding box. Remaining non-BG cells are pieces.
+% Output = frame bbox with each BG hole filled by the piece whose normalized
+% 4-connected shape fits exactly at that position. Backtracking exact cover;
+% fewest-placements-first. Frame colors = non-BG colors with cell count >=
+% half the maximum non-BG color cell count (ties yield multiple frame colors).
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule/1: register frame_assemble for generic induction dispatch.
+arc2_named_rule(frame_assemble).
+
+% arc2_fa_frame_colors_(+Grid, +Bg, -FrameColors)
+% FrameColors = non-Bg colors whose total cell count * 2 >= max non-Bg count.
+arc2_fa_frame_colors_(Grid, Bg, FrameColors) :-
+% Flatten grid to single value list.
+    append(Grid, Flat),
+% Remove BG cells.
+    exclude(=(Bg), Flat, NonBg),
+% Distinct non-BG colors.
+    list_to_set(NonBg, Vals),
+% Build Count-Color pairs.
+    findall(N-V, (member(V, Vals), include(=(V), NonBg, Ms), length(Ms, N)), Pairs),
+% Sort ascending; last pair has the maximum count.
+    msort(Pairs, Sorted), last(Sorted, Max-_),
+% Collect colors with count >= Max/2 (integer: count*2 >= Max).
+    findall(V, (member(N-V, Sorted), N * 2 >= Max), FrameColors).
+
+% arc2_fa_frame_bbox_(+Grid, +FrameColors, -R1, -R2, -C1, -C2)
+% Bounding box of all cells whose color is in FrameColors.
+arc2_fa_frame_bbox_(Grid, FrameColors, R1, R2, C1, C2) :-
+% Collect every (R,C) that holds a frame color.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, V), member(V, FrameColors)), RCList),
+% Extract row and col lists for min/max.
+    findall(R, member(R-_, RCList), Rs),
+    findall(C, member(_-C, RCList), Cs),
+    min_list(Rs, R1), max_list(Rs, R2),
+    min_list(Cs, C1), max_list(Cs, C2).
+
+% arc2_fa_holes_(+Grid, +Bg, +R1, +R2, +C1, +C2, -Holes)
+% Holes = absolute R-C pairs of BG cells within the frame bounding box.
+arc2_fa_holes_(Grid, Bg, R1, R2, C1, C2, Holes) :-
+% Scan every cell in the bbox; keep those holding the BG value.
+    findall(R-C, (between(R1, R2, R), between(C1, C2, C),
+                 nth0(R, Grid, Row), nth0(C, Row, Bg)), Holes).
+
+% arc2_fa_piece_comps_(+Grid, +Bg, +FrameColors, -PieceComps)
+% PieceComps = 4-connected non-BG components with no frame-colored cell.
+arc2_fa_piece_comps_(Grid, Bg, FrameColors, PieceComps) :-
+% All non-BG 4-connected components.
+    arc2_jf_pieces_(Grid, Bg, AllComps),
+% Keep only components that contain no frame color.
+    include([Comp]>>(\+ (member(_-_-V, Comp), member(V, FrameColors))),
+            AllComps, PieceComps).
+
+% arc2_fa_placements_(+Norm, +Holes, +R1, +C1, +TR, +TC, -Placements)
+% Find all absolute (R0,C0) offsets where every piece cell lands on a hole.
+arc2_fa_placements_(Norm, Holes, R1, C1, TR, TC, Placements) :-
+% Piece normalized bounding extents.
+    findall(DR, member(DR-_-_, Norm), DRs),
+    findall(DC, member(_-DC-_, Norm), DCs),
+    max_list(DRs, MaxDR), max_list(DCs, MaxDC),
+% Maximum bbox-relative top-left offset that keeps piece inside bbox.
+    MaxDR0 is TR - MaxDR - 1,
+    MaxDC0 is TC - MaxDC - 1,
+% Enumerate all valid absolute placements.
+    findall(R0-C0, (
+        between(0, MaxDR0, DR0), between(0, MaxDC0, DC0),
+        R0 is R1 + DR0, C0 is C1 + DC0,
+        forall(member(DR-DC-_, Norm),
+               (R is R0 + DR, C is C0 + DC, memberchk(R-C, Holes)))
+    ), Placements).
+
+% arc2_fa_cover_(+PiecesWP, +RemHoles, +Map0, -Map)
+% Backtracking exact cover: assign each piece to a non-overlapping placement.
+arc2_fa_cover_([], [], Map, Map).
+arc2_fa_cover_([_-Norm-Placements|Rest], RemHoles, Map0, Map) :-
+% Try each pre-computed placement.
+    member(R0-C0, Placements),
+% Compute absolute cell positions for this offset.
+    arc2_jf_place_(Norm, R0, C0, Cells),
+% All cells must be in the current remaining hole set.
+    maplist([R-C-_]>>(memberchk(R-C, RemHoles)), Cells),
+% Convert R-C-V triples to R-C pairs for subtraction.
+    maplist([R-C-_, R-C]>>(true), Cells, Placed),
+    subtract(RemHoles, Placed, NewRem),
+% Record (R-C)-Color entries in the color map.
+    maplist([R-C-V, (R-C)-V]>>(true), Cells, NewEntries),
+    append(Map0, NewEntries, Map1),
+% Recurse on remaining pieces and remaining holes.
+    arc2_fa_cover_(Rest, NewRem, Map1, Map).
+
+% arc2_fa_build_(+Grid, +R1, +R2, +C1, +C2, +ColorMap, -Out)
+% Extract the frame bbox subgrid; replace BG holes using ColorMap.
+arc2_fa_build_(Grid, R1, R2, C1, C2, ColorMap, Out) :-
+% Enumerate absolute row indices in the bbox.
+    numlist(R1, R2, RowIs),
+    maplist([RI, OutRow]>>(
+% Enumerate absolute column indices in the bbox.
+        numlist(C1, C2, ColIs),
+        maplist([CI, OutV]>>(
+            nth0(RI, Grid, Row), nth0(CI, Row, V),
+% Use ColorMap entry if present; otherwise keep the original frame color.
+            (memberchk((RI-CI)-OutV, ColorMap) -> true ; OutV = V)
+        ), ColIs, OutRow)
+    ), RowIs, Out).
+
+% arc2_transform(frame_assemble, +Grid, -Out): top-level orchestration.
+arc2_transform(frame_assemble, Grid, Out) :-
+% Find the background color (most frequent value).
+    append(Grid, Flat),
+    arc2_jf_mode_(Flat, Bg),
+% Identify frame colors by frequency threshold (count*2 >= max count).
+    arc2_fa_frame_colors_(Grid, Bg, FrameColors),
+% Compute bounding box of all frame-colored cells.
+    arc2_fa_frame_bbox_(Grid, FrameColors, R1, R2, C1, C2),
+% Bbox dimensions (rows x cols).
+    TR is R2 - R1 + 1, TC is C2 - C1 + 1,
+% Collect BG holes within the bbox.
+    arc2_fa_holes_(Grid, Bg, R1, R2, C1, C2, Holes),
+% Find all non-frame non-BG 4-connected piece components.
+    arc2_fa_piece_comps_(Grid, Bg, FrameColors, PieceComps),
+% Normalize each piece and compute valid placements over the full hole set.
+    maplist([Piece, N-Norm-Placements]>>(
+        arc2_jf_normalize_(Piece, Norm),
+        arc2_fa_placements_(Norm, Holes, R1, C1, TR, TC, Placements),
+        length(Placements, N)
+    ), PieceComps, PiecesWP),
+% Sort pieces by fewest placements first (most-constrained-first heuristic).
+    msort(PiecesWP, Sorted),
+% Backtracking exact cover assigns each piece to its hole positions.
+    arc2_fa_cover_(Sorted, Holes, [], ColorMap),
+% Extract the output subgrid from the frame bbox with holes filled.
+    arc2_fa_build_(Grid, R1, R2, C1, C2, ColorMap, Out).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 

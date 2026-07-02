@@ -1,0 +1,196 @@
+Accomplishment 348: ARC-AGI-2 Wave 50 - Frame Assemble (WP-308, Layer 283)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 50 adds the frame_assemble rule (WP-308, Layer 283) to PrologAI's
+ARC-AGI-2 benchmark solver, solving task e8686506 and raising the score from
+47/120 = 39.17% to 48/120 = 40.00%.
+
+The rule identifies a frame template by color frequency: any non-background
+color whose total cell count multiplied by two is at least the maximum non-
+background color cell count qualifies as a frame color. The bounding box of
+all frame-colored cells defines the output grid dimensions. Background cells
+inside that bounding box are holes. The remaining non-background cells are
+piece components found by 4-connected flood fill. Backtracking exact cover
+with fewest-placements-first ordering assigns each piece to the unique
+position where its normalized shape fits exactly in the holes.
+
+
+TASK DESCRIPTION
+
+Task ID: e8686506
+
+Input structure: a large grid containing (1) a frame template made of one or
+more colors that together form a closed or partial border around a set of
+background holes, and (2) scattered piece objects outside the frame area.
+The output is the bounding box of the frame, with each background hole filled
+by the piece component whose normalized 4-connected shape matches the hole
+geometry at that location.
+
+Output: a subgrid equal to the bounding box of the frame-colored cells, with
+background holes replaced by piece colors from the exact-cover assignment.
+
+
+THE FRAME_ASSEMBLE RULE
+
+Step 1 - Background detection: flatten the grid; most frequent value = BG.
+
+Step 2 - Frame color detection: count cells per non-BG color. Frame colors
+are those with count * 2 >= the maximum count. This threshold handles ties
+(two frame shapes of equal size) and works when the frame is fragmented into
+multiple disconnected 4-components of the same color.
+
+Step 3 - Frame bounding box: collect all cells with frame colors; compute
+min/max row and column to get (R1, R2, C1, C2). Bbox dimensions TR x TC.
+
+Step 4 - Holes: BG cells inside the bbox. These must be covered exactly.
+
+Step 5 - Piece components: find all 4-connected non-BG components; exclude
+any that contain a frame-colored cell. Each component is one piece.
+
+Step 6 - Normalize: shift each piece to (0,0) origin using arc2_jf_normalize_.
+
+Step 7 - Placements: for each normalized piece shape, enumerate all (DR0,DC0)
+offsets in [0..TR-MaxDR-1] x [0..TC-MaxDC-1]; translate to absolute (R0,C0)
+by adding (R1,C1); keep only offsets where every piece cell lands on a hole.
+
+Step 8 - Sort: order pieces by fewest placements first (most-constrained-first
+backtracking heuristic, same as jigsaw_fill).
+
+Step 9 - Cover: backtracking assignment. For each piece try its candidate
+placements; verify all cells are still in remaining holes; subtract placed
+cells; recurse on remaining pieces and remaining holes.
+
+Step 10 - Build output: extract the subgrid Grid[R1..R2][C1..C2]; replace
+each hole (R,C) with the color from the cover map.
+
+
+KEY INSIGHT: FRAME DETECTION BY COLOR FREQUENCY
+
+The frame template in this task family is NOT necessarily a single connected
+component. In training pair P1, the 3-colored cells form four separate
+4-connected quadrants (top-left, top-right, bottom-left, bottom-right). A
+naive largest-component heuristic fails because each quadrant has only 3-4
+cells, similar in size to the piece components.
+
+The correct criterion: a color is a frame color if its total cell count
+(across all its components combined) is at least half the maximum non-BG
+color cell count. This naturally selects the dominant structural color(s)
+and rejects small scattered marker pieces.
+
+Formal test: color C is a frame color if
+  count(C, non-BG cells) * 2 >= max_non_BG_color_count
+
+When two colors tie for the maximum (training pair P2: colors 1 and 2 each
+have 11 cells), both qualify as frame colors. Their combined bounding box
+defines the output dimensions.
+
+
+TRAINING PAIR VERIFICATION
+
+P1 (13x13 input, BG=8, output 5x5):
+Frame color = 3 (14 cells, four disconnected quadrants). Frame bbox: rows 3-7,
+cols 2-6. 11 BG holes. Pieces: color-1 block (6 cells, 1 placement at bbox
+offset (1,1)); color-6 pair (2 cells, 1 remaining placement after color-1
+placed); three color-4 single cells (each fills 1 remaining hole). Cover
+assigns: 1-block to interior 6 holes; 6-pair to center-bottom 2 holes; 4-cells
+to the top-center notch and two bottom-corner notches. PASS.
+
+Output:
+  3 3 4 3 3
+  3 1 1 1 3
+  3 1 1 1 3
+  4 3 6 3 4
+  3 3 6 3 3
+
+P2 (13x13 input, BG=3, output 8x5):
+Frame colors = 1 and 2 (tied at 11 cells each). Frame bbox: rows 3-10, cols
+2-6. 18 BG holes. Pieces: color-8 T-shape (5 cells, 1 placement); color-4
+inverted-T (5 cells, 1 placement); two color-6 vertical pairs (2 cells each,
+2 remaining placements after large shapes placed); four color-5 single cells
+(fill remaining corner holes). PASS.
+
+Output (8 rows x 5 cols):
+  5 1 1 1 5
+  1 8 8 8 1
+  1 1 8 1 1
+  6 1 8 1 6
+  6 2 4 2 6
+  2 2 4 2 2
+  2 4 4 4 2
+  5 2 2 2 5
+
+Test (15x15 input, BG=4, output 8x5):
+Frame color = 8 (18 cells, double-ring pattern). Frame bbox: rows 2-9, cols
+4-8. 22 BG holes. Pieces: two color-6 T-shapes (4 cells each, 1 placement
+each); two color-3 strips (4 cells each, 5 placements each, reduced to 1 after
+6-shapes placed); color-9 pair (2 cells, unique remaining placement); four
+color-1 single cells (corner holes). PASS.
+
+Output (8 rows x 5 cols):
+  1 8 8 8 1
+  8 6 6 6 8
+  3 8 6 8 3
+  3 8 9 8 3
+  3 8 9 8 3
+  3 8 6 8 3
+  8 6 6 6 8
+  1 8 8 8 1
+
+
+IMPLEMENTATION DETAILS
+
+New predicates (all in arc_benchmark_2.pl, prefixed arc2_fa_):
+
+arc2_fa_frame_colors_(Grid, Bg, FrameColors): flatten, exclude BG, build
+  Count-Color pairs via findall+include, msort to find max, collect colors
+  with count*2 >= max.
+
+arc2_fa_frame_bbox_(Grid, FrameColors, R1, R2, C1, C2): findall R-C for
+  cells with member(V, FrameColors); min_list / max_list on rows and cols.
+
+arc2_fa_holes_(Grid, Bg, R1, R2, C1, C2, Holes): between/3 scan over bbox;
+  nth0 checks each cell against Bg.
+
+arc2_fa_piece_comps_(Grid, Bg, FrameColors, PieceComps): arc2_jf_pieces_
+  finds all 4-connected non-BG components; include/3 filters out frame ones.
+
+arc2_fa_placements_(Norm, Holes, R1, C1, TR, TC, Placements): max_list on
+  normalized offsets; between/3 double loop; forall validates all piece cells
+  against Holes; returns absolute R0-C0 pairs.
+
+arc2_fa_cover_(PiecesWP, RemHoles, Map0, Map): member/2 over Placements;
+  arc2_jf_place_ translates offsets to absolute R-C-V triples; maplist+
+  memberchk validates against RemHoles; subtract removes placed cells; recurse.
+
+arc2_fa_build_(Grid, R1, R2, C1, C2, ColorMap, Out): numlist over row/col
+  indices; nth0 reads original cell; memberchk ColorMap applies piece color.
+
+Reused unchanged from jigsaw_fill (Wave 44):
+  arc2_jf_mode_ (BG detection), arc2_jf_pieces_ + arc2_jf_bfs_ (component
+  finding), arc2_jf_normalize_ + arc2_jf_shift_ (shape normalization),
+  arc2_jf_place_ (offset translation).
+
+arc2_named_rule(frame_assemble): registers the rule for the generic induction
+  dispatcher arc2_induce_rule/2.
+
+
+SIGNIFICANCE
+
+frame_assemble solves a fundamentally different class of assembly puzzle from
+jigsaw_fill. In jigsaw_fill the template region is spatially separate from the
+objects region (split by a row or column boundary). In frame_assemble the frame
+and pieces coexist in the same grid, with the frame defined not by position but
+by color dominance. The frequency-threshold criterion (count*2 >= max_count)
+is the key innovation: it correctly identifies the frame even when the frame
+template is fragmented into multiple disconnected components of the same color,
+which a simple largest-component heuristic would fail to handle.
+
+Score: 47/120 = 39.17% to 48/120 = 40.00%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
