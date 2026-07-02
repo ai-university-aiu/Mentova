@@ -3401,3 +3401,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 56: Shape-walk 3x3 block shapes form a visua
 Dison, D. R. (2026). ARC-AGI-2 Wave 57: Frame-reflect 9x9 bordered frame divided into nine 3x3 sub-regions; each of the 8 non-center sub-regions stamped as 180-degree rotation at outward-adjacent position; center hole filled by arm-product rule using arm-inner marker, frame filler, and outer corner values.
   Score: 54/120 = 45.00%. Task db0c5428 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 58: Cross-reflect a cross of 1s (one complete row + one complete col) divides the grid into 4 quadrants; TL has an anchor block plus satellite blocks; TR/BR/BL each have only an anchor block; output adds satellites to TR (LR-reflected), BR (180-rotated), BL (TB-reflected) scaled by N_q/N_tl anchor size ratio.
+  Score: 55/120 = 45.83%. Task b10624e5 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.
