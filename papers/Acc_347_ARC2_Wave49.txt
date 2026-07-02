@@ -1,0 +1,175 @@
+Accomplishment 347: ARC-AGI-2 Wave 49 - Layout Stack (WP-307, Layer 282)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-01
+
+ABSTRACT
+
+Wave 49 adds the layout_stack rule (WP-307, Layer 282) to PrologAI's
+ARC-AGI-2 benchmark solver, solving task 291dc1e1 and raising the score from
+46/120 = 38.33% to 47/120 = 39.17%.
+
+The rule recognizes a grid decorated with a 0-corner cell and two orthogonal
+header lines of 1s and 2s. These markers encode whether the interior blocks
+should be read in row-major or column-major order, and which direction to scan
+within each. In column-major mode, each extracted block is rotated 90 degrees
+counter-clockwise before stacking. All blocks are stacked vertically in the
+output, centered within the width of the widest block using background-8 padding.
+
+
+TASK DESCRIPTION
+
+Task ID: 291dc1e1
+
+Input structure: a grid with one corner cell holding 0, a header row of 1s or
+2s extending from that corner, and a header column of the other value. The
+interior (grid minus header row and column) has a background of 8. Colored
+rectangular blocks appear as non-8 regions, organized into "column bands"
+(groups of consecutive active columns) or "row bands" (groups of consecutive
+active rows) separated by all-8 columns or rows. Within each band, blocks are
+separated by all-8 rows (in col-major mode) or all-8 cols (in row-major mode).
+
+Output: a single stacked column of blocks drawn in reading order, each block
+centered in the width of the widest block, padded with background value 8.
+
+
+THE LAYOUT_STACK RULE
+
+Step 1 - Find corner: scan all four grid corners for the cell holding 0. The
+corner position (CR, CC) determines the header row (row CR) and header column
+(col CC).
+
+Step 2 - Determine mode: read the cell adjacent to the corner along the header
+row. Value 1 -> row-major; value 2 -> col-major.
+
+Step 3 - Direction flags:
+  PrimReverse = true if CR equals the last row (primary scan goes B->T).
+  SecReverse = true if CC equals the last column (secondary scan goes R->L).
+
+Step 4 - Strip interior: remove header row and header col to get the content
+area (Interior).
+
+Step 5 (col-major): Find column bands = consecutive groups of active cols
+(any non-8 cell). Order bands by SecReverse. For each band, find row stretches
+= maximal consecutive runs of active rows. Order stretches by PrimReverse.
+Extract sub-grid for each stretch. Rotate each sub-grid 90 CCW.
+
+Step 5 (row-major): Find row bands = consecutive groups of active rows. Order
+by PrimReverse. For each band, find column stretches = maximal consecutive runs
+of active cols. Order stretches by SecReverse. Extract sub-grid (no rotation).
+
+Step 6 - Stack: compute MaxW = maximum block width. For each block row, pad
+with floor((MaxW-W)/2) 8s on the left and the remainder on the right.
+Concatenate all padded rows into the output.
+
+
+THE 90 CCW ROTATION
+
+For an H x W input block, the output is W x H. The formula is:
+  Output[i][j] = Input[j][C-1-i]  where C = number of columns.
+
+Each output row i is built by reading input column C-1-i from top to bottom.
+This maps a tall block (many rows, few cols) into a wide 2-row block, which is
+the natural output orientation for stacking.
+
+
+TRAINING PAIR VERIFICATION
+
+P1 (20x8 input -> 12x6 output): col-major. 0 at top-left; 2s right (header
+row); 1s down (header col). SecReverse=false (L->R). PrimReverse=false (T->B).
+Interior: 19 rows x 7 cols. Left band (interior cols 1-2): 3 stretches
+(2x2 block of 4; 6x2 mixed block with 1,2,6 anomalies; 4x2 mixed with 3,6
+anomalies). Right band (interior cols 4-5): 3 stretches (2x2 of 9; 2x2 of 4;
+6x2 mixed with 4,7). Each rotated 90 CCW. MaxW=6. Output 12x6. PASS.
+
+P2 (8x11 input -> 8x4 output): row-major. 0 at top-left; 1s right; 2s down.
+SecReverse=false. PrimReverse=false. Interior: 7 rows x 10 cols. Two row bands.
+Band 1 (interior rows 1-2): 2 col stretches (3, 2-wide; 4, 4-wide). Band 2
+(rows 4-5): 2 col stretches (6, 2-wide; 9, 2-wide). No rotation. MaxW=4.
+Output 8x4. PASS.
+
+P3 (8x28 input -> 14x8 output): row-major. Same mode as P2; wider interior
+with 7 blocks across two row bands. MaxW=8. Output 14x8. PASS.
+
+P4 (8x23 input -> 14x6 output): row-major. 0 at top-right; 1s going left;
+2s down. SecReverse=true (R->L within each row band). PrimReverse=false.
+Interior: 7 rows x 22 cols. Two row bands; 7 blocks read R->L. MaxW=6. PASS.
+
+Test (28x8 input -> 18x8 output): col-major. 0 at top-right; 2s going left
+(header row); 1s going down (header col right side). SecReverse=true (R->L
+band order). PrimReverse=false. Interior: 27 rows x 7 cols. Right band first
+(cols 3-4): 5 stretches. Left band second (cols 0-1): 4 stretches. Each
+rotated 90 CCW. MaxW=8. Output 18x8. PASS.
+
+
+IMPLEMENTATION DETAILS
+
+Predicates:
+
+arc2_ls_corner_(Grid, CR, CC): try all four (row,col) corner pairs; first with
+  Grid[CR][CC]=0 wins.
+
+arc2_ls_mode_(Grid, CR, CC, Mode, PrimReverse, SecReverse): read header row
+  cell adjacent to corner; 1->row_major, 2->col_major. Flags from corner pos.
+
+arc2_ls_del_row_(Grid, N, Rest): recursive countdown to remove row N.
+
+arc2_ls_del_col_(C, List, Rest): recursive countdown to remove element C.
+
+arc2_ls_interior_(Grid, CR, CC, Interior): del_row then maplist del_col.
+
+arc2_ls_consec_groups_(Ints, Groups): partition sorted integers into consecutive
+  runs using arc2_ls_consec_ext_ for greedy extension.
+
+arc2_ls_col_active_(Interior, C): any row has non-8 at col C (cut after first).
+
+arc2_ls_col_bands_(Interior, Bands): include active cols, then consec_groups.
+
+arc2_ls_row_active_in_band_(Interior, BandCols, R): any band col in row R
+  is non-8.
+
+arc2_ls_band_stretches_(Interior, BandCols, Stretches): include active rows,
+  consec_groups, then extract sub-grid for each group.
+
+arc2_ls_rotate_ccw_(Grid, Rotated): maplist over col indices 0..C-1; each
+  output row i reads original col C-1-i via nested maplist.
+
+arc2_ls_row_active_(Interior, R): any cell in row R is non-8.
+
+arc2_ls_row_bands_(Interior, RowBands): include active rows, consec_groups.
+
+arc2_ls_col_active_in_rows_(Interior, RowBand, C): any row in RowBand has
+  non-8 at col C.
+
+arc2_ls_band_col_stretches_(Interior, RowBand, Stretches): include active cols,
+  consec_groups, extract sub-grids.
+
+arc2_ls_center_block_(MaxW, Block, Centered): Pad=(MaxW-W)//2 left,
+  Pad2=MaxW-W-Pad right; maplist builds padded rows.
+
+arc2_transform(layout_stack, Grid, Out): orchestrates all steps; append/2
+  flattens band block lists and concatenates centered output rows.
+
+arc2_named_rule(layout_stack): registers the rule in the generic induction
+  dispatcher so arc2_induce_rule/2 can discover it for any task.
+
+
+SIGNIFICANCE
+
+layout_stack demonstrates PrologAI's ability to decode two-dimensional reading
+instructions embedded in a grid's border. The corner 0, horizontal 1s/2s, and
+vertical 1s/2s form a compact encoding of row-vs-column scan order and
+left-to-right vs right-to-left direction within each scan. The 90 CCW rotation
+for col-major mode is a necessary normalization step: tall blocks in column
+order become wide 2-row blocks in the output, preserving the visual identity of
+each block while converting the stacking axis from vertical to horizontal.
+
+The rule handles four distinct configurations (P1 col-major L->R, P2/P3
+row-major L->R, P4 row-major R->L, TEST col-major R->L) with a single unified
+predicate. No special-casing per pair is needed.
+
+Score: 46/120 = 38.33% to 47/120 = 39.17%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

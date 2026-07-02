@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-01. Wave 48 complete: 46/120 = 38.33%.
+Last updated: 2026-07-01. Wave 49 complete: 47/120 = 39.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -170,6 +170,7 @@ Date        | Score      | Percent | Notes
 2026-07-01  |  44 / 120  | 36.67%  | Wave 46: two_join two 4-objects each with 7-cluster marker; shift one to align markers; pick smaller merged bbox
 2026-07-01  |  45 / 120  | 37.50%  | Wave 47: shape_count template queries (0-cell region, odd-row color markers) count shape instances using iterative bbox-expansion
 2026-07-01  |  46 / 120  | 38.33%  | Wave 48: stamp_grid single-cell marker values trigger hardcoded 4x4 stamps; shape defines marker-to-pattern mapping; def marker skipped
+2026-07-01  |  47 / 120  | 39.17%  | Wave 49: layout_stack corner 0 + 1s/2s markers encode reading mode; col-major rotates blocks 90 CCW; stacked vertically centered on max width
 
 
 COMPLETE SCORE PROGRESSION
@@ -417,6 +418,37 @@ Lessons learned: When a shape is defined by a bounding box, other objects may
   marker value without any training ambiguity.
 
 Accomplishment: Acc_346.  Paper: Acc_346_ARC2_Wave48.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 49 - 2026-07-01 - Score: 47/120 = 39.17%
+
+Date: 2026-07-01
+
+Confirmed score: 47 / 120 = 39.17%
+
+Rules added in this wave:
+  layout_stack (WP-307, Layer 282)
+
+Task solved: 291dc1e1 (4 training pairs + 1 test case; a corner cell of value 0
+  flanked by a header row of 1s or 2s and a perpendicular header col encodes the
+  reading mode and scan directions; the interior grid contains colored blocks on
+  an 8-background; col-major mode rotates each block 90 degrees CCW before
+  stacking; all blocks stacked vertically and centered within the maximum block
+  width using 8-padding).
+
+Bugs fixed: Initially omitted arc2_named_rule(layout_stack) from the rule
+  registry, causing the task to fail in the benchmark despite all training pairs
+  passing in standalone tests. Added registration to enable induction dispatch.
+
+Lessons learned: The named rule registry (arc2_named_rule/1) is required for
+  the generic arc2_induce_rule/2 clause to discover a new rule. A rule that
+  passes all training pairs in isolation but lacks arc2_named_rule registration
+  will not be found by the benchmark induction loop.
+
+Accomplishment: Acc_347.  Paper: Acc_347_ARC2_Wave49.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3147,4 +3179,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 47: Shape-count template queries (0-cell tem
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 48: Stamp-grid single-cell markers (2/3/5/8) each trigger a hardcoded 4x4 stamp; a 4x4 shape cluster defines which marker value maps to which visual pattern; the definition marker at (SR1+1,SC1+1) is skipped; shape cells erased in output.
   Score: 46/120 = 38.33%. Task dfadab01 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 49: Layout-stack reads a 0-corner with flanking 1s/2s markers to determine reading mode; col-major mode rotates blocks 90 CCW; all blocks stacked vertically centered on the maximum block width with 8-padding.
+  Score: 47/120 = 39.17%. Task 291dc1e1 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.

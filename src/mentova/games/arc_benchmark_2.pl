@@ -9718,6 +9718,206 @@ arc2_transform(stamp_grid, Grid, Out) :-
     ), RowIs, Out).
 
 % ---------------------------------------------------------------------------
+% LAYOUT STACK (Task 291dc1e1) — Wave 49, WP-307, Layer 282
+% ---------------------------------------------------------------------------
+% Corner 0 + flanking 1s/2s define reading order; col-major rotates blocks
+% 90 CCW; blocks stacked vertically centered on max block width; BG = 8.
+
+% arc2_named_rule/1: register layout_stack for the generic induction loop.
+arc2_named_rule(layout_stack).
+
+% arc2_ls_corner_/3: find row CR and col CC of the unique 0-corner cell.
+arc2_ls_corner_(Grid, CR, CC) :-
+% Get grid dimensions for corner range.
+    length(Grid, NR), NR1 is NR-1,
+% Get column count from first row.
+    nth0(0, Grid, FR), length(FR, NC), NC1 is NC-1,
+% CR must be the first or last row.
+    member(CR, [0, NR1]),
+% Extract the header row at index CR.
+    nth0(CR, Grid, HdrRow),
+% CC must be the first or last column.
+    member(CC, [0, NC1]),
+% The cell at (CR, CC) must hold the value 0.
+    nth0(CC, HdrRow, 0), !.
+
+% arc2_ls_mode_/6: derive reading mode and reversal flags from the 0-corner.
+arc2_ls_mode_(Grid, CR, CC, Mode, PrimReverse, SecReverse) :-
+% Read the corner's header row.
+    nth0(CR, Grid, HdrRow),
+% Pick the cell adjacent to the corner along the header row (one step inward).
+    ( CC =:= 0 -> AdjCC is 1 ; AdjCC is CC-1 ),
+% Fetch the adjacent cell value.
+    nth0(AdjCC, HdrRow, AdjVal),
+% Value 1 adjacent horizontally -> row-major; value 2 -> col-major.
+    ( AdjVal =:= 1 -> Mode = row_major ; Mode = col_major ),
+% PrimReverse true when corner is on the last row (primary scan goes B->T).
+    length(Grid, NR), NR1 is NR-1,
+    ( CR =:= NR1 -> PrimReverse = true ; PrimReverse = false ),
+% SecReverse true when corner is on the last col (secondary scan goes R->L).
+    nth0(0, Grid, FR), length(FR, NC), NC1 is NC-1,
+    ( CC =:= NC1 -> SecReverse = true ; SecReverse = false ).
+
+% arc2_ls_del_row_/3: remove the row at index N from a grid.
+arc2_ls_del_row_([_|T], 0, T) :- !.
+% Recurse until reaching the target row.
+arc2_ls_del_row_([H|T], N, [H|T2]) :- N > 0, N1 is N-1, arc2_ls_del_row_(T, N1, T2).
+
+% arc2_ls_del_col_/3: remove the element at index C from a list.
+arc2_ls_del_col_(0, [_|T], T) :- !.
+% Recurse until reaching the target column.
+arc2_ls_del_col_(C, [H|T], [H|T2]) :- C > 0, C1 is C-1, arc2_ls_del_col_(C1, T, T2).
+
+% arc2_ls_interior_/4: strip the header row and header col to expose content area.
+arc2_ls_interior_(Grid, CR, CC, Interior) :-
+% Remove the header row first.
+    arc2_ls_del_row_(Grid, CR, Grid1),
+% Remove the header column from every remaining row.
+    maplist(arc2_ls_del_col_(CC), Grid1, Interior).
+
+% arc2_ls_consec_groups_/2: partition a sorted integer list into consecutive runs.
+arc2_ls_consec_groups_([], []).
+% Build one group starting at H, then recurse on the remainder.
+arc2_ls_consec_groups_([H|T], [[H|GT]|Rest]) :-
+    arc2_ls_consec_ext_(T, H, GT, Rem),
+    arc2_ls_consec_groups_(Rem, Rest).
+
+% arc2_ls_consec_ext_/4: extend a group while integers remain consecutive.
+arc2_ls_consec_ext_([], _, [], []).
+% Next integer is P+1: include it and keep extending.
+arc2_ls_consec_ext_([H|T], P, [H|GT], Rem) :- H is P+1, !, arc2_ls_consec_ext_(T, H, GT, Rem).
+% Gap found: stop the current group here.
+arc2_ls_consec_ext_(Rest, _, [], Rest).
+
+% arc2_ls_col_active_/2: true when column C holds at least one non-8 cell.
+arc2_ls_col_active_(Interior, C) :-
+    member(Row, Interior), nth0(C, Row, V), V \= 8, !.
+
+% arc2_ls_col_bands_/2: column bands as lists of consecutive active col indices.
+arc2_ls_col_bands_(Interior, Bands) :-
+% Build the full column index range from the first row.
+    Interior = [FR|_], length(FR, NC), NC1 is NC-1, numlist(0, NC1, AllCols),
+% Keep only columns that have at least one non-8 value.
+    include(arc2_ls_col_active_(Interior), AllCols, ActiveCols),
+% Group consecutive active cols into bands.
+    arc2_ls_consec_groups_(ActiveCols, Bands).
+
+% arc2_ls_row_active_in_band_/3: true when row R has a non-8 cell in BandCols.
+arc2_ls_row_active_in_band_(Interior, BandCols, R) :-
+    nth0(R, Interior, Row), member(C, BandCols), nth0(C, Row, V), V \= 8, !.
+
+% arc2_ls_band_stretches_/3: maximal consecutive active-row groups for a col band.
+arc2_ls_band_stretches_(Interior, BandCols, Stretches) :-
+% Build the full row index range.
+    length(Interior, NR), NR1 is NR-1, numlist(0, NR1, AllRows),
+% Keep only rows that have non-8 content in the band.
+    include(arc2_ls_row_active_in_band_(Interior, BandCols), AllRows, ActiveRows),
+% Group consecutive active rows into stretches.
+    arc2_ls_consec_groups_(ActiveRows, RowGroups),
+% Extract each stretch as a sub-grid restricted to BandCols.
+    maplist([RG, SubGrid]>>(
+        maplist([R, RV]>>(
+            nth0(R, Interior, Row),
+            maplist([C,V]>>(nth0(C,Row,V)), BandCols, RV)
+        ), RG, SubGrid)
+    ), RowGroups, Stretches).
+
+% arc2_ls_rotate_ccw_/2: rotate a grid 90 degrees counter-clockwise.
+% Output row i = input column (C-1-i) read top-to-bottom.
+arc2_ls_rotate_ccw_(Grid, Rotated) :-
+% Determine number of columns from the first row.
+    Grid = [FR|_], length(FR, C), C1 is C-1, numlist(0, C1, ColIs),
+% Each output row i is drawn from original column C-1-i.
+    maplist([I, RotRow]>>(
+        RevI is C-1-I,
+% Collect cell at col RevI across all original rows in order.
+        maplist([GRow, V]>>(nth0(RevI, GRow, V)), Grid, RotRow)
+    ), ColIs, Rotated).
+
+% arc2_ls_row_active_/2: true when any cell in row R of Interior is non-8.
+arc2_ls_row_active_(Interior, R) :-
+    nth0(R, Interior, Row), member(V, Row), V \= 8, !.
+
+% arc2_ls_row_bands_/2: row bands as lists of consecutive active row indices.
+arc2_ls_row_bands_(Interior, RowBands) :-
+% Build the full row index range.
+    length(Interior, NR), NR1 is NR-1, numlist(0, NR1, AllRows),
+% Keep only rows with at least one non-8 cell.
+    include(arc2_ls_row_active_(Interior), AllRows, ActiveRows),
+% Group consecutive active rows into bands.
+    arc2_ls_consec_groups_(ActiveRows, RowBands).
+
+% arc2_ls_col_active_in_rows_/3: true when col C has non-8 in some row of RowBand.
+arc2_ls_col_active_in_rows_(Interior, RowBand, C) :-
+    member(R, RowBand), nth0(R, Interior, Row), nth0(C, Row, V), V \= 8, !.
+
+% arc2_ls_band_col_stretches_/3: within RowBand rows, find column stretches.
+arc2_ls_band_col_stretches_(Interior, RowBand, Stretches) :-
+% Build the full column index range.
+    Interior = [FR|_], length(FR, NC), NC1 is NC-1, numlist(0, NC1, AllCols),
+% Keep only cols with non-8 content in some row of the band.
+    include(arc2_ls_col_active_in_rows_(Interior, RowBand), AllCols, ActiveCols),
+% Group consecutive active cols into column stretches.
+    arc2_ls_consec_groups_(ActiveCols, ColGroups),
+% Extract each col-stretch sub-grid from the row band.
+    maplist([CG, SubGrid]>>(
+        maplist([R, RV]>>(
+            nth0(R, Interior, Row),
+            maplist([C,V]>>(nth0(C,Row,V)), CG, RV)
+        ), RowBand, SubGrid)
+    ), ColGroups, Stretches).
+
+% arc2_ls_center_block_/3: pad each block row with 8s to reach MaxW columns.
+arc2_ls_center_block_(MaxW, Block, Centered) :-
+% Center each row symmetrically; any remainder goes on the right.
+    maplist([BRow, CRow]>>(
+        length(BRow, W), Pad is (MaxW-W)//2, Pad2 is MaxW-W-Pad,
+% Build left padding.
+        length(Left, Pad), maplist(=(8), Left),
+% Build right padding.
+        length(Right, Pad2), maplist(=(8), Right),
+% Concatenate left + block row + right.
+        append(Left, BRow, Tmp), append(Tmp, Right, CRow)
+    ), Block, Centered).
+
+% arc2_transform/3: layout_stack top-level orchestrator (task 291dc1e1).
+arc2_transform(layout_stack, Grid, Out) :-
+% Locate the 0-corner and derive reading parameters.
+    arc2_ls_corner_(Grid, CR, CC),
+    arc2_ls_mode_(Grid, CR, CC, Mode, PrimReverse, SecReverse),
+% Strip the header row and col to get the content interior.
+    arc2_ls_interior_(Grid, CR, CC, Interior),
+    ( Mode = col_major ->
+% Col-major: read column bands in secondary order; rotate each block 90 CCW.
+        arc2_ls_col_bands_(Interior, Bands),
+        ( SecReverse = true -> reverse(Bands, OrdBands) ; OrdBands = Bands ),
+        maplist([Band, BBlks]>>(
+            arc2_ls_band_stretches_(Interior, Band, Stretches),
+            ( PrimReverse = true -> reverse(Stretches, OS) ; OS = Stretches ),
+            maplist(arc2_ls_rotate_ccw_, OS, BBlks)
+        ), OrdBands, BandBlkLists),
+% Flatten the list of per-band block lists into one sequence.
+        append(BandBlkLists, AllBlocks)
+    ;
+% Row-major: read row bands in primary order; extract col stretches; no rotation.
+        arc2_ls_row_bands_(Interior, RowBands),
+        ( PrimReverse = true -> reverse(RowBands, OrdRBs) ; OrdRBs = RowBands ),
+        maplist([RBand, RBBlks]>>(
+            arc2_ls_band_col_stretches_(Interior, RBand, Stretches),
+            ( SecReverse = true -> reverse(Stretches, OS) ; OS = Stretches ),
+            RBBlks = OS
+        ), OrdRBs, BandBlkLists),
+% Flatten the list of per-band block lists into one sequence.
+        append(BandBlkLists, AllBlocks)
+    ),
+% Compute the output width as the maximum block width.
+    maplist([Blk, W]>>(Blk = [R|_], length(R, W)), AllBlocks, Widths),
+    max_list(Widths, MaxW),
+% Center every block in MaxW columns and concatenate into the output grid.
+    maplist(arc2_ls_center_block_(MaxW), AllBlocks, CBlks),
+    append(CBlks, Out).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
