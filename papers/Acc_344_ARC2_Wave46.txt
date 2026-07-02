@@ -1,0 +1,161 @@
+Accomplishment 344: ARC-AGI-2 Wave 46 - Two Join (WP-304, Layer 279)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-01
+
+ABSTRACT
+
+Wave 46 adds the two_join rule (WP-304, Layer 279) to PrologAI's ARC-AGI-2
+benchmark solver, solving task 20270e3b and raising the score from 43/120 =
+35.83% to 44/120 = 36.67%.
+
+The rule recognizes that two 4-cell objects in the input each carry a cluster
+of 7-cells marking their connection point. The output joins them by shifting
+one object so its 7-cluster aligns immediately adjacent to the other object's
+7-cluster, replacing all 7s with 4s and producing a merged shape.
+
+
+TASK DESCRIPTION
+
+Task ID: 20270e3b
+
+Input structure: a grid with background value 1. Two connected sub-structures
+of 4-cells, each touching or containing a cluster of 7-cells. The 7-clusters
+encode the join alignment.
+
+Output: a grid (possibly different dimensions from the input) containing the
+two 4-structures merged at their 7-endpoints, with all 7s replaced by 4s and
+background remaining 1. The output dimensions equal the bounding box of the
+merged cell set.
+
+
+PATTERN ANALYSIS
+
+Step 1 - Collect non-1 positions: all cells with value 4 or 7 are the active
+  cells. Background 1-cells define the separator between the two sub-structures.
+
+Step 2 - Find two 7-clusters: group 7-cells by 4-connectivity. There are
+  exactly two such groups: G1 and G2. Each belongs to one of the two objects.
+
+Step 3 - For each ordering (base=G1, shift=G2) and (base=G2, shift=G1):
+  Object A = BFS from the base 7-cluster through all non-1 cells. This finds
+  all non-1 cells reachable from the base 7s.
+  Object B = all non-1 cells NOT in Object A. This is the complement and
+  includes any isolated pieces not 4-connected to a 7 but visually part of
+  the same sub-structure.
+  Compute shift: dr = min_row(base_7s) - min_row(shift_7s) - 1
+                 dc = min_col(base_7s) - min_col(shift_7s)
+  Apply shift to every position in Object B.
+
+Step 4 - Select ordering: if both orderings produce valid positions (row >= 0,
+  col >= 0), pick the one with the smaller merged bounding box. The correct
+  join always produces the smallest possible output. For most pairs, only one
+  ordering is valid (the other has negative row or col indices).
+
+Step 5 - Build output: create a grid of 1s sized (max_row+1) x (max_col+1).
+  Set every cell in Object A union Shifted B to 4.
+
+
+CRITICAL IMPLEMENTATION DETAIL: ISOLATED PIECES
+
+A naive approach would find two 4-connected components of non-1 cells and
+treat them as the two objects. This fails for Training Pair 1, where the right
+sub-structure contains an isolated piece (cells (4,10) and (4,11)) separated
+from the main right-region by 1-cells. Simple connectivity labeling would
+assign this piece to neither object.
+
+The correct approach: BFS from ONE 7-cluster identifies Object A; everything
+else becomes Object B. Isolated pieces are automatically absorbed into Object B.
+
+
+FOUR TRAINING PAIRS
+
+Training Pair 1: 7x13 input, 7x8 output. A 7x8 rectangular frame with a
+  7-strip at (1,3-5) marks where the right content attaches. The right pattern
+  (cols 9-12 plus separator) is an inner-frame shape with its own 7-strip at
+  (0,9-11). The shift dr=0, dc=-6 places the right pattern inside the left
+  frame starting at the 7-marked window.
+
+Training Pair 2: 7x13 input, 7x6 output. An L-shaped structure with its
+  7-endpoint at (6,1). A small 3-cell pattern with its 7 at (0,10). Shift
+  dr=5, dc=-9 attaches the small pattern at the L-arm's tip.
+
+Training Pair 3: 9x3 input, 6x3 output. Two identical 3x3 frames connected
+  by a 7/1/7 bridge. The bridge is removed and the frames stack directly.
+  Shift dr=-3, dc=0 brings the bottom frame up to touch the top frame.
+
+Training Pair 4: 7x9 input, 5x12 output. Two L-shaped structures connect
+  at their tips (7 at (4,5) and 7 at (5,2)). Shift dr=-2, dc=3 extends
+  the upper L rightward with the lower L, creating a wider output.
+
+
+ALGORITHM
+
+PROCEDURE two_join(Grid):
+  AllPos = {(R,C) : Grid[R][C] != 1}
+  G1, G2 = split_by_4_connectivity({(R,C) : Grid[R][C] == 7})
+  FOR (base, shift) IN [(G1,G2), (G2,G1)]:
+    ObjA = BFS(base, AllPos)
+    ObjB = AllPos - ObjA
+    dr = min_row(base) - min_row(shift) - 1
+    dc = min_col(base) - min_col(shift)
+    ObjBs = {(R+dr, C+dc) : (R,C) IN ObjB}
+    IF all(R>=0, C>=0 for R,C in ObjBs):
+      size = (max_row(ObjA union ObjBs)+1) * (max_col(ObjA union ObjBs)+1)
+    ELSE: size = infinity
+  (FinalA, FinalBs) = ordering with minimum size
+  Out = 1-grid sized (max_row+1) x (max_col+1)
+  FOR (R,C) IN FinalA union FinalBs: Out[R][C] = 4
+  RETURN Out
+
+
+PROLOG IMPLEMENTATION
+
+Main predicate: arc2_transform(two_join, +Grid, -Out)
+Helper predicates:
+  arc2_tj_nonbg_pos_ / arc2_tj_row_nonbg_ - gather non-1 positions
+  arc2_tj_all_sevens_ / arc2_tj_row_sevens_ - gather 7-cell positions
+  arc2_tj_seven_clusters_ / arc2_tj_grow_cluster_ - split 7s into two clusters
+  arc2_tj_seven_nbrs_ / arc2_tj_filter_adj_ - BFS within 7-cell set
+  arc2_tj_bfs_obj_ / arc2_tj_bfs_exp_ - BFS through non-1 cells
+  arc2_tj_adj_nbrs_ / arc2_tj_nbr_filt_ - in-bounds non-1 neighbors
+  arc2_tj_subtract_pos_ - set subtraction for Object B
+  arc2_tj_shift_ - compute (dr, dc) from two 7-cluster min positions
+  arc2_tj_min_row_ / arc2_tj_min_r_acc_ / arc2_tj_min_col_ / arc2_tj_min_c_acc_
+    - minimum row and column finders
+  arc2_tj_shift_pos_ - apply shift to all positions
+  arc2_tj_valid_pos_ - check all positions non-negative
+  arc2_tj_combined_size_ / arc2_tj_max_row_ / arc2_tj_max_r_acc_
+    / arc2_tj_max_col_ / arc2_tj_max_c_acc_ - bounding box computation
+  arc2_tj_build_out_ / arc2_tj_make_grid_ / arc2_tj_make_row_ - output construction
+
+All predicates use ERC comments above every line of code.
+File: Mentova/src/mentova/games/arc_benchmark_2.pl (WP-304, Layer 279 section).
+
+
+VERIFICATION
+
+Training Pair 1: PASS
+Training Pair 2: PASS
+Training Pair 3: PASS
+Training Pair 4: PASS
+Test Case:       PASS
+Full benchmark: 44/120 = 36.67%.
+
+
+SIGNIFICANCE
+
+two_join demonstrates PrologAI's ability to recognize structural connection
+protocols in abstract visual grids. The 7-marker convention encodes a
+"connection port" at the endpoint of each object. The join operation computes
+a rigid transformation (pure translation) that brings the two ports into
+contact. The BFS-based Object B definition correctly handles non-connected
+pieces within a sub-structure, a subtlety that a naive component-labeling
+approach misses. The ordering selection via minimum bounding box is a clean
+geometric criterion that works across all four training scenarios and the test.
+
+Score: 43/120 = 35.83% to 44/120 = 36.67%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

@@ -8924,6 +8924,357 @@ arc2_jf_apply_(Tmpl, ColorMap, Out) :-
     ), Tmpl, Out, RowIs).
 
 % ---------------------------------------------------------------------------
+% WP-304  two_join  (Layer 279)  Task 20270e3b
+% Input contains two connected objects made of 4-cells, each with one or more
+% 7-cells marking its connection point. The output merges the two objects by
+% shifting one object so its 7 lands one row above the other object's 7, with
+% columns aligned. All 7s become 4s. The background (1-cells) fills the rest
+% of the output bounding box.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule registers two_join for the generic induction loop.
+arc2_named_rule(two_join).
+
+% arc2_transform(two_join, +Grid, -Out): merge two 4-objects at 7-markers.
+arc2_transform(two_join, Grid, Out) :-
+% Get number of rows.
+    length(Grid, NR),
+% Extract first row to measure column count.
+    Grid = [Row0|_],
+% NC = number of columns.
+    length(Row0, NC),
+% Gather all non-1 cell positions as R-C pairs.
+    arc2_tj_nonbg_pos_(Grid, 0, NR, NC, AllPos),
+% Gather all 7-cell positions.
+    arc2_tj_all_sevens_(Grid, 0, NR, NC, Sevens),
+% Split the 7-cells into two clusters by 4-connectivity.
+    arc2_tj_seven_clusters_(Sevens, G1, G2),
+% --- Ordering A: Object A from BFS(G1), Object B = everything else ---
+% BFS from G1 through AllPos to identify Object A.
+    arc2_tj_bfs_obj_(G1, NR, NC, AllPos, ObjA_A),
+% Object B = all non-1 positions not reached by BFS(G1).
+    arc2_tj_subtract_pos_(AllPos, ObjA_A, ObjB_A),
+% Shift = minR(G1)-minR(G2)-1 rows, minC(G1)-minC(G2) cols.
+    arc2_tj_shift_(G1, G2, DrA, DcA),
+% Apply shift to every position in Object B.
+    arc2_tj_shift_pos_(ObjB_A, DrA, DcA, ObjBs_A),
+% If all shifted positions are non-negative, compute bounding-box size.
+    (   arc2_tj_valid_pos_(ObjBs_A)
+    ->  arc2_tj_combined_size_(ObjA_A, ObjBs_A, SizeA)
+    ;   SizeA = 9999999
+    ),
+% --- Ordering B: Object A from BFS(G2), Object B = everything else ---
+% BFS from G2 to identify Object A under the alternative ordering.
+    arc2_tj_bfs_obj_(G2, NR, NC, AllPos, ObjA_B),
+% Object B (alternative) = all non-1 positions not reached by BFS(G2).
+    arc2_tj_subtract_pos_(AllPos, ObjA_B, ObjB_B),
+% Shift for alternative ordering: swap the two 7-cluster arguments.
+    arc2_tj_shift_(G2, G1, DrB, DcB),
+% Apply alternative shift to Object B.
+    arc2_tj_shift_pos_(ObjB_B, DrB, DcB, ObjBs_B),
+% If all alternative shifted positions are non-negative, compute size.
+    (   arc2_tj_valid_pos_(ObjBs_B)
+    ->  arc2_tj_combined_size_(ObjA_B, ObjBs_B, SizeB)
+    ;   SizeB = 9999999
+    ),
+% Pick the ordering whose merged bounding box is smaller (smaller = correct).
+    (   SizeA =< SizeB
+    ->  FinalA = ObjA_A, FinalBs = ObjBs_A
+    ;   FinalA = ObjA_B, FinalBs = ObjBs_B
+    ),
+% Build the output grid: every cell in FinalA or FinalBs becomes 4.
+    arc2_tj_build_out_(FinalA, FinalBs, Out).
+
+% arc2_tj_nonbg_pos_(+Grid, +R, +NR, +NC, -Pos): R-C pairs for cells != 1.
+arc2_tj_nonbg_pos_(_, R, NR, _, []) :-
+% Base case: row index past the last row.
+    R >= NR, !.
+arc2_tj_nonbg_pos_(Grid, R, NR, NC, Pos) :-
+% Extract row R from the grid.
+    nth0(R, Grid, Row),
+% Collect non-1 positions from this row.
+    arc2_tj_row_nonbg_(Row, R, 0, NC, RowPos),
+% Advance to the next row.
+    R1 is R + 1,
+% Recurse on remaining rows.
+    arc2_tj_nonbg_pos_(Grid, R1, NR, NC, RestPos),
+% Combine this row's positions with the rest.
+    append(RowPos, RestPos, Pos).
+
+% arc2_tj_row_nonbg_(+Row, +R, +C, +NC, -Pos): non-1 positions in one row.
+arc2_tj_row_nonbg_(_, _, C, NC, []) :-
+% Base case: column index past the last column.
+    C >= NC, !.
+arc2_tj_row_nonbg_(Row, R, C, NC, Pos) :-
+% Get the value at column C.
+    nth0(C, Row, V),
+% Advance to the next column.
+    C1 is C + 1,
+% Recurse on remaining columns.
+    arc2_tj_row_nonbg_(Row, R, C1, NC, Rest),
+% Include R-C in results if V != 1, skip otherwise.
+    (V =:= 1 -> Pos = Rest ; Pos = [R-C|Rest]).
+
+% arc2_tj_all_sevens_(+Grid, +R, +NR, +NC, -Pos): R-C pairs for 7-cells.
+arc2_tj_all_sevens_(_, R, NR, _, []) :-
+% Base case: row index past the last row.
+    R >= NR, !.
+arc2_tj_all_sevens_(Grid, R, NR, NC, Pos) :-
+% Extract row R.
+    nth0(R, Grid, Row),
+% Collect 7-cell positions from this row.
+    arc2_tj_row_sevens_(Row, R, 0, NC, RowPos),
+% Advance to the next row.
+    R1 is R + 1,
+% Recurse on remaining rows.
+    arc2_tj_all_sevens_(Grid, R1, NR, NC, RestPos),
+% Combine this row's 7-positions with the rest.
+    append(RowPos, RestPos, Pos).
+
+% arc2_tj_row_sevens_(+Row, +R, +C, +NC, -Pos): 7-cell positions in one row.
+arc2_tj_row_sevens_(_, _, C, NC, []) :-
+% Base case: column index past the last column.
+    C >= NC, !.
+arc2_tj_row_sevens_(Row, R, C, NC, Pos) :-
+% Get cell value at column C.
+    nth0(C, Row, V),
+% Advance to the next column.
+    C1 is C + 1,
+% Recurse on remaining columns.
+    arc2_tj_row_sevens_(Row, R, C1, NC, Rest),
+% Include R-C only if the value is 7.
+    (V =:= 7 -> Pos = [R-C|Rest] ; Pos = Rest).
+
+% arc2_tj_seven_clusters_(+Sevens, -G1, -G2): split 7-cells into two clusters.
+arc2_tj_seven_clusters_(Sevens, G1, G2) :-
+% Use the first 7-cell as the BFS seed for cluster 1.
+    Sevens = [S0|_],
+% BFS within the 7-cell set starting from S0.
+    arc2_tj_grow_cluster_(Sevens, [S0], [], G1),
+% Cluster 2 = all 7-cells not in cluster 1.
+    arc2_tj_subtract_pos_(Sevens, G1, G2).
+
+% arc2_tj_grow_cluster_(+All7, +Frontier, +Visited, -Cluster): BFS on 7-cells.
+arc2_tj_grow_cluster_(_, [], Vis, Vis).
+arc2_tj_grow_cluster_(All, [H|Fr], Vis0, Cluster) :-
+% Skip H if already visited.
+    (   memberchk(H, Vis0)
+    ->  arc2_tj_grow_cluster_(All, Fr, Vis0, Cluster)
+    ;
+% Mark H as visited.
+        Vis1 = [H|Vis0],
+% Decompose H into row and column.
+        H = R-C,
+% Find adjacent 7-cells for H.
+        arc2_tj_seven_nbrs_(R, C, All, Nbrs),
+% Add unvisited neighbors to the frontier.
+        append(Nbrs, Fr, Fr1),
+% Continue BFS.
+        arc2_tj_grow_cluster_(All, Fr1, Vis1, Cluster)
+    ).
+
+% arc2_tj_seven_nbrs_(+R, +C, +All7, -Nbrs): 4-adjacent positions in All7.
+arc2_tj_seven_nbrs_(R, C, All, Nbrs) :-
+% Check all four cardinal directions.
+    arc2_tj_filter_adj_(R, C, [(-1,0),(1,0),(0,-1),(0,1)], All, Nbrs).
+
+% arc2_tj_filter_adj_(+R, +C, +Dirs, +Pool, -Nbrs): filter adjacent in Pool.
+arc2_tj_filter_adj_(_, _, [], _, []).
+arc2_tj_filter_adj_(R, C, [(Dr,Dc)|Dirs], Pool, Nbrs) :-
+% Compute neighbor coordinates.
+    R1 is R + Dr, C1 is C + Dc,
+% Recurse on remaining directions.
+    arc2_tj_filter_adj_(R, C, Dirs, Pool, Rest),
+% Include neighbor if it is in the pool.
+    (memberchk(R1-C1, Pool) -> Nbrs = [R1-C1|Rest] ; Nbrs = Rest).
+
+% arc2_tj_bfs_obj_(+Seeds, +NR, +NC, +AllPos, -ObjA): BFS through AllPos.
+arc2_tj_bfs_obj_(Seeds, NR, NC, AllPos, ObjA) :-
+% Start BFS with Seeds as the initial frontier.
+    arc2_tj_bfs_exp_(Seeds, NR, NC, AllPos, [], ObjA).
+
+% arc2_tj_bfs_exp_(+Fr, +NR, +NC, +Pool, +Vis, -Obj): BFS expansion loop.
+arc2_tj_bfs_exp_([], _, _, _, Vis, Vis).
+arc2_tj_bfs_exp_([H|Fr], NR, NC, Pool, Vis0, Obj) :-
+% Skip H if already visited.
+    (   memberchk(H, Vis0)
+    ->  arc2_tj_bfs_exp_(Fr, NR, NC, Pool, Vis0, Obj)
+    ;
+% Mark H as visited.
+        Vis1 = [H|Vis0],
+% Decompose H.
+        H = R-C,
+% Find non-1 neighbors of H that are within bounds.
+        arc2_tj_adj_nbrs_(R, C, NR, NC, Pool, Nbrs),
+% Prepend new neighbors to the frontier.
+        append(Nbrs, Fr, Fr1),
+% Continue BFS.
+        arc2_tj_bfs_exp_(Fr1, NR, NC, Pool, Vis1, Obj)
+    ).
+
+% arc2_tj_adj_nbrs_(+R, +C, +NR, +NC, +Pool, -Nbrs): in-bounds Pool neighbors.
+arc2_tj_adj_nbrs_(R, C, NR, NC, Pool, Nbrs) :-
+% Check all four cardinal directions.
+    arc2_tj_nbr_filt_(R, C, NR, NC, [(-1,0),(1,0),(0,-1),(0,1)], Pool, Nbrs).
+
+% arc2_tj_nbr_filt_(+R, +C, +NR, +NC, +Dirs, +Pool, -Nbrs): filter neighbors.
+arc2_tj_nbr_filt_(_, _, _, _, [], _, []).
+arc2_tj_nbr_filt_(R, C, NR, NC, [(Dr,Dc)|Dirs], Pool, Nbrs) :-
+% Compute neighbor coordinates.
+    R1 is R + Dr, C1 is C + Dc,
+% Recurse on remaining directions.
+    arc2_tj_nbr_filt_(R, C, NR, NC, Dirs, Pool, Rest),
+% Include only in-bounds members of Pool.
+    (   R1 >= 0, R1 < NR, C1 >= 0, C1 < NC,
+        memberchk(R1-C1, Pool)
+    ->  Nbrs = [R1-C1|Rest]
+    ;   Nbrs = Rest
+    ).
+
+% arc2_tj_subtract_pos_(+All, +Remove, -Result): Result = All minus Remove.
+arc2_tj_subtract_pos_([], _, []).
+arc2_tj_subtract_pos_([H|T], Remove, Result) :-
+% Include H only if it is not in Remove.
+    (   memberchk(H, Remove)
+    ->  arc2_tj_subtract_pos_(T, Remove, Result)
+    ;   arc2_tj_subtract_pos_(T, Remove, Rest),
+        Result = [H|Rest]
+    ).
+
+% arc2_tj_shift_(+GA, +GB, -Dr, -Dc): shift so GB's 7 goes one row above GA's.
+arc2_tj_shift_(GA, GB, Dr, Dc) :-
+% Find the minimum row in GA (GA's 7-cluster).
+    arc2_tj_min_row_(GA, MinRA),
+% Find the minimum col in GA.
+    arc2_tj_min_col_(GA, MinCA),
+% Find the minimum row in GB.
+    arc2_tj_min_row_(GB, MinRB),
+% Find the minimum col in GB.
+    arc2_tj_min_col_(GB, MinCB),
+% Row shift places GB's top 7-row one row above GA's top 7-row.
+    Dr is MinRA - MinRB - 1,
+% Col shift aligns GA's leftmost 7-col with GB's leftmost 7-col.
+    Dc is MinCA - MinCB.
+
+% arc2_tj_min_row_(+Positions, -MinR): minimum row index in a R-C list.
+arc2_tj_min_row_([R-_|T], MinR) :-
+% Start accumulator with the first row.
+    arc2_tj_min_r_acc_(T, R, MinR).
+
+% arc2_tj_min_r_acc_(+Rest, +Acc, -Min): accumulator for min row.
+arc2_tj_min_r_acc_([], M, M).
+arc2_tj_min_r_acc_([R-_|T], M0, M) :-
+% Update minimum if current row is smaller.
+    M1 is min(M0, R),
+% Continue accumulation.
+    arc2_tj_min_r_acc_(T, M1, M).
+
+% arc2_tj_min_col_(+Positions, -MinC): minimum column index in a R-C list.
+arc2_tj_min_col_([_-C|T], MinC) :-
+% Start accumulator with the first column.
+    arc2_tj_min_c_acc_(T, C, MinC).
+
+% arc2_tj_min_c_acc_(+Rest, +Acc, -Min): accumulator for min col.
+arc2_tj_min_c_acc_([], M, M).
+arc2_tj_min_c_acc_([_-C|T], M0, M) :-
+% Update minimum if current col is smaller.
+    M1 is min(M0, C),
+% Continue accumulation.
+    arc2_tj_min_c_acc_(T, M1, M).
+
+% arc2_tj_shift_pos_(+Positions, +Dr, +Dc, -Shifted): shift all positions.
+arc2_tj_shift_pos_([], _, _, []).
+arc2_tj_shift_pos_([R-C|T], Dr, Dc, [R1-C1|T1]) :-
+% Apply row shift.
+    R1 is R + Dr,
+% Apply col shift.
+    C1 is C + Dc,
+% Recurse on remaining positions.
+    arc2_tj_shift_pos_(T, Dr, Dc, T1).
+
+% arc2_tj_valid_pos_(+Positions): all positions have R>=0 and C>=0.
+arc2_tj_valid_pos_([]).
+arc2_tj_valid_pos_([R-C|T]) :-
+% Row must be non-negative.
+    R >= 0,
+% Column must be non-negative.
+    C >= 0,
+% Check remaining positions.
+    arc2_tj_valid_pos_(T).
+
+% arc2_tj_combined_size_(+ObjA, +ObjBs, -Size): bounding-box area of union.
+arc2_tj_combined_size_(ObjA, ObjBs, Size) :-
+% Merge both position lists.
+    append(ObjA, ObjBs, All),
+% Find maximum row index.
+    arc2_tj_max_row_(All, MaxR),
+% Find maximum col index.
+    arc2_tj_max_col_(All, MaxC),
+% Area = (MaxR+1) * (MaxC+1).
+    Size is (MaxR + 1) * (MaxC + 1).
+
+% arc2_tj_max_row_(+Positions, -MaxR): maximum row index in a R-C list.
+arc2_tj_max_row_([R-_|T], MaxR) :-
+% Start accumulator with the first row.
+    arc2_tj_max_r_acc_(T, R, MaxR).
+
+% arc2_tj_max_r_acc_(+Rest, +Acc, -Max): accumulator for max row.
+arc2_tj_max_r_acc_([], M, M).
+arc2_tj_max_r_acc_([R-_|T], M0, M) :-
+% Update maximum if current row is larger.
+    M1 is max(M0, R),
+% Continue accumulation.
+    arc2_tj_max_r_acc_(T, M1, M).
+
+% arc2_tj_max_col_(+Positions, -MaxC): maximum col index in a R-C list.
+arc2_tj_max_col_([_-C|T], MaxC) :-
+% Start accumulator with the first column.
+    arc2_tj_max_c_acc_(T, C, MaxC).
+
+% arc2_tj_max_c_acc_(+Rest, +Acc, -Max): accumulator for max col.
+arc2_tj_max_c_acc_([], M, M).
+arc2_tj_max_c_acc_([_-C|T], M0, M) :-
+% Update maximum if current col is larger.
+    M1 is max(M0, C),
+% Continue accumulation.
+    arc2_tj_max_c_acc_(T, M1, M).
+
+% arc2_tj_build_out_(+ObjA, +ObjBs, -Out): build output grid.
+arc2_tj_build_out_(ObjA, ObjBs, Out) :-
+% Merge all positions into one list.
+    append(ObjA, ObjBs, All),
+% Find the output row count.
+    arc2_tj_max_row_(All, MaxR),
+% Find the output column count.
+    arc2_tj_max_col_(All, MaxC),
+% Generate one row per row index from 0 to MaxR.
+    arc2_tj_make_grid_(0, MaxR, MaxC, All, Out).
+
+% arc2_tj_make_grid_(+R, +MaxR, +MaxC, +All, -Grid): build grid row by row.
+arc2_tj_make_grid_(R, MaxR, _, _, []) :-
+% Base case: past the last row.
+    R > MaxR, !.
+arc2_tj_make_grid_(R, MaxR, MaxC, All, [Row|Rest]) :-
+% Build the row at index R.
+    arc2_tj_make_row_(0, R, MaxC, All, Row),
+% Advance to the next row.
+    R1 is R + 1,
+% Recurse on remaining rows.
+    arc2_tj_make_grid_(R1, MaxR, MaxC, All, Rest).
+
+% arc2_tj_make_row_(+C, +R, +MaxC, +All, -Row): build one output row.
+arc2_tj_make_row_(C, _, MaxC, _, []) :-
+% Base case: past the last column.
+    C > MaxC, !.
+arc2_tj_make_row_(C, R, MaxC, All, [V|Rest]) :-
+% Cell is 4 if R-C is in All, else 1 (background).
+    (memberchk(R-C, All) -> V = 4 ; V = 1),
+% Advance to the next column.
+    C1 is C + 1,
+% Recurse on remaining columns.
+    arc2_tj_make_row_(C1, R, MaxC, All, Rest).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
