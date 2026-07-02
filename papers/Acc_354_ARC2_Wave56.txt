@@ -1,0 +1,199 @@
+Accomplishment 354: ARC-AGI-2 Wave 56 - Shape Walk (WP-314, Layer 289)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 56 adds the shape_walk rule (WP-314, Layer 289) to PrologAI's ARC-AGI-2
+benchmark solver, solving task 136b0064 and raising the score from 52/120 =
+43.33% to 53/120 = 44.17%.
+
+The rule decodes a structured left region of 3x3 block patterns and a right-
+side 5 marker to produce a colored chain walk in the output. Each 3x3 block
+belongs to one of four distinct normalized shapes that map to chain segment
+directions and lengths: S1 (U-shape) goes LEFT 2, S2 (Y-shape) goes RIGHT 3,
+S3 (inverted-V) goes DOWN 2, and S4 (T-shape) goes LEFT 4. The 5 marker's
+column offset from the divider establishes the chain start position.
+
+
+TASK DESCRIPTION
+
+Task ID: 136b0064
+
+Input structure: a rectangular grid with a full column of 4s (the divider)
+at column 7. Left of the divider (cols 0-6): rows organized into 3-row
+sections separated by blank rows. Each section contains two 3x3 block
+patterns, a left block (cols 0-2) and a middle block (cols 4-6), with a gap
+column at col 3. Each block uses a single color (1, 2, 3, or 6) to fill a
+fixed shape from the S1-S4 vocabulary. Right of the divider: a single cell
+with value 5 in row 0.
+
+Output structure: same number of rows as input but only DC (= 7) columns wide
+(cols 0-6). Row 0 contains only the 5 marker at column (5_col - DC - 1). Rows
+1 onward contain a colored chain walk: each section's left block then each
+section's middle block (read top-to-bottom) contributes one chain segment.
+
+
+THE SHAPE_WALK RULE
+
+Step 1 - Find divider: arc2_sw_divider_col_ scans columns until it finds the
+first column where every row holds value 4. For task 136b0064 this is always
+column 7.
+
+Step 2 - Find 5 marker: arc2_sw_five_rc_ scans all cells for value 5. The
+output start column is FC - DC - 1.
+
+Step 3 - Extract sections: arc2_sw_nonblank_rows_ finds all rows with a non-
+zero cell in cols 0..DC-1. arc2_sw_section_starts_ groups these into section
+starts by consuming consecutive triples (R, R+1, R+2).
+
+Step 4 - Collect blocks: arc2_sw_blocks_at_ is called twice, once with
+ColStart=0 (left blocks) and once with ColStart=DC-3 (middle blocks). For each
+section start, it reads the block's dominant color (arc2_sw_block_color_),
+normalizes the 3x3 pattern (arc2_sw_block_shape_ via arc2_sw_norm_), and maps
+the shape to (direction, length) via arc2_sw_shape_to_move_.
+
+Step 5 - Walk chain: arc2_sw_walk_ iterates the full block list (left blocks
+then middle blocks). For each block, it computes the segment cells
+(arc2_sw_seg_cells_), finds the tip (arc2_sw_seg_tip_), and sets the next
+segment start to (TipR+1, TipC). All R-C-Color triples are accumulated.
+
+Step 6 - Build output: the output grid is H rows by DC columns, all zeros.
+Row 0 gets the 5 marker at OutC5. Each chain triple (R,C,Color) is placed at
+output[R][C].
+
+
+TRAINING PAIR VERIFICATION
+
+Shape vocabulary for task 136b0064:
+- S1 (U-shape) [[1,0,1],[1,0,1],[1,1,1]]: moves LEFT, 2 cells.
+- S2 (Y-shape) [[1,1,0],[1,0,1],[0,1,0]]: moves RIGHT, 3 cells.
+- S3 (inverted-V) [[1,0,1],[0,1,0],[0,1,0]]: moves DOWN, 2 cells.
+- S4 (T-shape) [[1,1,1],[0,1,0],[1,0,1]]: moves LEFT, 4 cells.
+
+P1 (15x15 input, 15x7 output):
+Left blocks (sections rows 0-2, 4-6, 8-10, 12-14): S1/2, S2/1, S2/1, S3/6.
+Middle blocks (same sections): S3/6, S4/3, S3/6, S2/1.
+Chain: 8 segments. 5 at (0,1).
+  (1,1)-(1,0)=2 LEFT-2; (2,0)-(2,2)=1 RIGHT-3; (3,2)-(3,4)=1 RIGHT-3;
+  (4,4)-(5,4)=6 DOWN-2; (6,4)-(7,4)=6 DOWN-2; (8,4)-(8,1)=3 LEFT-4;
+  (9,1)-(10,1)=6 DOWN-2; (11,1)-(11,3)=1 RIGHT-3.
+PASS.
+
+P2 (7x15 input, 7x7 output):
+Left blocks (rows 0-2, 4-6): S2/1, S3/6.
+Middle blocks: S1/2, S4/3.
+Chain: 4 segments. 5 at (0,3).
+  (1,3)-(1,5)=1 RIGHT-3; (2,5)-(3,5)=6 DOWN-2; (4,5)-(4,4)=2 LEFT-2;
+  (5,4)-(5,1)=3 LEFT-4.
+PASS.
+
+P3 (11x15 input, 11x7 output):
+Left blocks (rows 0-2, 4-6, 8-10): S1/2, S3/6, S1/2.
+Middle blocks: S3/6, S2/1, S3/6.
+Chain: 6 segments. 5 at (0,4).
+  (1,4)-(1,3)=2 LEFT-2; (2,3)-(3,3)=6 DOWN-2; (4,3)-(4,2)=2 LEFT-2;
+  (5,2)-(6,2)=6 DOWN-2; (7,2)-(7,4)=1 RIGHT-3; (8,4)-(9,4)=6 DOWN-2.
+PASS.
+
+TEST (19x15 input, 19x7 output):
+Left blocks (rows 0-2, 4-6, 8-10, 12-14, 16-18): S2/1, S1/2, S3/6, S4/3, S3/6.
+Middle blocks: S2/1, S2/1, S3/6, S4/3, S1/2.
+Chain: 10 segments. 5 at (0,2).
+  (1,2)-(1,4)=1 RIGHT-3; (2,4)-(2,3)=2 LEFT-2; (3,3)-(4,3)=6 DOWN-2;
+  (5,3)-(5,0)=3 LEFT-4; (6,0)-(7,0)=6 DOWN-2; (8,0)-(8,2)=1 RIGHT-3;
+  (9,2)-(9,4)=1 RIGHT-3; (10,4)-(11,4)=6 DOWN-2; (12,4)-(12,1)=3 LEFT-4;
+  (13,1)-(13,0)=2 LEFT-2.
+PASS.
+
+
+IMPLEMENTATION DETAILS
+
+New predicates (all in arc_benchmark_2.pl, prefixed arc2_sw_):
+
+arc2_sw_divider_col_/2: between(0, W1, DC) + forall(member(Row, Grid),
+  nth0(DC, Row, 4)) + cut to find the all-4 column.
+
+arc2_sw_five_rc_/3: between over rows and cols + arc2_cell_/4 scan for value 5
+  with cut to return the first match.
+
+arc2_sw_nonblank_rows_/3: findall with once/1 inner scan for non-zero in
+  cols 0..DC-1 per row.
+
+arc2_sw_section_starts_/2: recursive list predicate; for each head R, select/3
+  removes R+1 and R+2 from Rest; the first-match cut ensures greedy grouping.
+
+arc2_sw_block_color_/4: once/1 wrapping member over the nine (Ri,Ci) offsets +
+  arc2_cell_/4 scan returning first non-zero value.
+
+arc2_sw_norm_/2: two clauses; 0 -> 0 with cut; _ -> 1 for non-zero. Used
+  inside maplist/3 to normalize all nine cells simultaneously.
+
+arc2_sw_block_shape_/4: reads nine cells via arc2_cell_/4; applies maplist with
+  arc2_sw_norm_ to get N00..N22; assembles Shape = [[R0],[R1],[R2]].
+
+arc2_sw_shape_to_move_/3: four head-matching clauses with cut; each unifies the
+  specific normalized 3x3 matrix and returns direction atom + integer length.
+
+arc2_sw_seg_cells_/5: three clauses (left, right, down); uses findall with
+  between/3 to generate all R-C positions in the segment.
+
+arc2_sw_seg_tip_/5: three clauses; arithmetic to compute last-cell coordinates:
+  LEFT tip col = C-Len+1; RIGHT tip col = C+Len-1; DOWN tip row = R+Len-1.
+
+arc2_sw_walk_/5: recursive accumulation; base case: empty block list -> empty
+  result. Step: seg_cells_ and seg_tip_ for current block; recurse on tail with
+  NR=TipR+1 and TipC; findall tags positions with color; append merges.
+
+arc2_sw_blocks_at_/4: findall over SectStarts; for each SR calls block_color_,
+  block_shape_, shape_to_move_ to produce blk/3 terms.
+
+arc2_transform(shape_walk)/3: orchestrates divider_col_, five_rc_,
+  nonblank_rows_, section_starts_, blocks_at_ (twice), append, walk_; builds
+  H x DC output via maplist with priority: row-0 5 marker > chain cell > 0.
+
+arc2_induce_rule(TrainingPairs, shape_walk): fast specific clause before catch-
+  all; pre-filter checks first row contains both 5 and 4 via memberchk/2.
+
+
+KEY INSIGHTS
+
+Four-shape vocabulary: the task defines a fixed visual vocabulary of four 3x3
+shapes that map each block to a chain segment move. Once the shapes are
+identified and normalized, decoding is deterministic. The shapes are
+distinctive enough that exact binary comparison (after normalization) suffices
+with no rotation or reflection matching.
+
+Traversal order: the chain walks all left-column blocks top-to-bottom before
+any middle-column blocks. This interleaving order reproduces the spatial path
+observed in all training pairs. An alternative traversal (e.g., interleaved
+section-by-section) produces wrong outputs.
+
+Unified next-segment rule: the next segment always starts at (TipR+1, TipC)
+regardless of the current segment's direction. For horizontal segments TipR
+equals the row (no vertical change), and for vertical segments TipR is the
+last row of the segment. This single rule cleanly handles all transitions.
+
+Output width: the output grid has exactly DC columns (the divider column index,
+not DC+1). This trims the right region (4s, 5, and zeros) from the output,
+keeping only the decoded chain on the left side.
+
+
+SIGNIFICANCE
+
+shape_walk demonstrates that PrologAI can decode a structured visual
+programming language embedded in a grid. The input encodes a chain-walking
+program as a sequence of 3x3 shape tokens, and the output is the result of
+executing that program. This requires simultaneous understanding of:
+(1) spatial segmentation to extract the two block columns;
+(2) shape recognition via normalized binary comparison;
+(3) sequential execution of a chain-walk with explicit direction and length
+    semantics per shape token;
+(4) an output format that preserves only the executed chain result.
+
+Score: 52/120 = 43.33% to 53/120 = 44.17%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
