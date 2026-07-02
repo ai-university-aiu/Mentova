@@ -11105,6 +11105,175 @@ arc2_transform(shape_walk, Grid, Out) :-
     ), Rs, Out).
 
 % ---------------------------------------------------------------------------
+% WP-315: frame_reflect (Layer 290) — 9x9 frame stamps 180-rotated sub-regions
+% Task: db0c5428
+% ---------------------------------------------------------------------------
+
+% Register frame_reflect as a known named induction rule.
+arc2_named_rule(frame_reflect).
+
+% arc2_fr_frame_/3: scan for top-left (FR,FC) of the 9x9 non-8 frame.
+arc2_fr_frame_(Grid, FR, FC) :-
+% Compute grid height bound for row scan.
+    length(Grid, H), H1 is H - 1,
+% Compute grid width bound for column scan.
+    Grid = [Row0|_], length(Row0, W), W1 is W - 1,
+% Scan rows then columns in row-major order; stop at first non-8 cell.
+    between(0, H1, FR),
+    between(0, W1, FC),
+% Non-8 cell found; cut to commit to this frame corner.
+    \+ arc2_cell_(Grid, FR, FC, 8), !.
+
+% arc2_fr_sub3_/4: extract 3x3 block with top-left at absolute (SR,SC).
+arc2_fr_sub3_(Grid, SR, SC,
+              [[V00,V01,V02],[V10,V11,V12],[V20,V21,V22]]) :-
+% Row offsets for the three rows of the sub-region.
+    SR1 is SR + 1, SR2 is SR + 2,
+% Column offsets for the three columns of the sub-region.
+    SC1 is SC + 1, SC2 is SC + 2,
+% Read row 0 of the sub-region.
+    arc2_cell_(Grid, SR,  SC,  V00), arc2_cell_(Grid, SR,  SC1, V01),
+% Complete row 0 and begin row 1.
+    arc2_cell_(Grid, SR,  SC2, V02), arc2_cell_(Grid, SR1, SC,  V10),
+% Continue row 1.
+    arc2_cell_(Grid, SR1, SC1, V11), arc2_cell_(Grid, SR1, SC2, V12),
+% Read row 2 of the sub-region.
+    arc2_cell_(Grid, SR2, SC,  V20), arc2_cell_(Grid, SR2, SC1, V21),
+% Final cell of row 2.
+    arc2_cell_(Grid, SR2, SC2, V22).
+
+% arc2_fr_rot180_/2: 180-degree rotation of 3x3 by reversing both element and row order.
+arc2_fr_rot180_([[A,B,C],[D,E,F],[G,H,I]], [[I,H,G],[F,E,D],[C,B,A]]).
+
+% arc2_fr_mix_/6: mixing rule for hole fill — both arms equal ArmInner gives Filler.
+arc2_fr_mix_(LA, TA, AI, Filler, _, Filler) :-
+% Both left and top arms equal the inner arm marker.
+    LA =:= AI, TA =:= AI, !.
+% arc2_fr_mix_/6: left arm alone equals ArmInner — fill with ArmInner.
+arc2_fr_mix_(LA, _, AI, _, _, AI) :-
+% Left arm matches the inner arm marker.
+    LA =:= AI, !.
+% arc2_fr_mix_/6: top arm alone equals ArmInner — fill with ArmInner.
+arc2_fr_mix_(_, TA, AI, _, _, AI) :-
+% Top arm matches the inner arm marker.
+    TA =:= AI, !.
+% arc2_fr_mix_/6: neither arm is ArmInner — corner cell uses outer corner value.
+arc2_fr_mix_(_, _, _, _, Corner, Corner).
+
+% arc2_fr_hole_fill_/6: compute 9 R-C-V triples for the 3x3 interior hole.
+arc2_fr_hole_fill_(Grid, FR, FC, HoleR, HoleC, Cells) :-
+% Frame filler: value at top-edge center of frame (relative column 4).
+    FC4 is FC + 4,
+% Read the filler value at absolute (FR, FC+4).
+    arc2_cell_(Grid, FR, FC4, Filler),
+% Row immediately above hole; row immediately below hole bottom edge.
+    AboveR is HoleR - 1, BelowR is HoleR + 3,
+% Column immediately left of hole; column immediately right of hole right edge.
+    LeftC is HoleC - 1, RightC is HoleC + 3,
+% Hole column offsets +1 and +2.
+    HC1 is HoleC + 1, HC2 is HoleC + 2,
+% Hole row offsets +1 and +2.
+    HR1 is HoleR + 1, HR2 is HoleR + 2,
+% Top arm at j=0: directly above hole column 0.
+    arc2_cell_(Grid, AboveR, HoleC, T0),
+% ArmInner: center of top arm (j=1); this is the dominant arm-marker value.
+    arc2_cell_(Grid, AboveR, HC1,   AI),
+% Top arm at j=2: directly above hole column 2.
+    arc2_cell_(Grid, AboveR, HC2,   T2),
+% Left arm at i=0: directly left of hole row 0.
+    arc2_cell_(Grid, HoleR,  LeftC, L0),
+% Left arm at i=2: directly left of hole row 2.
+    arc2_cell_(Grid, HR2,    LeftC, L2),
+% Outer corner TL: frame cell diagonally above-left of hole.
+    arc2_cell_(Grid, AboveR, LeftC,  TL),
+% Outer corner TR: frame cell diagonally above-right of hole.
+    arc2_cell_(Grid, AboveR, RightC, TR),
+% Outer corner BL: frame cell diagonally below-left of hole.
+    arc2_cell_(Grid, BelowR, LeftC,  BL),
+% Outer corner BR: frame cell diagonally below-right of hole.
+    arc2_cell_(Grid, BelowR, RightC, BR),
+% Fill hole cell (0,0): top-left corner position.
+    arc2_fr_mix_(L0, T0, AI, Filler, TL, V00),
+% Fill hole cell (0,1): top center-edge position.
+    arc2_fr_mix_(L0, AI, AI, Filler, _,  V01),
+% Fill hole cell (0,2): top-right corner position.
+    arc2_fr_mix_(L0, T2, AI, Filler, TR, V02),
+% Fill hole cell (1,0): left center-edge position.
+    arc2_fr_mix_(AI, T0, AI, Filler, _,  V10),
+% Fill hole cell (1,1): center — always frame filler when both arms match.
+    arc2_fr_mix_(AI, AI, AI, Filler, _,  V11),
+% Fill hole cell (1,2): right center-edge position.
+    arc2_fr_mix_(AI, T2, AI, Filler, _,  V12),
+% Fill hole cell (2,0): bottom-left corner position.
+    arc2_fr_mix_(L2, T0, AI, Filler, BL, V20),
+% Fill hole cell (2,1): bottom center-edge position.
+    arc2_fr_mix_(L2, AI, AI, Filler, _,  V21),
+% Fill hole cell (2,2): bottom-right corner position.
+    arc2_fr_mix_(L2, T2, AI, Filler, BR, V22),
+% Assemble all 9 absolute R-C-V triples for the hole fill.
+    Cells = [HoleR-HoleC-V00,  HoleR-HC1-V01,  HoleR-HC2-V02,
+             HR1-HoleC-V10,    HR1-HC1-V11,    HR1-HC2-V12,
+             HR2-HoleC-V20,    HR2-HC1-V21,    HR2-HC2-V22].
+
+% arc2_transform(frame_reflect): stamp 180-rotated sub-regions at 8 outer positions.
+arc2_transform(frame_reflect, Grid, Out) :-
+% Find the frame top-left; hole always starts 3 rows and 3 cols inside.
+    arc2_fr_frame_(Grid, FR, FC),
+% Absolute position of the 3x3 interior hole top-left.
+    HoleR is FR + 3, HoleC is FC + 3,
+% Collect R-C-V mods for all 8 non-center sub-region stamps.
+    findall(R-C-V, (
+% Enumerate the 8 sub-region positions (center 1-1 handled separately).
+        member(RSub-CSub, [0-0,0-1,0-2,1-0,1-2,2-0,2-1,2-2]),
+% Absolute top-left of this sub-region within the 9x9 frame.
+        SubR is FR + RSub * 3, SubC is FC + CSub * 3,
+% Extract the 3x3 block content from the input grid.
+        arc2_fr_sub3_(Grid, SubR, SubC, Sub),
+% Compute 180-degree rotation of the sub-region.
+        arc2_fr_rot180_(Sub, Rot),
+% Stamp placement: adjacent to sub-region, shifted outward by one block-width.
+        StampR is FR + (2 * RSub - 1) * 3,
+        StampC is FC + (2 * CSub - 1) * 3,
+% Destructure the three rows of the rotated block.
+        Rot = [[R0C0,R0C1,R0C2],[R1C0,R1C1,R1C2],[R2C0,R2C1,R2C2]],
+% Enumerate all 9 cells of the rotated block with their offsets.
+        member(DI-DJ-V,
+               [0-0-R0C0, 0-1-R0C1, 0-2-R0C2,
+                1-0-R1C0, 1-1-R1C1, 1-2-R1C2,
+                2-0-R2C0, 2-1-R2C1, 2-2-R2C2]),
+% Compute absolute output row and column for this stamp cell.
+        R is StampR + DI, C is StampC + DJ
+    ), StampMods),
+% Compute the 9 hole-fill triples for the interior 3x3.
+    arc2_fr_hole_fill_(Grid, FR, FC, HoleR, HoleC, HoleMods),
+% Merge stamp and hole modifications into one list.
+    append(StampMods, HoleMods, AllMods),
+% Grid dimensions for output row and column enumeration.
+    length(Grid, H), H1 is H - 1,
+    Grid = [GRow0|_], length(GRow0, W), W1 is W - 1,
+% Row and column index lists for maplist iteration.
+    numlist(0, H1, Rs), numlist(0, W1, Cs),
+% Build each output row by substituting mod values or copying input.
+    maplist([R, OutRow]>>(
+        maplist([C, V]>>(
+% If a modification exists for (R,C), use it; otherwise copy input cell.
+            ( member(R-C-V0, AllMods) -> V = V0
+% Copy the original input cell value as fallback.
+            ; arc2_cell_(Grid, R, C, V) )
+        ), Cs, OutRow)
+    ), Rs, Out).
+
+% Fast path: frame_reflect fires when input row 0 is all-8 (frame surrounded by BG).
+arc2_induce_rule(TrainingPairs, frame_reflect) :-
+% Pre-filter: row 0 of the first training input must be entirely background.
+    TrainingPairs = [pair(First, _)|_],
+    First = [Row0|_],
+    forall(member(V, Row0), V =:= 8),
+% Full verification: all training pairs must transform correctly.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(frame_reflect, In, Out)).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 

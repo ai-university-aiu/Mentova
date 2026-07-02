@@ -1,0 +1,162 @@
+Accomplishment 355: ARC-AGI-2 Wave 57 - Frame Reflect (WP-315, Layer 290)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 57 adds the frame_reflect rule (WP-315, Layer 290) to PrologAI's ARC-AGI-2
+benchmark solver, solving task db0c5428 and raising the score from 53/120 =
+44.17% to 54/120 = 45.00%.
+
+The rule recognizes a 9x9 bordered frame floating in a background of 8s. The
+frame contains a 3x3 interior hole and has arm-marker cells that divide it into
+nine 3x3 sub-regions. The output stamps the 180-degree rotation of each of the
+eight non-center sub-regions into adjacent outward positions, and fills the
+center hole using a 2D arm-product rule.
+
+
+TASK DESCRIPTION
+
+Task ID: db0c5428
+
+Input structure: a rectangular grid (BG=8) containing exactly one 9x9 bordered
+frame. The frame is surrounded by 8s on all sides, has a 3x3 interior hole of
+8s at its center, and contains arm-marker cells that divide it into nine 3x3
+sub-regions. The arm-inner marker AI appears at the center of the row/col
+adjacent to the hole interior.
+
+Output structure: same dimensions as input. The original 9x9 frame is
+unchanged. Eight new 3x3 stamp blocks appear in the surrounding BG area, one
+per non-center sub-region. The 3x3 interior hole is filled using the arm-
+product rule.
+
+
+THE FRAME_REFLECT RULE
+
+Step 1 - Locate the frame: arc2_fr_frame_/3 scans in row-major order for the
+first non-8 cell. That cell is the frame top-left (FR, FC). The 3x3 hole is
+always at (FR+3, FC+3).
+
+Step 2 - Extract sub-regions: the 9x9 frame is divided into 9 sub-regions of
+3x3 each (RSub in {0,1,2}, CSub in {0,1,2}). Sub-region (RSub, CSub) starts
+at absolute position (FR+RSub*3, FC+CSub*3).
+
+Step 3 - Stamp 8 outer sub-regions: for each of the 8 non-center sub-regions,
+compute the 180-degree rotation (arc2_fr_rot180_) and place it at the stamp
+position (FR+(2*RSub-1)*3, FC+(2*CSub-1)*3). This position is one sub-region-
+width beyond the original sub-region in both row and column directions.
+
+Step 4 - Fill the center hole: read the frame filler (Filler) from (FR, FC+4),
+the arm-inner marker (AI) from (HoleR-1, HoleC+1), the top arm values T0, T2
+from (HoleR-1, HoleC) and (HoleR-1, HoleC+2), the left arm values L0, L2 from
+(HoleR, HoleC-1) and (HoleR+2, HoleC-1), and the four outer corner values TL,
+TR, BL, BR from the diagonal cells just outside the hole. For each of the 9
+hole cells (i,j): if both LA=AI and TA=AI then fill=Filler; if exactly one of
+LA or TA equals AI then fill=AI; if neither equals AI (corner positions) then
+fill=the corresponding outer corner value (TL for i=0,j=0; TR for i=0,j=2;
+BL for i=2,j=0; BR for i=2,j=2).
+
+
+TRAINING PAIR VERIFICATION
+
+P1 (18x18): frame at rows 3-11, cols 3-11. BG=8. Frame filler=6. AI=9.
+Arms: top=[6,9,6], left=[6,9,6]. Outer corners: TL=TR=BL=BR=9.
+Hole fill: [[9,9,9],[9,6,9],[9,9,9]].
+8 stamps: each 3x3 sub-region rotated 180 degrees and placed at the adjacent
+outward position. Verified against P1 OUT.
+PASS.
+
+P2 (16x16): frame at rows 4-12, cols 3-11. BG=8. Frame filler=1. AI=7.
+Arms: top=[1,7,1], left=[1,7,1]. Outer corners=7.
+Hole fill: [[7,7,7],[7,1,7],[7,7,7]].
+8 stamps verified against P2 OUT.
+PASS.
+
+P3 (19x19): frame at rows 5-13, cols 6-14. BG=8. Frame filler=5. AI=2.
+Arms: top=[5,2,5], left=[5,2,5]. Outer corners: TL=TR=BL=BR=3.
+Hole fill: [[3,2,3],[2,5,2],[3,2,3]].
+8 stamps verified against P3 OUT.
+PASS.
+
+TEST (17x17): frame at rows 4-12, cols 4-12. BG=8. Frame filler=7. AI=1.
+Arms: top=[7,1,7], left=[7,1,7]. Outer corners: TL=TR=BL=BR=4.
+Hole fill: [[4,1,4],[1,7,1],[4,1,4]].
+8 stamps verified against TEST OUT.
+PASS.
+
+
+IMPLEMENTATION DETAILS
+
+New predicates (all in arc_benchmark_2.pl, prefixed arc2_fr_):
+
+arc2_fr_frame_/3: between/3 nested row-col scan + arc2_cell_ non-8 check + cut
+  to return top-left of the first non-8 cell in row-major order.
+
+arc2_fr_sub3_/4: reads 9 cells via arc2_cell_/4 at offsets (0-2, 0-2) from the
+  given (SR, SC) and assembles them into a 3x3 matrix.
+
+arc2_fr_rot180_/2: single fact matching the 9-variable 3x3 matrix and returning
+  it in fully reversed order: both element order within each row and row order
+  are reversed.
+
+arc2_fr_mix_/6: four-clause predicate implementing the arm-product mixing rule.
+  First clause: both arms = AI -> Filler (with cut). Second clause: left arm =
+  AI -> AI (with cut). Third clause: top arm = AI -> AI (with cut). Fourth
+  (catch-all): return Corner value.
+
+arc2_fr_hole_fill_/6: reads Filler from (FR, FC+4), AI from (HoleR-1, HoleC+1),
+  top arm values T0 and T2, left arm values L0 and L2, four outer corners TL/TR/
+  BL/BR; applies arc2_fr_mix_/6 to all 9 positions; assembles 9 R-C-V triples.
+
+arc2_transform(frame_reflect)/3: calls arc2_fr_frame_ to locate frame and hole;
+  uses findall to generate 72 stamp modification triples (8 sub-regions x 9
+  cells each); calls arc2_fr_hole_fill_ for 9 hole triples; merges with append;
+  builds output via maplist with member-lookup fallback to input cell.
+
+arc2_induce_rule(TrainingPairs, frame_reflect): fast-path clause placed before
+  catch-all; pre-filter checks that row 0 of the first training input is entirely
+  8 (the frame is always surrounded by a BG border); full verification via
+  forall + arc2_transform.
+
+
+KEY INSIGHTS
+
+Sub-region stamp: the 9x9 frame naturally decomposes into 9 equal 3x3 sub-
+regions. Each non-center sub-region stamps its 180-degree rotation to the
+adjacent outward position, creating a 3x3 grid of stamps around the original
+frame. The stamp offset formula is exactly one sub-region-width beyond the
+sub-region itself: stamp_row = FR + (2*RSub-1)*3.
+
+Arm-product fill: the center hole fill uses a tensor-product rule on the two
+arm vectors (left and top). The arm vectors are always of the form [Filler, AI,
+Filler] in all tasks. The filling rule then produces:
+- Corner cells (both arms = Filler) -> outer corner value (from the diagonal
+  frame cells just beyond the hole boundary).
+- Center-edge cells (one arm = AI) -> AI.
+- Center cell (both arms = AI) -> Filler.
+
+Frame filler location: the frame filler is reliably read from (FR, FC+4), the
+center of the frame's top edge. This position is far from all arm markers and
+outer decorative values, ensuring it always holds the dominant filler color.
+
+180-degree rotation: implemented as a single Prolog fact with 9 named variables,
+reversing both element order within each row and the row order itself. This is
+the simplest and most direct implementation.
+
+
+SIGNIFICANCE
+
+frame_reflect demonstrates PrologAI's ability to decompose a structured visual
+pattern into a grid of independent sub-units and apply a uniform reflection
+operation to all of them simultaneously. The rule requires simultaneous
+understanding of: (1) frame detection via first-non-BG-cell scan; (2) sub-
+region decomposition based on implicit 3x3 tiling; (3) 180-degree rotation as a
+spatial transformation; (4) a 2D tensor-product fill rule for the interior hole
+that depends on values read from the frame's arm structure.
+
+Score: 53/120 = 44.17% to 54/120 = 45.00%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
