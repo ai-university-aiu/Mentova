@@ -9317,7 +9317,9 @@ arc2_transform(shape_count, Grid, Out) :-
 % arc2_sc_tmpl_bbox_/5: compute bounding box of all 0-cells in Grid.
 arc2_sc_tmpl_bbox_(Grid, TR0, TR1, TC0, TC1) :-
 % Scan all rows accumulating min/max row and col of 0-cells.
-    arc2_sc_bbox_rows_(Grid, 0, 9999, -1, 9999, -1, TR0, TR1, TC0, TC1).
+    arc2_sc_bbox_rows_(Grid, 0, 9999, -1, 9999, -1, TR0, TR1, TC0, TC1),
+% Fail if no 0-cells were found (no template region).
+    TR0 =< TR1.
 
 % arc2_sc_bbox_rows_/10: row-by-row accumulator for 0-cell bounding box.
 arc2_sc_bbox_rows_([], _, R0, R1, C0, C1, R0, R1, C0, C1).
@@ -9498,7 +9500,7 @@ arc2_sc_subtract_([H|Rest], Remove, Result) :-
 % ---- Output grid construction ----
 
 % arc2_sc_zeros_/3: build an NR x NC grid filled with 0-cells.
-arc2_sc_zeros_(0, _, []) :- !.
+arc2_sc_zeros_(NR, _, []) :- NR =< 0, !.
 arc2_sc_zeros_(NR, NC, [Row|Rest]) :-
 % Build one zero row.
     arc2_sc_zero_row_(NC, Row),
