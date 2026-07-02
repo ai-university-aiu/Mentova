@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-01. Wave 46 complete: 44/120 = 36.67%.
+Last updated: 2026-07-01. Wave 47 complete: 45/120 = 37.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -168,6 +168,7 @@ Date        | Score      | Percent | Notes
 2026-07-01  |  43 / 120  | 35.83%  | Wave 45: stair_fill staircase-pocket fill; two-phase bottom-to-top smallest-gap-first; doubly-bounded before single-bounded
 2026-07-01  |  42 / 120  | 35.00%  | Wave 44: jigsaw-fill 2-color template holes tiled by exact-shape non-bg pieces; backtracking exact cover
 2026-07-01  |  44 / 120  | 36.67%  | Wave 46: two_join two 4-objects each with 7-cluster marker; shift one to align markers; pick smaller merged bbox
+2026-07-01  |  45 / 120  | 37.50%  | Wave 47: shape_count template queries (0-cell region, odd-row color markers) count shape instances using iterative bbox-expansion
 
 
 COMPLETE SCORE PROGRESSION
@@ -346,6 +347,40 @@ Lessons learned: 7-clusters always appear in pairs; the shift formula
   non-connected pieces that simple component labeling misses.
 
 Accomplishment: Acc_344.  Paper: Acc_344_ARC2_Wave46.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 47 - 2026-07-01 - Score: 45/120 = 37.50%
+
+Date: 2026-07-01
+
+Confirmed score: 45 / 120 = 37.50%
+
+Rules added in this wave:
+  shape_count (WP-305, Layer 280)
+
+Task solved: 58490d8a (3 training pairs + 1 test case; input contains a
+  rectangular template of 0-cells with single color markers at odd rows and
+  a game board with identical small shape instances per color; output reproduces
+  template with each color marker repeated Count times at odd columns; Count
+  is the number of non-overlapping instances of that color-shape in the game
+  board, found by iterative bounding-box expansion).
+
+Bugs fixed: initial approach used 4-connected flood-fill to count instances.
+  Failed for diamond-cross shapes (C _ C / _ C _ / C _ C) which have no
+  4-adjacent cell pairs within one instance - flood-fill splits one instance
+  into multiple components. Fix: iterative bbox-expansion groups all cells
+  fitting within a 1-cell-padded bounding box regardless of connectivity.
+
+Lessons learned: connectivity-agnostic bbox-expansion is more general than
+  flood-fill for counting geometric shape instances; expanding the tight bbox
+  by 1 in all 4 directions simultaneously (not sequentially) is essential for
+  diamond/cross patterns; the template region must be excluded from color-cell
+  gathering to avoid counting template markers as shape instances.
+
+Accomplishment: Acc_345.  Paper: Acc_345_ARC2_Wave47.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3068,4 +3103,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 45: Stair-fill two-phase staircase pocket fi
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 46: Two-join two 4-objects each with 7-cluster marker; shift one object to align markers; pick minimum merged bounding box to select correct ordering.
   Score: 44/120 = 36.67%. Task 20270e3b solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 47: Shape-count template queries (0-cell template with odd-row color markers) count geometric shape instances using iterative bounding-box expansion; handles disconnected-within-instance shapes.
+  Score: 45/120 = 37.50%. Task 58490d8a solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.

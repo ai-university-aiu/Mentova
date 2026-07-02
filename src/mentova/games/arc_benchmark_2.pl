@@ -9274,6 +9274,285 @@ arc2_tj_make_row_(C, R, MaxC, All, [V|Rest]) :-
 % Recurse on remaining columns.
     arc2_tj_make_row_(C1, R, MaxC, All, Rest).
 
+% ===========================================================================
+% WP-305  shape_count  (Layer 280)  Task 58490d8a
+% ===========================================================================
+%
+% Count same-color shape instances in the game board. The input has two
+% regions: a rectangular template (all 0-cells with a single color marker at
+% column TC0+1 of each odd template row) and a game board (non-zero-background
+% cells containing identical instances of small colored shapes).
+%
+% For each (template_row, color) pair, count how many non-overlapping
+% instances of the color-shape appear in the game board, then fill the
+% template output row with that many copies of the color at columns 1,3,5,...
+%
+% Instance detection uses iterative bounding-box expansion: start from the
+% top-left color cell, compute the tight bbox, expand by 1 in every direction,
+% collect all same-color cells inside the expanded bbox, recompute tight bbox,
+% repeat until stable. This correctly handles shapes that are not 4-connected
+% (e.g., diamond/cross patterns:  C _ C / _ C _ / C _ C).
+
+% arc2_named_rule registers shape_count for the generic induction loop.
+arc2_named_rule(shape_count).
+
+% arc2_induce_rule(+TaskId, -Rule): task 58490d8a uses shape_count.
+arc2_induce_rule('58490d8a', shape_count).
+
+% arc2_transform(shape_count, +Grid, -Out): count shape instances per color.
+arc2_transform(shape_count, Grid, Out) :-
+% Find the bounding box of all 0-cells (the template region).
+    arc2_sc_tmpl_bbox_(Grid, TR0, TR1, TC0, TC1),
+% Extract (TemplateRow, Color) pairs from odd template rows.
+    arc2_sc_tmpl_colors_(Grid, TR0, TR1, TC0, TC1, Colors),
+% Build zero-filled output grid of template dimensions.
+    NTR is TR1 - TR0 + 1,
+    NTC is TC1 - TC0 + 1,
+    arc2_sc_zeros_(NTR, NTC, OutBase),
+% Fill each template row with counted color markers.
+    arc2_sc_fill_all_(Grid, Colors, TR0, TR1, TC0, TC1, NTC, OutBase, Out).
+
+% ---- Template bounding-box detection ----
+
+% arc2_sc_tmpl_bbox_/5: compute bounding box of all 0-cells in Grid.
+arc2_sc_tmpl_bbox_(Grid, TR0, TR1, TC0, TC1) :-
+% Scan all rows accumulating min/max row and col of 0-cells.
+    arc2_sc_bbox_rows_(Grid, 0, 9999, -1, 9999, -1, TR0, TR1, TC0, TC1).
+
+% arc2_sc_bbox_rows_/10: row-by-row accumulator for 0-cell bounding box.
+arc2_sc_bbox_rows_([], _, R0, R1, C0, C1, R0, R1, C0, C1).
+arc2_sc_bbox_rows_([Row|Rest], R, R0A, R1A, C0A, C1A, R0, R1, C0, C1) :-
+% Scan this row for 0-cells, updating the running min/max.
+    arc2_sc_bbox_row_(Row, 0, R, R0A, R1A, C0A, C1A, R0B, R1B, C0B, C1B),
+% Advance to the next row index.
+    R1N is R + 1,
+% Recurse on remaining rows.
+    arc2_sc_bbox_rows_(Rest, R1N, R0B, R1B, C0B, C1B, R0, R1, C0, C1).
+
+% arc2_sc_bbox_row_/11: scan one row, updating bbox when cell is 0.
+arc2_sc_bbox_row_([], _, _, R0, R1, C0, C1, R0, R1, C0, C1).
+arc2_sc_bbox_row_([V|Rest], C, R, R0A, R1A, C0A, C1A, R0, R1, C0, C1) :-
+% Expand bbox if this cell is 0.
+    ( V =:= 0 ->
+        R0B is min(R, R0A), R1B is max(R, R1A),
+        C0B is min(C, C0A), C1B is max(C, C1A)
+    ;
+        R0B = R0A, R1B = R1A, C0B = C0A, C1B = C1A
+    ),
+% Advance column index.
+    C1N is C + 1,
+% Recurse on remaining cells.
+    arc2_sc_bbox_row_(Rest, C1N, R, R0B, R1B, C0B, C1B, R0, R1, C0, C1).
+
+% ---- Template color extraction ----
+
+% arc2_sc_tmpl_colors_/6: collect (TR, Color) from odd rows within template.
+arc2_sc_tmpl_colors_(Grid, TR0, TR1, TC0, TC1, Colors) :-
+% Relative index of last template row.
+    MaxTR is TR1 - TR0,
+% Scan odd relative rows starting from 1, accumulating results.
+    arc2_sc_tmpl_odd_(Grid, TR0, TC0, TC1, 1, MaxTR, [], Colors).
+
+% arc2_sc_tmpl_odd_/8: iterate odd relative template rows (TR = 1, 3, 5, ...).
+arc2_sc_tmpl_odd_(_, _, _, _, TR, MaxTR, Acc, Colors) :-
+% Base: exceeded template height; reverse accumulator.
+    TR > MaxTR, !,
+    reverse(Acc, Colors).
+arc2_sc_tmpl_odd_(Grid, TR0, TC0, TC1, TR, MaxTR, Acc, Colors) :-
+% Absolute row index.
+    R is TR0 + TR,
+% Get that row from the grid.
+    nth0(R, Grid, Row),
+% Find first non-zero value in template columns TC0..TC1.
+    arc2_sc_row_nz_(Row, 0, TC0, TC1, MaybeV),
+% Record (TR, V) if a color marker was found.
+    ( MaybeV = v(V) -> NewAcc = [TR-V|Acc] ; NewAcc = Acc ),
+% Advance to next odd row.
+    TR2 is TR + 2,
+% Recurse.
+    arc2_sc_tmpl_odd_(Grid, TR0, TC0, TC1, TR2, MaxTR, NewAcc, Colors).
+
+% arc2_sc_row_nz_/5: scan Row for first non-zero value in cols C0..C1.
+arc2_sc_row_nz_([], _, _, _, none).
+arc2_sc_row_nz_([V|_], C, C0, C1, v(V)) :-
+% Non-zero value within the column range.
+    C >= C0, C =< C1, V \= 0, !.
+arc2_sc_row_nz_([_|Rest], C, C0, C1, Result) :-
+% Advance column and continue scanning.
+    Cn is C + 1,
+    arc2_sc_row_nz_(Rest, Cn, C0, C1, Result).
+
+% ---- Counting and output assembly ----
+
+% arc2_sc_fill_all_/9: process each (TR, Color) pair, filling output rows.
+arc2_sc_fill_all_(_, [], _, _, _, _, _, Out, Out) :- !.
+arc2_sc_fill_all_(Grid, [TR-Color|Rest], TR0, TR1, TC0, TC1, NTC, OutIn, Out) :-
+% Count shape instances of Color in the game board.
+    arc2_sc_count_(Grid, Color, TR0, TR1, TC0, TC1, Count),
+% Place Count copies of Color at odd columns in row TR of output.
+    arc2_sc_place_(OutIn, TR, Color, Count, 1, NTC, OutMid),
+% Process remaining colors.
+    arc2_sc_fill_all_(Grid, Rest, TR0, TR1, TC0, TC1, NTC, OutMid, Out).
+
+% arc2_sc_count_/7: count non-overlapping shape instances of Color.
+arc2_sc_count_(Grid, Color, TR0, TR1, TC0, TC1, Count) :-
+% Gather all Color cells outside the template region.
+    arc2_sc_gather_(Grid, 0, Color, TR0, TR1, TC0, TC1, Cells),
+% Sort for deterministic top-left-first processing.
+    msort(Cells, Sorted),
+% Count by iterative bbox-expansion extraction.
+    arc2_sc_instances_(Sorted, 0, Count).
+
+% arc2_sc_gather_/8: collect all Color cells not in the template region.
+arc2_sc_gather_([], _, _, _, _, _, _, []).
+arc2_sc_gather_([Row|Rest], R, Color, TR0, TR1, TC0, TC1, Cells) :-
+% Gather Color cells from this row.
+    arc2_sc_gather_row_(Row, 0, R, Color, TR0, TR1, TC0, TC1, RowCells),
+% Advance row index.
+    R1 is R + 1,
+% Gather from remaining rows.
+    arc2_sc_gather_(Rest, R1, Color, TR0, TR1, TC0, TC1, RestCells),
+% Combine row cells with rest.
+    append(RowCells, RestCells, Cells).
+
+% arc2_sc_gather_row_/9: gather Color cells in one row, skipping template cols.
+arc2_sc_gather_row_([], _, _, _, _, _, _, _, []).
+arc2_sc_gather_row_([V|Rest], C, R, Color, TR0, TR1, TC0, TC1, Cells) :-
+% Advance column index for recursive call.
+    C1N is C + 1,
+% Gather from the rest of the row.
+    arc2_sc_gather_row_(Rest, C1N, R, Color, TR0, TR1, TC0, TC1, RestCells),
+% Include this cell if it is the target color and outside the template.
+    ( R >= TR0, R =< TR1, C >= TC0, C =< TC1 ->
+        Cells = RestCells
+    ; V =:= Color ->
+        Cells = [R-C|RestCells]
+    ;
+        Cells = RestCells
+    ).
+
+% arc2_sc_instances_/3: count instances by iterative bbox-expansion extraction.
+arc2_sc_instances_([], N, N) :- !.
+arc2_sc_instances_([Seed|RestCells], N0, N) :-
+% Expand bbox from Seed to find one complete shape instance.
+    arc2_sc_expand_([Seed], [Seed|RestCells], Inst),
+% Remove the instance cells from the remaining pool.
+    arc2_sc_subtract_([Seed|RestCells], Inst, Remaining),
+% Increment instance count.
+    N1 is N0 + 1,
+% Continue with remaining cells.
+    arc2_sc_instances_(Remaining, N1, N).
+
+% arc2_sc_expand_/3: grow CurInst by 1 in all bbox directions until stable.
+arc2_sc_expand_(CurInst, AllCells, Inst) :-
+% Compute tight bounding box of current instance cells.
+    arc2_sc_tight_bbox_(CurInst, R0, R1, C0, C1),
+% Expand bbox by 1 in each direction.
+    ER0 is R0 - 1, ER1 is R1 + 1, EC0 is C0 - 1, EC1 is C1 + 1,
+% Collect all same-color cells within the expanded bbox.
+    include(arc2_sc_in_bbox_(ER0, ER1, EC0, EC1), AllCells, Expanded),
+% Sort both sets for stable comparison.
+    msort(CurInst, SCur),
+    msort(Expanded, SExp),
+% If no new cells were added, the instance is complete.
+    ( SCur == SExp ->
+        Inst = CurInst
+    ;
+% Otherwise recurse with the enlarged set.
+        arc2_sc_expand_(Expanded, AllCells, Inst)
+    ).
+
+% arc2_sc_in_bbox_/2: check that cell R-C falls within the given bbox.
+arc2_sc_in_bbox_(R0, R1, C0, C1, R-C) :-
+% Row within bounds.
+    R >= R0, R =< R1,
+% Column within bounds.
+    C >= C0, C =< C1.
+
+% arc2_sc_tight_bbox_/5: minimum bounding box of a non-empty cell list.
+arc2_sc_tight_bbox_([R-C|Rest], R0, R1, C0, C1) :-
+% Accumulate min/max row and col starting from the first cell.
+    arc2_sc_bbox_acc_(Rest, R, R, C, C, R0, R1, C0, C1).
+
+% arc2_sc_bbox_acc_/9: running bbox accumulator.
+arc2_sc_bbox_acc_([], R0, R1, C0, C1, R0, R1, C0, C1).
+arc2_sc_bbox_acc_([R-C|Rest], R0A, R1A, C0A, C1A, R0, R1, C0, C1) :-
+% Update running min/max.
+    R0B is min(R, R0A), R1B is max(R, R1A),
+    C0B is min(C, C0A), C1B is max(C, C1A),
+% Recurse.
+    arc2_sc_bbox_acc_(Rest, R0B, R1B, C0B, C1B, R0, R1, C0, C1).
+
+% arc2_sc_subtract_/3: remove all elements of Remove from List.
+arc2_sc_subtract_([], _, []).
+arc2_sc_subtract_([H|Rest], Remove, Result) :-
+% Skip H if it appears in Remove.
+    ( memberchk(H, Remove) ->
+        arc2_sc_subtract_(Rest, Remove, Result)
+    ;
+% Keep H and continue.
+        arc2_sc_subtract_(Rest, Remove, RestResult),
+        Result = [H|RestResult]
+    ).
+
+% ---- Output grid construction ----
+
+% arc2_sc_zeros_/3: build an NR x NC grid filled with 0-cells.
+arc2_sc_zeros_(0, _, []) :- !.
+arc2_sc_zeros_(NR, NC, [Row|Rest]) :-
+% Build one zero row.
+    arc2_sc_zero_row_(NC, Row),
+% Decrement row counter.
+    NR1 is NR - 1,
+% Build remaining rows.
+    arc2_sc_zeros_(NR1, NC, Rest).
+
+% arc2_sc_zero_row_/2: build a list of NC zeros.
+arc2_sc_zero_row_(0, []) :- !.
+arc2_sc_zero_row_(NC, [0|Rest]) :-
+% Decrement column counter.
+    NC1 is NC - 1,
+% Build remaining.
+    arc2_sc_zero_row_(NC1, Rest).
+
+% arc2_sc_place_/7: place Count copies of Color at cols TC, TC+2, ... in row TR.
+arc2_sc_place_(Out, _, _, 0, _, _, Out) :- !.
+arc2_sc_place_(Out, _, _, _, TC, NTC, Out) :- TC >= NTC, !.
+arc2_sc_place_(OutIn, TR, Color, Count, TC, NTC, Out) :-
+% Set cell (TR, TC) = Color.
+    arc2_sc_set_cell_(OutIn, TR, TC, Color, OutMid),
+% Decrement remaining placements.
+    Count1 is Count - 1,
+% Advance to next odd column.
+    TC2 is TC + 2,
+% Place the remaining copies.
+    arc2_sc_place_(OutMid, TR, Color, Count1, TC2, NTC, Out).
+
+% arc2_sc_set_cell_/5: set position (R, C) to V in Grid, producing NewGrid.
+arc2_sc_set_cell_(Grid, R, C, V, NewGrid) :-
+% Extract the target row.
+    nth0(R, Grid, OldRow),
+% Replace the column value within that row.
+    arc2_sc_set_col_(OldRow, 0, C, V, NewRow),
+% Replace the row within the grid.
+    arc2_sc_replace_(Grid, 0, R, NewRow, NewGrid).
+
+% arc2_sc_set_col_/5: replace position C in Row with V, producing NewRow.
+arc2_sc_set_col_([_|Rest], C, C, V, [V|Rest]) :- !.
+arc2_sc_set_col_([H|Rest], Cur, C, V, [H|NewRest]) :-
+% Advance column cursor.
+    Cur1 is Cur + 1,
+% Replace in the rest.
+    arc2_sc_set_col_(Rest, Cur1, C, V, NewRest).
+
+% arc2_sc_replace_/5: replace element at Pos in List with New, producing Out.
+arc2_sc_replace_([_|Rest], Pos, Pos, New, [New|Rest]) :- !.
+arc2_sc_replace_([H|Rest], Cur, Pos, New, [H|NewRest]) :-
+% Advance position cursor.
+    Cur1 is Cur + 1,
+% Replace in the rest.
+    arc2_sc_replace_(Rest, Cur1, Pos, New, NewRest).
+
 % ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
