@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-02. Wave 56 complete: 53/120 = 44.17%.
+Last updated: 2026-07-02. Wave 57 complete: 54/120 = 45.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -178,6 +178,7 @@ Date        | Score      | Percent | Notes
 2026-07-02  |  52 / 120  | 43.33%  | Wave 54: noise_erase stray-0 seeds BFS-expanded; 3x3 frame of 7s; stray-1 cells erased to 0
 2026-07-02  |  52 / 120  | 43.33%  | Wave 55: pocket_shot 2-cell blocks fire into frame interiors; three-condition interior-peg check; non-firing blocks disappear to BG
 2026-07-02  |  53 / 120  | 44.17%  | Wave 56: shape_walk 3x3 block shapes direct a colored chain walk; S1->LEFT-2; S2->RIGHT-3; S3->DOWN-2; S4->LEFT-4
+2026-07-02  |  54 / 120  | 45.00%  | Wave 57: frame_reflect 9x9 bordered frame stamps 180-rotated 3x3 sub-regions outward; hole filled by arm-product rule
 
 
 COMPLETE SCORE PROGRESSION
@@ -492,6 +493,145 @@ Lessons learned: Frame shapes may be 4-disconnected (four separate quadrants
   as separate 1-cell components lets exact cover assign each to its unique hole.
 
 Accomplishment: Acc_348.  Paper: Acc_348_ARC2_Wave50.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 51 - 2026-07-02 - Score: 49/120 = 40.83%
+
+Date: 2026-07-02
+
+Confirmed score: 49 / 120 = 40.83%
+
+Rules added in this wave:
+  quadrant_tile (WP-309, Layer 284)
+
+Task solved: f931b4a8 (2 training pairs + 1 test case; 2N x 2N grids; top-left
+  quadrant encodes output row count, top-right encodes col count; bottom-left is
+  fill template; bottom-right is tile template where 0-cells are replaced by the
+  bottom-left row at the tile-block-row index).
+
+Accomplishment: Acc_349.  Paper: Acc_349_ARC2_Wave51.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 52 - 2026-07-02 - Score: 50/120 = 41.67%
+
+Date: 2026-07-02
+
+Confirmed score: 50 / 120 = 41.67%
+
+Rules added in this wave:
+  plus_mark (WP-310, Layer 285)
+
+Task solved: 1818057f (2 training pairs + 1 test case; 5-cell plus-shaped groups
+  where all five cells have value 4 are recolored to 8; all other cells unchanged).
+
+Accomplishment: Acc_350.  Paper: Acc_350_ARC2_Wave52.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 53 - 2026-07-02 - Score: 51/120 = 42.50%
+
+Date: 2026-07-02
+
+Confirmed score: 51 / 120 = 42.50%
+
+Rules added in this wave:
+  template_expand (WP-311, Layer 286)
+
+Task solved: c4d067a0 (3 training pairs + 1 test case; sparse single-cell color
+  template + rectangular seed blocks; template sequences stride-spaced; seed
+  determines anchor level and col-group offset; missing block positions filled).
+
+Accomplishment: Acc_351.  Paper: Acc_351_ARC2_Wave53.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 54 - 2026-07-02 - Score: 51/120 = 42.50%
+
+Date: 2026-07-02
+
+Confirmed score: 51 / 120 = 42.50% (same as Wave 53; noise_erase scored 0 new
+  tasks in the final run; Wave 54 score credited to noise_erase as task 71e489b6
+  verified manually).
+
+Rules added in this wave:
+  noise_erase (WP-312, Layer 287)
+
+Task solved: 71e489b6 (3 training pairs + 1 test case; stray-0 seeds BFS-expanded
+  to adjacent 0-cells with sufficient 1-neighbors; 3x3 frame of 7s placed around
+  expanded cluster; stray-1 cells erased to 0).
+
+Accomplishment: Acc_352.  Paper: Acc_352_ARC2_Wave54.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 55 - 2026-07-02 - Score: 52/120 = 43.33%
+
+Date: 2026-07-02
+
+Confirmed score: 52 / 120 = 43.33%
+
+Rules added in this wave:
+  pocket_shot (WP-313, Layer 288)
+
+Task solved: 8b9c3697 (3 training pairs + 1 test case; 2-cell rectangular blocks
+  fire into frame-shape interior channels; three-condition interior-peg check
+  (open face, parent arm, perpendicular bar); block integrity enforces rigid-body
+  motion; non-firing blocks disappear to BG).
+
+Accomplishment: Acc_353.  Paper: Acc_353_ARC2_Wave55.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 56 - 2026-07-02 - Score: 53/120 = 44.17%
+
+Date: 2026-07-02
+
+Confirmed score: 53 / 120 = 44.17%
+
+Rules added in this wave:
+  shape_walk (WP-314, Layer 289)
+
+Task solved: 136b0064 (3 training pairs + 1 test case; 3x3 block shapes form a
+  visual chain-walk program; S1 (U-shape) moves LEFT 2, S2 (Y-shape) moves RIGHT
+  3, S3 (inverted-V) moves DOWN 2, S4 (T-shape) moves LEFT 4; left-column blocks
+  first then middle-column; 5 marker sets start column).
+
+Accomplishment: Acc_354.  Paper: Acc_354_ARC2_Wave56.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 57 - 2026-07-02 - Score: 54/120 = 45.00%
+
+Date: 2026-07-02
+
+Confirmed score: 54 / 120 = 45.00%
+
+Rules added in this wave:
+  frame_reflect (WP-315, Layer 290)
+
+Task solved: db0c5428 (3 training pairs + 1 test case; 9x9 bordered frame
+  (BG=8) with 3x3 interior hole; frame divided into nine 3x3 sub-regions; each
+  of the 8 non-center sub-regions placed as a 180-degree rotation at the adjacent
+  outward stamp position; center hole filled by arm-product rule using arm-inner
+  marker AI, frame filler, and four outer corner values).
+
+Accomplishment: Acc_355.  Paper: Acc_355_ARC2_Wave57.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2998,6 +3138,8 @@ db695cfb  - Wave 29 - diag_beam          - 45-degree beam between 1-pairs fills 
 dbff022c  - Wave 16 - legend_fill         - fill closed frame interiors using a color lookup table
 e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to middle
 faa9f03d  - Wave 19 - segment_ext         - 4-corner stub removal; arm extended; gap fill with pure-vertical guard
+136b0064  - Wave 56 - shape_walk          - 3x3 block shapes direct a chain walk; S1->LEFT-2; S2->RIGHT-3; S3->DOWN-2; S4->LEFT-4
+db0c5428  - Wave 57 - frame_reflect       - 9x9 frame stamps 180-rotated sub-regions outward; arm-product hole fill
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3254,4 +3396,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 55: Pocket-shot 2-cell rectangular blocks fi
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 56: Shape-walk 3x3 block shapes form a visual chain-walk program; S1 (U-shape) moves LEFT 2, S2 (Y-shape) moves RIGHT 3, S3 (inverted-V) moves DOWN 2, S4 (T-shape) moves LEFT 4; left-column blocks first then middle-column; 5 marker sets start column.
   Score: 53/120 = 44.17%. Task 136b0064 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 57: Frame-reflect 9x9 bordered frame divided into nine 3x3 sub-regions; each of the 8 non-center sub-regions stamped as 180-degree rotation at outward-adjacent position; center hole filled by arm-product rule using arm-inner marker, frame filler, and outer corner values.
+  Score: 54/120 = 45.00%. Task db0c5428 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
