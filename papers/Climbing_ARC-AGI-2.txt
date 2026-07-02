@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-01. Wave 45 complete: 43/120 = 35.83%.
+Last updated: 2026-07-01. Wave 46 complete: 44/120 = 36.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -167,6 +167,7 @@ Date        | Score      | Percent | Notes
 2026-07-01  |  41 / 120  | 34.17%  | Wave 43: frame-stamp left-side shapes stamped into bordered room at border-encoded (row,col) positions
 2026-07-01  |  43 / 120  | 35.83%  | Wave 45: stair_fill staircase-pocket fill; two-phase bottom-to-top smallest-gap-first; doubly-bounded before single-bounded
 2026-07-01  |  42 / 120  | 35.00%  | Wave 44: jigsaw-fill 2-color template holes tiled by exact-shape non-bg pieces; backtracking exact cover
+2026-07-01  |  44 / 120  | 36.67%  | Wave 46: two_join two 4-objects each with 7-cluster marker; shift one to align markers; pick smaller merged bbox
 
 
 COMPLETE SCORE PROGRESSION
@@ -312,6 +313,39 @@ Lessons learned: visual "open" vs "enclosed" distinction maps directly to whethe
   smallest-gap-first sort ensures innermost step treads fill before wider regions.
 
 Accomplishment: Acc_343.  Paper: Acc_343_ARC2_Wave45.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 46 - 2026-07-01 - Score: 44/120 = 36.67%
+
+Date: 2026-07-01
+
+Confirmed score: 44 / 120 = 36.67%
+
+Rules added in this wave:
+  two_join (WP-304, Layer 279)
+
+Task solved: 20270e3b (4 training pairs + 1 test case; input contains two
+  4-cell objects each with a 7-cell cluster marking the join point; output
+  merges the two objects by shifting one so its 7-cluster aligns one row/col
+  adjacent to the other's 7-cluster; all 7s become 4s; output dimensions equal
+  bounding box of merged cells; selection between two possible orderings via
+  minimum merged bounding box).
+
+Bugs fixed: initial approach tried simple 2-connected-component labeling to
+  identify the two objects. Pair 1 has an isolated piece in the right sub-
+  structure that is not 4-connected to any 7-cell. Fix: BFS from ONE 7-cluster
+  defines Object A; ALL remaining non-1 cells (including isolated pieces) form
+  Object B.
+
+Lessons learned: 7-clusters always appear in pairs; the shift formula
+  dr = min_row(base_7s) - min_row(shift_7s) - 1 generalizes to all four
+  training pair geometries; BFS-based complement assignment handles isolated
+  non-connected pieces that simple component labeling misses.
+
+Accomplishment: Acc_344.  Paper: Acc_344_ARC2_Wave46.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3030,4 +3064,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 42: Section-sort all-6 divider partitioning;
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 45: Stair-fill two-phase staircase pocket fill; doubly-bounded pockets filled before single-bounded; bottom-to-top smallest-gap-first within each row.
   Score: 43/120 = 35.83%. Task 28a6681f solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 46: Two-join two 4-objects each with 7-cluster marker; shift one object to align markers; pick minimum merged bounding box to select correct ordering.
+  Score: 44/120 = 36.67%. Task 20270e3b solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.
