@@ -3229,3 +3229,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 50: Frame-assemble identifies the frame temp
 Dison, D. R. (2026). ARC-AGI-2 Wave 51: Quadrant-tile reads four quadrants of a 2N x 2N grid; top halves count output dimensions; bottom-left is fill template; bottom-right is tile template with zeros filled by BL at tile-block-row index.
   Score: 49/120 = 40.83%. Task f931b4a8 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 52: Plus-mark 5-cell plus-shaped groups (center + N/S/E/W all value 4) recoloured to 8; all other cells unchanged.
+  Score: 50/120 = 41.67%. Task 1818057f solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.

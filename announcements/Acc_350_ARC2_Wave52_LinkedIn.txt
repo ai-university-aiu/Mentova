@@ -1,0 +1,16 @@
+Accomplishment 350: ARC-AGI-2 Wave 52 - Plus Mark
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+PrologAI has solved ARC-AGI-2 task 1818057f with the plus_mark rule (Wave 52,
+WP-310, Layer 285), raising the score from 49/120 = 40.83% to 50/120 = 41.67%.
+
+The plus_mark rule finds every 5-cell plus-shape in the grid (center cell
+plus its four orthogonal neighbors, all holding value 4) and recolours those
+cells to 8. All other cells are unchanged.
+
+The rule is implemented in pure Prolog using between/3 enumeration for center
+detection, nth0 cell lookups, and memberchk for output construction. No
+machine learning. No pretraining. Pure glass-box induction.
+
+#PrologAI #ARCAGI2 #AIResearch #SymbolicAI #PureInduction

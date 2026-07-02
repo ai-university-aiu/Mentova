@@ -10164,6 +10164,97 @@ arc2_transform(quadrant_tile, Grid, Out) :-
     ), RowIs, Out).
 
 % ---------------------------------------------------------------------------
+% WP-310  PLUS_MARK  (Layer 285)  solves task 1818057f
+% Rule: every 5-cell plus-shape (center + N/S/E/W) where all 5 cells hold
+% value 4 is recoloured to 8; all other cells are unchanged.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule/1: register plus_mark for the generic induction dispatcher.
+arc2_named_rule(plus_mark).
+
+% arc2_pm_is_plus_center_/5: true when (R,C) is the center of a plus-shape
+% in Grid where all five cells (center and four orthogonal neighbors) are 4.
+% R and C must be interior (not on the grid boundary) for neighbors to exist.
+arc2_pm_is_plus_center_(Grid, H, W, R, C) :-
+% R must be strictly interior (has rows above and below).
+    R > 0, R < H - 1,
+% C must be strictly interior (has columns left and right).
+    C > 0, C < W - 1,
+% Extract center row and check the center cell.
+    nth0(R, Grid, Row),
+% Center cell must be 4.
+    nth0(C, Row, 4),
+% Compute neighbor row indices.
+    R1 is R - 1, R2 is R + 1,
+% Compute neighbor column indices.
+    C1 is C - 1, C2 is C + 1,
+% North neighbor row; check north cell.
+    nth0(R1, Grid, RowN), nth0(C,  RowN, 4),
+% South neighbor row; check south cell.
+    nth0(R2, Grid, RowS), nth0(C,  RowS, 4),
+% West neighbor from center row.
+    nth0(C1, Row, 4),
+% East neighbor from center row.
+    nth0(C2, Row, 4).
+
+% arc2_pm_plus_cells_/4: collect (as a sorted list of R-C pairs) every cell
+% that belongs to any plus-shape in Grid.  A cell belongs if it is a center
+% or an orthogonal neighbor of a center.
+arc2_pm_plus_cells_(Grid, H, W, PlusCells) :-
+% Compute inclusive upper bounds for between/3 enumeration.
+    H1 is H - 1, W1 is W - 1,
+% Gather every cell reachable from any plus center via findall.
+    findall(R-C,
+% Enumerate all candidate center rows.
+        (   between(0, H1, CR),
+% Enumerate all candidate center columns.
+            between(0, W1, CC),
+% Check that (CR,CC) is the center of a valid plus-shape.
+            arc2_pm_is_plus_center_(Grid, H, W, CR, CC),
+% Generate the center coordinate itself …
+            ( R = CR,         C = CC
+% … or the north neighbor …
+            ; R1 is CR - 1,   R = R1, C = CC
+% … or the south neighbor …
+            ; R2 is CR + 1,   R = R2, C = CC
+% … or the west neighbor …
+            ; C1 is CC - 1,   R = CR, C = C1
+% … or the east neighbor.
+            ; C2 is CC + 1,   R = CR, C = C2
+            )
+        ),
+% Sort deduplicates when multiple plus shapes share cells.
+        Raw),
+    sort(Raw, PlusCells).
+
+% arc2_transform(plus_mark, +Grid, -Out): recolour every plus-shape cell to
+% 8 and leave every other cell unchanged.
+arc2_transform(plus_mark, Grid, Out) :-
+% Measure the grid height.
+    length(Grid, H),
+% Measure the grid width from the first row.
+    Grid = [Row0|_], length(Row0, W),
+% Collect all cells that belong to any plus-shape.
+    arc2_pm_plus_cells_(Grid, H, W, PlusCells),
+% Build row and column index lists for maplist iteration.
+    H1 is H - 1, W1 is W - 1,
+% Row index list 0..H-1.
+    numlist(0, H1, RowIs),
+% Column index list 0..W-1.
+    numlist(0, W1, ColIs),
+% Construct each output row.
+    maplist([RI, OutRow]>>(
+% Construct each output cell.
+        maplist([CI, V]>>(
+% If this cell is part of a plus-shape, emit 8.
+            ( memberchk(RI-CI, PlusCells) -> V = 8
+% Otherwise copy the original cell value from the input grid.
+            ; nth0(RI, Grid, InRow), nth0(CI, InRow, V)
+            )
+        ), ColIs, OutRow)
+    ), RowIs, Out).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
