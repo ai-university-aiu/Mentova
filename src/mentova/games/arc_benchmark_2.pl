@@ -8411,6 +8411,259 @@ arc2_induce_rule_pair_(TrainingPairs, pair(R1, R2)) :-
 % unique non-overlapping assignment; the filled template is the output.
 % ---------------------------------------------------------------------------
 
+% ---------------------------------------------------------------------------
+% WP-303  stair_fill  (Layer 278)  Task 28a6681f
+% Input has staircase walls (non-0, non-1 cells forming L/step shapes) and
+% N misplaced 1-cells. Output fills exactly N "stair pocket" interior cells
+% with 1 and clears all other 1-cells. Two-phase algorithm: Phase 1 fills
+% doubly-bounded pockets (staircase wall on BOTH left and right), bottom to
+% top, smallest gap first. Phase 2 fills single-bounded pockets (staircase
+% wall on left, grid boundary on right) with any remaining budget.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule registers stair_fill for the generic induction loop.
+arc2_named_rule(stair_fill).
+
+% arc2_transform(stair_fill, +Grid, -Out): fill staircase step pockets.
+arc2_transform(stair_fill, Grid, Out) :-
+% Count all 1-cells in the input grid.
+    arc2_sf_count1_(Grid, N),
+% Must have at least one 1-cell to place.
+    N > 0,
+% Determine grid dimensions.
+    length(Grid, NR),
+% Extract first row to get column count.
+    Grid = [Row0|_],
+% Column count.
+    length(Row0, NC),
+% Compute last row and last column indices.
+    LastRow is NR - 1,
+    LastCol is NC - 1,
+% Phase 1: find doubly-bounded pockets (wall on left AND right).
+    arc2_sf_phase1_(Grid, NR, NC, LastRow, LastCol, N, [], Pockets1, N1),
+% Phase 2: find single-bounded pockets if budget remains.
+    (   N1 > 0
+    ->  arc2_sf_phase2_(Grid, NR, NC, LastRow, LastCol, N1, Pockets1, Pockets2)
+    ;   Pockets2 = Pockets1
+    ),
+% Build the output grid: pocket cells become 1, other 1s become 0.
+    arc2_sf_build_out_(Grid, Pockets2, Out).
+
+% arc2_sf_count1_(+Grid, -N): count 1-cells in Grid.
+arc2_sf_count1_(Grid, N) :-
+% Flatten grid to a single list.
+    flatten(Grid, Flat),
+% Collect only the 1-values.
+    include(==(1), Flat, Ones),
+% N is the length of that list.
+    length(Ones, N).
+
+% arc2_sf_is_wall_(+Cell): true when Cell is a staircase wall (not 0, not 1).
+arc2_sf_is_wall_(C) :-
+% Non-background non-1 means a staircase boundary.
+    C \== 0, C \== 1.
+
+% arc2_sf_open_(+Cell): true when Cell is open (0 or 1, not a wall).
+arc2_sf_open_(C) :-
+% 0 and 1-cells are both treated as traversable open space.
+    \+ arc2_sf_is_wall_(C).
+
+% arc2_sf_find_ranges_(+Row, +NC, -Ranges): find maximal open runs.
+% Each range is (GapSize, C_L, C_R).
+arc2_sf_find_ranges_(Row, NC, Ranges) :-
+% Scan left to right building maximal open runs.
+    arc2_sf_scan_ranges_(Row, 0, NC, [], Ranges).
+
+% arc2_sf_scan_ranges_(+Row, +C, +NC, +Acc, -Ranges)
+arc2_sf_scan_ranges_(_, C, NC, Acc, Acc) :-
+% Reached the end of the row; return accumulated ranges.
+    C >= NC, !.
+arc2_sf_scan_ranges_(Row, C, NC, Acc, Ranges) :-
+% Get the cell at column C.
+    nth0(C, Row, Cell),
+% If this cell is a wall, skip it.
+    arc2_sf_is_wall_(Cell), !,
+% Advance past the wall.
+    C1 is C + 1,
+    arc2_sf_scan_ranges_(Row, C1, NC, Acc, Ranges).
+arc2_sf_scan_ranges_(Row, C, NC, Acc, Ranges) :-
+% Open cell: find the end of this run.
+    arc2_sf_run_end_(Row, C, NC, C_R),
+% Compute gap size.
+    Gap is C_R - C + 1,
+% Record this range.
+    C1 is C_R + 1,
+    arc2_sf_scan_ranges_(Row, C1, NC, [Gap-C-C_R|Acc], Ranges).
+
+% arc2_sf_run_end_(+Row, +C, +NC, -C_R): find last open column in current run.
+arc2_sf_run_end_(Row, C, NC, C_R) :-
+% Next column.
+    C1 is C + 1,
+% Check if next column is within bounds and open.
+    (   C1 < NC, nth0(C1, Row, Next), arc2_sf_open_(Next)
+    ->  arc2_sf_run_end_(Row, C1, NC, C_R)
+    ;   C_R = C
+    ).
+
+% arc2_sf_below_ok_(+Grid, +R, +C_L, +C_R, +NR, +Pockets): all below are wall/pocket/bottom.
+arc2_sf_below_ok_(_, R, _, _, NR, _) :-
+% Last row: grid boundary acts as floor.
+    R =:= NR - 1, !.
+arc2_sf_below_ok_(Grid, R, C_L, C_R, NR, Pockets) :-
+% Row below.
+    R1 is R + 1,
+% Every column in range must have wall or pocket below.
+    nth0(R1, Grid, RowBelow),
+    forall(
+        (between(C_L, C_R, C),
+         nth0(C, RowBelow, BelowCell)),
+        (   arc2_sf_is_wall_(BelowCell)
+        ;   member(R1-C, Pockets)
+        )
+    ).
+
+% arc2_sf_phase1_(+Grid, +NR, +NC, +LastRow, +LastCol, +N, +P0, -P1, -N1):
+% Phase 1: doubly-bounded pockets (staircase wall on left AND right).
+arc2_sf_phase1_(Grid, NR, NC, LastRow, LastCol, N, P0, P1, N1) :-
+% Process rows bottom to top.
+    arc2_sf_phase1_rows_(Grid, NR, NC, LastRow, LastCol, N, P0, P1, N1).
+
+% arc2_sf_phase1_rows_: iterate rows from LastRow down to 0.
+arc2_sf_phase1_rows_(_, _, _, R, _, N, P, P, N) :-
+% Below row 0: done.
+    R < 0, !.
+arc2_sf_phase1_rows_(_, _, _, _, _, 0, P, P, 0) :- !.
+arc2_sf_phase1_rows_(Grid, NR, NC, R, LastCol, N, P0, P, N_out) :-
+% Get the current row.
+    nth0(R, Grid, Row),
+% Find all open runs in this row.
+    arc2_sf_find_ranges_(Row, NC, AllRanges),
+% Filter to doubly-bounded (left wall AND right wall, no grid boundary).
+    arc2_sf_db_ranges_(Row, AllRanges, Grid, R, NR, LastCol, P0, DBRanges),
+% Sort by gap size ascending (smallest first = innermost first).
+    msort(DBRanges, Sorted),
+% Fill cells from sorted ranges up to budget N.
+    arc2_sf_fill_ranges_(Sorted, R, N, P0, P1_row, N1_row),
+% Process next row upward.
+    R1 is R - 1,
+    arc2_sf_phase1_rows_(Grid, NR, NC, R1, LastCol, N1_row, P1_row, P, N_out).
+
+% arc2_sf_db_ranges_(+Row, +Ranges, +Grid, +R, +NR, +LastCol, +P, -DB):
+% Keep only doubly-bounded ranges (left wall = staircase, right wall = staircase, not boundary).
+arc2_sf_db_ranges_(_, [], _, _, _, _, _, []).
+arc2_sf_db_ranges_(Row, [Gap-C_L-C_R|Rest], Grid, R, NR, LastCol, P, DB) :-
+% Check left wall: C_L > 0 and cell to left is staircase wall.
+    (   C_L > 0,
+        C_L1 is C_L - 1,
+        nth0(C_L1, Row, LeftCell),
+        arc2_sf_is_wall_(LeftCell),
+% Check right wall: C_R < LastCol and cell to right is staircase wall.
+        C_R1 is C_R + 1,
+        C_R1 =< LastCol,
+        nth0(C_R1, Row, RightCell),
+        arc2_sf_is_wall_(RightCell),
+% Check below: all cells below are wall or pocket or bottom.
+        arc2_sf_below_ok_(Grid, R, C_L, C_R, NR, P)
+    ->  DB = [Gap-C_L-C_R|Rest2]
+    ;   DB = Rest2
+    ),
+    arc2_sf_db_ranges_(Row, Rest, Grid, R, NR, LastCol, P, Rest2).
+
+% arc2_sf_phase2_(+Grid, +NR, +NC, +LastRow, +LastCol, +N, +P0, -P):
+% Phase 2: single-bounded pockets (left = staircase wall, right = grid boundary).
+arc2_sf_phase2_(Grid, NR, NC, LastRow, LastCol, N, P0, P) :-
+    arc2_sf_phase2_rows_(Grid, NR, NC, LastRow, LastCol, N, P0, P).
+
+% arc2_sf_phase2_rows_: iterate rows bottom to top for single-bounded pockets.
+arc2_sf_phase2_rows_(_, _, _, R, _, _, P, P) :-
+    R < 0, !.
+arc2_sf_phase2_rows_(_, _, _, _, _, 0, P, P) :- !.
+arc2_sf_phase2_rows_(Grid, NR, NC, R, LastCol, N, P0, P) :-
+    nth0(R, Grid, Row),
+    arc2_sf_find_ranges_(Row, NC, AllRanges),
+% Filter to single-bounded: left=wall, right=grid boundary.
+    arc2_sf_sb_ranges_(Row, AllRanges, Grid, R, NR, LastCol, P0, SBRanges),
+    msort(SBRanges, Sorted),
+    arc2_sf_fill_ranges_(Sorted, R, N, P0, P1_row, N1_row),
+    R1 is R - 1,
+    arc2_sf_phase2_rows_(Grid, NR, NC, R1, LastCol, N1_row, P1_row, P).
+
+% arc2_sf_sb_ranges_(+Row, +Ranges, +Grid, +R, +NR, +LastCol, +P, -SB):
+% Keep only single-bounded ranges (left wall, right = grid boundary only).
+arc2_sf_sb_ranges_(_, [], _, _, _, _, _, []).
+arc2_sf_sb_ranges_(Row, [Gap-C_L-C_R|Rest], Grid, R, NR, LastCol, P, SB) :-
+    (   C_L > 0,
+        C_L1 is C_L - 1,
+        nth0(C_L1, Row, LeftCell),
+        arc2_sf_is_wall_(LeftCell),
+% Right must reach grid boundary (C_R == LastCol or next cell is not a wall).
+        C_R =:= LastCol,
+% Below condition.
+        arc2_sf_below_ok_(Grid, R, C_L, C_R, NR, P)
+    ->  SB = [Gap-C_L-C_R|Rest2]
+    ;   SB = Rest2
+    ),
+    arc2_sf_sb_ranges_(Row, Rest, Grid, R, NR, LastCol, P, Rest2).
+
+% arc2_sf_fill_ranges_(+Sorted, +R, +N, +P0, -P, -N_out):
+% Add cells from sorted ranges to pocket set up to budget N.
+arc2_sf_fill_ranges_([], _, N, P, P, N).
+arc2_sf_fill_ranges_(_, _, 0, P, P, 0) :- !.
+arc2_sf_fill_ranges_([_Gap-C_L-C_R|Rest], R, N, P0, P, N_out) :-
+% Fill cells C_L..C_R into pocket, decrementing N.
+    arc2_sf_fill_range_(C_L, C_R, R, N, P0, P1, N1),
+    arc2_sf_fill_ranges_(Rest, R, N1, P1, P, N_out).
+
+% arc2_sf_fill_range_(+C_L, +C_R, +R, +N, +P0, -P, -N_out):
+% Add cells (R, C_L), (R, C_L+1), ..., (R, C_R) to pocket if budget allows.
+arc2_sf_fill_range_(C, C_R, _, N, P, P, N) :-
+% Past end of range.
+    C > C_R, !.
+arc2_sf_fill_range_(_, _, _, 0, P, P, 0) :- !.
+arc2_sf_fill_range_(C, C_R, R, N, P0, P, N_out) :-
+% Add this cell if not already in pocket.
+    (   member(R-C, P0)
+    ->  P1 = P0, N1 = N
+    ;   P1 = [R-C|P0], N1 is N - 1
+    ),
+    C1 is C + 1,
+    arc2_sf_fill_range_(C1, C_R, R, N1, P1, P, N_out).
+
+% arc2_sf_build_out_(+Grid, +Pockets, -Out):
+% Build output: pocket cells -> 1, other 1s -> 0, walls unchanged.
+arc2_sf_build_out_(Grid, Pockets, Out) :-
+% Process each row with its row index.
+    length(Grid, NR),
+    NR1 is NR - 1,
+    numlist(0, NR1, RowIdxs),
+    maplist(arc2_sf_build_row_(Pockets, Grid), RowIdxs, Out).
+
+% arc2_sf_build_row_(+Pockets, +Grid, +R, -OutRow):
+% Build one output row.
+arc2_sf_build_row_(Pockets, Grid, R, OutRow) :-
+    nth0(R, Grid, Row),
+    length(Row, NC),
+    NC1 is NC - 1,
+    numlist(0, NC1, ColIdxs),
+    maplist(arc2_sf_build_cell_(Pockets, Row, R), ColIdxs, OutRow).
+
+% arc2_sf_build_cell_(+Pockets, +Row, +R, +C, -V):
+% Determine output cell value.
+arc2_sf_build_cell_(Pockets, Row, R, C, V) :-
+    nth0(C, Row, Cell),
+% Pocket cell -> output 1.
+    (   member(R-C, Pockets)
+    ->  V = 1
+% Staircase wall -> keep as-is.
+    ;   arc2_sf_is_wall_(Cell)
+    ->  V = Cell
+% 1-cell -> clear to 0.
+    ;   Cell =:= 1
+    ->  V = 0
+% 0-cell -> keep 0.
+    ;   V = 0
+    ).
+
 % arc2_named_rule registers jigsaw_fill for the generic induction loop.
 arc2_named_rule(jigsaw_fill).
 

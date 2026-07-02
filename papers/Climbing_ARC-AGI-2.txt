@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-01. Wave 44 complete: 42/120 = 35.00%.
+Last updated: 2026-07-01. Wave 45 complete: 43/120 = 35.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -165,6 +165,7 @@ Date        | Score      | Percent | Notes
 2026-07-01  |  39 / 120  | 32.50%  | Wave 41: box-absorb FIFO BFS from 3x3 box; 6-frame walls control reach; absorbed 9s fill box reading order
 2026-07-01  |  40 / 120  | 33.33%  | Wave 42: section-sort all-6 divider partitioning; ascending cell-count sort; direction transposition
 2026-07-01  |  41 / 120  | 34.17%  | Wave 43: frame-stamp left-side shapes stamped into bordered room at border-encoded (row,col) positions
+2026-07-01  |  43 / 120  | 35.83%  | Wave 45: stair_fill staircase-pocket fill; two-phase bottom-to-top smallest-gap-first; doubly-bounded before single-bounded
 2026-07-01  |  42 / 120  | 35.00%  | Wave 44: jigsaw-fill 2-color template holes tiled by exact-shape non-bg pieces; backtracking exact cover
 
 
@@ -279,6 +280,38 @@ Task solved: faa9f03d (4 training pairs; 12x12 grids; 4-corner junction cells
 Score advance: 18/120 = 15.00% to 19/120 = 15.83%.
 
 Accomplishment: Acc_317.  Paper: Acc_317_ARC2_Wave19.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 45 - 2026-07-01 - Score: 43/120 = 35.83%
+
+Date: 2026-07-01
+
+Confirmed score: 43 / 120 = 35.83%
+
+Rules added in this wave:
+  stair_fill (WP-303, Layer 278)
+
+Task solved: 28a6681f (3 training pairs + 1 test case; all grids 10x10;
+  staircase wall cells (non-0 non-1 values forming L/step shapes) partition the
+  grid into enclosed step-pocket recesses; N 1-cells appear misplaced in input;
+  output fills exactly N pocket cells with 1 and clears all others; two-phase
+  bottom-to-top fill: Phase 1 doubly-bounded pockets (staircase wall on left AND
+  right), Phase 2 single-bounded pockets (left=wall, right=grid boundary);
+  within each row, smallest gap filled first (innermost pocket before wider ones)).
+
+Bugs fixed: v1 algorithm filled single-bounded open regions before doubly-bounded
+  enclosed pockets; caused P3 to place 1-cells in the wrong region. Fix: Phase 1
+  handles only doubly-bounded pockets; Phase 2 handles single-bounded pockets with
+  remaining budget.
+
+Lessons learned: visual "open" vs "enclosed" distinction maps directly to whether
+  both sides of a horizontal run are bounded by staircase walls (not grid boundary);
+  smallest-gap-first sort ensures innermost step treads fill before wider regions.
+
+Accomplishment: Acc_343.  Paper: Acc_343_ARC2_Wave45.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -2993,4 +3026,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 43: Frame-stamp left-side shapes stamped int
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 42: Section-sort all-6 divider partitioning; ascending cell-count sort; direction transposition (V->H, H->V); 2D bbox height-vs-width direction detection.
   Score: 40/120 = 33.33%. Task 78332cb0 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 45: Stair-fill two-phase staircase pocket fill; doubly-bounded pockets filled before single-bounded; bottom-to-top smallest-gap-first within each row.
+  Score: 43/120 = 35.83%. Task 28a6681f solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.
