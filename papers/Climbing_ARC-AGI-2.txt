@@ -3233,3 +3233,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 51: Quadrant-tile reads four quadrants of a 
 Dison, D. R. (2026). ARC-AGI-2 Wave 52: Plus-mark 5-cell plus-shaped groups (center + N/S/E/W all value 4) recoloured to 8; all other cells unchanged.
   Score: 50/120 = 41.67%. Task 1818057f solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 53: Template-expand reads a sparse single-cell color template and rectangular seed blocks; determines the seed's level and col-group offset within the template sequence; fills all missing block positions at stride-spaced locations in the output.
+  Score: 51/120 = 42.50%. Task c4d067a0 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.

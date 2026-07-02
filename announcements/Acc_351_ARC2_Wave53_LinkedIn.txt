@@ -1,0 +1,22 @@
+Accomplishment 351: ARC-AGI-2 Wave 53 - Template Expand
+
+PrologAI solves ARC-AGI-2 task c4d067a0 with a new glass-box rule called
+template_expand (WP-311, Layer 286), raising the benchmark score from
+50/120 = 41.67% to 51/120 = 42.50%.
+
+The rule reads two regions in the input: (1) a sparse matrix of isolated
+single-cell color markers (the template), and (2) rectangular blocks of color
+(the seed). It determines where the seed sits within the template's level and
+col-group sequence, then reconstructs the complete block array by placing the
+missing blocks at stride-spaced positions throughout the grid.
+
+The key insight: the seed can sit at any position in the template sequence.
+The rule finds the unique (level, col-group offset) assignment that matches
+the seed's per-sub-block colors to the template, then uses that anchor to
+fill all other positions.
+
+All 3 training pairs and the test case pass. Pure induction. No pretraining.
+Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

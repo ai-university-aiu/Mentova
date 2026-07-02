@@ -10255,6 +10255,218 @@ arc2_transform(plus_mark, Grid, Out) :-
     ), RowIs, Out).
 
 % ---------------------------------------------------------------------------
+% WP-311  TEMPLATE_EXPAND  (Layer 286)  solves task c4d067a0
+% ---------------------------------------------------------------------------
+
+% Register template_expand for the generic induction dispatcher.
+arc2_named_rule(template_expand).
+
+% arc2_te_bg_(+Grid, -BG): most-common cell value is the background.
+arc2_te_bg_(Grid, BG) :-
+% Flatten all cell values into one list.
+    findall(V, (member(Row, Grid), member(V, Row)), Flat),
+% Sort to group equal values so the mode scan is linear.
+    msort(Flat, Sorted),
+% Scan for the value that appears most often.
+    arc2_te_mode_(Sorted, BG).
+
+% arc2_te_mode_(+SortedList, -Mode): initialise mode scan with first element.
+arc2_te_mode_([V|Vs], Mode) :-
+% Start with the first value as both current run and best.
+    arc2_te_mode_scan_(Vs, V, 1, V, 1, Mode).
+
+% Base: list exhausted; return accumulated best.
+arc2_te_mode_scan_([], _, _, BestV, _, BestV).
+% Same value as current run: extend the run, update best if now longer.
+arc2_te_mode_scan_([V|Vs], V, N, BestV, BestN, Mode) :-
+% Increment the run length.
+    N1 is N + 1,
+% Replace best if the new run is strictly longer.
+    (N1 > BestN -> NewBV = V, NewBN = N1 ; NewBV = BestV, NewBN = BestN),
+% Continue scanning.
+    arc2_te_mode_scan_(Vs, V, N1, NewBV, NewBN, Mode).
+% Different value: close previous run, restart count.
+arc2_te_mode_scan_([V|Vs], Prev, N, BestV, BestN, Mode) :-
+% Guard: ensure value changed.
+    V \= Prev,
+% Update best with the run that just ended.
+    (N > BestN -> NewBV = Prev, NewBN = N ; NewBV = BestV, NewBN = BestN),
+% Begin new run of length 1.
+    arc2_te_mode_scan_(Vs, V, 1, NewBV, NewBN, Mode).
+
+% arc2_te_isolated_(+Grid, +BG, +H, +W, +R, +C):
+%   cell (R,C) is non-BG and has no non-BG 4-connected neighbour.
+arc2_te_isolated_(Grid, BG, H, W, R, C) :-
+% Verify the cell itself is non-BG.
+    nth0(R, Grid, Row), nth0(C, Row, V), V \= BG,
+% Confirm none of the four orthogonal neighbours is non-BG.
+    \+ (member(DR-DC, [0-1, 0-(-1), 1-0, (-1)-0]),
+        R1 is R + DR, C1 is C + DC,
+% Neighbours outside the grid are ignored.
+        R1 >= 0, R1 < H, C1 >= 0, C1 < W,
+        nth0(R1, Grid, NRow), nth0(C1, NRow, NV), NV \= BG).
+
+% arc2_te_templ_cells_(+Grid, +BG, +H, +W, -TemplCells):
+%   collect every isolated non-BG cell as an R-C pair (template markers).
+arc2_te_templ_cells_(Grid, BG, H, W, TemplCells) :-
+% Enumerate all grid positions.
+    H1 is H - 1, W1 is W - 1,
+% Keep only those that satisfy the isolation check.
+    findall(R-C, (between(0, H1, R), between(0, W1, C),
+                  arc2_te_isolated_(Grid, BG, H, W, R, C)), TemplCells).
+
+% arc2_te_col_runs_(+SortedCols, -Runs):
+%   partition a sorted column list into contiguous runs as S-E pairs.
+arc2_te_col_runs_([], []).
+arc2_te_col_runs_([C|Cs], Runs) :-
+% Bootstrap the scan with the first column as both start and end.
+    arc2_te_col_runs_scan_(Cs, C, C, Runs).
+
+% Base: emit the last run.
+arc2_te_col_runs_scan_([], S, E, [S-E]).
+% Contiguous: extend the current run.
+arc2_te_col_runs_scan_([C|Cs], S, E, Runs) :-
+    (C =:= E + 1
+% Column follows immediately: widen the run end.
+    ->  arc2_te_col_runs_scan_(Cs, S, C, Runs)
+% Gap: close this run and start a new one.
+    ;   Runs = [S-E | Rest], arc2_te_col_runs_scan_(Cs, C, C, Rest)).
+
+% arc2_te_seed_info_(+Grid, +BG, +H, +W, +TemplCells,
+%                    -SeedRowMin, -ColRuns, -BH, -BW, -Stride, -SeedColors):
+%   derive seed block geometry: row range, column sub-block runs, strides, colors.
+arc2_te_seed_info_(Grid, BG, H, W, TemplCells,
+                   SeedRowMin, ColRuns, BH, BW, Stride, SeedColors) :-
+% Seed cells = non-BG cells that are NOT isolated (i.e. not in TemplCells).
+    H1 is H - 1, W1 is W - 1,
+    findall(R-C, (between(0, H1, R), between(0, W1, C),
+                  nth0(R, Grid, SRow0), nth0(C, SRow0, SV), SV \= BG,
+                  \+ member(R-C, TemplCells)), SeedCells),
+% Compute the row extent of the seed.
+    findall(R, member(R-_, SeedCells), SeedRs),
+    sort(SeedRs, SortedSeedRs),
+    SortedSeedRs = [SeedRowMin|_],
+    last(SortedSeedRs, SeedRowMax),
+% Block height = row span.
+    BH is SeedRowMax - SeedRowMin + 1,
+% Collect columns occupied in the first seed row.
+    findall(C, member(SeedRowMin-C, SeedCells), SRCols),
+    sort(SRCols, SortedSRCols),
+% Find contiguous column runs (one per sub-block).
+    arc2_te_col_runs_(SortedSRCols, ColRuns),
+% Need at least two sub-blocks to compute stride.
+    ColRuns = [S1-E1, S2-_ | _],
+% Block width from the first sub-block.
+    BW is E1 - S1 + 1,
+% Stride = distance between adjacent sub-block starts.
+    Stride is S2 - S1,
+% Record the color of each sub-block (read from its leftmost column).
+    maplist([S-_, Color]>>(
+        nth0(SeedRowMin, Grid, SRow2), nth0(S, SRow2, Color)
+    ), ColRuns, SeedColors).
+
+% arc2_te_template_structure_(+TemplCells, -TRows, -TCols):
+%   extract sorted lists of distinct template row and column positions.
+arc2_te_template_structure_(TemplCells, TRows, TCols) :-
+% Collect all template row indices.
+    findall(R, member(R-_, TemplCells), Rs), sort(Rs, TRows),
+% Collect all template column indices.
+    findall(C, member(_-C, TemplCells), Cs), sort(Cs, TCols).
+
+% arc2_te_check_match_(+Grid, +TRows, +TCols, +SeedColors, +LI, +C0, +I):
+%   verify that template row TRows[LI], col TCols[C0+I] equals SeedColors[I].
+arc2_te_check_match_(_, _, _, [], _, _, _).
+arc2_te_check_match_(Grid, TRows, TCols, [SC|SCs], LI, C0, I) :-
+% Index into template row list.
+    nth0(LI, TRows, TR),
+% Offset col-group index by the starting col-group.
+    CI is C0 + I,
+% Index into template col list.
+    nth0(CI, TCols, TC),
+% Read template cell; must equal the seed color.
+    nth0(TR, Grid, TRow), nth0(TC, TRow, SC),
+% Recurse on remaining seed colors.
+    I1 is I + 1,
+    arc2_te_check_match_(Grid, TRows, TCols, SCs, LI, C0, I1).
+
+% arc2_te_find_level_(+Grid, +TRows, +TCols, +SeedColors, -SeedLevel, -CGOff):
+%   find the template level L and col-group offset C0 where the seed sits.
+arc2_te_find_level_(Grid, TRows, TCols, SeedColors, SeedLevel, CGOff) :-
+% Compute search bounds.
+    length(TRows, NL), NL1 is NL - 1,
+    length(TCols, NCG), length(SeedColors, NSB),
+    MaxOff is NCG - NSB,
+% Try each level index.
+    between(0, NL1, LI),
+% Try each possible col-group starting offset.
+    between(0, MaxOff, C0),
+% Stop at the first consistent (level, offset) pair.
+    arc2_te_check_match_(Grid, TRows, TCols, SeedColors, LI, C0, 0),
+    !,
+% Commit the found values.
+    SeedLevel = LI, CGOff = C0.
+
+% arc2_te_in_block_(+X, +Anchor, +Stride, +BlockSize, +NumBlocks, -BIdx):
+%   succeeds when coordinate X falls inside block BIdx of a regular tiling.
+arc2_te_in_block_(X, Anchor, Stride, BlockSize, NumBlocks, BIdx) :-
+% Distance from anchor.
+    DX is X - Anchor,
+% Must be at or after the anchor.
+    DX >= 0,
+% Integer block index.
+    BIdx is DX // Stride,
+% Must not exceed the last block.
+    BIdx < NumBlocks,
+% Offset within the stride period must be inside the block footprint.
+    Off is DX - BIdx * Stride,
+    Off < BlockSize.
+
+% arc2_transform(template_expand, +Grid, -Out):
+%   expand a seed block array according to a sparse single-cell template.
+arc2_transform(template_expand, Grid, Out) :-
+% Measure grid dimensions.
+    length(Grid, H), Grid = [Row0|_], length(Row0, W),
+% Detect background as the most-common cell value.
+    arc2_te_bg_(Grid, BG),
+% Find all isolated (template) cells.
+    arc2_te_templ_cells_(Grid, BG, H, W, TemplCells),
+% Guard: at least one template cell must exist.
+    TemplCells \= [],
+% Extract seed block geometry.
+    arc2_te_seed_info_(Grid, BG, H, W, TemplCells,
+                       SeedRowMin, ColRuns, BH, BW, Stride, SeedColors),
+% Leftmost column of the first seed sub-block.
+    ColRuns = [SeedColStart-_|_],
+% Get sorted template row and column lists.
+    arc2_te_template_structure_(TemplCells, TRows, TCols),
+% Count template levels and col-groups.
+    length(TRows, NL), length(TCols, NCG),
+% Determine which level and col-group offset the seed represents.
+    arc2_te_find_level_(Grid, TRows, TCols, SeedColors, SeedLevel, CGOff),
+% Compute the top-left anchor of the entire block array.
+    AnchorRow is SeedRowMin - SeedLevel * Stride,
+    AnchorCol is SeedColStart - CGOff * Stride,
+% Prepare index lists for maplist.
+    H1 is H - 1, W1 is W - 1,
+    numlist(0, H1, RowIs), numlist(0, W1, ColIs),
+% Build output row by row, cell by cell.
+    maplist([RI, OutRow]>>(
+        maplist([CI, V]>>(
+% Check if (RI,CI) falls inside a template block.
+            (   arc2_te_in_block_(RI, AnchorRow, Stride, BH, NL, LI),
+                arc2_te_in_block_(CI, AnchorCol, Stride, BW, NCG, CGI),
+% Look up the template color for this block position.
+                nth0(LI, TRows, TR), nth0(CGI, TCols, TC),
+                nth0(TR, Grid, TRow2), nth0(TC, TRow2, TV), TV \= BG
+% Assign the template color.
+            ->  V = TV
+% Outside all blocks: copy original value.
+            ;   nth0(RI, Grid, InRow), nth0(CI, InRow, V)
+            )
+        ), ColIs, OutRow)
+    ), RowIs, Out).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
