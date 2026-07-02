@@ -1,0 +1,228 @@
+Accomplishment 353: ARC-AGI-2 Wave 55 - Pocket Shot (WP-313, Layer 288)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 55 adds the pocket_shot rule (WP-313, Layer 288) to PrologAI's ARC-AGI-2
+benchmark solver, solving task 8b9c3697 and raising the score from 51/120 =
+42.50% to 52/120 = 43.33%.
+
+The rule models 2-cell rectangular blocks as projectiles that fire into the
+interior channels of frame-shaped structures. Each block either fires in the
+unique valid direction (leaving a trail of 0s and landing adjacent to the
+interior bar) or disappears to background. The firing direction is identified
+by a three-condition interior peg check that verifies the face is open, the arm
+continues deeper, and the parent cell is part of a perpendicular bar.
+
+
+TASK DESCRIPTION
+
+Task ID: 8b9c3697
+
+Input structure: a large grid containing a background color BG (most common
+value), one or more frame-shaped closed structures made of an arm color AC,
+and several rectangular blocks of 2-cells. The 2-cells may be 1x1, 1x2, 2x1,
+2x2, 2x3, 3x2, or other rectangular shapes. The frame structures have enclosed
+interiors with interior divider cells (interior pegs).
+
+Output structure: same dimensions. Each 2-block either fires in the unique valid
+direction (original position and trail become 0, landing position becomes 2) or
+disappears (all cells become BG). All non-2-cell positions copy from input.
+
+
+THE POCKET_SHOT RULE
+
+The rule processes each connected rectangular block of 2-cells independently.
+
+Step 1 - Find background: arc2_bg_color_ detects BG as the most common cell
+value.
+
+Step 2 - Find 2-blocks: findall collects all 2-cells; arc2_bfs_/7 groups them
+into 4-connected components; axis-aligned bounding boxes are computed.
+
+Step 3 - Determine block fate: for each direction D in {up, down, left, right}:
+  a. Scan from the block's leading edge in direction D. For vertical fire, scan
+     each column from the top row (up) or bottom row (down). For horizontal
+     fire, scan each row from the left col (left) or right col (right).
+  b. Each scan skips BG and 2-cells and returns the first arm-cell (non-BG, non-2).
+  c. Block integrity check: all arm-cells for the block's positions must be at
+     the same row (vertical fire) or same column (horizontal fire). This
+     enforces that the block moves as a rigid unit.
+  d. Interior peg validation for each arm-cell (XR, XC):
+     Condition 1 - Open face: the cell in direction OPPOSITE(D) from (XR, XC)
+       must be BG or off-grid (the arm-cell faces the 2-block with an open side).
+     Condition 2 - Parent arm: the cell in direction D from (XR, XC) must be a
+       non-BG non-2 arm-cell (the arm continues deeper into the shape).
+     Condition 3 - Perpendicular bar: the parent cell must have at least 2
+       arm-cell neighbors in the two directions perpendicular to D (the parent
+       is part of a bar or spine that runs crosswise).
+  e. If all positions find valid pegs at the same distance, direction D is valid.
+
+Step 4 - Apply fate:
+  If exactly one direction D is valid:
+    - Original block positions and trail cells (between landing and original,
+      exclusive of landing) become 0.
+    - Landing positions (block placed one step from the arm-cells in OPPOSITE(D))
+      become 2.
+  If no direction is valid: all block positions become BG.
+
+Step 5 - Build output with priority: 2 (landing) > 0 (trail/original) > BG
+(erase) > original value.
+
+Landing box calculation:
+  UP: land_top = arm_row + 1; land_bottom = arm_row + 1 + (block_height - 1).
+  DOWN: land_bottom = arm_row - 1; land_top = arm_row - 1 - (block_height - 1).
+  LEFT: land_left = arm_col + 1; land_right = arm_col + 1 + (block_width - 1).
+  RIGHT: land_right = arm_col - 1; land_left = arm_col - 1 - (block_width - 1).
+
+
+TRAINING PAIR VERIFICATION
+
+P1 (19x22, BG=4, arm=1):
+Two frame shapes: Shape A (cross/tree with spine at col 5, branches at rows
+  4, 6, 8) and Shape B (rectangular frame at rows 11-14, cols 11-18).
+2-blocks: single (6,15) fires LEFT; all others disappear.
+  (6,15) D=LEFT: scan from col 15 left, first arm at (6,6)=1. Valid peg:
+  opposite=(6,7)=BG, parent=(6,5)=1, perp: (5,5)=1 and (7,5)=1 (N>=2).
+  Landing col=7. Trail cols 8-15 row 6 -> 0. Landing (6,7) -> 2.
+  All other blocks: no direction finds 2 perpendicular arm neighbors. Disappear.
+Total diffs: 9. All verified correct.
+
+P2 (19x22, BG=3, arm=4):
+Two frame shapes: Shape A (U-open-bottom, top bar row 3 cols 3-9) and
+  Shape B (U-open-top, bottom bar row 12 cols 12-19).
+2-blocks: single (9,6) fires UP; 2x2 at (1-2, 15-16) fires DOWN; all others
+  disappear.
+  (9,6) D=UP: arm at (4,6). Parent (3,6) has LEFT=(3,5)=4 and RIGHT=(3,7)=4.
+  Landing (5,6). Trail (6-8,6) and original (9,6) -> 0.
+  (1-2, 15-16) D=DOWN: arm at row 11 for both cols. Parent (12,15) and (12,16)
+  each have LEFT and RIGHT arm-neighbors in row 12. Block integrity passes (same row 11).
+  Landing rows 9-10, cols 15-16. Trail rows 3-8, original rows 1-2 -> 0.
+  (16,4) D=UP: parent (5,4) has no perpendicular arm-neighbors. Disappears.
+Total diffs: verified correct.
+
+P3 (19x22, BG=4, arm=8):
+Two frame shapes: Shape 1 (top bar row 2, walls rows 3-5) and Shape 2 (top bar
+  row 10, walls rows 11-13, interior row 11 cols 4-6).
+2-blocks: single (8,10) fires UP; 2x3 at (16-17, 4-6) fires UP; all others
+  disappear.
+  (8,10) D=UP: arm at (3,10). Parent (2,10) has LEFT=(2,9)=8 and RIGHT=(2,11)=8.
+  Landing (4,10). Trail rows 5-7 col 10 and original (8,10) -> 0.
+  (16-17, 4-6) D=UP: all three cols find arm at row 11 (same row). Each parent
+  at row 10 has LEFT and RIGHT arm-neighbors (row 10 spans cols 1-9). Landing
+  rows 12-13, cols 4-6. Trail rows 14-15, original rows 16-17 -> 0.
+Total diffs: verified correct.
+
+TEST (23x27, BG=3, arm=4):
+Three frame shapes: Shape X (top bar row 3 cols 14-20, walls rows 4-6, interior
+  peg (4,17)), Shape Y (three walls and a right interior divider at col 9), and
+  Shape Z (bottom bar row 20, walls rows 17-19, interior row 19 cols 22-23).
+Firing blocks:
+  (11,17) single D=UP: arm at (4,17). Parent (3,17) has LEFT=(3,16)=4 and
+  RIGHT=(3,18)=4. Landing (5,17). Trail rows 6-10 col 17 -> 0.
+  (9-11, 2-3) 3x2 D=RIGHT: all three rows find arm at col 9. Each parent at
+  col 10 has UP and/or DOWN 4-neighbors. Landing rows 9-11 cols 7-8.
+  Trail rows 9-11 cols 4-6 -> 0. Original cols 2-3 rows 9-11 -> 0.
+  (9-10, 22-23) 2x2 D=DOWN: both cols find arm at row 19. Parents (20,22) and
+  (20,23) in bottom bar have LEFT and RIGHT arm-neighbors. Landing rows 17-18
+  cols 22-23. Trail rows 11-16 cols 22-23 -> 0. Original rows 9-10 -> 0.
+  (20,15) D=RIGHT: arm at (20,19). Parent (20,20) has only UP=(19,20)=4; DOWN
+  is BG. Only 1 perp neighbor. Condition 3 fails. Disappears.
+All non-firing blocks disappear to BG=3. Total: 65 diffs. PASS.
+
+
+IMPLEMENTATION DETAILS
+
+New predicates (all in arc_benchmark_2.pl, prefixed arc2_ps_):
+
+arc2_ps_dr_/2, arc2_ps_dc_/2: direction-to-delta lookup tables for up/down/left/right.
+
+arc2_ps_perpdirs_/2: maps each direction to its two perpendicular directions.
+
+arc2_ps_opp_/2: maps each direction to its opposite.
+
+arc2_ps_scan_/6: starts one step from (R,C) in direction D and delegates to
+  scan_go_/7. Returns first arm-cell position.
+
+arc2_ps_scan_go_/7: base case returns R-C when cell is non-BG non-2. Step case
+  advances one cell. Fails if grid boundary is reached.
+
+arc2_ps_valid_peg_/4: three-condition check for interior pegs. Uses include/3
+  on the two perpendicular directions to count arm-neighbors of the parent cell.
+
+arc2_ps_arm_nbr_/4: used by include/3 inside valid_peg_; succeeds if the given
+  perpendicular direction from (R,C) leads to a non-BG non-2 cell.
+
+arc2_ps_peg_col_/6: combines scan_ and valid_peg_ for one column in vertical
+  firing; returns the arm row XR on success.
+
+arc2_ps_peg_row_/6: same for one row in horizontal firing; returns arm col XC.
+
+arc2_ps_vland_/4: four clauses (up/down) compute landing box as LR1-LR2-C1-C2
+  given arm row XAR.
+
+arc2_ps_hland_/4: four clauses (left/right) compute landing box as R1-R2-LC1-LC2
+  given arm col XAC.
+
+arc2_ps_fire_/5: tries all four directions via member/2; uses maplist with
+  peg_col_ or peg_row_; sort(XRs,[XAR]) enforces block integrity; returns first
+  valid direction and landing box.
+
+arc2_ps_find_blocks_/2: findall of all 2-cells, then arc2_ps_comps_/4.
+
+arc2_ps_comps_/4: iterates sorted 2-cells; skips already-visited via memberchk;
+  calls arc2_bfs_/7 for component expansion; min_list/max_list for bbox.
+
+arc2_ps_trail_/5: four clauses (up/down/left/right) compute zero-cells and
+  two-cells via findall with between/3.
+
+arc2_ps_solve_/6, arc2_ps_solve_acc_/9: accumulate zero/two/erase sets across
+  all blocks; once(arc2_ps_fire_) determines fate.
+
+arc2_ps_out_/8: priority if-then-else: TwoSet->2, ZeroSet->0, EraseSet->BG, else copy.
+
+arc2_transform(pocket_shot)/3: orchestrates bg_, find_blocks_, solve_, then
+  maplist over row/col indices to build output.
+
+arc2_induce_rule(TrainingPairs, pocket_shot): specific fast-path clause placed
+  before the generic catch-all to prevent timeout on large grids. Uses
+  once((between(0,H1,R), between(0,W1,C), arc2_cell_(First,R,C,2))) as a
+  pre-filter so non-pocket_shot tasks are rejected with negligible overhead.
+
+
+KEY INSIGHTS
+
+Three-condition interior peg check: The open-face condition (BG in opposite
+direction) distinguishes interior pegs (facing the projectile) from exterior
+wall cells. The parent condition verifies the arm extends deeper into the
+shape. The perpendicular bar condition identifies cells that are part of a
+cross-bar or spine rather than a tip or corner - only spine cells can serve as
+valid landing anchors.
+
+Block integrity: requiring all arm-cells to be at the same row (or column)
+ensures the block moves as a rigid rectangular unit. A block with positions
+finding arms at different distances would fracture, which is not observed in
+any training pair.
+
+Fast-path induction: the generic arc2_induce_rule catch-all tries all named
+rules sequentially. Some rules (jigsaw_fill, two_join) have expensive
+backtracking that can consume the 10-second per-task time limit before
+pocket_shot is reached. A specific clause with a 2-cell pre-filter is placed
+before the catch-all, eliminating the timeout risk.
+
+
+SIGNIFICANCE
+
+pocket_shot demonstrates that projectile-physics-like reasoning can be encoded
+in glass-box Prolog rules. The rule requires simultaneous understanding of:
+(1) spatial scanning to find arm-cells; (2) structural analysis of frame shapes
+via parent-and-bar conditions; (3) rigid-body block motion; and (4) multi-block
+scenes where some blocks fire and others disappear.
+
+Score: 51/120 = 42.50% to 52/120 = 43.33%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

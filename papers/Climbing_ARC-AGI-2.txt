@@ -3241,3 +3241,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 53: Template-expand reads a sparse single-ce
 Dison, D. R. (2026). ARC-AGI-2 Wave 54: Noise-erase detects stray-0 seeds (0-cells with >=min(3,avail) 1-neighbors), BFS-expands to adjacent 0-cells with >=2 1-neighbors, places 3x3 frame of 7s around them; stray-1 cells (<=1 1-neighbor) erased to 0.
   Score: 51/120 = 42.50%. Task 71e489b6 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 55: Pocket-shot 2-cell rectangular blocks fire into frame-shape interior channels; three-condition interior-peg check (open face, parent arm, perpendicular bar); block integrity enforces rigid-body motion; non-firing blocks disappear to BG.
+  Score: 52/120 = 43.33%. Task 8b9c3697 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.

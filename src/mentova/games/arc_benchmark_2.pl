@@ -8316,6 +8316,19 @@ arc2_fst_apply_(Grid, NR, NC, SortedS, LShapes, BG, Out) :-
         ), Pls, Gi, Go)
     ), SortedS, G1, Out).
 
+% Fast specific clause for pocket_shot: avoids catch-all timeout on large grids.
+% Requires at least one 2-cell in the first training input as a quick pre-filter.
+arc2_induce_rule(TrainingPairs, pocket_shot) :-
+% Quick pre-filter: verify the first training input contains at least one 2-cell.
+    TrainingPairs = [pair(First, _)|_],
+    length(First, H), H1 is H - 1,
+    First = [FRow|_], length(FRow, W), W1 is W - 1,
+% Fast scan: succeed as soon as any 2-cell is found.
+    once((between(0, H1, R), between(0, W1, C), arc2_cell_(First, R, C, 2))),
+% Full verification: all training pairs must transform correctly.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(pocket_shot, In, Out)).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
@@ -10628,6 +10641,296 @@ arc2_transform(noise_erase, Grid, Out) :-
             arc2_ne_out_val_(RI, CI, Grid, Stray0, Frame, Stray1, V)
         ), ColIs, OutRow)
     ), RowIs, Out).
+
+% ---------------------------------------------------------------------------
+% WP-313: pocket_shot (Layer 288) — 2-blocks slide into frame interior channels
+% Task: 8b9c3697
+% ---------------------------------------------------------------------------
+
+% Registry entry for arc2_induce_rule/2 dispatch.
+arc2_named_rule(pocket_shot).
+
+% arc2_ps_dr_/2: row delta for each firing direction.
+arc2_ps_dr_(up,   -1).
+% arc2_ps_dr_/2: row delta for down direction.
+arc2_ps_dr_(down,  1).
+% arc2_ps_dr_/2: row delta for left direction (zero).
+arc2_ps_dr_(left,  0).
+% arc2_ps_dr_/2: row delta for right direction (zero).
+arc2_ps_dr_(right, 0).
+% arc2_ps_dc_/2: col delta for each firing direction.
+arc2_ps_dc_(up,    0).
+% arc2_ps_dc_/2: col delta for down direction (zero).
+arc2_ps_dc_(down,  0).
+% arc2_ps_dc_/2: col delta for left direction.
+arc2_ps_dc_(left, -1).
+% arc2_ps_dc_/2: col delta for right direction.
+arc2_ps_dc_(right, 1).
+% arc2_ps_perpdirs_/2: perpendicular direction pair for each axis.
+arc2_ps_perpdirs_(up,    [left, right]).
+% arc2_ps_perpdirs_/2: perpendicular pair for down.
+arc2_ps_perpdirs_(down,  [left, right]).
+% arc2_ps_perpdirs_/2: perpendicular pair for left.
+arc2_ps_perpdirs_(left,  [up, down]).
+% arc2_ps_perpdirs_/2: perpendicular pair for right.
+arc2_ps_perpdirs_(right, [up, down]).
+% arc2_ps_opp_/2: opposite direction.
+arc2_ps_opp_(up,    down).
+% arc2_ps_opp_/2: opposite for down.
+arc2_ps_opp_(down,  up).
+% arc2_ps_opp_/2: opposite for left.
+arc2_ps_opp_(left,  right).
+% arc2_ps_opp_/2: opposite for right.
+arc2_ps_opp_(right, left).
+
+% arc2_ps_scan_/6: scan direction D from (R,C), skip BG/2 cells, return first arm-cell.
+arc2_ps_scan_(Grid, BG, R, C, D, XR-XC) :-
+% Look up row and col deltas for this direction.
+    arc2_ps_dr_(D, DR), arc2_ps_dc_(D, DC),
+% Start one step from the given position.
+    R2 is R + DR, C2 is C + DC,
+% Recurse until an arm-cell is found or grid boundary is reached.
+    arc2_ps_scan_go_(Grid, BG, R2, C2, DR, DC, XR-XC).
+
+% arc2_ps_scan_go_/7: base case — cell at (R,C) is an arm-cell (not BG, not 2).
+arc2_ps_scan_go_(Grid, BG, R, C, _, _, R-C) :-
+% Succeed only if this cell exists and is not background or a 2-cell.
+    arc2_cell_(Grid, R, C, V), V \= BG, V \= 2, !.
+% arc2_ps_scan_go_/7: step case — cell is BG or 2; advance one step.
+arc2_ps_scan_go_(Grid, BG, R, C, DR, DC, Out) :-
+% Cell must be BG or 2 to continue scanning.
+    arc2_cell_(Grid, R, C, V), (V =:= BG ; V =:= 2), !,
+% Advance one step in the scan direction.
+    R2 is R + DR, C2 is C + DC,
+% Continue scanning from the next cell.
+    arc2_ps_scan_go_(Grid, BG, R2, C2, DR, DC, Out).
+
+% arc2_ps_valid_peg_/4: verify (XR,XC) is a valid interior peg for approach direction D.
+arc2_ps_valid_peg_(Grid, BG, XR-XC, D) :-
+% Condition 1: open face toward the 2-block (BG or off-grid in opposite direction).
+    arc2_ps_opp_(D, OD), arc2_ps_dr_(OD, ODR), arc2_ps_dc_(OD, ODC),
+% Compute the opposite-direction neighbor of the peg.
+    OR is XR + ODR, OC is XC + ODC,
+% Opposite cell must be BG (or off-grid, which means \+ arc2_cell_ succeeds).
+    (\+ arc2_cell_(Grid, OR, OC, _) ; arc2_cell_(Grid, OR, OC, OV), OV =:= BG),
+% Condition 2: parent arm-cell exists in D direction (arm continues deeper into shape).
+    arc2_ps_dr_(D, DR), arc2_ps_dc_(D, DC),
+% Compute parent position (one step further in firing direction from peg).
+    PR is XR + DR, PC is XC + DC,
+% Parent must be an arm-cell (in bounds, not BG, not 2).
+    arc2_cell_(Grid, PR, PC, PV), PV \= BG, PV \= 2,
+% Condition 3: parent has >= 2 perpendicular arm-neighbors (forms a bar or spine).
+    arc2_ps_perpdirs_(D, PDs),
+% Count perpendicular arm-neighbors of the parent.
+    include(arc2_ps_arm_nbr_(Grid, BG, PR, PC), PDs, PerpArms),
+% Require at least two perpendicular arm-neighbors.
+    length(PerpArms, N), N >= 2.
+
+% arc2_ps_arm_nbr_/4: succeeds if direction PD from (R,C) leads to a non-BG non-2 cell.
+arc2_ps_arm_nbr_(Grid, BG, R, C, PD) :-
+% Look up the perpendicular direction offset.
+    arc2_ps_dr_(PD, PDR), arc2_ps_dc_(PD, PDC),
+% Compute neighbor position.
+    NR is R + PDR, NC is C + PDC,
+% Neighbor must exist and be an arm-cell.
+    arc2_cell_(Grid, NR, NC, NV), NV \= BG, NV \= 2.
+
+% arc2_ps_peg_col_/6: scan column C up/down from row SR; return arm row if valid peg.
+arc2_ps_peg_col_(Grid, BG, SR, D, C, XR) :-
+% Scan in direction D from (SR,C) and find first arm-cell.
+    arc2_ps_scan_(Grid, BG, SR, C, D, XR-C),
+% Verify the found arm-cell is a valid interior peg.
+    arc2_ps_valid_peg_(Grid, BG, XR-C, D).
+
+% arc2_ps_peg_row_/6: scan row R left/right from col SC; return arm col if valid peg.
+arc2_ps_peg_row_(Grid, BG, SC, D, R, XC) :-
+% Scan in direction D from (R,SC) and find first arm-cell.
+    arc2_ps_scan_(Grid, BG, R, SC, D, R-XC),
+% Verify the found arm-cell is a valid interior peg.
+    arc2_ps_valid_peg_(Grid, BG, R-XC, D).
+
+% arc2_ps_vland_/4: landing box for UP fire (arm row XAR; block rows R1-R2, cols C1-C2).
+arc2_ps_vland_(R1-R2-C1-C2, up, XAR, LR1-LR2-C1-C2) :-
+% Block top lands one row below the arm.
+    LR1 is XAR + 1,
+% Block bottom offset by block height.
+    LR2 is XAR + 1 + (R2 - R1).
+% arc2_ps_vland_/4: landing box for DOWN fire.
+arc2_ps_vland_(R1-R2-C1-C2, down, XAR, LR1-LR2-C1-C2) :-
+% Block bottom lands one row above the arm.
+    LR2 is XAR - 1,
+% Block top offset by block height.
+    LR1 is XAR - 1 - (R2 - R1).
+% arc2_ps_hland_/4: landing box for LEFT fire (arm col XAC; block rows R1-R2, cols C1-C2).
+arc2_ps_hland_(R1-R2-C1-C2, left, XAC, R1-R2-LC1-LC2) :-
+% Block left lands one col right of the arm.
+    LC1 is XAC + 1,
+% Block right offset by block width.
+    LC2 is XAC + 1 + (C2 - C1).
+% arc2_ps_hland_/4: landing box for RIGHT fire.
+arc2_ps_hland_(R1-R2-C1-C2, right, XAC, R1-R2-LC1-LC2) :-
+% Block right lands one col left of the arm.
+    LC2 is XAC - 1,
+% Block left offset by block width.
+    LC1 is XAC - 1 - (C2 - C1).
+
+% arc2_ps_fire_/5: find valid firing direction D and landing box for block Box.
+%   Fails if no direction satisfies the peg conditions for all block positions.
+arc2_ps_fire_(Grid, BG, Box, D, Land) :-
+% Unpack block bounding box.
+    Box = R1-R2-C1-C2,
+% Try each direction in order.
+    member(D, [up, down, left, right]),
+    arc2_ps_dr_(D, DR),
+    (DR \= 0 ->
+% Vertical fire: scan each column in the block from its leading row.
+        (DR < 0 -> SR = R1 ; SR = R2),
+        numlist(C1, C2, Cols),
+% Every column must find a valid peg at the same row (block integrity).
+        maplist(arc2_ps_peg_col_(Grid, BG, SR, D), Cols, XRs),
+% Block integrity: all arm-cells must be in the same row.
+        sort(XRs, [XAR]),
+% Compute landing box using vertical displacement.
+        arc2_ps_vland_(Box, D, XAR, Land)
+    ;
+% Horizontal fire: scan each row in the block from its leading col.
+        arc2_ps_dc_(D, DC),
+        (DC < 0 -> SC = C1 ; SC = C2),
+        numlist(R1, R2, Rows),
+% Every row must find a valid peg at the same col (block integrity).
+        maplist(arc2_ps_peg_row_(Grid, BG, SC, D), Rows, XCs),
+% Block integrity: all arm-cells must be in the same column.
+        sort(XCs, [XAC]),
+% Compute landing box using horizontal displacement.
+        arc2_ps_hland_(Box, D, XAC, Land)
+    ).
+
+% arc2_ps_find_blocks_/2: collect bounding boxes of all 4-connected 2-cell components.
+arc2_ps_find_blocks_(Grid, Boxes) :-
+% Measure grid dimensions.
+    length(Grid, H), Grid = [GR|_], length(GR, W),
+    H1 is H - 1, W1 is W - 1,
+% Collect all 2-cell positions.
+    findall(R-C,
+        (between(0, H1, R), between(0, W1, C), arc2_cell_(Grid, R, C, 2)),
+        Twos),
+% Sort for deterministic component ordering.
+    sort(Twos, TwoSorted),
+% Group into connected components.
+    arc2_ps_comps_(Grid, TwoSorted, [], Boxes).
+
+% arc2_ps_comps_/4: base case — no more 2-cells to process.
+arc2_ps_comps_(_, [], _, []).
+% arc2_ps_comps_/4: cell already belongs to a processed component; skip it.
+arc2_ps_comps_(Grid, [RC|Rest], Seen, Boxes) :-
+    memberchk(RC, Seen), !,
+% Advance to next cell with the same visited set.
+    arc2_ps_comps_(Grid, Rest, Seen, Boxes).
+% arc2_ps_comps_/4: new seed — BFS to get component; compute bounding box.
+arc2_ps_comps_(Grid, [R-C|Rest], Seen0, [R1-R2-C1-C2|Boxes]) :-
+% BFS-expand from R-C; Seen0 are cells already assigned to earlier components.
+    arc2_bfs_(Grid, [R-C], 2, Seen0, [], Comp, Seen1),
+% Extract all row coordinates of component cells.
+    findall(RR, member(RR-_, Comp), Rs),
+% Extract all col coordinates of component cells.
+    findall(CC, member(_-CC, Comp), Cs),
+% Bounding box: min/max row and col.
+    min_list(Rs, R1), max_list(Rs, R2),
+    min_list(Cs, C1), max_list(Cs, C2),
+% Process remaining cells with updated visited set.
+    arc2_ps_comps_(Grid, Rest, Seen1, Boxes).
+
+% arc2_ps_trail_/5: compute zero-cells and two-cells for UP fire.
+%   Zeros = original block + trail (rows LR2+1..R2); Twos = landing rows LR1..LR2.
+arc2_ps_trail_(_-R2-C1-C2, up, LR1-LR2-_-_, Zeros, Twos) :-
+% Collect landing positions (become 2).
+    findall(R-C, (between(LR1, LR2, R), between(C1, C2, C)), Twos),
+% Trail starts one row below landing bottom.
+    ZR1 is LR2 + 1,
+% Zeros span from trail start to original block bottom.
+    findall(R-C, (between(ZR1, R2, R), between(C1, C2, C)), Zeros).
+% arc2_ps_trail_/5: zero-cells and two-cells for DOWN fire.
+arc2_ps_trail_(R1-_-C1-C2, down, LR1-LR2-_-_, Zeros, Twos) :-
+% Collect landing positions.
+    findall(R-C, (between(LR1, LR2, R), between(C1, C2, C)), Twos),
+% Trail ends one row above landing top.
+    ZR2 is LR1 - 1,
+% Zeros span from original block top to trail end.
+    findall(R-C, (between(R1, ZR2, R), between(C1, C2, C)), Zeros).
+% arc2_ps_trail_/5: zero-cells and two-cells for LEFT fire.
+arc2_ps_trail_(R1-R2-_-C2, left, _-_-LC1-LC2, Zeros, Twos) :-
+% Collect landing positions.
+    findall(R-C, (between(R1, R2, R), between(LC1, LC2, C)), Twos),
+% Trail starts one col right of landing right edge.
+    ZC1 is LC2 + 1,
+% Zeros span from trail start to original block right.
+    findall(R-C, (between(R1, R2, R), between(ZC1, C2, C)), Zeros).
+% arc2_ps_trail_/5: zero-cells and two-cells for RIGHT fire.
+arc2_ps_trail_(R1-R2-C1-_, right, _-_-LC1-LC2, Zeros, Twos) :-
+% Collect landing positions.
+    findall(R-C, (between(R1, R2, R), between(LC1, LC2, C)), Twos),
+% Trail ends one col left of landing left edge.
+    ZC2 is LC1 - 1,
+% Zeros span from original block left to trail end.
+    findall(R-C, (between(R1, R2, R), between(C1, ZC2, C)), Zeros).
+
+% arc2_ps_solve_/6: compute zero/two/erase sets from block list.
+arc2_ps_solve_(Grid, BG, Blocks, ZeroSet, TwoSet, EraseSet) :-
+% Accumulate all position sets across all blocks.
+    arc2_ps_solve_acc_(Grid, BG, Blocks, [], [], [], ZsAcc, TsAcc, EsAcc),
+% Deduplicate each set.
+    sort(ZsAcc, ZeroSet), sort(TsAcc, TwoSet), sort(EsAcc, EraseSet).
+
+% arc2_ps_solve_acc_/9: accumulator base case — no blocks remaining.
+arc2_ps_solve_acc_(_, _, [], Zs, Ts, Es, Zs, Ts, Es).
+% arc2_ps_solve_acc_/9: firing block — compute trail+landing; accumulate zeros and twos.
+arc2_ps_solve_acc_(Grid, BG, [Box|Bs], Zs0, Ts0, Es0, Zs, Ts, Es) :-
+    once(arc2_ps_fire_(Grid, BG, Box, D, Land)), !,
+% Compute trail (zeros) and landing (twos) for this block.
+    arc2_ps_trail_(Box, D, Land, Zeros, Twos),
+% Prepend zeros and twos to accumulators.
+    append(Zeros, Zs0, Zs1), append(Twos, Ts0, Ts1),
+% Process remaining blocks.
+    arc2_ps_solve_acc_(Grid, BG, Bs, Zs1, Ts1, Es0, Zs, Ts, Es).
+% arc2_ps_solve_acc_/9: non-firing block — erase all its cells to BG.
+arc2_ps_solve_acc_(Grid, BG, [R1-R2-C1-C2|Bs], Zs0, Ts0, Es0, Zs, Ts, Es) :-
+% Collect all positions in this block.
+    findall(R-C, (between(R1, R2, R), between(C1, C2, C)), BoxCells),
+% Add block cells to erase set.
+    append(BoxCells, Es0, Es1),
+% Process remaining blocks.
+    arc2_ps_solve_acc_(Grid, BG, Bs, Zs0, Ts0, Es1, Zs, Ts, Es).
+
+% arc2_ps_out_/8: compute output value at (R,C) with priority: two > zero > erase > original.
+arc2_ps_out_(R, C, Grid, BG, ZeroSet, TwoSet, EraseSet, V) :-
+% Landing cell: becomes 2.
+    (memberchk(R-C, TwoSet)  -> V = 2  ;
+% Trail or original firing position: becomes 0.
+     memberchk(R-C, ZeroSet)  -> V = 0  ;
+% Erased (non-firing) block: becomes BG.
+     memberchk(R-C, EraseSet) -> V = BG ;
+% All other cells: copy from input.
+     arc2_cell_(Grid, R, C, V)).
+
+% arc2_transform(pocket_shot, +Grid, -Out):
+%   Top-level: find 2-block components; determine fate (fire or erase); build output.
+arc2_transform(pocket_shot, Grid, Out) :-
+% Detect background color (most common value).
+    arc2_bg_color_(Grid, BG),
+% Find bounding boxes of all 4-connected 2-cell components.
+    arc2_ps_find_blocks_(Grid, Blocks),
+% Compute zero (trail+original), two (landing), and erase position sets.
+    arc2_ps_solve_(Grid, BG, Blocks, ZeroSet, TwoSet, EraseSet),
+% Build row and col index lists.
+    length(Grid, H), Grid = [GR|_], length(GR, W),
+    H1 is H - 1, W1 is W - 1,
+    numlist(0, H1, Rs), numlist(0, W1, Cs),
+% Map over all rows and columns to produce the output grid.
+    maplist([R, Row]>>(
+        maplist([C, V]>>(
+            arc2_ps_out_(R, C, Grid, BG, ZeroSet, TwoSet, EraseSet, V)
+        ), Cs, Row)
+    ), Rs, Out).
 
 % ---------------------------------------------------------------------------
 % PRINT REPORT
