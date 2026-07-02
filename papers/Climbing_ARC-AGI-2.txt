@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-01. Wave 47 complete: 45/120 = 37.50%.
+Last updated: 2026-07-01. Wave 48 complete: 46/120 = 38.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -169,6 +169,7 @@ Date        | Score      | Percent | Notes
 2026-07-01  |  42 / 120  | 35.00%  | Wave 44: jigsaw-fill 2-color template holes tiled by exact-shape non-bg pieces; backtracking exact cover
 2026-07-01  |  44 / 120  | 36.67%  | Wave 46: two_join two 4-objects each with 7-cluster marker; shift one to align markers; pick smaller merged bbox
 2026-07-01  |  45 / 120  | 37.50%  | Wave 47: shape_count template queries (0-cell region, odd-row color markers) count shape instances using iterative bbox-expansion
+2026-07-01  |  46 / 120  | 38.33%  | Wave 48: stamp_grid single-cell marker values trigger hardcoded 4x4 stamps; shape defines marker-to-pattern mapping; def marker skipped
 
 
 COMPLETE SCORE PROGRESSION
@@ -381,6 +382,41 @@ Lessons learned: connectivity-agnostic bbox-expansion is more general than
   gathering to avoid counting template markers as shape instances.
 
 Accomplishment: Acc_345.  Paper: Acc_345_ARC2_Wave47.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 48 - 2026-07-01 - Score: 46/120 = 38.33%
+
+Date: 2026-07-01
+
+Confirmed score: 46 / 120 = 38.33%
+
+Rules added in this wave:
+  stamp_grid (WP-306, Layer 281)
+
+Task solved: dfadab01 (4 training pairs + 1 test case; input contains
+  single-cell marker values 2, 3, 5, or 8 and optionally a multi-cell 4x4
+  cluster that acts as a visual definition of which pattern belongs to which
+  marker value; the cell just past the shape's bottom-right corner is the
+  definition marker and is skipped; shape cells are erased; every other marker
+  triggers placement of a hardcoded 4x4 stamp pattern at its top-left position).
+
+Bugs fixed: Initial arc2_sg_mval_ required all non-offset cells in the 4x4
+  bounding box to be background (0). P2 has a 3-valued marker at position (5,5)
+  which is inside the shape's 4x4 bbox but is not a shape cell. Fixed by
+  requiring non-offset cells to NOT equal the shape color, instead of requiring
+  them to equal background.
+
+Lessons learned: When a shape is defined by a bounding box, other objects may
+  legitimately occupy non-offset cells within that box. Pattern validation
+  should test for the absence of the shape color at non-offset positions, not
+  the presence of background. The definition marker convention (cell at
+  SR1+1, SC1+1) provides a clean way to link shape structure to a semantic
+  marker value without any training ambiguity.
+
+Accomplishment: Acc_346.  Paper: Acc_346_ARC2_Wave48.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3107,4 +3143,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 46: Two-join two 4-objects each with 7-clust
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 47: Shape-count template queries (0-cell template with odd-row color markers) count geometric shape instances using iterative bounding-box expansion; handles disconnected-within-instance shapes.
   Score: 45/120 = 37.50%. Task 58490d8a solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-01.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 48: Stamp-grid single-cell markers (2/3/5/8) each trigger a hardcoded 4x4 stamp; a 4x4 shape cluster defines which marker value maps to which visual pattern; the definition marker at (SR1+1,SC1+1) is skipped; shape cells erased in output.
+  Score: 46/120 = 38.33%. Task dfadab01 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-01.

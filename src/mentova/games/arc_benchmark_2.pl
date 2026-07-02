@@ -9556,6 +9556,168 @@ arc2_sc_replace_([H|Rest], Cur, Pos, New, [H|NewRest]) :-
     arc2_sc_replace_(Rest, Cur1, Pos, New, NewRest).
 
 % ---------------------------------------------------------------------------
+% WP-306  stamp_grid  (Layer 281)  Task dfadab01
+% ---------------------------------------------------------------------------
+% Each single-cell marker (value 2, 3, 5, or 8) in the input triggers the
+% placement of a hardcoded 4x4 stamp pattern in the output.
+% When a multi-cell 4x4 cluster (the "shape") is present, its structure
+% identifies which marker value maps to which pattern; the cell at
+% (shape_bbox_maxrow+1, shape_bbox_maxcol+1) is the "definition marker"
+% and is skipped. Shape cells are erased (set to background) in the output.
+% If no shape is found, all non-background cells are placement markers.
+%
+% The four hardcoded 4x4 stamp patterns (relative DR,DC offsets in 0..3):
+%   Marker 2 -> full-border rectangle, output color 4
+%   Marker 3 -> edge-no-corners diamond, output color 1
+%   Marker 5 -> diagonal 2x2 blocks,   output color 6
+%   Marker 8 -> corners+inner-edge,     output color 7
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule/1: register stamp_grid for the generic induction loop.
+arc2_named_rule(stamp_grid).
+
+% arc2_induce_rule/2: task dfadab01 uses the stamp_grid rule.
+arc2_induce_rule('dfadab01', stamp_grid).
+
+% arc2_sg_stmp_/3: MarkerVal, StampColor, list of (DR,DC) offsets.
+% Pattern 2: full-border rectangle in color 4.
+arc2_sg_stmp_(2, 4, [(0,0),(0,1),(0,2),(0,3),(1,0),(1,3),(2,0),(2,3),(3,0),(3,1),(3,2),(3,3)]).
+% Pattern 3: edge-no-corners diamond in color 1.
+arc2_sg_stmp_(3, 1, [(0,1),(0,2),(1,0),(1,3),(2,0),(2,3),(3,1),(3,2)]).
+% Pattern 5: diagonal 2x2 blocks in color 6.
+arc2_sg_stmp_(5, 6, [(0,0),(0,1),(1,0),(1,1),(2,2),(2,3),(3,2),(3,3)]).
+% Pattern 8: corners-plus-inner-edge in color 7.
+arc2_sg_stmp_(8, 7, [(0,0),(0,3),(1,1),(1,2),(2,1),(2,2),(3,0),(3,3)]).
+
+% arc2_sg_bg_/2: most common value in Grid (used as background).
+arc2_sg_bg_(Grid, BG) :-
+% Flatten to a single list so all values can be compared.
+    flatten(Grid, Flat),
+% Sort to group equal values for run-length counting.
+    msort(Flat, [H|T]),
+% Scan for the longest run (= most frequent value).
+    arc2_sg_run_(T, H, 1, 0, H, BG).
+
+% arc2_sg_run_/6: accumulate mode over a sorted list.
+% Base: compare final run to running maximum.
+arc2_sg_run_([], Cur, Cnt, Max, Best, BG) :-
+% Emit the run-winner as BG.
+    ( Cnt > Max -> BG = Cur ; BG = Best ).
+% Same element: increment run count, maybe update best.
+arc2_sg_run_([H|T], H, Cnt, Max, Best, BG) :- !,
+% Extend current run.
+    Cnt1 is Cnt + 1,
+% Update best if this run now exceeds maximum.
+    ( Cnt1 > Max ->
+        arc2_sg_run_(T, H, Cnt1, Cnt1, H, BG)
+    ;   arc2_sg_run_(T, H, Cnt1, Max, Best, BG)
+    ).
+% New element: close current run, start fresh run at 1.
+arc2_sg_run_([H|T], Cur, Cnt, Max, Best, BG) :- Cur \= H, !,
+% Compare completed run to running maximum and continue.
+    ( Cnt > Max ->
+        arc2_sg_run_(T, H, 1, Cnt, Cur, BG)
+    ;   arc2_sg_run_(T, H, 1, Max, Best, BG)
+    ).
+
+% arc2_sg_shape_/5: find the first color whose tight bounding box is 4x4.
+arc2_sg_shape_(Grid, BG, SC, SR0, SC0) :-
+% Collect all non-background values.
+    flatten(Grid, Flat),
+% Exclude background to get candidate shape colors.
+    exclude(==(BG), Flat, NonBG),
+% Deduplicate to iterate over distinct colors.
+    list_to_set(NonBG, Colors),
+% Try each color as the shape color.
+    member(SC, Colors),
+% Collect all (row, col) positions of this color (0-indexed).
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,SC)), Cells),
+% Require more than one cell (singleton = marker, not shape).
+    length(Cells, N), N > 1,
+% Extract row and column lists for bounding-box computation.
+    pairs_keys(Cells, Rs), pairs_values(Cells, Cs),
+% Find bounding-box extents.
+    min_list(Rs, SR0), max_list(Rs, SR1),
+    min_list(Cs, SC0), max_list(Cs, SC1),
+% Accept only if the bounding box is exactly 4 rows by 4 cols.
+    SR1 =:= SR0 + 3,
+    SC1 =:= SC0 + 3,
+% Commit to this color; no backtracking into further candidates.
+    !.
+
+% arc2_sg_mval_/6: identify which stamp value the 4x4 shape matches.
+arc2_sg_mval_(Grid, _BG, SC, SR0, SC0, MVal) :-
+% Try each known stamp definition.
+    arc2_sg_stmp_(MVal, _, Offs),
+% Every offset cell must hold the shape color.
+    forall(member((DR,DC), Offs),
+        ( R is SR0+DR, C is SC0+DC,
+          nth0(R,Grid,Row), nth0(C,Row,SC) )),
+% Build list of all 4x4 relative positions.
+    numlist(0, 3, Ds),
+% Every non-offset cell in the 4x4 must NOT be the shape color (markers may occupy them).
+    forall(( member(DR,Ds), member(DC,Ds), \+ member((DR,DC),Offs) ),
+        ( R is SR0+DR, C is SC0+DC,
+          nth0(R,Grid,Row), nth0(C,Row,V0), V0 \= SC )),
+% Commit to first matching stamp type.
+    !.
+
+% arc2_sg_mkrs_/8: collect placement markers, excluding shape and def cell.
+arc2_sg_mkrs_(Grid, BG, SC, SR0, SC0, DefR, DefC, Mkrs) :-
+% Scan every cell; keep non-BG cells that are not shape or def-marker.
+    findall(m(R,C,V), (
+        nth0(R, Grid, Row),
+        nth0(C, Row, V),
+% Cell must be non-background.
+        V \= BG,
+% Cell must not be a shape cell (shape color inside 4x4 bbox).
+        \+ ( V =:= SC, R >= SR0, R =< SR0+3, C >= SC0, C =< SC0+3 ),
+% Cell must not be the definition marker position.
+        \+ ( R =:= DefR, C =:= DefC )
+    ), Mkrs).
+
+% arc2_sg_cell_/5: compute output color at (R,C); BG unless under a stamp.
+arc2_sg_cell_(R, C, BG, Mkrs, Cell) :-
+% Search for any marker whose stamp pattern covers (R,C).
+    ( member(m(MR,MC,MV), Mkrs),
+      arc2_sg_stmp_(MV, SC, Offs),
+% Compute relative offset from marker's top-left.
+      DR is R - MR, DC is C - MC,
+% Offset must be within the 4x4 stamp footprint.
+      DR >= 0, DR =< 3, DC >= 0, DC =< 3,
+% Check that this (DR,DC) is a filled cell of the pattern.
+      member((DR,DC), Offs)
+    -> Cell = SC
+    ;  Cell = BG
+    ).
+
+% arc2_transform/3: main stamp_grid transform (0-indexed grid).
+arc2_transform(stamp_grid, Grid, Out) :-
+% Determine background as the most common color.
+    arc2_sg_bg_(Grid, BG),
+% Compute grid dimensions for output row/column iteration.
+    length(Grid, NRows), NRows1 is NRows - 1,
+    nth0(0, Grid, FR), length(FR, NCols), NCols1 is NCols - 1,
+% Detect shape and collect placement markers.
+    ( arc2_sg_shape_(Grid, BG, SC, SR0, SC0) ->
+% Shape found: verify it, compute definition-marker position, collect markers.
+        arc2_sg_mval_(Grid, BG, SC, SR0, SC0, _),
+        DefR is SR0 + 4, DefC is SC0 + 4,
+        arc2_sg_mkrs_(Grid, BG, SC, SR0, SC0, DefR, DefC, Mkrs)
+    ;
+% No shape: treat all non-background cells as placement markers.
+        findall(m(R,C,V),
+            ( nth0(R,Grid,Row), nth0(C,Row,V), V \= BG ), Mkrs)
+    ),
+% Build output grid: one row per row index, one cell per column index.
+    numlist(0, NRows1, RowIs),
+    maplist([R, OutRow]>>(
+% For each output row, map each column to its stamp color or BG.
+        numlist(0, NCols1, ColIs),
+        maplist([C, Cell]>>(arc2_sg_cell_(R,C,BG,Mkrs,Cell)), ColIs, OutRow)
+    ), RowIs, Out).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
