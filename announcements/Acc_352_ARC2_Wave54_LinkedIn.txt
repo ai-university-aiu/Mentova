@@ -1,0 +1,24 @@
+Accomplishment 352: ARC-AGI-2 Wave 54 - Noise Erase
+
+PrologAI solves ARC-AGI-2 task 71e489b6 with a new glass-box rule called
+noise_erase (WP-312, Layer 287), raising the benchmark score from
+51/120 = 42.50% to 52/120 = 43.33%.
+
+The input is a binary grid (0s and 1s). Two kinds of noise must be handled:
+stray-0 cells (0-clusters embedded inside the 1-region) and stray-1 cells
+(isolated 1s inside the 0-region). The rule surrounds each stray-0 cell with
+a 3x3 frame of 7s while keeping the stray-0 center as 0, and erases each
+stray-1 cell to 0.
+
+The key insight: detecting stray-0 clusters requires a two-phase approach.
+Phase 1 seeds are 0-cells where the 1-neighbor count meets or exceeds min(3,
+available neighbors), adapting the threshold for edge and corner cells. Phase 2
+BFS-expands from seeds to adjacent 0-cells with >=2 1-neighbors, catching
+cluster members that individually have only 2 1-neighbors but are reachable
+from a seed.
+
+All 3 training pairs and the test case pass. Pure induction. No pretraining.
+Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

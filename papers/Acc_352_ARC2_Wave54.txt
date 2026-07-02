@@ -1,0 +1,165 @@
+Accomplishment 352: ARC-AGI-2 Wave 54 - Noise Erase (WP-312, Layer 287)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 54 adds the noise_erase rule (WP-312, Layer 287) to PrologAI's
+ARC-AGI-2 benchmark solver, solving task 71e489b6 and raising the score
+from 51/120 = 42.50% to 52/120 = 43.33%.
+
+The rule identifies two kinds of noise in a binary (0-and-1) grid: stray-0
+cells (isolated 0s or small 0-clusters embedded inside the 1-region) and
+stray-1 cells (isolated 1s or peninsula tips inside the 0-region). Stray-0
+cells receive a 3x3 frame of 7s around them while remaining 0 at their
+centers. Stray-1 cells are erased to 0.
+
+
+TASK DESCRIPTION
+
+Task ID: 71e489b6
+
+Input structure: a grid containing exactly two base values, 0 and 1. The
+grid has two large connected regions - a 0-region and a 1-region - with small
+noise cells interspersed. Noise in the 1-region consists of 0-cells that are
+nearly or fully surrounded by 1-cells on all available 4-connected sides.
+Noise in the 0-region consists of 1-cells that are nearly isolated (at most
+one 1-valued 4-neighbor).
+
+Output structure: same dimensions as input. Stray-0 centers keep value 0.
+All in-bounds 8-neighbors of any stray-0 cell that are not themselves stray-0
+centers become 7. Stray-1 cells become 0. All other cells are unchanged.
+
+
+THE NOISE_ERASE RULE
+
+Step 1 - Detect stray-0 seeds: for each 0-cell (R,C), count how many of its
+in-bounds 4-neighbors hold value 1. Let avail = total number of in-bounds
+4-neighbors. If the 1-neighbor count is >= min(3, avail), mark (R,C) as a
+stray-0 seed. The min(3, avail) threshold adapts to corner cells (2 available
+neighbors) and edge cells (3 available neighbors).
+
+Step 2 - Expand the stray-0 set by BFS: start the BFS queue with all seeds.
+For each position in the queue, examine its 4-connected 0-cell neighbors that
+are not yet in the stray-0 set. If such a neighbor has >= 2 1-valued 4-neighbors,
+add it to the stray-0 set and to the queue. Repeat until the queue is empty.
+This catches multi-cell stray-0 clusters where interior cluster cells may have
+only 2 1-neighbors but are reachable from a seed.
+
+Step 3 - Build the frame: collect all in-bounds 8-neighbor positions of every
+stray-0 cell. Remove positions that are themselves stray-0 cells. This set of
+positions is the frame; they will become 7 in the output.
+
+Step 4 - Detect stray-1 cells: for each 1-cell (R,C), count 1-valued 4-neighbors.
+If this count is <= 1, the cell is a stray-1.
+
+Step 5 - Build output with priority: stray-0 center -> 0 (preserved); frame
+cell -> 7; stray-1 cell -> 0 (erased); all other cells copy the input value.
+
+
+TRAINING PAIR VERIFICATION
+
+P1 (19x17):
+Stray-0 seeds: (0,3) with 3 of 3 available nbrs = 1; (2,16) with 3 of 3 = 1;
+  (4,8) with 3 of 4 = 1; (10,6) with 3 of 4 = 1; (17,14) with 3 of 4 = 1.
+BFS expansion from (10,6): neighbor (11,6) has 2 1-nbrs -> expanded; from (11,6):
+  neighbor (11,5) has 2 1-nbrs -> expanded. Cluster {(10,6),(11,5),(11,6)} complete.
+Stray-0 set: {(0,3),(2,16),(4,8),(10,6),(11,5),(11,6),(17,14)}.
+Frame placed around each stray-0 cell or cluster. Frame of (4,8) extends into
+  the 0-region at (5,7),(5,8),(5,9) -> they become 7.
+Stray-1s: (7,13) with 0 1-nbrs; (14,8) with 1 1-nbr; (15,3) with 0 1-nbrs -> all erased.
+41 output diffs. PASS.
+
+P2 (16x16):
+Stray-0 seed: (0,15) at grid corner with 2 available neighbors (0,14)=1 and
+  (1,15)=1; min(3,2)=2 and ones=2 >= 2 -> seed. Also 6 cluster seeds in the
+  2-row 0-hole inside the 1-region at rows 3-10.
+Stray-1s: (5,2) with 1 1-nbr; (8,4) with 0 1-nbrs -> erased.
+34 output diffs. PASS.
+
+P3 (16x16):
+Stray-0 seeds: (6,10) with 4 1-nbrs; (7,11) with 4 1-nbrs; (12,7) with 3 1-nbrs
+  (one neighbor (13,7) is in the 0-region).
+Frame of (12,7) includes (13,6),(13,7),(13,8) in the 0-region -> they become 7.
+Stray-1s: (3,6) with 0 1-nbrs; (4,15) with 0 1-nbrs; (14,1) with 0 1-nbrs -> erased.
+9 output diffs. PASS.
+
+Test (16x16):
+Stray-0 seeds: (3,11),(5,5),(6,4),(7,3),(8,11),(11,6) all with >=3 1-nbrs.
+BFS expansion from (8,11): neighbor (9,11) has 3 1-nbrs -> expanded.
+  Cluster {(8,11),(9,11)} complete.
+Frame placed around all 7 stray-0 positions (6 individual + 1 cluster).
+Stray-1s: (4,15),(6,15),(9,14),(14,12),(15,15) -> all erased.
+20 output diffs. PASS.
+
+
+IMPLEMENTATION DETAILS
+
+New predicates (all in arc_benchmark_2.pl, prefixed arc2_ne_):
+
+arc2_ne_1nbr_count_(Grid, R, C, Count): uses include/3 with arc2_cell_/4 to
+  count the number of the four candidate neighbors that hold value 1.
+
+arc2_ne_avail_count_(Grid, R, C, Avail): uses include/3 with arc2_cell_/4
+  to count the number of in-bounds 4-neighbors regardless of value.
+
+arc2_ne_stray0_seed_(Grid, R, C): combines 1nbr_count and avail_count with
+  the min(3, avail) threshold to detect stray-0 seeds.
+
+arc2_ne_stray1_(Grid, R, C): checks that a 1-cell has at most 1 same-valued
+  4-neighbor.
+
+arc2_ne_expand_bfs_(Grid, Queue, Visited, Stray0): iterative BFS; each step
+  filters the 4-neighbors of the current cell for unvisited 0-cells with >= 2
+  1-neighbors; deduplicates with sort/2; appends to the visited set and the
+  queue tail; terminates when the queue is empty.
+
+arc2_ne_stray0_all_(Grid, H, W, Stray0): findall to collect seeds, sort, then
+  call expand_bfs_ starting from the sorted seed list as both queue and initial
+  visited set.
+
+arc2_ne_frame_(Stray0, Grid, Frame): findall over all 8-offset directions for
+  each stray-0 cell; bounds-tested with arc2_cell_/4; stray-0 positions
+  excluded; deduplicated with sort/2.
+
+arc2_ne_out_val_(R, C, Grid, Stray0, Frame, Stray1, Val): priority if-then-else
+  chain: memberchk in each set; falls back to arc2_cell_ copy.
+
+arc2_transform(noise_erase, Grid, Out): orchestrates the above predicates then
+  constructs the output via maplist over row and column index lists.
+
+arc2_named_rule(noise_erase): registers the rule for arc2_induce_rule/2 dispatch.
+
+
+KEY INSIGHT: TWO-PHASE STRAY-0 DETECTION
+
+The central challenge is that stray-0 clusters can be larger than a single cell.
+In P1, the cluster {(10,6),(11,5),(11,6)} has three cells, two of which have only
+2 1-neighbors individually. A pure per-cell threshold of >= 3 would miss these
+cluster interior cells.
+
+The solution is a two-phase approach: (1) identify seeds using the min(3, avail)
+threshold so that even corner/edge cells embedded in the 1-region are caught;
+(2) BFS-expand from seeds to adjacent 0-cells with >= 2 1-neighbors, which
+propagates stray status through the cluster without contaminating the main
+0-region (whose boundary cells have at most 1 1-neighbor).
+
+The min(3, avail) threshold is also necessary for edge/corner stray-0 seeds
+like (0,15) in P2, which sits at the grid corner with only 2 available neighbors,
+both 1.
+
+
+SIGNIFICANCE
+
+noise_erase demonstrates that a binary grid can encode semantic information about
+which cells are noise: stray-0 cells embedded in a 1-background and stray-1 cells
+embedded in a 0-background. The rule must simultaneously denoise both color
+regions with different output actions (7-frame for stray-0, erase for stray-1),
+while leaving all other cells unchanged.
+
+Score: 51/120 = 42.50% to 52/120 = 43.33%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

@@ -3237,3 +3237,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 52: Plus-mark 5-cell plus-shaped groups (cen
 Dison, D. R. (2026). ARC-AGI-2 Wave 53: Template-expand reads a sparse single-cell color template and rectangular seed blocks; determines the seed's level and col-group offset within the template sequence; fills all missing block positions at stride-spaced locations in the output.
   Score: 51/120 = 42.50%. Task c4d067a0 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 54: Noise-erase detects stray-0 seeds (0-cells with >=min(3,avail) 1-neighbors), BFS-expands to adjacent 0-cells with >=2 1-neighbors, places 3x3 frame of 7s around them; stray-1 cells (<=1 1-neighbor) erased to 0.
+  Score: 51/120 = 42.50%. Task 71e489b6 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.
