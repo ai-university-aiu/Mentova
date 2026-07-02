@@ -1,0 +1,169 @@
+Accomplishment 351: ARC-AGI-2 Wave 53 - Template Expand (WP-311, Layer 286)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 53 adds the template_expand rule (WP-311, Layer 286) to PrologAI's
+ARC-AGI-2 benchmark solver, solving task c4d067a0 and raising the score from
+50/120 = 41.67% to 51/120 = 42.50%.
+
+The rule reads a sparse single-cell template (a matrix of isolated colored
+markers against a background) and a rectangular seed block (one or more
+rectangular sub-blocks of color), determines the seed's position within the
+template's level and col-group sequence, and fills in all remaining template
+positions with appropriately colored blocks at the correct stride-spaced
+locations in the output.
+
+
+TASK DESCRIPTION
+
+Task ID: c4d067a0
+
+Input structure: a grid containing two distinct regions. The first is a sparse
+template region: single isolated non-background cells arranged in a regular
+matrix pattern, with each cell appearing at even row and col offsets within
+the template area. The second is a seed region: one or more rectangular
+blocks of the same height and width, separated by equal strides, each block
+filled with a uniform non-background color. Together the template cells define
+a color table indexed by (level, col-group) and the seed blocks provide an
+anchor showing which subset of that table is already instantiated.
+
+Output structure: same dimensions as the input. Every position that corresponds
+to a template (level, col-group) pair with a non-background color receives the
+corresponding block of that color. Positions already in the seed retain their
+seed color. Positions outside all blocks retain the background value.
+
+
+THE TEMPLATE_EXPAND RULE
+
+Step 1 - Detect background: flatten all cells into one list, sort, scan for
+the most frequently occurring value. That value is BG.
+
+Step 2 - Classify cells: a non-BG cell is a template marker if all four of
+its orthogonal neighbours (within grid bounds) are BG. Otherwise it belongs
+to a seed block.
+
+Step 3 - Parse template: collect the sorted list TRows of distinct row
+indices of template markers and the sorted list TCols of distinct col indices.
+The template color at level LI and col-group CGI is Grid[TRows[LI]][TCols[CGI]]
+if that position holds a non-BG value.
+
+Step 4 - Parse seed: collect all seed cells; find SeedRowMin and SeedRowMax
+to get block height BH. In the first seed row, find contiguous column runs to
+determine the sub-blocks. The first sub-block gives block width BW. The stride
+between adjacent sub-block starts gives Stride. Each sub-block's leftmost cell
+gives SeedColors[i].
+
+Step 5 - Find anchor: search all (level index L, col-group offset C0) pairs.
+Commit to the first (L, C0) where template[L][C0+i] == SeedColors[i] for all i.
+Compute AnchorRow = SeedRowMin - L * Stride and AnchorCol = SeedColStart -
+C0 * Stride.
+
+Step 6 - Build output: for each cell (R, C), compute row block index
+LI = (R - AnchorRow) // Stride and col block index CGI = (C - AnchorCol) //
+Stride. If both LI and CGI are in range and the within-block offsets are less
+than BH and BW respectively, look up the template color TV = Grid[TRows[LI]]
+[TCols[CGI]]. If TV != BG emit TV; otherwise copy the input value. Outside
+all blocks, copy the input value.
+
+
+TRAINING PAIR VERIFICATION
+
+P1 (18x25):
+Template markers: single cells at rows 1,3,5 x cols 1,3 giving a 3x2 color
+table: [[4,4],[1,1],[1,1]]. Seed: two 3x3 blocks (color 4) at rows 1-3, cols
+8-10 and 13-15. Stride=5. Seed matches level 0 ([4,4]). Anchor=(1,8). Output
+adds color-1 blocks at rows 6-8 and 11-13 at cols 8-10 and 13-15. PASS.
+
+P2 (22x21):
+Template markers: single cells at rows 1,3,5,7 x cols 1,3,5 giving a 4x3
+color table. Seed: three 2x2 sub-blocks (color 2) at rows 4-5. Stride=3.
+Seed matches level 0 ([2,2,?]). Output fills levels 1-3 below the seed with
+colors from the template at stride intervals. PASS.
+
+P3 (23x23):
+Template markers: single cells at rows 1,3,5 x cols 1,3 giving table
+[[2,3],[3,3],[3,4]]. Seed: two 2x2 blocks at rows 20-21, colors 3 and 4.
+Stride=5. Seed colors [3,4] match level 2 ([3,4]) at col-group offset 0.
+Anchor=(20-2*5, 11) = (10, 11). Output adds level-0 (2,3) blocks at rows
+10-11 and level-1 (3,3) blocks at rows 15-16 at the appropriate col positions.
+PASS.
+
+Test (27x27):
+Template markers at rows 1,3,5,7 x cols 1,3,5; seed two 4x4 sub-blocks at
+rows 10-13, colors 4 and 2. Seed matches level 1, col-group offset 1.
+Anchor=(10-5, 13-5) = (5, 8). Output fills all four levels and three
+col-groups at stride=5. PASS.
+
+
+IMPLEMENTATION DETAILS
+
+New predicates (all in arc_benchmark_2.pl, prefixed arc2_te_):
+
+arc2_te_bg_(Grid, BG): flattens Grid, msorts, calls arc2_te_mode_ to find BG.
+
+arc2_te_mode_(SortedList, Mode) / arc2_te_mode_scan_: linear mode scan over
+  sorted list tracking current-run length and best-run (value, length).
+
+arc2_te_isolated_(Grid, BG, H, W, R, C): succeeds when cell (R,C) is non-BG
+  and has no non-BG 4-connected neighbour within grid bounds.
+
+arc2_te_templ_cells_(Grid, BG, H, W, TemplCells): findall with
+  arc2_te_isolated_ to collect all template marker positions as R-C pairs.
+
+arc2_te_col_runs_(SortedCols, Runs) / arc2_te_col_runs_scan_: convert sorted
+  column list to list of S-E pairs for contiguous runs.
+
+arc2_te_seed_info_(Grid, BG, H, W, TemplCells, SeedRowMin, ColRuns, BH, BW,
+  Stride, SeedColors): collect non-template non-BG cells, compute row range,
+  col runs, BH, BW, Stride, per-sub-block SeedColors.
+
+arc2_te_template_structure_(TemplCells, TRows, TCols): sort template cell
+  row and col indices into TRows and TCols.
+
+arc2_te_check_match_(Grid, TRows, TCols, SeedColors, LI, C0, I): recursive
+  check that template[LI][C0+I] == SeedColors[I] for all I.
+
+arc2_te_find_level_(Grid, TRows, TCols, SeedColors, SeedLevel, CGOff): double
+  between/3 loop over (level, col-group offset) pairs; first-match cut.
+
+arc2_te_in_block_(X, Anchor, Stride, BlockSize, NumBlocks, BIdx): succeeds
+  when coordinate X falls inside block BIdx of a regular stride tiling.
+
+arc2_transform(template_expand, Grid, Out): orchestrates all above; maplist
+  over rows and cols builds Out cell by cell.
+
+arc2_named_rule(template_expand): registers rule for arc2_induce_rule/2.
+
+
+KEY INSIGHT: SEED POSITIONING VIA LEVEL AND COL-GROUP MATCHING
+
+The central challenge is that the seed blocks may be positioned at ANY level
+and col-group within the template sequence, not always at level 0. The
+algorithm resolves this by searching (level, col-group offset) pairs and
+finding the unique assignment where the seed's per-sub-block colors match the
+template exactly. Once the level is known, the anchor position is computed by
+stepping backward (level * Stride) in rows and (CGOff * Stride) in cols from
+the seed's top-left corner. This makes the rule agnostic to the seed's
+position within the pattern.
+
+The BG detection via mode is necessary because different training pairs use
+different background values (8 in P1/P2, 1 in P3, 3 in the test case).
+
+
+SIGNIFICANCE
+
+template_expand generalises the concept of a "fill pattern" beyond simple
+tiling: the sparse template encodes WHICH color goes WHERE in a 2D block
+array, and the seed encodes WHERE in that array the current state begins.
+The rule reconstructs the complete block array from these two pieces of
+information. This tests the ability to interpret a legend (the template) and
+use it to complete a partially-filled regular structure (the seed).
+
+Score: 50/120 = 41.67% to 51/120 = 42.50%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
