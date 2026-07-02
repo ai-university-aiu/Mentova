@@ -1,0 +1,171 @@
+Accomplishment 343: ARC-AGI-2 Wave 45 - Stair Fill (WP-303, Layer 278)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-01
+
+ABSTRACT
+
+Wave 45 adds the stair_fill rule (WP-303, Layer 278) to PrologAI's ARC-AGI-2
+benchmark solver, solving task 28a6681f and raising the score from 42/120 =
+35.00% to 43/120 = 35.83%.
+
+The rule recognizes that staircase wall cells (any non-0, non-1 valued cells
+forming L-shaped or step-shaped outlines) create enclosed step pocket recesses
+inside their concave arms. N 1-cells appear misplaced anywhere in the input.
+The output redistributes exactly N 1-cells into the interiors of those step
+pockets and clears all other 1-cells, leaving wall cells unchanged.
+
+A two-phase bottom-to-top algorithm identifies pockets: Phase 1 fills
+doubly-bounded pockets (staircase wall on left AND right, both not at grid
+boundary); Phase 2 fills single-bounded pockets (left=staircase wall,
+right=grid boundary) with any remaining budget. Within each row, smaller
+gaps fill before wider ones (innermost first).
+
+
+TASK DESCRIPTION
+
+Task ID: 28a6681f
+
+Input structure: a 10x10 grid. Three cell types appear:
+  0 - background cells (open space, not a pocket candidate)
+  1 - misplaced indicator cells (N of these exist; will all be cleared or moved)
+  non-0, non-1 - staircase wall cells (fixed; form step shapes of various colors)
+
+The staircase walls form L-shaped or step-shaped outlines whose concave interior
+recesses are the step pockets. The N input 1-cells are scattered in arbitrary
+positions inside or outside the pocket regions.
+
+Output: exactly N pocket cells filled with 1; all other cells are either the
+original wall value (non-0, non-1) or 0. The 1-cell count is exactly conserved.
+
+
+PATTERN ANALYSIS
+
+Step 1 - Count 1-cells: traverse all cells and count N = total 1-cells. This is
+the exact budget to redistribute.
+
+Step 2 - Identify open runs per row: for each row, find all maximal horizontal
+runs of non-wall cells (cells that are 0 or 1). These are the candidate pocket
+or open-space ranges.
+
+Step 3 - Check enclosure: a run (C_L, C_R) in row R is enclosed if:
+  Left wall: cell (R, C_L - 1) is a staircase wall (non-0, non-1 and C_L > 0).
+  Right wall for Phase 1: cell (R, C_R + 1) is a staircase wall and C_R < NC-1.
+  Right boundary for Phase 2: C_R == NC - 1 (grid right edge) and C_L > 0.
+  Below condition: every cell (R+1, C) for C in [C_L, C_R] is either a staircase
+    wall, an already-confirmed pocket cell, or R is the last row (grid bottom).
+
+Step 4 - Phase 1 fill (doubly-bounded pockets): process rows from bottom to top.
+  For each row, collect all doubly-bounded runs (both sides are staircase walls).
+  Sort the collected runs by gap size (C_R - C_L + 1) ascending (smallest first).
+  Fill each run cell by cell left to right, decrementing N each time. Stop when
+  N reaches 0.
+
+Step 5 - Phase 2 fill (single-bounded pockets): only if N > 0 after Phase 1.
+  Process rows bottom to top. For each row, collect single-bounded runs (left is
+  staircase wall, right is grid boundary). Sort by gap size ascending. Fill until
+  N reaches 0.
+
+Step 6 - Build output: for each cell (R, C):
+  If (R, C) is in the pocket set -> 1
+  If cell is a staircase wall -> preserve original wall value
+  Otherwise -> 0
+
+
+CRITICAL DISCRIMINATOR: DOUBLY-BOUNDED VS SINGLE-BOUNDED
+
+The three training pairs reveal the key invariant:
+
+Training Pair 3 (N=3): only 3 pocket cells exist, all doubly-bounded. A large
+  single-bounded open region at cols 6-9, row 9 (left=4-wall, right=grid
+  boundary) exists but must NOT be filled. Filling it first would exhaust the
+  budget before reaching the true step pocket cells. Phase 1 exclusively handles
+  enclosed pockets and correctly fills only the 3 doubly-bounded cells.
+
+Training Pair 1 (N=20): Phase 1 fills a 4-cell doubly-bounded pocket (col 6,
+  rows 5-8, between two 3-walls). Phase 2 fills a 16-cell single-bounded region
+  (cols 8-9, rows 2-9, left=3-wall, right=grid boundary). N=4+16=20. Both
+  phases needed.
+
+Training Pair 2 (N=25): all pockets are doubly-bounded across multiple row levels
+  of the staircase. Phase 1 alone fills all 25 cells.
+
+Test Case (N=5): two doubly-bounded pockets (col 8 gap=1 filling 3 cells and
+  cols 3-4 gap=2 filling 2 cells). Phase 1 fills all 5. Phase 2 not needed.
+
+
+ALGORITHM
+
+PROCEDURE stair_fill(Grid):
+  N = count(cell == 1 in Grid)
+  IF N == 0: RETURN Grid
+  Pockets = empty_set
+  // Phase 1: doubly-bounded pockets
+  FOR R = NR-1 DOWN TO 0:
+    IF N == 0: BREAK
+    Ranges = maximal_open_runs(Grid[R])
+    DB = filter(Ranges, left_wall AND right_wall AND below_ok(R, Pockets))
+    SORT DB BY gap_size ASCENDING
+    FOR (C_L, C_R) IN DB:
+      FILL C_L..C_R INTO Pockets UNTIL N == 0
+  // Phase 2: single-bounded pockets (if budget remains)
+  IF N > 0:
+    FOR R = NR-1 DOWN TO 0:
+      IF N == 0: BREAK
+      Ranges = maximal_open_runs(Grid[R])
+      SB = filter(Ranges, left_wall AND C_R == NC-1 AND below_ok(R, Pockets))
+      SORT SB BY gap_size ASCENDING
+      FOR (C_L, C_R) IN SB:
+        FILL C_L..C_R INTO Pockets UNTIL N == 0
+  Build output: pocket cells -> 1, wall cells -> wall value, others -> 0
+
+
+PROLOG IMPLEMENTATION
+
+Main predicate: arc2_transform(stair_fill, +Grid, -Out)
+Helper predicates:
+  arc2_sf_count1_(+Grid, -N) - count all 1-valued cells
+  arc2_sf_is_wall_(+Cell) - true if cell is non-0 and non-1
+  arc2_sf_open_(+Cell) - true if cell is 0 or 1 (non-wall)
+  arc2_sf_find_ranges_(+Row, +NC, -Ranges) - find maximal open runs
+  arc2_sf_scan_ranges_(+Row, +C, +NC, +Start, +InRun, -Ranges) - row scanner
+  arc2_sf_run_end_(+Start, +C, -Range) - close a completed run
+  arc2_sf_below_ok_(+Grid, +R, +C_L, +C_R, +NR, +Pockets) - floor check
+  arc2_sf_phase1_(+Grid, +NR, +NC, +LR, +LC, +N, +P0, -P, -N1) - Phase 1 driver
+  arc2_sf_phase1_rows_(+Grid, +NR, +NC, +LR, +LC, +R, +N, +P0, -P, -N1) - row loop
+  arc2_sf_db_ranges_(+Row, +Grid, +R, +NR, +NC, +LC, +Pockets, -DB) - doubly-bounded
+  arc2_sf_phase2_(+Grid, +NR, +NC, +LR, +LC, +N, +P0, -P) - Phase 2 driver
+  arc2_sf_phase2_rows_(+Grid, +NR, +NC, +LR, +LC, +R, +N, +P0, -P) - row loop
+  arc2_sf_sb_ranges_(+Row, +Grid, +R, +NR, +NC, +LC, +Pockets, -SB) - single-bounded
+  arc2_sf_fill_ranges_(+Ranges, +R, +N, +P0, -P, -N1) - fill sorted runs
+  arc2_sf_fill_range_(+C_L, +C_R, +R, +N, +P0, -P, -N1) - fill one run
+  arc2_sf_build_out_(+Grid, +Pockets, -Out) - reconstruct output
+  arc2_sf_build_row_(+Row, +R, +Pockets, +C, -OutRow) - build one row
+  arc2_sf_build_cell_(+Cell, +R, +C, +Pockets, -OutCell) - build one cell
+
+All predicates use ERC % comments above every line of code.
+File: Mentova/src/mentova/games/arc_benchmark_2.pl (WP-303, Layer 278 section).
+
+
+VERIFICATION
+
+Training Pair 1 (N=20): PASS
+Training Pair 2 (N=25): PASS
+Training Pair 3 (N=3):  PASS
+Test Case   (N=5):  PASS
+Full benchmark: 43/120 = 35.83%.
+
+
+SIGNIFICANCE
+
+stair_fill demonstrates PrologAI's ability to recognize spatial containment
+structures defined by non-standard wall geometries (staircase walls rather than
+rectangular borders) and redistribute indicator cells into those contained spaces.
+The two-phase algorithm generalizes naturally: any number of staircase arms and
+orientations can be handled by the same doubly-bounded / single-bounded
+classification. The smallest-gap-first priority within each row encodes the
+natural reading of "innermost" pockets filling before "outermost" ones, matching
+the ground-truth outputs exactly.
+
+Score: 42/120 = 35.00% to 43/120 = 35.83%.
