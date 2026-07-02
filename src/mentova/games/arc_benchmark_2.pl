@@ -8316,6 +8316,20 @@ arc2_fst_apply_(Grid, NR, NC, SortedS, LShapes, BG, Out) :-
         ), Pls, Gi, Go)
     ), SortedS, G1, Out).
 
+% Fast specific clause for shape_walk: avoids catch-all timeout.
+% Pre-filter: first row of first training input must contain both a 4 (divider) and a 5 (marker).
+arc2_induce_rule(TrainingPairs, shape_walk) :-
+% Unpack first training pair.
+    TrainingPairs = [pair(First, _)|_],
+% Read first row of the grid.
+    First = [FR0|_],
+% Quick check: first row must contain a 5 (marker) and a 4 (divider column).
+    memberchk(5, FR0),
+    memberchk(4, FR0),
+% Full verification: all training pairs must transform correctly.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(shape_walk, In, Out)).
+
 % Fast specific clause for pocket_shot: avoids catch-all timeout on large grids.
 % Requires at least one 2-cell in the first training input as a quick pre-filter.
 arc2_induce_rule(TrainingPairs, pocket_shot) :-
@@ -10929,6 +10943,164 @@ arc2_transform(pocket_shot, Grid, Out) :-
     maplist([R, Row]>>(
         maplist([C, V]>>(
             arc2_ps_out_(R, C, Grid, BG, ZeroSet, TwoSet, EraseSet, V)
+        ), Cs, Row)
+    ), Rs, Out).
+
+% ---------------------------------------------------------------------------
+% WP-314: shape_walk (Layer 289) — 3x3 block shapes direct a colored chain walk
+% Task: 136b0064
+% ---------------------------------------------------------------------------
+
+% Registry entry for arc2_induce_rule/2 dispatch.
+arc2_named_rule(shape_walk).
+
+% arc2_sw_divider_col_/2: first column index where all rows contain value 4.
+arc2_sw_divider_col_(Grid, DC) :-
+% Determine grid width from first row.
+    Grid = [Row0|_], length(Row0, W), W1 is W - 1,
+% Scan left to right; succeed at first all-4 column.
+    between(0, W1, DC),
+    forall(member(Row, Grid), nth0(DC, Row, 4)), !.
+
+% arc2_sw_five_rc_/3: row and column of the single cell with value 5.
+arc2_sw_five_rc_(Grid, R, C) :-
+% Grid dimensions.
+    length(Grid, H), H1 is H - 1,
+    Grid = [Row0|_], length(Row0, W), W1 is W - 1,
+% Scan all positions; take first cell with value 5.
+    between(0, H1, R), between(0, W1, C),
+    arc2_cell_(Grid, R, C, 5), !.
+
+% arc2_sw_nonblank_rows_/3: rows with at least one non-zero cell in cols 0..DC-1.
+arc2_sw_nonblank_rows_(Grid, DC, Rows) :-
+% Last left-side column index.
+    DC1 is DC - 1,
+    length(Grid, H), H1 is H - 1,
+% Collect indices where any left-side cell is non-zero.
+    findall(R, (
+        between(0, H1, R),
+        nth0(R, Grid, Row),
+        once((between(0, DC1, C), nth0(C, Row, V), V \= 0))
+    ), Rows).
+
+% arc2_sw_section_starts_/2: first row of each 3-row section in a sorted non-blank list.
+arc2_sw_section_starts_([], []).
+arc2_sw_section_starts_([R|Rest], [R|SRest]) :-
+% Consume the consecutive triple R, R+1, R+2.
+    R2 is R + 1, R3 is R + 2,
+    select(R2, Rest, Rest1), select(R3, Rest1, Rest2), !,
+    arc2_sw_section_starts_(Rest2, SRest).
+arc2_sw_section_starts_([_|Rest], SRest) :-
+% Skip lone non-blank rows (should not occur in valid inputs).
+    arc2_sw_section_starts_(Rest, SRest).
+
+% arc2_sw_block_color_/4: first non-zero value in the 3x3 block at top-left (R,C).
+arc2_sw_block_color_(Grid, R, C, Color) :-
+% Enumerate the nine (row,col) offsets and return first non-zero cell.
+    R1 is R+1, R2 is R+2, C1 is C+1, C2 is C+2,
+    once((
+        member(Ri-Ci, [R-C,R-C1,R-C2,R1-C,R1-C1,R1-C2,R2-C,R2-C1,R2-C2]),
+        arc2_cell_(Grid, Ri, Ci, Color), Color \= 0
+    )).
+
+% arc2_sw_norm_/2: binary normalization — 0 stays 0, any non-zero becomes 1.
+arc2_sw_norm_(0, 0) :- !.
+arc2_sw_norm_(_, 1).
+
+% arc2_sw_block_shape_/4: normalized [[0,1]] 3x3 matrix at top-left (R,C).
+arc2_sw_block_shape_(Grid, R, C, Shape) :-
+% Compute offsets for 3x3 block.
+    R1 is R+1, R2 is R+2, C1 is C+1, C2 is C+2,
+% Read all nine raw cell values.
+    arc2_cell_(Grid, R,  C,  V00), arc2_cell_(Grid, R,  C1, V01), arc2_cell_(Grid, R,  C2, V02),
+    arc2_cell_(Grid, R1, C,  V10), arc2_cell_(Grid, R1, C1, V11), arc2_cell_(Grid, R1, C2, V12),
+    arc2_cell_(Grid, R2, C,  V20), arc2_cell_(Grid, R2, C1, V21), arc2_cell_(Grid, R2, C2, V22),
+% Normalize each to 0 or 1.
+    maplist(arc2_sw_norm_,
+            [V00,V01,V02,V10,V11,V12,V20,V21,V22],
+            [N00,N01,N02,N10,N11,N12,N20,N21,N22]),
+% Assemble row-major 3x3 structure.
+    Shape = [[N00,N01,N02],[N10,N11,N12],[N20,N21,N22]].
+
+% arc2_sw_shape_to_move_/3: map a normalized 3x3 shape to (direction, length).
+% S1 — U-shape open at top: moves LEFT 2 cells.
+arc2_sw_shape_to_move_([[1,0,1],[1,0,1],[1,1,1]], left,  2) :- !.
+% S2 — Y-shape leaning right: moves RIGHT 3 cells.
+arc2_sw_shape_to_move_([[1,1,0],[1,0,1],[0,1,0]], right, 3) :- !.
+% S3 — inverted-V dropping down: moves DOWN 2 cells.
+arc2_sw_shape_to_move_([[1,0,1],[0,1,0],[0,1,0]], down,  2) :- !.
+% S4 — T-shape wide top: moves LEFT 4 cells.
+arc2_sw_shape_to_move_([[1,1,1],[0,1,0],[1,0,1]], left,  4) :- !.
+
+% arc2_sw_seg_cells_/5: list of R-C positions for segment starting at (R,C).
+arc2_sw_seg_cells_(R, C, left,  Len, Cells) :-
+% Left: same row, columns from C down to C-Len+1 inclusive.
+    Cend is C - Len + 1, findall(R-Ci, between(Cend, C, Ci), Cells).
+arc2_sw_seg_cells_(R, C, right, Len, Cells) :-
+% Right: same row, columns from C to C+Len-1 inclusive.
+    Cend is C + Len - 1, findall(R-Ci, between(C, Cend, Ci), Cells).
+arc2_sw_seg_cells_(R, C, down,  Len, Cells) :-
+% Down: same column, rows from R to R+Len-1 inclusive.
+    Rend is R + Len - 1, findall(Ri-C, between(R, Rend, Ri), Cells).
+
+% arc2_sw_seg_tip_/5: last cell position (tip) after drawing a segment.
+arc2_sw_seg_tip_(R, C, left,  Len, R-Ct)  :- Ct  is C - Len + 1.
+arc2_sw_seg_tip_(R, C, right, Len, R-Ct)  :- Ct  is C + Len - 1.
+arc2_sw_seg_tip_(R, C, down,  Len, Rt-C)  :- Rt  is R + Len - 1.
+
+% arc2_sw_walk_/5: draw chain segments; accumulate R-C-Color triples.
+arc2_sw_walk_([], _, _, []).
+arc2_sw_walk_([blk(Col,Dir,Len)|Bs], R, C, All) :-
+% Compute cell positions for this segment.
+    arc2_sw_seg_cells_(R, C, Dir, Len, Pos),
+% Find the tip of this segment.
+    arc2_sw_seg_tip_(R, C, Dir, Len, TipR-TipC),
+% Next segment starts one row below the tip.
+    NR is TipR + 1,
+% Walk remaining segments.
+    arc2_sw_walk_(Bs, NR, TipC, Rest),
+% Tag each position with this segment's color.
+    findall(Ri-Ci-Col, member(Ri-Ci, Pos), Tagged),
+    append(Tagged, Rest, All).
+
+% arc2_sw_blocks_at_/4: collect blk/3 terms for all sections at a given block-column start.
+arc2_sw_blocks_at_(Grid, SectStarts, ColStart, Blocks) :-
+% For each section start row, extract color, shape, direction, and length.
+    findall(blk(Color,Dir,Len), (
+        member(SR, SectStarts),
+        arc2_sw_block_color_(Grid, SR, ColStart, Color),
+        arc2_sw_block_shape_(Grid, SR, ColStart, Shape),
+        arc2_sw_shape_to_move_(Shape, Dir, Len)
+    ), Blocks).
+
+% arc2_transform(shape_walk, +Grid, -Out): build the chain-walk output grid.
+arc2_transform(shape_walk, Grid, Out) :-
+% Locate the divider column (full column of 4s).
+    arc2_sw_divider_col_(Grid, DC),
+% Find the 5 marker; compute its output column as offset from divider.
+    arc2_sw_five_rc_(Grid, _FR, FC),
+    OutC5 is FC - DC - 1,
+% Collect non-blank left-side rows; group into 3-row section starts.
+    arc2_sw_nonblank_rows_(Grid, DC, NbRows),
+    arc2_sw_section_starts_(NbRows, SectStarts),
+% Left blocks at col 0; middle blocks at col DC-3 (= col 4 for DC=7).
+    MidCol is DC - 3,
+    arc2_sw_blocks_at_(Grid, SectStarts, 0,      LBlks),
+    arc2_sw_blocks_at_(Grid, SectStarts, MidCol, MBlks),
+    append(LBlks, MBlks, AllBlks),
+% Walk chain starting at row 1, column OutC5.
+    arc2_sw_walk_(AllBlks, 1, OutC5, ChainCells),
+% Build H-row x DC-col output grid; place 5 marker and chain cells.
+    length(Grid, H), H1 is H - 1, DC1 is DC - 1,
+    numlist(0, H1, Rs), numlist(0, DC1, Cs),
+    maplist([R, Row]>>(
+        maplist([C, V]>>(
+% Row 0: place 5 marker at computed output column.
+            ( R =:= 0, C =:= OutC5 -> V = 5
+% Chain cells: assign their segment color.
+            ; member(R-C-V, ChainCells) -> true
+% All other cells: background zero.
+            ; V = 0)
         ), Cs, Row)
     ), Rs, Out).
 

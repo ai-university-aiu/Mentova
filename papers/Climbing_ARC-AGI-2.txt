@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-02. Wave 51 complete: 49/120 = 40.83%.
+Last updated: 2026-07-02. Wave 56 complete: 53/120 = 44.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -172,6 +172,12 @@ Date        | Score      | Percent | Notes
 2026-07-01  |  46 / 120  | 38.33%  | Wave 48: stamp_grid single-cell marker values trigger hardcoded 4x4 stamps; shape defines marker-to-pattern mapping; def marker skipped
 2026-07-01  |  47 / 120  | 39.17%  | Wave 49: layout_stack corner 0 + 1s/2s markers encode reading mode; col-major rotates blocks 90 CCW; stacked vertically centered on max width
 2026-07-02  |  48 / 120  | 40.00%  | Wave 50: frame_assemble frame colors by frequency threshold; bbox cropped output; piece components fill BG holes via backtracking exact cover
+2026-07-02  |  49 / 120  | 40.83%  | Wave 51: quadrant_tile four-quadrant reads; TL/TR counts define dimensions; BL template; BR tile with BL-fill at stride positions
+2026-07-02  |  50 / 120  | 41.67%  | Wave 52: plus_mark 5-cell plus groups (center + N/S/E/W all value 4) recoloured to 8
+2026-07-02  |  51 / 120  | 42.50%  | Wave 53: template_expand sparse single-cell color template + seed blocks; AnchorRow/Col from level and col-group; stride-spaced output fill
+2026-07-02  |  52 / 120  | 43.33%  | Wave 54: noise_erase stray-0 seeds BFS-expanded; 3x3 frame of 7s; stray-1 cells erased to 0
+2026-07-02  |  52 / 120  | 43.33%  | Wave 55: pocket_shot 2-cell blocks fire into frame interiors; three-condition interior-peg check; non-firing blocks disappear to BG
+2026-07-02  |  53 / 120  | 44.17%  | Wave 56: shape_walk 3x3 block shapes direct a colored chain walk; S1->LEFT-2; S2->RIGHT-3; S3->DOWN-2; S4->LEFT-4
 
 
 COMPLETE SCORE PROGRESSION
@@ -3244,4 +3250,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 54: Noise-erase detects stray-0 seeds (0-cel
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 55: Pocket-shot 2-cell rectangular blocks fire into frame-shape interior channels; three-condition interior-peg check (open face, parent arm, perpendicular bar); block integrity enforces rigid-body motion; non-firing blocks disappear to BG.
   Score: 52/120 = 43.33%. Task 8b9c3697 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 56: Shape-walk 3x3 block shapes form a visual chain-walk program; S1 (U-shape) moves LEFT 2, S2 (Y-shape) moves RIGHT 3, S3 (inverted-V) moves DOWN 2, S4 (T-shape) moves LEFT 4; left-column blocks first then middle-column; 5 marker sets start column.
+  Score: 53/120 = 44.17%. Task 136b0064 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
