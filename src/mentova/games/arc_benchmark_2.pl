@@ -10054,6 +10054,116 @@ arc2_transform(frame_assemble, Grid, Out) :-
     arc2_fa_build_(Grid, R1, R2, C1, C2, ColorMap, Out).
 
 % ---------------------------------------------------------------------------
+% WAVE 51 — quadrant_tile (WP-309, Layer 284)
+% Task: f931b4a8
+% Input is 2N x 2N. Top-left N rows encode TL_count (non-zero cells in cols
+% 0..N-1) and TR_count (non-zero cells in cols N..2N-1). Bottom-left NxN
+% is the BL fill template. Bottom-right NxN is the BR tile template (0s are
+% holes). Output is TL_count rows x TR_count cols. Each output cell (R,C):
+%   tile_r = R mod BRh, tile_c = C mod BRw, ti = R // BRh.
+%   If BR[tile_r][tile_c] != 0: use that value.
+%   Else: use BL[ti mod BLh][tile_c mod BLw].
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule/1 registers quadrant_tile for generic induction dispatch.
+arc2_named_rule(quadrant_tile).
+
+% arc2_qt_subgrid_(+Grid, +R0, +R1, +C0, +C1, -Sub)
+% Extract rows R0..R1 and columns C0..C1 as a subgrid.
+arc2_qt_subgrid_(Grid, R0, R1, C0, C1, Sub) :-
+% Build a list of row indices to extract.
+    numlist(R0, R1, RowIs),
+% For each row index, extract the requested column slice.
+    maplist([RI, Row]>>(
+% Get the full row from Grid.
+        nth0(RI, Grid, FullRow),
+% Build column indices for the slice.
+        numlist(C0, C1, ColIs),
+% Extract each column value.
+        maplist([CI, V]>>(nth0(CI, FullRow, V)), ColIs, Row)
+    ), RowIs, Sub).
+
+% arc2_qt_count_nz_(+Grid, +R0, +R1, +C0, +C1, -Count)
+% Count cells with value != 0 in the rectangle [R0..R1] x [C0..C1].
+arc2_qt_count_nz_(Grid, R0, R1, C0, C1, Count) :-
+% Enumerate all (row, col) pairs in the rectangle.
+    numlist(R0, R1, RowIs),
+% Collect all non-zero values using findall.
+    findall(1, (
+% Iterate over each row index.
+        member(RI, RowIs),
+% Get the row list.
+        nth0(RI, Grid, Row),
+% Check column range and non-zero value.
+        between(C0, C1, CI),
+        nth0(CI, Row, V),
+        V \= 0
+    ), Ones),
+% The count is the length of the found list.
+    length(Ones, Count).
+
+% arc2_qt_cell_(+BR, +BL, +BRh, +BRw, +BLh, +BLw, +R, +C, -V)
+% Compute the value at output position (R,C) using the tile and fill rules.
+arc2_qt_cell_(BR, BL, BRh, BRw, BLh, BLw, R, C, V) :-
+% Tile row index within BR (0-based).
+    TileR is R mod BRh,
+% Tile column index within BR (0-based).
+    TileC is C mod BRw,
+% Tile-block row index (which repetition of BR we are in).
+    TI    is R // BRh,
+% Look up the BR value at this tile position.
+    nth0(TileR, BR, BRRow),
+    nth0(TileC, BRRow, BRV),
+% If BR has a non-zero value here, use it directly.
+    ( BRV \= 0 ->
+        V = BRV
+    ;
+% Otherwise look up the fill from BL using tile-block row and tile col.
+        BLi is TI mod BLh,
+        BLj is TileC mod BLw,
+        nth0(BLi, BL, BLRow),
+        nth0(BLj, BLRow, V)
+    ).
+
+% arc2_transform(quadrant_tile, +Grid, -Out)
+% Top-level orchestration: split, count, tile-and-fill.
+arc2_transform(quadrant_tile, Grid, Out) :-
+% Grid dimensions.
+    length(Grid, R),
+    Grid = [Row0|_],
+    length(Row0, C),
+% Split point is the midpoint of each dimension.
+    SplitR is R // 2,
+    SplitC is C // 2,
+% Last row/col indices for subgrid extraction.
+    R1max  is R - 1,
+    C1BL   is SplitC - 1,
+    C1BR   is C - 1,
+    SplitR1 is SplitR - 1,
+% Extract BL (bottom-left) fill template.
+    arc2_qt_subgrid_(Grid, SplitR, R1max, 0,      C1BL,  BL),
+% Extract BR (bottom-right) tile template.
+    arc2_qt_subgrid_(Grid, SplitR, R1max, SplitC, C1BR,  BR),
+% Count non-zero cells in TL (top-left) to get output row count.
+    arc2_qt_count_nz_(Grid, 0, SplitR1, 0,      C1BL,  TLCount),
+% Count non-zero cells in TR (top-right) to get output col count.
+    arc2_qt_count_nz_(Grid, 0, SplitR1, SplitC, C1BR,  TRCount),
+% BL and BR dimensions.
+    length(BL, BLh), BL = [BLR0|_], length(BLR0, BLw),
+    length(BR, BRh), BR = [BRR0|_], length(BRR0, BRw),
+% Output row and col index lists.
+    TLLast is TLCount - 1,
+    TRLast is TRCount - 1,
+    numlist(0, TLLast, RowIs),
+    numlist(0, TRLast, ColIs),
+% Build each output row by computing each cell value.
+    maplist([RI, OutRow]>>(
+        maplist([CI, V]>>(
+            arc2_qt_cell_(BR, BL, BRh, BRw, BLh, BLw, RI, CI, V)
+        ), ColIs, OutRow)
+    ), RowIs, Out).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 

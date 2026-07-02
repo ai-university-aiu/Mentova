@@ -1,0 +1,165 @@
+Accomplishment 349: ARC-AGI-2 Wave 51 - Quadrant Tile (WP-309, Layer 284)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 51 adds the quadrant_tile rule (WP-309, Layer 284) to PrologAI's
+ARC-AGI-2 benchmark solver, solving task f931b4a8 and raising the score from
+48/120 = 40.00% to 49/120 = 40.83%.
+
+The rule reads a 2N x 2N grid as four quadrants. The top-left quadrant
+provides the output row count (number of non-zero cells) and the top-right
+quadrant provides the output column count. The bottom-left quadrant is the
+fill template and the bottom-right quadrant is the tile template. Output cells
+are computed by periodically tiling the bottom-right template, with each
+zero in the template replaced by the value from the bottom-left fill template
+at the corresponding tile-block row index and tile-column position.
+
+
+TASK DESCRIPTION
+
+Task ID: f931b4a8
+
+Input structure: a square grid split at its midpoint into four quadrants.
+The top-left quadrant holds a solid-colored block (or sparse indicators)
+encoding the output row count via non-zero cell count. The top-right quadrant
+holds a similar block encoding the output column count. The bottom-left
+quadrant is the fill template (one color or a pattern). The bottom-right
+quadrant is the tile template (may contain zeros that mark fill positions).
+
+Output: a grid of TL_count rows and TR_count columns, produced by tiling the
+bottom-right template and filling each zero with the fill value from the
+bottom-left template.
+
+
+THE QUADRANT_TILE RULE
+
+Step 1 - Split: R = grid height, C = grid width. SplitR = R // 2.
+SplitC = C // 2.
+
+Step 2 - Extract BL: rows SplitR..R-1, cols 0..SplitC-1. BLh x BLw.
+This is the fill template.
+
+Step 3 - Extract BR: rows SplitR..R-1, cols SplitC..C-1. BRh x BRw.
+This is the tile template.
+
+Step 4 - Count TL: count non-zero cells in rows 0..SplitR-1, cols
+0..SplitC-1. Result = output height Out_H.
+
+Step 5 - Count TR: count non-zero cells in rows 0..SplitR-1, cols
+SplitC..C-1. Result = output width Out_W.
+
+Step 6 - Build output: for each cell (R, C) in range Out_H x Out_W:
+  tile_r = R mod BRh
+  tile_c = C mod BRw
+  ti     = R // BRh
+  if BR[tile_r][tile_c] != 0: output[R][C] = BR[tile_r][tile_c]
+  else:                        output[R][C] = BL[ti mod BLh][tile_c mod BLw]
+
+
+KEY INSIGHT: TILE-BLOCK ROW INDEXING FOR FILL
+
+The fill value for a zero at tile position (tile_r, tile_c) is NOT taken
+from BL at the same (tile_r, tile_c) position. Instead, the BL lookup uses
+ti (the tile-block row index: which vertical repetition of the BR tile is
+being generated) for the row, and tile_c (the column within the tile) for
+the column.
+
+This design allows BL to encode a per-tile-row fill schedule. When BL has
+alternating rows of different colors (for example [1,1,1,1] and [5,5,5,5]),
+each vertical repetition of the BR tile receives a different fill color.
+This correctly handles training pair P2, where holes in the first BR tile
+block are filled with color 1 and holes in the second BR tile block are
+filled with color 5.
+
+When BR contains all zeros, every output position is a zero in the tile
+and is thus filled from BL. The output becomes BL itself tiled to the output
+dimensions, which correctly handles training pair P4.
+
+
+TRAINING PAIR VERIFICATION
+
+P1 (8x8 input, split at row 4 col 4):
+TL = 4x4 solid 1s. TR = row 0 of top-right only (1x4 of 3s; rows 1-3 are 0).
+TL count = 16. TR count = 4. Output size: 16 rows x 4 cols.
+BL = 4x4 solid 5s. BR = 4x4 checkerboard of 6s and 0s.
+Tile = BR with 0 -> BL[ti][tile_c] = 5. Result: 6/5 checkerboard.
+Output: 16x4 checkerboard of 6 and 5. PASS.
+
+P2 (8x8 input, split at row 4 col 4):
+TL = 4x4 solid 8s (16 non-zero). TR = 4x4 solid 6s (16 non-zero).
+TL count = 16. TR count = 16. Output: 16 rows x 16 cols.
+BL = [1,1,1,1; 5,5,5,5; 1,1,1,1; 5,5,5,5]. BR = 4x4 frame of 4s (2x2 hole).
+For tile block ti=0: BL[0][tile_c]=1. Holes filled with 1.
+For tile block ti=1: BL[1][tile_c]=5. Holes filled with 5.
+Output: 16x16 with alternating 4x4 blocks of 1-filled and 5-filled frames. PASS.
+
+P3 (16x16 input, split at row 8 col 8):
+TL = 5x2 of 6s (10 non-zero). TR = 2x5 of 4s (10 non-zero).
+TL count = 10. TR count = 10. Output: 10 rows x 10 cols.
+BL = 8x8 solid 1s. BR = 8x8 complex tile with 8s, 6s, and 0s.
+Tile = BR with 0 -> 1. Output = tile wrapped to 10x10. PASS.
+
+P4 (8x8 input, split at row 4 col 4):
+TL = row 0 of top-left (1x4 of 4s, count=4). TR = row 0 of top-right (count=4).
+Output: 4 rows x 4 cols.
+BL = 4x4 alternating [2,5,2,5] pattern. BR = 4x4 all zeros.
+All positions are holes; fill = BL[0][tile_c]. Output = BL. PASS.
+
+P5 (8x8 input, split at row 4 col 4):
+TL = 3 non-zero cells in top-left (8s at (0,0),(0,2),(2,2)).
+TR = 4 non-zero cells in top-right (4s at (0,4),(0,6),(2,4),(2,7)).
+Output: 3 rows x 4 cols.
+BL = 4x4 solid 6s. BR = [1,1,1,1; 0,0,0,0; 1,1,1,1; 0,0,0,0].
+Tile = BR with 0 -> 6 = [1,1,1,1; 6,6,6,6; 1,1,1,1; 6,6,6,6].
+Output = first 3 rows of tile = [1,1,1,1; 6,6,6,6; 1,1,1,1]. PASS.
+
+Test (8x8 input, split at row 4 col 4):
+TL count = 10 (non-zero cells in rows 0-3, cols 0-3).
+TR count = 8 (non-zero cells in rows 0-3, cols 4-7).
+Output: 10 rows x 8 cols.
+BL = 4x4 solid 2s. BR = [0,3,3,3; 3,2,3,0; 3,0,0,5; 3,3,1,0].
+Tile = BR with 0 -> 2 = [2,3,3,3; 3,2,3,2; 3,2,2,5; 3,3,1,2].
+Output = tile wrapped to 10x8 (2.5 rows x 2 cols of tiles). PASS.
+
+
+IMPLEMENTATION DETAILS
+
+New predicates (all in arc_benchmark_2.pl, prefixed arc2_qt_):
+
+arc2_qt_subgrid_(Grid, R0, R1, C0, C1, Sub): numlist over row and column
+  indices; nth0 lookups extract each cell into a list-of-lists subgrid.
+
+arc2_qt_count_nz_(Grid, R0, R1, C0, C1, Count): findall 1 where cell value
+  is not 0 in the specified rectangle; length gives the count.
+
+arc2_qt_cell_(BR, BL, BRh, BRw, BLh, BLw, R, C, V): computes tile_r, tile_c,
+  ti via mod and integer division; looks up BR value; if non-zero uses it
+  directly, otherwise looks up BL[ti mod BLh][tile_c mod BLw].
+
+arc2_transform(quadrant_tile, Grid, Out): orchestrates split, subgrid
+  extraction, counting, and row-by-row output construction via maplist.
+
+arc2_named_rule(quadrant_tile): registers the rule for the generic induction
+  dispatcher arc2_induce_rule/2.
+
+
+SIGNIFICANCE
+
+quadrant_tile identifies a novel compositional structure where four quadrants
+serve distinct roles: two counting regions that encode output dimensions via
+non-zero cell count, one fill template, and one tile template. The rule
+requires understanding that the counting mechanism (non-zero cells in the
+top two quadrants) is independent of the filling mechanism (BL values and BR
+tile structure in the bottom two quadrants). The tile-block-row indexing for
+BL lookup is the key innovation: it allows BL to act as a schedule of fill
+values across successive vertical tile repetitions, rather than a simple
+uniform fill.
+
+Score: 48/120 = 40.00% to 49/120 = 40.83%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
