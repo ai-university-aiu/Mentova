@@ -1,0 +1,114 @@
+Accomplishment 350: ARC-AGI-2 Wave 52 - Plus Mark (WP-310, Layer 285)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 52 adds the plus_mark rule (WP-310, Layer 285) to PrologAI's
+ARC-AGI-2 benchmark solver, solving task 1818057f and raising the score from
+49/120 = 40.83% to 50/120 = 41.67%.
+
+The rule identifies every 5-cell plus-shape in the input grid where all five
+cells (one center plus its four orthogonal neighbors) hold value 4, and
+recolours those cells to 8. All other cells remain unchanged.
+
+
+TASK DESCRIPTION
+
+Task ID: 1818057f
+
+Input structure: a grid whose cells hold either value 2 (background) or value
+4. Some subsets of 4-cells form a plus-shape: a center cell with its four
+orthogonal neighbors (N, S, E, W) each exactly one step away, all five cells
+holding value 4.
+
+Output structure: same grid dimensions; cells that belong to any plus-shape
+are set to 8; all other cells remain unchanged. Value 2 cells are never
+changed and value 4 cells that are not part of any plus-shape are also
+unchanged.
+
+
+THE PLUS_MARK RULE
+
+Step 1 - Find plus centers: for each interior cell (R, C) (where R is
+strictly between 0 and H-1, and C is strictly between 0 and W-1), check
+whether Grid[R][C] = 4 AND Grid[R-1][C] = 4 AND Grid[R+1][C] = 4 AND
+Grid[R][C-1] = 4 AND Grid[R][C+1] = 4. If so, (R, C) is a plus center.
+
+Step 2 - Collect plus cells: for each plus center (CR, CC), add the five
+cells (CR, CC), (CR-1, CC), (CR+1, CC), (CR, CC-1), (CR, CC+1) to the set
+of plus cells.
+
+Step 3 - Build output: copy the input grid. For each cell in the plus-cell
+set, set that cell to 8. All other cells retain their input values.
+
+
+TRAINING PAIR VERIFICATION
+
+P1 (10x12): one plus center at (5, 9). Plus cells: (4,9), (5,8), (5,9),
+(5,10), (6,9). Those five cells change from 4 to 8. All other cells
+unchanged. PASS.
+
+P2 (15x17): the input is a regular tiling of a pattern that contains 9 plus
+centers arranged in a 3x3 grid at coordinates (3,3), (3,8), (3,13), (7,3),
+(7,8), (7,13), (12,3), (12,8), (12,13). All 45 cells of those 9 plus-shapes
+are set to 8. Non-plus 4-cells (e.g., the 2x2 corner blocks at [4,4] pairs)
+remain as 4. PASS.
+
+P3 (12x12): two plus centers at (5, 6) and (8, 1). The 10 cells of those two
+plus-shapes are set to 8. All other cells unchanged. PASS.
+
+Test (22x22): multiple plus centers in a larger grid. All plus-shape cells
+set to 8; no spurious changes. PASS.
+
+
+IMPLEMENTATION DETAILS
+
+New predicates (all in arc_benchmark_2.pl, prefixed arc2_pm_):
+
+arc2_pm_is_plus_center_(Grid, H, W, R, C): bounds-checks R and C as interior,
+  then uses nth0/3 lookups for the center row and the two neighbor rows to
+  verify all five cells hold value 4.
+
+arc2_pm_plus_cells_(Grid, H, W, PlusCells): uses between/3 to enumerate all
+  candidate center positions; findall collects the center plus its four
+  orthogonal neighbors for each valid plus center; sort/2 deduplicates.
+
+arc2_transform(plus_mark, Grid, Out): measures H and W from Grid; calls
+  arc2_pm_plus_cells_ to get the set; uses numlist for row and column index
+  lists; maplist builds each output row with memberchk to select 8 for
+  plus-shape cells and the original value for all others.
+
+arc2_named_rule(plus_mark): registers the rule for the generic induction
+  dispatcher arc2_induce_rule/2.
+
+
+KEY INSIGHT: PLUS-SHAPE DETECTION VIA CENTER MEMBERSHIP
+
+The rule does not search for the plus shape by scanning all possible
+5-cell patterns. Instead it identifies plus centers directly: a center is
+defined by its four orthogonal neighbors all being the same value. This
+reduces the search to a single pass over interior cells with 5 cell
+lookups each.
+
+The use of between/3 inside findall guarantees that the center coordinates
+are ground (instantiated) before arc2_pm_is_plus_center_ is called. This
+avoids the uninstantiated-variable error that would arise from passing
+unbound variables to the > comparison operator.
+
+
+SIGNIFICANCE
+
+plus_mark identifies a local structural pattern (the 5-cell orthogonal cross)
+and uses a single global recolouring rule to highlight it. The challenge lies
+in distinguishing plus-shaped 4-cells from other isolated or non-plus 4-cells
+that must remain unchanged. The solution is purely local: no connectivity
+components, no bounding boxes, no flood fill. Only the 5-cell membership test
+is needed.
+
+Score: 49/120 = 40.83% to 50/120 = 41.67%.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

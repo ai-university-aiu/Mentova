@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-yellow?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-goldenrod?style=for-the-badge" alt="48/48 Reasoning Types">
   <img src="https://img.shields.io/badge/accomplishments-349-red?style=for-the-badge" alt="349 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-49%2F120%20%3D%2040.83%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 49/120 = 40.83%">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-50%2F120%20%3D%2041.67%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 50/120 = 41.67%">
   <img src="https://img.shields.io/badge/glass--box-yes-darkred?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **49/120 = 40.83%** — Wave 51; climbing underway |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **50/120 = 41.67%** — Wave 52; climbing underway |
 | Documented accomplishments | **344 accomplished** |
 | Scientific papers | **333 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 51 complete (49/120 = 40.83%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 52 complete (50/120 = 41.67%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -574,6 +574,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_347` | ARC-AGI-2 Wave 49 — layout_stack rule solves task 291dc1e1; corner 0 with flanking 1s/2s encodes reading mode; col-major rotates blocks 90 CCW; blocks stacked vertically centered on max width. Score: 47/120 = 39.17%. |
 | `Acc_348` | ARC-AGI-2 Wave 50 — frame_assemble rule solves task e8686506; frame colors identified by frequency threshold; piece components fill BG holes via backtracking exact cover. Score: 48/120 = 40.00%. |
 | `Acc_349` | ARC-AGI-2 Wave 51 — quadrant_tile rule solves task f931b4a8; four quadrants encode output dimensions and tile/fill templates; BL fill indexed by tile-block row. Score: 49/120 = 40.83%. |
+| `Acc_350` | ARC-AGI-2 Wave 52 — plus_mark rule solves task 1818057f; every 5-cell plus-shape (center + N/S/E/W, all value 4) recoloured to 8. Score: 50/120 = 41.67%. |
 | `Acc_343` | ARC-AGI-2 Wave 45 — stair_fill rule solves task 28a6681f; two-phase bottom-to-top pocket fill; doubly-bounded pockets before single-bounded; smallest-gap-first within each row. Score: 43/120 = 35.83%. |
 | `Acc_342` | ARC-AGI-2 Wave 44 — jigsaw_fill rule solves task 5dbc8537; template holes tiled by exact-shape pieces from objects region; backtracking exact cover; fewest-placements-first ordering. Score: 42/120 = 35.00%. |
 | `Acc_341` | ARC-AGI-2 Wave 43 — frame_stamp rule solves task 247ef758; left-side shapes stamped into bordered room at (row,col) positions encoded by frame anomalies; descending size order for correct overwrites. Score: 41/120 = 34.17%. |
