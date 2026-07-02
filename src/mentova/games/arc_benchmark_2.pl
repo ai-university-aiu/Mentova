@@ -10467,6 +10467,169 @@ arc2_transform(template_expand, Grid, Out) :-
     ), RowIs, Out).
 
 % ---------------------------------------------------------------------------
+% NOISE ERASE (noise_erase, WP-312, Layer 287)
+% Task: 71e489b6
+% Stray-0 cells (0s embedded in the 1-region) stay 0 with a 3x3 frame of 7s.
+% Stray-1 cells (isolated 1s in the 0-region) are erased to 0.
+% Stray-0 seed: a 0-cell with 1-neighbor count >= min(3, available neighbors).
+% Stray-0 set: BFS expansion from seeds to adjacent 0-cells with >=2 1-nbrs.
+% Frame: in-bounds 8-neighbors of any stray-0 cell (excluding centers) -> 7.
+% Stray-1: a 1-cell with 1-neighbor count <= 1.
+% Priority: stray-0 center -> 0; frame -> 7; stray-1 -> 0; else unchanged.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule(noise_erase): register noise_erase as a known rule name.
+arc2_named_rule(noise_erase).
+
+% arc2_ne_1nbr_count_(+Grid, +R, +C, -Count):
+%   Count = number of in-bounds 4-neighbors of (R,C) with value 1.
+arc2_ne_1nbr_count_(Grid, R, C, Count) :-
+% Compute all four cardinal neighbor coordinates.
+    R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+% Collect only those neighbors that are in-bounds and hold value 1.
+    include([NR-NC]>>(arc2_cell_(Grid, NR, NC, 1)),
+% List of all four candidate neighbors.
+            [R1-C, R2-C, R-C1, R-C2], Ones),
+% Count is the length of the matching list.
+    length(Ones, Count).
+
+% arc2_ne_avail_count_(+Grid, +R, +C, -Avail):
+%   Avail = number of in-bounds 4-neighbors of (R,C).
+arc2_ne_avail_count_(Grid, R, C, Avail) :-
+% Compute all four cardinal neighbor coordinates.
+    R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+% Collect only those neighbors for which arc2_cell_ succeeds (i.e., in-bounds).
+    include([NR-NC]>>(arc2_cell_(Grid, NR, NC, _)),
+% List of all four candidate neighbors.
+            [R1-C, R2-C, R-C1, R-C2], InBounds),
+% Avail is the count of in-bounds neighbors.
+    length(InBounds, Avail).
+
+% arc2_ne_stray0_seed_(+Grid, +R, +C):
+%   (R,C) is a stray-0 seed: value 0 and 1-count >= min(3, avail).
+arc2_ne_stray0_seed_(Grid, R, C) :-
+% Cell must hold value 0.
+    arc2_cell_(Grid, R, C, 0),
+% Count how many in-bounds 4-neighbors are 1.
+    arc2_ne_1nbr_count_(Grid, R, C, OneCount),
+% Count total in-bounds 4-neighbors.
+    arc2_ne_avail_count_(Grid, R, C, Avail),
+% Threshold adapts to corner/edge cells: min(3, total available).
+    Thresh is min(3, Avail),
+% Stray-0 seed when 1-neighbor count meets or exceeds threshold.
+    OneCount >= Thresh.
+
+% arc2_ne_stray1_(+Grid, +R, +C):
+%   (R,C) is a stray-1: value 1 and 1-neighbor count <= 1.
+arc2_ne_stray1_(Grid, R, C) :-
+% Cell must hold value 1.
+    arc2_cell_(Grid, R, C, 1),
+% Count how many in-bounds 4-neighbors are also 1.
+    arc2_ne_1nbr_count_(Grid, R, C, OneCount),
+% Stray-1 when nearly all neighbors are 0 (isolated or peninsula tip).
+    OneCount =< 1.
+
+% arc2_ne_expand_bfs_(+Grid, +Queue, +Visited, -Stray0):
+%   BFS from Queue; expand to 0-cell neighbors with >=2 1-neighbors.
+%   Visited accumulates all stray-0 positions found so far.
+arc2_ne_expand_bfs_(_, [], Visited, Visited).
+arc2_ne_expand_bfs_(Grid, [R-C|Rest], Vis0, Stray0) :-
+% Compute cardinal neighbor coordinates of current position.
+    R1 is R-1, R2 is R+1, C1 is C-1, C2 is C+1,
+% Find unvisited 0-cell neighbors with >=2 1-valued neighbors.
+    include([NR-NC]>>(
+% Neighbor must hold value 0.
+        arc2_cell_(Grid, NR, NC, 0),
+% Neighbor must not already be in the stray-0 set.
+        \+ memberchk(NR-NC, Vis0),
+% Neighbor must have at least 2 1-valued 4-neighbors.
+        arc2_ne_1nbr_count_(Grid, NR, NC, OC), OC >= 2),
+% Four cardinal neighbors to check.
+        [R1-C, R2-C, R-C1, R-C2], New),
+% Deduplicate newly found cells.
+    sort(New, UniqueNew),
+% Add newly found cells to the visited set.
+    append(Vis0, UniqueNew, Vis1),
+% Append newly found cells to the end of the BFS queue.
+    append(Rest, UniqueNew, Queue1),
+% Continue BFS with the updated queue and visited set.
+    arc2_ne_expand_bfs_(Grid, Queue1, Vis1, Stray0).
+
+% arc2_ne_stray0_all_(+Grid, +H, +W, -Stray0):
+%   Stray0 = sorted list of all stray-0 positions (seeds + BFS expansion).
+arc2_ne_stray0_all_(Grid, H, W, Stray0) :-
+% Coordinate bounds for the full grid.
+    H1 is H-1, W1 is W-1,
+% Collect all seed stray-0 positions.
+    findall(R-C,
+        (between(0, H1, R), between(0, W1, C),
+% Each candidate must pass the stray-0 seed test.
+         arc2_ne_stray0_seed_(Grid, R, C)),
+        Seeds),
+% Sort seeds to produce a canonical starting set.
+    sort(Seeds, SortedSeeds),
+% BFS-expand from seeds to adjacent 0-cells with >=2 1-neighbors.
+    arc2_ne_expand_bfs_(Grid, SortedSeeds, SortedSeeds, Stray0).
+
+% arc2_ne_frame_(+Stray0, +Grid, -Frame):
+%   Frame = sorted in-bounds 8-neighbor positions of Stray0, minus Stray0.
+arc2_ne_frame_(Stray0, Grid, Frame) :-
+% For each stray-0 cell and each of the 8 offsets, generate candidate positions.
+    findall(NR-NC,
+        (member(R-C, Stray0),
+% Visit all 8 surrounding cells (excluding center offset 0-0).
+         member(DR-DC, [-1-(-1), -1-0, -1-1, 0-(-1), 0-1, 1-(-1), 1-0, 1-1]),
+         NR is R+DR, NC is C+DC,
+% Candidate must be in bounds (arc2_cell_ fails for out-of-bounds).
+         arc2_cell_(Grid, NR, NC, _),
+% Candidate must not itself be a stray-0 center.
+         \+ memberchk(NR-NC, Stray0)),
+        Candidates),
+% Deduplicate to produce a sorted frame set.
+    sort(Candidates, Frame).
+
+% arc2_ne_out_val_(+R, +C, +Grid, +Stray0, +Frame, +Stray1, -Val):
+%   Compute output value with priority: stray-0->0, frame->7, stray-1->0, else copy.
+arc2_ne_out_val_(R, C, Grid, Stray0, Frame, Stray1, Val) :-
+% Stray-0 center stays 0 (highest priority).
+    (   memberchk(R-C, Stray0) -> Val = 0
+% Frame cell becomes 7.
+    ;   memberchk(R-C, Frame)  -> Val = 7
+% Stray-1 is erased to 0.
+    ;   memberchk(R-C, Stray1) -> Val = 0
+% All other cells copy the original value.
+    ;   arc2_cell_(Grid, R, C, Val)
+    ).
+
+% arc2_transform(noise_erase, +Grid, -Out):
+%   Top-level: detect stray-0 clusters and stray-1 cells; apply frame and erase.
+arc2_transform(noise_erase, Grid, Out) :-
+% Measure grid dimensions.
+    length(Grid, H), Grid = [Row0|_], length(Row0, W),
+% Build index ranges for maplist.
+    H1 is H-1, W1 is W-1,
+    numlist(0, H1, RowIs), numlist(0, W1, ColIs),
+% Compute complete stray-0 set (seeds + BFS expansion).
+    arc2_ne_stray0_all_(Grid, H, W, Stray0),
+% Compute 8-neighbor frame around all stray-0 cells.
+    arc2_ne_frame_(Stray0, Grid, Frame),
+% Collect all stray-1 positions.
+    findall(R-C,
+        (between(0, H1, R), between(0, W1, C),
+% Each 1-cell with <=1 same-valued neighbor qualifies.
+         arc2_ne_stray1_(Grid, R, C)),
+        Stray1Raw),
+% Sort stray-1 list for fast memberchk.
+    sort(Stray1Raw, Stray1),
+% Build output row by row, cell by cell.
+    maplist([RI, OutRow]>>(
+        maplist([CI, V]>>(
+% Apply priority rule to determine each output cell.
+            arc2_ne_out_val_(RI, CI, Grid, Stray0, Frame, Stray1, V)
+        ), ColIs, OutRow)
+    ), RowIs, Out).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
