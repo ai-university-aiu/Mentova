@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-yellow?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-goldenrod?style=for-the-badge" alt="48/48 Reasoning Types">
   <img src="https://img.shields.io/badge/accomplishments-363-red?style=for-the-badge" alt="363 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-65%2F120%20%3D%2054.17%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 65/120 = 54.17%">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-66%2F120%20%3D%2055.00%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 66/120 = 55.00%">
   <img src="https://img.shields.io/badge/glass--box-yes-darkred?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **65/120 = 54.17%** — Wave 68; climbing underway |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **66/120 = 55.00%** — Wave 69; climbing underway |
 | Documented accomplishments | **344 accomplished** |
 | Scientific papers | **333 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 68 complete (65/120 = 54.17%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 69 complete (66/120 = 55.00%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -582,6 +582,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_364` | ARC-AGI-2 Wave 66 — mosaic_heal rule solves task 981571dc; damaged rows and columns of a symmetric mosaic borrow cells from compatible donors to fixpoint, with a diagonal-mirror fallback for leftover zeros. Score: 63/120 = 52.50%. |
 | `Acc_365` | ARC-AGI-2 Wave 67 — mirror_patch rule solves task 0934a4d8; a patch hidden behind a solid 8-block is recovered via detected mirror axes, fixpoint healing, and a transpose-donor fallback. Score: 64/120 = 53.33%. |
 | `Acc_366` | ARC-AGI-2 Wave 68 — diag_corridor rule solves task 7666fa5d; anti-diagonal bank chains bound winding corridors, and background cells bracketed between chain pairs in the rotated (r+c, r-c) frame are flooded with color 2. Score: 65/120 = 54.17%. |
+| `Acc_367` | ARC-AGI-2 Wave 69 — frame_compass rule solves task fc7cae8d; two frame lines painted in border-side colors point each crop edge at its matching border side, selecting a unique dihedral-four transform for the cropped component. Score: 66/120 = 55.00%. |
 | `Acc_361` | ARC-AGI-2 Wave 63 — col_rank_fill rule solves task 97d7923e; indicator bar length at each column's row-0 cell gives a rank; rank-R column segment (by descending filler count) has its filler cells replaced by the marker color. Score: 60/120 = 50.00%. |
 | `Acc_360` | ARC-AGI-2 Wave 62 — shape_slide rule solves task 581f7754; anchor seeds on grid edges define slide direction and target row/col; each shape's unique-color interior marker aligns to the target; floating seeds also slide to match. Score: 59/120 = 49.17%. |
 | `Acc_358` | ARC-AGI-2 Wave 60 — layout_tile rule solves task 65b59efc; grid divided by two identical major divider rows and N divider cols into template, layout, and marker row-groups; output is S x S arrangement of S x S blocks, each template recolored by its marker color. Score: 57/120 = 47.50%. |

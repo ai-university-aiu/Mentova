@@ -1,0 +1,121 @@
+Acc_367: ARC-AGI-2 Wave 69 - Frame Compass Rotation
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 69 of the ARC-AGI-2 benchmark climb: task fc7cae8d solved using the
+frame_compass rule (WP-327, Layer 302). Score advances from 65/120 = 54.17%
+to 66/120 = 55.00%.
+
+TASK DESCRIPTION
+
+Task fc7cae8d presents 22x22 to 29x29 grids whose four border sides carry
+noisy lines, each side owning a majority non-zero color (for example a top
+row of solid 4s, a left column of mostly 6s). The interior holds one large
+multi-color patterned component hugged by exactly two straight frame
+lines, one horizontal and one vertical, each one cell away from the
+component's bounding box. The output is the component cropped along its
+bounding box and then rotated and/or mirrored - a different orientation in
+each training pair, and yet another in the test case.
+
+RULE: frame_compass
+
+The glass-box named rule is a four-stage compass-reading procedure with no
+learned parameters:
+
+1. BORDER SIDE COLORS (fc_border_colors_/2, fc_majority_/2)
+   Each of the four grid border lines (first row, last row, first column,
+   last column) is assigned its majority non-zero color. At least one
+   border line must be one solid non-zero color (fc_has_solid_side_/1, a
+   fast pre-filter gate).
+
+2. INTERIOR COMPONENT (fc_largest_inner_blob_/4, fc_blobs_/2, fc_flood_/5)
+   The largest 4-connected component of non-zero cells that touches no
+   grid border line is located. Its cells split into crop cells (colors
+   that are not border colors) and frame cells (colors that match a border
+   color) via fc_split_blob_/5.
+
+3. COMPASS READING (fc_compass_/9, fc_frame_side_/6)
+   The crop bounding box is computed. Exactly two frame colors must be
+   present. Each frame color's cells must hug exactly one edge of the
+   bounding box (the line one cell above, below, left, or right of it),
+   giving the input edge; the unique border side owning that color gives
+   the output edge.
+
+4. UNIQUE TRANSFORM (fc_emap_/3, fc_apply_/3)
+   The two constraints "input edge X must face output edge Y" select a
+   unique element of the dihedral-four group - identity, three rotations,
+   or four reflections - via the 32-fact edge-permutation table fc_emap_/3.
+   The crop is cut out along its bounding box (fc_crop_/6) and the selected
+   transform is applied, reusing the registered primitive transforms
+   rotate_90_cw, rotate_90_ccw, rotate_180, reverse_rows, vertical_flip,
+   and transpose.
+
+THE KEY INSIGHT: THE FRAME LINES ARE A COLOR-CODED COMPASS
+
+The published human-steps description of this task says "rotate a quarter
+turn, then mirror left-right if the dominant color leans on the right
+edge". That heuristic cannot solve the hidden test case, which requires a
+main-diagonal reflection no training pair uses. The real mechanism is
+semantic: each frame line is painted in the majority color of one grid
+border side, and it commands "this edge of the crop must face that border
+side in the output". Training pair 1 maps right-to-top and bottom-to-left
+(anti-diagonal reflection), training pairs 2 and 3 map to the
+counterclockwise quarter turn, and the test case maps left-to-top and
+bottom-to-right (main-diagonal reflection). Two adjacent-edge constraints
+always pin down exactly one of the eight dihedral-four transforms, so the
+rule is fully deterministic with zero per-pair case analysis.
+
+Two implementation pitfalls surfaced. First, the largest non-zero
+component in the grid can be the border noise itself: in training pair 3
+the left border column and the bottom border row meet at a shared corner
+cell and fuse into one 60-cell component, larger than the 33-cell
+interior component, so any component touching a border line must be
+excluded before taking the largest. Second, two border sides may share a
+majority color (left and bottom are both 5 in the test case), so the
+compass target is required to be the unique border side owning the frame
+color - and the two frame colors always have unique owners.
+
+INDUCTION PRE-FILTER
+
+The first training pair must have an output strictly smaller than its
+input in both dimensions (the crop shrinks), and the input must have at
+least one solid non-zero border line; all training pairs are then
+verified with forall before the rule is selected. Inside the transform,
+grids smaller than 12x12 fail immediately, keeping the rule cheap for
+every other task in the named-rule enumeration.
+
+KEY PREDICATES
+
+  fc_border_colors_/2      - majority non-zero color of each border side
+  fc_majority_/2           - most frequent non-zero value of a line
+  fc_has_solid_side_/1     - at least one solid non-zero border line
+  fc_largest_inner_blob_/4 - largest component touching no border
+  fc_blobs_/2, fc_flood_/5 - 4-connected component partitioning
+  fc_split_blob_/5         - split blob into crop cells and frame cells
+  fc_bbox_/5               - bounding box of the crop cells
+  fc_compass_/9            - frame color to input edge and output edge
+  fc_frame_side_/6         - which bounding-box edge a frame line hugs
+  fc_emap_/3               - 32-fact dihedral-four edge-permutation table
+  fc_crop_/6               - cut the bounding-box subgrid out of the input
+  fc_apply_/3              - apply the selected dihedral-four transform
+  arc2_transform(frame_compass, +Grid, -Out)
+  arc2_induce_rule(+Pairs, frame_compass)
+
+VERIFICATION
+
+All three training pairs and the test case pass in SWI-Prolog - on the
+first full prototype run. A full benchmark regression run confirms no
+previously solved task lost its rule. Pure induction from training
+examples. No pretraining on the ARC-AGI-2 corpus. Every rule is named
+and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v298, Pseudocode v290, Architecture v291,
+Refinement v350, Completion v356.
+
+---

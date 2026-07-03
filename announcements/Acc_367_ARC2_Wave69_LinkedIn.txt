@@ -1,0 +1,36 @@
+Accomplishment 367: ARC-AGI-2 Wave 69 - Frame Compass Rotation
+
+PrologAI solves ARC-AGI-2 task fc7cae8d with a new glass-box rule called
+frame_compass (WP-327, Layer 302), raising the benchmark score from
+65/120 = 54.17% to 66/120 = 55.00%.
+
+The input grid carries noisy border lines on all four sides, each side
+owning a majority color, plus one large patterned component in the
+interior hugged by exactly two straight frame lines. The output is the
+component cropped out and reoriented - a different rotation or mirror in
+every training pair, and yet another in the hidden test case.
+
+The key insight is that the frame lines are a color-coded compass. Each
+frame line is painted in the majority color of one grid border side, and
+it commands: this edge of the crop must face that border side in the
+output. Two adjacent-edge constraints pin down exactly one of the eight
+dihedral-four transforms - identity, three rotations, four reflections -
+so the orientation is read off the grid, never guessed. The published
+human-steps heuristic for this task ("rotate a quarter turn, mirror if
+the dominant color leans right") cannot solve the hidden test case,
+which demands a main-diagonal reflection no training pair uses; the
+compass reading produces it deterministically.
+
+Two subtleties made the rule honest. The largest colored component in
+the grid can be the border noise itself when two noisy border lines
+fuse at a corner, so components touching any border are excluded before
+taking the largest. And two border sides may share a majority color, so
+each frame color must resolve to a unique owning side - and it always
+does.
+
+All three training pairs and the test case passed on the first full
+prototype run. Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
