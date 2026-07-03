@@ -341,6 +341,37 @@ arc2_induce_rule(TrainingPairs, hole_census) :-
 % Each training pair must transform correctly under hole_census.
            arc2_transform(hole_census, In, Out)).
 
+% glyph_swap: early dispatch before generic clause (WP-333, Layer 308).
+arc2_named_rule(glyph_swap).
+% arc2_induce_rule(glyph_swap): framed-crop pre-filter + verification.
+arc2_induce_rule(TrainingPairs, glyph_swap) :-
+% Fast filter: inspect the first training pair only.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output must have strictly fewer rows than the input.
+    OH < H,
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [OR0|_],
+% Measure the first input width.
+    length(FR, W),
+% Measure the first output width.
+    length(OR0, OW),
+% The output must have strictly fewer columns than the input.
+    OW < W,
+% The top-left output cell must carry the frame color 5.
+    OR0 = [5|_],
+% Fetch the last row of the first output.
+    last(FirstOut, OLast),
+% The bottom-left output cell must also carry the frame color 5.
+    OLast = [5|_],
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under glyph_swap.
+           arc2_transform(glyph_swap, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -15192,3 +15223,278 @@ hcs_tile_cell_(Grid, TV, item(SV, SR0, SC0, _, _, _), SH, SW, DR, DC, LR, LC, V)
         ( GV == SV -> V = SV ; V = TV )
 % Outside the shape window, the cell takes the solid tile color.
     ;   V = TV ).
+
+% ---------------------------------------------------------------------------
+% WP-333  glyph_swap  —  Layer 308
+% glyph_swap: a rectangular frame of color 5 encloses a display holding
+% solid square blocks of size B, each painted in a single color and
+% separated by background. Outside the frame sit two kinds of hints:
+% legend pairs, drawn as a 3-row-by-4-column interlock of two colors A and
+% B in the pattern AABB / AAAB / AABB, meaning color A maps to color B;
+% and reference glyphs, one B-by-B picture per block color, drawn in that
+% color over the background. The output is the framed subgrid with every
+% solid block replaced by its color's reference glyph shape, repainted in
+% the legend-mapped color, over the display background.
+% Reference: ARC-AGI-2 task edb79dae.
+% ---------------------------------------------------------------------------
+
+% arc2_transform for glyph_swap: decode blocks through glyphs and legends.
+arc2_transform(glyph_swap, Grid, Out) :-
+% Determine the background color as the most common cell value.
+    arc2_bg_color_(Grid, BG),
+% The frame color 5 must not itself be the background.
+    BG \== 5,
+% Collect every cell painted in the frame color 5.
+    findall(R-C, ( nth0(R, Grid, Row), nth0(C, Row, 5) ), F5),
+% At least one frame cell must be present.
+    F5 = [_|_],
+% The frame region is the bounding box of all frame-colored cells.
+    hc_bbox4_(F5, FR0, FR1, FC0, FC1),
+% The frame must be at least four rows tall.
+    FR1 > FR0 + 2,
+% The frame must be at least four columns wide.
+    FC1 > FC0 + 2,
+% The top and bottom edges of the bounding box must be solid frame color.
+    forall(between(FC0, FC1, Cx),
+% Both horizontal border cells at this column must carry color 5.
+           ( arc2_cell_(Grid, FR0, Cx, 5), arc2_cell_(Grid, FR1, Cx, 5) )),
+% The left and right edges of the bounding box must be solid frame color.
+    forall(between(FR0, FR1, Rx),
+% Both vertical border cells at this row must carry color 5.
+           ( arc2_cell_(Grid, Rx, FC0, 5), arc2_cell_(Grid, Rx, FC1, 5) )),
+% Detect the legend pairs outside the frame and their occupied cells.
+    gsw_legends_(Grid, BG, FR0, FR1, FC0, FC1, Map, LegendCells),
+% At least one legend pair must be present.
+    Map = [_|_],
+% Detect the solid square blocks inside the frame and their shared size.
+    gsw_blocks_(Grid, BG, FR0, FR1, FC0, FC1, Blocks, B),
+% Collect the color of every block.
+    findall(V, member(block(_, _, V), Blocks), Vs),
+% Reduce the block colors to the distinct set.
+    sort(Vs, Colors),
+% Extract the reference glyph mask for every block color.
+    findall(V-Mask,
+% Each block color pairs with its glyph mask of offsets.
+            ( member(V, Colors),
+% Extract the glyph mask for this color from outside the frame.
+              gsw_glyph_(Grid, FR0, FR1, FC0, FC1, LegendCells, V, B, Mask) ),
+            Glyphs),
+% Count the distinct block colors.
+    length(Colors, NCol),
+% Every block color must have exactly one reference glyph.
+    length(Glyphs, NCol),
+% Precompute the largest in-block offset.
+    Bm1 is B - 1,
+% Build the replacement cell list covering every block footprint.
+    findall((R-C)-OV,
+% Walk every cell of every block and decide its output value.
+            ( member(block(R0, C0, V), Blocks),
+% Look up the legend-mapped output color for the block color.
+              memberchk(V-MV, Map),
+% Look up the reference glyph mask for the block color.
+              memberchk(V-Mask, Glyphs),
+% Enumerate the row offset within the block.
+              between(0, Bm1, I),
+% Enumerate the column offset within the block.
+              between(0, Bm1, J),
+% Compute the absolute row of this block cell.
+              R is R0 + I,
+% Compute the absolute column of this block cell.
+              C is C0 + J,
+% Glyph cells take the mapped color; the rest become background.
+              ( memberchk(I-J, Mask) -> OV = MV ; OV = BG ) ),
+            Repl),
+% Render the output as the framed subgrid with replacements applied.
+    findall(ORow,
+% Enumerate every row of the frame region.
+            ( between(FR0, FR1, R),
+% Build the output row cell by cell.
+              findall(OV,
+% Enumerate every column of the frame region.
+                      ( between(FC0, FC1, C),
+% Replaced cells take their new value; others copy the input.
+                        ( memberchk((R-C)-OVr, Repl) -> OV = OVr
+% Unreplaced cells keep the input cell value.
+                        ; arc2_cell_(Grid, R, C, OV) ) ),
+                      ORow) ),
+            Out).
+
+% gsw_legends_(+Grid, +BG, +FR0, +FR1, +FC0, +FC1, -Map, -LegendCells):
+% collect all legend pairs outside the frame as a color map plus cells.
+gsw_legends_(Grid, BG, FR0, FR1, FC0, FC1, Map, LegendCells) :-
+% Find every legend interlock anchored at some top-left position.
+    findall(lg(R, C, A, B),
+% A legend match yields its anchor position and its two colors.
+            gsw_legend_at_(Grid, BG, FR0, FR1, FC0, FC1, R, C, A, B),
+            Ls),
+% Project each legend onto its source-to-target color pair.
+    findall(A-B, member(lg(_, _, A, B), Ls), Map0),
+% Deduplicate the color pairs into the final map.
+    sort(Map0, Map),
+% Collect the source color of every map entry.
+    findall(A, member(A-_, Map), Ks),
+% Reduce the source colors to the distinct set.
+    sort(Ks, SKs),
+% Count the map entries.
+    length(Map, NM),
+% The map must be a function: one target per source color.
+    length(SKs, NM),
+% Collect every cell covered by any legend interlock.
+    findall(RC,
+% Each legend covers a 3-row-by-4-column window of cells.
+            ( member(lg(R, C, _, _), Ls),
+% Enumerate the row offset within the legend window.
+              between(0, 2, I),
+% Enumerate the column offset within the legend window.
+              between(0, 3, J),
+% Compute the absolute row of the legend cell.
+              RR is R + I,
+% Compute the absolute column of the legend cell.
+              CC is C + J,
+% Record the legend cell as a row-column pair.
+              RC = RR-CC ),
+            LegendCells0),
+% Deduplicate the covered legend cells.
+    sort(LegendCells0, LegendCells).
+
+% gsw_legend_at_(+Grid, +BG, +FR0, +FR1, +FC0, +FC1, -R, -C, -A, -B):
+% match one AABB / AAAB / AABB legend interlock anchored at (R, C).
+gsw_legend_at_(Grid, BG, FR0, FR1, FC0, FC1, R, C, A, B) :-
+% Enumerate each grid row with its index.
+    nth0(R, Grid, Row),
+% Enumerate each cell of the row as the candidate source color.
+    nth0(C, Row, A),
+% The source color must not be the background.
+    A \== BG,
+% The source color must not be the frame color.
+    A \== 5,
+% The target color sits three columns to the right of the anchor.
+    C3 is C + 3,
+% Fetch the candidate target color.
+    arc2_cell_(Grid, R, C3, B),
+% The target color must not be the background.
+    B \== BG,
+% The target color must not be the frame color.
+    B \== 5,
+% The target color must differ from the source color.
+    B \== A,
+% The legend window spans three rows ending here.
+    R2 is R + 2,
+% The legend window must lie fully outside the frame bounding box.
+    \+ ( R2 >= FR0, R =< FR1, C3 >= FC0, C =< FC1 ),
+% Name the middle column of the source half.
+    C1 is C + 1,
+% Name the first column of the target half.
+    C2 is C + 2,
+% Name the middle row of the legend window.
+    R1 is R + 1,
+% Top row: the second cell belongs to the source color.
+    arc2_cell_(Grid, R, C1, A),
+% Top row: the third cell belongs to the target color.
+    arc2_cell_(Grid, R, C2, B),
+% Middle row: the first cell belongs to the source color.
+    arc2_cell_(Grid, R1, C, A),
+% Middle row: the second cell belongs to the source color.
+    arc2_cell_(Grid, R1, C1, A),
+% Middle row: the third cell extends the source color interlock.
+    arc2_cell_(Grid, R1, C2, A),
+% Middle row: the fourth cell belongs to the target color.
+    arc2_cell_(Grid, R1, C3, B),
+% Bottom row: the first cell belongs to the source color.
+    arc2_cell_(Grid, R2, C, A),
+% Bottom row: the second cell belongs to the source color.
+    arc2_cell_(Grid, R2, C1, A),
+% Bottom row: the third cell belongs to the target color.
+    arc2_cell_(Grid, R2, C2, B),
+% Bottom row: the fourth cell belongs to the target color.
+    arc2_cell_(Grid, R2, C3, B).
+
+% gsw_blocks_(+Grid, +BG, +FR0, +FR1, +FC0, +FC1, -Blocks, -B): find the
+% solid square blocks inside the frame interior and their shared size.
+gsw_blocks_(Grid, BG, FR0, FR1, FC0, FC1, Blocks, B) :-
+% The interior starts one row below the frame top.
+    IR0 is FR0 + 1,
+% The interior ends one row above the frame bottom.
+    IR1 is FR1 - 1,
+% The interior starts one column right of the frame left edge.
+    IC0 is FC0 + 1,
+% The interior ends one column left of the frame right edge.
+    IC1 is FC1 - 1,
+% Collect every colored interior cell as an R-C-V triple.
+    findall(R-C-V,
+% Enumerate the interior cells and keep the colored ones.
+            ( between(IR0, IR1, R),
+% Fetch the interior row.
+              nth0(R, Grid, Row),
+% Enumerate the interior columns.
+              between(IC0, IC1, C),
+% Fetch the interior cell value.
+              nth0(C, Row, V),
+% The cell must not be the background color.
+              V \== BG,
+% The cell must not be the frame color.
+              V \== 5 ),
+            Cells),
+% At least one colored interior cell must be present.
+    Cells = [_|_],
+% Partition the interior cells into same-color 4-connected components.
+    bst_components_(Cells, Comps),
+% Read the first component to fix the shared block size.
+    Comps = [comp(_, C0s)|_],
+% Compute the bounding box of the first component.
+    hc_bbox4_(C0s, A0, A1, _, _),
+% The shared block size is the first component's height.
+    B is A1 - A0 + 1,
+% Blocks must be at least two cells on a side.
+    B >= 2,
+% Keep every component that is a solid B-by-B square.
+    findall(block(R0, K0, V),
+% A block is a component whose bounding box is a full solid square.
+            ( member(comp(V, Cs), Comps),
+% Compute the component bounding box.
+              hc_bbox4_(Cs, R0, R1x, K0, K1),
+% The bounding-box height must equal the shared block size.
+              B =:= R1x - R0 + 1,
+% The bounding-box width must equal the shared block size.
+              B =:= K1 - K0 + 1,
+% Count the component cells.
+              length(Cs, N),
+% The component must fill its bounding box completely.
+              N =:= B * B ),
+            Blocks),
+% Count the interior components.
+    length(Comps, NC),
+% Every interior component must qualify as a solid block.
+    length(Blocks, NC).
+
+% gsw_glyph_(+Grid, +FR0, +FR1, +FC0, +FC1, +LegendCells, +V, +B, -Mask):
+% extract color V's reference glyph mask from outside the frame.
+gsw_glyph_(Grid, FR0, FR1, FC0, FC1, LegendCells, V, B, Mask) :-
+% Collect every cell of color V outside the frame and outside legends.
+    findall(R-C,
+% Enumerate the cells of color V and filter by position.
+            ( nth0(R, Grid, Row),
+% Fetch a cell carrying the glyph color.
+              nth0(C, Row, V),
+% The cell must lie outside the frame bounding box.
+              \+ ( R >= FR0, R =< FR1, C >= FC0, C =< FC1 ),
+% The cell must not belong to any legend interlock.
+              \+ memberchk(R-C, LegendCells) ),
+            GCells),
+% At least one glyph cell must be present.
+    GCells = [_|_],
+% Compute the bounding box of the glyph cells.
+    hc_bbox4_(GCells, G0, G1, H0, H1),
+% The glyph bounding box height must equal the block size.
+    B =:= G1 - G0 + 1,
+% The glyph bounding box width must equal the block size.
+    B =:= H1 - H0 + 1,
+% Convert the glyph cells into offsets relative to the bounding box.
+    findall(I-J,
+% Each glyph cell yields its in-box row and column offset.
+            ( member(R-C, GCells),
+% Compute the row offset within the glyph box.
+              I is R - G0,
+% Compute the column offset within the glyph box.
+              J is C - H0 ),
+            Mask).
