@@ -316,6 +316,31 @@ arc2_induce_rule(TrainingPairs, lattice_stamp) :-
 % Each training pair must transform correctly under lattice_stamp.
            arc2_transform(lattice_stamp, In, Out)).
 
+% hole_census: early dispatch before generic clause (WP-332, Layer 307).
+arc2_named_rule(hole_census).
+% arc2_induce_rule(hole_census): shrinking-output pre-filter + verification.
+arc2_induce_rule(TrainingPairs, hole_census) :-
+% Fast filter: inspect the first training pair only.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output must have strictly fewer rows than the input.
+    OH < H,
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [OR0|_],
+% Measure the first input width.
+    length(FR, W),
+% Measure the first output width.
+    length(OR0, OW),
+% The output must have strictly fewer columns than the input.
+    OW < W,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under hole_census.
+           arc2_transform(hole_census, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -14976,3 +15001,194 @@ lst_render_(H, W, BG, Stamps, Out) :-
                         ( memberchk(R-C-SV, Stamps) -> V = SV ; V = BG ) ),
                       ORow) ),
             Out).
+
+% ---------------------------------------------------------------------------
+% WP-332  hole_census  —  Layer 307
+% hole_census: the grid holds equally sized large rectangular tiles and an
+% equal number of smaller rectangular shapes, all drawn over a background.
+% Each tile carries scattered single-cell background holes; each shape
+% carries background holes forming 4-connected components. A tile pairs
+% with the unique shape whose hole-component count equals the tile's
+% hole-component count. The output redraws the tiles in their packed
+% layout, solid in each tile color, with each paired shape centered inside
+% its tile and the shape's holes filled by the tile color.
+% Reference: ARC-AGI-2 task 8698868d.
+% ---------------------------------------------------------------------------
+
+% arc2_transform for hole_census: pair shapes to tiles by hole census.
+arc2_transform(hole_census, Grid, Out) :-
+% Determine the background color as the most common cell value.
+    arc2_bg_color_(Grid, BG),
+% Collect every non-background cell as an R-C-V triple.
+    findall(R-C-V,
+% Enumerate each cell and keep those that differ from the background.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V \== BG ),
+            Cells),
+% At least one colored cell must be present.
+    Cells \= [],
+% Partition the cells into same-color 4-connected components.
+    bst_components_(Cells, Comps),
+% Annotate each component with its bounding box and hole census.
+    hcs_items_(Comps, Grid, BG, Items),
+% Collect the bounding-box area of every component.
+    findall(A, ( member(item(_, _, _, IH, IW, _), Items), A is IH * IW ), As),
+% The largest bounding-box area identifies the tiles.
+    max_list(As, MaxA),
+% Tiles are the components whose bounding-box area equals the maximum.
+    findall(TI, ( member(TI, Items), TI = item(_, _, _, H2, W2, _), MaxA =:= H2 * W2 ), Tiles),
+% Shapes are all remaining components.
+    findall(SI, ( member(SI, Items), SI = item(_, _, _, H3, W3, _), MaxA =\= H3 * W3 ), Shapes),
+% At least one shape must be present.
+    Shapes \= [],
+% Count the tiles.
+    length(Tiles, N),
+% The shape count must equal the tile count.
+    length(Shapes, N),
+% Read the shared tile height and width from the first tile.
+    Tiles = [item(_, _, _, TH, TW, _)|_],
+% Every tile must share the same bounding-box dimensions.
+    forall(member(item(_, _, _, H4, W4, _), Tiles), ( H4 =:= TH, W4 =:= TW )),
+% Read the shared shape height and width from the first shape.
+    Shapes = [item(_, _, _, SH, SW, _)|_],
+% Every shape must share the same bounding-box dimensions.
+    forall(member(item(_, _, _, H5, W5, _), Shapes), ( H5 =:= SH, W5 =:= SW )),
+% The shapes must be strictly shorter than the tiles.
+    SH < TH,
+% The shapes must be strictly narrower than the tiles.
+    SW < TW,
+% Pair each tile with the unique shape sharing its hole census.
+    hcs_pairing_(Tiles, Shapes, Pairing),
+% Collect the top row index of every tile.
+    findall(R0, member(item(_, R0, _, _, _, _), Tiles), TR0s),
+% The output origin row is the smallest tile top row.
+    min_list(TR0s, MinR),
+% The lowest tile top row anchors the final tile row band.
+    max_list(TR0s, MaxR0),
+% The output height spans from the origin row to the lowest tile bottom.
+    OH is MaxR0 + TH - MinR,
+% Collect the left column index of every tile.
+    findall(C0, member(item(_, _, C0, _, _, _), Tiles), TC0s),
+% The output origin column is the smallest tile left column.
+    min_list(TC0s, MinC),
+% The rightmost tile left column anchors the final tile column band.
+    max_list(TC0s, MaxC0),
+% The output width spans from the origin column to the rightmost tile edge.
+    OW is MaxC0 + TW - MinC,
+% Center each shape inside its tile with this row offset.
+    DR is (TH - SH) // 2,
+% Center each shape inside its tile with this column offset.
+    DC is (TW - SW) // 2,
+% Render the packed tiles with their centered shapes.
+    hcs_render_(Grid, BG, Pairing, MinR, MinC, OH, OW, TH, TW, SH, SW, DR, DC, Out).
+
+% hcs_items_(+Comps, +Grid, +BG, -Items): annotate components with censuses.
+hcs_items_([], _, _, []).
+% Annotate one component and recurse over the rest.
+hcs_items_([comp(V, Cs)|T], Grid, BG, [item(V, R0, C0, H, W, K)|Items]) :-
+% Compute the component's bounding box.
+    hc_bbox4_(Cs, R0, R1, C0, C1),
+% The bounding-box height is the row span.
+    H is R1 - R0 + 1,
+% The bounding-box width is the column span.
+    W is C1 - C0 + 1,
+% Count the 4-connected background-hole components inside the bounding box.
+    hcs_census_(Grid, BG, R0, C0, R1, C1, K),
+% Annotate the remaining components.
+    hcs_items_(T, Grid, BG, Items).
+
+% hcs_census_(+Grid, +BG, +R0, +C0, +R1, +C1, -K): hole-component count.
+hcs_census_(Grid, BG, R0, C0, R1, C1, K) :-
+% Collect every background cell inside the bounding box as a triple.
+    findall(HR-HC-BG,
+% Enumerate each bounding-box cell and keep the background-colored ones.
+            ( between(R0, R1, HR), nth0(HR, Grid, Row),
+% Check the cell color against the background color.
+              between(C0, C1, HC), nth0(HC, Row, X), X == BG ),
+            Holes),
+% Partition the hole cells into 4-connected components.
+    bst_components_(Holes, HComps),
+% The census is the number of hole components.
+    length(HComps, K).
+
+% hcs_pairing_(+Tiles, +Shapes, -Pairing): bijective census pairing.
+hcs_pairing_(Tiles, Shapes, Pairing) :-
+% Pair every tile with a shape of equal census.
+    findall(T-S,
+% Enumerate each tile with its census K.
+            ( member(T, Tiles), T = item(_, _, _, _, _, K),
+% Exactly one shape must carry the same census K.
+              hcs_match_(K, Shapes, S) ),
+            Pairing),
+% Count the tiles.
+    length(Tiles, N),
+% Every tile must have found its shape.
+    length(Pairing, N),
+% Collect the shapes used by the pairing.
+    findall(S2, member(_-S2, Pairing), Used),
+% Deduplicate the used shapes.
+    sort(Used, UniqueUsed),
+% Every shape must be used exactly once.
+    length(UniqueUsed, N).
+
+% hcs_match_(+K, +Shapes, -S): the unique shape whose census equals K.
+hcs_match_(K, Shapes, S) :-
+% Collect every shape carrying census K and require exactly one.
+    findall(S0, ( member(S0, Shapes), S0 = item(_, _, _, _, _, K) ), [S]).
+
+% hcs_render_: paint the packed tile layout with centered shapes.
+hcs_render_(Grid, BG, Pairing, MinR, MinC, OH, OW, TH, TW, SH, SW, DR, DC, Out) :-
+% The last output row index is the height minus one.
+    H1 is OH - 1,
+% The last output column index is the width minus one.
+    W1 is OW - 1,
+% Build the output row list in order.
+    findall(ORow,
+% Enumerate each output row index.
+            ( between(0, H1, R),
+% Build the output row cell by cell.
+              findall(V,
+% Enumerate each output column index.
+                      ( between(0, W1, C),
+% Compute the output cell value at (R, C).
+                        hcs_cell_(Grid, BG, Pairing, MinR, MinC, TH, TW, SH, SW, DR, DC, R, C, V) ),
+                      ORow) ),
+            Out).
+
+% hcs_cell_: the output value at one cell of the packed layout.
+hcs_cell_(Grid, BG, Pairing, MinR, MinC, TH, TW, SH, SW, DR, DC, R, C, V) :-
+% Find the tile covering the cell, or fall back to the background color.
+    (   hcs_covering_(Pairing, MinR, MinC, TH, TW, R, C, TV, LR, LC, SItem)
+% Inside a tile, take the tile fill or the centered shape overlay.
+    ->  hcs_tile_cell_(Grid, TV, SItem, SH, SW, DR, DC, LR, LC, V)
+% Outside every tile, the cell keeps the background color.
+    ;   V = BG ).
+
+% hcs_covering_: locate the pairing entry whose tile covers cell (R, C).
+hcs_covering_(Pairing, MinR, MinC, TH, TW, R, C, TV, LR, LC, SItem) :-
+% Enumerate each tile-shape pairing entry.
+    member(item(TV, TR0, TC0, _, _, _)-SItem, Pairing),
+% Translate the output row into the tile's local row.
+    LR is R - TR0 + MinR,
+% The local row must fall inside the tile.
+    LR >= 0, LR < TH,
+% Translate the output column into the tile's local column.
+    LC is C - TC0 + MinC,
+% The local column must fall inside the tile.
+    LC >= 0, LC < TW.
+
+% hcs_tile_cell_: shape overlay over a solid tile fill.
+hcs_tile_cell_(Grid, TV, item(SV, SR0, SC0, _, _, _), SH, SW, DR, DC, LR, LC, V) :-
+% Test whether the local cell lies inside the centered shape window.
+    (   LR >= DR, LR < DR + SH, LC >= DC, LC < DC + SW
+% Map the local cell back to the shape's source row in the input.
+    ->  GR is SR0 + LR - DR,
+% Map the local cell back to the shape's source column in the input.
+        GC is SC0 + LC - DC,
+% Fetch the shape's source row.
+        nth0(GR, Grid, GRow),
+% Fetch the shape's source cell value.
+        nth0(GC, GRow, GV),
+% Shape cells keep the shape color; shape holes take the tile color.
+        ( GV == SV -> V = SV ; V = TV )
+% Outside the shape window, the cell takes the solid tile color.
+    ;   V = TV ).

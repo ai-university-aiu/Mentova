@@ -1,0 +1,34 @@
+Accomplishment 372: ARC-AGI-2 Wave 74 - Hole Census Tile-Shape Pairing
+
+PrologAI solves ARC-AGI-2 task 8698868d with a new glass-box rule called
+hole_census (WP-332, Layer 307), raising the benchmark score from
+70/120 = 58.33% to 71/120 = 59.17%.
+
+The input grid holds equally sized large tiles of distinct colors packed
+side by side, plus an equal number of smaller rectangular shapes
+scattered over the background. Both are pierced by background-colored
+holes: the tiles carry a few scattered single cells, the shapes carry
+hole patterns that clump into blocks, bars, and diagonals. In the output
+the scattered shapes are gone and the tile layout alone remains, each
+tile redrawn solid with one small shape stamped dead center inside it,
+the shape's holes filled by the tile color.
+
+The key insight is that the tiles' holes are a census. A tile with three
+holes belongs to the shape whose background-hole region forms exactly
+three 4-connected components. Two simpler readings both fail: counting
+raw hole cells breaks because a shape's nine-cell hole block is one
+component, not nine, and matching hole positions breaks because the tile
+holes sit at arbitrary spots. Only the component count of the holes
+survives the trip from shape interior to tile face. The pairing is
+verified as a bijection - exactly one census match per tile, every shape
+used exactly once - so any ambiguous grid becomes a clean rule failure
+instead of a wrong stamp.
+
+The rule carries no learned parameters: background color, tiles, shapes,
+censuses, pairings, and stamp positions are all derived from the input
+grid itself. Both training pairs and the hidden test case passed on the
+first run. Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
