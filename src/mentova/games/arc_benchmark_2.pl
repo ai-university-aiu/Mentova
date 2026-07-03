@@ -181,6 +181,19 @@ arc2_induce_rule(TrainingPairs, frame_pour) :-
     forall(member(pair(In, Out), TrainingPairs),
            arc2_transform(frame_pour, In, Out)).
 
+% col_rank_fill: early dispatch before generic clause.
+arc2_named_rule(col_rank_fill).
+% arc2_induce_rule(col_rank_fill): indicator bar at (0,C) determines rank; majority verify.
+arc2_induce_rule(TrainingPairs, col_rank_fill) :-
+% First training input must have a non-BG cell at (0,0) to signal bar indicators.
+    TrainingPairs = [pair([R0|_], _)|_],
+    R0 = [Ind|_], Ind =\= 0,
+% Require majority of training pairs to pass the transform.
+    length(TrainingPairs, NTotal),
+    findall(1, (member(pair(In, Out), TrainingPairs),
+               arc2_transform(col_rank_fill, In, Out)), OKs),
+    length(OKs, NOK), NOK >= NTotal - 1.
+
 % shape_slide: early dispatch before generic clause.
 arc2_named_rule(shape_slide).
 % arc2_induce_rule(shape_slide): seed-directed relocation pre-filter + majority verify.
@@ -12500,3 +12513,150 @@ arc2_ss_apply_cell_(GRow, R, OldPosns, NewPosns, BG, C, Val) :-
 % Unchanged cell: keep original.
     ; Val = Orig
     ).
+
+% =============================================================================
+% WP-321 - col_rank_fill: Layer 296
+% Rule: indicator bars in top rows select a column segment to fill.
+% For each column C where Grid[0][C] != BG, count the run of that color
+% from row 0 downward; this gives (marker_color, rank) pairs.
+% Segments are [bg*, M, F+, M, bg*] patterns in each column (below any bar).
+% For each (marker, rank): sort segments with that marker by filler count desc;
+% replace filler cells in the rank-th segment with the marker color.
+% =============================================================================
+
+% arc2_transform(col_rank_fill, +Grid, -Out): apply rank-based column fill.
+arc2_transform(col_rank_fill, Grid, Out) :-
+% Extract first row and compute width.
+    Grid = [R0|_], length(R0, W),
+% Compute grid height.
+    length(Grid, H),
+% Step 1: detect indicator bars (col, color, length).
+    arc2_crf_indicators_(Grid, W, Indicators),
+    Indicators \= [],
+% Step 2: detect column segments below any indicator bar.
+    arc2_crf_segments_(Grid, H, W, Indicators, Segs),
+    Segs \= [],
+% Step 3: for each indicator, pick the rank-th segment to fill.
+    arc2_crf_targets_(Indicators, Segs, Targets),
+    Targets \= [],
+% Step 4: build replacement list and apply to grid.
+    arc2_crf_apply_(Grid, Targets, Out).
+
+% arc2_crf_indicators_(+Grid, +W, -Indicators): list of C-Color-Len tuples.
+arc2_crf_indicators_(Grid, W, Indicators) :-
+% For each column index C from 0 to W-1.
+    W1 is W - 1,
+% Collect (C, Color, BarLength) for columns with non-BG at row 0.
+    findall(C-Color-Len, (
+        between(0, W1, C),
+% Read the cell at row 0, column C.
+        nth0(0, Grid, R0), nth0(C, R0, Color),
+% Only consider non-BG (non-zero) cells.
+        Color =\= 0,
+% Count how many consecutive rows from row 0 have this color.
+        arc2_crf_bar_len_(Grid, C, Color, 0, 0, Len)
+    ), Indicators).
+
+% arc2_crf_bar_len_(+Grid, +Col, +Color, +Row, +Acc, -Len):
+% Count consecutive Color cells starting at (Row, Col).
+arc2_crf_bar_len_(Grid, Col, Color, Row, Acc, Len) :-
+% Attempt to read cell at (Row, Col); if out of bounds, stop.
+    ( nth0(Row, Grid, R), nth0(Col, R, V) ->
+        ( V =:= Color ->
+% Cell matches: increment accumulator and advance row.
+            Row1 is Row + 1, Acc1 is Acc + 1,
+            arc2_crf_bar_len_(Grid, Col, Color, Row1, Acc1, Len)
+        ;
+% Cell differs: bar ends here.
+            Len = Acc
+        )
+    ;
+% Out of bounds: bar ends here.
+        Len = Acc
+    ).
+
+% arc2_crf_segments_(+Grid, +H, +W, +Indicators, -Segs):
+% Find column segments: C-Marker-FillCount-TopRow-BotRow.
+arc2_crf_segments_(Grid, H, W, Indicators, Segs) :-
+    W1 is W - 1,
+    findall(C-M-N-TR-BR, (
+        between(0, W1, C),
+% Get indicator bar length for this column (0 if none).
+        ( member(C-_-BLen, Indicators) -> true ; BLen = 0 ),
+% Find the segment in rows BLen..H-1.
+        arc2_crf_seg_(Grid, H, C, BLen, M, N, TR, BR)
+    ), Segs).
+
+% arc2_crf_seg_(+Grid, +H, +Col, +BarLen, -Marker, -FillCount, -TopRow, -BotRow):
+% Detect [BG*, M, F+, M, BG*] pattern in column Col at rows BarLen..H-1.
+arc2_crf_seg_(Grid, H, C, BLen, Marker, FillCount, TopRow, BotRow) :-
+    H1 is H - 1,
+% Find first non-BG row at or after BarLen.
+    between(BLen, H1, TopRow),
+    nth0(TopRow, Grid, RT), nth0(C, RT, Marker),
+    Marker =\= 0, !,
+% Find last non-BG row in [BarLen..H1].
+    arc2_crf_last_nonbg_(Grid, C, H1, BLen, BotRow),
+    BotRow > TopRow,
+% Top and bottom markers must be the same color.
+    nth0(BotRow, Grid, RB), nth0(C, RB, Marker),
+% Filler count is cells between top and bottom markers.
+    FillCount is BotRow - TopRow - 1,
+    FillCount > 0,
+% Verify intermediate cells are all the same non-BG non-Marker filler color.
+    TR1 is TopRow + 1, BR1 is BotRow - 1,
+    findall(V, (between(TR1, BR1, R), nth0(R, Grid, GR), nth0(C, GR, V)), FVals),
+    FVals = [FC|_], FC =\= 0, FC =\= Marker,
+    \+ (member(V2, FVals), V2 \= FC).
+
+% arc2_crf_last_nonbg_(+Grid, +Col, +MaxRow, +MinRow, -BotRow):
+% Find the last (highest-index) non-BG row in Col within [MinRow..MaxRow].
+arc2_crf_last_nonbg_(Grid, C, Row, MinRow, BotRow) :-
+    ( Row < MinRow -> fail
+    ; nth0(Row, Grid, R), nth0(C, R, V), V =\= 0 -> BotRow = Row
+    ; Row1 is Row - 1, arc2_crf_last_nonbg_(Grid, C, Row1, MinRow, BotRow)
+    ).
+
+% arc2_crf_targets_(+Indicators, +Segs, -Targets):
+% For each indicator (Marker, Rank): pick the rank-th segment (desc by filler count).
+arc2_crf_targets_(Indicators, Segs, Targets) :-
+    findall(Col-Marker-TR-BR, (
+        member(_ColInd-Marker-Rank, Indicators),
+% Collect all segments with this marker color.
+        findall(N-C-TR-BR, member(C-Marker-N-TR-BR, Segs), MSegs0),
+        MSegs0 \= [],
+% Sort ascending by filler count, then reverse for descending.
+        msort(MSegs0, Sorted0),
+        reverse(Sorted0, Sorted),
+% Pick the Rank-th element (1-indexed); fails if rank out of range.
+        nth1(Rank, Sorted, _N-Col-TR-BR)
+    ), Targets).
+
+% arc2_crf_apply_(+Grid, +Targets, -Out):
+% Replace all cells in each target segment (TopRow..BotRow, Col) with Marker.
+arc2_crf_apply_(Grid, Targets, Out) :-
+% Build flat list of (Row, Col, NewVal) replacement triples.
+    findall(Row-Col-Marker, (
+        member(Col-Marker-TR-BR, Targets),
+        between(TR, BR, Row)
+    ), Reps),
+% Apply replacements row by row.
+    arc2_crf_apply_rows_(Grid, 0, Reps, Out).
+
+% arc2_crf_apply_rows_: process each grid row in order.
+arc2_crf_apply_rows_([], _, _, []).
+arc2_crf_apply_rows_([Row|Rest], RI, Reps, [NRow|NRest]) :-
+% Collect replacements for this row index.
+    findall(C-V, member(RI-C-V, Reps), RReps),
+% Apply column replacements within this row.
+    arc2_crf_apply_cols_(Row, 0, RReps, NRow),
+    RI1 is RI + 1,
+    arc2_crf_apply_rows_(Rest, RI1, Reps, NRest).
+
+% arc2_crf_apply_cols_: process each cell in a row.
+arc2_crf_apply_cols_([], _, _, []).
+arc2_crf_apply_cols_([V|Rest], CI, Reps, [NV|NRest]) :-
+% Use replacement value if one exists for this column, else keep original.
+    ( member(CI-NV, Reps) -> true ; NV = V ),
+    CI1 is CI + 1,
+    arc2_crf_apply_cols_(Rest, CI1, Reps, NRest).
