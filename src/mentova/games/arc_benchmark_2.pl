@@ -166,6 +166,21 @@ arc2_induce_rule(TrainingPairs, frame_reflect) :-
     forall(member(pair(In, Out), TrainingPairs),
            arc2_transform(frame_reflect, In, Out)).
 
+% frame_pour: early dispatch to run before slow generic clause.
+arc2_named_rule(frame_pour).
+% arc2_induce_rule(frame_pour): frame-plus-fill pre-filter + forall verify.
+arc2_induce_rule(TrainingPairs, frame_pour) :-
+% Pre-filter: require at least 3 distinct colors in first training input.
+    TrainingPairs = [pair(First, _)|_],
+% Flatten grid to check color count quickly.
+    flatten(First, Cells),
+    sort(Cells, Uniq),
+    length(Uniq, NC),
+    NC >= 3,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(frame_pour, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -11947,3 +11962,361 @@ arc2_benchmark_print :-
         format("  transformation rule named glass-box for every solved task.~n")
     ),
     format("~n=== Benchmark complete. ===~n").
+
+% ---------------------------------------------------------------------------
+% FRAME POUR (fp_*): Layer 294, WP-319, Task b9e38dc0
+% A rectangular frame (F) encloses a fill-color seed (FC) on its interior
+% side.  The opposite side of the frame is the "opening."  The interior BFS
+% fills BG cells on the seed-side of the frame.  The exterior projects a
+% widening triangular cone outward through the opening; B-colored noise cells
+% cast shadows that blank their row/col for all deeper depths.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(frame_pour): delegate to solver.
+arc2_transform(frame_pour, Grid, Out) :-
+% Invoke the frame_pour main solver on the input grid.
+    arc2_fp_solve_(Grid, Out).
+
+% arc2_fp_solve_(+Grid, -Out): orchestrate the unified frame_pour algorithm.
+arc2_fp_solve_(Grid, Out) :-
+% Obtain grid height H and width W.
+    length(Grid, H),
+% Extract grid width from first row.
+    Grid = [R0|_], length(R0, W),
+% Identify background color (most common value in grid).
+    arc2_fp_bg_(Grid, BG),
+% Identify frame color F (most common non-BG value).
+    arc2_fp_fcolor_(Grid, BG, F),
+% Identify fill-seed color FC (most common non-BG non-F inside frame bbox).
+    arc2_fp_ccolor_(Grid, BG, F, FC),
+% Determine opening direction from FC centroid offset relative to frame center.
+    arc2_fp_dir_(Grid, F, FC, Dir),
+% Compute boundary row/col (Bnd), wall extents (LW, RW), slope S.
+    arc2_fp_bnd_(Grid, F, Dir, Bnd, LW, RW, S),
+% Enumerate all F-cells once for interior range lookup.
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,F)), FCs),
+% Interior shadow-cone: fill from far side to Bnd; shadows carry outward.
+    arc2_fp_int_cone_(Grid, BG, F, FC, FCs, Dir, Bnd, H, W, IntFill, BlkFromInt),
+% Exterior shadow-cone: widening cone outside Bnd, shadow from interior carried in.
+    arc2_fp_exterior_(Grid, BG, FC, Dir, Bnd, LW, RW, S, H, W, BlkFromInt, IntFill, Out).
+
+% arc2_fp_bg_(+Grid, -BG): most frequent value in entire grid (background).
+arc2_fp_bg_(Grid, BG) :-
+% Flatten grid to a single list of all cell values.
+    flatten(Grid, All),
+% Sort while keeping duplicates to group equal values together.
+    msort(All, Sorted),
+% Walk the sorted list picking the longest run as the background.
+    arc2_fp_best_(Sorted, none, 0, BG).
+
+% arc2_fp_best_(+Sorted, +BestV, +BestC, -Out): find value with longest run.
+arc2_fp_best_([], B, _, B).
+% Measure current run, compare to best-so-far, and recurse on remainder.
+arc2_fp_best_([H|T], BV, BC, Out) :-
+% Count consecutive H-valued cells at the head of the sorted list.
+    arc2_fp_prefix_([H|T], H, 0, Cnt, Rest),
+% Keep whichever run is longer.
+    (Cnt > BC -> arc2_fp_best_(Rest, H,  Cnt, Out)
+               ; arc2_fp_best_(Rest, BV, BC,  Out)).
+
+% arc2_fp_prefix_(+List, +Val, +Acc, -Count, -Rest): consume a prefix run.
+arc2_fp_prefix_([], _, C, C, []).
+% Matching head: increment accumulator and continue.
+arc2_fp_prefix_([H|T], H, C0, C, R) :- C1 is C0+1, arc2_fp_prefix_(T, H, C1, C, R).
+% Non-matching head: stop and return remainder unchanged.
+arc2_fp_prefix_([X|T], H, C, C, [X|T]) :- X \= H.
+
+% arc2_fp_fcolor_(+Grid, +BG, -F): most frequent non-BG value (frame color).
+arc2_fp_fcolor_(Grid, BG, F) :-
+% Collect all non-BG cells from the flattened grid.
+    flatten(Grid, All), exclude(==(BG), All, NB),
+% Sort with duplicates and pick the longest run.
+    msort(NB, Sorted), arc2_fp_best_(Sorted, none, 0, F).
+
+% arc2_fp_ccolor_(+Grid, +BG, +F, -FC): dominant non-BG non-F color inside frame bbox.
+arc2_fp_ccolor_(Grid, BG, F, FC) :-
+% Enumerate all F-cell positions to determine bounding box.
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,F)), FCs),
+% Row span of frame.
+    findall(R, member(R-_, FCs), Rs), min_list(Rs, R1), max_list(Rs, R2),
+% Col span of frame.
+    findall(C, member(_-C, FCs), Cs), min_list(Cs, C1), max_list(Cs, C2),
+% Gather all non-BG non-F values that lie within the frame bounding box.
+    findall(V, (nth0(R,Grid,Row), nth0(C,Row,V),
+                R>=R1, R=<R2, C>=C1, C=<C2, V\=BG, V\=F), Vs),
+% Sort with duplicates and pick the most frequent value.
+    msort(Vs, VS), arc2_fp_best_(VS, none, 0, FC).
+
+% arc2_fp_dir_(+Grid, +F, +FC, -Dir): opening direction north/south/east/west.
+arc2_fp_dir_(Grid, F, FC, Dir) :-
+% Enumerate frame cell positions.
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,F)), FCs),
+% Row and col extents of frame.
+    findall(R, member(R-_, FCs), FRs), min_list(FRs, FR1), max_list(FRs, FR2),
+    findall(C, member(_-C, FCs), FCols), min_list(FCols, FC1), max_list(FCols, FC2),
+% Mean row of all FC-colored cells (weighted per-cell, not per-row).
+    findall(R, (nth0(R,Grid,Row), member(FC,Row)), CRs),
+    CRs \= [],
+    sumlist(CRs, RS), length(CRs, RN), CR is RS/RN,
+% Mean col of all FC-colored cells.
+    findall(C, (nth0(_,Grid,Row), nth0(C,Row,FC)), CCs),
+    CCs \= [],
+    sumlist(CCs, CS), length(CCs, CN), CC is CS/CN,
+% Frame center coordinates.
+    FCR is (FR1+FR2)/2.0, FCC is (FC1+FC2)/2.0,
+% Frame half-dimensions (avoid divide-by-zero).
+    FH is max(1, FR2-FR1), FW is max(1, FC2-FC1),
+% Normalized offsets of FC centroid from frame center.
+    Voff is abs(CR-FCR)/(FH/2.0), Hoff is abs(CC-FCC)/(FW/2.0),
+% Opening is OPPOSITE the side where FC sits: if FC is above center, opening is south.
+    (Voff >= Hoff -> (CR < FCR -> Dir=south ; Dir=north)
+                   ; (CC < FCC -> Dir=east  ; Dir=west)).
+
+% arc2_fp_bnd_(+Grid,+F,+Dir,-Bnd,-LW,-RW,-S): boundary position, wall extents, slope.
+arc2_fp_bnd_(Grid, F, Dir, Bnd, LW, RW, S) :-
+% Enumerate all F-cell positions once.
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,F)), FCs),
+% Dispatch on direction to compute boundary row/col and two reference rows/cols.
+    (Dir=south ->
+        findall(R, member(R-_, FCs), Rs), max_list(Rs, Bnd),
+% One row inside frame (Bnd-1) and two rows inside (Bnd-2) for slope.
+        B1 is Bnd-1, B2 is Bnd-2,
+        arc2_fp_wcols_(FCs, Bnd, B1, LW, RW),
+        arc2_fp_slopev_(FCs, Bnd, B2, S)
+    ; Dir=north ->
+        findall(R, member(R-_, FCs), Rs), min_list(Rs, Bnd),
+% One row inside frame (Bnd+1) and two rows inside (Bnd+2) for slope.
+        B1 is Bnd+1, B2 is Bnd+2,
+        arc2_fp_wcols_(FCs, Bnd, B1, LW, RW),
+        arc2_fp_slopev_(FCs, Bnd, B2, S)
+    ; Dir=west ->
+        findall(C, member(_-C, FCs), Cs), min_list(Cs, Bnd),
+% One col inside frame (Bnd+1) and two cols inside (Bnd+2) for slope.
+        B1 is Bnd+1, B2 is Bnd+2,
+        arc2_fp_wrows_(FCs, Bnd, B1, LW, RW),
+        arc2_fp_slopeh_(FCs, Bnd, B2, S)
+    ; % Dir=east
+        findall(C, member(_-C, FCs), Cs), max_list(Cs, Bnd),
+% One col inside frame (Bnd-1) and two cols inside (Bnd-2) for slope.
+        B1 is Bnd-1, B2 is Bnd-2,
+        arc2_fp_wrows_(FCs, Bnd, B1, LW, RW),
+        arc2_fp_slopeh_(FCs, Bnd, B2, S)
+    ).
+
+% arc2_fp_wcols_(+FCs,+R1,+R2,-LW,-RW): min/max F-col at rows R1 or R2 combined.
+arc2_fp_wcols_(FCs, R1, R2, LW, RW) :-
+% Collect F-cols at boundary row and one row inward.
+    findall(C, (member(R-C, FCs), (R=:=R1; R=:=R2)), Cs),
+% Min col is left wall; max col is right wall.
+    min_list(Cs, LW), max_list(Cs, RW).
+
+% arc2_fp_wrows_(+FCs,+C1,+C2,-TW,-BW): min/max F-row at cols C1 or C2 combined.
+arc2_fp_wrows_(FCs, C1, C2, TW, BW) :-
+% Collect F-rows at boundary col and one col inward.
+    findall(R, (member(R-C, FCs), (C=:=C1; C=:=C2)), Rs),
+% Min row is top wall; max row is bottom wall.
+    min_list(Rs, TW), max_list(Rs, BW).
+
+% arc2_fp_slopev_(+FCs,+Bnd,+Bnd2,-S): rows-per-col expansion rate for vert openings.
+arc2_fp_slopev_(FCs, Bnd, Bnd2, S) :-
+% Min F-col at boundary row.
+    findall(C, member(Bnd-C, FCs), Cs1), Cs1\=[],
+    min_list(Cs1, LW1),
+% Min F-col two rows into the frame (reference point for slope).
+    (   findall(C, member(Bnd2-C, FCs), Cs2), Cs2\=[]
+    ->  min_list(Cs2, LW2), DC is abs(LW2-LW1),
+        (DC>0 -> S is 2.0/DC ; S=1.0)
+    ;   S=1).
+
+% arc2_fp_slopeh_(+FCs,+Bnd,+Bnd2,-S): cols-per-row expansion rate for horiz openings.
+arc2_fp_slopeh_(FCs, Bnd, Bnd2, S) :-
+% Min F-row at boundary col.
+    findall(R, member(R-Bnd, FCs), Rs1), Rs1\=[],
+    min_list(Rs1, TW1),
+% Min F-row two cols into the frame (reference point for slope).
+    (   findall(R, member(R-Bnd2, FCs), Rs2), Rs2\=[]
+    ->  min_list(Rs2, TW2), DR is abs(TW2-TW1),
+        (DR>0 -> S is 2.0/DR ; S=1.0)
+    ;   S=1).
+
+% arc2_fp_int_cone_: interior shadow-cone fill from far side to Bnd.
+% B-cell shadows propagate toward the opening and into the exterior.
+% LW/RW serve as fallback wall bounds when only one F-cell exists at Bnd.
+arc2_fp_int_cone_(Grid, BG, F, FC, FCs, Dir, Bnd, H, W, FillOut, BlkOut) :-
+% Dispatch on direction: row loop for N/S, col loop for E/W.
+    (Dir = north ->
+        findall(R, member(R-_, FCs), Rs), max_list(Rs, FarR),
+% NORTH: far side = max F-row; scan downward (Sign=-1) toward Bnd=min F-row.
+        arc2_fp_bnd_(Grid, F, Dir, Bnd, LW, RW, _),
+        arc2_fp_int_rloop_(FarR, Bnd, -1, Grid, BG, F, FC, FCs, W, LW, RW, [], [], FillOut, BlkOut)
+    ; Dir = south ->
+        findall(R, member(R-_, FCs), Rs), min_list(Rs, FarR),
+% SOUTH: far side = min F-row; scan upward (Sign=+1) toward Bnd=max F-row.
+        arc2_fp_bnd_(Grid, F, Dir, Bnd, LW, RW, _),
+        arc2_fp_int_rloop_(FarR, Bnd, 1, Grid, BG, F, FC, FCs, W, LW, RW, [], [], FillOut, BlkOut)
+    ; Dir = west ->
+        findall(C, member(_-C, FCs), Cs), max_list(Cs, FarC),
+% WEST: far side = max F-col; scan leftward (Sign=-1) toward Bnd=min F-col.
+        arc2_fp_bnd_(Grid, F, Dir, Bnd, TW, BW, _),
+        arc2_fp_int_cloop_(FarC, Bnd, -1, Grid, BG, F, FC, FCs, H, TW, BW, [], [], FillOut, BlkOut)
+    ; % east
+        findall(C, member(_-C, FCs), Cs), min_list(Cs, FarC),
+% EAST: far side = min F-col; scan rightward (Sign=+1) toward Bnd=max F-col.
+        arc2_fp_bnd_(Grid, F, Dir, Bnd, TW, BW, _),
+        arc2_fp_int_cloop_(FarC, Bnd, 1, Grid, BG, F, FC, FCs, H, TW, BW, [], [], FillOut, BlkOut)
+    ).
+
+% arc2_fp_int_rloop_: interior row loop (NORTH/SOUTH).
+% Stop condition: R has passed Bnd in the scan direction.
+arc2_fp_int_rloop_(R, Bnd, Sign, _, _, _, _, _, _, _, _, Blk, Acc, Acc, Blk) :-
+    (Sign =:= -1 -> R < Bnd ; R > Bnd), !.
+% Process row R: determine interior col range from F-cells, then fill.
+arc2_fp_int_rloop_(R, Bnd, Sign, Grid, BG, F, FC, FCs, W, FbLW, FbRW, BlkIn, AccIn, AccOut, BlkOut) :-
+% F-cols at this row determine the interior boundary.
+    findall(C, member(R-C, FCs), FCols),
+    (   FCols = [] ->
+% No frame at this row: use fallback bounds (precomputed wall extent).
+        MinC is max(0, FbLW+1), MaxC is min(W-1, FbRW-1),
+        arc2_fp_scan_int_(MinC, MaxC, R, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ;   min_list(FCols, FLW), max_list(FCols, FRW),
+        FLW =:= FRW,
+        Mid is (FbLW + FbRW) / 2 ->
+% Degenerate (single F-cell): decide which wall it is and extend to fallback.
+        ( FLW < Mid ->
+            MinC is max(0, FLW+1), MaxC is min(W-1, FbRW)
+        ;
+            MinC is max(0, FbLW), MaxC is min(W-1, FLW-1)
+        ),
+        arc2_fp_scan_int_(MinC, MaxC, R, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ;
+% Normal: use left and right F-walls at this row.
+        min_list(FCols, FLW2), max_list(FCols, FRW2),
+        MinC is max(0, FLW2+1), MaxC is min(W-1, FRW2-1),
+        arc2_fp_scan_int_(MinC, MaxC, R, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ),
+    NextR is R + Sign,
+    arc2_fp_int_rloop_(NextR, Bnd, Sign, Grid, BG, F, FC, FCs, W, FbLW, FbRW, B1, A1, AccOut, BlkOut).
+
+% arc2_fp_int_cloop_: interior col loop (WEST/EAST).
+arc2_fp_int_cloop_(C, Bnd, Sign, _, _, _, _, _, _, _, _, Blk, Acc, Acc, Blk) :-
+    (Sign =:= -1 -> C < Bnd ; C > Bnd), !.
+% Process col C: determine interior row range from F-cells, then fill.
+arc2_fp_int_cloop_(C, Bnd, Sign, Grid, BG, F, FC, FCs, H, FbTW, FbBW, BlkIn, AccIn, AccOut, BlkOut) :-
+    findall(R, member(R-C, FCs), FRows),
+    (   FRows = [] ->
+% No frame at col C: use fallback bounds.
+        MinR is max(0, FbTW+1), MaxR is min(H-1, FbBW-1),
+        arc2_fp_scan_intc_(MinR, MaxR, C, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ;   min_list(FRows, FTW), max_list(FRows, FBW),
+        FTW =:= FBW,
+        Mid is (FbTW + FbBW) / 2 ->
+% Degenerate (single F-cell): decide which wall and extend to fallback.
+        ( FTW < Mid ->
+            MinR is max(0, FTW+1), MaxR is min(H-1, FbBW)
+        ;
+            MinR is max(0, FbTW), MaxR is min(H-1, FTW-1)
+        ),
+        arc2_fp_scan_intc_(MinR, MaxR, C, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ;
+% Normal: use top and bottom F-walls at this col.
+        min_list(FRows, FTW2), max_list(FRows, FBW2),
+        MinR is max(0, FTW2+1), MaxR is min(H-1, FBW2-1),
+        arc2_fp_scan_intc_(MinR, MaxR, C, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ),
+    NextC is C + Sign,
+    arc2_fp_int_cloop_(NextC, Bnd, Sign, Grid, BG, F, FC, FCs, H, FbTW, FbBW, B1, A1, AccOut, BlkOut).
+
+% arc2_fp_scan_int_(+Min,+Max,+R,...): scan interior cols [Min..Max] at row R.
+arc2_fp_scan_int_(Cur, Max, _, _, _, _, _, B, A, A, B) :- Cur > Max, !.
+% Each cell: skip if blocked, skip F-cells, fill BG, shadow B-cells, skip FC.
+arc2_fp_scan_int_(Cur, Max, R, Grid, BG, F, FC, BlkIn, AccIn, AccOut, BlkOut) :-
+    nth0(R, Grid, Row), nth0(Cur, Row, V),
+    (   member(Cur, BlkIn) -> A1=AccIn, B1=BlkIn
+    ;   V =:= F             -> A1=AccIn, B1=BlkIn
+    ;   V =:= BG            -> A1=[R-Cur|AccIn], B1=BlkIn
+    ;   V =:= FC            -> A1=AccIn, B1=BlkIn
+    ;   A1=AccIn, B1=[Cur|BlkIn]
+    ),
+    Cur1 is Cur+1,
+    arc2_fp_scan_int_(Cur1, Max, R, Grid, BG, F, FC, B1, A1, AccOut, BlkOut).
+
+% arc2_fp_scan_intc_(+Min,+Max,+C,...): scan interior rows [Min..Max] at col C.
+arc2_fp_scan_intc_(Cur, Max, _, _, _, _, _, B, A, A, B) :- Cur > Max, !.
+% Each cell: skip if blocked, skip F-cells, fill BG, shadow B-cells, skip FC.
+arc2_fp_scan_intc_(Cur, Max, C, Grid, BG, F, FC, BlkIn, AccIn, AccOut, BlkOut) :-
+    nth0(Cur, Grid, Row), nth0(C, Row, V),
+    (   member(Cur, BlkIn) -> A1=AccIn, B1=BlkIn
+    ;   V =:= F             -> A1=AccIn, B1=BlkIn
+    ;   V =:= BG            -> A1=[Cur-C|AccIn], B1=BlkIn
+    ;   V =:= FC            -> A1=AccIn, B1=BlkIn
+    ;   A1=AccIn, B1=[Cur|BlkIn]
+    ),
+    Cur1 is Cur+1,
+    arc2_fp_scan_intc_(Cur1, Max, C, Grid, BG, F, FC, B1, A1, AccOut, BlkOut).
+
+% arc2_fp_apply_(+Grid,+FillSet,+FC,-Out): paint all cells in FillSet with FC.
+arc2_fp_apply_(Grid, FillSet, FC, Out) :-
+% Process each row with its index.
+    arc2_fp_apply_rows_(Grid, 0, FillSet, FC, Out).
+% arc2_fp_apply_rows_(+Rows,+R,+FS,+FC,-Out): iterate over rows.
+arc2_fp_apply_rows_([], _, _, _, []).
+% For each row, apply fill then recurse with incremented row index.
+arc2_fp_apply_rows_([Row|Rows], R, FS, FC, [NRow|NRows]) :-
+    arc2_fp_apply_row_(Row, R, 0, FS, FC, NRow),
+    R1 is R+1, arc2_fp_apply_rows_(Rows, R1, FS, FC, NRows).
+% arc2_fp_apply_row_(+Cells,+R,+C,+FS,+FC,-Out): iterate over cols in one row.
+arc2_fp_apply_row_([], _, _, _, _, []).
+% Replace cell with FC if (R-C) is in fill set; otherwise keep original value.
+arc2_fp_apply_row_([V|Vs], R, C, FS, FC, [NV|NVs]) :-
+    (member(R-C, FS) -> NV=FC ; NV=V),
+    C1 is C+1, arc2_fp_apply_row_(Vs, R, C1, FS, FC, NVs).
+
+% arc2_fp_exterior_(+Grid,+BG,+FC,+Dir,+Bnd,+LW,+RW,+S,+H,+W,+BlkIn,+IntFill,-Out).
+% Widening exterior cone fill; shadow set BlkIn carries from interior phase.
+arc2_fp_exterior_(Grid, BG, FC, Dir, Bnd, LW, RW, S, H, W, BlkIn, IntFill, Out) :-
+% Determine max exterior depth and axis of propagation.
+    (Dir=south -> MaxD is H-1-Bnd, Sign=1,  Ax=row
+    ; Dir=north -> MaxD is Bnd,     Sign= -1, Ax=row
+    ; Dir=west  -> MaxD is Bnd,     Sign= -1, Ax=col
+    ; % east
+                   MaxD is W-1-Bnd, Sign=1,  Ax=col),
+% Apply accumulated fill set (interior + exterior) to original grid.
+    (MaxD =< 0 ->
+        arc2_fp_apply_(Grid, IntFill, FC, Out)
+    ;
+        arc2_fp_ext_loop_(1, MaxD, Grid, BG, FC, Bnd, LW, RW, S, H, W, Sign, Ax, BlkIn, IntFill, FinalFill),
+        arc2_fp_apply_(Grid, FinalFill, FC, Out)
+    ).
+
+% arc2_fp_ext_loop_(+D,+MaxD,...,+BlkIn,+AccIn,-AccOut): exterior depth loop.
+arc2_fp_ext_loop_(D, MaxD, _, _, _, _, _, _, _, _, _, _, _, _, Acc, Acc) :- D > MaxD, !.
+% For depth D: compute cone expansion, scan the row or col, recurse.
+arc2_fp_ext_loop_(D, MaxD, Grid, BG, FC, Bnd, LW, RW, S, H, W, Sign, Ax, BlkIn, AccIn, Out) :-
+% Lateral expansion grows by 1 for every S units of depth.
+    E is truncate((D-1) / S),
+% Widened boundaries at depth D.
+    Lo is LW-E, Hi is RW+E,
+% Absolute row or col position at depth D.
+    Pos is Bnd + D*Sign,
+% Clip to grid bounds and scan.
+    (Ax=row ->
+        MinP is max(0,Lo), MaxP is min(W-1,Hi),
+        arc2_fp_scan_(MinP, MaxP, row, Pos, Grid, BG, FC, BlkIn, AccIn, Acc1, Blk1)
+    ;   MinP is max(0,Lo), MaxP is min(H-1,Hi),
+        arc2_fp_scan_(MinP, MaxP, col, Pos, Grid, BG, FC, BlkIn, AccIn, Acc1, Blk1)),
+    D1 is D+1,
+    arc2_fp_ext_loop_(D1, MaxD, Grid, BG, FC, Bnd, LW, RW, S, H, W, Sign, Ax, Blk1, Acc1, Out).
+
+% arc2_fp_scan_(+Min,+Max,+Ax,+Pos,...,-AccOut,-BlkOut): scan exterior positions.
+arc2_fp_scan_(Cur, Max, _, _, _, _, _, B, A, A, B) :- Cur > Max, !.
+% Scan each cell: fill BG, shadow noise B-cells, skip FC and blocked.
+arc2_fp_scan_(Cur, Max, Ax, Pos, Grid, BG, FC, BlkIn, AccIn, AccOut, BlkOut) :-
+    (Ax=row -> R=Pos, C=Cur ; R=Cur, C=Pos),
+    nth0(R, Grid, GRow), nth0(C, GRow, V),
+    (   member(Cur, BlkIn) -> A1=AccIn, B1=BlkIn
+    ;   V =:= BG            -> A1=[R-C|AccIn], B1=BlkIn
+    ;   V =\= FC            -> A1=AccIn, B1=[Cur|BlkIn]
+    ;   A1=AccIn, B1=BlkIn
+    ),
+    Cur1 is Cur+1,
+    arc2_fp_scan_(Cur1, Max, Ax, Pos, Grid, BG, FC, B1, A1, AccOut, BlkOut).

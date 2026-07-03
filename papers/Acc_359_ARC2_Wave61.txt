@@ -1,0 +1,150 @@
+Accomplishment 359: ARC-AGI-2 Wave 61 - Frame Pour Rule (frame_pour, Layer 294)
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+Task solved: b9e38dc0
+
+Score before: 57/120 = 47.50%
+
+Score after: 58/120 = 48.33%
+
+
+Rule Name: frame_pour
+
+Work Package: WP-319
+
+Layer: 294
+
+
+Pattern Description
+
+A rectangular frame of color F encloses an interior region. One interior side contains
+a fill-seed of color FC. The side OPPOSITE the FC seed is the opening. The rule fills
+the interior with FC (excluding F-cells and B-cells), then pours through the opening
+into the exterior, creating a widening triangular cone. The cone widens by one unit
+every S depth steps, where S is derived from the slope of the frame walls.
+
+B-cells (non-BG, non-F, non-FC cells) cast shadows: a B-cell at interior row/col
+position P blocks all positions past P (toward the opening and beyond) in the same
+row/col. Interior shadows propagate through the opening into the exterior via a shared
+blocked-set passed from the interior phase to the exterior phase.
+
+
+Training Pair Verification
+
+Pair 1 (SOUTH opening, 3 colors):
+• Frame opens downward; fill-seed FC at top interior.
+• Interior and exterior cone filled correctly with no B-cells.
+• Result: PASS
+
+Pair 2 (WEST opening, 4 colors):
+• Wedge-shaped frame with single-F-cell at boundary col (degenerate case).
+• Fallback wall extents used at boundary col to produce correct range [3, 7].
+• Result: PASS
+
+Pair 3 (NORTH opening, B-cell shadow):
+• B-cell at interior (4, 7) casts shadow blocking col 7 for rows above it.
+• Shadow propagates through opening into exterior rows 0-2.
+• Result: PASS
+
+Test case (WEST opening):
+• B-cells in exterior only; interior filled without B-cell interference.
+• Result: PASS
+
+
+Key Implementation Decisions
+
+Unified shadow-cone (not BFS): The interior fill uses a directional scan
+from the far frame wall toward Bnd (the opening boundary), tracking a
+blocked-set of row/col indices. This allows B-cell shadows to accumulate and
+pass through the opening into the exterior in a single pass, which BFS cannot do.
+
+Degenerate single-F-cell boundary: At the boundary col/row, the frame may
+have only one F-cell (a corner). The formula [min_F+1, max_F-1] gives an empty
+range. Fix: detect single-F-cell (FTW=:=FBW), determine which wall it represents
+(top or bottom by comparison to midpoint), and extend to the precomputed fallback
+wall (FbBW or FbTW) inclusively.
+
+Float slope: Slope S = 2.0/DC (float division) where DC is the change in minimum
+F-col per 2 interior rows. Using integer division (2//DC) gives 0 when DC > 2,
+causing zero-expansion. Float with truncate((D-1)/S) gives correct gradual widening.
+
+Zero-divisor guard: arc2_fp_dir_ computes the centroid of FC-colored cells.
+A guard (CRs \= []) prevents division-by-zero when arc2_fp_dir_ is called on
+a task where FC appears in no row (fast failure during induce_rule dispatch).
+
+
+Prolog Implementation (key predicates)
+
+% arc2_fp_solve_(+Grid, -Out): top-level frame_pour solver.
+arc2_fp_solve_(Grid, Out) :-
+% Detect background, frame, seed colors.
+    length(Grid, H), Grid = [R0|_], length(R0, W),
+    arc2_fp_bg_(Grid, BG),
+    arc2_fp_fcolor_(Grid, BG, F),
+    arc2_fp_ccolor_(Grid, BG, F, FC),
+% Determine opening direction from seed centroid relative to frame center.
+    arc2_fp_dir_(Grid, F, FC, Dir),
+% Boundary position, wall extents, slope.
+    arc2_fp_bnd_(Grid, F, Dir, Bnd, LW, RW, S),
+    findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,F)), FCs),
+% Interior shadow-cone fill: far side to Bnd, accumulating blocked set.
+    arc2_fp_int_cone_(Grid, BG, F, FC, FCs, Dir, Bnd, H, W, IntFill, BlkFromInt),
+% Exterior cone: widening from Bnd outward, using slope S.
+    arc2_fp_exterior_(Grid, BG, FC, Dir, Bnd, LW, RW, S, H, W, BlkFromInt, IntFill, Out).
+
+% arc2_fp_int_cloop_: interior col loop for WEST/EAST opening.
+% At degenerate boundary col (single F-cell), falls back to precomputed wall extents.
+arc2_fp_int_cloop_(C, Bnd, Sign, _, _, _, _, _, _, _, _, Blk, Acc, Acc, Blk) :-
+    (Sign =:= -1 -> C < Bnd ; C > Bnd), !.
+arc2_fp_int_cloop_(C, Bnd, Sign, Grid, BG, F, FC, FCs, H, FbTW, FbBW, BlkIn, AccIn, AccOut, BlkOut) :-
+    findall(R, member(R-C, FCs), FRows),
+    (   FRows = [] ->
+        MinR is max(0, FbTW+1), MaxR is min(H-1, FbBW-1),
+        arc2_fp_scan_intc_(MinR, MaxR, C, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ;   min_list(FRows, FTW), max_list(FRows, FBW),
+        FTW =:= FBW,
+        Mid is (FbTW + FbBW) / 2 ->
+        ( FTW < Mid ->
+            MinR is max(0, FTW+1), MaxR is min(H-1, FbBW)
+        ;
+            MinR is max(0, FbTW), MaxR is min(H-1, FTW-1)
+        ),
+        arc2_fp_scan_intc_(MinR, MaxR, C, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ;
+        min_list(FRows, FTW2), max_list(FRows, FBW2),
+        MinR is max(0, FTW2+1), MaxR is min(H-1, FBW2-1),
+        arc2_fp_scan_intc_(MinR, MaxR, C, Grid, BG, F, FC, BlkIn, AccIn, A1, B1)
+    ),
+    NextC is C + Sign,
+    arc2_fp_int_cloop_(NextC, Bnd, Sign, Grid, BG, F, FC, FCs, H, FbTW, FbBW, B1, A1, AccOut, BlkOut).
+
+
+Score Progress Table
+
+Wave 61: 57/120 -> 58/120 = 48.33%
+Task: b9e38dc0 (frame_pour)
+
+
+SPARC Documentation
+
+Specification: PrologAI_1_Specification_v291.txt
+Pseudocode: PrologAI_2_Pseudocode_v283.txt
+Architecture: PrologAI_3_Architecture_v284.txt
+Refinement: PrologAI_4_Refinement_v343.txt
+Completion: PrologAI_5_Completion_v349.txt
+
+
+Repository
+
+Mentova: feature/wp319-frame_pour -> main
+PrologAI: feature/wp319-frame_pour -> main
+
+
+References
+
+ARC-AGI-2 benchmark: https://arcprize.org/
+Task b9e38dc0: ARC-AGI-2 evaluation set
+Mentova arc_benchmark_2.pl: Layer 294 implementation
