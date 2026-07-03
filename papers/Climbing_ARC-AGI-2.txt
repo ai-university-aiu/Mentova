@@ -3468,3 +3468,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 59: Scaled-frame identifies a rectangular fr
 Dison, D. R. (2026). ARC-AGI-2 Wave 60: Layout-tile divides the input by two identical major divider rows and N divider cols into three row-groups and N col-groups; row-group 0 holds S x S template subgrids; row-group 2 holds one marker color per col-group; row-group 1 holds S x S layout subgrids encoding which template goes at each output block position, recolored by the marker; output is S x S blocks in an S x S arrangement. Early dispatch refactor also restored scaled_frame, cross_reflect, and frame_reflect (+3 net).
   Score: 57/120 = 47.50%. Task 65b59efc solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 61: Frame-pour - a rectangular frame of color F contains a fill-seed FC on one interior side opposite the opening; the interior fills with FC via unified shadow-cone scan (far side to boundary); B-cell shadows accumulate and propagate through the opening into the exterior; the exterior widens by one unit every S depth steps (slope S = 2.0/DC, float); degenerate single-F-cell boundary col uses precomputed wall extents as fallback range.
+  Score: 58/120 = 48.33%. Task b9e38dc0 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
