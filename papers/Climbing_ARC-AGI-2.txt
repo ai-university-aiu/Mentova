@@ -3476,3 +3476,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 61: Frame-pour - a rectangular frame of colo
 Dison, D. R. (2026). ARC-AGI-2 Wave 62: Shape-slide detects 4-connected components of non-BG cells; size-1 components on grid edges are anchor seeds that define a vertical (left/right edge) or horizontal (top/bottom edge) slide target; each multi-cell shape's unique-color interior marker slides to align with the target row or col; floating seeds (size-1, not on edge) of matching color also slide to the target; cells exiting the grid boundary are discarded.
   Score: 59/120 = 49.17%. Task 581f7754 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 63: Col-rank-fill - each column with a non-BG value at row 0 forms an indicator bar; the bar's length (consecutive cells of that color from row 0) gives a rank R; column segments [M, filler+, M] are detected in each column (below the bar if any); for each indicator (marker M, rank R), segments with marker M are sorted by filler-cell count descending and the rank-R segment has its filler cells replaced by M.
+  Score: 60/120 = 50.00%. Task 97d7923e solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
