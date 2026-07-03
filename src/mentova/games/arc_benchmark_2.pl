@@ -293,6 +293,29 @@ arc2_induce_rule(TrainingPairs, band_stamp) :-
 % Each training pair must transform correctly under band_stamp.
            arc2_transform(band_stamp, In, Out)).
 
+% lattice_stamp: early dispatch before generic clause (WP-331, Layer 306).
+arc2_named_rule(lattice_stamp).
+% arc2_induce_rule(lattice_stamp): two-color template/marker pre-filter + verify.
+arc2_induce_rule(TrainingPairs, lattice_stamp) :-
+% Fast filter: inspect the first training pair only.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% The first input and output must have the same number of rows.
+    length(First, H), length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [OR0|_],
+% The first input and output must have the same number of columns.
+    length(FR, W), length(OR0, W),
+% Determine the background color of the first training input.
+    arc2_bg_color_(First, BG),
+% Collect the non-background colors of the first training input.
+    findall(V, (member(Row, First), member(V, Row), V \== BG), Vs),
+% Exactly two distinct non-background colors must be present.
+    sort(Vs, [_, _]),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under lattice_stamp.
+           arc2_transform(lattice_stamp, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -14822,5 +14845,134 @@ bst_render_(Grid, BG, BandIdx, Stamps, Out) :-
                         ( memberchk(RI-CI-SV, Stamps) -> V = SV
                         ; memberchk(RI, BandIdx) -> V = IV
                         ; V = BG ) ),
+                      ORow) ),
+            Out).
+
+% ---------------------------------------------------------------------------
+% WP-331  lattice_stamp  —  Layer 306
+% lattice_stamp: the grid holds one template shape of color T and a marker
+% map made of single cells of marker color M arranged around one single cell
+% of color T (the map center). Every marker sits at an even offset (DR, DC)
+% from the center; each marker orders one copy of the template, painted in
+% color T, at the template's own position shifted by DR/2 template heights
+% and DC/2 template widths. The original template is repainted in the marker
+% color M, the marker map is erased, and everything else becomes background.
+% Reference: ARC-AGI-2 task a395ee82.
+% ---------------------------------------------------------------------------
+
+% arc2_transform for lattice_stamp: stamp template copies at marker offsets.
+arc2_transform(lattice_stamp, Grid, Out) :-
+% Determine the background color as the most common cell value.
+    arc2_bg_color_(Grid, BG),
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Collect every non-background cell as an R-C-V triple.
+    findall(R-C-V,
+% Enumerate each cell and keep those that differ from the background.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V \== BG ),
+            Cells),
+% Collect the colors of the non-background cells.
+    findall(V, member(_-_-V, Cells), Vs),
+% Exactly two distinct non-background colors A and B must be present.
+    sort(Vs, [A, B]),
+% Partition the cells into same-color 4-connected components.
+    bst_components_(Cells, Comps),
+% Identify template color T, marker color M, template cells, and map center.
+    ( lst_roles_(Comps, A, TemplCells, CR-CC) -> T = A, M = B
+% Otherwise try the two colors with their roles swapped.
+    ; lst_roles_(Comps, B, TemplCells, CR-CC), T = B, M = A ),
+% Collect the marker cells: every cell of the marker color.
+    findall(MR-MC, member(MR-MC-M, Cells), Markers),
+% At least one marker must be present.
+    Markers \= [],
+% Collect the row indices of the template cells.
+    findall(TR, member(TR-_, TemplCells), TRs),
+% The template bottom row is the maximum template row index.
+    max_list(TRs, BotR),
+% The template top row is the minimum template row index.
+    min_list(TRs, TopR),
+% Collect the column indices of the template cells.
+    findall(TC, member(_-TC, TemplCells), TCs),
+% The template right column is the maximum template column index.
+    max_list(TCs, RightC),
+% The template left column is the minimum template column index.
+    min_list(TCs, LeftC),
+% The template height is the bounding-box row span.
+    TH is BotR - TopR + 1,
+% The template width is the bounding-box column span.
+    TW is RightC - LeftC + 1,
+% Compute one template copy per marker, painted in the template color.
+    findall(SR-SC-T,
+% Enumerate each marker cell.
+            ( member(MR-MC, Markers),
+% Compute the marker's row offset from the map center.
+              DR is MR - CR,
+% Compute the marker's column offset from the map center.
+              DC is MC - CC,
+% The row offset must be an even number of cells.
+              0 =:= DR mod 2,
+% The column offset must be an even number of cells.
+              0 =:= DC mod 2,
+% Convert the row offset into whole template heights.
+              UR is DR // 2,
+% Convert the column offset into whole template widths.
+              UC is DC // 2,
+% Enumerate the template's own cells.
+              member(R-C, TemplCells),
+% Shift the cell down by the offset in template heights.
+              SR is R + UR * TH,
+% Shift the cell right by the offset in template widths.
+              SC is C + UC * TW ),
+            CopyStamps),
+% Count the markers.
+    length(Markers, NM),
+% Count the template cells.
+    length(TemplCells, NT),
+% Count the copy stamp cells.
+    length(CopyStamps, NC),
+% Every marker must have contributed one full template copy.
+    NC =:= NM * NT,
+% Repaint the original template in the marker color.
+    findall(R-C-M, member(R-C, TemplCells), CenterStamps),
+% Combine the copies with the repainted original template.
+    append(CopyStamps, CenterStamps, Stamps),
+% Every stamp cell must land inside the grid.
+    forall(member(SR-SC-_, Stamps),
+% Check the stamp row and column against the grid bounds.
+           ( SR >= 0, SR < H, SC >= 0, SC < W )),
+% Render the output as a background grid overlaid with the stamps.
+    lst_render_(H, W, BG, Stamps, Out).
+
+% lst_roles_(+Comps, +T, -TemplCells, -Center): split color T's components.
+lst_roles_(Comps, T, TemplCells, Center) :-
+% Collect every component of color T.
+    findall(Cs, member(comp(T, Cs), Comps), TComps),
+% Color T must form exactly two components.
+    TComps = [C1, C2],
+% Case one: the first component is the template and the second the center.
+    ( C2 = [Center], length(C1, L1), L1 >= 2 -> TemplCells = C1
+% Case two: the second component is the template and the first the center.
+    ; C1 = [Center], length(C2, L2), L2 >= 2, TemplCells = C2 ).
+
+% lst_render_(+H, +W, +BG, +Stamps, -Out): paint stamps on a background grid.
+lst_render_(H, W, BG, Stamps, Out) :-
+% The last row index is the height minus one.
+    H1 is H - 1,
+% The last column index is the width minus one.
+    W1 is W - 1,
+% Build the output row list in order.
+    findall(ORow,
+% Enumerate each output row index.
+            ( between(0, H1, R),
+% Build the output row cell by cell.
+              findall(V,
+% Enumerate each output column index.
+                      ( between(0, W1, C),
+% Stamped cells take the stamp color; all other cells are background.
+                        ( memberchk(R-C-SV, Stamps) -> V = SV ; V = BG ) ),
                       ORow) ),
             Out).

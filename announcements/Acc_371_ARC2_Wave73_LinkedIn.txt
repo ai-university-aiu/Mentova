@@ -1,0 +1,34 @@
+Accomplishment 371: ARC-AGI-2 Wave 73 - Lattice Stamp Marker-Map Copying
+
+PrologAI solves ARC-AGI-2 task a395ee82 with a new glass-box rule called
+lattice_stamp (WP-331, Layer 306), raising the benchmark score from
+69/120 = 57.50% to 70/120 = 58.33%.
+
+The input grid holds a small template shape of one color and a marker
+map: scattered single cells of a second color arranged around one lone
+cell of the template's color that acts as the map center. Every marker
+sits at an even offset from that center. In the output the map is gone
+and the template has multiplied: each marker orders one copy of the
+template at the template's own position shifted by half the marker's
+offset, measured in whole template heights and widths, while the
+original template is repainted in the marker color.
+
+The key insight is that the map center wears the template's color. That
+one color choice separates the two roles without any positional
+heuristic: the template color is simply the color with one multi-cell
+component and one single-cell component, and the other color supplies
+the markers. The map itself is a half-scale blueprint - marker offsets
+count in steps of two cells while stamp offsets count in whole template
+units, so the rule reads the map by halving each offset. The color
+exchange is asymmetric: copies keep the template color, and only the
+original flips to the marker color, marking the map's own place in the
+copy field.
+
+The rule carries no learned parameters: background color, template,
+map center, markers, and stamp positions are all derived from the input
+grid itself. All three training pairs and the hidden test case passed
+on the first run. Pure induction. No pretraining. Every rule is named
+and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

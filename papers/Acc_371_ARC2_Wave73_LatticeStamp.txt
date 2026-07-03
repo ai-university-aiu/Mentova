@@ -1,0 +1,103 @@
+Acc_371: ARC-AGI-2 Wave 73 - Lattice Stamp Marker-Map Copying
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 73 of the ARC-AGI-2 benchmark climb: task a395ee82 solved using the
+lattice_stamp rule (WP-331, Layer 306). Score advances from 69/120 =
+57.50% to 70/120 = 58.33%.
+
+TASK DESCRIPTION
+
+Task a395ee82 presents 22x22 grids holding exactly two non-background
+colors. One color T draws a single small template shape, three to four
+cells across. The other color M draws a marker map: scattered single
+cells arranged around one additional single cell of color T that acts as
+the map center. Every marker sits at an even offset from the center,
+such as two cells up, two cells left, or four cells down. In the output
+the marker map is gone and the template has multiplied: one copy of the
+template, in color T, appears for every marker, placed at the template's
+own position shifted by half the marker's offset measured in whole
+template heights and widths, while the original template is repainted in
+the marker color M.
+
+RULE: lattice_stamp
+
+The glass-box named rule is a five-stage copying procedure with no
+learned parameters:
+
+1. BACKGROUND AND CELL EXTRACTION (arc2_bg_color_/2)
+   The background is the most common cell value. Every non-background
+   cell is collected, and exactly two distinct non-background colors
+   must be present.
+
+2. ROLE SEPARATION (bst_components_/2, lst_roles_/4)
+   The cells are partitioned into same-color 4-connected components.
+   The template color T is the color forming exactly two components:
+   one with two or more cells (the template) and one single cell (the
+   map center). The other color M supplies the marker cells.
+
+3. OFFSET HALVING
+   Each marker's offset (DR, DC) from the map center must be even in
+   both coordinates. Halving converts it into whole template-size
+   units (UR, UC) - the map is a half-scale blueprint of the copy
+   field.
+
+4. TEMPLATE STAMPING
+   For each marker, a copy of the template, painted in color T, is
+   stamped at the template's own bounding-box position shifted by UR
+   template heights and UC template widths. Every stamp cell must land
+   inside the grid, and every marker must contribute one full copy.
+
+5. RENDER (lst_render_/5)
+   The original template is repainted in the marker color M, the
+   marker map is erased, and every other cell becomes background.
+
+THE KEY INSIGHT: THE CENTER WEARS THE TEMPLATE'S COLOR
+
+The decisive observation is that the map center is not a marker - it is
+a single cell of the TEMPLATE's color sitting among the markers. That
+one color choice makes the two roles separable without any positional
+heuristic: the template color is simply the color with one multi-cell
+component and one single-cell component, and the marker color is the
+other one. The color exchange is asymmetric: all copies keep the
+template color, and only the original template flips to the marker
+color, marking the map's own position inside the copy field. The second
+observation is the half-scale reading: marker offsets count in steps of
+two cells while stamp offsets count in whole template heights and
+widths, so the map is read by halving each offset, never by measuring
+raw distances.
+
+INDUCTION PRE-FILTER
+
+The first training pair must have identical input and output dimensions
+and the first input must contain exactly two distinct non-background
+colors; all training pairs are then verified with forall before the
+rule is selected. The color scan is a single pass over the cells,
+keeping the pre-filter cheap for every other task in the named-rule
+enumeration. The induce clause dispatches early, directly after
+band_stamp, ahead of the generic named-rule search.
+
+KEY PREDICATES
+
+  lst_roles_/4         - split the template color into template and center
+  lst_render_/5        - paint the stamps on a fresh background grid
+  bst_components_/2    - same-color 4-connected components (reused)
+  arc2_bg_color_/2     - most common cell value as background (reused)
+  arc2_transform(lattice_stamp, +Grid, -Out)
+  arc2_induce_rule(+Pairs, lattice_stamp)
+
+VERIFICATION
+
+All three training pairs and the test case pass in SWI-Prolog on the
+first run. A full benchmark regression run confirms no previously solved
+task lost its rule. Pure induction from training examples. No
+pretraining on the ARC-AGI-2 corpus. Every rule is named and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v302, Pseudocode v294, Architecture v295,
+Refinement v354, Completion v360.
