@@ -1,0 +1,31 @@
+Accomplishment 364: ARC-AGI-2 Wave 66 - Mosaic Heal
+
+PrologAI solves ARC-AGI-2 task 981571dc with a new glass-box rule called
+mosaic_heal (WP-324, Layer 299), raising the benchmark score from
+62/120 = 51.67% to 63/120 = 52.50%.
+
+The input grid is a 30x30 symmetric wallpaper mosaic damaged by
+rectangular patches of zeros - up to 114 destroyed cells per grid. The
+output is the fully healed mosaic with every damaged cell restored to
+its original color.
+
+The key insight: a symmetric mosaic carries its own backup copies. Every
+damaged row searches the grid for a compatible donor row - one that
+agrees at every position where both rows are non-zero, with at least 5
+agreeing positions for confidence - and copies the donor's values into
+its zero cells. The same healing is applied to columns via
+transposition, and the two passes iterate until nothing changes. Any
+zeros that survive (because a row and all its donors are damaged in the
+same columns) borrow from the diagonal mirror cell: position (r, c)
+takes the value at (c, r). A final fixpoint pass finishes the repair,
+and the rule only accepts a completely zero-free result.
+
+No parameters are learned; the entire repair is deterministic
+redundancy recovery, and partially damaged rows heal each other across
+passes until the fixpoint converges.
+
+All 4 training pairs and the test case pass. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

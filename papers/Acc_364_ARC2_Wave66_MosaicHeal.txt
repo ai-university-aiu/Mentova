@@ -1,0 +1,90 @@
+Acc_364: ARC-AGI-2 Wave 66 - Mosaic Heal Symmetric Repair
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 66 of the ARC-AGI-2 benchmark climb: task 981571dc solved using the
+mosaic_heal rule (WP-324, Layer 299). Score advances from 62/120 = 51.67%
+to 63/120 = 52.50%.
+
+TASK DESCRIPTION
+
+Task 981571dc presents 30x30 grids showing a symmetric wallpaper mosaic that
+has been damaged by rectangular patches of zeros (between 82 and 114 damaged
+cells per training input, 30 in the test input). The mosaic has mirror
+structure in its rows, in its columns, and across its main diagonal. The
+output is the fully healed grid, identical in size, with every zero replaced
+by the color the undamaged mosaic carries at that position. No training or
+test output contains a single zero.
+
+RULE: mosaic_heal
+
+The glass-box named rule is a three-stage deterministic repair that exploits
+the mosaic's internal redundancy instead of learning any parameters:
+
+1. ROW AND COLUMN DONOR HEALING (FIXPOINT)
+   A row containing zeros searches the grid for a compatible donor row.
+   Compatibility (mh_compat_/4) requires agreement at every position where
+   both rows are non-zero; a disagreement at any shared non-zero position
+   fails the candidate outright. Zeros on either side are neutral. At least
+   5 agreeing non-zero positions are required for confidence. The damaged
+   row then copies the donor's values into its zero cells (mh_merge_/3).
+   The same pass is applied to columns by transposing the grid, healing
+   rows, and transposing back (mh_pass_/2). Row-and-column passes iterate
+   until a full pass changes nothing (mh_fixpoint_/2).
+
+2. DIAGONAL MIRROR FALLBACK
+   If zeros survive the fixpoint (because a row and all of its potential
+   donors are damaged in the same columns), each leftover zero at (r, c)
+   borrows the value at its diagonal mirror (c, r), implemented as a
+   row-wise merge of the grid with its own transpose (mh_diag_/2).
+
+3. FINAL FIXPOINT AND ZERO-FREE GUARD
+   The row-and-column fixpoint runs once more after the diagonal repair,
+   and the transform only succeeds if the final grid contains no zeros.
+
+INDUCTION PRE-FILTER
+
+The first training input must contain a zero, the first training output must
+contain no zero, and input and output must have the same number of rows; all
+training pairs are then verified with forall before the rule is selected.
+
+WHY THE COMPATIBILITY TEST MUST FAIL HARD
+
+Treating a shared non-zero disagreement as merely a low score would let
+near-miss rows donate wrong colors. Failing the candidate outright means
+only genuinely mirrored or repeated rows qualify, and the neutral treatment
+of zeros lets two partially damaged rows heal each other across passes,
+which is what makes the fixpoint converge from multiple damage patches.
+
+KEY PREDICATES
+
+  mh_fixpoint_/2  - iterate row+column healing passes until stable
+  mh_pass_/2      - one row pass plus one column pass via transpose
+  mh_heal_rows_/2 - map the single-row healer over all rows
+  mh_heal_row_/3  - find a compatible donor and merge it into the row
+  mh_compat_/4    - hard-failing agreement test with agreement count
+  mh_merge_/3     - fill zeros of a damaged row from a donor row
+  mh_diag_/2      - diagonal mirror repair via transpose merge
+  mh_transpose_/2 - grid transposition
+  arc2_transform(mosaic_heal, +Grid, -Out)
+  arc2_induce_rule(+Pairs, mosaic_heal)
+
+VERIFICATION
+
+All 4 training pairs and the test case pass in SWI-Prolog. Regression
+checks on previously solved tasks e3721c99 (hole_color), 135a2760
+(period_repair), dd6b8c4b (box_absorb), and 8f3a5a89 (room_outline) still
+pass with their original rules. Pure induction from training examples. No
+pretraining on the ARC-AGI-2 corpus. Every rule is named and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v295, Pseudocode v287, Architecture v288,
+Refinement v347, Completion v353.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).
