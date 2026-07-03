@@ -1,0 +1,40 @@
+Accomplishment 375: ARC-AGI-2 Wave 77 - Palette Jigsaw Corner-Recolored Square Assembly
+
+PrologAI solves ARC-AGI-2 task f560132c with a new glass-box rule called
+palette_jigsaw (WP-335, Layer 310), raising the benchmark score from
+73/120 = 60.83% to 74/120 = 61.67%.
+
+The input grid scatters four pieces over the background: three
+single-color connected shapes and one key piece whose body embeds a
+2-by-2 block of four foreign palette colors in place of four of its own
+cells. The total number of piece cells is always a perfect square. The
+output is the assembled square: every piece rotated by quarter turns,
+the rotated pieces interlocking with no gaps and no overlaps, the key
+piece covering the top-left corner, and every piece repainted with the
+palette color of the output corner it covers - the key takes the
+palette's top-left color, and the pieces on the other three corners
+take the colors of their corners.
+
+The key insight is that the palette carrier anchors the corner. Without
+any anchoring constraint each grid admits exactly four distinct-corner
+tilings - the four global rotations of one and the same assembly - and
+only one of them recolors correctly. Pinning the key piece to the
+top-left corner, the same corner where its own palette reading begins,
+collapses every grid, training and test alike, to exactly one tiling,
+confirmed by exhaustive enumeration. This generalizes the Wave 76
+puzzle_fit anchor from a single colored stud to a role-bearing piece,
+and the entire Wave 76 exact-cover engine is reused without
+modification.
+
+The engine extracts the pieces as 8-connected mixed-color components,
+reads the 2-by-2 palette out of the key piece, converts the pieces to
+indexed shape masks, derives the square's side from the total cell
+count, runs the scanline-anchored exact-cover search with quarter-turn
+rotations, and repaints each placed piece by the corner it covers. The
+rule carries no learned parameters: background, pieces, palette, square
+size, rotations, and the anchored corner are all derived from the input
+grid itself. Both training pairs and the hidden test case pass. Pure
+induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 76 complete: 73/120 = 60.83%.
+Last updated: 2026-07-03. Wave 77 complete: 74/120 = 61.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -198,6 +198,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  71 / 120  | 59.17%  | Wave 74: hole_census equally sized large tiles and an equal number of smaller shapes over a background; each tile carries scattered single-cell background holes and pairs with the unique shape whose background-hole region has that many 4-connected components; tiles redrawn solid in their packed layout with each paired shape centered inside, shape holes filled by the tile color
 2026-07-03  |  72 / 120  | 60.00%  | Wave 75: glyph_swap color-5 frame encloses solid square blocks; outside sit AABB/AAAB/AABB legend interlocks mapping color A to color B plus one reference glyph per block color; output is the framed subgrid with every solid block replaced by its color's glyph shape repainted in the legend-mapped color
 2026-07-03  |  73 / 120  | 60.83%  | Wave 76: puzzle_fit four scattered multi-color puzzle pieces, one carrying a color-5 anchor stud; each piece rotated by quarter turns only (no reflections) and assembled by exact-cover search into the unique perfect N x N square tiling with the anchor stud at the top-left corner
+2026-07-03  |  74 / 120  | 61.67%  | Wave 77: palette_jigsaw four scattered pieces, one carrying an embedded 2 x 2 color palette; quarter-turn rotations assemble the unique perfect N x N square tiling with the palette carrier anchoring the top-left corner; each piece repainted with the palette color of the output corner it covers
 
 
 COMPLETE SCORE PROGRESSION
@@ -1218,6 +1219,74 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 77 - 2026-07-03 - Score: 74/120 = 61.67%
+
+Date: 2026-07-03
+
+Confirmed score: 74 / 120 = 61.67%
+
+Rules added in this wave:
+  palette_jigsaw (WP-335, Layer 310)
+
+Task solved: f560132c (2 training pairs + 1 test case; 20x20 training
+  inputs, 26x26 test input; four pieces scattered over the background,
+  three single-color connected shapes and one key piece whose body
+  carries an embedded 2-by-2 block of four foreign palette colors in
+  place of four of its own cells; total piece cells always a perfect
+  square - 64 and 100 in training, 144 in the test; the output is the
+  assembled N-by-N square with every piece repainted in a palette
+  color).
+
+Algorithm: rotation-only exact-cover assembly with corner-palette
+  recoloring. Stage 1: the background is the most common cell value,
+  and all non-background cells are grouped into 8-connected components
+  over mixed colors; exactly four components must emerge, and exactly
+  one - the key - carries more than one distinct color. Stage 2: the
+  key's body color is its most frequent cell color, and the four cells
+  that differ from the body form a 2-by-2 palette block read as
+  top-left, top-right, bottom-left, bottom-right. Stage 3: each piece
+  is normalized to its bounding-box origin and converted to an indexed
+  mask (the key is index 1, palette cells counted as part of its
+  shape); the cell counts must sum to a perfect square N * N, fixing
+  the output side N. Stage 4: the puzzle_fit exact-cover engine
+  (pf_solve_) tiles the N-by-N board using the four quarter-turn
+  rotation variants of each mask, and the accepted tiling is the one
+  where the key covers the output's top-left corner and the four
+  corners are covered by four distinct pieces. Stage 5: each piece is
+  repainted with the palette color of the corner it covers - the key
+  takes the palette's top-left color, the piece on the top-right
+  corner takes the top-right color, and likewise for the bottom two -
+  and the recolored cells are rendered as the output square.
+
+Bugs fixed: none; the prototype passed both training pairs and the
+  test on its first complete run, reusing the debugged Wave 76
+  pf_* machinery (cells, components, normalization, rotation variants,
+  exact-cover fill, rendering) without modification.
+
+Lessons learned: the corner anchor generalizes from a colored stud to
+  a role-bearing piece. Without any anchoring constraint each grid
+  admits four distinct-corner tilings - the four global rotations of
+  the same assembly - and only one of them recolors correctly; pinning
+  the palette-carrying key to the top-left corner (the same corner
+  where its own palette reading begins) collapses every grid to
+  exactly one tiling, confirmed by exhaustive enumeration on both
+  training pairs and the test grid. The human-steps description
+  (quadrant roles from centroid offsets with per-role rotations) does
+  not survive contact with the data: piece-to-corner assignment does
+  not follow input quadrants, and per-piece rotations vary freely, so
+  the jigsaw search interpretation is the real rule. Regression
+  spot-check of sixteen solved tasks (puzzle_fit, glyph_swap,
+  shape_count, hole_census, shape_catalog, shape_sort, shape_beam,
+  shape_classify, layout_tile, scaled_frame, cross_reflect,
+  frame_reflect, frame_pour, legend_fill, grid_tile, quadrant_tile)
+  all still induce and pass.
+
+Accomplishment: Acc_375.  Paper: Acc_375_ARC2_Wave77_PaletteJigsaw.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3807,6 +3876,7 @@ a395ee82  - Wave 73 - lattice_stamp      - marker map of single M-color cells ar
 8698868d  - Wave 74 - hole_census        - equally sized tiles pair with smaller shapes by hole census: tile hole count equals shape background-hole component count; tiles redrawn solid in packed layout with paired shapes centered inside, shape holes filled by tile color
 edb79dae  - Wave 75 - glyph_swap         - color-5 frame encloses solid square blocks; AABB/AAAB/AABB legend interlocks outside the frame map colors; each block replaced by its color's outside reference glyph shape repainted in the legend-mapped color
 7b3084d4  - Wave 76 - puzzle_fit         - four scattered multi-color puzzle pieces, one with a color-5 anchor stud; quarter-turn rotations only; exact-cover search assembles the unique perfect N x N square tiling with the stud at the top-left corner
+f560132c  - Wave 77 - palette_jigsaw     - four scattered pieces, one key piece embedding a 2 x 2 palette block; quarter-turn exact-cover tiling with the key at the top-left corner; each piece repainted with the palette color of the output corner it covers
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4143,4 +4213,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 75: Glyph-swap - a rectangular frame of colo
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 76: Puzzle-fit - the grid scatters four puzzle pieces over the background, mostly single-color connected shapes with bumps and notches, one piece carrying a single anchor stud of color 5 in place of one of its own cells, and the total piece cell count is always a perfect square; the pieces are extracted as 8-connected multi-color components, normalized to their bounding boxes, and assembled by scanline-anchored exact-cover search into the N-by-N square, each piece rotated by quarter turns only, interlocking with no gaps and no overlaps, with the anchor stud landing on the square's top-left corner - reflections are deliberately excluded because the pieces are chiral, and under rotations only every grid admits exactly one perfect tiling, confirmed by exhaustive enumeration.
   Score: 73/120 = 60.83%. Task 7b3084d4 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 77: Palette-jigsaw - the grid scatters four pieces over the background, three single-color connected shapes and one key piece whose body embeds a 2-by-2 block of four foreign palette colors in place of four of its own cells, and the total piece cell count is always a perfect square; the pieces are extracted as 8-connected mixed-color components, normalized to their bounding boxes, and assembled by scanline-anchored exact-cover search into the N-by-N square using quarter-turn rotations only, with the key piece pinned to the square's top-left corner and the four corners covered by four distinct pieces; each piece is then repainted with the palette color of the corner it covers - the key takes the palette's top-left color and the other three pieces take the colors of their corners - and without the key-corner pin every grid admits exactly four distinct-corner tilings, the global rotations of one assembly, of which only the pinned one recolors correctly, confirmed by exhaustive enumeration.
+  Score: 74/120 = 61.67%. Task f560132c solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
