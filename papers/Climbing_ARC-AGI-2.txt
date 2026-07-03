@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-02. Wave 57 complete: 54/120 = 45.00%.
+Last updated: 2026-07-03. Wave 64 complete: 61/120 = 50.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -181,6 +181,11 @@ Date        | Score      | Percent | Notes
 2026-07-02  |  54 / 120  | 45.00%  | Wave 57: frame_reflect 9x9 bordered frame stamps 180-rotated 3x3 sub-regions outward; hole filled by arm-product rule
 2026-07-02  |  55 / 120  | 45.83%  | Wave 58: cross_reflect cross of 1s divides grid into 4 quadrants; TL has anchor+satellites; TR/BR/BL each get satellites reflected+scaled
 2026-07-02  |  56 / 120  | 46.67%  | Wave 59: scaled_frame rectangular frame scaled by sqrt(GCD of object sizes); 0-holes filled by matched object color via (norm_size,centroid_col) sort-pair
+2026-07-03  |  57 / 120  | 47.50%  | Wave 60: layout_tile divider rows split grid into row-groups; template subgrids in row-group 0; marker colors in row-group 2; layout in row-group 1; early dispatch refactor restores scaled_frame, cross_reflect, frame_reflect (+3 net)
+2026-07-03  |  58 / 120  | 48.33%  | Wave 61: frame_pour rectangular frame F with fill-seed FC; interior fills via unified shadow-cone scan; exterior widens by slope S = 2.0/DC per depth step
+2026-07-03  |  59 / 120  | 49.17%  | Wave 62: shape_slide 4-connected components; edge size-1 seeds define slide target; shape unique-color marker aligns to target; floating seeds slide too
+2026-07-03  |  60 / 120  | 50.00%  | Wave 63: col_rank_fill indicator bar length gives rank; column segments [M,F+,M] sorted by filler count desc; rank-R segment filler replaced by M
+2026-07-03  |  61 / 120  | 50.83%  | Wave 64: snake_frame pointer (value 3) traces rectangular wrap-path around each snake (1/2 body); near/far boundaries snake_edge+/-(N1+1); turn from 1-cell half-count
 
 
 COMPLETE SCORE PROGRESSION
@@ -3195,6 +3200,12 @@ e376de54  - Wave 4  - segment_equalize     - equalize all segment lengths to mid
 faa9f03d  - Wave 19 - segment_ext         - 4-corner stub removal; arm extended; gap fill with pure-vertical guard
 136b0064  - Wave 56 - shape_walk          - 3x3 block shapes direct a chain walk; S1->LEFT-2; S2->RIGHT-3; S3->DOWN-2; S4->LEFT-4
 db0c5428  - Wave 57 - frame_reflect       - 9x9 frame stamps 180-rotated sub-regions outward; arm-product hole fill
+b10624e5  - Wave 58 - cross_reflect       - cross of 1s divides grid into quadrants; satellites reflected+scaled from TL to TR/BR/BL
+898e7135  - Wave 59 - scaled_frame        - rectangular frame scaled by sqrt(GCD object sizes); 0-holes filled by matched object color
+65b59efc  - Wave 60 - layout_tile         - divider rows split grid into row-groups; template+layout+marker subgrids assemble output blocks
+b9e38dc0  - Wave 61 - frame_pour         - rectangular frame with fill-seed; interior + exterior widening cone via shadow-cone scan
+581f7754  - Wave 62 - shape_slide         - size-1 edge seeds define slide target; unique-color marker aligns shape; floating seeds follow
+cb2d8a2c  - Wave 64 - snake_frame        - pointer (value 3) traces rectangular wrap-path around 1/2 snakes; near/far = snake_edge +/-(N1+1)
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3479,4 +3490,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 62: Shape-slide detects 4-connected componen
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 63: Col-rank-fill - each column with a non-BG value at row 0 forms an indicator bar; the bar's length (consecutive cells of that color from row 0) gives a rank R; column segments [M, filler+, M] are detected in each column (below the bar if any); for each indicator (marker M, rank R), segments with marker M are sorted by filler-cell count descending and the rank-R segment has its filler cells replaced by M.
   Score: 60/120 = 50.00%. Task 97d7923e solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 64: Snake-frame - pointer cell (value 3) on grid edge traces rectangular wrap-path around each connected 1/2 snake object; near/far boundaries computed as snake_edge +/- (N1+1); turn direction from 1-cell half-count (TopH vs BotH for vertical snakes, LH vs RH for horizontal); grid boundary clamping applied; all value-1 snake cells become 2.
+  Score: 61/120 = 50.83%. Task cb2d8a2c solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

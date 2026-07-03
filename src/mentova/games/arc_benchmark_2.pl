@@ -209,6 +209,23 @@ arc2_induce_rule(TrainingPairs, shape_slide) :-
                arc2_transform(shape_slide, In, Out)), OKs),
     length(OKs, NOK), NOK >= NTotal - 1.
 
+% snake_frame: early dispatch before generic clause.
+arc2_named_rule(snake_frame).
+% arc2_induce_rule(snake_frame): pointer 3 wraps frame around 1/2 snake objects.
+arc2_induce_rule(TrainingPairs, snake_frame) :-
+% Fast filter: first input must have exactly these four values: 1, 2, 3, 8.
+    TrainingPairs = [pair(First,_)|_],
+    flatten(First, FCs),
+    sort(FCs, Uniq), Uniq = [1,2,3,8],
+% Exactly one cell must hold value 3 (the single pointer).
+    include(==(3), FCs, Threes), length(Threes, 1),
+% Require all training pairs to pass the transform.
+    length(TrainingPairs, NTotal),
+% Verify each pair passes snake_frame.
+    findall(1, (member(pair(In, Out), TrainingPairs),
+               arc2_transform(snake_frame, In, Out)), OKs),
+    length(OKs, NOK), NOK =:= NTotal.
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -12660,3 +12677,306 @@ arc2_crf_apply_cols_([V|Rest], CI, Reps, [NV|NRest]) :-
     ( member(CI-NV, Reps) -> true ; NV = V ),
     CI1 is CI + 1,
     arc2_crf_apply_cols_(Rest, CI1, Reps, NRest).
+
+% ===========================================================
+% WP-322  snake_frame  —  Layer 297
+% Task cb2d8a2c: a single pointer cell (value 3) draws a
+% rectangular wrap-path around each snake object (connected
+% 1/2 bodies). All 1s inside snakes become 2s in the output.
+% The pointer navigates nearest-to-farthest, turning at each
+% snake boundary (snake_edge ± (num_1s+1)), direction
+% determined by where the 1s are concentrated in the snake.
+% ===========================================================
+
+% arc2_transform(snake_frame, +Grid, -Out): entry point.
+arc2_transform(snake_frame, Grid, Out) :-
+% Measure grid height and width.
+    length(Grid, H),
+    Grid = [Row0|_], length(Row0, W),
+% Locate the pointer (value 3).
+    cbsf_ptr(Grid, 0, PR, PC),
+% Collect all snake cells (values 1 or 2).
+    cbsf_cells(Grid, 0, H, W, SCells),
+% Partition snake cells into connected components.
+    cbsf_partition(SCells, Comps),
+% Analyse each component: bounding box and half-counts.
+    maplist(cbsf_analyse(Grid), Comps, Infos),
+% Determine which grid edge the pointer sits on.
+    cbsf_edge(PR, PC, H, W, Edge),
+% Sort components nearest-to-farthest from the pointer.
+    cbsf_order(Edge, Infos, Ordered),
+% Trace the 3-path through all snakes.
+    cbsf_trace(PR, PC, Edge, Ordered, H, W, Path),
+% Write output: 1→2 in snake cells, path cells→3.
+    cbsf_out(Grid, 0, SCells, Path, Out).
+
+% --- pointer location ---
+
+% cbsf_ptr(+Rows, +RI, -PR, -PC): find the row and column of value 3.
+cbsf_ptr([Row|_], RI, RI, PC) :-
+% Search this row for value 3.
+    nth0(PC, Row, 3), !.
+% cbsf_ptr: value 3 not in this row; advance to next.
+cbsf_ptr([_|Rest], RI, PR, PC) :-
+% Increment row index and recurse.
+    RI1 is RI + 1,
+    cbsf_ptr(Rest, RI1, PR, PC).
+
+% --- snake cell collection ---
+
+% cbsf_cells(+Grid, +RI, +H, +W, -Cells): collect all R-C pairs with value 1 or 2.
+cbsf_cells(_, H, H, _, []) :- !.
+% cbsf_cells: collect from this row then recurse.
+cbsf_cells([Row|Rest], RI, H, W, All) :-
+% Gather snake cells from this row.
+    cbsf_row(Row, RI, 0, W, RC),
+% Advance row index.
+    RI1 is RI + 1,
+% Collect remaining rows.
+    cbsf_cells(Rest, RI1, H, W, Tail),
+% Combine this row's cells with the rest.
+    append(RC, Tail, All).
+
+% cbsf_row(+Row, +RI, +CI, +W, -Cells): collect snake cells from one row.
+cbsf_row(_, _, W, W, []) :- !.
+% cbsf_row: cell has value 1 or 2; include it.
+cbsf_row([V|T], RI, CI, W, [RI-CI|Rest]) :-
+    (V =:= 1 ; V =:= 2), !,
+    CI1 is CI + 1,
+    cbsf_row(T, RI, CI1, W, Rest).
+% cbsf_row: background cell; skip it.
+cbsf_row([_|T], RI, CI, W, Rest) :-
+    CI1 is CI + 1,
+    cbsf_row(T, RI, CI1, W, Rest).
+
+% --- connected component partitioning ---
+
+% cbsf_partition(+Cells, -Comps): split cells into 4-connected components.
+cbsf_partition([], []).
+% cbsf_partition: BFS from the head cell to collect one component.
+cbsf_partition([H|T], [Comp|More]) :-
+    cbsf_bfs([H], T, Comp, Rest),
+    cbsf_partition(Rest, More).
+
+% cbsf_bfs(+Queue, +Avail, -Comp, -Leftover): collect one component via BFS.
+cbsf_bfs([], Avail, [], Avail).
+% cbsf_bfs: expand front cell; find its available neighbours.
+cbsf_bfs([C|Q], Avail, [C|Rest], Final) :-
+    C = R-Col,
+% Find available cells adjacent to R-Col.
+    include(cbsf_adj4(R, Col), Avail, Nbrs),
+% Remove found neighbours from the available pool.
+    subtract(Avail, Nbrs, Avail2),
+% Enqueue the neighbours for exploration.
+    append(Q, Nbrs, Q2),
+    cbsf_bfs(Q2, Avail2, Rest, Final).
+
+% cbsf_adj4(+R, +C, +NR-NC): true if NR-NC is 4-adjacent to R-C.
+cbsf_adj4(R, C, NR-NC) :-
+    ( NR is R+1, NC = C
+    ; NR is R-1, NC = C
+    ; NR = R, NC is C+1
+    ; NR = R, NC is C-1
+    ).
+
+% --- component analysis ---
+
+% cbsf_analyse(+Grid, +Comp, -Info): compute bounding box and half-1-counts.
+cbsf_analyse(Grid, Comp, info(TR,BR,LC,RC,N1,TopH,BotH,LH,RH)) :-
+% Extract all row and column indices.
+    findall(R, member(R-_, Comp), Rs),
+    findall(C, member(_-C, Comp), Cs),
+% Compute bounding rows and columns.
+    min_list(Rs, TR), max_list(Rs, BR),
+    min_list(Cs, LC), max_list(Cs, RC),
+% Count cells with value 1.
+    include(cbsf_is1(Grid), Comp, Ones),
+    length(Ones, N1),
+% Compute vertical midpoint for top/bottom split.
+    VMid is (TR + BR) // 2,
+% Count 1s in top half vs bottom half.
+    include([R-_]>>(R =< VMid), Ones, TopList),
+    include([R-_]>>(R > VMid), Ones, BotList),
+    length(TopList, TopH),
+    length(BotList, BotH),
+% Compute horizontal midpoint for left/right split.
+    HMid is (LC + RC) // 2,
+% Count 1s in left half vs right half.
+    include([_-C]>>(C =< HMid), Ones, LeftList),
+    include([_-C]>>(C > HMid), Ones, RightList),
+    length(LeftList, LH),
+    length(RightList, RH).
+
+% cbsf_is1(+Grid, +R-C): true when Grid[R][C] equals 1.
+cbsf_is1(Grid, R-C) :-
+    nth0(R, Grid, Row),
+    nth0(C, Row, 1).
+
+% --- pointer edge detection ---
+
+% cbsf_edge(+PR, +PC, +H, +W, -Edge): which grid edge is the pointer on?
+cbsf_edge(0, _, _, _, top) :- !.
+% cbsf_edge: check bottom row.
+cbsf_edge(PR, _, H, _, bottom) :- PR =:= H - 1, !.
+% cbsf_edge: check left column.
+cbsf_edge(_, 0, _, _, left) :- !.
+% cbsf_edge: check right column.
+cbsf_edge(_, PC, _, W, right) :- PC =:= W - 1, !.
+% cbsf_edge: fallback — treat as top.
+cbsf_edge(_, _, _, _, top).
+
+% --- snake ordering ---
+
+% cbsf_order(+Edge, +Infos, -Sorted): sort snakes nearest-to-farthest from pointer.
+cbsf_order(right, Infos, Sorted) :-
+% Right pointer: nearest snake has largest right column; sort -RC ascending.
+    findall(K-I, (member(I,Infos), I=info(_,_,_,RC,_,_,_,_,_), K is -RC), KV),
+    keysort(KV, KS), pairs_values(KS, Sorted).
+% cbsf_order left: nearest snake has smallest left column.
+cbsf_order(left, Infos, Sorted) :-
+    findall(K-I, (member(I,Infos), I=info(_,_,LC,_,_,_,_,_,_), K=LC), KV),
+    keysort(KV, KS), pairs_values(KS, Sorted).
+% cbsf_order top: nearest snake has smallest top row.
+cbsf_order(top, Infos, Sorted) :-
+    findall(K-I, (member(I,Infos), I=info(TR,_,_,_,_,_,_,_,_), K=TR), KV),
+    keysort(KV, KS), pairs_values(KS, Sorted).
+% cbsf_order bottom: nearest snake has largest bottom row.
+cbsf_order(bottom, Infos, Sorted) :-
+    findall(K-I, (member(I,Infos), I=info(_,BR,_,_,_,_,_,_,_), K is -BR), KV),
+    keysort(KV, KS), pairs_values(KS, Sorted).
+
+% --- path tracing ---
+
+% cbsf_trace(+R, +C, +Edge, +Snakes, +H, +W, -Path): generate all 3-path cells.
+
+% Base cases: no more snakes; go to grid boundary.
+cbsf_trace(R, C, right, [], _, _, Cells) :-
+    cbsf_hline(R, C, 0, Cells).
+cbsf_trace(R, C, left, [], _, W, Cells) :-
+    WW is W - 1, cbsf_hline(R, C, WW, Cells).
+cbsf_trace(R, C, top, [], H, _, Cells) :-
+    HH is H - 1, cbsf_vline(R, C, HH, Cells).
+cbsf_trace(R, C, bottom, [], _, _, Cells) :-
+    cbsf_vline(R, C, 0, Cells).
+
+% cbsf_trace right: primary direction is LEFT; snakes are vertical.
+cbsf_trace(R, C, right, [info(TR,BR,_,RC,N1,TopH,BotH,_,_)|Rest], H, W, All) :-
+% Near column: right boundary of snake's cell.
+    NearC is RC + N1 + 1,
+% Draw horizontal segment LEFT to near column.
+    cbsf_hline(R, C, NearC, Seg1),
+% Turn DOWN if top-half has more-or-equal 1s; else turn UP.
+    ( TopH >= BotH ->
+        FarR0 is BR + N1 + 1, FarR is min(FarR0, H-1)
+    ;   FarR0 is TR - N1 - 1, FarR is max(FarR0, 0)
+    ),
+% Draw vertical segment to far row.
+    cbsf_vline(R, NearC, FarR, Seg2),
+% Continue from new position toward remaining snakes.
+    cbsf_trace(FarR, NearC, right, Rest, H, W, RestCells),
+    append(Seg1, Seg2, SegAB),
+    append(SegAB, RestCells, All).
+
+% cbsf_trace left: primary direction is RIGHT; snakes are vertical.
+cbsf_trace(R, C, left, [info(TR,BR,LC,_,N1,TopH,BotH,_,_)|Rest], H, W, All) :-
+% Near column: left boundary of snake's cell.
+    NearC is LC - N1 - 1,
+% Draw horizontal segment RIGHT to near column.
+    cbsf_hline(R, C, NearC, Seg1),
+% Turn DOWN if top-half has more-or-equal 1s; else turn UP.
+    ( TopH >= BotH ->
+        FarR0 is BR + N1 + 1, FarR is min(FarR0, H-1)
+    ;   FarR0 is TR - N1 - 1, FarR is max(FarR0, 0)
+    ),
+% Draw vertical segment to far row.
+    cbsf_vline(R, NearC, FarR, Seg2),
+% Continue from new position toward remaining snakes.
+    cbsf_trace(FarR, NearC, left, Rest, H, W, RestCells),
+    append(Seg1, Seg2, SegAB),
+    append(SegAB, RestCells, All).
+
+% cbsf_trace top: primary direction is DOWN; snakes are horizontal.
+cbsf_trace(R, C, top, [info(TR,_,LC,RC,N1,_,_,LH,RH)|Rest], H, W, All) :-
+% Near row: top boundary of snake's cell.
+    NearR is TR - N1 - 1,
+% Draw vertical segment DOWN to near row.
+    cbsf_vline(R, C, NearR, Seg1),
+% Compute right and left far-column candidates.
+    FarCR is RC + N1 + 1,
+    FarCL is LC - N1 - 1,
+% Choose direction: force if one side is out-of-bounds; else use 1-distribution.
+    ( FarCR >= W, FarCL >= 0 -> GoRight = false
+    ; FarCL < 0,  FarCR <  W -> GoRight = true
+    ; LH >= RH                -> GoRight = true
+    ;                            GoRight = false
+    ),
+% Compute the actual far column, clamped to grid.
+    ( GoRight = true ->
+        FarC is min(FarCR, W-1), cbsf_hline(NearR, C, FarC, Seg2)
+    ;   FarC is max(FarCL, 0),   cbsf_hline(NearR, C, FarC, Seg2)
+    ),
+% Continue from new position toward remaining snakes.
+    cbsf_trace(NearR, FarC, top, Rest, H, W, RestCells),
+    append(Seg1, Seg2, SegAB),
+    append(SegAB, RestCells, All).
+
+% cbsf_trace bottom: primary direction is UP; snakes are horizontal.
+cbsf_trace(R, C, bottom, [info(_,BR,LC,RC,N1,_,_,LH,RH)|Rest], H, W, All) :-
+% Near row: bottom boundary of snake's cell.
+    NearR is BR + N1 + 1,
+% Draw vertical segment UP to near row.
+    cbsf_vline(R, C, NearR, Seg1),
+% Compute right and left far-column candidates.
+    FarCR is RC + N1 + 1,
+    FarCL is LC - N1 - 1,
+% Choose direction using boundary constraint then 1-distribution.
+    ( FarCR >= W, FarCL >= 0 -> GoRight = false
+    ; FarCL < 0,  FarCR <  W -> GoRight = true
+    ; LH >= RH                -> GoRight = true
+    ;                            GoRight = false
+    ),
+% Compute actual far column, clamped to grid.
+    ( GoRight = true ->
+        FarC is min(FarCR, W-1), cbsf_hline(NearR, C, FarC, Seg2)
+    ;   FarC is max(FarCL, 0),   cbsf_hline(NearR, C, FarC, Seg2)
+    ),
+% Continue from new position.
+    cbsf_trace(NearR, FarC, bottom, Rest, H, W, RestCells),
+    append(Seg1, Seg2, SegAB),
+    append(SegAB, RestCells, All).
+
+% --- line generation ---
+
+% cbsf_hline(+R, +C1, +C2, -Cells): horizontal line from (R,C1) to (R,C2).
+cbsf_hline(R, C1, C2, Cells) :-
+    ( C1 =< C2 -> Lo = C1, Hi = C2 ; Lo = C2, Hi = C1 ),
+    numlist(Lo, Hi, Cs),
+    findall(R-C, member(C, Cs), Cells).
+
+% cbsf_vline(+R1, +C, +R2, -Cells): vertical line from (R1,C) to (R2,C).
+cbsf_vline(R1, C, R2, Cells) :-
+    ( R1 =< R2 -> Lo = R1, Hi = R2 ; Lo = R2, Hi = R1 ),
+    numlist(Lo, Hi, Rs),
+    findall(R-C, member(R, Rs), Cells).
+
+% --- output assembly ---
+
+% cbsf_out(+Grid, +RI, +SCells, +Path, -Out): build the output grid.
+cbsf_out([], _, _, _, []).
+% cbsf_out: process one row then recurse.
+cbsf_out([Row|Rest], RI, SCells, Path, [NRow|NRest]) :-
+    length(Row, W),
+    cbsf_outrow(Row, RI, 0, W, SCells, Path, NRow),
+    RI1 is RI + 1,
+    cbsf_out(Rest, RI1, SCells, Path, NRest).
+
+% cbsf_outrow(+Row, +RI, +CI, +W, +SCells, +Path, -NRow): process one row.
+cbsf_outrow([], _, _, _, _, _, []).
+% cbsf_outrow: path cell takes value 3.
+cbsf_outrow([V|T], RI, CI, W, SCells, Path, [NV|NT]) :-
+    ( member(RI-CI, Path)              -> NV = 3
+    ; member(RI-CI, SCells), V =:= 1   -> NV = 2
+    ;                                     NV = V
+    ),
+    CI1 is CI + 1,
+    cbsf_outrow(T, RI, CI1, W, SCells, Path, NT).
