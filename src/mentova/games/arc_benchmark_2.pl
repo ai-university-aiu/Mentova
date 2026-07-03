@@ -13726,3 +13726,433 @@ cbsf_outrow([V|T], RI, CI, W, SCells, Path, [NV|NT]) :-
     ),
     CI1 is CI + 1,
     cbsf_outrow(T, RI, CI1, W, SCells, Path, NT).
+
+% ===========================================================================
+% WP-327  frame_compass  —  Layer 302
+% frame_compass: the grid carries noisy border lines on all four sides, each
+% side owning a majority color, plus one large interior component hugged by
+% exactly two straight frame lines. Each frame line is painted in the color
+% of one grid border side, acting as a compass needle: the crop edge that a
+% frame line touches must face the border side that shares its color in the
+% output. The two edge constraints select a unique dihedral-four transform
+% (rotation and/or mirror) that is applied to the cropped component.
+% Reference: ARC-AGI-2 task fc7cae8d.
+% ===========================================================================
+
+% Register frame_compass as a known named rule.
+arc2_named_rule(frame_compass).
+
+% arc2_induce_rule for frame_compass: pre-filter on shrinking output plus a
+% solid border line, then verify every training pair reproduces exactly.
+arc2_induce_rule(TrainingPairs_, frame_compass) :-
+% Unpack the first training pair for the fast pre-filter.
+    TrainingPairs_ = [pair(In0_, Out0_)|_],
+% Measure the input row count of the first pair.
+    length(In0_, IH_),
+% Take the first input row to measure the input width.
+    In0_ = [IR0_|_],
+% Measure the input column count of the first pair.
+    length(IR0_, IW_),
+% Measure the output row count of the first pair.
+    length(Out0_, OH_),
+% Take the first output row to measure the output width.
+    Out0_ = [OR0_|_],
+% Measure the output column count of the first pair.
+    length(OR0_, OW_),
+% The output must have fewer rows than the input (crop shrinks).
+    OH_ < IH_,
+% The output must have fewer columns than the input (crop shrinks).
+    OW_ < IW_,
+% At least one border line of the input must be one solid non-zero color.
+    fc_has_solid_side_(In0_),
+% Verify all training pairs under frame_compass.
+    forall(member(pair(In_, Out_), TrainingPairs_),
+% Each training pair must transform correctly.
+           arc2_transform(frame_compass, In_, Out_)).
+
+% arc2_transform for frame_compass: crop the interior component and apply
+% the dihedral-four transform selected by the two color-coded frame lines.
+arc2_transform(frame_compass, Grid_, Out_) :-
+% Measure the grid height.
+    length(Grid_, H_),
+% Take the first row to measure the grid width.
+    Grid_ = [Row0_|_],
+% Measure the grid width.
+    length(Row0_, W_),
+% Require a reasonably large grid (fast fail for small tasks).
+    H_ >= 12,
+% Require a reasonably wide grid (fast fail for narrow tasks).
+    W_ >= 12,
+% At least one border line must be one solid non-zero color (fast gate).
+    fc_has_solid_side_(Grid_),
+% Determine the majority non-zero color of each of the four border sides.
+    fc_border_colors_(Grid_, SideCols_),
+% Collect the raw list of the four border side colors.
+    findall(BC_, member(_-BC_, SideCols_), BCs0_),
+% Deduplicate the border colors into a sorted set.
+    sort(BCs0_, BCols_),
+% Find the largest connected component that does not touch the grid border.
+    fc_largest_inner_blob_(Grid_, H_, W_, Blob_),
+% Split the blob into crop cells (non-border colors) and frame cells.
+    fc_split_blob_(Grid_, Blob_, BCols_, CropCells_, FrameCells_),
+% The crop region must be non-empty.
+    CropCells_ = [_|_],
+% Compute the bounding box of the crop cells.
+    fc_bbox_(CropCells_, R0_, C0_, R1_, C1_),
+% Collect the raw list of frame cell colors.
+    findall(FV_, member(_-_-FV_, FrameCells_), FVs0_),
+% Deduplicate the frame colors into a sorted set.
+    sort(FVs0_, FCols_),
+% Exactly two frame colors must hug the component.
+    FCols_ = [F1_, F2_],
+% Resolve the first frame color to an input edge and an output edge.
+    fc_compass_(FrameCells_, F1_, R0_, C0_, R1_, C1_, SideCols_, InS1_, OutS1_),
+% Resolve the second frame color to an input edge and an output edge.
+    fc_compass_(FrameCells_, F2_, R0_, C0_, R1_, C1_, SideCols_, InS2_, OutS2_),
+% The two frame lines must sit on different edges of the crop.
+    InS1_ \== InS2_,
+% Select the unique dihedral-four transform satisfying both edge constraints.
+    once((fc_d4_(T_), fc_emap_(T_, InS1_, OutS1_), fc_emap_(T_, InS2_, OutS2_))),
+% Cut the crop subgrid out of the input along its bounding box.
+    fc_crop_(Grid_, R0_, C0_, R1_, C1_, Crop_),
+% Apply the selected dihedral-four transform to the crop.
+    fc_apply_(T_, Crop_, Out_).
+
+% fc_has_solid_side_/1: at least one border line is one solid non-zero color.
+fc_has_solid_side_(Grid_) :-
+% Enumerate the four border lines of the grid.
+    fc_border_line_(Grid_, _, Line_),
+% Take the first value of the border line.
+    Line_ = [V0_|_],
+% The line color must be non-zero.
+    V0_ =\= 0,
+% Every cell of the line must equal the first value.
+    forall(member(V_, Line_), V_ =:= V0_),
+% One solid side suffices; stop searching.
+    !.
+
+% fc_border_line_/3: the top border line is the first row.
+fc_border_line_(Grid_, top, Line_) :-
+% The first row is the top border line.
+    Grid_ = [Line_|_].
+% fc_border_line_/3: the bottom border line is the last row.
+fc_border_line_(Grid_, bottom, Line_) :-
+% The last row is the bottom border line.
+    last(Grid_, Line_).
+% fc_border_line_/3: the left border line is the first column.
+fc_border_line_(Grid_, left, Line_) :-
+% Collect the first value of every row.
+    findall(V_, (member(Row_, Grid_), Row_ = [V_|_]), Line_).
+% fc_border_line_/3: the right border line is the last column.
+fc_border_line_(Grid_, right, Line_) :-
+% Collect the last value of every row.
+    findall(V_, (member(Row_, Grid_), last(Row_, V_)), Line_).
+
+% fc_border_colors_/2: majority non-zero color of each of the four sides.
+fc_border_colors_(Grid_, [top-CT_, bottom-CB_, left-CL_, right-CR_]) :-
+% Fetch the top border line.
+    fc_border_line_(Grid_, top, TopL_),
+% Compute the majority non-zero color of the top line.
+    fc_majority_(TopL_, CT_),
+% Fetch the bottom border line.
+    fc_border_line_(Grid_, bottom, BotL_),
+% Compute the majority non-zero color of the bottom line.
+    fc_majority_(BotL_, CB_),
+% Fetch the left border line.
+    fc_border_line_(Grid_, left, LeftL_),
+% Compute the majority non-zero color of the left line.
+    fc_majority_(LeftL_, CL_),
+% Fetch the right border line.
+    fc_border_line_(Grid_, right, RightL_),
+% Compute the majority non-zero color of the right line.
+    fc_majority_(RightL_, CR_).
+
+% fc_majority_/2: the most frequent non-zero value of a list; fails if none.
+fc_majority_(Vals_, C_) :-
+% Keep only the non-zero values.
+    include([V_]>>(V_ =\= 0), Vals_, NZ_),
+% At least one non-zero value must exist.
+    NZ_ = [_|_],
+% Order the values so duplicates sit together for counting.
+    msort(NZ_, S_),
+% Pair each color occurrence with its total occurrence count.
+    findall(N_-V_,
+% Count how many times each color value occurs in the line.
+            (member(V_, S_), aggregate_all(count, member(V_, S_), N_)),
+% Collect the count-color pairs.
+            Pairs_),
+% Order the pairs so the most frequent color comes first.
+    sort(0, @>=, Pairs_, [_-C_|_]).
+
+% fc_largest_inner_blob_/4: largest 4-connected non-zero component that
+% does not touch any of the four grid borders.
+fc_largest_inner_blob_(Grid_, H_, W_, Blob_) :-
+% Enumerate every non-zero cell of the grid.
+    findall(R_-C_,
+% Locate each non-zero cell by row and column index.
+            (nth0(R_, Grid_, Row_), nth0(C_, Row_, V_), V_ =\= 0),
+% Collect the raw non-zero coordinates.
+            Cells0_),
+% Sort the coordinates for deterministic flood seeding.
+    sort(Cells0_, Cells_),
+% Partition the cells into 4-connected components.
+    fc_blobs_(Cells_, Blobs_),
+% Compute the last row index of the grid.
+    RM_ is H_ - 1,
+% Compute the last column index of the grid.
+    CM_ is W_ - 1,
+% Keep only the components that avoid every grid border line.
+    include(fc_inner_blob_(RM_, CM_), Blobs_, Inner_),
+% Tag each interior component with its cell count.
+    findall(L_-B_,
+% Measure the size of each interior component.
+            (member(B_, Inner_), length(B_, L_)),
+% Collect the size-component pairs.
+            LBs_),
+% Order the pairs so the largest component comes first.
+    sort(1, @>=, LBs_, [_-Blob_|_]).
+
+% fc_inner_blob_/3: true when a component touches no grid border line.
+fc_inner_blob_(RM_, CM_, Blob_) :-
+% No cell of the component may sit on a border row or border column.
+    \+ (member(R_-C_, Blob_), (R_ =:= 0 ; R_ =:= RM_ ; C_ =:= 0 ; C_ =:= CM_)).
+
+% fc_blobs_/2: base case, no cells left means no more components.
+fc_blobs_([], []).
+% fc_blobs_/2: grow one component from the first remaining cell.
+fc_blobs_([Seed_|Rest_], [Blob_|Blobs_]) :-
+% Flood outward from the seed, consuming cells from the pool.
+    fc_flood_([Seed_], Rest_, [Seed_], Blob_, Rem_),
+% Recurse on the unclaimed cells for further components.
+    fc_blobs_(Rem_, Blobs_).
+
+% fc_flood_/5: empty queue means the component is complete.
+fc_flood_([], Pool_, Acc_, Acc_, Pool_).
+% fc_flood_/5: expand the queue head into its unclaimed 4-neighbors.
+fc_flood_([R_-C_|Q_], Pool_, Acc_, Blob_, Rem_) :-
+% Find the pool cells 4-adjacent to the current cell.
+    findall(N_, fc_pool_neighbor_(R_, C_, Pool_, N_), Ns0_),
+% Deduplicate the neighbor list.
+    sort(Ns0_, Ns_),
+% Remove the claimed neighbors from the pool.
+    subtract(Pool_, Ns_, Pool1_),
+% Add the claimed neighbors to the work queue.
+    append(Ns_, Q_, Q1_),
+% Add the claimed neighbors to the component accumulator.
+    append(Ns_, Acc_, Acc1_),
+% Continue flooding with the extended queue.
+    fc_flood_(Q1_, Pool1_, Acc1_, Blob_, Rem_).
+
+% fc_pool_neighbor_/4: a pool cell 4-adjacent to the given coordinates.
+fc_pool_neighbor_(R_, C_, Pool_, N_) :-
+% Enumerate the four axis-aligned direction offsets.
+    member(DR_-DC_, [0-1, 0-(-1), 1-0, -1-0]),
+% Compute the neighbor row.
+    R2_ is R_ + DR_,
+% Compute the neighbor column.
+    C2_ is C_ + DC_,
+% Build the neighbor coordinate term.
+    N_ = R2_-C2_,
+% The neighbor must still be unclaimed in the pool.
+    memberchk(N_, Pool_).
+
+% fc_split_blob_/5: split blob cells by whether their color is a border color.
+fc_split_blob_(Grid_, Blob_, BCols_, CropCells_, FrameCells_) :-
+% Crop cells are blob cells whose color is not any border side color.
+    findall(R_-C_,
+% Keep the blob cells carrying a non-border color.
+            (member(R_-C_, Blob_), arc2_cell_(Grid_, R_, C_, V_), \+ memberchk(V_, BCols_)),
+% Collect the crop coordinates.
+            CropCells_),
+% Frame cells are blob cells whose color matches a border side color.
+    findall(R_-C_-V_,
+% Keep the blob cells carrying a border color, together with that color.
+            (member(R_-C_, Blob_), arc2_cell_(Grid_, R_, C_, V_), memberchk(V_, BCols_)),
+% Collect the frame coordinates with their colors.
+            FrameCells_).
+
+% fc_bbox_/5: bounding box of a list of coordinates.
+fc_bbox_(Cells_, R0_, C0_, R1_, C1_) :-
+% Collect the row indices of all cells.
+    findall(R_, member(R_-_, Cells_), Rs_),
+% Collect the column indices of all cells.
+    findall(C_, member(_-C_, Cells_), Cs_),
+% The top edge is the minimum row.
+    min_list(Rs_, R0_),
+% The bottom edge is the maximum row.
+    max_list(Rs_, R1_),
+% The left edge is the minimum column.
+    min_list(Cs_, C0_),
+% The right edge is the maximum column.
+    max_list(Cs_, C1_).
+
+% fc_compass_/9: resolve one frame color to its input edge and output edge.
+fc_compass_(FrameCells_, F_, R0_, C0_, R1_, C1_, SideCols_, InSide_, OutSide_) :-
+% Collect the coordinates of the frame cells carrying this color.
+    findall(R_-C_, member(R_-C_-F_, FrameCells_), FCells_),
+% At least one frame cell of this color must exist.
+    FCells_ = [_|_],
+% The frame cells must hug exactly one edge of the crop bounding box.
+    fc_frame_side_(FCells_, R0_, C0_, R1_, C1_, InSide_),
+% Exactly one border side may carry this color (unique compass target).
+    findall(S_, member(S_-F_, SideCols_), [OutSide_]).
+
+% fc_frame_side_/6: frame cells one row above the box hug the top edge.
+fc_frame_side_(Cells_, R0_, _, _, _, top) :-
+% Compute the row index just above the bounding box.
+    RT_ is R0_ - 1,
+% Every frame cell must sit on that row.
+    forall(member(R_-_, Cells_), R_ =:= RT_),
+% Commit to the top edge.
+    !.
+% fc_frame_side_/6: frame cells one row below the box hug the bottom edge.
+fc_frame_side_(Cells_, _, _, R1_, _, bottom) :-
+% Compute the row index just below the bounding box.
+    RB_ is R1_ + 1,
+% Every frame cell must sit on that row.
+    forall(member(R_-_, Cells_), R_ =:= RB_),
+% Commit to the bottom edge.
+    !.
+% fc_frame_side_/6: frame cells one column left of the box hug the left edge.
+fc_frame_side_(Cells_, _, C0_, _, _, left) :-
+% Compute the column index just left of the bounding box.
+    CL_ is C0_ - 1,
+% Every frame cell must sit on that column.
+    forall(member(_-C_, Cells_), C_ =:= CL_),
+% Commit to the left edge.
+    !.
+% fc_frame_side_/6: frame cells one column right of the box hug the right edge.
+fc_frame_side_(Cells_, _, _, _, C1_, right) :-
+% Compute the column index just right of the bounding box.
+    CR_ is C1_ + 1,
+% Every frame cell must sit on that column.
+    forall(member(_-C_, Cells_), C_ =:= CR_).
+
+% fc_d4_/1: enumerate the eight dihedral-four transform names.
+fc_d4_(identity).
+% Quarter turn clockwise.
+fc_d4_(rot90).
+% Half turn.
+fc_d4_(rot180).
+% Quarter turn counterclockwise.
+fc_d4_(rot270).
+% Left-right mirror.
+fc_d4_(mirror_lr).
+% Up-down mirror.
+fc_d4_(mirror_ud).
+% Main-diagonal reflection (transpose).
+fc_d4_(diag_main).
+% Anti-diagonal reflection.
+fc_d4_(diag_anti).
+
+% fc_emap_/3: identity keeps every edge in place.
+fc_emap_(identity, top, top).
+% Identity keeps the bottom edge at the bottom.
+fc_emap_(identity, bottom, bottom).
+% Identity keeps the left edge at the left.
+fc_emap_(identity, left, left).
+% Identity keeps the right edge at the right.
+fc_emap_(identity, right, right).
+% Clockwise quarter turn sends the top edge to the right.
+fc_emap_(rot90, top, right).
+% Clockwise quarter turn sends the right edge to the bottom.
+fc_emap_(rot90, right, bottom).
+% Clockwise quarter turn sends the bottom edge to the left.
+fc_emap_(rot90, bottom, left).
+% Clockwise quarter turn sends the left edge to the top.
+fc_emap_(rot90, left, top).
+% Half turn swaps the top and bottom edges.
+fc_emap_(rot180, top, bottom).
+% Half turn swaps the bottom and top edges.
+fc_emap_(rot180, bottom, top).
+% Half turn swaps the left and right edges.
+fc_emap_(rot180, left, right).
+% Half turn swaps the right and left edges.
+fc_emap_(rot180, right, left).
+% Counterclockwise quarter turn sends the top edge to the left.
+fc_emap_(rot270, top, left).
+% Counterclockwise quarter turn sends the left edge to the bottom.
+fc_emap_(rot270, left, bottom).
+% Counterclockwise quarter turn sends the bottom edge to the right.
+fc_emap_(rot270, bottom, right).
+% Counterclockwise quarter turn sends the right edge to the top.
+fc_emap_(rot270, right, top).
+% Left-right mirror keeps the top edge at the top.
+fc_emap_(mirror_lr, top, top).
+% Left-right mirror keeps the bottom edge at the bottom.
+fc_emap_(mirror_lr, bottom, bottom).
+% Left-right mirror swaps the left and right edges.
+fc_emap_(mirror_lr, left, right).
+% Left-right mirror swaps the right and left edges.
+fc_emap_(mirror_lr, right, left).
+% Up-down mirror swaps the top and bottom edges.
+fc_emap_(mirror_ud, top, bottom).
+% Up-down mirror swaps the bottom and top edges.
+fc_emap_(mirror_ud, bottom, top).
+% Up-down mirror keeps the left edge at the left.
+fc_emap_(mirror_ud, left, left).
+% Up-down mirror keeps the right edge at the right.
+fc_emap_(mirror_ud, right, right).
+% Main-diagonal reflection swaps the top and left edges.
+fc_emap_(diag_main, top, left).
+% Main-diagonal reflection swaps the left and top edges.
+fc_emap_(diag_main, left, top).
+% Main-diagonal reflection swaps the bottom and right edges.
+fc_emap_(diag_main, bottom, right).
+% Main-diagonal reflection swaps the right and bottom edges.
+fc_emap_(diag_main, right, bottom).
+% Anti-diagonal reflection swaps the top and right edges.
+fc_emap_(diag_anti, top, right).
+% Anti-diagonal reflection swaps the right and top edges.
+fc_emap_(diag_anti, right, top).
+% Anti-diagonal reflection swaps the bottom and left edges.
+fc_emap_(diag_anti, bottom, left).
+% Anti-diagonal reflection swaps the left and bottom edges.
+fc_emap_(diag_anti, left, bottom).
+
+% fc_crop_/6: cut the subgrid inside the bounding box out of the grid.
+fc_crop_(Grid_, R0_, C0_, R1_, C1_, Crop_) :-
+% Build one output row for each row index in the box.
+    findall(SubRow_,
+% Slice the column range out of each grid row in the box.
+            (between(R0_, R1_, R_), nth0(R_, Grid_, Row_), fc_row_slice_(Row_, C0_, C1_, SubRow_)),
+% Collect the sliced rows into the crop grid.
+            Crop_).
+
+% fc_row_slice_/4: keep the values between two column indices inclusive.
+fc_row_slice_(Row_, C0_, C1_, Sub_) :-
+% Collect the value at each column index in the range.
+    findall(V_, (between(C0_, C1_, C_), nth0(C_, Row_, V_)), Sub_).
+
+% fc_apply_/3: identity returns the crop unchanged.
+fc_apply_(identity, G_, G_).
+% fc_apply_/3: quarter turn clockwise reuses rotate_90_cw.
+fc_apply_(rot90, G_, T_) :-
+% Delegate to the registered rotate_90_cw transform.
+    arc2_transform(rotate_90_cw, G_, T_).
+% fc_apply_/3: half turn reuses rotate_180.
+fc_apply_(rot180, G_, T_) :-
+% Delegate to the registered rotate_180 transform.
+    arc2_transform(rotate_180, G_, T_).
+% fc_apply_/3: quarter turn counterclockwise reuses rotate_90_ccw.
+fc_apply_(rot270, G_, T_) :-
+% Delegate to the registered rotate_90_ccw transform.
+    arc2_transform(rotate_90_ccw, G_, T_).
+% fc_apply_/3: left-right mirror reuses reverse_rows.
+fc_apply_(mirror_lr, G_, T_) :-
+% Delegate to the registered reverse_rows transform.
+    arc2_transform(reverse_rows, G_, T_).
+% fc_apply_/3: up-down mirror reuses vertical_flip.
+fc_apply_(mirror_ud, G_, T_) :-
+% Delegate to the registered vertical_flip transform.
+    arc2_transform(vertical_flip, G_, T_).
+% fc_apply_/3: main-diagonal reflection reuses transpose.
+fc_apply_(diag_main, G_, T_) :-
+% Delegate to the registered transpose transform.
+    arc2_transform(transpose, G_, T_).
+% fc_apply_/3: anti-diagonal reflection is transpose then half turn.
+fc_apply_(diag_anti, G_, T_) :-
+% First reflect over the main diagonal.
+    arc2_transform(transpose, G_, X_),
+% Then apply the half turn to reach the anti-diagonal reflection.
+    arc2_transform(rotate_180, X_, T_).

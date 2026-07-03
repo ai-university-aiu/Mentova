@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 68 complete: 65/120 = 54.17%.
+Last updated: 2026-07-03. Wave 69 complete: 66/120 = 55.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -190,6 +190,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  63 / 120  | 52.50%  | Wave 66: mosaic_heal symmetric mosaic damaged by 0-patches; damaged rows and cols borrow from compatible donors (>= 5 non-zero agreements) to fixpoint; leftover zeros healed by diagonal mirror
 2026-07-03  |  64 / 120  | 53.33%  | Wave 67: mirror_patch wallpaper patch hidden by solid 8-block; H/V mirror axes detected from visible cells (zero conflicts, > 50 supporting pairs); covered cells healed to fixpoint from mirrors; transpose donor fallback; recovered patch is the output
 2026-07-03  |  65 / 120  | 54.17%  | Wave 68: diag_corridor anti-diagonal bank chains (constant r+c) bound winding corridors; background cells with r+c strictly between two chains' line sums and r-c inside the overlap of both chains' cross ranges flooded with color 2
+2026-07-03  |  66 / 120  | 55.00%  | Wave 69: frame_compass interior component hugged by two frame lines colored like grid border sides; each frame line points its crop edge at the same-colored border side; the two edge constraints select a unique dihedral-four transform applied to the crop
 
 
 COMPLETE SCORE PROGRESSION
@@ -831,6 +832,59 @@ Lessons learned: the key discovery is the change of coordinates. In (row,
   training pair; both training pairs and the test case pass exactly.
 
 Accomplishment: Acc_366.  Paper: Acc_366_ARC2_Wave68_DiagCorridor.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 69 - 2026-07-03 - Score: 66/120 = 55.00%
+
+Date: 2026-07-03
+
+Confirmed score: 66 / 120 = 55.00%
+
+Rules added in this wave:
+  frame_compass (WP-327, Layer 302)
+
+Task solved: fc7cae8d (3 training pairs + 1 test case; inputs 22x22 to 29x29;
+  each grid carries noisy border lines on all four sides, each side owning a
+  majority color, plus one large multi-color interior component hugged by
+  exactly two straight frame lines; the output is the cropped component after
+  a rotation and/or mirror selected by the frame lines).
+
+Algorithm: color-coded compass reading. Stage 1: each of the four grid border
+  sides (first row, last row, first column, last column) is assigned its
+  majority non-zero color. Stage 2: the largest 4-connected non-zero component
+  that touches no grid border is located; its cells split into crop cells
+  (colors that are not border colors) and frame cells (colors that match a
+  border color). Stage 3: the crop bounding box is computed, and each of the
+  exactly two frame colors is resolved to the crop edge it hugs (the line one
+  cell above, below, left, or right of the bounding box) and to the unique
+  border side that owns its color. Stage 4: the two constraints "input edge X
+  must face border side Y in the output" select a unique element of the
+  dihedral-four group (identity, three rotations, four reflections); the crop
+  is cut out along its bounding box and the selected transform is applied.
+  Training pair 1 maps right-to-top and bottom-to-left (anti-diagonal
+  reflection), training pairs 2 and 3 map to the counterclockwise quarter
+  turn, and the test case maps left-to-top and bottom-to-right (main-diagonal
+  reflection, a transform no training pair uses).
+
+Lessons learned: the human-steps description ("rotate a quarter turn, then
+  mirror left-right if the dominant color leans on the right edge") is a
+  serviceable heuristic but not the real mechanism - the test case needs a
+  main-diagonal reflection that the heuristic cannot produce. The real
+  mechanism is semantic: the frame lines are painted in border-side colors
+  and act as a compass, and reading them makes the rule deterministic with
+  zero per-pair case analysis. Two implementation pitfalls: (1) the largest
+  non-zero component in the grid can be the border noise itself when two
+  noisy border lines meet at a corner (training pair 3), so components
+  touching any border line must be excluded before taking the largest; (2)
+  two border sides may share a majority color (left and bottom are both 5 in
+  the test case), so the compass target must be required to be unique per
+  frame color, which it always is. All three training pairs and the test
+  case passed on the first full prototype run.
+
+Accomplishment: Acc_367.  Paper: Acc_367_ARC2_Wave69_FrameCompass.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3349,6 +3403,7 @@ e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; gre
 981571dc  - Wave 66 - mosaic_heal        - symmetric mosaic 0-damage healed; rows/cols borrow from compatible donors to fixpoint; diagonal mirror fallback
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
+fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3653,4 +3708,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 67: Mirror-patch - a mirror-symmetric wallpa
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 68: Diag-corridor - bank cells of a single non-background color form slanted anti-diagonal chains (constant line sum s = r + c, connected under the step (r+1, c-1)); each chain spans an interval in the cross coordinate d = r - c; for every pair of chains with distinct line sums, background cells whose line sum lies strictly between the two sums and whose cross coordinate falls inside the intersection of the two chains' cross intervals are flooded with color 2, painting the winding corridor between the banks.
   Score: 65/120 = 54.17%. Task 7666fa5d solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 69: Frame-compass - each of the four grid border sides owns a majority non-zero color; the largest interior 4-connected component is hugged by exactly two straight frame lines painted in border-side colors; each frame line demands that the crop edge it touches face the border side sharing its color in the output; the two edge constraints select a unique dihedral-four transform (rotation and/or reflection) that is applied to the component cropped along its bounding box.
+  Score: 66/120 = 55.00%. Task fc7cae8d solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
