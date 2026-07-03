@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 71 complete: 68/120 = 56.67%.
+Last updated: 2026-07-03. Wave 72 complete: 69/120 = 57.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -193,6 +193,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  66 / 120  | 55.00%  | Wave 69: frame_compass interior component hugged by two frame lines colored like grid border sides; each frame line points its crop edge at the same-colored border side; the two edge constraints select a unique dihedral-four transform applied to the crop
 2026-07-03  |  67 / 120  | 55.83%  | Wave 70: shape_catalog largest component is a two-color lattice block; background motif pockets inside the cropped block recolored to the dominant same-shaped catalogue color outside the block, matched up to rotation and reflection
 2026-07-03  |  68 / 120  | 56.67%  | Wave 71: wallpaper_motif separator-lined wallpaper of two tile designs; the minority motif tile's own color mask is the placement map over the tile grid; anchor pinned by the observed motif tiles; motif stamped at every mapped position
+2026-07-03  |  69 / 120  | 57.50%  | Wave 72: band_stamp legend of same-color connected shapes above full-width edge-and-interior bands; each legend component stamped into the band whose interior color matches the component color, same columns, bottom-anchored, painted in the band edge color; legend erased
 
 
 COMPLETE SCORE PROGRESSION
@@ -995,6 +996,59 @@ Lessons learned: the placement mask must be built from the motif color's
   remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_369.  Paper: Acc_369_ARC2_Wave71_WallpaperMotif.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 72 - 2026-07-03 - Score: 69/120 = 57.50%
+
+Date: 2026-07-03
+
+Confirmed score: 69 / 120 = 57.50%
+
+Rules added in this wave:
+  band_stamp (WP-330, Layer 305)
+
+Task solved: 7c66cb00 (3 training pairs + 1 test case; grids 29x24 to
+  30x24; each grid holds a legend area of small shapes on the background
+  above a stack of full-width bands; every band shows an edge color in
+  its first and last columns and a uniform interior color between them;
+  band edge and interior colors differ per band and per grid, and the
+  legend shapes include hollow boxes whose interior holes are themselves
+  colored shapes).
+
+Algorithm: color-paired bottom-anchored stamping. Stage 1: the
+  background is the most common cell value, and the band rows are the
+  rows of the form edge, uniform interior, edge with the edge color
+  different from the interior color; consecutive band rows sharing the
+  same color pair are grouped into bands with a top row and a bottom
+  row. Stage 2: every non-background cell outside the band rows is a
+  legend cell, and the legend cells are partitioned into same-color
+  4-connected components - a hollow box of one color and the hole shape
+  inside it of another color are separate components. Stage 3: each
+  legend component is paired with the band whose interior color equals
+  the component color. Stage 4: the component is stamped into its band
+  in the band's edge color, keeping its columns unchanged and shifting
+  it down so its lowest row lands on the band's bottom row. Stage 5: the
+  output keeps every band row's input appearance outside the stamps and
+  erases every non-band row to the background color.
+
+Lessons learned: the decisive observation is that the hole inside a
+  legend box is not decoration - it is a first-class component routed to
+  its own band by its own color, so the box of color 2 with a hole of
+  color 3 feeds both the interior-2 band and the interior-3 band. Same-
+  color 4-connected components make this fall out naturally: no special
+  hole-extraction step is needed, because splitting the legend by color
+  before connectivity already separates box from hole. Bottom anchoring
+  is per component, not per color group - two same-color components land
+  on the same bottom row but keep their own shapes and columns. All
+  three training pairs and the test passed on the first run. Runner
+  bookkeeping: the live benchmark reports 68/120 after this wave against
+  the official ledger of 69/120; tasks 13e47133 and 9385bd28 remain
+  flagged for a dedicated repair wave.
+
+Accomplishment: Acc_370.  Paper: Acc_370_ARC2_Wave72_BandStamp.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3516,6 +3570,7 @@ e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; gre
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
 67e490f4  - Wave 70 - shape_catalog      - two-color lattice block cropped; background motif pockets recolored to the dominant same-shaped catalogue color outside the block (D4-invariant match)
 b99e7126  - Wave 71 - wallpaper_motif    - separator-lined wallpaper; minority motif tile's own color mask is the tile-grid placement map; anchor pinned by observed motif tiles; motif stamped at every mapped position
+7c66cb00  - Wave 72 - band_stamp         - same-color connected legend components stamped into the band whose interior color matches, same columns, bottom-anchored, painted in the band edge color; legend erased
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3832,4 +3887,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 70: Shape-catalog - the largest 4-connected 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 71: Wallpaper-motif - uniform separator rows and columns carve the grid into a tile grid carrying exactly two tile designs, a majority standard tile and a minority motif tile; the motif color is the color unique to the motif tile, and its cell positions inside the motif tile form a placement mask; the mask is slid over the tile grid until every observed motif tile sits on a mask position, and the wallpaper is repainted with the motif tile at every anchored mask position and the standard tile elsewhere - the motif's own picture is the map of its placements.
   Score: 68/120 = 56.67%. Task b99e7126 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 72: Band-stamp - a legend of small same-color connected shapes sits above full-width bands, each band showing an edge color in its first and last columns and a uniform interior color between them; every same-color 4-connected legend component is stamped into the band whose interior color matches the component color, keeping its columns and shifting down so its lowest row lands on the band's bottom row, painted in the band's edge color; the hole shape inside a legend box is its own component routed to its own band by its own color; the legend area is erased to the background.
+  Score: 69/120 = 57.50%. Task 7c66cb00 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

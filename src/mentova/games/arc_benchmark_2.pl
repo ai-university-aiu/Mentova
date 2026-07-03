@@ -272,6 +272,27 @@ arc2_induce_rule(TrainingPairs, wallpaper_motif) :-
 % Each training pair must transform correctly under wallpaper_motif.
            arc2_transform(wallpaper_motif, In, Out)).
 
+% band_stamp: early dispatch before generic clause (WP-330, Layer 305).
+arc2_named_rule(band_stamp).
+% arc2_induce_rule(band_stamp): band-row pre-filter + full verification.
+arc2_induce_rule(TrainingPairs, band_stamp) :-
+% Fast filter: inspect the first training pair only.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% The first input and output must have the same number of rows.
+    length(First, H), length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [OR0|_],
+% The first input and output must have the same number of columns.
+    length(FR, W), length(OR0, W),
+% The first input must contain at least one full-width band row.
+    bst_band_rows_(First, 0, BandRows0),
+% Require a non-empty band-row list before attempting full verification.
+    BandRows0 \= [],
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under band_stamp.
+           arc2_transform(band_stamp, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -14631,3 +14652,175 @@ wm_cell_(R_, C_, _, _, _, RSegs_, CSegs_, Placed_, Motif_, Std_, V_) :-
     nth0(LC_, PRow_, V_),
 % Commit to the painted value.
     !.
+
+% ---------------------------------------------------------------------------
+% WP-330  band_stamp  —  Layer 305
+% band_stamp: the grid holds a legend of small same-color shapes above a set
+% of full-width bands; each band shows an edge color at both ends and a
+% uniform interior color between them. Every same-color connected legend
+% component is stamped into the band whose interior color matches the
+% component color: same columns, bottom row anchored to the band's bottom
+% row, painted in the band's edge color. The legend area is erased to the
+% background color, and the bands otherwise keep their input appearance.
+% Reference: ARC-AGI-2 task 7c66cb00.
+% ---------------------------------------------------------------------------
+
+% arc2_transform for band_stamp: stamp legend components into paired bands.
+arc2_transform(band_stamp, Grid, Out) :-
+% Determine the background color as the most common cell value.
+    arc2_bg_color_(Grid, BG),
+% Collect the index and edge/interior colors of every band row.
+    bst_band_rows_(Grid, 0, BandRows),
+% The grid must contain at least one band row.
+    BandRows \= [],
+% Group consecutive band rows with equal colors into band(E, C, Top, Bot).
+    bst_group_bands_(BandRows, Bands),
+% Collect the raw list of band row indices.
+    findall(RI, member(RI-_, BandRows), BandIdx0),
+% Deduplicate and order the band row indices.
+    sort(BandIdx0, BandIdx),
+% Collect every legend cell: non-background cells outside all band rows.
+    bst_legend_cells_(Grid, BG, BandIdx, LegendCells),
+% The legend must contain at least one colored cell.
+    LegendCells \= [],
+% Partition the legend cells into same-color 4-connected components.
+    bst_components_(LegendCells, Components),
+% Compute every stamp cell R-C-Color across all bands.
+    findall(SR-SC-E,
+% Enumerate each band with edge color E and interior color C.
+            ( member(band(E, C, _Top, Bot), Bands),
+% Pick a legend component whose color equals the band interior color.
+              member(comp(C, Cells), Components),
+% Find the component's lowest row index for bottom anchoring.
+              bst_max_row_(Cells, MaxR),
+% Compute the downward shift landing the component on the band bottom.
+              D is Bot - MaxR,
+% Enumerate the component's cells.
+              member(R-Cc, Cells),
+% Shift the cell row down by the anchoring distance.
+              SR is R + D,
+% Keep the cell column unchanged.
+              SC = Cc ),
+            Stamps),
+% Render the output: erase the legend, keep bands, and apply the stamps.
+    bst_render_(Grid, BG, BandIdx, Stamps, Out).
+
+% bst_band_rows_(+Grid, +RI, -BandRows): indices with edge/interior colors.
+bst_band_rows_([], _, []).
+% Case: the row is a band row with edge color E and uniform interior C.
+bst_band_rows_([Row|Rows], RI, [RI-(E-C)|Rest]) :-
+% The row must start with the edge color E.
+    Row = [E|Tail],
+% The row must end with the same edge color E after a middle section.
+    append(Mid, [E], Tail),
+% The middle section must be non-empty.
+    Mid = [C|_],
+% Every middle cell must equal the interior color C.
+    forall(member(V, Mid), V == C),
+% The edge color must differ from the interior color.
+    E \== C,
+% Commit to the band-row reading of this row.
+    !,
+% Advance to the next row index.
+    RI1 is RI + 1,
+% Continue scanning the remaining rows.
+    bst_band_rows_(Rows, RI1, Rest).
+% Case: the row is not a band row; skip it.
+bst_band_rows_([_|Rows], RI, Rest) :-
+% Advance to the next row index.
+    RI1 is RI + 1,
+% Continue scanning the remaining rows.
+    bst_band_rows_(Rows, RI1, Rest).
+
+% bst_group_bands_(+BandRows, -Bands): group consecutive same-color rows.
+bst_group_bands_([], []).
+% Start a new band at the first remaining band row.
+bst_group_bands_([RI-(E-C)|T], [band(E, C, RI, Bot)|Bands]) :-
+% Extend the band downward through consecutive same-color rows.
+    bst_extend_band_(T, RI, E, C, Bot, Rest),
+% Group the remaining band rows into further bands.
+    bst_group_bands_(Rest, Bands).
+
+% bst_extend_band_: absorb the next row if adjacent with the same colors.
+bst_extend_band_([RI2-(E-C)|T], RI, E, C, Bot, Rest) :-
+% The next band row must sit directly below the current one.
+    RI2 =:= RI + 1,
+% Commit to absorbing the row into the current band.
+    !,
+% Continue extending from the absorbed row.
+    bst_extend_band_(T, RI2, E, C, Bot, Rest).
+% Base case: the band ends at the current row index.
+bst_extend_band_(Rest, RI, _, _, RI, Rest).
+
+% bst_legend_cells_(+Grid, +BG, +BandIdx, -Cells): non-band colored cells.
+bst_legend_cells_(Grid, BG, BandIdx, Cells) :-
+% Collect every qualifying cell as an R-C-V triple.
+    findall(R-C-V,
+% Enumerate each row with its index.
+            ( nth0(R, Grid, Row),
+% The row must not belong to any band.
+              \+ memberchk(R, BandIdx),
+% Enumerate each cell with its column index.
+              nth0(C, Row, V),
+% The cell must not be the background color.
+              V \== BG ),
+            Cells).
+
+% bst_components_(+Cells, -Components): same-color 4-connected components.
+bst_components_([], []).
+% Grow one component from the first unassigned cell.
+bst_components_([R-C-V|Rest], [comp(V, Cells)|Comps]) :-
+% Flood outward from the seed cell over same-color 4-neighbors.
+    bst_flood_([R-C], V, Rest, [R-C], Cells, Remaining),
+% Partition the remaining cells into further components.
+    bst_components_(Remaining, Comps).
+
+% bst_flood_: breadth-first flood; empty frontier ends the component.
+bst_flood_([], _, Pool, Acc, Acc, Pool).
+% Expand the frontier by one cell.
+bst_flood_([R-C|Front], V, Pool, Acc, Cells, PoolOut) :-
+% Find all unvisited same-color 4-neighbors of the frontier cell.
+    findall(NR-NC-V,
+% A neighbor must be in the pool and orthogonally adjacent.
+            ( member(NR-NC-V, Pool), bst_adjacent_(R, C, NR, NC) ),
+            Neigh),
+% Remove the found neighbors from the pool.
+    subtract(Pool, Neigh, Pool1),
+% Strip the color from the neighbor triples.
+    findall(NR-NC, member(NR-NC-_, Neigh), NeighRC),
+% Add the neighbors to the frontier.
+    append(Front, NeighRC, Front1),
+% Add the neighbors to the accumulated component cells.
+    append(Acc, NeighRC, Acc1),
+% Continue flooding with the extended frontier.
+    bst_flood_(Front1, V, Pool1, Acc1, Cells, PoolOut).
+
+% bst_adjacent_(+R, +C, +NR, +NC): orthogonal 4-adjacency test.
+bst_adjacent_(R, C, NR, NC) :-
+% Adjacent cells differ by exactly one in exactly one coordinate.
+    ( NR =:= R, abs(NC - C) =:= 1 ; NC =:= C, abs(NR - R) =:= 1 ).
+
+% bst_max_row_(+Cells, -MaxR): the lowest (largest) row index in a component.
+bst_max_row_(Cells, MaxR) :-
+% Collect the row index of every component cell.
+    findall(R, member(R-_, Cells), Rs),
+% Take the maximum row index.
+    max_list(Rs, MaxR).
+
+% bst_render_(+Grid, +BG, +BandIdx, +Stamps, -Out): paint the output grid.
+bst_render_(Grid, BG, BandIdx, Stamps, Out) :-
+% Build the output row list in order.
+    findall(ORow,
+% Enumerate each input row with its index.
+            ( nth0(RI, Grid, Row),
+% Build the output row cell by cell.
+              findall(V,
+% Enumerate each input cell with its column index.
+                      ( nth0(CI, Row, IV),
+% Stamped cells take the stamp color; band rows keep their input value;
+% all other rows are erased to the background color.
+                        ( memberchk(RI-CI-SV, Stamps) -> V = SV
+                        ; memberchk(RI, BandIdx) -> V = IV
+                        ; V = BG ) ),
+                      ORow) ),
+            Out).

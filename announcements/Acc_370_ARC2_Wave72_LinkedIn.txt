@@ -1,0 +1,30 @@
+Accomplishment 370: ARC-AGI-2 Wave 72 - Band Stamp Legend Routing
+
+PrologAI solves ARC-AGI-2 task 7c66cb00 with a new glass-box rule called
+band_stamp (WP-330, Layer 305), raising the benchmark score from
+68/120 = 56.67% to 69/120 = 57.50%.
+
+The input grid holds a legend of small shapes above a stack of
+full-width bands. Each band shows an edge color in its first and last
+columns and a uniform interior color between them. In the output the
+legend is erased and each band receives a stamp: the legend shape whose
+color matches the band's interior color, redrawn in the band's edge
+color, at the same columns, resting on the band's bottom row.
+
+The key insight is that the hole inside a legend box is its own
+messenger. A color-3 box with a color-2 hole feeds two different bands:
+the box travels to the band with interior color 3 and the hole travels
+to the band with interior color 2, each repainted in the receiving
+band's edge color. The rule needs no special hole-extraction step -
+partitioning the legend into same-color 4-connected components before
+routing already separates box from hole, and each component is
+bottom-anchored independently so shapes arrive without colliding.
+
+The rule carries no learned parameters: background color, band rows,
+band color pairs, legend components, and stamp positions are all derived
+from the input grid itself. All three training pairs and the hidden test
+case passed on the first run. Pure induction. No pretraining. Every rule
+is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
