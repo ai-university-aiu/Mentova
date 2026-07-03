@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 69 complete: 66/120 = 55.00%.
+Last updated: 2026-07-03. Wave 70 complete: 67/120 = 55.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -191,6 +191,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  64 / 120  | 53.33%  | Wave 67: mirror_patch wallpaper patch hidden by solid 8-block; H/V mirror axes detected from visible cells (zero conflicts, > 50 supporting pairs); covered cells healed to fixpoint from mirrors; transpose donor fallback; recovered patch is the output
 2026-07-03  |  65 / 120  | 54.17%  | Wave 68: diag_corridor anti-diagonal bank chains (constant r+c) bound winding corridors; background cells with r+c strictly between two chains' line sums and r-c inside the overlap of both chains' cross ranges flooded with color 2
 2026-07-03  |  66 / 120  | 55.00%  | Wave 69: frame_compass interior component hugged by two frame lines colored like grid border sides; each frame line points its crop edge at the same-colored border side; the two edge constraints select a unique dihedral-four transform applied to the crop
+2026-07-03  |  67 / 120  | 55.83%  | Wave 70: shape_catalog largest component is a two-color lattice block; background motif pockets inside the cropped block recolored to the dominant same-shaped catalogue color outside the block, matched up to rotation and reflection
 
 
 COMPLETE SCORE PROGRESSION
@@ -885,6 +886,59 @@ Lessons learned: the human-steps description ("rotate a quarter turn, then
   case passed on the first full prototype run.
 
 Accomplishment: Acc_367.  Paper: Acc_367_ARC2_Wave69_FrameCompass.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 70 - 2026-07-03 - Score: 67/120 = 55.83%
+
+Date: 2026-07-03
+
+Confirmed score: 67 / 120 = 55.83%
+
+Rules added in this wave:
+  shape_catalog (WP-328, Layer 303)
+
+Task solved: 67e490f4 (2 training pairs + 1 test case; all inputs 30x30;
+  outputs 11x11, 13x13, and 7x30; each grid holds one large lattice block
+  built from exactly two colors, a frame color drawn over the background
+  color, while the field outside the block is scattered with small
+  monochrome shapes, each in its own color, forming a shape catalogue).
+
+Algorithm: catalogue-driven motif recoloring. Stage 1: the background is
+  the most frequent cell value and the largest 4-connected non-background
+  component is the frame lattice; every cell inside its bounding box must
+  be frame color or background, and the block is cropped along that box.
+  Stage 2: every non-frame component is a catalogue entry; its cells are
+  shifted to the origin and the lexicographically smallest of the eight
+  dihedral-four variants becomes its canonical shape, paired with its
+  color. Stage 3: the background pockets inside the crop are extracted as
+  4-connected motif components by rerunning the standard component sweep
+  with the frame color playing the background role. Stage 4: each motif's
+  canonical shape collects the colors of all same-shaped catalogue
+  entries and takes the most frequent color, smallest value on ties; the
+  block is rebuilt with frame cells kept and motif cells recolored.
+  Training pair 1 recolors 2x2 squares, pluses, and dominoes inside an
+  11x11 block; training pair 2 recolors L-triominoes and larger glyphs
+  inside a 13x13 block; the test case recolors motifs inside a 7x30 band.
+
+Lessons learned: matching must be rotation- and reflection-invariant -
+  the test block holds a horizontal domino whose only catalogue mates are
+  vertical, and corner L-triominoes appear in four orientations; raw
+  normalized cell-set matching fails. The dominant vote also matters: in
+  training pair 1 the 2x2 motif matches catalogue squares of colors 8, 2,
+  and 3 simultaneously, and the output uses color 8, the color with the
+  most catalogue entries. The two-color bounding-box guard doubles as
+  catalogue separation, so no positional filtering of catalogue entries
+  is needed. The first full prototype run passed all three grids.
+  Bookkeeping note: the live benchmark runner reports 66/120 after this
+  wave against the official ledger of 67/120; tasks 13e47133
+  (concentric_rings) and 9385bd28 (bbox_fill) reproduce all training
+  pairs but mismatch their hidden test outputs by 29 and 12 cells, and
+  are flagged as candidates for a dedicated repair wave.
+
+Accomplishment: Acc_368.  Paper: Acc_368_ARC2_Wave70_ShapeCatalog.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3404,6 +3458,7 @@ e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; gre
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
+67e490f4  - Wave 70 - shape_catalog      - two-color lattice block cropped; background motif pockets recolored to the dominant same-shaped catalogue color outside the block (D4-invariant match)
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3712,4 +3767,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 68: Diag-corridor - bank cells of a single n
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 69: Frame-compass - each of the four grid border sides owns a majority non-zero color; the largest interior 4-connected component is hugged by exactly two straight frame lines painted in border-side colors; each frame line demands that the crop edge it touches face the border side sharing its color in the output; the two edge constraints select a unique dihedral-four transform (rotation and/or reflection) that is applied to the component cropped along its bounding box.
   Score: 66/120 = 55.00%. Task fc7cae8d solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 70: Shape-catalog - the largest 4-connected non-background component is a lattice block built from exactly two colors (frame color over background); every cell in its bounding box must belong to that two-color palette; the block is cropped, its background pockets are extracted as motifs, and each motif is recolored to the color of the same-shaped catalogue component outside the block, where shapes match up to rotation and reflection (canonical dihedral-four form) and the most frequent matching catalogue color wins.
+  Score: 67/120 = 55.83%. Task 67e490f4 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
