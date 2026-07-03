@@ -1,0 +1,103 @@
+Acc_363: ARC-AGI-2 Wave 65 - Hole Color Legend Classification
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 65 of the ARC-AGI-2 benchmark climb: task e3721c99 solved using the
+hole_color rule (WP-323, Layer 298). Score advances from 61/120 = 50.83%
+to 62/120 = 51.67%.
+
+TASK DESCRIPTION
+
+Task e3721c99 presents 30x30 grids divided into a legend region and a body
+region. The legend contains compact colored template shapes, each enclosing
+some number N of background holes: 4-connected pockets of value-0 cells that
+cannot be reached from the grid border without crossing the template's color.
+The body contains grey (value 5) shapes. The output recolors each grey shape
+to the color of the legend template that has the same number of enclosed
+holes, and erases grey shapes whose hole count matches no legend entry.
+
+RULE: hole_color
+
+The glass-box named rule derives from the legend acting as an in-context
+symbol table mapping hole counts to colors:
+
+1. COMPONENT INVENTORY
+   All non-background 4-connected components are found (arc2_all_comps_ with
+   background 0) and partitioned into grey components (color 5) and legend
+   template candidates.
+
+2. LEGEND TEMPLATE FILTER
+   Templates are non-grey components with bounding-box height >= 2,
+   width >= 2, and fill rate >= 75% (cell count * 4 >= bbox area * 3).
+   The full-width divider line between legend and body is rejected by the
+   height filter.
+
+3. HOLE COUNTING
+   For a component with wall color W (the template's color, or 5 for grey
+   shapes):
+   - Exterior BFS: seeds are all grid-border cells whose value differs from
+     W; expansion passes through any cell whose value differs from W.
+   - Hole seeds: value-0 cells 4-adjacent to component cells, in bounds,
+     and not in the exterior set.
+   - Hole count N: the number of 4-connected components among hole seeds
+     (BFS through value-0 non-exterior cells).
+   The legend map is the sorted, deduplicated set of N -> color pairs.
+
+4. GREY CLASSIFICATION AND RECOLORING
+   Every grey shape is classified on the ORIGINAL grid (before any
+   recoloring) with wall color 5, its target color is looked up in the
+   legend map, and all recolorings are applied with foldl over
+   arc2_set_cell_. A grey shape with an unmatched hole count is erased to
+   value 0.
+
+LEGEND OBSERVED IN TRAINING PAIR 1
+
+  Color 4: solid 3x3 square  -> 0 holes
+  Color 3: 3x3 ring          -> 1 hole
+  Color 1: 3x5 shape         -> 2 holes
+  Color 2: 3x7 shape         -> 3 holes
+  A grey body shape with 4 enclosed holes matches no entry and is erased.
+
+REFINEMENTS DURING VERIFICATION
+
+1. BFS seed expansion: the initial implementation passed the seed set as the
+   initial visited set to both BFS predicates; because the BFS guard skips
+   already-visited cells, no seed was ever expanded, the exterior collapsed
+   to the border ring, and a solid 3x3 square reported 6 holes instead of 0.
+   The fix passes an empty initial visited set.
+
+2. Unmatched grey shapes: training pair 1 contains a grey shape with 4
+   enclosed holes while the legend only defines counts 0 through 3; the
+   expected output erases that shape. The fallback was changed from
+   keep-grey to erase-to-background.
+
+INDUCTION PRE-FILTER
+
+The first training input must contain a 5 and the first training output must
+contain no 5; all training pairs are then verified with forall before the
+rule is selected.
+
+KEY PREDICATES
+
+  hc_bbox4_/5, hc_bbox4_acc_/9 - accumulator bounding box over R-C pairs
+  hc_holes_/6                  - enclosed-hole count for one component
+  hc_nwall_bfs_/5              - exterior BFS through non-wall cells
+  hc_nwall_comps_/5            - hole-seed connected-component counting
+  hc_bg_bfs_/5                 - BFS through enclosed background cells
+  arc2_transform(hole_color, +Grid, -Out)
+  arc2_induce_rule(+Pairs, hole_color)
+
+VERIFICATION
+
+Both training pairs and the test case pass in SWI-Prolog. Pure induction
+from training examples. No pretraining on the ARC-AGI-2 corpus. Every rule
+is named and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v294, Pseudocode v286, Architecture v287,
+Refinement v346, Completion v352.

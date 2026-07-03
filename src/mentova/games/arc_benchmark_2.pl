@@ -8453,6 +8453,204 @@ arc2_induce_rule(TrainingPairs, pocket_shot) :-
     forall(member(pair(In, Out), TrainingPairs),
            arc2_transform(pocket_shot, In, Out)).
 
+% ===========================================================================
+% WP-323  hole_color  —  Layer 298
+% hole_color: recolor grey (5) blobs by counting internal enclosed holes.
+% Each grey component is classified by its hole count, then recolored to the
+% color of the legend template that has the same number of internal holes.
+% Reference: ARC-AGI-2 task e3721c99.
+% ===========================================================================
+
+% Register hole_color as a known named rule.
+arc2_named_rule(hole_color).
+
+% arc2_induce_rule for hole_color: pre-filter on grey presence/absence.
+arc2_induce_rule(TrainingPairs_, hole_color) :-
+% Require grey (5) cells in first training input.
+    TrainingPairs_ = [pair(In0_, Out0_)|_],
+% Flatten input and check for grey cells.
+    flatten(In0_, F0_), memberchk(5, F0_),
+% Flatten output and verify no grey cells remain.
+    flatten(Out0_, FO0_), \+ memberchk(5, FO0_),
+% Verify all training pairs under hole_color.
+    forall(member(pair(In_, Out_), TrainingPairs_),
+% Each training pair must transform correctly.
+           arc2_transform(hole_color, In_, Out_)).
+
+% arc2_transform for hole_color: parse legend, count holes, recolor grey blobs.
+arc2_transform(hole_color, Grid_, Out_) :-
+% Early dispatch guard: the grid must contain at least one grey (5) cell.
+    flatten(Grid_, FlatG_), memberchk(5, FlatG_),
+% Determine grid dimensions.
+    length(Grid_, NR_), Grid_ = [FR_|_], length(FR_, NC_),
+% Compute maximum row and column indices (0-based).
+    MaxR_ is NR_ - 1, MaxC_ is NC_ - 1,
+% Find all connected components ignoring background (0).
+    arc2_all_comps_(Grid_, 0, AllComps_),
+% Separate grey (5) components from non-grey candidates.
+    include([comp(5,_)]>>true, AllComps_, GreyComps_),
+% Keep only compact non-grey components as legend templates.
+    include([comp(V_,Cs_)]>>(
+% Template color must not be grey.
+        V_ \= 5,
+% Compute the component bounding box.
+        hc_bbox4_(Cs_, R1_, R2_, C1_, C2_),
+% Compute bounding-box height and width.
+        H_ is R2_ - R1_ + 1, W_ is C2_ - C1_ + 1,
+% Require a minimum dimension of 2 in each direction.
+        H_ >= 2, W_ >= 2,
+% Compute component size and bounding-box area.
+        length(Cs_, Sz_), Area_ is H_ * W_,
+% Require a fill rate of at least 75 percent.
+        Sz_ * 4 >= Area_ * 3
+% Close the template filter over all components.
+    ), AllComps_, TplComps_),
+% Build legend map: hole_count -> template_color.
+    findall(N_-V_, (
+% Enumerate each legend template component.
+        member(comp(V_, TC_), TplComps_),
+% Count enclosed holes using the template color as the wall.
+        hc_holes_(Grid_, TC_, V_, MaxR_, MaxC_, N_)
+% Close the legend-map findall.
+    ), RawMap_),
+% Sort and deduplicate the legend map.
+    sort(RawMap_, LegMap_),
+% Pre-compute hole counts and target colors for all grey shapes on the original grid.
+    findall(GC_-GCol_, (
+% Enumerate each grey component.
+        member(comp(5, GC_), GreyComps_),
+% Count enclosed holes using grey as the wall color.
+        hc_holes_(Grid_, GC_, 5, MaxR_, MaxC_, GN_),
+% Look up the target color in the legend map; erase to background if absent.
+        (member(GN_-GCol_, LegMap_) -> true ; GCol_ = 0)
+% Close the colorings findall.
+    ), Colorings_),
+% Apply recoloring: replace each grey component's cells with its target color.
+    foldl([GCC_-GCV_, G0_, G1_]>>(
+% Thread the grid through every cell of the component.
+        foldl([R_-C_, Gi_, Go_]>>(arc2_set_cell_(Gi_, R_, C_, GCV_, Go_)),
+% Fold over the component cells starting from the incoming grid.
+              GCC_, G0_, G1_)
+% Fold over all colorings starting from the original grid.
+    ), Colorings_, Grid_, Out_).
+
+% hc_bbox4_/5: compute bounding box (min_row, max_row, min_col, max_col).
+hc_bbox4_([R0_-C0_|Rest_], MnR_, MxR_, MnC_, MxC_) :-
+% Initialise accumulator from the first cell.
+    hc_bbox4_acc_(Rest_, R0_, R0_, C0_, C0_, MnR_, MxR_, MnC_, MxC_).
+
+% hc_bbox4_acc_/9: base case returns the accumulated bounding box.
+hc_bbox4_acc_([], MnR_, MxR_, MnC_, MxC_, MnR_, MxR_, MnC_, MxC_).
+% hc_bbox4_acc_/9: accumulate bounding box values over remaining cells.
+hc_bbox4_acc_([R_-C_|T_], MnR0_, MxR0_, MnC0_, MxC0_, MnR_, MxR_, MnC_, MxC_) :-
+% Update min and max row with the new cell.
+    NMnR_ is min(MnR0_, R_), NMxR_ is max(MxR0_, R_),
+% Update min and max column with the new cell.
+    NMnC_ is min(MnC0_, C_), NMxC_ is max(MxC0_, C_),
+% Recurse over remaining cells.
+    hc_bbox4_acc_(T_, NMnR_, NMxR_, NMnC_, NMxC_, MnR_, MxR_, MnC_, MxC_).
+
+% hc_holes_/6: count enclosed background holes in a component.
+% WallColor is the cell value that forms walls (5 for grey, V for template).
+hc_holes_(Grid_, Cells_, WallColor_, MaxR_, MaxC_, N_) :-
+% Sort component cells for efficient lookup.
+    sort(Cells_, CellSet_),
+% Collect boundary seeds: grid-border cells with value not equal to WallColor.
+    findall(R_-C_, (
+% Enumerate every cell position on the grid.
+        between(0, MaxR_, R_), between(0, MaxC_, C_),
+% Keep only cells on the grid border.
+        (R_ =:= 0 ; R_ =:= MaxR_ ; C_ =:= 0 ; C_ =:= MaxC_),
+% Keep only passable (non-wall) border cells.
+        arc2_cell_(Grid_, R_, C_, V_), V_ \= WallColor_
+% Close the boundary-seeds findall.
+    ), Seeds0_),
+% Sort seeds to remove duplicates.
+    sort(Seeds0_, Seeds_),
+% BFS from boundary through non-WallColor cells to find exterior.
+    hc_nwall_bfs_(Grid_, WallColor_, Seeds_, [], Ext_),
+% Find background (0) cells adjacent to component cells that are not exterior.
+    findall(R_-C_, (
+% Enumerate each cell of the component.
+        member(CR_-CC_, CellSet_),
+% Enumerate the four cardinal neighbours: above the cell first.
+        (R_ is CR_-1, C_ = CC_ ;
+% Neighbour below the cell.
+         R_ is CR_+1, C_ = CC_ ;
+% Neighbour to the left of the cell.
+         R_ = CR_, C_ is CC_-1 ;
+% Neighbour to the right of the cell.
+         R_ = CR_, C_ is CC_+1),
+% Keep only in-bounds neighbours.
+        R_ >= 0, C_ >= 0, R_ =< MaxR_, C_ =< MaxC_,
+% Keep only background (0) neighbours.
+        arc2_cell_(Grid_, R_, C_, 0),
+% Exclude neighbours reachable from the grid border.
+        \+ memberchk(R_-C_, Ext_)
+% Close the hole-seeds findall.
+    ), HSeeds0_),
+% Sort hole seeds to remove duplicates.
+    sort(HSeeds0_, HSeeds_),
+% Count connected components among enclosed background cells.
+    hc_nwall_comps_(HSeeds_, Ext_, Grid_, 0, N_).
+
+% hc_nwall_bfs_/5: base case with an empty queue returns visited set.
+hc_nwall_bfs_(_, _, [], Vis_, Vis_) :- !.
+% hc_nwall_bfs_/5: BFS through cells where value differs from WallColor.
+hc_nwall_bfs_(Grid_, Wall_, [R_-C_|Q_], Vis0_, Vis_) :-
+% Expand only if not yet visited and cell is passable (value not Wall).
+    (   \+ memberchk(R_-C_, Vis0_),
+% Read the cell value and require it to differ from the wall color.
+        arc2_cell_(Grid_, R_, C_, V_), V_ \= Wall_
+% Mark the cell as visited.
+    ->  Vis1_ = [R_-C_|Vis0_],
+% Compute the four cardinal neighbour coordinates.
+        R1_ is R_-1, R2_ is R_+1, C1_ is C_-1, C2_ is C_+1,
+% Add the four cardinal neighbours to the queue.
+        append(Q_, [R1_-C_, R2_-C_, R_-C1_, R_-C2_], Q1_),
+% Continue the BFS with the extended queue.
+        hc_nwall_bfs_(Grid_, Wall_, Q1_, Vis1_, Vis_)
+% Otherwise skip this cell and continue with the rest of the queue.
+    ;   hc_nwall_bfs_(Grid_, Wall_, Q_, Vis0_, Vis_)
+% Close the conditional expansion.
+    ).
+
+% hc_nwall_comps_/5: base case with no seeds returns the accumulated count.
+hc_nwall_comps_([], _, _, N_, N_) :- !.
+% hc_nwall_comps_/5: count connected components among hole seed cells.
+hc_nwall_comps_([Seed_|Rest_], Ext_, Grid_, Acc_, N_) :-
+% Expand one component from the seed through enclosed background cells.
+    hc_bg_bfs_(Grid_, [Seed_], Ext_, [], Vis_),
+% Remove all visited cells from remaining seeds.
+    subtract(Rest_, Vis_, Rem_),
+% Increment the component count.
+    Acc1_ is Acc_ + 1,
+% Recurse over remaining seeds.
+    hc_nwall_comps_(Rem_, Ext_, Grid_, Acc1_, N_).
+
+% hc_bg_bfs_/5: base case with an empty queue returns visited set.
+hc_bg_bfs_(_, [], _, Vis_, Vis_) :- !.
+% hc_bg_bfs_/5: BFS through enclosed background (0) cells not in Exterior.
+hc_bg_bfs_(Grid_, [R_-C_|Q_], Ext_, Vis0_, Vis_) :-
+% Expand only if not visited, value is 0, and not exterior.
+    (   \+ memberchk(R_-C_, Vis0_),
+% Require the cell to be background (0).
+        arc2_cell_(Grid_, R_, C_, 0),
+% Require the cell to be enclosed (not reachable from the border).
+        \+ memberchk(R_-C_, Ext_)
+% Mark the cell as visited.
+    ->  Vis1_ = [R_-C_|Vis0_],
+% Compute the four cardinal neighbour coordinates.
+        R1_ is R_-1, R2_ is R_+1, C1_ is C_-1, C2_ is C_+1,
+% Add the four cardinal neighbours to the queue.
+        append(Q_, [R1_-C_, R2_-C_, R_-C1_, R_-C2_], Q1_),
+% Continue the BFS with the extended queue.
+        hc_bg_bfs_(Grid_, Q1_, Ext_, Vis1_, Vis_)
+% Otherwise skip this cell and continue with the rest of the queue.
+    ;   hc_bg_bfs_(Grid_, Q_, Ext_, Vis0_, Vis_)
+% Close the conditional expansion.
+    ).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
