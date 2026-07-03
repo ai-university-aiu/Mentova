@@ -1,0 +1,114 @@
+Acc_374: ARC-AGI-2 Wave 76 - Puzzle Fit Rotation-Only Square Assembly
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 76 of the ARC-AGI-2 benchmark climb: task 7b3084d4 solved using the
+puzzle_fit rule (WP-334, Layer 309). Score advances from 72/120 =
+60.00% to 73/120 = 60.83%.
+
+TASK DESCRIPTION
+
+Task 7b3084d4 presents 20x20 grids scattering four puzzle pieces over
+the background. Each piece is a mostly single-color connected shape
+with bumps and notches, and exactly one piece carries a single anchor
+stud of color 5 in place of one of its own cells. The total number of
+piece cells is always a perfect square - 36, 100, 16 across the three
+training grids and 196 in the test grid. The output is the N-by-N
+square assembled from the four pieces: every piece is rotated by some
+number of quarter turns, the rotated pieces interlock with no gaps and
+no overlaps, and the color-5 anchor stud lands exactly on the square's
+top-left corner.
+
+RULE: puzzle_fit
+
+The glass-box named rule is a five-stage assembly procedure with no
+learned parameters:
+
+1. PIECE EXTRACTION (pf_cells_/3, pf_comps_/2)
+   The background is the most common cell value. All non-background
+   cells are grouped into 8-connected components over mixed colors -
+   8-connected because some piece cells touch only diagonally, and
+   mixed-color because the anchor stud's color 5 differs from its
+   piece's body color.
+
+2. NORMALIZATION (pf_norm_/2, pf_count_/3)
+   Each piece is translated so its bounding box starts at row 0,
+   column 0, and the piece cell counts are summed. The total must be
+   a perfect square N * N, which fixes the output side length N.
+
+3. ROTATION VARIANTS (pf_variants_/2, pf_map_/7)
+   Each piece generates exactly four variants: identity and the three
+   quarter-turn rotations. Reflections are deliberately excluded.
+
+4. EXACT-COVER SEARCH (pf_solve_/3, pf_fill_/5)
+   Backtracking fills the N-by-N board: at each step the scanline-first
+   empty cell must be covered by the scanline-first cell of some
+   rotated variant of a still-unplaced piece; the variant must fit the
+   board and overlap only empty cells. The accepted solution is the
+   tiling whose top-left corner carries the color-5 anchor stud.
+
+5. RENDER (pf_render_/3)
+   The placed cells are painted row by row into the output square,
+   every cell keeping its input color, including the anchor stud.
+
+THE KEY INSIGHT: ROTATIONS ONLY
+
+Allowing the full dihedral group of eight variants per piece makes the
+task ambiguous: under rotations plus reflections the three training
+grids admit 3, 2, and 2 perfect tilings with the stud at the corner,
+and the test grid admits 2, so any tie-break other than the right one
+assembles a wrong square. Restricting the variants to the four
+rotations collapses every grid - all three training grids and the test
+grid - to exactly one perfect tiling, confirmed by exhaustive
+enumeration. The pieces in this task are chiral enough that their
+mirror images do not belong to the puzzle. A second, humbler lesson
+came from the prototype: the counterclockwise rotation map accidentally
+reused the input column variable as the output column, silently mapping
+(R,C) to (W-1-C, C) instead of (W-1-C, R); the resulting zero-solution
+search on a grid that had been solved by hand exposed the bug, flagged
+all along by a singleton-variable warning.
+
+INDUCTION PRE-FILTER
+
+The first training pair's output must have strictly fewer rows and
+strictly fewer columns than its input, be exactly square, carry color 5
+in its top-left cell, and not carry color 5 in its bottom-left cell
+(that shape belongs to glyph_swap). All training pairs are then
+verified with forall before the rule is selected. The checks are
+constant-time, keeping the pre-filter cheap for every other task in the
+named-rule enumeration. The induce clause dispatches early, directly
+after glyph_swap, ahead of the generic named-rule search.
+
+KEY PREDICATES
+
+  pf_cells_/3          - non-background cells as row-column-color
+  pf_comps_/2          - 8-connected multi-color components
+  pf_norm_/2           - piece shifted to bounding-box origin
+  pf_variants_/2       - the four quarter-turn rotations, deduped
+  pf_map_/7            - coordinate maps for id, r90, r180, r270
+  pf_solve_/3          - N-by-N exact-cover tiling search
+  pf_fill_/5           - scanline-anchored backtracking placement
+  pf_render_/3         - placed cells painted as the output square
+  arc2_bg_color_/2     - most common cell value as background (reused)
+  arc2_transform(puzzle_fit, +Grid, -Out)
+  arc2_induce_rule(+Pairs, puzzle_fit)
+
+VERIFICATION
+
+All three training pairs and the test case pass in SWI-Prolog, and
+exhaustive enumeration confirms the rotation-only tiling is unique for
+every grid. A regression spot-check confirms hole_census, glyph_swap,
+mirror_patch, layout_tile, scaled_frame, cross_reflect, frame_pour,
+layout_stack, frame_compass, shape_count, box_absorb, and
+frame_assemble all still induce and pass. Pure induction from training
+examples. No pretraining on the ARC-AGI-2 corpus. Every rule is named
+and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v305, Pseudocode v297, Architecture v298,
+Refinement v357, Completion v363.

@@ -372,6 +372,39 @@ arc2_induce_rule(TrainingPairs, glyph_swap) :-
 % Each training pair must transform correctly under glyph_swap.
            arc2_transform(glyph_swap, In, Out)).
 
+% puzzle_fit: early dispatch before generic clause (WP-334, Layer 309).
+arc2_named_rule(puzzle_fit).
+% arc2_induce_rule(puzzle_fit): square-output pre-filter + verification.
+arc2_induce_rule(TrainingPairs, puzzle_fit) :-
+% Fast filter: inspect the first training pair only.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output must have strictly fewer rows than the input.
+    OH < H,
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [OR0|_],
+% Measure the first input width.
+    length(FR, W),
+% Measure the first output width.
+    length(OR0, OW),
+% The output must have strictly fewer columns than the input.
+    OW < W,
+% The output must be a square grid.
+    OH =:= OW,
+% The top-left output cell must carry the anchor stud color 5.
+    OR0 = [5|_],
+% Fetch the last row of the first output.
+    last(FirstOut, OLast),
+% The bottom-left output cell must not be 5 (that shape is glyph_swap).
+    OLast = [BL|_], BL =\= 5,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under puzzle_fit.
+           arc2_transform(puzzle_fit, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -15498,3 +15531,223 @@ gsw_glyph_(Grid, FR0, FR1, FC0, FC1, LegendCells, V, B, Mask) :-
 % Compute the column offset within the glyph box.
               J is C - H0 ),
             Mask).
+
+% ---------------------------------------------------------------------------
+% PUZZLE FIT
+% Scattered multi-color puzzle pieces (one carrying a color-5 anchor stud)
+% are rotated by quarter turns and assembled into a perfect square tiling
+% with the anchor stud at the output's top-left corner.
+% Reference: ARC-AGI-2 task 7b3084d4 (WP-334, Layer 309).
+% ---------------------------------------------------------------------------
+
+% arc2_transform(puzzle_fit): assemble rotated pieces into a full square.
+arc2_transform(puzzle_fit, Grid, Out) :-
+% Determine the background color of the input grid.
+    arc2_bg_color_(Grid, BG),
+% Collect every non-background cell with its row, column, and color.
+    pf_cells_(Grid, BG, Cells),
+% Group the cells into 8-connected multi-color puzzle pieces.
+    pf_comps_(Cells, Pieces0),
+% Normalize each piece so its bounding box starts at row 0, column 0.
+    maplist(pf_norm_, Pieces0, Pieces),
+% Sum the cell counts of all pieces into a running total.
+    foldl(pf_count_, Pieces, 0, Total),
+% Compute the candidate square side length from the total.
+    N is round(sqrt(Total)),
+% The total number of piece cells must form a perfect square.
+    N * N =:= Total,
+% Search for the unique rotation-only tiling with the 5 stud at (0,0).
+    once(( pf_solve_(Pieces, N, Placed),
+% The anchor stud color 5 must land on the output's top-left corner.
+           memberchk(0-0-5, Placed) )),
+% Render the placed cells as the output square grid.
+    pf_render_(Placed, N, Out).
+
+% pf_cells_(+Grid, +BG, -Cells): collect all non-background cells as R-C-V.
+pf_cells_(Grid, BG, Cells) :-
+% Enumerate every cell whose color differs from the background.
+    findall(R-C-V,
+% Walk each row, each column, and keep the non-background colors.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= BG ),
+% Bind the collected cell list.
+            Cells).
+
+% pf_comps_(+Cells, -Comps): 8-connected components over mixed colors.
+pf_comps_([], []).
+% Grow one component from the first unassigned cell, then recurse.
+pf_comps_([Cell|Rest], [Comp|Comps]) :-
+% Flood outward from the seed cell, consuming its component.
+    pf_grow_([Cell], Rest, [Cell], Comp, Remaining),
+% Group the remaining cells into further components.
+    pf_comps_(Remaining, Comps).
+
+% pf_grow_(+Frontier, +Pool, +Acc, -Comp, -Remaining): 8-way flood fill.
+pf_grow_([], Rest, Acc, Comp, Rest) :-
+% Frontier exhausted: sort the accumulated cells into the component.
+    sort(Acc, Comp).
+% Expand the frontier by one cell, absorbing its 8-neighbors from the pool.
+pf_grow_([R-C-_|Frontier], Pool, Acc, Comp, Remaining) :-
+% Select the pool cells that touch (R,C) within king-move distance.
+    include(pf_adj_(R, C), Pool, New),
+% Keep the pool cells that do not touch (R,C).
+    exclude(pf_adj_(R, C), Pool, Pool2),
+% Queue the newly absorbed cells for expansion.
+    append([Frontier, New], Frontier2),
+% Add the newly absorbed cells to the component accumulator.
+    append([New, Acc], Acc2),
+% Continue flooding with the extended frontier.
+    pf_grow_(Frontier2, Pool2, Acc2, Comp, Remaining).
+
+% pf_adj_(+R, +C, +Cell): cell lies within one king move of (R,C).
+pf_adj_(R, C, R2-C2-_) :-
+% The row distance must be at most one.
+    abs(R - R2) =< 1,
+% The column distance must be at most one.
+    abs(C - C2) =< 1.
+
+% pf_norm_(+Cells, -Norm): shift a piece so its bounding box origin is (0,0).
+pf_norm_(Cells, Norm) :-
+% Collect the row coordinates of the piece.
+    findall(R, member(R-_-_, Cells), Rs),
+% Find the minimum row of the piece.
+    min_list(Rs, MinR),
+% Collect the column coordinates of the piece.
+    findall(C, member(_-C-_, Cells), Cs),
+% Find the minimum column of the piece.
+    min_list(Cs, MinC),
+% Translate every cell by the negative bounding box origin.
+    findall(R2-C2-V,
+% Shift each cell so the piece starts at row 0, column 0.
+            ( member(R-C-V, Cells), R2 is R - MinR, C2 is C - MinC ),
+% Bind the shifted cell list.
+            N0),
+% Sort the shifted cells into canonical scanline order.
+    sort(N0, Norm).
+
+% pf_count_(+Piece, +Acc0, -Acc): accumulate the piece's cell count.
+pf_count_(Piece, Acc0, Acc) :-
+% Measure the number of cells in the piece.
+    length(Piece, L),
+% Add the cell count to the running total.
+    Acc is Acc0 + L.
+
+% pf_dims_(+Cells, -H, -W): bounding box height and width of a piece.
+pf_dims_(Cells, H, W) :-
+% Collect the row coordinates of the piece.
+    findall(R, member(R-_-_, Cells), Rs),
+% The height is one more than the maximum row.
+    max_list(Rs, MaxR), H is MaxR + 1,
+% Collect the column coordinates of the piece.
+    findall(C, member(_-C-_, Cells), Cs),
+% The width is one more than the maximum column.
+    max_list(Cs, MaxC), W is MaxC + 1.
+
+% pf_variants_(+Cells, -Variants): the four quarter-turn rotations, deduped.
+pf_variants_(Cells, Variants) :-
+% Measure the piece's bounding box.
+    pf_dims_(Cells, H, W),
+% Apply each of the four rotations to the piece.
+    findall(Var,
+% Enumerate identity and the three quarter-turn rotations.
+            ( member(T, [id, r90, r180, r270]),
+% Transform the piece cells under the chosen rotation.
+              pf_apply_(T, H, W, Cells, Var) ),
+% Bind the raw variant list.
+            Vars0),
+% Deduplicate symmetric variants via sorting.
+    sort(Vars0, Variants).
+
+% pf_apply_(+T, +H, +W, +Cells, -Var): rotate a piece's cells by T.
+pf_apply_(T, H, W, Cells, Var) :-
+% Map every cell coordinate under the rotation T.
+    findall(R2-C2-V,
+% Rotate each cell while preserving its color.
+            ( member(R-C-V, Cells), pf_map_(T, H, W, R, C, R2, C2) ),
+% Bind the rotated cell list.
+            V0),
+% Sort the rotated cells into canonical scanline order.
+    sort(V0, Var).
+
+% pf_map_(id): identity keeps the coordinates unchanged.
+pf_map_(id, _, _, R, C, R, C).
+% pf_map_(r90): quarter turn clockwise sends (R,C) to (C, H-1-R).
+pf_map_(r90, H, _, R, C, C, C2) :-
+% Compute the new column from the flipped row.
+    C2 is H - 1 - R.
+% pf_map_(r180): half turn sends (R,C) to (H-1-R, W-1-C).
+pf_map_(r180, H, W, R, C, R2, C2) :-
+% Compute the new row from the flipped row.
+    R2 is H - 1 - R,
+% Compute the new column from the flipped column.
+    C2 is W - 1 - C.
+% pf_map_(r270): quarter turn counterclockwise sends (R,C) to (W-1-C, R).
+pf_map_(r270, _, W, R, C, R2, R) :-
+% Compute the new row from the flipped column.
+    R2 is W - 1 - C.
+
+% pf_solve_(+Pieces, +N, -Placed): tile the N x N square with the pieces.
+pf_solve_(Pieces, N, Placed) :-
+% Compute the last valid board index.
+    N1 is N - 1,
+% Enumerate every board position as an empty cell.
+    findall(R-C, ( between(0, N1, R), between(0, N1, C) ), Empty0),
+% Sort the empty cells into scanline order.
+    sort(Empty0, Empty),
+% Fill the board by covering the first empty cell at each step.
+    pf_fill_(Empty, Pieces, N, [], Placed).
+
+% pf_fill_(+Empty, +Pieces, +N, +Acc, -Placed): exact-cover backtracking.
+pf_fill_([], [], _, Acc, Placed) :-
+% Board full and all pieces used: sort the placements.
+    sort(Acc, Placed).
+% Cover the scanline-first empty cell with some rotated piece.
+pf_fill_([ER-EC|Empty], Pieces, N, Acc, Placed) :-
+% Choose one still-unplaced piece, leaving the rest.
+    select(Piece, Pieces, Rest),
+% Generate the piece's four rotation variants.
+    pf_variants_(Piece, Variants),
+% Try each rotation variant in turn.
+    member(Var, Variants),
+% The variant's scanline-first cell anchors onto the empty cell.
+    Var = [R0-C0-_|_],
+% Compute the row shift that lands the anchor on the empty cell.
+    DR is ER - R0,
+% Compute the column shift that lands the anchor on the empty cell.
+    DC is EC - C0,
+% Translate every variant cell by the anchor shift.
+    findall(R2-C2-V,
+% Shift each rotated cell into board coordinates.
+            ( member(R-C-V, Var), R2 is R + DR, C2 is C + DC ),
+% Bind the shifted cell list.
+            Shifted),
+% Compute the last valid board index.
+    N1 is N - 1,
+% Every shifted cell must lie inside the board.
+    forall(member(R2-C2-_, Shifted),
+% Check the row and column bounds of the shifted cell.
+           ( R2 >= 0, R2 =< N1, C2 >= 0, C2 =< N1 )),
+% Project the shifted cells onto their board positions.
+    findall(R2-C2, member(R2-C2-_, Shifted), Pos0),
+% Sort the positions into canonical order.
+    sort(Pos0, Pos),
+% Every covered position must currently be empty.
+    forall(member(P, Pos), memberchk(P, [ER-EC|Empty])),
+% Remove the covered positions from the empty set.
+    subtract([ER-EC|Empty], Pos, Empty2),
+% Record the placed cells in the accumulator.
+    append([Shifted, Acc], Acc2),
+% Continue filling the remaining empty cells with the remaining pieces.
+    pf_fill_(Empty2, Rest, N, Acc2, Placed).
+
+% pf_render_(+Placed, +N, -Grid): paint the placements as an N x N grid.
+pf_render_(Placed, N, Grid) :-
+% Compute the last valid board index.
+    N1 is N - 1,
+% Build the grid row by row.
+    findall(Row,
+% For each row index, assemble its cells in column order.
+            ( between(0, N1, R),
+% Look up the color placed at each column of this row.
+              findall(V, ( between(0, N1, C), memberchk(R-C-V, Placed) ), Row) ),
+% Bind the assembled grid.
+            Grid).

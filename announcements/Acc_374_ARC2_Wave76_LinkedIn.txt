@@ -1,0 +1,34 @@
+Accomplishment 374: ARC-AGI-2 Wave 76 - Puzzle Fit Rotation-Only Square Assembly
+
+PrologAI solves ARC-AGI-2 task 7b3084d4 with a new glass-box rule called
+puzzle_fit (WP-334, Layer 309), raising the benchmark score from
+72/120 = 60.00% to 73/120 = 60.83%.
+
+The input grid scatters four puzzle pieces over the background - mostly
+single-color connected shapes with bumps and notches, one of them
+carrying a single anchor stud of color 5 in place of one of its own
+cells. The total number of piece cells is always a perfect square. The
+output is the assembled square: every piece rotated by quarter turns,
+the rotated pieces interlocking with no gaps and no overlaps, and the
+anchor stud landing exactly on the square's top-left corner.
+
+The key insight is that reflections do not belong to this puzzle.
+Allowing all eight dihedral variants per piece makes the task
+ambiguous - the grids admit two or three perfect tilings each, and only
+one of them is the intended answer. Restricting each piece to its four
+quarter-turn rotations collapses every grid, training and test alike,
+to exactly one perfect tiling, confirmed by exhaustive enumeration. The
+pieces are chiral, and their handedness is part of the answer.
+
+The engine extracts the pieces as 8-connected multi-color components,
+normalizes them to their bounding boxes, derives the square's side from
+the total cell count, and runs a scanline-anchored exact-cover search:
+the first empty board cell must be covered by the first cell of some
+rotated piece, which prunes the search to a handful of branches. The
+rule carries no learned parameters: background, pieces, square size,
+rotations, and the anchored corner are all derived from the input grid
+itself. All three training pairs and the hidden test case pass. Pure
+induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
