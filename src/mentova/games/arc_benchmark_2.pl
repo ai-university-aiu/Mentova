@@ -11465,6 +11465,236 @@ arc2_induce_rule(TrainingPairs, cross_reflect) :-
            arc2_transform(cross_reflect, In, Out)).
 
 % ---------------------------------------------------------------------------
+% WP-317: scaled_frame (Layer 292) — scale rectangular frame; fill hole groups
+% ---------------------------------------------------------------------------
+% Rule: scaled_frame — solves task 898e7135.
+% Input: one rectangular frame (solid-border color FC, 0-holes inside) plus
+% colored object-blobs in the background.  Scale = sqrt(GCD of object sizes).
+% Output: frame scaled by Scale; each 0-hole-group filled by matched blob color.
+% Matching: sort hole-groups and objects by (norm_size, centroid_col); pair.
+
+% Register scaled_frame for the generic induction loop.
+arc2_named_rule(scaled_frame).
+
+% arc2_transform(scaled_frame): scale the frame and fill each hole-group.
+arc2_transform(scaled_frame, Grid, Out) :-
+% Delegate all work to the main solver predicate.
+    arc2_sf_solve_(Grid, Out), !.
+
+% arc2_induce_rule(scaled_frame): pre-filter + full training verification.
+arc2_induce_rule(TrainingPairs, scaled_frame) :-
+% Pre-filter: frame must be detectable in first training input.
+    TrainingPairs = [pair(First, _)|_],
+% Check that a rectangular frame is present in the first training example.
+    arc2_sf_frame_(First, _, _, _, _, _),
+% Full verification: every training pair must produce the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(scaled_frame, In, Out)).
+
+% arc2_sf_solve_(+Grid, -Out): main scaled_frame solver.
+arc2_sf_solve_(Grid, Out) :-
+% Locate the rectangular frame: color, bounding box.
+    arc2_sf_frame_(Grid, FC, R0, C0, R1, C1),
+% Collect all 0-cells strictly inside the frame bounding box.
+    arc2_sf_holes_(Grid, R0, C0, R1, C1, Holes),
+% Partition holes into 4-connected components.
+    arc2_sf_conn_comps_(Holes, HComps),
+% Collect background object blobs (non-frame, non-BG, size >= 4).
+    arc2_sf_objects_(Grid, FC, R0, C0, R1, C1, Objects),
+% Compute scale factor = sqrt(GCD of all object cell-counts).
+    arc2_sf_scale_(Objects, Scale),
+% Build hole-group to fill-color mapping.
+    arc2_sf_match_(HComps, Objects, Scale, Matches),
+% Output height = frame height * Scale.
+    FH is R1 - R0 + 1,
+% Output width = frame width * Scale.
+    FW is C1 - C0 + 1,
+% Compute actual output dimensions.
+    OutH is FH * Scale, OutW is FW * Scale,
+% Build index bounds for numlist.
+    OutHm is OutH - 1, OutWm is OutW - 1,
+% Enumerate all output row indices.
+    numlist(0, OutHm, OutRows),
+% Enumerate all output column indices.
+    numlist(0, OutWm, OutCols),
+% Build output grid row-by-row.
+    maplist([R, Row]>>(
+        maplist([C, V]>>(
+            arc2_sf_cell_val_(Grid, FC, R0, C0, Scale, Matches, R, C, V)
+        ), OutCols, Row)
+    ), OutRows, Out).
+
+% arc2_sf_cell_val_: resolve the output color for one output cell.
+arc2_sf_cell_val_(Grid, FC, FR0, FC0, Scale, Matches, R, C, Val) :-
+% Map output row R to the frame row it comes from.
+    FRow is FR0 + R // Scale,
+% Map output col C to the frame col it comes from.
+    FCol is FC0 + C // Scale,
+% Read the frame grid value at that position.
+    nth0(FRow, Grid, GRow), nth0(FCol, GRow, GVal),
+% If the frame cell is a hole (0), use the matched fill color.
+    (   GVal =:= 0
+    ->  arc2_sf_hole_color_(Matches, FRow, FCol, Val)
+% Otherwise use the frame color.
+    ;   Val = FC
+    ).
+
+% arc2_sf_hole_color_: look up fill color for a hole at (R,C).
+arc2_sf_hole_color_(Matches, R, C, V) :-
+% Search the match list for the component containing this hole.
+    member(HComp-V, Matches), member(R-C, HComp), !.
+
+% arc2_sf_frame_: find the rectangular frame in Grid.
+arc2_sf_frame_(Grid, FC, R0, C0, R1, C1) :-
+% Collect every non-BG cell with its row and col.
+    findall(V-R-C, (nth0(R, Grid, Row), nth0(C, Row, V), V \== 0), All),
+% Extract distinct colors present.
+    findall(V, member(V-_-_, All), Vs0), sort(Vs0, Colors),
+% Try each color as candidate frame color.
+    member(FC, Colors),
+% Collect all cells of this candidate color.
+    findall(R-C, member(FC-R-C, All), FCells),
+% Require at least one such cell.
+    FCells \= [],
+% Compute bounding box rows.
+    findall(R, member(R-_, FCells), Rs),
+    min_list(Rs, R0), max_list(Rs, R1),
+% Compute bounding box cols.
+    findall(C, member(_-C, FCells), Cs),
+    min_list(Cs, C0), max_list(Cs, C1),
+% Frame must be at least 3 rows tall (border + interior + border).
+    R1 > R0 + 1,
+% Frame must be at least 3 cols wide.
+    C1 > C0 + 1,
+% All four border sides of the bounding box must be solid FC.
+    arc2_sf_solid_border_(Grid, FC, R0, C0, R1, C1),
+% There must be at least one 0-hole strictly inside the bbox.
+    RIn is R0 + 1, RIn1 is R1 - 1, CIn is C0 + 1, CIn1 is C1 - 1,
+    between(RIn, RIn1, Rh), between(CIn, CIn1, Ch),
+    nth0(Rh, Grid, Rowh), nth0(Ch, Rowh, 0), !.
+
+% arc2_sf_solid_border_: verify all four border sides are color FC.
+arc2_sf_solid_border_(Grid, FC, R0, C0, R1, C1) :-
+% Pre-fetch top and bottom border rows.
+    nth0(R0, Grid, TopRow), nth0(R1, Grid, BotRow),
+% Every cell in top and bottom rows from C0 to C1 must equal FC.
+    forall(between(C0, C1, C), (nth0(C, TopRow, FC), nth0(C, BotRow, FC))),
+% Every cell in left and right cols from R0 to R1 must equal FC.
+    forall(between(R0, R1, R), (
+        nth0(R, Grid, Row), nth0(C0, Row, FC), nth0(C1, Row, FC)
+    )).
+
+% arc2_sf_holes_: collect all 0-cells strictly inside the frame bbox.
+arc2_sf_holes_(Grid, R0, C0, R1, C1, Holes) :-
+% Interior row range (excluding top and bottom border rows).
+    RIn is R0 + 1, RIn1 is R1 - 1,
+% Interior col range (excluding left and right border cols).
+    CIn is C0 + 1, CIn1 is C1 - 1,
+% Find every interior cell with value 0.
+    findall(R-C, (
+        between(RIn, RIn1, R), between(CIn, CIn1, C),
+        nth0(R, Grid, Row), nth0(C, Row, 0)
+    ), Holes).
+
+% arc2_sf_objects_: find background object blobs (size >= 4).
+arc2_sf_objects_(Grid, FC, R0, C0, R1, C1, Objects) :-
+% Collect non-BG non-frame cells that are strictly outside the frame bbox.
+    findall(V-R-C, (
+        nth0(R, Grid, Row), nth0(C, Row, V), V \== 0, V \== FC,
+        (R < R0 ; R > R1 ; C < C0 ; C > C1)
+    ), AllCells),
+% Extract just R-C positions for connectivity analysis.
+    findall(R-C, member(_-R-C, AllCells), RCAll),
+% Find 4-connected components of these positions.
+    arc2_sf_conn_comps_(RCAll, RCComps),
+% Keep only components with at least 4 cells (discard noise singletons).
+    include([Comp]>>(length(Comp, L), L >= 4), RCComps, BigComps),
+% Pair each component with its color (read from first cell).
+    maplist([Comp, V-Comp]>>(
+        Comp = [R-C|_], nth0(R, Grid, GRow), nth0(C, GRow, V)
+    ), BigComps, Objects).
+
+% arc2_sf_scale_: compute scale factor = sqrt(GCD of object cell-counts).
+arc2_sf_scale_(Objects, Scale) :-
+% Extract cell-count for each object.
+    maplist([_-Cells, Sz]>>(length(Cells, Sz)), Objects, Sizes),
+% GCD of all sizes gives scale-squared.
+    arc2_sf_gcd_list_(Sizes, G),
+% Square root of GCD = scale factor.
+    Scale is round(sqrt(float(G))).
+
+% arc2_sf_gcd_list_: compute GCD of a non-empty integer list.
+arc2_sf_gcd_list_([X], X) :- !.
+arc2_sf_gcd_list_([X|Rest], G) :-
+% Recurse on tail first, then combine with head.
+    arc2_sf_gcd_list_(Rest, G0),
+% SWI-Prolog built-in gcd/2 arithmetic function.
+    G is gcd(X, G0).
+
+% arc2_sf_match_: pair each hole-group with a fill color.
+arc2_sf_match_(HComps, Objects, Scale, Matches) :-
+% Scale squared is the cell-count per hole.
+    Scale2 is Scale * Scale,
+% Annotate hole-groups: (hole_count, centroid_col, HComp).
+    maplist([HC, Sz-Col-HC]>>(
+        length(HC, Sz), arc2_sf_centcol_(HC, Col)
+    ), HComps, HAnnot),
+% Annotate objects: (norm_size = cells/scale2, centroid_col, Color).
+    maplist([V-Cells, NS-Col-V]>>(
+        length(Cells, S), NS is S // Scale2, arc2_sf_centcol_(Cells, Col)
+    ), Objects, OAnnot),
+% Sort both lists: primary key = normalized_size, secondary = centroid_col.
+    msort(HAnnot, HSort),
+    msort(OAnnot, OSort),
+% Pair corresponding elements: each hole-group gets the matching object color.
+    maplist(arc2_sf_pair_match_, HSort, OSort, Matches).
+
+% arc2_sf_pair_match_: extract HComp and V from sorted annotation triples.
+arc2_sf_pair_match_(_-_-HC, _-_-V, HC-V).
+
+% arc2_sf_centcol_: compute centroid column of a R-C cell list.
+arc2_sf_centcol_(Cells, Col) :-
+% Extract all column indices.
+    findall(C, member(_-C, Cells), Cs),
+% Average column index = centroid column.
+    sumlist(Cs, Sum), length(Cs, N), Col is Sum / N.
+
+% arc2_sf_conn_comps_: find all 4-connected components of a R-C list.
+arc2_sf_conn_comps_(Cells, Comps) :-
+% Sort to remove any duplicate cells.
+    sort(Cells, Sorted),
+% Iteratively extract components from the sorted list.
+    arc2_sf_comps_(Sorted, Comps).
+
+% arc2_sf_comps_: recursively extract connected components.
+arc2_sf_comps_([], []).
+arc2_sf_comps_([Seed|Rest], [Comp|Comps]) :-
+% BFS from Seed to find its full component.
+    arc2_sf_bfs_([Seed], Rest, [Seed], Comp, Remaining),
+% Recurse on cells not yet assigned to a component.
+    arc2_sf_comps_(Remaining, Comps).
+
+% arc2_sf_bfs_: BFS flood-fill for a single connected component.
+arc2_sf_bfs_([], Remaining, Visited, Visited, Remaining).
+arc2_sf_bfs_([R-C|Queue], Avail, Visited, Comp, Remaining) :-
+% Compute the four 4-connected neighbor positions.
+    R1 is R - 1, R2 is R + 1, C1 is C - 1, C2 is C + 1,
+% Find neighbors that are available and not yet visited.
+    findall(NR-NC, (
+        member(NR-NC, [R1-C, R2-C, R-C1, R-C2]),
+        member(NR-NC, Avail),
+        \+ member(NR-NC, Visited)
+    ), NewSeeds),
+% Remove newly found seeds from the available pool.
+    subtract(Avail, NewSeeds, NewAvail),
+% Add them to the visited set.
+    append(Visited, NewSeeds, NewVisited),
+% Append them to the BFS queue.
+    append(Queue, NewSeeds, NewQueue),
+% Continue BFS with updated state.
+    arc2_sf_bfs_(NewQueue, NewAvail, NewVisited, Comp, Remaining).
+
+% ---------------------------------------------------------------------------
 % PRINT REPORT
 % ---------------------------------------------------------------------------
 
