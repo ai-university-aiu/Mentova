@@ -1,0 +1,100 @@
+Acc_362: ARC-AGI-2 Wave 64 - Snake Frame Path Tracing
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 64 of the ARC-AGI-2 benchmark climb: task cb2d8a2c solved using the
+snake_frame rule (WP-322, Layer 297). Score advances from 60/120 = 50.00%
+to 61/120 = 50.83%.
+
+TASK DESCRIPTION
+
+Task cb2d8a2c presents grids with background value 8, snake objects (4-connected
+bodies of cells with value 1 or 2), and a single pointer cell (value 3) located
+on one grid edge. The output places value 3 at the pointer and along a
+rectangular wrap-path that visits each snake nearest-to-farthest from the pointer;
+all value-1 cells in snakes become value 2 in the output.
+
+RULE: snake_frame
+
+The glass-box named rule derives from three observations across four training pairs:
+
+1. POINTER EDGE DETECTION
+   The pointer cell lies on exactly one grid edge (top, bottom, left, or right).
+   The edge determines the primary direction of travel (away from the edge).
+
+2. SNAKE ORDERING
+   Snakes (connected components of values 1 and 2) are sorted nearest-to-farthest
+   from the pointer edge:
+   - Right edge: sort by decreasing right-column (RC desc).
+   - Left edge: sort by increasing left-column (LC asc).
+   - Top edge: sort by increasing top-row (TR asc).
+   - Bottom edge: sort by decreasing bottom-row (BR desc).
+
+3. BOUNDARY FORMULA
+   For each snake with N1 cells of value 1:
+   - Near boundary: snake_edge +/- (N1 + 1) toward the pointer.
+   - Far boundary: snake_edge +/- (N1 + 1) away from the pointer.
+   The pointer travels from its current position to the near boundary in the
+   primary direction, then turns perpendicular to reach the far boundary, then
+   returns to the primary direction to continue to the next snake.
+
+4. TURN DIRECTION
+   For vertical snakes (primary direction left or right):
+   - Count 1s in top half vs bottom half of the snake bounding box.
+   - If TopH >= BotH: turn toward BR + N1 + 1 (clamped to H-1).
+   - Else: turn toward TR - N1 - 1 (clamped to 0).
+   For horizontal snakes (primary direction up or down):
+   - Count 1s in left half vs right half.
+   - If LH >= RH: turn toward RC + N1 + 1 (clamped to W-1).
+   - Else: turn toward LC - N1 - 1 (clamped to 0).
+   Grid boundary overrides: if one direction would place the far column outside
+   the grid, take the other direction instead.
+
+5. BASE CASE
+   After all snakes, the pointer continues in the primary direction to the
+   opposite grid edge.
+
+IMPLEMENTATION
+
+arc2_transform(snake_frame, Grid, Out) implemented in
+Mentova/src/mentova/games/arc_benchmark_2.pl with helper predicates prefixed cbsf_:
+- cbsf_ptr/4: locate value-3 pointer by row scan.
+- cbsf_cells/5 + cbsf_row/5: collect all value-1/2 cells as R-C pairs.
+- cbsf_partition/2 + cbsf_bfs/4: BFS connected-component partitioning.
+- cbsf_analyse/3: bounding box, N1 count, TopH/BotH/LH/RH half-counts.
+- cbsf_edge/5: determine pointer edge from position.
+- cbsf_order/3: keysort by appropriate coordinate.
+- cbsf_trace/7: recursive path generation; four edge-type clauses.
+- cbsf_hline/4 + cbsf_vline/4: generate horizontal/vertical cell lists.
+- cbsf_out/5 + cbsf_outrow/7: build output grid.
+
+Early dispatch in arc2_induce_rule(snake_frame) filters on:
+- exactly four distinct values {1, 2, 3, 8},
+- exactly one cell with value 3,
+before attempting the full transform on all training pairs.
+
+VERIFICATION
+
+All 4 training pairs and the test case for cb2d8a2c pass in SWI-Prolog.
+The algorithm was Python-prototyped before Prolog implementation to verify
+the boundary formula and direction heuristic across all training pairs.
+
+CITATION
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 64: Snake-frame - pointer cell (value 3) on
+grid edge traces rectangular wrap-path around each connected 1/2 snake object;
+near/far boundaries computed as snake_edge +/- (N1+1); turn direction from 1-cell
+half-count; all value-1 snake cells become 2.
+Score: 60/120 = 50.00% -> 61/120 = 50.83%.
+Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+SPARC: Specification v290, Pseudocode v282, Architecture v283,
+       Refinement v342, Completion v348.
+
+---
+Copyright (C) 2026 by D. R. Dison (LinkedIn) All rights reserved. No part of this work may be reproduced, stored in a retrieval system, or transmitted in any form or by any means, electronic, mechanical, photocopying, recording, or otherwise, without the prior written permission of the publisher, D. R. Dison, except as provided by U.S. Copyright Law or for the use of brief quotations in a review. Acknowledgment: This work was produced with the aid of various technological tools, including Work Processing Tools (WPT), Desktop Publishing Tools (DPT), Image Processing Tools (IPT), and Artificial Intelligence Tools (AIT).

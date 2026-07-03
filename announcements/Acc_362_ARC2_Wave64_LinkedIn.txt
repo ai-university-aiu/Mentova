@@ -1,0 +1,26 @@
+Accomplishment 362: ARC-AGI-2 Wave 64 - Snake Frame
+
+PrologAI solves ARC-AGI-2 task cb2d8a2c with a new glass-box rule called
+snake_frame (WP-322, Layer 297), raising the benchmark score from
+60/120 = 50.00% to 61/120 = 50.83%.
+
+The input is a grid containing a background (value 8), snake objects
+(4-connected bodies of value-1 and value-2 cells), and a single pointer
+cell (value 3) located on one grid edge. The output traces the pointer
+along a rectangular wrap-path that visits each snake nearest-to-farthest,
+marking the path with 3 and turning all value-1 snake cells into value 2.
+
+The key insight: the near and far boundaries of each rectangular loop
+segment are computed as snake_edge +/- (N1 + 1), where N1 is the count of
+value-1 cells in the snake. The perpendicular turn direction at the near
+boundary is determined by counting value-1 cells in each half of the
+snake's bounding box: if the top half has more (or equal) 1s, the path
+turns downward toward the bottom; otherwise upward. The same logic applies
+left/right for horizontal snakes, with grid-boundary clamping applied
+throughout.
+
+All 4 training pairs and the test case pass. Pure induction. No pretraining.
+Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
