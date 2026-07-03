@@ -1,0 +1,33 @@
+Accomplishment 373: ARC-AGI-2 Wave 75 - Glyph Swap Legend-Mapped Block Decoding
+
+PrologAI solves ARC-AGI-2 task edb79dae with a new glass-box rule called
+glyph_swap (WP-333, Layer 308), raising the benchmark score from
+71/120 = 59.17% to 72/120 = 60.00%.
+
+The input grid shows a rectangular frame of color 5 enclosing a display
+of solid square blocks, each painted in a single color. Outside the
+frame sit two kinds of hints. Legend interlocks - small two-color
+figures in the exact pattern AABB / AAAB / AABB - declare that color A
+maps to color B. Reference glyphs - one block-sized picture per block
+color - declare each color's shape. The output keeps only the framed
+region, with every solid block replaced by its color's glyph shape,
+repainted in the legend-mapped color.
+
+The key insight is that the two hint systems share colors and must be
+separated before either can be read. In the test grid one color plays
+three roles at once: legend target, legend source, and reference glyph.
+Reading a color's glyph only works after every legend cell is
+subtracted from that color's cell set; what remains is exactly the
+block-sized picture. A second trap: color 8 is the background of one
+training grid but a genuine block color in the test grid, so no color
+may be treated as special except the frame color and the per-grid
+background.
+
+The rule carries no learned parameters: background color, frame, legend
+map, block size, glyph masks, and every replacement are all derived
+from the input grid itself. Both training pairs and the hidden test
+case passed on the first run. Pure induction. No pretraining. Every
+rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
