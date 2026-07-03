@@ -116,6 +116,56 @@ arc2_transform(rotate_180, Grid, Result) :-
     arc2_transform(reverse_rows, Grid, T),
     arc2_transform(vertical_flip, T, Result).
 
+% layout_tile: dispatch early because its pre-filter is O(H) and fails fast.
+arc2_named_rule(layout_tile).
+% arc2_induce_rule(layout_tile): fast divider-row pre-filter + forall verify.
+arc2_induce_rule(TrainingPairs, layout_tile) :-
+% Require exactly 2 identical divider rows in the first training input.
+    TrainingPairs = [pair(First, _)|_],
+% Find divider rows (rows with only {0,5} values, at least one 5).
+    arc2_lt_divider_rows_(First, [R0, R1]),
+% Both divider rows must be identical (same repeating pattern).
+    nth0(R0, First, DivRow), nth0(R1, First, DivRow),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(layout_tile, In, Out)).
+
+% scaled_frame: early dispatch to avoid generic clause hitting slow frame_assemble.
+arc2_named_rule(scaled_frame).
+% arc2_induce_rule(scaled_frame): frame pre-filter + forall verify.
+arc2_induce_rule(TrainingPairs, scaled_frame) :-
+% Pre-filter: a rectangular frame must be detectable in the first training input.
+    TrainingPairs = [pair(First, _)|_],
+% Check that a rectangular frame is present.
+    arc2_sf_frame_(First, _, _, _, _, _),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(scaled_frame, In, Out)).
+
+% cross_reflect: early dispatch to run specific clause before generic.
+arc2_named_rule(cross_reflect).
+% arc2_induce_rule(cross_reflect): background/cross pre-filter + forall verify.
+arc2_induce_rule(TrainingPairs, cross_reflect) :-
+% Pre-filter: must have a cross-reflect structure in the first training input.
+    TrainingPairs = [pair(First, _)|_],
+    arc2_cell_(First, 0, 0, BG0),
+    arc2_cr_cross_(First, BG0, _, _),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(cross_reflect, In, Out)).
+
+% frame_reflect: early dispatch to run specific clause before generic.
+arc2_named_rule(frame_reflect).
+% arc2_induce_rule(frame_reflect): row-0-all-8 pre-filter + forall verify.
+arc2_induce_rule(TrainingPairs, frame_reflect) :-
+% Pre-filter: first row of first training input must be entirely color 8.
+    TrainingPairs = [pair(First, _)|_],
+    First = [Row0|_],
+    forall(member(V, Row0), V =:= 8),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(frame_reflect, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -11109,8 +11159,7 @@ arc2_transform(shape_walk, Grid, Out) :-
 % Task: db0c5428
 % ---------------------------------------------------------------------------
 
-% Register frame_reflect as a known named induction rule.
-arc2_named_rule(frame_reflect).
+% frame_reflect named_rule is registered early (near top of file).
 
 % arc2_fr_frame_/3: scan for top-left (FR,FC) of the 9x9 non-8 frame.
 arc2_fr_frame_(Grid, FR, FC) :-
@@ -11263,23 +11312,14 @@ arc2_transform(frame_reflect, Grid, Out) :-
         ), Cs, OutRow)
     ), Rs, Out).
 
-% Fast path: frame_reflect fires when input row 0 is all-8 (frame surrounded by BG).
-arc2_induce_rule(TrainingPairs, frame_reflect) :-
-% Pre-filter: row 0 of the first training input must be entirely background.
-    TrainingPairs = [pair(First, _)|_],
-    First = [Row0|_],
-    forall(member(V, Row0), V =:= 8),
-% Full verification: all training pairs must transform correctly.
-    forall(member(pair(In, Out), TrainingPairs),
-           arc2_transform(frame_reflect, In, Out)).
+% frame_reflect induce_rule is registered early (near top of file).
 
 % ---------------------------------------------------------------------------
 % WP-316: cross_reflect (Layer 291) — cross-quadrant satellite reflection
 % Task: b10624e5
 % ---------------------------------------------------------------------------
 
-% arc2_named_rule: register cross_reflect for the generic induction loop.
-arc2_named_rule(cross_reflect).
+% cross_reflect named_rule is registered early (near top of file).
 
 % arc2_cr_cross_/4: find cross row R and cross col C (all-same non-BG lines).
 arc2_cr_cross_(Grid, BG, R, C) :-
@@ -11454,15 +11494,7 @@ arc2_transform(cross_reflect, Grid, Out) :-
         ), Cs, OutRow)
     ), Rs, Out).
 
-% arc2_induce_rule(cross_reflect): fast pre-filter + full training verification.
-arc2_induce_rule(TrainingPairs, cross_reflect) :-
-% Pre-filter: first training input must contain a complete cross row.
-    TrainingPairs = [pair(First, _)|_],
-    arc2_cell_(First, 0, 0, BG0),
-    arc2_cr_cross_(First, BG0, _, _),
-% Full verification: every training pair must transform correctly.
-    forall(member(pair(In, Out), TrainingPairs),
-           arc2_transform(cross_reflect, In, Out)).
+% cross_reflect induce_rule is registered early (near top of file).
 
 % ---------------------------------------------------------------------------
 % WP-317: scaled_frame (Layer 292) — scale rectangular frame; fill hole groups
@@ -11473,23 +11505,12 @@ arc2_induce_rule(TrainingPairs, cross_reflect) :-
 % Output: frame scaled by Scale; each 0-hole-group filled by matched blob color.
 % Matching: sort hole-groups and objects by (norm_size, centroid_col); pair.
 
-% Register scaled_frame for the generic induction loop.
-arc2_named_rule(scaled_frame).
+% scaled_frame named_rule and induce_rule are registered early (near top of file).
 
 % arc2_transform(scaled_frame): scale the frame and fill each hole-group.
 arc2_transform(scaled_frame, Grid, Out) :-
 % Delegate all work to the main solver predicate.
     arc2_sf_solve_(Grid, Out), !.
-
-% arc2_induce_rule(scaled_frame): pre-filter + full training verification.
-arc2_induce_rule(TrainingPairs, scaled_frame) :-
-% Pre-filter: frame must be detectable in first training input.
-    TrainingPairs = [pair(First, _)|_],
-% Check that a rectangular frame is present in the first training example.
-    arc2_sf_frame_(First, _, _, _, _, _),
-% Full verification: every training pair must produce the correct output.
-    forall(member(pair(In, Out), TrainingPairs),
-           arc2_transform(scaled_frame, In, Out)).
 
 % arc2_sf_solve_(+Grid, -Out): main scaled_frame solver.
 arc2_sf_solve_(Grid, Out) :-
@@ -11693,6 +11714,212 @@ arc2_sf_bfs_([R-C|Queue], Avail, Visited, Comp, Remaining) :-
     append(Queue, NewSeeds, NewQueue),
 % Continue BFS with updated state.
     arc2_sf_bfs_(NewQueue, NewAvail, NewVisited, Comp, Remaining).
+
+% ---------------------------------------------------------------------------
+% layout_tile (WP-318, Layer 293) -- task 65b59efc
+% ---------------------------------------------------------------------------
+% Divider rows/cols (values in {0,5}) partition input into row/col groups.
+% Row-group 0: N template shapes (S x S each, one per col-group).
+% Row-group 2: N single-cell marker colors (one per col-group).
+% Row-group 1: N layout subgrids (S x S each, one per col-group).
+% Each non-zero layout cell at (r,c) with color C identifies the template T
+% containing C; output block at (r,c) gets T recolored with T's marker.
+% Output: S*S x S*S grid (S x S arrangement of S x S blocks).
+% ---------------------------------------------------------------------------
+
+% arc2_transform(layout_tile): apply the layout_tile transformation.
+arc2_transform(layout_tile, Grid, Out) :-
+% Delegate all work to the main solver predicate.
+    arc2_lt_solve_(Grid, Out), !.
+
+% arc2_lt_solve_(+Grid, -Out): main layout_tile solver.
+arc2_lt_solve_(Grid, Out) :-
+% Find all divider rows (rows with only 0/5 values).
+    arc2_lt_divider_rows_(Grid, DivRows),
+% Find all divider cols (cols with only 0/5 values, at least one 5).
+    arc2_lt_divider_cols_(Grid, DivCols),
+% Split into 3 row-groups: template (top), layout (middle), marker (bottom).
+    arc2_lt_row_groups_(Grid, DivRows, RG0, RG1, RG2),
+% Split into N col-groups, excluding all-zero padding cols.
+    arc2_lt_col_groups_(Grid, DivCols, ColGroups),
+% Block size NS = width of first col-group (= height of template row-group).
+    ColGroups = [G0|_],
+% Bind NS to the width of the first col-group.
+    length(G0, NS),
+% Extract template subgrid for each col-group.
+    arc2_lt_subgrids_(Grid, RG0, ColGroups, Templates),
+% Extract single marker color for each col-group from the bottom row-group.
+    arc2_lt_markers_(Grid, RG2, ColGroups, Markers),
+% Extract layout subgrid for each col-group from the middle row-group.
+    arc2_lt_layouts_(Grid, RG1, ColGroups, Layouts),
+% Build output block assignment list from layout subgrids.
+    arc2_lt_assignments_(Layouts, Templates, Assigns),
+% Assemble the NS^2 x NS^2 output grid from assignments.
+    arc2_lt_build_output_(Assigns, Templates, Markers, NS, Out).
+
+% arc2_lt_divider_rows_(+Grid, -DivRows): rows with all values in {0,5}, >=half are 5.
+arc2_lt_divider_rows_(Grid, DivRows) :-
+% A major divider row spans the full grid width with 5s; at least half the cells are 5.
+    findall(R,
+        (nth0(R, Grid, Row),
+         \+ (member(V, Row), V \= 0, V \= 5),
+         include(==(5), Row, Fives),
+         length(Row, W), length(Fives, NF),
+         NF * 2 >= W),
+        DivRows).
+
+% arc2_lt_divider_cols_(+Grid, -DivCols): cols where all values in {0,5}.
+arc2_lt_divider_cols_(Grid, DivCols) :-
+% Use first row to determine total column count.
+    Grid = [FirstRow|_],
+% Bind W to the total number of columns.
+    length(FirstRow, W),
+% Max column index.
+    W1 is W - 1,
+% Collect cols where all values are 0 or 5 and at least one value is 5.
+    findall(C,
+        (between(0, W1, C),
+         findall(V, (member(Row, Grid), nth0(C, Row, V)), Vals),
+         \+ (member(V, Vals), V \= 0, V \= 5),
+         member(5, Vals)),
+        DivCols).
+
+% arc2_lt_row_groups_(+Grid,+DivRows,-RG0,-RG1,-RG2): split into 3 groups.
+arc2_lt_row_groups_(Grid, DivRows, RG0, RG1, RG2) :-
+% Total number of rows.
+    length(Grid, H),
+% Max row index.
+    H1 is H - 1,
+% Build full list of row indices.
+    numlist(0, H1, AllRows),
+% Remove divider rows to get content row indices.
+    subtract(AllRows, DivRows, ContentRows),
+% Group contiguous content rows into exactly 3 segments.
+    arc2_lt_contiguous_groups_(ContentRows, [RG0, RG1, RG2]).
+
+% arc2_lt_col_groups_(+Grid,+DivCols,-ColGroups): extract valid col groups.
+arc2_lt_col_groups_(Grid, DivCols, ColGroups) :-
+% Use first row to bound column range.
+    Grid = [FirstRow|_],
+% Total column count.
+    length(FirstRow, W),
+% Max column index.
+    W1 is W - 1,
+% All column indices.
+    numlist(0, W1, AllCols),
+% Remove divider cols from full set.
+    subtract(AllCols, DivCols, ContentCols),
+% Group contiguous content columns.
+    arc2_lt_contiguous_groups_(ContentCols, AllGroups),
+% Retain only groups that have at least one non-zero non-5 value (not padding).
+    include([G]>>(
+        member(C, G),
+        member(GRow, Grid),
+        nth0(C, GRow, V),
+        V \= 0, V \= 5
+    ), AllGroups, ColGroups).
+
+% arc2_lt_contiguous_groups_(+Sorted,-Groups): split into contiguous runs.
+arc2_lt_contiguous_groups_([], []).
+% Start a new run from H and process the tail.
+arc2_lt_contiguous_groups_([H|T], [[H|Run]|Rest]) :-
+% Extend the current run as far as possible.
+    arc2_lt_cont_run_(H, T, Run, Remaining),
+% Recursively group remaining elements.
+    arc2_lt_contiguous_groups_(Remaining, Rest).
+
+% arc2_lt_cont_run_(+Prev,+In,-Run,-Out): extend a contiguous run from Prev.
+arc2_lt_cont_run_(_, [], [], []).
+% H continues the run if H = Prev + 1.
+arc2_lt_cont_run_(Prev, [H|T], [H|Run], Rest) :-
+% Check continuity.
+    H =:= Prev + 1, !,
+% Extend run by one more element.
+    arc2_lt_cont_run_(H, T, Run, Rest).
+% H breaks continuity; end the run here.
+arc2_lt_cont_run_(_, Rest, [], Rest).
+
+% arc2_lt_subgrid_(+Grid,+Rows,+Cols,-Sub): extract row-col subgrid.
+arc2_lt_subgrid_(Grid, Rows, Cols, Sub) :-
+% For each row R, build the restricted row by selecting columns Cols.
+    findall(Row,
+        (member(R, Rows),
+         nth0(R, Grid, GRow),
+         findall(V, (member(C, Cols), nth0(C, GRow, V)), Row)),
+        Sub).
+
+% arc2_lt_subgrids_(+Grid,+Rows,+ColGroups,-Subs): one subgrid per group.
+arc2_lt_subgrids_(Grid, Rows, ColGroups, Subs) :-
+% Map subgrid extraction over all col-groups.
+    maplist([CG, S]>>(arc2_lt_subgrid_(Grid, Rows, CG, S)), ColGroups, Subs).
+
+% arc2_lt_markers_(+Grid,+RG2,+ColGroups,-Markers): one color per col-group.
+arc2_lt_markers_(Grid, RG2, ColGroups, Markers) :-
+% For each col-group extract the single non-zero non-5 marker color.
+    maplist([CG, M]>>(
+        arc2_lt_subgrid_(Grid, RG2, CG, Sub),
+        findall(V, (member(Row, Sub), member(V, Row), V \= 0, V \= 5), [M|_])
+    ), ColGroups, Markers).
+
+% arc2_lt_layouts_(+Grid,+RG1,+ColGroups,-Layouts): layout subgrid per group.
+arc2_lt_layouts_(Grid, RG1, ColGroups, Layouts) :-
+% Extract layout subgrid for each col-group from the middle row-group.
+    maplist([CG, L]>>(arc2_lt_subgrid_(Grid, RG1, CG, L)), ColGroups, Layouts).
+
+% arc2_lt_assignments_(+Layouts,+Templates,-Assigns): block-to-template map.
+arc2_lt_assignments_(Layouts, Templates, Assigns) :-
+% Collect triples (block-row BR, block-col BC, template-index TI).
+    findall(BR-BC-TI,
+        (nth0(_I, Layouts, Layout),
+         nth0(R, Layout, LRow),
+         nth0(C, LRow, V),
+         V \= 0, V \= 5,
+         nth0(TI, Templates, Tmpl),
+         arc2_lt_has_color_(Tmpl, V),
+         BR = R, BC = C),
+        Assigns).
+
+% arc2_lt_has_color_(+Tmpl,+V): true if template contains non-zero non-5 V.
+arc2_lt_has_color_(Tmpl, V) :-
+% Scan template cells; succeed when V is found as a non-zero non-5 value.
+    member(Row, Tmpl),
+    member(V, Row),
+    V \= 0, V \= 5.
+
+% arc2_lt_build_output_(+Assigns,+Templates,+Markers,+NS,-Out): assemble grid.
+arc2_lt_build_output_(Assigns, Templates, Markers, NS, Out) :-
+% Output side-length is NS squared.
+    TotalSize is NS * NS,
+% Max output index (0-based).
+    TotalSize1 is TotalSize - 1,
+% Build each output row by iterating over all output row indices.
+    findall(OutRow,
+        (between(0, TotalSize1, OR),
+% Block row BR = output row OR divided by block size NS.
+         BR is OR // NS,
+% Inner row IR = output row OR modulo block size NS.
+         IR is OR mod NS,
+% Build each output cell in this row.
+         findall(OV,
+             (between(0, TotalSize1, OC),
+% Block col BC = output col OC divided by block size NS.
+              BC is OC // NS,
+% Inner col IC = output col OC modulo block size NS.
+              IC is OC mod NS,
+% Look up whether this output block has an assignment.
+              (   member(BR-BC-TI, Assigns)
+              ->  nth0(TI, Templates, Tmpl),
+% Get template row at inner row IR.
+                  nth0(IR, Tmpl, TRow),
+% Get template cell value at inner col IC.
+                  nth0(IC, TRow, TV),
+% Non-zero template cell → use marker color; zero cell → output zero.
+                  (TV =:= 0 -> OV = 0 ; nth0(TI, Markers, OV))
+% Unassigned block → output zero.
+              ;   OV = 0
+              )),
+             OutRow)),
+        Out).
 
 % ---------------------------------------------------------------------------
 % PRINT REPORT

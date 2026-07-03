@@ -3464,3 +3464,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 58: Cross-reflect a cross of 1s (one complet
 Dison, D. R. (2026). ARC-AGI-2 Wave 59: Scaled-frame identifies a rectangular frame (solid-colored border with 0-holes inside) and colored background object-blobs; scale = sqrt(GCD of object cell-counts); output is the frame scaled by N; each 0-hole filled with matched object color via (norm_size, centroid_col) sort-pair order.
   Score: 56/120 = 46.67%. Task 898e7135 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 60: Layout-tile divides the input by two identical major divider rows and N divider cols into three row-groups and N col-groups; row-group 0 holds S x S template subgrids; row-group 2 holds one marker color per col-group; row-group 1 holds S x S layout subgrids encoding which template goes at each output block position, recolored by the marker; output is S x S blocks in an S x S arrangement. Early dispatch refactor also restored scaled_frame, cross_reflect, and frame_reflect (+3 net).
+  Score: 57/120 = 47.50%. Task 65b59efc solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
