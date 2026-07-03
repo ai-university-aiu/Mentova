@@ -1,0 +1,34 @@
+Accomplishment 366: ARC-AGI-2 Wave 68 - Diagonal Corridor Fill
+
+PrologAI solves ARC-AGI-2 task 7666fa5d with a new glass-box rule called
+diag_corridor (WP-326, Layer 301), raising the benchmark score from
+64/120 = 53.33% to 65/120 = 54.17%.
+
+The input grid holds slanted diagonal chains of colored cells - the two
+banks of a winding corridor. The task: flood every background cell that
+lies between a pair of opposing banks with red (color 2), leaving the
+banks and all unbracketed background untouched.
+
+The key insight is a change of coordinates. In ordinary row-column
+space the corridors wind and the fill looks irregular - a cell touching
+a bank may stay empty while a farther cell turns red. But in the
+rotated system s = row + column, d = row - column, every chain becomes
+a straight axis-aligned segment, and each corridor becomes a plain
+rectangle: line sum strictly between the two banks, cross coordinate
+inside the overlap of the two banks' spans. The winding corridor is
+straight when viewed along the diagonals.
+
+Two subtleties made the rule honest. All pairs of chains contribute
+corridors, not just neighboring pairs - some cells are bracketed only
+by the outermost banks. And two distinct chains can sit on the same
+diagonal line at opposite ends of the grid, so chains are separated by
+true diagonal connectivity, never merely grouped by line position.
+
+No parameters are learned; the entire fill is deterministic geometry in
+a rotated coordinate frame.
+
+Both training pairs and the test case pass. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
