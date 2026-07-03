@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 66 complete: 63/120 = 52.50%.
+Last updated: 2026-07-03. Wave 67 complete: 64/120 = 53.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -188,6 +188,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  61 / 120  | 50.83%  | Wave 64: snake_frame pointer (value 3) traces rectangular wrap-path around each snake (1/2 body); near/far boundaries snake_edge+/-(N1+1); turn from 1-cell half-count
 2026-07-03  |  62 / 120  | 51.67%  | Wave 65: hole_color legend templates enclose N background holes; grey (5) shapes classified by own hole count and recolored to matching legend color; unmatched grey shapes erased
 2026-07-03  |  63 / 120  | 52.50%  | Wave 66: mosaic_heal symmetric mosaic damaged by 0-patches; damaged rows and cols borrow from compatible donors (>= 5 non-zero agreements) to fixpoint; leftover zeros healed by diagonal mirror
+2026-07-03  |  64 / 120  | 53.33%  | Wave 67: mirror_patch wallpaper patch hidden by solid 8-block; H/V mirror axes detected from visible cells (zero conflicts, > 50 supporting pairs); covered cells healed to fixpoint from mirrors; transpose donor fallback; recovered patch is the output
 
 
 COMPLETE SCORE PROGRESSION
@@ -732,6 +733,52 @@ Lessons learned: The compatibility test must fail hard (not merely score low)
   when a row and its donor pool are simultaneously damaged in the same columns.
 
 Accomplishment: Acc_364.  Paper: Acc_364_ARC2_Wave66_MosaicHeal.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 67 - 2026-07-03 - Score: 64/120 = 53.33%
+
+Date: 2026-07-03
+
+Confirmed score: 64 / 120 = 53.33%
+
+Rules added in this wave:
+  mirror_patch (WP-325, Layer 300)
+
+Task solved: 0934a4d8 (4 training pairs + 1 test case; each 30x30 grid is a
+  mirror-symmetric wallpaper with a rectangular patch covered by a solid block
+  of color 8; the output is the recovered hidden patch, exactly the size of the
+  covered rectangle, containing no 8s).
+
+Algorithm: four-stage deterministic recovery. Stage 1: locate the solid
+  rectangle of color 8 cells (the bounding box of all 8s must be completely
+  filled by them). Stage 2: detect the wallpaper's horizontal mirror axis
+  (a column reflection sum SC with G[r][c] = G[r][SC-c]) and vertical mirror
+  axis (a row reflection sum SR) directly from the visible cells - an axis is
+  accepted only when no pair of visible mirrored cells disagrees and more than
+  50 visible pairs support it. On this task both axes have reflection sum 31
+  (axis between rows/columns 15 and 16), NOT the grid center sum 29, which is
+  why axis detection is required. Stage 3: heal covered cells to a fixpoint,
+  each 8-cell taking the value of its horizontal mirror, vertical mirror, or
+  point mirror, whichever is visible first; healed cells become donors for
+  later iterations. Stage 4: cells whose mirrors all fall outside the grid or
+  inside the cover (this happens when the cover touches the short edge of the
+  asymmetric crop) fall back to the transpose donor (r, c) <- (c, r), then the
+  mirror fixpoint runs again; the recovered patch must contain no 8s.
+
+Lessons learned: The wallpaper's mirror axes need not coincide with the grid
+  center - the 30x30 crop is asymmetric (reflection sum 31 leaves rows/cols 0
+  and 1 without in-grid partners), so hard-coding the grid-center mirror fails
+  all pairs. Detecting the axis from visible cells with a zero-conflict test
+  plus a support threshold finds the true axis uniquely in all five grids. The
+  test case hides the patch at the left edge where columns 0-1 mirror out of
+  the grid and rows 14-17 mirror into the cover itself; the transpose relation
+  holds exactly in that central band, supplying the four values the mirrors
+  cannot reach, after which the mirror fixpoint completes the patch.
+
+Accomplishment: Acc_365.  Paper: Acc_365_ARC2_Wave67_MirrorPatch.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3248,6 +3295,7 @@ b9e38dc0  - Wave 61 - frame_pour         - rectangular frame with fill-seed; int
 cb2d8a2c  - Wave 64 - snake_frame        - pointer (value 3) traces rectangular wrap-path around 1/2 snakes; near/far = snake_edge +/-(N1+1)
 e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; grey (5) shapes recolored by own enclosed-hole count; unmatched erased
 981571dc  - Wave 66 - mosaic_heal        - symmetric mosaic 0-damage healed; rows/cols borrow from compatible donors to fixpoint; diagonal mirror fallback
+0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3544,4 +3592,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 65: Hole-color - legend templates (compact n
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 66: Mosaic-heal - a symmetric wallpaper mosaic damaged by rectangular patches of zeros is repaired in three stages: (1) every damaged row borrows values from a compatible donor row (agreeing at every shared non-zero position, with at least 5 agreements), the same applied to columns via transposition, iterated to fixpoint; (2) leftover zeros borrow from the diagonal mirror cell (r, c) <- (c, r); (3) the fixpoint runs once more; the result must be zero-free.
   Score: 63/120 = 52.50%. Task 981571dc solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 67: Mirror-patch - a mirror-symmetric wallpaper hides a rectangular patch behind a solid block of color 8; the horizontal and vertical mirror axes are detected from the visible cells (an axis is accepted only with zero conflicting mirrored pairs and more than 50 supporting pairs); covered cells are healed to a fixpoint from their horizontal, vertical, or point mirror images; cells unreachable by any mirror fall back to the transpose donor (r, c) <- (c, r); the recovered patch alone, free of 8s, is the output.
+  Score: 64/120 = 53.33%. Task 0934a4d8 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

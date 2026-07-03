@@ -1,0 +1,36 @@
+Accomplishment 365: ARC-AGI-2 Wave 67 - Mirror Patch
+
+PrologAI solves ARC-AGI-2 task 0934a4d8 with a new glass-box rule called
+mirror_patch (WP-325, Layer 300), raising the benchmark score from
+63/120 = 52.50% to 64/120 = 53.33%.
+
+The input grid is a 30x30 mirror-symmetric wallpaper in which one
+rectangular patch has been covered by a solid block of color 8. The
+output is the hidden patch alone - exactly the size of the cover, with
+every concealed cell restored.
+
+The key insight: the wallpaper's mirror axes do not sit at the grid
+center. The 30x30 grid is an asymmetric crop of the wallpaper, so the
+rule detects the true horizontal and vertical reflection axes directly
+from the visible cells - a candidate axis is accepted only when no pair
+of mirrored visible cells disagrees and more than 50 pairs support it.
+Covered cells are then healed to a fixpoint from their horizontal,
+vertical, or point mirror images, with healed cells becoming donors for
+later iterations.
+
+The test case hides the patch flush against the left edge, where the
+columns mirror outside the grid and the central rows mirror into the
+cover itself. Eight cells are unreachable by any mirror - and they fall
+back to the transpose donor: position (r, c) takes the value at (c, r),
+which holds exactly in the wallpaper's central band. The mirror
+fixpoint then completes the patch, and the rule only accepts a result
+free of 8s.
+
+No parameters are learned; the entire recovery is deterministic
+symmetry detection plus redundancy readout.
+
+All 4 training pairs and the test case pass. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

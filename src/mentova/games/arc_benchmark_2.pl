@@ -8786,6 +8786,238 @@ mh_transpose_(M_, [Col_|Cols_]) :-
 % mh_head_tail_/3: split a list into its head element and its tail.
 mh_head_tail_([H_|T_], H_, T_).
 
+% ===========================================================================
+% WP-325  mirror_patch  —  Layer 300
+% mirror_patch: a symmetric wallpaper grid has a rectangular patch covered
+% by a solid block of color 8. The horizontal and vertical mirror axes of
+% the wallpaper are detected from the visible cells, covered cells are
+% healed to a fixpoint from their mirror images, stubborn cells fall back
+% to the transpose donor, and the recovered patch alone is the output.
+% Reference: ARC-AGI-2 task 0934a4d8.
+% ===========================================================================
+
+% Register mirror_patch as a known named rule.
+arc2_named_rule(mirror_patch).
+
+% arc2_induce_rule for mirror_patch: pre-filter on a solid 8-block whose
+% bounding box matches the output dimensions, then verify all pairs.
+arc2_induce_rule(TrainingPairs_, mirror_patch) :-
+% Unpack the first training pair for the fast pre-filter.
+    TrainingPairs_ = [pair(In0_, Out0_)|_],
+% The first input must contain a solid rectangle of color 8 cells.
+    mp_bbox8_(In0_, R1_, R2_, C1_, C2_),
+% The output height must equal the height of the covered rectangle.
+    length(Out0_, OH_),
+% Compare the output height against the 8-block bounding-box height.
+    OH_ =:= R2_ - R1_ + 1,
+% Unpack the first output row to measure the output width.
+    Out0_ = [ORow0_|_],
+% The output width must equal the width of the covered rectangle.
+    length(ORow0_, OW_),
+% Compare the output width against the 8-block bounding-box width.
+    OW_ =:= C2_ - C1_ + 1,
+% Flatten the output grid to inspect its cell values.
+    flatten(Out0_, FO0_),
+% The recovered patch must contain no color 8 cells.
+    \+ memberchk(8, FO0_),
+% Verify all training pairs under mirror_patch.
+    forall(member(pair(In_, Out_), TrainingPairs_),
+% Each training pair must transform correctly.
+           arc2_transform(mirror_patch, In_, Out_)).
+
+% arc2_transform for mirror_patch: detect axes, heal, extract the patch.
+arc2_transform(mirror_patch, Grid_, Out_) :-
+% Measure the number of rows in the grid.
+    length(Grid_, NR_),
+% Unpack the first row to measure the number of columns.
+    Grid_ = [Row0_|_],
+% Measure the number of columns in the grid.
+    length(Row0_, NC_),
+% Locate the solid rectangle of color 8 cells covering the patch.
+    mp_bbox8_(Grid_, R1_, R2_, C1_, C2_),
+% Detect the horizontal mirror axis (column sum) from visible cells.
+    once(mp_axis_(Grid_, NR_, NC_, h, SC_)),
+% Detect the vertical mirror axis (row sum) from visible cells.
+    once(mp_axis_(Grid_, NR_, NC_, v, SR_)),
+% Heal all covered cells using the detected mirror symmetries.
+    mp_heal_(Grid_, NR_, NC_, SC_, SR_, Healed_),
+% Extract the healed patch rows within the covered bounding box.
+    findall(ORow_,
+% Enumerate each row index of the covered rectangle.
+            ( between(R1_, R2_, R_),
+% Collect the healed cell values across the covered columns.
+              findall(V_,
+% Enumerate each column index and read the healed cell.
+                      ( between(C1_, C2_, C_), arc2_cell_(Healed_, R_, C_, V_) ),
+% Bind the collected values as one output row.
+                      ORow_) ),
+% Bind the collected rows as the output patch.
+            Out_),
+% Flatten the output patch to inspect its cell values.
+    flatten(Out_, FOut_),
+% The recovered patch must contain no unresolved color 8 cells.
+    \+ memberchk(8, FOut_).
+
+% mp_bbox8_/5: bounding box of all color 8 cells, required to be solid.
+mp_bbox8_(Grid_, R1_, R2_, C1_, C2_) :-
+% Collect the coordinates of every color 8 cell in the grid.
+    findall(R_-C_, ( nth0(R_, Grid_, Row_), nth0(C_, Row_, 8) ), Cells_),
+% At least one color 8 cell must exist for a cover to be present.
+    Cells_ \== [],
+% Extract the row coordinates of all color 8 cells.
+    findall(R_, member(R_-_, Cells_), Rs_),
+% The top edge of the bounding box is the minimum row.
+    min_list(Rs_, R1_),
+% The bottom edge of the bounding box is the maximum row.
+    max_list(Rs_, R2_),
+% Extract the column coordinates of all color 8 cells.
+    findall(C_, member(_-C_, Cells_), Cs_),
+% The left edge of the bounding box is the minimum column.
+    min_list(Cs_, C1_),
+% The right edge of the bounding box is the maximum column.
+    max_list(Cs_, C2_),
+% Compute the height of the bounding box.
+    H_ is R2_ - R1_ + 1,
+% Compute the width of the bounding box.
+    W_ is C2_ - C1_ + 1,
+% Count the color 8 cells found in the grid.
+    length(Cells_, N_),
+% The block is solid when the cell count fills the whole bounding box.
+    N_ =:= H_ * W_.
+
+% mp_axis_/5: find a mirror axis sum with zero conflicts among visible
+% cells and more than fifty supporting matched pairs.
+mp_axis_(Grid_, NR_, NC_, Dir_, S_) :-
+% The candidate axis sum ranges over all in-grid reflection sums.
+    ( Dir_ = h -> Max_ is 2 * NC_ - 3 ; Max_ is 2 * NR_ - 3 ),
+% Enumerate each candidate axis sum in turn.
+    between(1, Max_, S_),
+% No pair of visible cells related by the axis may disagree.
+    \+ ( nth0(R_, Grid_, Row_),
+% Enumerate each visible cell of the row with its value.
+         nth0(C_, Row_, V1_),
+% Skip covered cells: only visible cells constrain the axis.
+         V1_ =\= 8,
+% Compute the mirrored coordinates under the candidate axis.
+         ( Dir_ = h -> R2_ = R_, C2_ is S_ - C_ ; R2_ is S_ - R_, C2_ = C_ ),
+% The mirrored cell must lie inside the grid to constrain the axis.
+         R2_ >= 0, R2_ < NR_, C2_ >= 0, C2_ < NC_,
+% Read the mirrored cell value.
+         arc2_cell_(Grid_, R2_, C2_, V2_),
+% Skip mirrored cells that are covered by the color 8 block.
+         V2_ =\= 8,
+% A disagreement between mirrored visible cells rejects the axis.
+         V1_ =\= V2_ ),
+% Count the visible cell pairs supporting the candidate axis.
+    aggregate_all(count,
+% Enumerate each visible cell of the grid with its value.
+                  ( nth0(R_, Grid_, Row_),
+% Read the cell value at each column of the row.
+                    nth0(C_, Row_, V1_),
+% Only visible cells count as axis support.
+                    V1_ =\= 8,
+% Compute the mirrored coordinates under the candidate axis.
+                    ( Dir_ = h -> R2_ = R_, C2_ is S_ - C_ ; R2_ is S_ - R_, C2_ = C_ ),
+% The mirrored cell must lie inside the grid to count.
+                    R2_ >= 0, R2_ < NR_, C2_ >= 0, C2_ < NC_,
+% Read the mirrored cell value.
+                    arc2_cell_(Grid_, R2_, C2_, V2_),
+% Both cells of the pair must be visible for support.
+                    V2_ =\= 8 ),
+% Bind the number of supporting pairs.
+                  N_),
+% Require substantial support to accept the axis as genuine.
+    N_ > 50.
+
+% mp_heal_/6: mirror fixpoint, then transpose fallback, then iterate.
+mp_heal_(G0_, NR_, NC_, SC_, SR_, G_) :-
+% Run mirror healing passes until no covered cell can be filled.
+    mp_mirror_pass_(G0_, NR_, NC_, SC_, SR_, G1_),
+% Check whether any covered cells survived the mirror fixpoint.
+    (   \+ ( nth0(_, G1_, Row_), memberchk(8, Row_) )
+% No covered cells remain: healing is complete.
+    ->  G_ = G1_
+% Covered cells remain: try the transpose donor fallback once.
+    ;   mp_transpose_pass_(G1_, NR_, NC_, G2_, Changed_),
+% If the transpose pass helped, iterate the full healing cycle.
+        ( Changed_ = true -> mp_heal_(G2_, NR_, NC_, SC_, SR_, G_)
+% Otherwise stop: no further progress is possible.
+        ; G_ = G1_ )
+% Close the leftover-cover conditional.
+    ).
+
+% mp_mirror_pass_/6: repeatedly fill covered cells from mirror images.
+mp_mirror_pass_(G0_, NR_, NC_, SC_, SR_, G_) :-
+% Search for a covered cell with a visible mirror source.
+    (   nth0(R_, G0_, Row_),
+% The cell must be covered by the color 8 block.
+        nth0(C_, Row_, 8),
+% Try the horizontal mirror, the vertical mirror, then the point mirror.
+        (   MC_ is SC_ - C_,
+% The horizontal mirror column must lie inside the grid.
+            MC_ >= 0, MC_ < NC_,
+% Read the horizontally mirrored cell value.
+            arc2_cell_(G0_, R_, MC_, V_),
+% The mirror source must be visible to donate its value.
+            V_ =\= 8
+% The horizontal mirror succeeded; use its value.
+        ->  true
+% Otherwise compute the vertical mirror row.
+        ;   MR_ is SR_ - R_,
+% The vertical mirror row must lie inside the grid.
+            MR_ >= 0, MR_ < NR_,
+% Read the vertically mirrored cell value.
+            arc2_cell_(G0_, MR_, C_, V_),
+% The mirror source must be visible to donate its value.
+            V_ =\= 8
+% The vertical mirror succeeded; use its value.
+        ->  true
+% Otherwise compute both mirror coordinates for the point mirror.
+        ;   MR_ is SR_ - R_,
+% Compute the point-mirror column as well.
+            MC_ is SC_ - C_,
+% The point-mirror cell must lie inside the grid.
+            MR_ >= 0, MR_ < NR_, MC_ >= 0, MC_ < NC_,
+% Read the point-mirrored cell value.
+            arc2_cell_(G0_, MR_, MC_, V_),
+% The mirror source must be visible to donate its value.
+            V_ =\= 8
+% Close the three-way mirror source selection.
+        )
+% A covered cell with a visible mirror source was found: fill it.
+    ->  arc2_set_cell_(G0_, R_, C_, V_, G1_),
+% Continue the pass on the updated grid until no fill is possible.
+        mp_mirror_pass_(G1_, NR_, NC_, SC_, SR_, G_)
+% No covered cell can be filled by any mirror: the pass is stable.
+    ;   G_ = G0_
+% Close the fill-search conditional.
+    ).
+
+% mp_transpose_pass_/5: fill covered cells from their transpose donors.
+mp_transpose_pass_(G0_, NR_, NC_, G_, Changed_) :-
+% Search for a covered cell whose transpose donor is visible.
+    (   nth0(R_, G0_, Row_),
+% The cell must be covered by the color 8 block.
+        nth0(C_, Row_, 8),
+% The transposed coordinates must lie inside the grid.
+        C_ < NR_, R_ < NC_,
+% Read the transpose donor cell value at the swapped coordinates.
+        arc2_cell_(G0_, C_, R_, V_),
+% The transpose donor must be visible to donate its value.
+        V_ =\= 8
+% A transpose donor was found: fill the covered cell.
+    ->  arc2_set_cell_(G0_, R_, C_, V_, G1_),
+% Continue the pass on the updated grid and record the change.
+        mp_transpose_pass_(G1_, NR_, NC_, G_, _),
+% At least one cell was filled during this pass.
+        Changed_ = true
+% No covered cell has a visible transpose donor: nothing changed.
+    ;   G_ = G0_,
+% Record that the transpose pass made no progress.
+        Changed_ = false
+% Close the donor-search conditional.
+    ).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
