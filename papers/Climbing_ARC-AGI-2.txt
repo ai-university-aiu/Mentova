@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 65 complete: 62/120 = 51.67%.
+Last updated: 2026-07-03. Wave 66 complete: 63/120 = 52.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -187,6 +187,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  60 / 120  | 50.00%  | Wave 63: col_rank_fill indicator bar length gives rank; column segments [M,F+,M] sorted by filler count desc; rank-R segment filler replaced by M
 2026-07-03  |  61 / 120  | 50.83%  | Wave 64: snake_frame pointer (value 3) traces rectangular wrap-path around each snake (1/2 body); near/far boundaries snake_edge+/-(N1+1); turn from 1-cell half-count
 2026-07-03  |  62 / 120  | 51.67%  | Wave 65: hole_color legend templates enclose N background holes; grey (5) shapes classified by own hole count and recolored to matching legend color; unmatched grey shapes erased
+2026-07-03  |  63 / 120  | 52.50%  | Wave 66: mosaic_heal symmetric mosaic damaged by 0-patches; damaged rows and cols borrow from compatible donors (>= 5 non-zero agreements) to fixpoint; leftover zeros healed by diagonal mirror
 
 
 COMPLETE SCORE PROGRESSION
@@ -693,6 +694,44 @@ Lessons learned: Frame identification by solid-border test on bounding box uniqu
   same arc2_sf_comps_/arc2_sf_bfs_ predicate pair.
 
 Accomplishment: Acc_357.  Paper: Acc_357_ARC2_Wave59.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 66 - 2026-07-03 - Score: 63/120 = 52.50%
+
+Date: 2026-07-03
+
+Confirmed score: 63 / 120 = 52.50%
+
+Rules added in this wave:
+  mosaic_heal (WP-324, Layer 299)
+
+Task solved: 981571dc (4 training pairs + 1 test case; each 30x30 grid is a
+  symmetric wallpaper mosaic damaged by rectangular patches of zeros; the healed
+  output contains no zeros).
+
+Algorithm: three-stage deterministic repair. Stage 1: every row containing a
+  zero searches the grid for a compatible donor row - one that agrees at every
+  position where both rows are non-zero, with at least 5 agreeing non-zero
+  positions required for confidence - and copies the donor's values into its
+  zero cells; the same pass is applied to columns via transposition; row and
+  column passes iterate until a full pass changes nothing (fixpoint). Stage 2:
+  any leftover zero at (r, c) borrows the value at its diagonal mirror (c, r),
+  exploiting the mosaic's diagonal symmetry. Stage 3: the row/column fixpoint
+  runs once more after the diagonal repair. The transform requires the final
+  grid to be completely zero-free.
+
+Lessons learned: The compatibility test must fail hard (not merely score low)
+  when two rows disagree on any shared non-zero position; treating zeros on
+  either side as neutral makes partially damaged rows valid donors for each
+  other, which is what lets the fixpoint converge from multiple damage patches.
+  The minimum-overlap threshold (5 agreements) prevents accidental matches
+  between short or heavily damaged rows. The diagonal fallback is only needed
+  when a row and its donor pool are simultaneously damaged in the same columns.
+
+Accomplishment: Acc_364.  Paper: Acc_364_ARC2_Wave66_MosaicHeal.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3208,6 +3247,7 @@ b9e38dc0  - Wave 61 - frame_pour         - rectangular frame with fill-seed; int
 581f7754  - Wave 62 - shape_slide         - size-1 edge seeds define slide target; unique-color marker aligns shape; floating seeds follow
 cb2d8a2c  - Wave 64 - snake_frame        - pointer (value 3) traces rectangular wrap-path around 1/2 snakes; near/far = snake_edge +/-(N1+1)
 e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; grey (5) shapes recolored by own enclosed-hole count; unmatched erased
+981571dc  - Wave 66 - mosaic_heal        - symmetric mosaic 0-damage healed; rows/cols borrow from compatible donors to fixpoint; diagonal mirror fallback
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3500,4 +3540,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 64: Snake-frame - pointer cell (value 3) on 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 65: Hole-color - legend templates (compact non-grey components with min dimension >= 2 and fill rate >= 75%) each enclose N background holes (4-connected 0-pockets not reachable from the grid border); grey (value 5) body shapes are classified by their own enclosed-hole count and recolored to the legend color with the same count; grey shapes whose hole count matches no legend entry are erased to background.
   Score: 62/120 = 51.67%. Task e3721c99 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 66: Mosaic-heal - a symmetric wallpaper mosaic damaged by rectangular patches of zeros is repaired in three stages: (1) every damaged row borrows values from a compatible donor row (agreeing at every shared non-zero position, with at least 5 agreements), the same applied to columns via transposition, iterated to fixpoint; (2) leftover zeros borrow from the diagonal mirror cell (r, c) <- (c, r); (3) the fixpoint runs once more; the result must be zero-free.
+  Score: 63/120 = 52.50%. Task 981571dc solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

@@ -8651,6 +8651,141 @@ hc_bg_bfs_(Grid_, [R_-C_|Q_], Ext_, Vis0_, Vis_) :-
 % Close the conditional expansion.
     ).
 
+% ===========================================================================
+% WP-324  mosaic_heal  —  Layer 299
+% mosaic_heal: repair a symmetric mosaic damaged by rectangular patches of
+% zeros. Damaged rows borrow cells from compatible donor rows, damaged
+% columns borrow from compatible donor columns, the two passes iterate to a
+% fixpoint, and any leftover zeros are healed via the diagonal symmetry.
+% Reference: ARC-AGI-2 task 981571dc.
+% ===========================================================================
+
+% Register mosaic_heal as a known named rule.
+arc2_named_rule(mosaic_heal).
+
+% arc2_induce_rule for mosaic_heal: pre-filter on zero damage disappearing.
+arc2_induce_rule(TrainingPairs_, mosaic_heal) :-
+% Unpack the first training pair for the fast pre-filter.
+    TrainingPairs_ = [pair(In0_, Out0_)|_],
+% The first training input must contain at least one zero (damage) cell.
+    flatten(In0_, FI0_), memberchk(0, FI0_),
+% The first training output must contain no zero cells (fully healed).
+    flatten(Out0_, FO0_), \+ memberchk(0, FO0_),
+% Input and output must have the same number of rows.
+    length(In0_, NR0_), length(Out0_, NR0_),
+% Verify all training pairs under mosaic_heal.
+    forall(member(pair(In_, Out_), TrainingPairs_),
+% Each training pair must transform correctly.
+           arc2_transform(mosaic_heal, In_, Out_)).
+
+% arc2_transform for mosaic_heal: fixpoint row/column healing plus diagonal.
+arc2_transform(mosaic_heal, Grid_, Out_) :-
+% Early dispatch guard: the grid must contain at least one zero cell.
+    flatten(Grid_, FlatG_), memberchk(0, FlatG_),
+% Heal rows and columns repeatedly until a full pass changes nothing.
+    mh_fixpoint_(Grid_, G1_),
+% Check whether any zero cells survived the row/column fixpoint.
+    (   flatten(G1_, F1_), memberchk(0, F1_)
+% Leftover zeros: borrow from the diagonal mirror, then iterate again.
+    ->  mh_diag_(G1_, G2_),
+% Re-run the row/column fixpoint after the diagonal repair.
+        mh_fixpoint_(G2_, Out_)
+% No zeros remain: the fixpoint result is already the healed grid.
+    ;   Out_ = G1_
+% Close the leftover-zero conditional.
+    ),
+% Require the healed grid to contain no remaining zero cells.
+    flatten(Out_, FlatO_), \+ memberchk(0, FlatO_).
+
+% mh_fixpoint_/2: iterate row-and-column healing passes until stable.
+mh_fixpoint_(G0_, G_) :-
+% Run one combined row-and-column healing pass.
+    mh_pass_(G0_, G1_),
+% Stop at the fixpoint, otherwise iterate on the improved grid.
+    ( G1_ == G0_ -> G_ = G1_ ; mh_fixpoint_(G1_, G_) ).
+
+% mh_pass_/2: one healing pass over all rows and then all columns.
+mh_pass_(G0_, G_) :-
+% Heal every damaged row by borrowing from a compatible donor row.
+    mh_heal_rows_(G0_, G1_),
+% Transpose the grid so columns become rows.
+    mh_transpose_(G1_, T1_),
+% Heal every damaged column (now a row) the same way.
+    mh_heal_rows_(T1_, T2_),
+% Transpose back to the original orientation.
+    mh_transpose_(T2_, G_).
+
+% mh_heal_rows_/2: heal each row of the grid independently.
+mh_heal_rows_(Grid_, Out_) :-
+% Map the single-row healer over every row, with the grid as donor pool.
+    maplist(mh_heal_row_(Grid_), Grid_, Out_).
+
+% mh_heal_row_/3: fill one damaged row from a compatible donor row.
+mh_heal_row_(Grid_, Row_, New_) :-
+% Only rows containing a zero need healing; search for an agreeing donor.
+    (   memberchk(0, Row_),
+% Enumerate candidate donor rows from the grid.
+        member(Donor_, Grid_),
+% A donor must differ from the damaged row itself.
+        Donor_ \== Row_,
+% Donor and row must agree on every position where both are non-zero.
+        mh_compat_(Row_, Donor_, 0, N_),
+% Require at least five agreeing non-zero positions for confidence.
+        N_ >= 5,
+% Merge: copy donor values into the zero cells of the damaged row.
+        mh_merge_(Row_, Donor_, New_),
+% The merge must actually change the row for the donor to count.
+        New_ \== Row_
+% A suitable donor was found, so keep the healed row.
+    ->  true
+% No suitable donor: leave the row unchanged this pass.
+    ;   New_ = Row_
+% Close the conditional donor search.
+    ).
+
+% mh_compat_/4: base case returns the accumulated agreement count.
+mh_compat_([], [], N_, N_).
+% mh_compat_/4: rows agree wherever both are non-zero; count agreements.
+mh_compat_([A_|As_], [B_|Bs_], Acc_, N_) :-
+% A zero in the damaged row is neutral and adds no agreement.
+    (   A_ =:= 0 -> Acc1_ = Acc_
+% A zero in the donor row is also neutral.
+    ;   B_ =:= 0 -> Acc1_ = Acc_
+% Equal non-zero values increase the agreement count; unequal ones fail.
+    ;   A_ =:= B_ -> Acc1_ is Acc_ + 1
+% Close the per-cell comparison.
+    ),
+% Recurse over the remaining cells of both rows.
+    mh_compat_(As_, Bs_, Acc1_, N_).
+
+% mh_merge_/3: base case for merging two rows of equal length.
+mh_merge_([], [], []).
+% mh_merge_/3: fill zeros of the damaged row from the donor row.
+mh_merge_([A_|As_], [B_|Bs_], [C_|Cs_]) :-
+% Keep the original value unless it is zero, then take the donor value.
+    ( A_ =:= 0 -> C_ = B_ ; C_ = A_ ),
+% Recurse over the remaining cells of both rows.
+    mh_merge_(As_, Bs_, Cs_).
+
+% mh_diag_/2: heal leftover zeros using the diagonal mirror cell.
+mh_diag_(G0_, G_) :-
+% Transpose the grid to obtain each cell's diagonal mirror value.
+    mh_transpose_(G0_, T_),
+% Merge row-wise: any zero cell takes the value of its mirrored cell.
+    maplist(mh_merge_, G0_, T_, G_).
+
+% mh_transpose_/2: base case, a grid of empty rows transposes to nothing.
+mh_transpose_([[]|_], []) :- !.
+% mh_transpose_/2: peel the first column off as the next transposed row.
+mh_transpose_(M_, [Col_|Cols_]) :-
+% Split every row into its head cell and its remaining tail.
+    maplist(mh_head_tail_, M_, Col_, Rest_),
+% Recurse on the remaining columns of the grid.
+    mh_transpose_(Rest_, Cols_).
+
+% mh_head_tail_/3: split a list into its head element and its tail.
+mh_head_tail_([H_|T_], H_, T_).
+
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
