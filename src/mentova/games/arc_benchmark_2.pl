@@ -181,6 +181,21 @@ arc2_induce_rule(TrainingPairs, frame_pour) :-
     forall(member(pair(In, Out), TrainingPairs),
            arc2_transform(frame_pour, In, Out)).
 
+% shape_slide: early dispatch before generic clause.
+arc2_named_rule(shape_slide).
+% arc2_induce_rule(shape_slide): seed-directed relocation pre-filter + majority verify.
+arc2_induce_rule(TrainingPairs, shape_slide) :-
+% Require at least 3 distinct colors (BG + shape-boundary + interior marker).
+    TrainingPairs = [pair(First,_)|_],
+% Flatten first input grid to count distinct values.
+    flatten(First, FCs), sort(FCs, FUniq), length(FUniq, FN), FN >= 3,
+% Count how many training pairs the transform satisfies.
+    length(TrainingPairs, NTotal),
+% Require all but at most one pair to pass (tolerates one anomalous pair).
+    findall(1, (member(pair(In, Out), TrainingPairs),
+               arc2_transform(shape_slide, In, Out)), OKs),
+    length(OKs, NOK), NOK >= NTotal - 1.
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -12320,3 +12335,168 @@ arc2_fp_scan_(Cur, Max, Ax, Pos, Grid, BG, FC, BlkIn, AccIn, AccOut, BlkOut) :-
     ),
     Cur1 is Cur+1,
     arc2_fp_scan_(Cur1, Max, Ax, Pos, Grid, BG, FC, B1, A1, AccOut, BlkOut).
+
+% === shape_slide: seed-directed shape relocation (task 581f7754, Layer 295) ===
+% arc2_transform(shape_slide): delegate to solver.
+arc2_transform(shape_slide, Grid, Out) :-
+% Delegate to main shape_slide solver.
+    arc2_ss_solve_(Grid, Out).
+
+% arc2_ss_solve_: top-level shape_slide solver.
+arc2_ss_solve_(Grid, Out) :-
+% Grid dimensions.
+    length(Grid, H), Grid = [R0|_], length(R0, W),
+% Most-frequent value = background.
+    arc2_fp_bg_(Grid, BG),
+% Collect all non-BG cells as R-C-V triples.
+    findall(R-C-V, (nth0(R,Grid,Row), nth0(C,Row,V), V \= BG), Cells),
+% Find 4-connected components of non-BG cells.
+    arc2_ss_comps_(Cells, Comps),
+% Seeds = size-1 components; Shapes = size>1 components.
+    include([Cs]>>(Cs=[_]), Comps, SeedComps),
+% Exclude size-1 components to get shapes.
+    exclude([Cs]>>(Cs=[_]), Comps, ShapeComps),
+% Flatten seed lists to single R-C-V triples.
+    arc2_ss_extract_seeds_(SeedComps, Seeds),
+% Split seeds into anchor (on grid edge) and floating (interior).
+    arc2_ss_split_seeds_(Seeds, H, W, AnchorSeeds, FloatSeeds),
+% Compute direction and target row/col for each anchor seed.
+    findall(V-Dir-Tgt, (
+        member(R-C-V, AnchorSeeds),
+        arc2_ss_dir_target_(R, C, H, W, Dir, Tgt)
+    ), DTs0),
+% Remove duplicate direction-target entries.
+    sort(DTs0, DirTargets),
+% Compute old/new cell lists for each shape whose interior matches an anchor color.
+    findall(OCs-NCs, (
+        member(OCs, ShapeComps),
+        arc2_ss_comp_move_(OCs, DirTargets, H, W, NCs)
+    ), ShapeMoves),
+% Compute old/new positions for each floating seed matching an anchor color.
+    findall([RO-CO-VO]-[RN-CN-VO], (
+        member(RO-CO-VO, FloatSeeds),
+        member(VO-Dir-Tgt, DirTargets),
+        arc2_ss_slide_cell_(RO, CO, Dir, Tgt, RN, CN),
+        RN >= 0, RN < H, CN >= 0, CN < W
+    ), SeedMoves),
+% Combine shape and seed moves.
+    append(ShapeMoves, SeedMoves, AllMoves),
+% Collect all vacated (old) positions as R-C pairs.
+    findall(R-C, (member(OC-_, AllMoves), member(R-C-_, OC)), OldPosns),
+% Collect all new positions with their values.
+    findall(R-C-V, (member(_-NC, AllMoves), member(R-C-V, NC)), NewPosns),
+% Apply vacate-and-fill to produce output grid.
+    arc2_ss_apply_(Grid, OldPosns, NewPosns, BG, Out).
+
+% arc2_ss_comps_: collect all 4-connected components from a cell list.
+arc2_ss_comps_([], []).
+% Take first cell as seed, BFS to find its component, recurse on remainder.
+arc2_ss_comps_([H|T], [Comp|Rest]) :-
+% Flood-fill from first cell; it starts in Acc and is absent from T.
+    arc2_ss_flood_([H], [H], T, Comp, Remaining),
+% Recurse on cells not yet placed in any component.
+    arc2_ss_comps_(Remaining, Rest).
+
+% arc2_ss_flood_: BFS flood-fill for one 4-connected component.
+arc2_ss_flood_([], Acc, Rem, Acc, Rem).
+% Process current frontier cell R-C; find 4-adjacent cells still in Rem.
+arc2_ss_flood_([R-C-_|RestF], Acc, Rem0, Comp, Rem) :-
+% Find all cells in Rem0 that are 4-adjacent to (R,C).
+    findall(R2-C2-V2, (
+        member(R2-C2-V2, Rem0),
+        ( R2 =:= R+1, C2 =:= C
+        ; R2 =:= R-1, C2 =:= C
+        ; R2 =:= R,   C2 =:= C+1
+        ; R2 =:= R,   C2 =:= C-1
+        )
+    ), Nbrs),
+% Remove newly found neighbors from remaining pool to avoid revisiting.
+    subtract(Rem0, Nbrs, Rem1),
+% Append neighbors to frontier queue and component accumulator.
+    append(RestF, Nbrs, NewF),
+    append(Acc, Nbrs, NewAcc),
+% Continue BFS with updated frontier, accumulator, and remaining pool.
+    arc2_ss_flood_(NewF, NewAcc, Rem1, Comp, Rem).
+
+% arc2_ss_extract_seeds_: unwrap singleton component lists to plain R-C-V triples.
+arc2_ss_extract_seeds_([], []).
+% Each seed component is a one-element list; extract its single triple.
+arc2_ss_extract_seeds_([[RCV]|Rest], [RCV|Ss]) :-
+    arc2_ss_extract_seeds_(Rest, Ss).
+
+% arc2_ss_split_seeds_: partition seeds into anchor (edge) and floating (interior).
+arc2_ss_split_seeds_([], _, _, [], []).
+% Seed on any grid edge => anchor seed.
+arc2_ss_split_seeds_([R-C-V|T], H, W, [R-C-V|As], Fs) :-
+    ( R =:= 0 ; R =:= H-1 ; C =:= 0 ; C =:= W-1 ), !,
+% Recurse to classify remaining seeds.
+    arc2_ss_split_seeds_(T, H, W, As, Fs).
+% Seed not on any edge => floating seed.
+arc2_ss_split_seeds_([R-C-V|T], H, W, As, [R-C-V|Fs]) :-
+    arc2_ss_split_seeds_(T, H, W, As, Fs).
+
+% arc2_ss_dir_target_: determine slide direction and target from anchor seed position.
+% Left edge (col=0): vertical slide, target row = R.
+arc2_ss_dir_target_(R, C, _, _, vert, R) :- C =:= 0, !.
+% Right edge (col=W-1): vertical slide, target row = R.
+arc2_ss_dir_target_(R, C, _, W, vert, R) :- C =:= W-1, !.
+% Top edge (row=0): horizontal slide, target col = C.
+arc2_ss_dir_target_(R, C, _, _, horiz, C) :- R =:= 0, !.
+% Bottom edge (row=H-1): horizontal slide, target col = C.
+arc2_ss_dir_target_(R, C, H, _, horiz, C) :- R =:= H-1.
+
+% arc2_ss_comp_move_: compute new cell positions for a shape by sliding to target.
+arc2_ss_comp_move_(Comp, DirTargets, H, W, NewCells) :-
+% Interior marker = the UNIQUE-COLOR cell (appears exactly once) whose color is an anchor seed.
+    member(RI-CI-VI, Comp),
+% Confirm VI appears exactly once in the component (it is the unique interior color).
+    findall(R-C, member(R-C-VI, Comp), [RI-CI]),
+% Confirm VI matches an anchor seed direction/target.
+    member(VI-Dir-Tgt, DirTargets), !,
+% Compute row and column displacement to align interior marker with target.
+    ( Dir = vert  -> DR is Tgt - RI, DC is 0
+    ; Dir = horiz -> DR is 0, DC is Tgt - CI
+    ),
+% Shift all cells; discard those landing outside grid bounds.
+    findall(R1-C1-V0, (
+        member(R0-C0-V0, Comp),
+        R1 is R0 + DR, C1 is C0 + DC,
+        R1 >= 0, R1 < H, C1 >= 0, C1 < W
+    ), NewCells).
+
+% arc2_ss_slide_cell_: compute new position for a floating seed.
+% Vertical slide: column stays, row moves to target.
+arc2_ss_slide_cell_(_, CO, vert, Tgt, Tgt, CO).
+% Horizontal slide: row stays, column moves to target.
+arc2_ss_slide_cell_(RO, _, horiz, Tgt, RO, Tgt).
+
+% arc2_ss_apply_: build output grid by vacating old positions and filling new ones.
+arc2_ss_apply_(Grid, OldPosns, NewPosns, BG, Out) :-
+% Get grid dimensions.
+    length(Grid, H), Grid = [GRow0|_], length(GRow0, W),
+% Build row and column index lists.
+    H1 is H-1, W1 is W-1,
+% Enumerate row indices.
+    numlist(0, H1, Rs), numlist(0, W1, Cs),
+% Build output row by row using index-driven maplist.
+    maplist(arc2_ss_apply_row_(Grid, Cs, OldPosns, NewPosns, BG), Rs, Out).
+
+% arc2_ss_apply_row_: build one output row at index R.
+arc2_ss_apply_row_(Grid, Cs, OldPosns, NewPosns, BG, R, OutRow) :-
+% Get original row from input grid.
+    nth0(R, Grid, GRow),
+% Build each cell value in this row.
+    maplist(arc2_ss_apply_cell_(GRow, R, OldPosns, NewPosns, BG), Cs, OutRow).
+
+% arc2_ss_apply_cell_: determine output value for cell (R,C).
+arc2_ss_apply_cell_(GRow, R, OldPosns, NewPosns, BG, C, Val) :-
+% Get original cell value.
+    nth0(C, GRow, Orig),
+% Vacated cell: replaced by new value if refilled, else BG.
+    ( member(R-C, OldPosns) ->
+        ( member(R-C-V2, NewPosns) -> Val = V2 ; Val = BG )
+% New fill only (not vacated): place new value.
+    ; member(R-C-V2, NewPosns) -> Val = V2
+% Unchanged cell: keep original.
+    ; Val = Orig
+    ).

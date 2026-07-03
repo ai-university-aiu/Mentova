@@ -3472,3 +3472,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 60: Layout-tile divides the input by two ide
 Dison, D. R. (2026). ARC-AGI-2 Wave 61: Frame-pour - a rectangular frame of color F contains a fill-seed FC on one interior side opposite the opening; the interior fills with FC via unified shadow-cone scan (far side to boundary); B-cell shadows accumulate and propagate through the opening into the exterior; the exterior widens by one unit every S depth steps (slope S = 2.0/DC, float); degenerate single-F-cell boundary col uses precomputed wall extents as fallback range.
   Score: 58/120 = 48.33%. Task b9e38dc0 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 62: Shape-slide detects 4-connected components of non-BG cells; size-1 components on grid edges are anchor seeds that define a vertical (left/right edge) or horizontal (top/bottom edge) slide target; each multi-cell shape's unique-color interior marker slides to align with the target row or col; floating seeds (size-1, not on edge) of matching color also slide to the target; cells exiting the grid boundary are discarded.
+  Score: 59/120 = 49.17%. Task 581f7754 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
