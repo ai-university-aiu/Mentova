@@ -1,0 +1,27 @@
+Accomplishment 363: ARC-AGI-2 Wave 65 - Hole Color
+
+PrologAI solves ARC-AGI-2 task e3721c99 with a new glass-box rule called
+hole_color (WP-323, Layer 298), raising the benchmark score from
+61/120 = 50.83% to 62/120 = 51.67%.
+
+The input grid contains a legend region of compact colored template
+shapes and a body region of grey (value 5) shapes. Each legend template
+encloses some number of background holes: pockets of empty cells that
+cannot be reached from the grid border without crossing the template's
+color. The output recolors each grey body shape to the color of the
+legend template with the same number of enclosed holes.
+
+The key insight: the legend is an in-context symbol table mapping hole
+counts to colors. A solid square has 0 holes, a ring has 1, and larger
+templates enclose 2 or 3 pockets. Each grey shape is classified by
+counting its own enclosed holes with a border-connected exterior BFS,
+then looked up in the legend. Grey shapes whose hole count matches no
+legend entry are erased to background - a detail revealed by a 4-hole
+grey shape in training pair 1 that simply disappears in the expected
+output.
+
+Both training pairs and the test case pass. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
