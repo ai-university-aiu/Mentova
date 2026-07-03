@@ -226,6 +226,29 @@ arc2_induce_rule(TrainingPairs, snake_frame) :-
                arc2_transform(snake_frame, In, Out)), OKs),
     length(OKs, NOK), NOK =:= NTotal.
 
+% shape_catalog: early dispatch before generic clause (WP-328, Layer 303).
+arc2_named_rule(shape_catalog).
+% arc2_induce_rule(shape_catalog): crop-and-recolor pre-filter + full verify.
+arc2_induce_rule(TrainingPairs, shape_catalog) :-
+% Fast filter: first training output must be strictly smaller than its input.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first training input dimensions.
+    length(First, HI), First = [FR0|_], length(FR0, WI),
+% Measure the first training output dimensions.
+    length(FirstOut, HO), FirstOut = [OR0|_], length(OR0, WO),
+% Output must fit inside the input.
+    HO =< HI, WO =< WI,
+% Output must be strictly smaller in at least one dimension.
+    (HO < HI ; WO < WI),
+% Fast filter: the first training input must use at least five colors.
+    flatten(First, FCells),
+% Count the distinct colors of the first training input.
+    sort(FCells, FUniq), length(FUniq, FNC), FNC >= 5,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under shape_catalog.
+           arc2_transform(shape_catalog, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -14156,3 +14179,205 @@ fc_apply_(diag_anti, G_, T_) :-
     arc2_transform(transpose, G_, X_),
 % Then apply the half turn to reach the anti-diagonal reflection.
     arc2_transform(rotate_180, X_, T_).
+
+% ===========================================================================
+% WP-328  shape_catalog  —  Layer 303
+% shape_catalog: crop the two-color block and recolor its motifs from the
+% catalogue of same-shaped colored components scattered outside the block.
+% The largest non-background component is a lattice of one frame color whose
+% bounding box encloses only frame-color and background cells; each connected
+% background pocket inside the box is a motif whose shape (up to rotation and
+% reflection) matches catalogue shapes outside; the motif takes the dominant
+% catalogue color for that shape.
+% Reference: ARC-AGI-2 task 67e490f4.
+% ===========================================================================
+
+% arc2_transform for shape_catalog: crop block and recolor motifs by shape.
+arc2_transform(shape_catalog, Grid_, Out_) :-
+% Determine the background color as the most frequent cell value.
+    arc2_bg_color_(Grid_, Bg_),
+% Find all 4-connected same-color components ignoring the background.
+    arc2_all_comps_(Grid_, Bg_, Comps_),
+% At least two components are required (frame plus catalogue).
+    Comps_ = [_, _|_],
+% Select the largest component as the frame lattice.
+    scg_largest_(Comps_, comp(FC_, FCells_)),
+% Compute the bounding box of the frame lattice.
+    scg_bbox_(FCells_, R0_, R1_, C0_, C1_),
+% Require every bounding-box cell to be frame color or background.
+    forall((between(R0_, R1_, BR_), between(C0_, C1_, BC_)),
+% Fetch the cell and check its color is in the two-color block palette.
+           (arc2_cell_(Grid_, BR_, BC_, BV_), (BV_ =:= FC_ ; BV_ =:= Bg_))),
+% Crop the block sub-grid along the frame bounding box.
+    scg_crop_(Grid_, R0_, R1_, C0_, C1_, Crop_),
+% Build the catalogue from every non-frame component.
+    exclude(==(comp(FC_, FCells_)), Comps_, Catalogue_),
+% Canonicalize each catalogue component into a shape-color pair.
+    maplist([comp(CV_, CCs_), Canon_-CV_]>>scg_canon_(CCs_, Canon_),
+            Catalogue_, CatPairs_),
+% Find the background motif pockets inside the cropped block.
+    arc2_all_comps_(Crop_, FC_, Motifs_),
+% Assign the dominant catalogue color to every motif by canonical shape.
+    maplist(scg_assign_(CatPairs_), Motifs_, CellColorLists_),
+% Flatten the per-motif cell-color assignments into one lookup list.
+    append(CellColorLists_, CellColors_),
+% Rebuild the cropped block with every motif recolored.
+    scg_paint_(Crop_, FC_, CellColors_, Out_).
+
+% scg_largest_(+Comps, -Largest): component with the most cells.
+scg_largest_([Comp_], Comp_) :-
+% A single component is trivially the largest.
+    !.
+% scg_largest_/2 recursive case: compare head against best of tail.
+scg_largest_([comp(V_, Cs_)|Rest_], Best_) :-
+% Find the largest component of the tail.
+    scg_largest_(Rest_, comp(BV_, BCs_)),
+% Measure the head component.
+    length(Cs_, N_),
+% Measure the best tail component.
+    length(BCs_, BN_),
+% Keep whichever component holds more cells.
+    (N_ > BN_ -> Best_ = comp(V_, Cs_) ; Best_ = comp(BV_, BCs_)).
+
+% scg_bbox_(+Cells, -R0, -R1, -C0, -C1): bounding box of a cell list.
+scg_bbox_(Cells_, R0_, R1_, C0_, C1_) :-
+% Collect all row indices of the cells.
+    findall(R_, member(R_-_, Cells_), Rs_),
+% Collect all column indices of the cells.
+    findall(C_, member(_-C_, Cells_), Cs_),
+% Take the row extremes.
+    min_list(Rs_, R0_), max_list(Rs_, R1_),
+% Take the column extremes.
+    min_list(Cs_, C0_), max_list(Cs_, C1_).
+
+% scg_crop_(+Grid, +R0, +R1, +C0, +C1, -Crop): cut the sub-grid.
+scg_crop_(Grid_, R0_, R1_, C0_, C1_, Crop_) :-
+% Iterate rows of the bounding box in order.
+    findall(CropRow_,
+% For each row index inside the box build the cropped row.
+            (between(R0_, R1_, R_),
+% Fetch the full grid row.
+             nth0(R_, Grid_, Row_),
+% Collect the row cells between the column bounds.
+             findall(V_, (between(C0_, C1_, C_), nth0(C_, Row_, V_)), CropRow_)),
+% The collected rows form the cropped block.
+            Crop_).
+
+% scg_canon_(+Cells, -Canon): canonical shape under the eight D4 transforms.
+scg_canon_(Cells_, Canon_) :-
+% Normalize the raw cells to the origin.
+    scg_norm_(Cells_, Norm_),
+% Measure the normalized shape extents.
+    scg_bbox_(Norm_, 0, MR_, 0, MC_),
+% Build all eight rotated and reflected variants of the shape.
+    findall(Var_,
+% Each variant maps every normalized cell through one D4 transform.
+            (member(T_, [id, fh, fv, r2, tr, r1, r3, ad]),
+% Transform each cell and renormalize the result.
+             scg_d4_(T_, MR_, MC_, Norm_, Var_)),
+% Collect the eight candidate forms.
+            Vars_),
+% The canonical form is the lexicographically smallest variant.
+    msort(Vars_, [Canon_|_]).
+
+% scg_norm_(+Cells, -Norm): shift cells so the minimum corner is the origin.
+scg_norm_(Cells_, Norm_) :-
+% Compute the bounding box of the raw cells.
+    scg_bbox_(Cells_, R0_, _, C0_, _),
+% Shift every cell by the minimum corner offsets.
+    findall(NR_-NC_,
+% Subtract the corner offsets from each cell coordinate.
+            (member(R_-C_, Cells_), NR_ is R_ - R0_, NC_ is C_ - C0_),
+% Collect the shifted cells.
+            Shifted_),
+% Sort the shifted cells into a stable order.
+    msort(Shifted_, Norm_).
+
+% scg_d4_(+T, +MR, +MC, +Norm, -Var): apply one D4 transform to a shape.
+scg_d4_(T_, MR_, MC_, Norm_, Var_) :-
+% Map every normalized cell through the named transform.
+    findall(P_, (member(R_-C_, Norm_), scg_d4c_(T_, MR_, MC_, R_, C_, P_)), Ps_),
+% Sort the transformed cells into canonical order.
+    msort(Ps_, Var_).
+
+% scg_d4c_(id, ...): identity transform keeps the cell unchanged.
+scg_d4c_(id, _, _, R_, C_, R_-C_).
+% scg_d4c_(fh, ...): horizontal flip mirrors the column index.
+scg_d4c_(fh, _, MC_, R_, C_, R_-C2_) :-
+% Mirror the column across the shape width.
+    C2_ is MC_ - C_.
+% scg_d4c_(fv, ...): vertical flip mirrors the row index.
+scg_d4c_(fv, MR_, _, R_, C_, R2_-C_) :-
+% Mirror the row across the shape height.
+    R2_ is MR_ - R_.
+% scg_d4c_(r2, ...): half turn mirrors both indices.
+scg_d4c_(r2, MR_, MC_, R_, C_, R2_-C2_) :-
+% Mirror the row across the shape height.
+    R2_ is MR_ - R_,
+% Mirror the column across the shape width.
+    C2_ is MC_ - C_.
+% scg_d4c_(tr, ...): main-diagonal reflection swaps the indices.
+scg_d4c_(tr, _, _, R_, C_, C_-R_).
+% scg_d4c_(r1, ...): quarter turn clockwise.
+scg_d4c_(r1, MR_, _, R_, C_, C_-R2_) :-
+% Mirror the row before swapping to rotate clockwise.
+    R2_ is MR_ - R_.
+% scg_d4c_(r3, ...): quarter turn counterclockwise.
+scg_d4c_(r3, _, MC_, R_, C_, C2_-R_) :-
+% Mirror the column before swapping to rotate counterclockwise.
+    C2_ is MC_ - C_.
+% scg_d4c_(ad, ...): anti-diagonal reflection mirrors both then swaps.
+scg_d4c_(ad, MR_, MC_, R_, C_, C2_-R2_) :-
+% Mirror the row across the shape height.
+    R2_ is MR_ - R_,
+% Mirror the column across the shape width.
+    C2_ is MC_ - C_.
+
+% scg_assign_(+CatPairs, +Motif, -CellColors): color one motif from the catalogue.
+scg_assign_(CatPairs_, comp(_, Cells_), CellColors_) :-
+% Canonicalize the motif shape.
+    scg_canon_(Cells_, Canon_),
+% Collect every catalogue color whose shape matches the motif.
+    findall(CV_, member(Canon_-CV_, CatPairs_), Votes_),
+% At least one catalogue shape must match the motif.
+    Votes_ = [_|_],
+% Pick the dominant (most frequent) catalogue color.
+    scg_dominant_(Votes_, Color_),
+% Pair every motif cell with the chosen color.
+    findall(Cell_-Color_, member(Cell_, Cells_), CellColors_).
+
+% scg_dominant_(+Votes, -Color): most frequent value, smallest on ties.
+scg_dominant_(Votes_, Color_) :-
+% Sort the votes so equal colors are adjacent.
+    msort(Votes_, Sorted_),
+% Count each run of equal colors as Count-Color pairs.
+    findall(N_-V_,
+% A run is one distinct color with its number of occurrences.
+            (member(V_, Sorted_), aggregate_all(count, member(V_, Sorted_), N_)),
+% Collect all run counts.
+            Runs_),
+% Sort the runs so the largest count comes last with the largest color.
+    msort(Runs_, RunsSorted_),
+% Deduplicate while keeping order.
+    last(RunsSorted_, TopN_-_),
+% Among top-count colors take the smallest color value.
+    findall(TV_, member(TopN_-TV_, RunsSorted_), TopVs_),
+% The sorted list head is the smallest dominant color.
+    msort(TopVs_, [Color_|_]).
+
+% scg_paint_(+Crop, +FC, +CellColors, -Out): rebuild the recolored block.
+scg_paint_(Crop_, FC_, CellColors_, Out_) :-
+% Iterate the cropped rows with their indices.
+    findall(OutRow_,
+% For every row index rebuild the recolored row.
+            (nth0(R_, Crop_, Row_),
+% For every cell decide between frame color and motif color.
+             findall(OV_,
+% Fetch the cell value at each column of the row.
+                     (nth0(C_, Row_, V_),
+% Frame cells stay frame colored; motif cells take their assigned color.
+                      (V_ =:= FC_ -> OV_ = FC_ ; memberchk(R_-C_-OV2_, CellColors_), OV_ = OV2_)),
+% Collect the rebuilt row.
+                     OutRow_)),
+% Collect all rebuilt rows into the output block.
+            Out_).

@@ -1,0 +1,37 @@
+Accomplishment 368: ARC-AGI-2 Wave 70 - Shape Catalogue Recoloring
+
+PrologAI solves ARC-AGI-2 task 67e490f4 with a new glass-box rule called
+shape_catalog (WP-328, Layer 303), raising the benchmark score from
+66/120 = 55.00% to 67/120 = 55.83%.
+
+The input grid is dominated by one large lattice block built from
+exactly two colors - a frame color drawn over the background - whose
+lattice encloses small pockets shaped like squares, dominoes, pluses,
+and L-triominoes. Scattered outside the block sits a catalogue of small
+shapes, each drawn in its own color. The output is the block alone,
+cropped along its bounding box, with every pocket recolored to the
+color of the same-shaped catalogue entry.
+
+The key insight is that the outside shapes are a color dictionary keyed
+by shape. Every pocket inside the block looks itself up in that
+dictionary and paints itself with the color it finds there. The lookup
+must be invariant under rotation and reflection: the hidden test block
+holds a horizontal domino whose only catalogue mates are drawn
+vertically, and the block corners repeat one L-triomino in four
+orientations while the catalogue draws it in fewer, so each shape is
+reduced to the lexicographically smallest of its eight dihedral-four
+variants before comparison.
+
+One more subtlety made the rule honest. The assignment is a vote, not a
+first match: one training motif matches catalogue squares in three
+different colors at the same time, and the correct color is the one
+holding the most catalogue entries. The two-color bounding-box guard
+also doubles as catalogue separation, guaranteeing every other
+component stands outside the block with no positional filtering.
+
+Both training pairs and the test case passed on the first full
+prototype run. Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
