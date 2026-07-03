@@ -1,0 +1,163 @@
+Accomplishment 357: ARC-AGI-2 Wave 59 - Scaled Frame (WP-317, Layer 292)
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-02
+
+ABSTRACT
+
+Wave 59 adds the scaled_frame rule (WP-317, Layer 292) to PrologAI's ARC-AGI-2
+benchmark solver, solving task 898e7135 and raising the score from 55/120 =
+45.83% to 56/120 = 46.67%.
+
+The rule recognizes a rectangular frame (a solid-colored border with 0-hole cells
+inside) in the input grid, along with colored object-blobs placed outside the
+frame in the background. The scale factor N is derived as sqrt(GCD of all object
+cell-counts). The output is the frame scaled by N, with each 0-hole region in the
+frame filled by the color of its matched background object. Matching uses a
+(normalized_size, centroid_column) sort-pair order to resolve ties.
+
+
+TASK DESCRIPTION
+
+Task ID: 898e7135
+
+Training pair 1 (P1): a 12x13 input containing a 3-colored frame at rows 2-7,
+cols 3-9 (6x7 bounding box; frame color 3; two interior hole regions). Outside
+the frame: a 4-blob (4 cells) and a 5-blob (4 cells). Scale = sqrt(GCD(4,4)) = 2.
+Output: 12x14 grid; frame scaled 2x; two holes filled with colors 4 and 5.
+
+Training pair 2 (P2): a 19x30 input containing a 3-colored frame at rows 0-13,
+cols 20-29 (14x10 bounding box). Outside: 1-blob (24 cells), 4-blob (24 cells),
+5-blkA (4 cells), 5-blkB (4 cells), 6-blob (20 cells). Noise: isolated 8-cells
+(size 1, discarded). Scale = sqrt(GCD(24,24,4,4,20)) = sqrt(4) = 2.
+Output: 28x20 grid; frame scaled 2x; five hole-groups filled with matched object
+colors in (norm_size, centroid_col) order.
+
+Test case: a 30x30 input containing a 4-colored frame at rows 10-19, cols 0-9
+(10x10 bounding box). Outside: 8-blob (63 cells), 5-blob (54 cells), two 3-blobs
+(9 cells each), 6-blob (45 cells), 9-blob (45 cells). Noise: isolated 2-cells
+(size 1, discarded). Scale = sqrt(GCD(63,54,9,9,45,45)) = sqrt(9) = 3.
+Output: 30x30 grid; frame scaled 3x; six hole-groups filled with matched object
+colors.
+
+
+THE SCALED_FRAME RULE
+
+Step 1 - Locate the frame:
+arc2_sf_frame_/6 iterates over each distinct non-background color FC. For each
+FC, it collects all cells of that color, computes their bounding box (R0,C0,R1,C1),
+and calls arc2_sf_solid_border_/6 to verify that all four border edges (top row
+R0, bottom row R1, left column C0, right column C1) are completely filled with FC.
+Then it checks that at least one 0-cell exists strictly inside the bounding box
+interior. The first color passing all tests is the frame color.
+
+Step 2 - Extract hole components:
+arc2_sf_holes_/6 collects all 0-cells in the frame interior (rows R0+1..R1-1,
+cols C0+1..C1-1). arc2_sf_conn_comps_/2 finds the 4-connected components of those
+0-cells using BFS (arc2_sf_comps_/2 and arc2_sf_bfs_/5). Each component is a
+hole-group.
+
+Step 3 - Identify background objects:
+arc2_sf_objects_/7 collects all non-background non-FC cells that lie outside the
+frame bounding box. It finds their 4-connected components (using the same BFS
+predicates) and discards any component with fewer than 4 cells (noise filter).
+Each surviving component is recorded as (color, cell-list).
+
+Step 4 - Compute scale factor:
+arc2_sf_scale_/2 collects the cell-counts of all background objects. arc2_sf_gcd_list_/2
+folds GCD across the list of counts using SWI-Prolog's built-in gcd/2. The scale
+factor is round(sqrt(float(G))) where G is the GCD.
+
+Step 5 - Match hole-groups to object colors:
+arc2_sf_match_/4 annotates each hole-group as a triple (size, centroid_col, HComp)
+and each object as (size // Scale^2, centroid_col, Color). arc2_sf_centcol_/2
+computes centroid column as the mean column coordinate of all cells. msort/2 sorts
+both annotated lists by (size, centroid_col) in ascending order. arc2_sf_pair_match_/3
+pairs the N-th hole-group annotation with the N-th object annotation, extracting
+the HComp and Color. This sort-pair strategy ensures that among objects of equal
+normalized size, the one with the smaller centroid column fills the hole-group
+with the smaller centroid column.
+
+Step 6 - Build the output grid:
+arc2_sf_solve_/2 computes OutH = (R1-R0+1)*Scale and OutW = (C1-C0+1)*Scale.
+It builds the output by maplist over all output rows and columns. For each
+output cell (R,C), arc2_sf_cell_val_/8 computes the frame cell position:
+FRow = R0 + R // Scale, FCol = C0 + C // Scale. It reads the value at (FRow,FCol)
+in the original grid. If that value is 0 (a hole), arc2_sf_hole_color_/4 looks up
+the fill color from Matches by finding which hole-group contains (FRow, FCol).
+Otherwise the output value is FC.
+
+
+KEY INSIGHTS
+
+Frame identification - The solid-border test (all four edges solid FC) uniquely
+selects the frame color from among all non-background colors. Interior cells may
+be either FC (interior walls) or 0 (holes); both are valid. Background object blobs
+and noise cells fail the test because their bounding box borders contain cells of
+other values.
+
+Scale from GCD - Each background object corresponds to exactly one hole-group:
+if the hole-group has H cells and the scale is N, the object has H * N^2 cells.
+Therefore GCD of all object cell-counts = N^2, so N = sqrt(GCD). Computing via
+round(sqrt(float(GCD))) avoids integer square root truncation errors.
+
+Tie-breaking by column - When multiple hole-groups have the same size and multiple
+objects share the same normalized size, sorting both by centroid column and pairing
+in order places left-side hole-groups with left-side objects. This spatial locality
+invariant is satisfied by every training pair and the test case.
+
+Output by integer division - Output cell (R,C) maps to frame cell
+(R0 + R//N, C0 + C//N). This uniformly tiles the frame N times in each dimension:
+the N consecutive output positions mapping to the same frame row/col all receive
+the same value, producing perfect N*N blocks for every frame cell.
+
+Noise filter - Objects with fewer than 4 cells (isolated noise markers) are
+excluded before GCD computation and before matching. This prevents noise cells
+from affecting the scale factor or consuming hole-group matches.
+
+
+IMPLEMENTATION
+
+File: Mentova/src/mentova/games/arc_benchmark_2.pl
+Layer: 292 (WP-317)
+Namespace: arc2_sf_* (scaled_frame helpers)
+
+New predicates (all with ERC % comments):
+  arc2_named_rule(scaled_frame)
+  arc2_transform(scaled_frame, +Grid, -Out)
+  arc2_induce_rule(+TrainingPairs, scaled_frame)
+  arc2_sf_solve_(+Grid, -Out)
+  arc2_sf_cell_val_(+Grid,+FC,+FR0,+FC0,+Scale,+Matches,+R,+C,-Val)
+  arc2_sf_hole_color_(+Matches,+R,+C,-V)
+  arc2_sf_frame_(+Grid,-FC,-R0,-C0,-R1,-C1)
+  arc2_sf_solid_border_(+Grid,+FC,+R0,+C0,+R1,+C1)
+  arc2_sf_holes_(+Grid,+R0,+C0,+R1,+C1,-Holes)
+  arc2_sf_objects_(+Grid,+FC,+R0,+C0,+R1,+C1,-Objects)
+  arc2_sf_scale_(+Objects,-Scale)
+  arc2_sf_gcd_list_(+List,-G)
+  arc2_sf_match_(+HComps,+Objects,+Scale,-Matches)
+  arc2_sf_pair_match_(+HAnnot,+OAnnot,-Match)
+  arc2_sf_centcol_(+Cells,-Col)
+  arc2_sf_conn_comps_(+Cells,-Comps)
+  arc2_sf_comps_(+Cells,-Comps)
+  arc2_sf_bfs_(+Queue,+Avail,+Visited,-Comp,-Remaining)
+
+Test results: P1 PASS, P2 PASS, TEST PASS.
+arc2_induce_rule([P1,P2], scaled_frame) succeeds on both training pairs.
+
+
+SCORE IMPACT
+
+Previous score: 55 / 120 = 45.83% (Wave 58 complete)
+This wave:       56 / 120 = 46.67% (Wave 59 complete)
+Tasks remaining: 64 unsolved (plus 2 regressed: 13e47133, 9385bd28)
+
+
+SPARC DOCUMENTATION
+
+Specification: v289 (Mentova), v285 (PrologAI)
+Pseudocode: v281 (Mentova), v277 (PrologAI)
+Architecture: v282 (Mentova), v278 (PrologAI)
+Refinement: v341 (Mentova), v337 (PrologAI)
+Completion: v347 (Mentova), v343 (PrologAI)

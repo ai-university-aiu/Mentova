@@ -179,6 +179,8 @@ Date        | Score      | Percent | Notes
 2026-07-02  |  52 / 120  | 43.33%  | Wave 55: pocket_shot 2-cell blocks fire into frame interiors; three-condition interior-peg check; non-firing blocks disappear to BG
 2026-07-02  |  53 / 120  | 44.17%  | Wave 56: shape_walk 3x3 block shapes direct a colored chain walk; S1->LEFT-2; S2->RIGHT-3; S3->DOWN-2; S4->LEFT-4
 2026-07-02  |  54 / 120  | 45.00%  | Wave 57: frame_reflect 9x9 bordered frame stamps 180-rotated 3x3 sub-regions outward; hole filled by arm-product rule
+2026-07-02  |  55 / 120  | 45.83%  | Wave 58: cross_reflect cross of 1s divides grid into 4 quadrants; TL has anchor+satellites; TR/BR/BL each get satellites reflected+scaled
+2026-07-02  |  56 / 120  | 46.67%  | Wave 59: scaled_frame rectangular frame scaled by sqrt(GCD of object sizes); 0-holes filled by matched object color via (norm_size,centroid_col) sort-pair
 
 
 COMPLETE SCORE PROGRESSION
@@ -632,6 +634,59 @@ Task solved: db0c5428 (3 training pairs + 1 test case; 9x9 bordered frame
   marker AI, frame filler, and four outer corner values).
 
 Accomplishment: Acc_355.  Paper: Acc_355_ARC2_Wave57.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 58 - 2026-07-02 - Score: 55/120 = 45.83%
+
+Date: 2026-07-02
+
+Confirmed score: 55 / 120 = 45.83%
+
+Rules added in this wave:
+  cross_reflect (WP-316, Layer 291)
+
+Task solved: b10624e5 (2 training pairs + 1 test case; a cross of 1s divides the
+  grid into 4 quadrants; TL quadrant has an anchor block plus satellite blocks; each
+  other quadrant has only an anchor block; output adds satellites to TR (LR-reflected),
+  BR (180-rotated), BL (TB-reflected) scaled by N_q/N_tl anchor size ratio).
+
+Lessons learned: Cross detection requires finding the unique row and unique column
+  that are entirely one non-BG value. Satellite offset/size computation must be done
+  in anchor-local coordinates, then scaled by N_q/N_tl for each other quadrant.
+  LR-reflection: NewDC=N_tl-DC-SW. TB-reflection: NewDR=N_tl-DR-SH.
+  180-rotation: both NewDR and NewDC flipped.
+
+Accomplishment: Acc_356.  Paper: Acc_356_ARC2_Wave58.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 59 - 2026-07-02 - Score: 56/120 = 46.67%
+
+Date: 2026-07-02
+
+Confirmed score: 56 / 120 = 46.67%
+
+Rules added in this wave:
+  scaled_frame (WP-317, Layer 292)
+
+Task solved: 898e7135 (2 training pairs + 1 test case; input has a solid-bordered
+  rectangular frame with 0-holes inside, plus colored object-blobs outside; scale
+  N = sqrt(GCD of object cell-counts); output = frame scaled by N; each 0-hole in
+  frame filled with color of matched background object; matching by (norm_size,
+  centroid_col) sort-pair order; noise cells size < 4 discarded).
+
+Lessons learned: Frame identification by solid-border test on bounding box uniquely
+  selects the frame color. GCD of all object sizes equals N^2 so N = sqrt(GCD).
+  Tie-breaking by centroid column is necessary when multiple objects share the same
+  normalized size. BFS flood-fill for hole-groups and object components uses the
+  same arc2_sf_comps_/arc2_sf_bfs_ predicate pair.
+
+Accomplishment: Acc_357.  Paper: Acc_357_ARC2_Wave59.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3404,4 +3459,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 57: Frame-reflect 9x9 bordered frame divided
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 58: Cross-reflect a cross of 1s (one complete row + one complete col) divides the grid into 4 quadrants; TL has an anchor block plus satellite blocks; TR/BR/BL each have only an anchor block; output adds satellites to TR (LR-reflected), BR (180-rotated), BL (TB-reflected) scaled by N_q/N_tl anchor size ratio.
   Score: 55/120 = 45.83%. Task b10624e5 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-02.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 59: Scaled-frame identifies a rectangular frame (solid-colored border with 0-holes inside) and colored background object-blobs; scale = sqrt(GCD of object cell-counts); output is the frame scaled by N; each 0-hole filled with matched object color via (norm_size, centroid_col) sort-pair order.
+  Score: 56/120 = 46.67%. Task 898e7135 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-02.
