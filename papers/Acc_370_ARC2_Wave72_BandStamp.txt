@@ -1,0 +1,104 @@
+Acc_370: ARC-AGI-2 Wave 72 - Band Stamp Legend Routing
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 72 of the ARC-AGI-2 benchmark climb: task 7c66cb00 solved using the
+band_stamp rule (WP-330, Layer 305). Score advances from 68/120 =
+56.67% to 69/120 = 57.50%.
+
+TASK DESCRIPTION
+
+Task 7c66cb00 presents 29x24 to 30x24 grids split into two regions. The
+upper region is a legend: small shapes drawn on the background color,
+including hollow boxes whose interior holes are themselves colored
+shapes. The lower region is a stack of full-width bands: each band shows
+an edge color in its first and last columns and a uniform interior color
+between them, and both colors change from band to band and from grid to
+grid. In the output the legend is erased and each band carries a stamp:
+the legend shape whose color matches the band's interior color, redrawn
+in the band's edge color, at the same columns, resting on the band's
+bottom row.
+
+RULE: band_stamp
+
+The glass-box named rule is a five-stage routing procedure with no
+learned parameters:
+
+1. BACKGROUND AND BAND DETECTION (arc2_bg_color_/2, bst_band_rows_/3)
+   The background is the most common cell value. A band row has the form
+   edge, uniform interior, edge, with the edge color different from the
+   interior color. Consecutive band rows sharing the same color pair are
+   grouped into bands with a top row and a bottom row
+   (bst_group_bands_/2, bst_extend_band_/6).
+
+2. LEGEND EXTRACTION (bst_legend_cells_/4)
+   Every non-background cell outside the band rows is a legend cell.
+
+3. COMPONENT ANALYSIS (bst_components_/2, bst_flood_/6)
+   The legend cells are partitioned into same-color 4-connected
+   components by breadth-first flooding. A hollow box of one color and
+   the hole shape inside it of another color are separate components.
+
+4. COLOR-PAIRED BOTTOM-ANCHORED STAMPING (bst_max_row_/2)
+   Each legend component is paired with the band whose interior color
+   equals the component color. The component is stamped in the band's
+   edge color, keeping its columns unchanged and shifting down so its
+   lowest row lands on the band's bottom row.
+
+5. RENDER (bst_render_/5)
+   The output keeps every band row's input appearance outside the
+   stamps and erases every non-band row to the background color.
+
+THE KEY INSIGHT: THE HOLE IS ITS OWN MESSENGER
+
+The decisive observation is that the hole inside a legend box is not
+decoration - it is a first-class component routed to its own band by its
+own color. In training pair 1 the legend holds a color-3 box with a
+color-2 hole: the box feeds the interior-3 band as a hollow rectangle,
+and the hole feeds the interior-2 band as a short bar, each painted in
+the receiving band's edge color. Same-color 4-connected components make
+this fall out naturally: no special hole-extraction step is needed,
+because splitting the legend by color before connectivity already
+separates box from hole. Bottom anchoring is per component, not per
+color group - two same-color components land on the same bottom row but
+keep their own shapes and columns, so a box and a distant hole shape of
+the same color arrive in the same band without colliding.
+
+INDUCTION PRE-FILTER
+
+The first training pair must have identical input and output dimensions
+and the first input must contain at least one full-width band row; all
+training pairs are then verified with forall before the rule is
+selected. The band-row scan is a single pass over the rows, keeping the
+pre-filter cheap for every other task in the named-rule enumeration. The
+induce clause dispatches early, directly after wallpaper_motif, ahead of
+the generic named-rule search.
+
+KEY PREDICATES
+
+  bst_band_rows_/3     - band row indices with edge and interior colors
+  bst_group_bands_/2   - group consecutive band rows into bands
+  bst_extend_band_/6   - absorb adjacent same-color band rows
+  bst_legend_cells_/4  - non-background cells outside all band rows
+  bst_components_/2    - same-color 4-connected legend components
+  bst_flood_/6         - breadth-first component flooding
+  bst_max_row_/2       - lowest row of a component for bottom anchoring
+  bst_render_/5        - stamp application and legend erasure
+  arc2_transform(band_stamp, +Grid, -Out)
+  arc2_induce_rule(+Pairs, band_stamp)
+
+VERIFICATION
+
+All three training pairs and the test case pass in SWI-Prolog on the
+first run. A full benchmark regression run confirms no previously solved
+task lost its rule. Pure induction from training examples. No
+pretraining on the ARC-AGI-2 corpus. Every rule is named and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v301, Pseudocode v293, Architecture v294,
+Refinement v353, Completion v359.
