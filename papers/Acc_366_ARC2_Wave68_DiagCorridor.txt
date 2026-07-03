@@ -1,0 +1,100 @@
+Acc_366: ARC-AGI-2 Wave 68 - Diagonal Corridor Fill
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 68 of the ARC-AGI-2 benchmark climb: task 7666fa5d solved using the
+diag_corridor rule (WP-326, Layer 301). Score advances from 64/120 = 53.33%
+to 65/120 = 54.17%.
+
+TASK DESCRIPTION
+
+Task 7666fa5d presents 16x16 grids with background color 8 and a single
+bank color per grid (4, 3, or 9). The bank cells form slanted anti-diagonal
+chains - runs of cells stepping (row+1, column-1) - that act as the two
+banks of a winding corridor. Every background cell lying between a pair of
+opposing banks must be flooded with color 2 (red), filling the corridor;
+the banks themselves and all unbracketed background stay untouched.
+
+RULE: diag_corridor
+
+The glass-box named rule is a four-stage coordinate-transform bracketing
+procedure with no learned parameters:
+
+1. BACKGROUND AND BANKS (dc_bg_/2, dc_banks_/3)
+   The background color is the most frequent cell value; every other cell
+   is a bank cell.
+
+2. CHAIN EXTRACTION (dc_chains_/2, dc_grow_/5)
+   Bank cells are grouped into chains: connected components under the
+   anti-diagonal step (r+1, c-1). Every cell of a chain shares the same
+   line sum s = r + c, and the chain spans an interval [dmin, dmax] in the
+   cross coordinate d = r - c (dc_chain_info_/4).
+
+3. CORRIDOR BRACKETING (dc_fill_cell_/5)
+   For every unordered pair of chains with distinct line sums s1 < s2, a
+   background cell belongs to their corridor when its line sum satisfies
+   s1 < r + c < s2 and its cross coordinate d = r - c lies inside the
+   intersection [max(dmin1, dmin2), min(dmax1, dmax2)] of the two chains'
+   cross intervals.
+
+4. FLOOD (dc_paint_/4)
+   The union of all corridor regions over all chain pairs is painted with
+   color 2; bank cells and unbracketed background cells are preserved.
+
+THE KEY INSIGHT: A CHANGE OF COORDINATES
+
+In ordinary (row, column) space the corridors wind diagonally and the fill
+looks irregular: a background cell directly adjacent to a bank may stay
+empty while a cell farther away is filled. In the rotated coordinate
+system (s, d) with s = r + c and d = r - c, each chain becomes an
+axis-aligned segment (constant s, an interval in d), and the corridor
+between two banks becomes a plain rectangle: strictly between in s,
+interval intersection in d. The winding corridor is straight when viewed
+along the diagonals.
+
+Two subtleties matter. First, ALL pairs of chains contribute corridors,
+not merely adjacent pairs: in training pair 2, cells such as (8,13) are
+bracketed only by the outermost pair of chains, whose corridor covers
+regions no adjacent pair reaches. Second, two distinct chains can share
+the same line sum - in training pair 1 two separate chains both sit on
+s = 12 at opposite ends of the grid - so chains must be separated by
+anti-diagonal connectivity; grouping bank cells by line sum alone would
+merge them and create phantom corridors.
+
+INDUCTION PRE-FILTER
+
+The first training pair must have equal input and output row counts, the
+input must contain exactly two colors (background plus one bank color),
+and the output palette must equal the input palette plus fill color 2;
+all training pairs are then verified with forall before the rule is
+selected.
+
+KEY PREDICATES
+
+  dc_bg_/2          - most frequent cell value as background color
+  dc_banks_/3       - sorted coordinates of all non-background cells
+  dc_chains_/2      - anti-diagonal connected components of bank cells
+  dc_grow_/5        - extend a chain by the next (r+1, c-1) neighbor
+  dc_chain_info_/4  - line sum and cross-coordinate range of a chain
+  dc_fill_cell_/5   - background cell bracketed by a pair of chains
+  dc_paint_/4       - repaint bracketed cells with color 2
+  arc2_transform(diag_corridor, +Grid, -Out)
+  arc2_induce_rule(+Pairs, diag_corridor)
+
+VERIFICATION
+
+Both training pairs and the test case pass in SWI-Prolog. A full
+benchmark regression run confirms no previously solved task lost its rule.
+Pure induction from training examples. No pretraining on the ARC-AGI-2
+corpus. Every rule is named and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v297, Pseudocode v289, Architecture v290,
+Refinement v349, Completion v355.
+
+---

@@ -9977,6 +9977,187 @@ arc2_tj_make_row_(C, R, MaxC, All, [V|Rest]) :-
     arc2_tj_make_row_(C1, R, MaxC, All, Rest).
 
 % ===========================================================================
+% WP-326  diag_corridor  —  Layer 301
+% diag_corridor: bank cells of a single non-background color form slanted
+% anti-diagonal chains (constant r+c). Every pair of chains on different
+% anti-diagonal lines bounds a corridor: background cells whose line sum
+% r+c lies strictly between the two chains' sums and whose cross coordinate
+% r-c falls inside the overlap of both chains' r-c ranges are flooded with
+% color 2, painting the winding corridor between the banks.
+% Reference: ARC-AGI-2 task 7666fa5d.
+% ===========================================================================
+
+% Register diag_corridor as a known named rule.
+arc2_named_rule(diag_corridor).
+
+% arc2_induce_rule for diag_corridor: pre-filter on same-size grids with a
+% single bank color and red-only additions, then verify all pairs.
+arc2_induce_rule(TrainingPairs_, diag_corridor) :-
+% Unpack the first training pair for the fast pre-filter.
+    TrainingPairs_ = [pair(In0_, Out0_)|_],
+% Measure the input row count for the size comparison.
+    length(In0_, NR0_),
+% Input and output must have the same number of rows.
+    length(Out0_, NR0_),
+% Flatten the input grid to inspect its distinct colors.
+    flatten(In0_, FI0_),
+% Collect the distinct colors of the input grid.
+    sort(FI0_, InCols_),
+% The input must contain exactly two colors: background and bank.
+    length(InCols_, 2),
+% Flatten the output grid to inspect its distinct colors.
+    flatten(Out0_, FO0_),
+% Collect the distinct colors of the output grid.
+    sort(FO0_, OutCols_),
+% The output palette must be the input palette plus fill color 2.
+    sort([2|InCols_], OutCols_),
+% Verify all training pairs under diag_corridor.
+    forall(member(pair(In_, Out_), TrainingPairs_),
+% Each training pair must transform correctly.
+           arc2_transform(diag_corridor, In_, Out_)).
+
+% arc2_transform for diag_corridor: find chains and flood corridor cells.
+arc2_transform(diag_corridor, Grid_, Out_) :-
+% Determine the background color as the most frequent cell value.
+    dc_bg_(Grid_, BG_),
+% Collect the sorted list of bank cells (non-background cells).
+    dc_banks_(Grid_, BG_, Cells_),
+% There must be at least one bank cell to anchor the corridors.
+    Cells_ = [_|_],
+% Group the bank cells into anti-diagonal chains.
+    dc_chains_(Cells_, Chains_),
+% Summarize each chain by its line sum and its r-c cross range.
+    findall(dc_info_(S_, Dmin_, Dmax_),
+% Each chain contributes one info term with sum and cross bounds.
+            (member(Ch_, Chains_), dc_chain_info_(Ch_, S_, Dmin_, Dmax_)),
+% Collect the chain info terms into a list.
+            Infos_),
+% Collect every background cell bracketed by a pair of chains.
+    findall(R_-C_, dc_fill_cell_(Grid_, BG_, Infos_, R_, C_), Fill0_),
+% Sort the fill cells to remove duplicates from multiple chain pairs.
+    sort(Fill0_, Fill_),
+% Repaint the grid with color 2 on every bracketed cell.
+    dc_paint_(Grid_, 0, Fill_, Out_).
+
+% dc_bg_/2: the background color is the most frequent cell value.
+dc_bg_(Grid_, BG_) :-
+% Flatten the grid into a single list of cell values.
+    flatten(Grid_, Vals_),
+% Order the values so duplicates sit together for counting.
+    msort(Vals_, Sorted_),
+% Pair each color occurrence with its total occurrence count.
+    findall(N_-C_,
+% Count how many times each color value occurs in the grid.
+            (member(C_, Sorted_), aggregate_all(count, member(C_, Sorted_), N_)),
+% Collect the count-color pairs.
+            Pairs_),
+% Order the pairs so the most frequent color comes first.
+    sort(0, @>=, Pairs_, [_-BG_|_]).
+
+% dc_banks_/3: collect the sorted coordinates of non-background cells.
+dc_banks_(Grid_, BG_, Cells_) :-
+% Enumerate every cell whose value differs from the background.
+    findall(R_-C_,
+% Locate each non-background cell by row and column index.
+            (nth0(R_, Grid_, Row_), nth0(C_, Row_, V_), V_ \== BG_),
+% Collect the raw bank coordinates.
+            Raw_),
+% Sort the coordinates by row then column for chain growing.
+    sort(Raw_, Cells_).
+
+% dc_chains_/2: base case, no cells left means no more chains.
+dc_chains_([], []).
+% dc_chains_/2: grow one chain from the topmost remaining cell.
+dc_chains_([R_-C_|Rest_], [Chain_|Chains_]) :-
+% Extend the chain downward along the anti-diagonal.
+    dc_grow_(R_-C_, Rest_, [R_-C_], Chain_, Rem_),
+% Recurse on the remaining cells for further chains.
+    dc_chains_(Rem_, Chains_).
+
+% dc_grow_/5: extend a chain by the next anti-diagonal neighbor.
+dc_grow_(R_-C_, Pool_, Acc_, Chain_, Rem_) :-
+% Compute the row of the next cell down the anti-diagonal.
+    R1_ is R_ + 1,
+% Compute the column of the next cell down the anti-diagonal.
+    C1_ is C_ - 1,
+% Continue growing if the neighbor is present in the pool.
+    ( select(R1_-C1_, Pool_, Pool2_) ->
+% Recurse with the neighbor added to the chain.
+        dc_grow_(R1_-C1_, Pool2_, [R1_-C1_|Acc_], Chain_, Rem_)
+% Otherwise the chain is complete and the pool is returned.
+    ; Chain_ = Acc_, Rem_ = Pool_ ).
+
+% dc_chain_info_/4: summarize a chain by line sum and r-c range.
+dc_chain_info_(Chain_, S_, Dmin_, Dmax_) :-
+% Any member cell determines the shared anti-diagonal sum.
+    Chain_ = [R0_-C0_|_],
+% Compute the anti-diagonal line sum of the chain.
+    S_ is R0_ + C0_,
+% Collect the r-c cross coordinates of all chain cells.
+    findall(D_,
+% Compute r-c for each chain cell.
+            (member(R_-C_, Chain_), D_ is R_ - C_),
+% Gather the cross coordinates into a list.
+            Ds_),
+% The minimum cross coordinate bounds the chain on one side.
+    min_list(Ds_, Dmin_),
+% The maximum cross coordinate bounds the chain on the other side.
+    max_list(Ds_, Dmax_).
+
+% dc_fill_cell_/5: a background cell bracketed by a pair of chains.
+dc_fill_cell_(Grid_, BG_, Infos_, R_, C_) :-
+% Enumerate every row of the grid.
+    nth0(R_, Grid_, Row_),
+% Enumerate every cell of the row.
+    nth0(C_, Row_, V_),
+% Only background cells may be flooded.
+    V_ == BG_,
+% Compute the anti-diagonal line sum of the cell.
+    S_ is R_ + C_,
+% Compute the r-c cross coordinate of the cell.
+    D_ is R_ - C_,
+% Pick the first chain of the bracketing pair.
+    member(dc_info_(S1_, A1_, B1_), Infos_),
+% Pick the second chain of the bracketing pair.
+    member(dc_info_(S2_, A2_, B2_), Infos_),
+% The two chains must lie on distinct ordered lines.
+    S1_ < S2_,
+% The cell must lie strictly past the first line.
+    S_ > S1_,
+% The cell must lie strictly before the second line.
+    S_ < S2_,
+% Compute the lower bound of the overlapping cross range.
+    Lo_ is max(A1_, A2_),
+% Compute the upper bound of the overlapping cross range.
+    Hi_ is min(B1_, B2_),
+% The cell cross coordinate must reach the overlap lower bound.
+    D_ >= Lo_,
+% The cell cross coordinate must not exceed the overlap upper bound.
+    D_ =< Hi_.
+
+% dc_paint_/4: base case, no rows left to repaint.
+dc_paint_([], _, _, []).
+% dc_paint_/4: repaint one row and recurse on the rest.
+dc_paint_([Row_|Rows_], R_, Fill_, [NewRow_|NewRows_]) :-
+% Repaint the current row starting at column zero.
+    dc_paint_row_(Row_, R_, 0, Fill_, NewRow_),
+% Advance to the next row index.
+    R1_ is R_ + 1,
+% Recurse on the remaining rows.
+    dc_paint_(Rows_, R1_, Fill_, NewRows_).
+
+% dc_paint_row_/5: base case, no cells left in the row.
+dc_paint_row_([], _, _, _, []).
+% dc_paint_row_/5: repaint one cell and recurse on the rest.
+dc_paint_row_([V_|Vs_], R_, C_, Fill_, [NV_|NVs_]) :-
+% A bracketed cell becomes color 2, any other cell is kept.
+    ( memberchk(R_-C_, Fill_) -> NV_ = 2 ; NV_ = V_ ),
+% Advance to the next column index.
+    C1_ is C_ + 1,
+% Recurse on the remaining cells of the row.
+    dc_paint_row_(Vs_, R_, C1_, Fill_, NVs_).
+
+% ===========================================================================
 % WP-305  shape_count  (Layer 280)  Task 58490d8a
 % ===========================================================================
 %

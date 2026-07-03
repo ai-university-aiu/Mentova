@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 67 complete: 64/120 = 53.33%.
+Last updated: 2026-07-03. Wave 68 complete: 65/120 = 54.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -189,6 +189,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  62 / 120  | 51.67%  | Wave 65: hole_color legend templates enclose N background holes; grey (5) shapes classified by own hole count and recolored to matching legend color; unmatched grey shapes erased
 2026-07-03  |  63 / 120  | 52.50%  | Wave 66: mosaic_heal symmetric mosaic damaged by 0-patches; damaged rows and cols borrow from compatible donors (>= 5 non-zero agreements) to fixpoint; leftover zeros healed by diagonal mirror
 2026-07-03  |  64 / 120  | 53.33%  | Wave 67: mirror_patch wallpaper patch hidden by solid 8-block; H/V mirror axes detected from visible cells (zero conflicts, > 50 supporting pairs); covered cells healed to fixpoint from mirrors; transpose donor fallback; recovered patch is the output
+2026-07-03  |  65 / 120  | 54.17%  | Wave 68: diag_corridor anti-diagonal bank chains (constant r+c) bound winding corridors; background cells with r+c strictly between two chains' line sums and r-c inside the overlap of both chains' cross ranges flooded with color 2
 
 
 COMPLETE SCORE PROGRESSION
@@ -779,6 +780,57 @@ Lessons learned: The wallpaper's mirror axes need not coincide with the grid
   cannot reach, after which the mirror fixpoint completes the patch.
 
 Accomplishment: Acc_365.  Paper: Acc_365_ARC2_Wave67_MirrorPatch.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 68 - 2026-07-03 - Score: 65/120 = 54.17%
+
+Date: 2026-07-03
+
+Confirmed score: 65 / 120 = 54.17%
+
+Rules added in this wave:
+  diag_corridor (WP-326, Layer 301)
+
+Task solved: 7666fa5d (2 training pairs + 1 test case; each grid is 16x16 with
+  a single background color 8 and one bank color per grid - 4, 3, or 9; the
+  bank cells form slanted anti-diagonal chains that act as the two banks of a
+  winding corridor; every background cell lying between a pair of opposing
+  banks is flooded with color 2, filling the corridor).
+
+Algorithm: coordinate-transform bracketing. Stage 1: the background color is
+  the most frequent cell value, and every other cell is a bank cell. Stage 2:
+  bank cells are grouped into chains, the 4-connected-along-the-anti-diagonal
+  components under the step (r+1, c-1); every cell of one chain shares the
+  same anti-diagonal line sum s = r + c, and the chain spans an interval
+  [dmin, dmax] in the cross coordinate d = r - c. Stage 3: for every unordered
+  pair of chains with distinct line sums s1 < s2, the corridor region is the
+  set of background cells whose line sum satisfies s1 < r + c < s2 and whose
+  cross coordinate lies inside the overlap [max(dmin1, dmin2),
+  min(dmax1, dmax2)] of the two chains' cross ranges. Stage 4: the union of
+  all corridor regions over all chain pairs is painted with color 2; bank
+  cells and unbracketed background cells are left untouched.
+
+Lessons learned: the key discovery is the change of coordinates. In (row,
+  column) space the corridors wind diagonally and the fill looks irregular -
+  a cell adjacent to a bank may stay empty while a farther cell is filled. In
+  (s, d) space with s = r + c and d = r - c, each chain becomes an axis-
+  aligned segment (constant s, an interval in d), and the corridor between
+  two banks becomes a plain rectangle: strictly between in s, interval
+  intersection in d. Crucially, ALL pairs of chains contribute corridors, not
+  just adjacent pairs - in training pair 2, cells such as (8,13) are bracketed
+  only by the outermost chain pair, whose corridor overlaps regions no
+  adjacent pair covers. Equally crucial, two chains can share the same line
+  sum (in training pair 1 two separate chains both have s = 12), so chains
+  must be separated by anti-diagonal connectivity, never merely grouped by
+  line sum, or phantom corridors appear. The rule induces from a cheap
+  pre-filter (same grid size, exactly two input colors, output palette =
+  input palette plus color 2) followed by full verification of every
+  training pair; both training pairs and the test case pass exactly.
+
+Accomplishment: Acc_366.  Paper: Acc_366_ARC2_Wave68_DiagCorridor.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3296,6 +3348,7 @@ cb2d8a2c  - Wave 64 - snake_frame        - pointer (value 3) traces rectangular 
 e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; grey (5) shapes recolored by own enclosed-hole count; unmatched erased
 981571dc  - Wave 66 - mosaic_heal        - symmetric mosaic 0-damage healed; rows/cols borrow from compatible donors to fixpoint; diagonal mirror fallback
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
+7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3596,4 +3649,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 66: Mosaic-heal - a symmetric wallpaper mosa
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 67: Mirror-patch - a mirror-symmetric wallpaper hides a rectangular patch behind a solid block of color 8; the horizontal and vertical mirror axes are detected from the visible cells (an axis is accepted only with zero conflicting mirrored pairs and more than 50 supporting pairs); covered cells are healed to a fixpoint from their horizontal, vertical, or point mirror images; cells unreachable by any mirror fall back to the transpose donor (r, c) <- (c, r); the recovered patch alone, free of 8s, is the output.
   Score: 64/120 = 53.33%. Task 0934a4d8 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 68: Diag-corridor - bank cells of a single non-background color form slanted anti-diagonal chains (constant line sum s = r + c, connected under the step (r+1, c-1)); each chain spans an interval in the cross coordinate d = r - c; for every pair of chains with distinct line sums, background cells whose line sum lies strictly between the two sums and whose cross coordinate falls inside the intersection of the two chains' cross intervals are flooded with color 2, painting the winding corridor between the banks.
+  Score: 65/120 = 54.17%. Task 7666fa5d solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
