@@ -1,0 +1,124 @@
+Acc_375: ARC-AGI-2 Wave 77 - Palette Jigsaw Corner-Recolored Square Assembly
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 77 of the ARC-AGI-2 benchmark climb: task f560132c solved using the
+palette_jigsaw rule (WP-335, Layer 310). Score advances from 73/120 =
+60.83% to 74/120 = 61.67%.
+
+TASK DESCRIPTION
+
+Task f560132c presents 20x20 training grids and a 26x26 test grid, each
+scattering four pieces over the background. Three pieces are
+single-color connected shapes. The fourth - the key - carries an
+embedded 2-by-2 block of four foreign palette colors in place of four
+of its own body cells. The total number of piece cells is always a
+perfect square - 64 and 100 across the two training grids and 144 in
+the test grid. The output is the N-by-N square assembled from the four
+pieces: every piece is rotated by some number of quarter turns, the
+rotated pieces interlock with no gaps and no overlaps, the key piece
+covers the square's top-left corner, and every piece is repainted with
+the palette color of the output corner it covers.
+
+RULE: palette_jigsaw
+
+The glass-box named rule is a five-stage assembly-and-recoloring
+procedure with no learned parameters:
+
+1. PIECE EXTRACTION (pf_cells_/3, pf_comps_/2, pj_multi_/1)
+   The background is the most common cell value. All non-background
+   cells are grouped into 8-connected components over mixed colors.
+   Exactly four components must emerge, and exactly one - the key -
+   carries more than one distinct color.
+
+2. PALETTE READING (pj_majority_/2)
+   The key's body color is its most frequent cell color. The four key
+   cells whose color differs from the body must form a 2-by-2 block,
+   read as top-left, top-right, bottom-left, and bottom-right palette
+   colors.
+
+3. INDEXED MASKS (pj_mask_/4, pf_norm_/2, pf_count_/3)
+   Each piece is translated to its bounding-box origin and converted
+   to a shape mask tagged with a piece index; the key is index 1 and
+   its palette cells count as part of its shape. The mask cell counts
+   must sum to a perfect square N * N, fixing the output side N.
+
+4. ANCHORED EXACT-COVER SEARCH (pf_solve_/3, pf_fill_/5)
+   The Wave 76 exact-cover engine tiles the N-by-N board using the
+   four quarter-turn rotation variants of each mask: the scanline-first
+   empty cell must be covered by the scanline-first cell of some
+   rotated variant of a still-unplaced piece. The accepted tiling is
+   the one where the key piece covers the board's top-left corner and
+   the four board corners are covered by four distinct pieces.
+
+5. CORNER RECOLORING AND RENDER (pj_color_/9, pf_render_/3)
+   Each placed piece is repainted with the palette color of the corner
+   it covers: the key takes the palette's top-left color, the piece on
+   the top-right corner takes the top-right color, and likewise for
+   the two bottom corners. The recolored cells are painted row by row
+   into the output square.
+
+THE KEY INSIGHT: THE PALETTE CARRIER ANCHORS THE CORNER
+
+Without any anchoring constraint each grid admits exactly four
+distinct-corner tilings - the four global rotations of one and the
+same assembly - and only one of them recolors correctly. Pinning the
+palette-carrying key piece to the top-left corner, the same corner
+where its own 2-by-2 palette reading begins, collapses every grid -
+both training grids and the test grid - to exactly one tiling,
+confirmed by exhaustive enumeration. This generalizes the Wave 76
+anchor from a single colored stud to a role-bearing piece. A second
+lesson: the human-solver description of this task (quadrant roles
+assigned from centroid offsets, with a fixed rotation per role) does
+not survive contact with the data - the piece-to-corner assignment
+does not follow the pieces' input quadrants, and the per-piece
+rotations vary freely between grids - so the jigsaw search
+interpretation is the real rule.
+
+INDUCTION PRE-FILTER
+
+The first training pair's output must have strictly fewer rows and
+strictly fewer columns than its input, be exactly square, and carry
+four distinct colors in its four corners (puzzle_fit's shape carries
+color 5 at the top-left corner and is dispatched first). All training
+pairs are then verified with forall before the rule is selected. The
+checks are constant-time, keeping the pre-filter cheap for every other
+task in the named-rule enumeration. The induce clause dispatches early,
+directly after puzzle_fit, ahead of the generic named-rule search.
+
+KEY PREDICATES
+
+  pj_multi_/1          - component carries more than one distinct color
+  pj_majority_/2       - most frequent color in a color list
+  pj_mask_/4           - normalized piece mask tagged with piece index
+  pj_color_/9          - piece index mapped to its corner palette color
+  pf_cells_/3          - non-background cells as row-column-color (reused)
+  pf_comps_/2          - 8-connected mixed-color components (reused)
+  pf_norm_/2           - piece shifted to bounding-box origin (reused)
+  pf_variants_/2       - the four quarter-turn rotations (reused)
+  pf_solve_/3          - N-by-N exact-cover tiling search (reused)
+  pf_render_/3         - placed cells painted as the output square (reused)
+  arc2_bg_color_/2     - most common cell value as background (reused)
+  arc2_transform(palette_jigsaw, +Grid, -Out)
+  arc2_induce_rule(+Pairs, palette_jigsaw)
+
+VERIFICATION
+
+Both training pairs and the test case pass in SWI-Prolog, and
+exhaustive enumeration confirms the key-anchored tiling is unique for
+every grid. A regression spot-check confirms puzzle_fit, glyph_swap,
+shape_count, hole_census, shape_catalog, shape_sort, shape_beam,
+shape_classify, layout_tile, scaled_frame, cross_reflect,
+frame_reflect, frame_pour, legend_fill, grid_tile, and quadrant_tile
+all still induce and pass. Pure induction from training examples. No
+pretraining on the ARC-AGI-2 corpus. Every rule is named and
+glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v306, Pseudocode v298, Architecture v299,
+Refinement v358, Completion v364.

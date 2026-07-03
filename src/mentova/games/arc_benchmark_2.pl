@@ -405,6 +405,47 @@ arc2_induce_rule(TrainingPairs, puzzle_fit) :-
 % Each training pair must transform correctly under puzzle_fit.
            arc2_transform(puzzle_fit, In, Out)).
 
+% palette_jigsaw: early dispatch before generic clause (WP-335, Layer 310).
+arc2_named_rule(palette_jigsaw).
+% arc2_induce_rule(palette_jigsaw): square-output corner pre-filter + verify.
+arc2_induce_rule(TrainingPairs, palette_jigsaw) :-
+% Fast filter: inspect the first training pair only.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output must have strictly fewer rows than the input.
+    OH < H,
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [OR0|_],
+% Measure the first input width.
+    length(FR, W),
+% Measure the first output width.
+    length(OR0, OW),
+% The output must have strictly fewer columns than the input.
+    OW < W,
+% The output must be a square grid.
+    OH =:= OW,
+% Fetch the top-left corner color of the first output.
+    OR0 = [TL|_],
+% Fetch the top-right corner color of the first output.
+    last(OR0, TR),
+% Fetch the last row of the first output.
+    last(FirstOut, OLast),
+% Fetch the bottom-left corner color of the first output.
+    OLast = [BL|_],
+% Fetch the bottom-right corner color of the first output.
+    last(OLast, BR),
+% All four output corners must carry distinct palette colors.
+    sort([TL, TR, BL, BR], Corners),
+% Four distinct corner colors signal the palette jigsaw shape.
+    length(Corners, 4),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under palette_jigsaw.
+           arc2_transform(palette_jigsaw, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -15751,3 +15792,131 @@ pf_render_(Placed, N, Grid) :-
               findall(V, ( between(0, N1, C), memberchk(R-C-V, Placed) ), Row) ),
 % Bind the assembled grid.
             Grid).
+
+% ---------------------------------------------------------------------------
+% PALETTE JIGSAW
+% Four scattered pieces (one carrying an embedded 2 x 2 color palette) are
+% rotated by quarter turns and assembled into a perfect square tiling; each
+% piece is then repainted with the palette color of the corner it covers,
+% with the palette carrier anchoring the top-left corner.
+% Reference: ARC-AGI-2 task f560132c (WP-335, Layer 310).
+% ---------------------------------------------------------------------------
+
+% arc2_transform(palette_jigsaw): tile a square and repaint by corner palette.
+arc2_transform(palette_jigsaw, Grid, Out) :-
+% Determine the background color of the input grid.
+    arc2_bg_color_(Grid, BG),
+% Collect every non-background cell with its row, column, and color.
+    pf_cells_(Grid, BG, Cells),
+% Group the cells into 8-connected multi-color puzzle pieces.
+    pf_comps_(Cells, Comps),
+% Exactly four pieces must be present in the input.
+    length(Comps, 4),
+% Exactly one piece carries more than one color: the palette key.
+    partition(pj_multi_, Comps, [Key], Others),
+% Collect the color of every cell of the key piece.
+    findall(V, member(_-_-V, Key), KeyColors),
+% The key's body color is its most frequent cell color.
+    pj_majority_(KeyColors, Body),
+% The palette cells are the key cells that differ from the body color.
+    findall(R-C-V, ( member(R-C-V, Key), V =\= Body ), Pal),
+% The palette must consist of exactly four cells.
+    length(Pal, 4),
+% Collect the row coordinates of the palette cells.
+    findall(R, member(R-_-_, Pal), PRs),
+% Find the top row of the palette block.
+    min_list(PRs, PR0),
+% Collect the column coordinates of the palette cells.
+    findall(C, member(_-C-_, Pal), PCs),
+% Find the left column of the palette block.
+    min_list(PCs, PC0),
+% Compute the bottom row of the 2 x 2 palette block.
+    PR1 is PR0 + 1,
+% Compute the right column of the 2 x 2 palette block.
+    PC1 is PC0 + 1,
+% Read the palette's top-left color.
+    memberchk(PR0-PC0-Ptl, Pal),
+% Read the palette's top-right color.
+    memberchk(PR0-PC1-Ptr, Pal),
+% Read the palette's bottom-left color.
+    memberchk(PR1-PC0-Pbl, Pal),
+% Read the palette's bottom-right color.
+    memberchk(PR1-PC1-Pbr, Pal),
+% Convert the pieces to indexed masks with the key piece as index 1.
+    foldl(pj_mask_, [Key|Others], Masks, 1, _),
+% Sum the cell counts of all masks into a running total.
+    foldl(pf_count_, Masks, 0, Total),
+% Compute the candidate square side length from the total.
+    N is round(sqrt(Total)),
+% The total number of piece cells must form a perfect square.
+    N * N =:= Total,
+% Compute the last valid board index.
+    N1 is N - 1,
+% Search for the unique tiling with the key anchoring the top-left corner.
+    once(( pf_solve_(Masks, N, Placed),
+% The key piece (index 1) must cover the output's top-left corner.
+           memberchk(0-0-1, Placed),
+% Read the piece index covering the top-right corner.
+           memberchk(0-N1-K2, Placed),
+% Read the piece index covering the bottom-left corner.
+           memberchk(N1-0-K3, Placed),
+% Read the piece index covering the bottom-right corner.
+           memberchk(N1-N1-K4, Placed),
+% All four corners must be covered by four distinct pieces.
+           sort([1, K2, K3, K4], S4),
+% Reject tilings where one piece covers two or more corners.
+           length(S4, 4) )),
+% Repaint every placed cell with its piece's corner palette color.
+    findall(R-C-V,
+% Map each placed piece index to the palette color of its corner.
+            ( member(R-C-K, Placed),
+% Select the palette color assigned to piece index K.
+              pj_color_(K, K2, K3, K4, Ptl, Ptr, Pbl, Pbr, V) ),
+% Bind the repainted cell list.
+            Colored),
+% Render the repainted cells as the output square grid.
+    pf_render_(Colored, N, Out).
+
+% pj_multi_(+Comp): the component carries more than one distinct color.
+pj_multi_(Comp) :-
+% Collect the color of every cell of the component.
+    findall(V, member(_-_-V, Comp), Vs),
+% Deduplicate the colors into a sorted set.
+    sort(Vs, Set),
+% Measure the number of distinct colors.
+    length(Set, L),
+% More than one distinct color marks the palette key.
+    L > 1.
+
+% pj_majority_(+Colors, -Body): the most frequent color in the list.
+pj_majority_(Colors, Body) :-
+% Deduplicate the colors into a sorted set of candidates.
+    sort(Colors, Set),
+% Pair every candidate color with its occurrence count.
+    findall(Cnt-V,
+% Count how many times each candidate color occurs.
+            ( member(V, Set), aggregate_all(count, member(V, Colors), Cnt) ),
+% Bind the count-color pair list.
+            Pairs),
+% Sort the pairs by descending count to expose the majority color.
+    sort(0, @>=, Pairs, [_-Body|_]).
+
+% pj_mask_(+Comp, -Mask, +I, -I2): normalized piece mask tagged with index I.
+pj_mask_(Comp, Mask, I, I2) :-
+% Shift the piece so its bounding box origin is (0,0).
+    pf_norm_(Comp, Norm),
+% Replace every cell color with the piece index tag.
+    findall(R-C-I, member(R-C-_, Norm), M0),
+% Sort the tagged cells into canonical scanline order.
+    sort(M0, Mask),
+% Advance the index for the next piece.
+    I2 is I + 1.
+
+% pj_color_(1): the key piece takes the palette's top-left color.
+pj_color_(1, _, _, _, Ptl, _, _, _, Ptl) :- !.
+% pj_color_(K2): the top-right corner piece takes the top-right color.
+pj_color_(K, K, _, _, _, Ptr, _, _, Ptr) :- !.
+% pj_color_(K3): the bottom-left corner piece takes the bottom-left color.
+pj_color_(K, _, K, _, _, _, Pbl, _, Pbl) :- !.
+% pj_color_(K4): the bottom-right corner piece takes the bottom-right color.
+pj_color_(K, _, _, K, _, _, _, Pbr, Pbr) :- !.
