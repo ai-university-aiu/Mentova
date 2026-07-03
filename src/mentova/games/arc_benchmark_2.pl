@@ -249,6 +249,29 @@ arc2_induce_rule(TrainingPairs, shape_catalog) :-
 % Each training pair must transform correctly under shape_catalog.
            arc2_transform(shape_catalog, In, Out)).
 
+% wallpaper_motif: early dispatch before generic clause (WP-329, Layer 304).
+arc2_named_rule(wallpaper_motif).
+% arc2_induce_rule(wallpaper_motif): separator wallpaper pre-filter + full verify.
+arc2_induce_rule(TrainingPairs, wallpaper_motif) :-
+% Fast filter: inspect the first training pair only.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% The first input and output must have the same number of rows.
+    length(First, H), length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [OR0|_],
+% The first input and output must have the same number of columns.
+    length(FR, W), length(OR0, W),
+% The first row must be one uniform separator color SC.
+    FR = [SC|_],
+% Every cell of the first row must equal the separator color.
+    arc2_bw_uniform_(FR, SC),
+% The first column must also be entirely the separator color.
+    forall(member(Row, First), Row = [SC|_]),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under wallpaper_motif.
+           arc2_transform(wallpaper_motif, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -14381,3 +14404,230 @@ scg_paint_(Crop_, FC_, CellColors_, Out_) :-
                      OutRow_)),
 % Collect all rebuilt rows into the output block.
             Out_).
+
+% ===========================================================================
+% WP-329  wallpaper_motif  —  Layer 304
+% wallpaper_motif: a wallpaper of identical tiles separated by uniform
+% separator rows and columns carries one minority motif tile design; the
+% motif tile's own color mask (the cells painted in the color unique to the
+% motif) is the placement map, and the observed motif tile positions in the
+% tile grid pin down where that map is anchored; the output repaints the
+% wallpaper with the motif tile stamped at every mapped tile position and
+% the standard tile everywhere else, leaving all separator lines untouched.
+% Reference: ARC-AGI-2 task b99e7126.
+% ===========================================================================
+
+% arc2_transform for wallpaper_motif: stamp motif tiles per the motif mask.
+arc2_transform(wallpaper_motif, Grid_, Out_) :-
+% Detect the separator rows and the shared separator color.
+    wm_sep_idx_(Grid_, SepRows_, SepColor_),
+% Transpose the grid so column separators can be found as rows.
+    arc2_transform(transpose, Grid_, TGrid_),
+% Detect the separator columns; they must use the same separator color.
+    wm_sep_idx_(TGrid_, SepCols_, SepColor_),
+% Measure the number of grid rows.
+    length(Grid_, NR_),
+% Fetch the first grid row.
+    Grid_ = [Row0_|_],
+% Measure the number of grid columns.
+    length(Row0_, NC_),
+% Compute the row spans of the tile bands between separator rows.
+    wm_segments_(NR_, SepRows_, RSegs_),
+% Compute the column spans of the tile bands between separator columns.
+    wm_segments_(NC_, SepCols_, CSegs_),
+% Extract every tile with its tile-grid coordinates.
+    findall(TR_-TC_-Tile_,
+% Pair each row span index with each column span index.
+            (nth0(TR_, RSegs_, RSeg_),
+% Enumerate the column spans.
+             nth0(TC_, CSegs_, CSeg_),
+% Cut the tile at that row span and column span.
+             wm_tile_(Grid_, RSeg_, CSeg_, Tile_)),
+% Collect all positioned tiles.
+            Tiles_),
+% Collect the bare tile patterns.
+    findall(T_, member(_-_-T_, Tiles_), Pats_),
+% Exactly two distinct tile designs must exist in the wallpaper.
+    sort(Pats_, [PatA_, PatB_]),
+% Count how many tiles carry the first design.
+    aggregate_all(count, member(PatA_, Pats_), NA_),
+% Count how many tiles carry the second design.
+    aggregate_all(count, member(PatB_, Pats_), NB_),
+% The two designs must differ in frequency (majority versus minority).
+    NA_ =\= NB_,
+% The majority design is the standard tile; the minority is the motif.
+    (NA_ > NB_ -> Std_ = PatA_, Motif_ = PatB_ ; Std_ = PatB_, Motif_ = PatA_),
+% Collect every color used inside the motif tile.
+    findall(MV_, (member(MRow_, Motif_), member(MV_, MRow_)), MVs_),
+% Deduplicate the motif tile colors.
+    sort(MVs_, MotifCols_),
+% Collect every color used inside the standard tile.
+    findall(SV_, (member(SRow_, Std_), member(SV_, SRow_)), SVs_),
+% Deduplicate the standard tile colors.
+    sort(SVs_, StdCols_),
+% The motif color is a color of the motif tile absent from the standard tile.
+    member(MColor_, MotifCols_),
+% Require that the standard tile never uses the motif color.
+    \+ memberchk(MColor_, StdCols_),
+% Commit to the first qualifying motif color.
+    !,
+% The mask is the set of motif-color cell positions inside the motif tile.
+    findall(MR_-MC_, (nth0(MR_, Motif_, MaskRow_), nth0(MC_, MaskRow_, MColor_)), Mask0_),
+% Deduplicate and order the mask positions.
+    sort(Mask0_, Mask_),
+% The mask must be non-empty.
+    Mask_ = [_|_],
+% Observed motif placements are the tile positions currently showing the motif.
+    findall(OTR_-OTC_, member(OTR_-OTC_-Motif_, Tiles_), Obs_),
+% At least one motif tile must be present in the input.
+    Obs_ = [_|_],
+% Measure the tile grid height.
+    length(RSegs_, TGR_),
+% Measure the tile grid width.
+    length(CSegs_, TGC_),
+% Collect the mask row coordinates.
+    findall(R2_, member(R2_-_, Mask_), MaskRs_),
+% The deepest mask row bounds the vertical anchor range.
+    max_list(MaskRs_, MaxMR_),
+% Collect the mask column coordinates.
+    findall(C2_, member(_-C2_, Mask_), MaskCs_),
+% The widest mask column bounds the horizontal anchor range.
+    max_list(MaskCs_, MaxMC_),
+% The anchor row offset may not push the mask past the tile grid bottom.
+    MaxDR_ is TGR_ - 1 - MaxMR_,
+% The anchor column offset may not push the mask past the tile grid right edge.
+    MaxDC_ is TGC_ - 1 - MaxMC_,
+% Try each candidate anchor row offset.
+    between(0, MaxDR_, DR_),
+% Try each candidate anchor column offset.
+    between(0, MaxDC_, DC_),
+% Shift the mask by the candidate anchor to get placement positions.
+    findall(PR_-PC_, (member(MR2_-MC2_, Mask_), PR_ is MR2_ + DR_, PC_ is MC2_ + DC_), Placed0_),
+% Deduplicate and order the placement positions.
+    sort(Placed0_, Placed_),
+% Every observed motif tile must sit on a placement position.
+    forall(member(Ob_, Obs_), memberchk(Ob_, Placed_)),
+% Commit to the first anchor consistent with the observed motif tiles.
+    !,
+% Repaint the wallpaper with motif tiles at all placement positions.
+    wm_render_(Grid_, SepRows_, SepCols_, RSegs_, CSegs_, Placed_, Motif_, Std_, Out_).
+
+% wm_sep_idx_(+Grid, -Idxs, -Color): separator row indices and their color.
+wm_sep_idx_(Grid_, Idxs_, Color_) :-
+% The first row determines the separator color.
+    Grid_ = [First_|_],
+% Read the separator color from the first cell of the first row.
+    First_ = [Color_|_],
+% The whole first row must be uniform in the separator color.
+    arc2_bw_uniform_(First_, Color_),
+% Collect every row index whose row is uniform in the separator color.
+    findall(I_,
+% Enumerate each row with its index.
+            (nth0(I_, Grid_, Row_),
+% The row must start with the separator color.
+             Row_ = [Color_|_],
+% Every cell of the row must equal the separator color.
+             arc2_bw_uniform_(Row_, Color_)),
+% Collect all separator row indices.
+            Idxs_),
+% At least two separator rows are required for a wallpaper.
+    Idxs_ = [_, _|_].
+
+% wm_segments_(+Len, +Seps, -Segs): index spans A-B between separators.
+wm_segments_(Len_, Seps_, Segs_) :-
+% Collect the spans strictly between consecutive separators.
+    findall(A_-B_,
+% Enumerate each separator with its list position.
+            (nth0(K_, Seps_, S1_),
+% The successor position indexes the next separator.
+             K2_ is K_ + 1,
+% Fetch the next separator index.
+             nth0(K2_, Seps_, S2_),
+% The span starts one past the first separator.
+             A_ is S1_ + 1,
+% The span ends one before the next separator.
+             B_ is S2_ - 1,
+% Keep only non-empty spans.
+             B_ >= A_),
+% Collect the interior spans.
+            Mid_),
+% Fetch the first separator index.
+    Seps_ = [FirstSep_|_],
+% A span before the first separator exists when it is not at index 0.
+    (FirstSep_ > 0 -> B0_ is FirstSep_ - 1, Pre_ = [0-B0_] ; Pre_ = []),
+% Fetch the last separator index.
+    last(Seps_, LastSep_),
+% Compute the final list index.
+    Last_ is Len_ - 1,
+% A span after the last separator exists when it is not at the final index.
+    (LastSep_ < Last_ -> A1_ is LastSep_ + 1, Post_ = [A1_-Last_] ; Post_ = []),
+% Concatenate leading, interior, and trailing spans in order.
+    append([Pre_, Mid_, Post_], Segs_).
+
+% wm_slice_(+List, +Span, -Sub): elements of List at indices A through B.
+wm_slice_(List_, A_-B_, Sub_) :-
+% Collect the elements across the index span in order.
+    findall(X_, (between(A_, B_, I_), nth0(I_, List_, X_)), Sub_).
+
+% wm_tile_(+Grid, +RSeg, +CSeg, -Tile): cut one tile out of the wallpaper.
+wm_tile_(Grid_, RSeg_, CSeg_, Tile_) :-
+% Slice the tile's rows out of the grid.
+    wm_slice_(Grid_, RSeg_, Rows_),
+% Slice the tile's columns out of every tile row.
+    findall(SubRow_, (member(Row_, Rows_), wm_slice_(Row_, CSeg_, SubRow_)), Tile_).
+
+% wm_render_(+Grid, +SepRows, +SepCols, +RSegs, +CSegs, +Placed, +Motif, +Std, -Out).
+wm_render_(Grid_, SepRows_, SepCols_, RSegs_, CSegs_, Placed_, Motif_, Std_, Out_) :-
+% Rebuild the grid row by row.
+    findall(ORow_,
+% Enumerate each input row with its index.
+            (nth0(R_, Grid_, IRow_),
+% Rebuild the row cell by cell.
+             findall(V_,
+% Enumerate each input cell with its column index.
+                     (nth0(C_, IRow_, IV_),
+% Decide the output value for this cell.
+                      wm_cell_(R_, C_, IV_, SepRows_, SepCols_, RSegs_, CSegs_, Placed_, Motif_, Std_, V_)),
+% Collect the rebuilt row.
+                     ORow_)),
+% Collect all rebuilt rows.
+            Out_).
+
+% wm_cell_ separator-row case: separator rows are copied unchanged.
+wm_cell_(R_, _, IV_, SepRows_, _, _, _, _, _, _, IV_) :-
+% The cell lies on a separator row.
+    memberchk(R_, SepRows_),
+% Commit to the unchanged separator value.
+    !.
+% wm_cell_ separator-column case: separator columns are copied unchanged.
+wm_cell_(_, C_, IV_, _, SepCols_, _, _, _, _, _, IV_) :-
+% The cell lies on a separator column.
+    memberchk(C_, SepCols_),
+% Commit to the unchanged separator value.
+    !.
+% wm_cell_ tile case: paint from the motif or the standard tile pattern.
+wm_cell_(R_, C_, _, _, _, RSegs_, CSegs_, Placed_, Motif_, Std_, V_) :-
+% Locate the tile row band containing this cell.
+    nth0(TR_, RSegs_, RA_-RB_),
+% The cell row must be at or below the band top.
+    R_ >= RA_,
+% The cell row must be at or above the band bottom.
+    R_ =< RB_,
+% Locate the tile column band containing this cell.
+    nth0(TC_, CSegs_, CA_-CB_),
+% The cell column must be at or right of the band left edge.
+    C_ >= CA_,
+% The cell column must be at or left of the band right edge.
+    C_ =< CB_,
+% Placement positions receive the motif tile; all others the standard tile.
+    (memberchk(TR_-TC_, Placed_) -> Pat_ = Motif_ ; Pat_ = Std_),
+% Compute the cell's row inside the tile pattern.
+    LR_ is R_ - RA_,
+% Compute the cell's column inside the tile pattern.
+    LC_ is C_ - CA_,
+% Fetch the pattern row.
+    nth0(LR_, Pat_, PRow_),
+% Fetch the pattern cell value.
+    nth0(LC_, PRow_, V_),
+% Commit to the painted value.
+    !.
