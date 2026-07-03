@@ -1,0 +1,160 @@
+Accomplishment 358: ARC-AGI-2 Wave 60 - Layout Tile Rule (layout_tile, Layer 293)
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+Task solved: 65b59efc
+
+Score before: 54/120 = 45.00%
+
+Score after: 57/120 = 47.50%
+
+Note: This wave also introduced an early dispatch refactor that restored
+scaled_frame (898e7135), cross_reflect (b10624e5), and frame_reflect
+(db0c5428) which were timing out due to the frame_assemble rule consuming
+more than 20 seconds in the generic dispatch clause before those rules could
+be tried. Moving the specific induce clauses for these four rules (layout_tile,
+scaled_frame, cross_reflect, frame_reflect) to dispatch positions before the
+generic clause resolved the timing regression.
+
+
+Rule Name: layout_tile
+
+Work Package: WP-318
+
+Layer: 293
+
+
+Pattern Description
+
+The input grid is divided by structural "divider rows" and "divider cols" into
+three horizontal row-groups and N vertical col-groups.
+
+A major divider row has all values in {0, 5} AND at least half of its cells
+are 5 (the full-width pattern of 5s that spans across all col-groups).
+
+A divider col has all values in {0, 5} AND at least one value is 5.
+
+Row-group 0 (top): contains N template subgrids (one per col-group, size S x S
+each, where S is the col-group width and equals the row-group-0 height).
+
+Row-group 2 (bottom): contains N marker cells (one per col-group), each being
+the single non-zero non-5 value in that col-group of the bottom row-group.
+
+Row-group 1 (middle): contains N layout subgrids (S x S each). Each non-zero
+non-5 cell at position (r, c) in layout L[i] identifies a template T by color
+(T is the template subgrid that contains that color). Output block at position
+(r, c) in the S x S output arrangement uses template T with all non-zero cells
+recolored to T's marker color.
+
+Output: S x S arrangement of S x S blocks = total S^2 x S^2 grid.
+
+
+Training Pair Verification
+
+Pair 1 (10 rows x 11 cols input, 9x9 output):
+• Input: 3 col-groups of width 3 (S=3), divider rows at rows 3 and 7.
+• Templates: solid-2 (3x3), frame-1 (3x3), frame-4 (3x3).
+• Markers: M0=6, M1=7, M2=1.
+• Layout encodes: position (0,0) gets template-0 (col-index 0 in layout 0),
+  position (1,1) gets template-1, position (2,2) gets template-2, etc.
+• Result: PASS
+
+Pair 2 (10 rows x 11 cols input, 9x9 output):
+• Same structural pattern, different colors and layouts.
+• Result: PASS
+
+Pair 3 (14 rows x 17 cols input, 25x25 output):
+• 3 col-groups of width 5 (S=5), divider rows at rows 5 and 11.
+• Output = 5x5 arrangement of 5x5 blocks = 25x25.
+• Result: PASS
+
+Test case (16 rows x 30 cols input, 25x25 output):
+• 4 col-groups of width 5 (S=5), divider rows at rows 5 and 11.
+• Output = 5x5 arrangement of 5x5 blocks = 25x25.
+• Result: PASS
+
+
+Key Implementation Decisions
+
+Divider row detection: The major divider rows span the full grid width with
+dense 5 patterns. Sparse-5 rows in the marker region (rows with 5s only at
+col-divider positions) must be excluded. The fix: require count(5s) * 2 >= W
+using include(==(5), Row, Fives), length(Row,W), length(Fives,NF), NF*2>=W.
+Using member(5, Row) in a findall is wrong because member backtracks for each
+occurrence of 5, causing duplicate row indices.
+
+Output block membership: Assignments list maps (block_row, block_col) to
+template_index. The output builder uses member/2 lookup for each of the S^2
+output cells. For S=5, this is 625 lookups, each O(|Assigns|). Performance
+is acceptable given small Assigns lists.
+
+Early dispatch: The arc2_induce_rule(layout_tile) clause is placed before
+the generic arc2_induce_rule(Pairs, Rule) clause. This ensures the fast
+structural pre-filter (two identical major divider rows) is tested without
+going through 60+ named rules in the generic clause first.
+
+
+Prolog Implementation
+
+% arc2_lt_solve_(+Grid, -Out): main layout_tile solver.
+arc2_lt_solve_(Grid, Out) :-
+% Find all divider rows (rows with only 0/5 values).
+    arc2_lt_divider_rows_(Grid, DivRows),
+% Find all divider cols (cols with only 0/5 values, at least one 5).
+    arc2_lt_divider_cols_(Grid, DivCols),
+% Split into 3 row-groups: template (top), layout (middle), marker (bottom).
+    arc2_lt_row_groups_(Grid, DivRows, RG0, RG1, RG2),
+% Split into N col-groups (non-divider, non-padding groups).
+    arc2_lt_col_groups_(Grid, DivCols, ColGroups),
+% S = width of each col-group = block size.
+    ColGroups = [G0|_], length(G0, NS),
+% Extract template, marker, and layout subgrids.
+    arc2_lt_subgrids_(Grid, RG0, ColGroups, Templates),
+    arc2_lt_markers_(Grid, RG2, ColGroups, Markers),
+    arc2_lt_layouts_(Grid, RG1, ColGroups, Layouts),
+% Compute assignments: (br,bc,template_index) for each layout cell.
+    arc2_lt_assignments_(Layouts, Templates, Assigns),
+% Build the S*S x S*S output grid.
+    arc2_lt_build_output_(Assigns, Templates, Markers, NS, Out).
+
+% arc2_lt_divider_rows_(+Grid, -DivRows): rows with all values in {0,5}, >=half are 5.
+arc2_lt_divider_rows_(Grid, DivRows) :-
+% A major divider row spans the full grid width with 5s; at least half the cells are 5.
+    findall(R,
+        (nth0(R, Grid, Row),
+         \+ (member(V, Row), V \= 0, V \= 5),
+         include(==(5), Row, Fives),
+         length(Row, W), length(Fives, NF),
+         NF * 2 >= W),
+        DivRows).
+
+
+Score Progress Table
+
+Wave 60: 54/120 -> 57/120 = 47.50%
+Task: 65b59efc (layout_tile)
+Note: +3 net due to early dispatch restoring 3 previously timing-out tasks
+
+
+SPARC Documentation
+
+Specification: PrologAI_1_Specification_v290.txt
+Pseudocode: PrologAI_2_Pseudocode_v282.txt
+Architecture: PrologAI_3_Architecture_v283.txt
+Refinement: PrologAI_4_Refinement_v342.txt
+Completion: PrologAI_5_Completion_v348.txt
+
+
+Repository
+
+Mentova: feature/wp318-layout_tile -> main
+PrologAI: feature/wp318-layout_tile -> main
+
+
+References
+
+ARC-AGI-2 benchmark: https://arcprize.org/
+Task 65b59efc: ARC-AGI-2 evaluation set
+Mentova arc_benchmark_2.pl: Layer 293 implementation
