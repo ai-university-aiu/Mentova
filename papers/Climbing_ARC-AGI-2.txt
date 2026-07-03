@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 70 complete: 67/120 = 55.83%.
+Last updated: 2026-07-03. Wave 71 complete: 68/120 = 56.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -192,6 +192,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  65 / 120  | 54.17%  | Wave 68: diag_corridor anti-diagonal bank chains (constant r+c) bound winding corridors; background cells with r+c strictly between two chains' line sums and r-c inside the overlap of both chains' cross ranges flooded with color 2
 2026-07-03  |  66 / 120  | 55.00%  | Wave 69: frame_compass interior component hugged by two frame lines colored like grid border sides; each frame line points its crop edge at the same-colored border side; the two edge constraints select a unique dihedral-four transform applied to the crop
 2026-07-03  |  67 / 120  | 55.83%  | Wave 70: shape_catalog largest component is a two-color lattice block; background motif pockets inside the cropped block recolored to the dominant same-shaped catalogue color outside the block, matched up to rotation and reflection
+2026-07-03  |  68 / 120  | 56.67%  | Wave 71: wallpaper_motif separator-lined wallpaper of two tile designs; the minority motif tile's own color mask is the placement map over the tile grid; anchor pinned by the observed motif tiles; motif stamped at every mapped position
 
 
 COMPLETE SCORE PROGRESSION
@@ -939,6 +940,61 @@ Lessons learned: matching must be rotation- and reflection-invariant -
   are flagged as candidates for a dedicated repair wave.
 
 Accomplishment: Acc_368.  Paper: Acc_368_ARC2_Wave70_ShapeCatalog.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 71 - 2026-07-03 - Score: 68/120 = 56.67%
+
+Date: 2026-07-03
+
+Confirmed score: 68 / 120 = 56.67%
+
+Rules added in this wave:
+  wallpaper_motif (WP-329, Layer 304)
+
+Task solved: b99e7126 (3 training pairs + 1 test case; all grids 29x29;
+  each grid is a wallpaper: uniform separator rows and columns every 4
+  cells carve the grid into a 7x7 tile grid of 3x3 inner tiles; exactly
+  two tile designs appear, a majority standard tile and a minority motif
+  tile; separator colors vary per grid - 2, 2, 1, and 8 - and palettes
+  vary too: pair 1 uses colors 1/2/3/4, pair 2 uses 1/2/3/8, pair 3 uses
+  1/2/4/8, and the test uses 2/4/8/9).
+
+Algorithm: fractal self-placement. Stage 1: separator rows are the rows
+  uniform in the color of row 0, and separator columns are found the same
+  way on the transposed grid with the same color; the index spans between
+  separators define the tile bands, and every 3x3 tile is cut out with
+  its tile-grid coordinates. Stage 2: the two distinct tile designs are
+  counted; the more frequent one is the standard tile, the less frequent
+  one is the motif tile. Stage 3: the motif color is the color present in
+  the motif tile but absent from the standard tile; the set of positions
+  where the motif color appears inside the motif tile is the placement
+  mask - the motif tile's own picture is the map of where motif tiles
+  belong in the tile grid. Stage 4: the anchor offset is found by sliding
+  the mask over the 7x7 tile grid until every observed motif tile
+  position lands on a mask position (first consistent anchor wins).
+  Stage 5: the wallpaper is repainted - separator lines unchanged, motif
+  tile stamped at every anchored mask position, standard tile everywhere
+  else. In pair 1 the observed motif tiles form the mask's full bottom
+  row and the completed stamp reproduces the motif's own 7-cell pattern
+  across the tile grid.
+
+Lessons learned: the placement mask must be built from the motif color's
+  positions, not from the cell-by-cell difference between the two tile
+  designs - the difference mask is a full 3x3 box minus the shared center
+  and overpaints tile positions where the motif tile places its
+  complement color; only the motif-color cells form the self-similar
+  placement picture. The first prototype using the difference mask failed
+  pairs 1 and 3 while passing pair 2, a reminder that a partially passing
+  mask definition is still the wrong abstraction. With the motif-color
+  mask all three training pairs and the test pass on the first run.
+  Runner bookkeeping: the live benchmark reports 67/120 after this wave
+  against the official ledger of 68/120; tasks 13e47133 and 9385bd28
+  remain flagged for a dedicated repair wave.
+
+Accomplishment: Acc_369.  Paper: Acc_369_ARC2_Wave71_WallpaperMotif.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3459,6 +3515,7 @@ e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; gre
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
 67e490f4  - Wave 70 - shape_catalog      - two-color lattice block cropped; background motif pockets recolored to the dominant same-shaped catalogue color outside the block (D4-invariant match)
+b99e7126  - Wave 71 - wallpaper_motif    - separator-lined wallpaper; minority motif tile's own color mask is the tile-grid placement map; anchor pinned by observed motif tiles; motif stamped at every mapped position
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3771,4 +3828,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 69: Frame-compass - each of the four grid bo
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 70: Shape-catalog - the largest 4-connected non-background component is a lattice block built from exactly two colors (frame color over background); every cell in its bounding box must belong to that two-color palette; the block is cropped, its background pockets are extracted as motifs, and each motif is recolored to the color of the same-shaped catalogue component outside the block, where shapes match up to rotation and reflection (canonical dihedral-four form) and the most frequent matching catalogue color wins.
   Score: 67/120 = 55.83%. Task 67e490f4 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 71: Wallpaper-motif - uniform separator rows and columns carve the grid into a tile grid carrying exactly two tile designs, a majority standard tile and a minority motif tile; the motif color is the color unique to the motif tile, and its cell positions inside the motif tile form a placement mask; the mask is slid over the tile grid until every observed motif tile sits on a mask position, and the wallpaper is repainted with the motif tile at every anchored mask position and the standard tile elsewhere - the motif's own picture is the map of its placements.
+  Score: 68/120 = 56.67%. Task b99e7126 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

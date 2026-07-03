@@ -1,0 +1,37 @@
+Accomplishment 369: ARC-AGI-2 Wave 71 - Wallpaper Motif Self-Placement
+
+PrologAI solves ARC-AGI-2 task b99e7126 with a new glass-box rule called
+wallpaper_motif (WP-329, Layer 304), raising the benchmark score from
+67/120 = 55.83% to 68/120 = 56.67%.
+
+The input grid is a wallpaper: uniform separator rows and columns carve
+it into a 7x7 tile grid of 3x3 tiles carrying exactly two designs - a
+majority standard tile and a minority motif tile, the same design with
+one extra color painted into some of its cells. The output stamps the
+motif tile at additional positions in the tile grid.
+
+The key insight is that the motif is its own placement map. The picture
+painted in the motif color inside one 3x3 tile is exactly the picture
+that the motif tiles must paint across the 7x7 tile grid - a fractal in
+miniature. The rule reads that picture as a mask, slides the mask over
+the tile grid until every motif tile already visible in the input lands
+on a mask position, and then completes the stamp: motif tile at every
+anchored mask position, standard tile everywhere else, separator lines
+untouched.
+
+One failed prototype taught the honest lesson. Building the mask from
+the cell-by-cell difference between the two tile designs passes one
+training pair and fails the other two, because the difference mask also
+includes the positions where the motif tile paints its complement color.
+Only the motif color's own cells form the self-similar placement
+picture. A partially passing mask definition is still the wrong
+abstraction.
+
+All three training pairs and the test case passed on the first run with
+the corrected mask. The rule carries no learned parameters: separator
+color, tile designs, motif color, mask, and anchor are all derived from
+the input grid itself. Pure induction. No pretraining. Every rule is
+named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

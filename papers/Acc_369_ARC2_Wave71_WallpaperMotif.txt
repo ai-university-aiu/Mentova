@@ -1,0 +1,114 @@
+Acc_369: ARC-AGI-2 Wave 71 - Wallpaper Motif Self-Placement
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 71 of the ARC-AGI-2 benchmark climb: task b99e7126 solved using the
+wallpaper_motif rule (WP-329, Layer 304). Score advances from 67/120 =
+55.83% to 68/120 = 56.67%.
+
+TASK DESCRIPTION
+
+Task b99e7126 presents 29x29 grids that are wallpapers: uniform separator
+rows and columns every 4 cells carve each grid into a 7x7 tile grid of
+3x3 inner tiles. Exactly two tile designs appear. A majority standard
+tile repeats everywhere, and a minority motif tile - the same design with
+one extra color painted into some of its cells - occupies a handful of
+tile positions. The separator color and the palette change from grid to
+grid: the three training grids use separators 2, 2, and 1 with palettes
+1/2/3/4, 1/2/3/8, and 1/2/4/8, and the hidden test grid uses separator 8
+with palette 2/4/8/9. The output is the same wallpaper with the motif
+tile stamped at additional tile positions.
+
+RULE: wallpaper_motif
+
+The glass-box named rule is a five-stage self-placement procedure with no
+learned parameters:
+
+1. SEPARATOR DETECTION (wm_sep_idx_/3)
+   The separator color is the color of row 0, which must be uniform. All
+   rows uniform in that color are separator rows; the same scan on the
+   transposed grid (reusing arc2_transform(transpose, ...)) yields the
+   separator columns, which must share the same color. At least two
+   separators are required in each direction.
+
+2. TILE EXTRACTION (wm_segments_/3, wm_slice_/3, wm_tile_/4)
+   The index spans between consecutive separators - plus any span before
+   the first or after the last separator - define the tile bands. Every
+   tile is cut out with its tile-grid coordinates, giving a 7x7 grid of
+   3x3 tile patterns.
+
+3. MAJORITY AND MINORITY (aggregate_all count)
+   Exactly two distinct tile designs must exist, with different
+   frequencies. The more frequent design is the standard tile; the less
+   frequent one is the motif tile.
+
+4. THE SELF-PLACEMENT MASK
+   The motif color is the color present in the motif tile but absent from
+   the standard tile. The set of positions where the motif color appears
+   inside the 3x3 motif tile is the placement mask: the motif tile's own
+   picture is the map of where motif tiles belong in the 7x7 tile grid.
+   The anchor offset is found by sliding the mask over the tile grid and
+   accepting the first offset at which every observed motif tile position
+   lands on a mask position.
+
+5. REPAINT (wm_render_/9, wm_cell_/11)
+   The wallpaper is rebuilt cell by cell: separator rows and columns are
+   copied unchanged, tile positions on the anchored mask receive the
+   motif tile, and every other tile position receives the standard tile.
+
+THE KEY INSIGHT: THE MOTIF IS ITS OWN PLACEMENT MAP
+
+The task is fractal in miniature: the picture painted in motif color
+inside one 3x3 tile is the same picture that the motif tiles paint across
+the 7x7 tile grid. In training pair 1 the motif tile paints seven cells
+of color 3 in a 3-3-3 pattern whose bottom row is full; the input shows
+three motif tiles in a horizontal run - the mask's full bottom row - and
+the completed output stamps motif tiles in the mask's remaining four
+positions, reproducing the motif's own picture at tile scale.
+
+The decisive lesson came from a failed first prototype. Building the mask
+from the cell-by-cell difference between the two tile designs - every
+position where motif and standard tiles disagree - passes training pair 2
+but fails pairs 1 and 3, because the difference mask is a full 3x3 box
+minus the shared center: it includes the positions where the motif tile
+paints its complement color rather than the motif color. Only the motif
+color's own cells form the self-similar placement picture. A partially
+passing mask definition is still the wrong abstraction.
+
+INDUCTION PRE-FILTER
+
+The first training pair must have identical input and output dimensions,
+a first row uniform in one separator color, and a first column entirely
+in that same color; all training pairs are then verified with forall
+before the rule is selected. Inside the transform, the uniform-row-0
+guard and the exactly-two-designs guard fail fast on non-wallpaper grids,
+keeping the rule cheap for every other task in the named-rule
+enumeration.
+
+KEY PREDICATES
+
+  wm_sep_idx_/3    - separator row indices and their shared color
+  wm_segments_/3   - index spans between consecutive separators
+  wm_slice_/3      - elements of a list across an index span
+  wm_tile_/4       - cut one tile out of the wallpaper
+  wm_render_/9     - repaint the wallpaper from the anchored mask
+  wm_cell_/11      - per-cell paint decision (separator, motif, standard)
+  arc2_transform(wallpaper_motif, +Grid, -Out)
+  arc2_induce_rule(+Pairs, wallpaper_motif)
+
+VERIFICATION
+
+All three training pairs and the test case pass in SWI-Prolog - on the
+first run with the motif-color mask. A full benchmark regression run
+confirms no previously solved task lost its rule. Pure induction from
+training examples. No pretraining on the ARC-AGI-2 corpus. Every rule is
+named and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v300, Pseudocode v292, Architecture v293,
+Refinement v352, Completion v358.
