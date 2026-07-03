@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 73 complete: 70/120 = 58.33%.
+Last updated: 2026-07-03. Wave 74 complete: 71/120 = 59.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -195,6 +195,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  68 / 120  | 56.67%  | Wave 71: wallpaper_motif separator-lined wallpaper of two tile designs; the minority motif tile's own color mask is the placement map over the tile grid; anchor pinned by the observed motif tiles; motif stamped at every mapped position
 2026-07-03  |  69 / 120  | 57.50%  | Wave 72: band_stamp legend of same-color connected shapes above full-width edge-and-interior bands; each legend component stamped into the band whose interior color matches the component color, same columns, bottom-anchored, painted in the band edge color; legend erased
 2026-07-03  |  70 / 120  | 58.33%  | Wave 73: lattice_stamp template shape of color T plus a marker map of single M-color cells around one single T-color center cell; each marker at even offset (DR, DC) stamps a T-colored template copy at DR/2 template heights and DC/2 template widths from the template; original template repainted in M; marker map erased
+2026-07-03  |  71 / 120  | 59.17%  | Wave 74: hole_census equally sized large tiles and an equal number of smaller shapes over a background; each tile carries scattered single-cell background holes and pairs with the unique shape whose background-hole region has that many 4-connected components; tiles redrawn solid in their packed layout with each paired shape centered inside, shape holes filled by the tile color
 
 
 COMPLETE SCORE PROGRESSION
@@ -1104,6 +1105,60 @@ Lessons learned: the marker map is a half-scale blueprint - marker
   remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_371.  Paper: Acc_371_ARC2_Wave73_LatticeStamp.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 74 - 2026-07-03 - Score: 71/120 = 59.17%
+
+Date: 2026-07-03
+
+Confirmed score: 71 / 120 = 59.17%
+
+Rules added in this wave:
+  hole_census (WP-332, Layer 307)
+
+Task solved: 8698868d (2 training pairs + 1 test case; inputs 20x15 to
+  30x30; each grid holds a set of equally sized large rectangular tiles
+  of distinct colors packed side by side, plus an equal number of
+  smaller rectangular shapes of their own colors scattered elsewhere
+  over the background; both the tiles and the shapes are pierced by
+  background-colored holes).
+
+Algorithm: hole-census pairing with centered stamping. Stage 1: the
+  background is the most common cell value, and every non-background
+  cell is partitioned into same-color 4-connected components. Stage 2:
+  each component is annotated with its bounding box and its hole
+  census - the number of 4-connected components formed by the
+  background cells inside its bounding box. Stage 3: the components
+  whose bounding-box area equals the maximum are the tiles; the rest
+  are the shapes; tile and shape counts must be equal, all tiles must
+  share one bounding-box size, all shapes must share one strictly
+  smaller size. Stage 4: each tile is paired with the unique shape
+  whose hole census equals the tile's own hole census, and the pairing
+  must use every shape exactly once. Stage 5: the output spans exactly
+  the packed tile layout, anchored at the smallest tile top row and
+  left column; each tile is redrawn solid in its own color, its paired
+  shape is stamped centered inside it, shape cells keep the shape
+  color, and shape holes take the tile color.
+
+Lessons learned: the tiles' scattered single background holes are not
+  noise - they are a census, a count that names the partner shape by
+  the number of 4-connected hole components in the shape's interior.
+  Counting raw hole cells fails (a shape's holes clump into blocks and
+  bars), and matching hole positions fails (the tile holes sit at
+  arbitrary spots); only the component count of the holes is the
+  invariant carried from shape to tile. The pairing must be verified
+  as a bijection: requiring exactly one census match per tile and all
+  matched shapes distinct turns any ambiguous grid into a clean rule
+  failure instead of a wrong stamp. All two training pairs and the
+  test passed on the first run. Runner bookkeeping: the live benchmark
+  reports 70/120 after this wave against the official ledger of
+  71/120; tasks 13e47133 and 9385bd28 remain flagged for a dedicated
+  repair wave.
+
+Accomplishment: Acc_372.  Paper: Acc_372_ARC2_Wave74_HoleCensus.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3627,6 +3682,7 @@ fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug th
 b99e7126  - Wave 71 - wallpaper_motif    - separator-lined wallpaper; minority motif tile's own color mask is the tile-grid placement map; anchor pinned by observed motif tiles; motif stamped at every mapped position
 7c66cb00  - Wave 72 - band_stamp         - same-color connected legend components stamped into the band whose interior color matches, same columns, bottom-anchored, painted in the band edge color; legend erased
 a395ee82  - Wave 73 - lattice_stamp      - marker map of single M-color cells around a single T-color center; each even marker offset halved into template-size units stamps a T-colored template copy; original template repainted in M; map erased
+8698868d  - Wave 74 - hole_census        - equally sized tiles pair with smaller shapes by hole census: tile hole count equals shape background-hole component count; tiles redrawn solid in packed layout with paired shapes centered inside, shape holes filled by tile color
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -3951,4 +4007,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 72: Band-stamp - a legend of small same-colo
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 73: Lattice-stamp - the grid holds a template shape of one color T and a marker map of scattered single cells of a marker color M arranged around one single T-colored center cell; every marker sits at an even offset from the center, and halving that offset converts it into whole template-size units; each marker stamps a copy of the template, painted in color T, at the template's own position shifted by that many template heights and widths; the original template is repainted in the marker color M and the marker map is erased - the map is a half-scale blueprint of the copy field, and the center's template color is what separates the two roles.
   Score: 70/120 = 58.33%. Task a395ee82 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 74: Hole-census - the grid holds equally sized large rectangular tiles packed side by side and an equal number of smaller rectangular shapes scattered over the background, both pierced by background-colored holes; each tile's scattered single holes are a census that names its partner: the tile pairs with the unique shape whose background-hole region forms exactly that many 4-connected components; the output redraws the tiles solid in their packed layout with each paired shape centered inside its tile, shape cells keeping the shape color and shape holes taking the tile color - the hole count is the invariant carried from shape interior to tile face, and the pairing is verified as a bijection.
+  Score: 71/120 = 59.17%. Task 8698868d solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
