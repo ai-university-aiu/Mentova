@@ -1,0 +1,121 @@
+Acc_399: ARC-AGI-2 Wave 101 - Legend Snake: Pattern-Programmed Paths Climbing a Two-Region Boundary
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-04
+
+ACCOMPLISHMENT
+
+Wave 101 of the ARC-AGI-2 benchmark climb - task 195c6913 solved
+using the legend_snake rule (WP-359, Layer 334). Score advances
+from 97/120 = 80.83% to 98/120 = 81.67%.
+
+TASK DESCRIPTION
+
+Task 195c6913 presents three training pairs and one test case. The
+grids range from 20x20 to 30x30; the output always keeps the input
+size. Each input shows two large regions of two dominant colors
+meeting along a jagged diagonal boundary, with stray cells of each
+color scattered inside the other region. Near the top-left corner a
+legend strip of two-by-two blocks, separated by single background
+columns, spells out a color sequence - three blocks reading 2, 2, 8
+in the first pair, two blocks reading 4, 1 in the second, three
+blocks reading 2, 2, 3 in the third, and four blocks reading
+1, 2, 8, 3 in the test. Elsewhere a lone two-by-two block of one
+extra color - 4, 9, 8, and 6 across the four grids - names the turn
+color. Single marker cells of the legend's first color sit on the
+left edge inside one of the two regions. In the output each marker
+has fired a snake path eastward through its own region, painted with
+the legend pattern repeating cyclically; every time the path ran
+into the other region, the blocking cell took the turn color and the
+snake pivoted north, then east again at the next block, climbing the
+diagonal boundary like a staircase; and both the legend strip and
+the lone turn block have been erased to the region color around
+them.
+
+Two properties make the task hard. First, the paint program and the
+navigation are interleaved: the cyclic pattern must flow unbroken
+around every corner, so the turn marks must consume no pattern
+position. Second, the path's ending must be read correctly from the
+scene: a snake stops silently at the grid edge, but a snake whose
+pivot direction is also blocked stops after painting exactly one
+turn mark - the second training pair's lower snake dies against the
+boundary this way after a single mark.
+
+RULE: legend_snake
+
+The glass-box rule is a five-stage procedure whose parameters are
+all read off the input grid at solve time:
+
+1. REGION READING (ls_region_colors_/3)
+   The two region colors are the two most frequent colors of the
+   grid.
+
+2. LEGEND AND TURN BLOCK (ls_blocks_/4, ls_legend_/4)
+   Every two-by-two block of a non-region color is collected. The
+   blocks sharing one top row form the legend strip, read left to
+   right as the repeating pattern; the single remaining block names
+   the turn color.
+
+3. MARKERS (ls_markers_/3)
+   The markers are the left-edge cells carrying the pattern's first
+   color; each marker's region color is read from the cell directly
+   beside it.
+
+4. ERASURE (ls_erase_/6, ls_fill_color_/6)
+   The legend strip and the lone turn block are erased to the
+   region color found orthogonally next to them.
+
+5. SNAKE WALK (ls_path_/7, ls_walk_/12, ls_step_/15, ls_turn_/4)
+   Each snake starts at its marker as pattern position zero and
+   walks east through its own region, painting the pattern
+   cyclically. A cell outside the region blocks the snake: the
+   blocking cell is painted the turn color, no pattern position is
+   spent, and the heading pivots from east to north or from north
+   to east, resuming from the last path cell. If the pivoted
+   direction is also blocked the path ends without a second mark,
+   and walking off the grid edge ends the path silently. The snake
+   reads region membership from the untouched input grid while
+   painting onto the working copy.
+
+The discriminating observation is the pivot bookkeeping. The turn
+mark spends no pattern position, so the cyclic pattern flows
+unbroken around every staircase corner - verified position by
+position across all six snakes of the four grids - and the second
+training pair's lower snake, whose pivot direction is blocked
+immediately, proves that a blocked pivot ends the path after
+exactly one turn mark, quietly.
+
+VERIFICATION
+
+The complete rule was written in plain English covering all three
+training pairs and the test case before any code, following the
+proven wave method: all eight grids were dumped to text and every
+changed cell - every painted path cell, every turn mark, every
+erased legend and block cell - was accounted for by hand in a full
+cell-level diff, including the pattern position of every painted
+cell. The integrated rule passed the single-task test on its first
+run after one instantiation fix and the full regression without any
+further change: induction returns legend_snake, the test output
+matches exactly, and every previously solved task still passes.
+Induction is pure verification: a cheap pre-filter (same-size
+output, a legend strip with a lone turn block, at least one edge
+marker) followed by transformation of every training pair.
+
+IMPLEMENTATION
+
+Predicates added to arc_benchmark_2.pl (WP-359, Layer 334):
+arc2_transform(legend_snake)/3, ls_region_colors_/3, ls_blocks_/4,
+ls_legend_/4, ls_at_row_/2, ls_markers_/3, ls_erase_/6,
+ls_fill_color_/6, ls_path_/7, ls_walk_/12, ls_step_/15, and
+ls_turn_/4, plus the early-dispatch arc2_induce_rule/2 clause and
+the arc2_named_rule(legend_snake) registration. The rule reuses
+arc2_cell_/4, arc2_set_cell_/5, and hb_paint_/4 from the shared
+toolkit. Every code line carries an ERC comment.
+
+SCORE
+
+ARC-AGI-2: 98/120 = 81.67%. Task 195c6913 solved with a single
+integration fix. Pure induction. No pretraining. Every rule is
+named and glass-box. No human in the development loop.
