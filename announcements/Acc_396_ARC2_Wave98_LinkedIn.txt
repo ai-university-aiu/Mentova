@@ -1,0 +1,39 @@
+Accomplishment 396: ARC-AGI-2 Wave 98 - Twin Beam: Firing Lamp Probes from Twin-Bar Separators
+
+PrologAI solves ARC-AGI-2 task 9bbf930d with a new glass-box rule
+called twin_beam (WP-356, Layer 331), raising the benchmark score
+from 94/120 = 78.33% to 95/120 = 79.17%.
+
+Each input of this task is a ladder: even rows carry a colored
+horizontal bar plus pipe-like decorations to the right, odd rows
+are empty separator corridors, and every row opens with a small 6
+lamp in column zero. Wherever two consecutive bars share one
+color, the separator between them loses its lamp - and a 6 appears
+somewhere else entirely: at the far end of the row, deep inside
+the pipe decorations, or pressed against a distant wall.
+
+The lamp is a probe. It leaves column zero heading right, glides
+through the empty corridors, and turns wherever the pipes force
+it: blocked ahead with exactly one open side, it turns there and
+keeps going; blocked at a two-way junction or a dead end, it rests
+and lights up where it stands. One probe in the test grid crosses
+twenty rows and turns twice before finding its resting place.
+
+The trick that cracks the task: two junctions can be locally
+identical in every surrounding cell, yet one probe must rest while
+the other must turn left. The difference is not in the walls - it
+is in the lamps. A probe refuses to turn left along a row that
+still holds its own lamp, and gladly turns left along a row whose
+lamp has already fired. The vacated column-zero lamps are not
+cosmetic; they are state that later probes consult. No purely
+local turning rule solves this task.
+
+The complete rule was written in plain English covering every grid
+before any code, a Python prototype confirmed it - exposing one
+ordering subtlety, that junction arity must be tested before the
+lamp guard is applied - and the integrated Prolog rule passed the
+single-task test and the full regression on the first compile.
+Pure induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

@@ -1,0 +1,119 @@
+Acc_396: ARC-AGI-2 Wave 98 - Twin Beam: Firing Lamp Probes from Twin-Bar Separators
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-04
+
+ACCOMPLISHMENT
+
+Wave 98 of the ARC-AGI-2 benchmark climb: task 9bbf930d solved using
+the twin_beam rule (WP-356, Layer 331). Score advances from
+94/120 = 78.33% to 95/120 = 79.17%.
+
+TASK DESCRIPTION
+
+Task 9bbf930d presents three training pairs and one test case. The
+grids are 17x16, 19x14, and 17x16 in training and 23x21 in the
+test; the output always keeps the input size and changes only a
+handful of cells. Each grid is a ladder: even rows carry a colored
+horizontal bar starting near column two plus optional pipe
+decorations to the right, odd rows are 7-filled separator
+corridors, and every row opens with a 6 lamp in column zero on a 7
+spacer. Wherever two consecutive bars share one color, the
+separator between them loses its lamp, and a 6 appears somewhere
+else in the grid - at the right end of the separator in the clean
+second pair, but deep inside the pipe decorations, at the top or
+bottom boundary, or beside a distant obstacle in the others.
+
+Two properties make the task hard. First, the delivered 6 can land
+far from its separator: in the test grid one beam crosses twenty
+rows and turns twice before resting. Second, two beam junctions
+can be locally identical in every cell of their neighborhoods yet
+demand opposite behavior - one beam must rest, the other must turn
+left - so no purely local turning rule works.
+
+RULE: twin_beam
+
+The glass-box rule is a six-stage procedure whose parameters are
+all read off the input grid at solve time:
+
+1. LADDER READING (tb_bar_color_/3, tb_first_fg_/2)
+   Even rows are bar rows and odd rows are separators. Each bar
+   row's color is the first non-7 cell scanning from column two,
+   which skips the lamp and spacer columns and tolerates bars that
+   start late, such as the 9 bars of the first pair.
+
+2. FIRING TEST
+   A separator fires when the bar rows directly above and below
+   share one color. Twin 1 bars, 4 bars, and 9 bars fire in the
+   first pair; twin 1, 0, and 3 bars in the second; twin 4, 2, 5,
+   and 3 bars in the third; six separators fire in the test.
+
+3. SIMULTANEOUS LAMP REMOVAL (tb_douse_/3)
+   Every fired separator's lamp leaves column zero (6 becomes 7)
+   before any beam is traced, so all fired rows are vacated at
+   once - later beams consult this shared state.
+
+4. BEAM WALK (tb_trace_/9)
+   Each fired separator launches a beam at column zero heading
+   right. The beam advances while the next cell holds 7. Stepping
+   off the grid, it rests on the cell it occupies.
+
+5. TURN RESOLUTION (tb_turn_/9, tb_open_/6, tb_guarded_/3)
+   Hitting an obstacle, the beam examines the two cells
+   perpendicular to its heading - up and down for a horizontal
+   heading, left and right for a vertical one. With exactly one
+   open it turns there and continues, except that a turn onto
+   heading left is refused while the current row still shows its
+   own lamp. With zero or two open cells, or a refused left turn,
+   the beam rests where it stands.
+
+6. LAMP DELIVERY (tb_light_/3)
+   A 6 is painted on every beam's resting cell; every other cell
+   is unchanged.
+
+The discriminating observation is the lamp guard on left turns.
+In the third training pair a beam descends a pipe and rests beside
+an open leftward corridor because that row still holds its 6 lamp,
+while in the test grid a beam turns left along a fired separator
+whose lamp has already departed. The two junctions are locally
+identical, so only the row's own lamp state separates them.
+Junction arity is tested on raw openness before the guard is
+applied: a beam facing a two-way junction rests even when the
+guard would have thinned the choice to one side, which the third
+pair's final beam proves.
+
+VERIFICATION
+
+The complete rule was written in plain English covering all three
+training pairs and the test case before any code, following the
+proven wave method: all four grids were dumped to text, every
+fired separator, every beam path, and every resting cell was
+mapped by hand against the full cell-level diff, and a Python
+prototype confirmed the rule. The prototype exposed one ordering
+subtlety - the lamp guard must not thin a two-way junction to a
+single candidate - and after moving the raw-openness test ahead of
+the guard, the prototype passed all three training pairs and the
+test grid. The Prolog port then passed the single-task test and
+the full regression on the first compile: induction returns
+twin_beam, the test output matches exactly, and every previously
+solved task still passes. Induction is pure verification: a cheap
+pre-filter (same-size output, every row opening with a 6 lamp on a
+7 spacer) followed by transformation of every training pair.
+
+IMPLEMENTATION
+
+Predicates added to arc_benchmark_2.pl (WP-356, Layer 331):
+arc2_transform(twin_beam)/3, tb_douse_/3, tb_light_/3,
+tb_bar_color_/3, tb_first_fg_/2, tb_trace_/9, tb_turn_/9,
+tb_open_/6, tb_guarded_/3, plus the early-dispatch
+arc2_induce_rule/2 clause and the arc2_named_rule(twin_beam)
+registration. The rule reuses arc2_cell_/4 and arc2_set_cell_/5
+from the shared toolkit. Every code line carries an ERC comment.
+
+SCORE
+
+ARC-AGI-2: 95/120 = 79.17%. Task 9bbf930d solved on the first
+integrated compile. Pure induction. No pretraining. Every rule is
+named and glass-box. No human in the development loop.
