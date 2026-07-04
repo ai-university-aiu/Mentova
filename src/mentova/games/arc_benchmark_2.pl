@@ -1587,6 +1587,38 @@ arc2_induce_rule(TrainingPairs, cavity_paint) :-
 % Each training pair must reproduce its output exactly.
            arc2_transform(cavity_paint, In, Out)).
 
+% pipe_router: early dispatch before generic clause (WP-367, Layer 342).
+% Enumerate pipe_router as a known rule name.
+arc2_named_rule(pipe_router).
+% arc2_induce_rule(pipe_router): legend-strip pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, pipe_router) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% The first legend row must be entirely frame color 5.
+    First = [Row0|_],
+% Every cell of the top row is the legend frame color.
+    forall(member(V, Row0), V =:= 5),
+% The sixth row closes the legend strip and must also be all 5s.
+    nth0(5, First, Row5),
+% Every cell of the closing row is the legend frame color.
+    forall(member(V5, Row5), V5 =:= 5),
+% Measure the first input height.
+    length(First, H),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output must be exactly the input minus the 6-row legend strip.
+    OH =:= H - 6,
+% Measure the first input width.
+    length(Row0, W),
+% Take the first output row.
+    FirstOut = [ORow0|_],
+% Input and output widths must agree.
+    length(ORow0, W),
+% Verify every training pair under the pipe_router transform.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must reproduce its output exactly.
+           arc2_transform(pipe_router, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -24679,4 +24711,307 @@ cvp_render_(H, W, MaskLocal, MaskColor, Paints, Bg, Out) :-
                         ;   V = Bg
                         ) ),
                       Row) ),
+            Out).
+
+% ---------------------------------------------------------------------------
+% pipe_router: a 6-row legend strip of framed color swatches sits above the
+% playing field. Each 6-wide swatch holds one colored pixel among its four
+% interior cells: a pixel on the left half means blocks of that color turn
+% pipes LEFT; a pixel on the right half means they turn pipes RIGHT. The
+% field holds a majority-color background, colored rectangular blocks, and
+% one square seed of 8s. Four 8-pipes as wide as the seed shoot from the
+% seed in the four orthogonal directions; each pipe travels straight
+% painting 8s over background (crossing other pipes freely), ends when it
+% leaves the grid, and when it frontally meets a colored block it stops
+% beside it and turns left or right according to that block color's legend
+% handedness, then continues. Output = field only, with all pipes painted.
+% WP-367, Layer 342.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(pipe_router): drop the legend, route the four seed pipes.
+arc2_transform(pipe_router, Grid, Out) :-
+% The legend strip is exactly six rows tall.
+    length(Legend, 6),
+% The playing field is everything below the legend strip.
+    append(Legend, Field, Grid),
+% Parse the legend swatches into a color-to-turn-handedness map.
+    prl_turn_map_(Legend, TurnMap),
+% Identify the field background as the majority color.
+    arc2_bg_color_(Field, Bg),
+% Locate the square 8-seed bounding box and derive the pipe width.
+    prl_seed_(Field, R0, R1, C0, C1, Wd),
+% Measure the field height.
+    length(Field, H),
+% Take the first field row.
+    Field = [FRow|_],
+% Measure the field width.
+    length(FRow, W),
+% The eastbound pipe starts just right of the seed.
+    CE is C1 + 1,
+% Route the eastbound pipe from the seed.
+    prl_march_(Field, H, W, Bg, TurnMap, Wd, east, R0, R1, CE, 0, CellsE),
+% The westbound pipe starts just left of the seed.
+    CW is C0 - 1,
+% Route the westbound pipe from the seed.
+    prl_march_(Field, H, W, Bg, TurnMap, Wd, west, R0, R1, CW, 0, CellsW),
+% The northbound pipe starts just above the seed.
+    RN is R0 - 1,
+% Route the northbound pipe from the seed.
+    prl_march_(Field, H, W, Bg, TurnMap, Wd, north, C0, C1, RN, 0, CellsN),
+% The southbound pipe starts just below the seed.
+    RS is R1 + 1,
+% Route the southbound pipe from the seed.
+    prl_march_(Field, H, W, Bg, TurnMap, Wd, south, C0, C1, RS, 0, CellsS),
+% Merge the four pipes' painted cells.
+    append([CellsE, CellsW, CellsN, CellsS], AllCells),
+% Deduplicate the painted cell set.
+    sort(AllCells, Painted),
+% Render the field with every painted cell set to 8.
+    prl_render_(Field, Painted, Out).
+
+% prl_turn_map_(+Legend, -TurnMap): read swatch pixels into Color-Turn pairs.
+prl_turn_map_(Legend, TurnMap) :-
+% Use the second legend row, which crosses every swatch interior.
+    nth0(1, Legend, Row),
+% Measure the legend width.
+    length(Row, W),
+% Each swatch is exactly six cells wide.
+    NS is W // 6,
+% Compute the upper swatch index bound.
+    NS1 is NS - 1,
+% Decode one Color-Turn pair from every swatch.
+    findall(Color-Turn,
+% Enumerate the swatch indices.
+            ( between(0, NS1, K),
+% Decode the colored pixel of swatch K.
+              prl_swatch_(Row, K, Color, Turn) ),
+            TurnMap).
+
+% prl_swatch_(+Row, +K, -Color, -Turn): decode one legend swatch.
+prl_swatch_(Row, K, Color, Turn) :-
+% Compute the interior start column of swatch K.
+    Base is K * 6 + 1,
+% Enumerate the four interior offsets.
+    between(0, 3, I),
+% Compute the absolute column of the interior cell.
+    Col is Base + I,
+% Read the interior cell value.
+    nth0(Col, Row, V),
+% The colored pixel is neither empty nor the frame color.
+    V =\= 0,
+% Exclude the frame color from pixel candidates.
+    V =\= 5,
+% Bind the swatch color to the pixel value.
+    Color = V,
+% A pixel on the left half turns pipes left; on the right half, right.
+    ( I =< 1 -> Turn = left ; Turn = right ),
+% Commit to the first colored pixel of the swatch.
+    !.
+
+% prl_seed_(+Field, -R0, -R1, -C0, -C1, -Wd): square 8-seed bounding box.
+prl_seed_(Field, R0, R1, C0, C1, Wd) :-
+% Collect the coordinates of every 8-colored cell.
+    findall(R-C, (nth0(R, Field, Row), nth0(C, Row, 8)), Seeds),
+% The seed must exist.
+    Seeds = [_|_],
+% Extract the seed row indices.
+    findall(R, member(R-_, Seeds), Rs),
+% Extract the seed column indices.
+    findall(C, member(_-C, Seeds), Cs),
+% Bound the seed rows from below.
+    min_list(Rs, R0),
+% Bound the seed rows from above.
+    max_list(Rs, R1),
+% Bound the seed columns from below.
+    min_list(Cs, C0),
+% Bound the seed columns from above.
+    max_list(Cs, C1),
+% The pipe width equals the seed height.
+    Wd is R1 - R0 + 1,
+% The seed must be square.
+    Wd =:= C1 - C0 + 1.
+
+% prl_march_(+Field, +H, +W, +Bg, +Map, +Wd, +Dir, +L0, +L1, +Front, +Depth,
+% -Cells): advance one pipe until it exits the grid, turning at blocks.
+prl_march_(Field, H, W, Bg, TurnMap, Wd, Dir, Lat0, Lat1, Front, Depth, Cells) :-
+% Check whether the front line is still inside the grid.
+    (   \+ prl_front_in_(Dir, H, W, Front)
+% The pipe leaves the grid: it ends here.
+    ->  Cells = []
+% Otherwise inspect the front line for an obstacle.
+    ;   prl_front_cells_(Dir, Lat0, Lat1, Front, FrontCells),
+% Look for a colored block cell directly ahead.
+        (   prl_obstacle_(Field, Bg, FrontCells, ObsColor)
+% A block ahead: cap the number of turns for safety.
+        ->  Depth < 16,
+% Look up the block color's turn handedness in the legend map.
+            memberchk(ObsColor-Turn, TurnMap),
+% Compute the new travel direction after the turn.
+            prl_turn_(Dir, Turn, NewDir),
+% Compute the corner square span on the old travel axis.
+            prl_corner_(Dir, Wd, Front, K0, K1),
+% Collect the in-bounds corner square cells to paint.
+            findall(RR-CC,
+% Enumerate the corner square coordinates.
+                    ( between(Lat0, Lat1, L),
+% Enumerate the corner span on the travel axis.
+                      between(K0, K1, KK),
+% Map lateral/travel coordinates to row and column.
+                      prl_cell_rc_(Dir, L, KK, RR, CC),
+% Keep only rows inside the grid.
+                      RR >= 0, RR < H,
+% Keep only columns inside the grid.
+                      CC >= 0, CC < W ),
+                    CornerCells),
+% Compute the front line of the turned pipe.
+            prl_next_front_(NewDir, Lat0, Lat1, NF),
+% Count the completed turn.
+            D2 is Depth + 1,
+% Continue marching in the new direction from the corner.
+            prl_march_(Field, H, W, Bg, TurnMap, Wd, NewDir, K0, K1, NF, D2, Rest),
+% The pipe paints the corner square plus everything after the turn.
+            append(CornerCells, Rest, Cells)
+% Clear ahead: advance the front one step.
+        ;   prl_step_(Dir, Front, Front2),
+% Continue marching in the same direction.
+            prl_march_(Field, H, W, Bg, TurnMap, Wd, Dir, Lat0, Lat1, Front2, Depth, Rest),
+% The pipe paints this front line plus everything beyond it.
+            append(FrontCells, Rest, Cells)
+        )
+    ).
+
+% prl_front_in_(+Dir, +H, +W, +Front): the front line is inside the grid.
+prl_front_in_(east, _, W, F) :-
+% An eastbound front is a column inside [0, W).
+    F >= 0, F < W.
+% A westbound front is a column inside [0, W).
+prl_front_in_(west, _, W, F) :-
+% Check the column bound for the westbound pipe.
+    F >= 0, F < W.
+% A northbound front is a row inside [0, H).
+prl_front_in_(north, H, _, F) :-
+% Check the row bound for the northbound pipe.
+    F >= 0, F < H.
+% A southbound front is a row inside [0, H).
+prl_front_in_(south, H, _, F) :-
+% Check the row bound for the southbound pipe.
+    F >= 0, F < H.
+
+% prl_front_cells_(+Dir, +L0, +L1, +Front, -Cells): cells of the front line.
+prl_front_cells_(Dir, Lat0, Lat1, Front, Cells) :-
+% Build one cell per lateral position.
+    findall(R-C,
+% Enumerate the lateral span.
+            ( between(Lat0, Lat1, L),
+% Map the lateral/front coordinates to row and column.
+              prl_cell_rc_(Dir, L, Front, R, C) ),
+            Cells).
+
+% prl_cell_rc_(+Dir, +Lat, +K, -R, -C): map pipe coordinates to grid cells.
+prl_cell_rc_(east, L, K, L, K).
+% For a westbound pipe the lateral axis is rows and the travel axis columns.
+prl_cell_rc_(west, L, K, L, K).
+% For a northbound pipe the lateral axis is columns and the travel axis rows.
+prl_cell_rc_(north, L, K, K, L).
+% For a southbound pipe the lateral axis is columns and the travel axis rows.
+prl_cell_rc_(south, L, K, K, L).
+
+% prl_obstacle_(+Field, +Bg, +Cells, -Color): first block cell in the front.
+prl_obstacle_(Field, Bg, Cells, Color) :-
+% Scan the front cells in order.
+    member(R-C, Cells),
+% Read the cell value.
+    nth0(R, Field, Row),
+% Extract the value at the front column.
+    nth0(C, Row, V),
+% A block cell is neither background nor pipe/seed color.
+    V =\= Bg,
+% The 8 color marks seed and pipes, never a block.
+    V =\= 8,
+% Bind the obstacle color.
+    Color = V,
+% Commit to the first obstacle found.
+    !.
+
+% prl_turn_(+Dir, +Handedness, -NewDir): rotate the travel direction.
+prl_turn_(east, left, north).
+% An eastbound pipe turning right heads south.
+prl_turn_(east, right, south).
+% A westbound pipe turning left heads south.
+prl_turn_(west, left, south).
+% A westbound pipe turning right heads north.
+prl_turn_(west, right, north).
+% A northbound pipe turning left heads west.
+prl_turn_(north, left, west).
+% A northbound pipe turning right heads east.
+prl_turn_(north, right, east).
+% A southbound pipe turning left heads east.
+prl_turn_(south, left, east).
+% A southbound pipe turning right heads west.
+prl_turn_(south, right, west).
+
+% prl_corner_(+Dir, +Wd, +Front, -K0, -K1): corner span on the travel axis.
+prl_corner_(east, Wd, F, K0, K1) :-
+% The eastbound corner covers the last Wd columns before the block.
+    K0 is F - Wd, K1 is F - 1.
+% The westbound corner covers the last Wd columns before the block.
+prl_corner_(west, Wd, F, K0, K1) :-
+% Compute the westbound corner span.
+    K0 is F + 1, K1 is F + Wd.
+% The northbound corner covers the last Wd rows before the block.
+prl_corner_(north, Wd, F, K0, K1) :-
+% Compute the northbound corner span.
+    K0 is F + 1, K1 is F + Wd.
+% The southbound corner covers the last Wd rows before the block.
+prl_corner_(south, Wd, F, K0, K1) :-
+% Compute the southbound corner span.
+    K0 is F - Wd, K1 is F - 1.
+
+% prl_next_front_(+NewDir, +L0, +L1, -NF): front line after a turn.
+prl_next_front_(north, Lat0, _, NF) :-
+% Turning north continues just above the old lateral span.
+    NF is Lat0 - 1.
+% Turning west continues just left of the old lateral span.
+prl_next_front_(west, Lat0, _, NF) :-
+% Compute the westward front after the turn.
+    NF is Lat0 - 1.
+% Turning south continues just below the old lateral span.
+prl_next_front_(south, _, Lat1, NF) :-
+% Compute the southward front after the turn.
+    NF is Lat1 + 1.
+% Turning east continues just right of the old lateral span.
+prl_next_front_(east, _, Lat1, NF) :-
+% Compute the eastward front after the turn.
+    NF is Lat1 + 1.
+
+% prl_step_(+Dir, +Front, -Front2): advance the front line one step.
+prl_step_(east, F, F2) :-
+% Eastbound pipes advance to higher columns.
+    F2 is F + 1.
+% Westbound pipes advance to lower columns.
+prl_step_(west, F, F2) :-
+% Compute the next westbound front column.
+    F2 is F - 1.
+% Northbound pipes advance to lower rows.
+prl_step_(north, F, F2) :-
+% Compute the next northbound front row.
+    F2 is F - 1.
+% Southbound pipes advance to higher rows.
+prl_step_(south, F, F2) :-
+% Compute the next southbound front row.
+    F2 is F + 1.
+
+% prl_render_(+Field, +Painted, -Out): set every painted cell to 8.
+prl_render_(Field, Painted, Out) :-
+% Rebuild every field row in order.
+    findall(ORow,
+% Enumerate the field rows with their indices.
+            ( nth0(R, Field, Row),
+% Rebuild one row cell by cell.
+              findall(V2,
+% Enumerate the row cells with their column indices.
+                      ( nth0(C, Row, V),
+% Painted cells become pipe color 8; others keep their value.
+                        ( memberchk(R-C, Painted) -> V2 = 8 ; V2 = V ) ),
+                      ORow) ),
             Out).
