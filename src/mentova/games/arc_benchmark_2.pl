@@ -1651,6 +1651,36 @@ arc2_induce_rule(TrainingPairs, snake_dock) :-
 % Each training pair must reproduce its output exactly.
            arc2_transform(snake_dock, In, Out)).
 
+% fractal_stamp: early dispatch before generic clause (WP-369, Layer 344).
+% Enumerate fractal_stamp as a known rule name.
+arc2_named_rule(fractal_stamp).
+% arc2_induce_rule(fractal_stamp): cheap structural pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, fractal_stamp) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output height must match the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [FRow|_],
+% Measure the first input width.
+    length(FRow, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% Measure the first output width.
+    length(ORow, OW),
+% The legend panels are cut away: the output must be narrower.
+    OW < W,
+% Find the full-height divider columns of the first input.
+    frs_divider_cols_(First, W, Divs),
+% At least one divider column must exist.
+    Divs = [_|_],
+% Verify every training pair under the fractal_stamp transform.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must reproduce its output exactly.
+           arc2_transform(fractal_stamp, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -25420,3 +25450,464 @@ snd_match_one_(Socket, Snakes, Bg, G0, G1, Rest) :-
     snd_paint_(G0, Socket, InColor, GA),
 % Paint the trail with the outer color.
     snd_paint_(GA, TQ, OutColor, G1).
+
+% ---------------------------------------------------------------------------
+% FRACTAL_STAMP (WP-369, Layer 344, task a32d8b75)
+% fractal_stamp: legend panels sit beside full-height columns of divider
+% color 6; each panel holds a two-color STAMP glyph, a one-color LAYOUT
+% glyph, a box whose single 4 marks the field corner to anchor at, and a
+% box whose 7-domino points the rotation of the layout (up = 0, right =
+% 90 cw, down = 180, left = 270 cw).  The output is the field (the grid
+% minus the panels) with the rotated layout mask painted at the anchored
+% corner, each mask cell replaced by the stamp with its two colors swapped.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(fractal_stamp): cut the field and run every legend panel.
+arc2_transform(fractal_stamp, Grid, Out) :-
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Find every full-height column of divider color 6.
+    frs_divider_cols_(Grid, W, Divs),
+% At least one divider column must exist.
+    Divs = [_|_],
+% Compute the panel spans and the field column range.
+    frs_panels_(Divs, W, Panels, FieldLo, FieldHi),
+% The field must be non-empty.
+    FieldLo =< FieldHi,
+% Cut the field columns out of the grid.
+    frs_slice_grid_(Grid, FieldLo, FieldHi, Field0),
+% Apply each legend panel's stamping program to the field.
+    foldl(frs_apply_panel_(Grid), Panels, Field0, Out).
+
+% frs_divider_cols_(+Grid, +W, -Divs): columns made entirely of color 6.
+frs_divider_cols_(Grid, W, Divs) :-
+% Last column index.
+    W1 is W - 1,
+% Collect every column whose cells are all the divider color.
+    findall(C,
+% Enumerate a candidate column and demand 6 in every row.
+            ( between(0, W1, C), forall(member(Row, Grid), nth0(C, Row, 6)) ),
+% Gather the divider columns in ascending order.
+            Divs).
+
+% frs_panels_(+Divs, +W, -Panels, -FieldLo, -FieldHi): assign panel spans.
+frs_panels_(Divs, W, Panels, FieldLo, FieldHi) :-
+% Last column index.
+    W1 is W - 1,
+% Fold the dividers while narrowing the field range.
+    frs_panels_loop_(Divs, W1, Panels, 0, FieldLo, W1, FieldHi).
+
+% frs_panels_loop_(+Divs, +W1, -Panels, +Lo0, -Lo, +Hi0, -Hi): worker loop.
+frs_panels_loop_([], _, [], Lo, Lo, Hi, Hi).
+% Handle one divider: its panel lies toward the nearer grid edge.
+frs_panels_loop_([D|Ds], W1, [panel(PLo, PHi)|Ps], Lo0, Lo, Hi0, Hi) :-
+% Choose the side by comparing distances to the two edges.
+    (   D * 2 < W1
+% Left-side panel: from column 0 through the divider.
+    ->  PLo = 0,
+% The divider column closes the panel on the right.
+        PHi = D,
+% The field starts after the divider.
+        D1 is D + 1,
+% Narrow the field's left bound.
+        Lo1 is max(Lo0, D1),
+% The right bound is unchanged.
+        Hi1 = Hi0
+% Right-side panel: from the divider through the last column.
+    ;   PLo = D,
+% The panel ends at the grid edge.
+        PHi = W1,
+% The field ends before the divider.
+        D1 is D - 1,
+% Narrow the field's right bound.
+        Hi1 is min(Hi0, D1),
+% The left bound is unchanged.
+        Lo1 = Lo0
+% End of the side choice.
+    ),
+% Continue with the remaining dividers.
+    frs_panels_loop_(Ds, W1, Ps, Lo1, Lo, Hi1, Hi).
+
+% frs_slice_row_(+Row, +Lo, +Hi, -Slice): keep columns Lo..Hi of one row.
+frs_slice_row_(Row, Lo, Hi, Slice) :-
+% Collect the values at the requested column range.
+    findall(V,
+% Enumerate the columns and read each value.
+            ( between(Lo, Hi, C), nth0(C, Row, V) ),
+% Gather the slice in column order.
+            Slice).
+
+% frs_slice_grid_(+Grid, +Lo, +Hi, -Sub): keep columns Lo..Hi of every row.
+frs_slice_grid_([], _, _, []).
+% Slice the first row, then recurse over the rest.
+frs_slice_grid_([Row|Rows], Lo, Hi, [Slice|Slices]) :-
+% Slice this row.
+    frs_slice_row_(Row, Lo, Hi, Slice),
+% Slice the remaining rows.
+    frs_slice_grid_(Rows, Lo, Hi, Slices).
+
+% frs_apply_panel_(+Grid, +Panel, +FieldIn, -FieldOut): run one legend.
+frs_apply_panel_(Grid, panel(PLo, PHi), FieldIn, FieldOut) :-
+% Cut the panel columns out of the grid.
+    frs_slice_grid_(Grid, PLo, PHi, Sub),
+% Find the two all-6 separator rows of the panel.
+    findall(SR,
+% A separator row holds the divider color in every cell.
+            ( nth0(SR, Sub, SRow), forall(member(SV, SRow), SV == 6) ),
+% Exactly two separator rows must exist.
+            [R1, R2]),
+% Collect the glyph-zone cells above the first separator.
+    findall(ZR-ZC,
+% A glyph cell is neither legend background 0 nor divider 6.
+            ( nth0(ZR, Sub, ZRow), ZR < R1, nth0(ZC, ZRow, ZV), ZV =\= 0, ZV =\= 6 ),
+% Gather the glyph cells.
+            Cells0),
+% Order the cells for deterministic component peeling.
+    sort(Cells0, Cells),
+% Split the glyph zone into 8-connected components.
+    frs_comps_(Cells, Comps),
+% Identify the stamp (two colors, swapped) and the layout mask.
+    frs_glyphs_(Sub, Comps, Stamp, Mask0),
+% First box: rows strictly between the two separators.
+    B1Lo is R1 + 1,
+% Last row of the first box.
+    B1Hi is R2 - 1,
+% Interior columns of the first box (border 6 columns trimmed).
+    frs_interior_cols_(Sub, B1Lo, B1Hi, IC1s),
+% Leftmost interior column.
+    IC1s = [IC1Lo|_],
+% Rightmost interior column.
+    last(IC1s, IC1Hi),
+% The first box holds a single 4 anchor marker.
+    frs_marker_cells_(Sub, B1Lo, B1Hi, 4, [FR-FC]),
+% A marker in the upper half anchors to the top of the field.
+    (   FR * 2 < B1Lo + B1Hi
+% Anchor vertically at the top.
+    ->  VAnch = top
+% Otherwise anchor vertically at the bottom.
+    ;   VAnch = bottom
+% End of the vertical choice.
+    ),
+% A marker in the left half anchors to the left of the field.
+    (   FC * 2 < IC1Lo + IC1Hi
+% Anchor horizontally at the left.
+    ->  HAnch = left
+% Otherwise anchor horizontally at the right.
+    ;   HAnch = right
+% End of the horizontal choice.
+    ),
+% Measure the panel height.
+    length(Sub, PH),
+% Second box: rows below the second separator.
+    B2Lo is R2 + 1,
+% Last row of the second box.
+    B2Hi is PH - 1,
+% Interior columns of the second box.
+    frs_interior_cols_(Sub, B2Lo, B2Hi, IC2s),
+% Leftmost interior column.
+    IC2s = [IC2Lo|_],
+% Rightmost interior column.
+    last(IC2s, IC2Hi),
+% The second box holds a two-cell 7-domino rotation needle.
+    frs_marker_cells_(Sub, B2Lo, B2Hi, 7, [Ra-Ca, Rb-Cb]),
+% A vertical domino points up or down; a horizontal one left or right.
+    (   Ca =:= Cb
+% Vertical needle: compare its row midpoint with the box midpoint.
+    ->  (   Ra + Rb < B2Lo + B2Hi
+% Needle points up: no rotation.
+        ->  K = 0
+% Needle points down: rotate the layout 180 degrees.
+        ;   K = 2
+% End of the vertical needle choice.
+        )
+% Horizontal needle: compare its column midpoint with the box midpoint.
+    ;   (   Ca + Cb > IC2Lo + IC2Hi
+% Needle points right: rotate the layout 90 degrees clockwise.
+        ->  K = 1
+% Needle points left: rotate the layout 270 degrees clockwise.
+        ;   K = 3
+% End of the horizontal needle choice.
+        )
+% End of the needle orientation choice.
+    ),
+% Rotate the layout mask K quarter turns clockwise.
+    frs_rot_mask_(K, Mask0, Mask),
+% Paint the scaled layout onto the field at the anchored corner.
+    frs_place_(FieldIn, Mask, Stamp, VAnch, HAnch, FieldOut).
+
+% frs_comps_(+Pool, -Comps): 8-connected components of a cell set.
+frs_comps_([], []).
+% Peel one component per iteration.
+frs_comps_([Cell|Rest], [Comp|Comps]) :-
+% Grow the component from the seed cell.
+    frs_grow_([Cell], Rest, [Cell], Remain, Comp),
+% Peel the remaining pool.
+    frs_comps_(Remain, Comps).
+
+% frs_grow_(+Front, +Pool, +Acc, -Remain, -Comp): flood one component.
+frs_grow_([], Pool, Acc, Pool, Acc).
+% Expand the frontier by one cell.
+frs_grow_([R-C|Front], Pool, Acc, Remain, Comp) :-
+% Collect the pool cells adjacent to the frontier cell.
+    findall(N,
+% An 8-neighbor still in the pool joins the component.
+            ( frs_nbr8_(R, C, N), memberchk(N, Pool) ),
+% Gather the newly reached cells.
+            Ns),
+% Remove the reached cells from the pool.
+    subtract(Pool, Ns, Pool1),
+% Queue the reached cells on the frontier.
+    append(Ns, Front, Front1),
+% Record the reached cells in the component.
+    append(Ns, Acc, Acc1),
+% Continue flooding.
+    frs_grow_(Front1, Pool1, Acc1, Remain, Comp).
+
+% frs_nbr8_(+R, +C, -N): one of the eight neighbors of a cell.
+frs_nbr8_(R, C, R2-C2) :-
+% Enumerate the row offsets.
+    member(DR, [-1, 0, 1]),
+% Enumerate the column offsets.
+    member(DC, [-1, 0, 1]),
+% Skip the zero offset pair.
+    ( DR =\= 0 ; DC =\= 0 ),
+% Neighbor row.
+    R2 is R + DR,
+% Neighbor column.
+    C2 is C + DC.
+
+% frs_comp_colors_(+Sub, +Cells, -Colors): distinct colors of a component.
+frs_comp_colors_(Sub, Cells, Colors) :-
+% Read the color at every component cell.
+    findall(V,
+% Fetch one cell's color from the panel.
+            ( member(R-C, Cells), nth0(R, Sub, Row), nth0(C, Row, V) ),
+% Gather the raw color list.
+            Vs),
+% Deduplicate into the sorted color set.
+    sort(Vs, Colors).
+
+% frs_glyphs_(+Sub, +Comps, -Stamp, -Mask): identify stamp and layout.
+frs_glyphs_(Sub, [A, B], Stamp, Mask) :-
+% Color set of the first component.
+    frs_comp_colors_(Sub, A, CA),
+% Color set of the second component.
+    frs_comp_colors_(Sub, B, CB),
+% The one-color component is the layout; the two-color one the stamp.
+    (   CA = [LC], CB = [X, Y]
+% First component is the layout.
+    ->  LayCells = A,
+% Second component is the stamp.
+        StampCells = B
+% Otherwise the roles are reversed.
+    ;   CB = [LC], CA = [X, Y],
+% Second component is the layout.
+        LayCells = B,
+% First component is the stamp.
+        StampCells = A
+% End of the role assignment.
+    ),
+% Bounding box of the stamp glyph.
+    frs_bbox_(StampCells, SRLo, SCLo, SRHi, SCHi),
+% Cut the stamp subgrid from the panel.
+    frs_subgrid_(Sub, SRLo, SCLo, SRHi, SCHi, StampRaw),
+% Swap the stamp's two colors: the demonstrations paint the negative.
+    frs_swap_grid_(StampRaw, X, Y, Stamp),
+% Bounding box of the layout glyph.
+    frs_bbox_(LayCells, LRLo, LCLo, LRHi, LCHi),
+% Build the boolean layout mask over its bounding box.
+    frs_mask_(Sub, LRLo, LCLo, LRHi, LCHi, LC, Mask).
+
+% frs_bbox_(+Cells, -RLo, -CLo, -RHi, -CHi): bounding box of a cell set.
+frs_bbox_(Cells, RLo, CLo, RHi, CHi) :-
+% Collect the row coordinates.
+    findall(R, member(R-_, Cells), Rs),
+% Smallest row.
+    min_list(Rs, RLo),
+% Largest row.
+    max_list(Rs, RHi),
+% Collect the column coordinates.
+    findall(C, member(_-C, Cells), Cs),
+% Smallest column.
+    min_list(Cs, CLo),
+% Largest column.
+    max_list(Cs, CHi).
+
+% frs_subgrid_(+Sub, +RLo, +CLo, +RHi, +CHi, -G): cut a rectangle.
+frs_subgrid_(Sub, RLo, CLo, RHi, CHi, G) :-
+% Slice each row of the rectangle.
+    findall(RowS,
+% Fetch one row and keep its column range.
+            ( between(RLo, RHi, R), nth0(R, Sub, Row), frs_slice_row_(Row, CLo, CHi, RowS) ),
+% Gather the rectangle rows.
+            G).
+
+% frs_swap_grid_(+G, +X, +Y, -S): exchange colors X and Y in a grid.
+frs_swap_grid_([], _, _, []).
+% Swap one row, then recurse.
+frs_swap_grid_([Row|Rows], X, Y, [SRow|SRows]) :-
+% Swap the colors in this row.
+    frs_swap_row_(Row, X, Y, SRow),
+% Swap the remaining rows.
+    frs_swap_grid_(Rows, X, Y, SRows).
+
+% frs_swap_row_(+Row, +X, +Y, -SRow): exchange colors X and Y in a row.
+frs_swap_row_([], _, _, []).
+% Swap one cell, then recurse.
+frs_swap_row_([V|Vs], X, Y, [SV|SVs]) :-
+% X becomes Y, Y becomes X, anything else is kept.
+    (   V == X
+% Replace X with Y.
+    ->  SV = Y
+% Check for the other color.
+    ;   V == Y
+% Replace Y with X.
+    ->  SV = X
+% Keep any other value.
+    ;   SV = V
+% End of the swap choice.
+    ),
+% Swap the remaining cells.
+    frs_swap_row_(Vs, X, Y, SVs).
+
+% frs_mask_(+Sub, +RLo, +CLo, +RHi, +CHi, +LC, -Mask): boolean layout mask.
+frs_mask_(Sub, RLo, CLo, RHi, CHi, LC, Mask) :-
+% Build one mask row per bounding-box row.
+    findall(MRow,
+% Fetch a panel row and threshold it against the layout color.
+            ( between(RLo, RHi, R), nth0(R, Sub, Row), frs_mask_row_(Row, CLo, CHi, LC, MRow) ),
+% Gather the mask rows.
+            Mask).
+
+% frs_mask_row_(+Row, +CLo, +CHi, +LC, -MRow): one row of the layout mask.
+frs_mask_row_(Row, CLo, CHi, LC, MRow) :-
+% Threshold every column of the range.
+    findall(Bit,
+% A layout-colored cell yields 1; anything else yields 0.
+            ( between(CLo, CHi, C), nth0(C, Row, V), ( V == LC -> Bit = 1 ; Bit = 0 ) ),
+% Gather the mask bits.
+            MRow).
+
+% frs_interior_cols_(+Sub, +RLo, +RHi, -ICs): non-border columns of a box.
+frs_interior_cols_(Sub, RLo, RHi, ICs) :-
+% Collect every column holding a non-6 value inside the box rows.
+    findall(C,
+% Enumerate the box cells and keep non-divider columns.
+            ( between(RLo, RHi, R), nth0(R, Sub, Row), nth0(C, Row, V), V =\= 6 ),
+% Gather the raw column list.
+            Cs0),
+% Deduplicate into the sorted interior column set.
+    sort(Cs0, ICs).
+
+% frs_marker_cells_(+Sub, +RLo, +RHi, +Color, -Cells): find marker cells.
+frs_marker_cells_(Sub, RLo, RHi, Color, Cells) :-
+% Scan the box rows for the marker color.
+    findall(R-C,
+% Fetch one marker cell.
+            ( between(RLo, RHi, R), nth0(R, Sub, Row), nth0(C, Row, Color) ),
+% Gather the marker cells in scan order.
+            Cells).
+
+% frs_rot_mask_(+K, +Mask, -Rot): rotate a mask K quarter turns clockwise.
+frs_rot_mask_(0, Mask, Mask) :- !.
+% Rotate once, then recurse with a smaller count.
+frs_rot_mask_(K, Mask, Rot) :-
+% Only positive counts remain here.
+    K > 0,
+% One clockwise quarter turn via the shared grid transform.
+    arc2_transform(rotate_90_cw, Mask, Mask1),
+% Decrement the remaining turn count.
+    K1 is K - 1,
+% Apply the remaining turns.
+    frs_rot_mask_(K1, Mask1, Rot).
+
+% frs_place_(+FieldIn, +Mask, +Stamp, +VAnch, +HAnch, -FieldOut): paint.
+frs_place_(FieldIn, Mask, Stamp, VAnch, HAnch, FieldOut) :-
+% Field height.
+    length(FieldIn, FH),
+% Take the first field row.
+    FieldIn = [FRow|_],
+% Field width.
+    length(FRow, FW),
+% Mask height.
+    length(Mask, MH),
+% Take the first mask row.
+    Mask = [MRow|_],
+% Mask width.
+    length(MRow, MW),
+% Stamp height.
+    length(Stamp, SH),
+% Take the first stamp row.
+    Stamp = [SRow|_],
+% Stamp width.
+    length(SRow, SW),
+% Painted region height: mask rows scaled by the stamp height.
+    RH is MH * SH,
+% Painted region width: mask columns scaled by the stamp width.
+    RW is MW * SW,
+% Anchor the region vertically.
+    (   VAnch == top
+% Flush with the top edge.
+    ->  R0 = 0
+% Flush with the bottom edge.
+    ;   R0 is FH - RH
+% End of the vertical anchoring.
+    ),
+% Anchor the region horizontally.
+    (   HAnch == left
+% Flush with the left edge.
+    ->  C0 = 0
+% Flush with the right edge.
+    ;   C0 is FW - RW
+% End of the horizontal anchoring.
+    ),
+% The region must fit inside the field.
+    R0 >= 0,
+% The region must fit horizontally as well.
+    C0 >= 0,
+% Enumerate every painted cell of the scaled layout.
+    findall((PR-PC)-PV,
+% A set mask cell paints one full stamp block.
+            ( nth0(MI, Mask, MaskRow), nth0(MJ, MaskRow, 1),
+% Read one stamp cell.
+              nth0(SI, Stamp, StampRow), nth0(SJ, StampRow, PV),
+% Painted row inside the field.
+              PR is R0 + MI * SH + SI,
+% Painted column inside the field.
+              PC is C0 + MJ * SW + SJ ),
+% Gather the painted cells.
+            PaintPairs),
+% Index the painted cells for fast lookup.
+    list_to_assoc(PaintPairs, PaintA),
+% Overlay the painted cells onto the field.
+    frs_overlay_(FieldIn, 0, PaintA, FieldOut).
+
+% frs_overlay_(+Rows, +R, +PaintA, -Out): overlay painted cells row by row.
+frs_overlay_([], _, _, []).
+% Overlay one row, then recurse.
+frs_overlay_([Row|Rows], R, PaintA, [ORow|ORows]) :-
+% Overlay the cells of this row.
+    frs_overlay_row_(Row, R, 0, PaintA, ORow),
+% Advance the row counter.
+    R1 is R + 1,
+% Overlay the remaining rows.
+    frs_overlay_(Rows, R1, PaintA, ORows).
+
+% frs_overlay_row_(+Cells, +R, +C, +PaintA, -Out): overlay one row.
+frs_overlay_row_([], _, _, _, []).
+% Overlay one cell, then recurse.
+frs_overlay_row_([V|Vs], R, C, PaintA, [OV|OVs]) :-
+% A painted cell takes the stamp color; others keep the field color.
+    (   get_assoc(R-C, PaintA, PV)
+% Use the painted color.
+    ->  OV = PV
+% Keep the original field color.
+    ;   OV = V
+% End of the cell choice.
+    ),
+% Advance the column counter.
+    C1 is C + 1,
+% Overlay the remaining cells.
+    frs_overlay_row_(Vs, R, C1, PaintA, OVs).

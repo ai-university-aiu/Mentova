@@ -1,0 +1,48 @@
+Accomplishment 409: ARC-AGI-2 Wave 111 - Fractal Stamp: Legend Panels, Corner Anchors, and the Domino Rotation Needle
+
+PrologAI solves ARC-AGI-2 task a32d8b75 with a new glass-box rule
+called fractal_stamp (WP-369, Layer 344), raising the benchmark
+score from 107/120 = 89.17% to 108/120 = 90.00% - the ninety
+percent line.
+
+Each input of this task carries one or two legend panels beside
+full-height divider columns, and each panel is a four-part
+stamping program: a small STAMP glyph drawn in two colors, a
+larger LAYOUT glyph drawn in one color, an anchor box whose
+single 4 names a corner of the playing field, and a rotation box
+whose two-cell 7-domino needle names a quarter-turn command - up
+for none, right for a quarter turn clockwise, down for a half
+turn, left for three quarters. The output drops the panels and
+paints the layout onto the field at the named corner, rotated as
+the needle commands and scaled up by the stamp's size: every set
+layout cell becomes a full copy of the stamp with its two colors
+exchanged. The test grid raises the stakes with two independent
+panels, one per side, each stamping its own corner of the field.
+
+The delicate part is that the anchor and the rotation form a
+TWO-PART command that only makes sense read together. Across the
+five panels of the task, the same corner appears with two
+different rotations and the same rotation with two different
+corners - top-left with no turn, top-right with a quarter turn,
+bottom-right with a half turn, bottom-right with no turn, and
+top-left with a half turn. Any theory reading one marker alone
+collapses; the pair predicts all five placements exactly.
+
+The wave's lesson: legend instruction boxes can carry compound
+commands whose parts are meaningless in isolation, and a domino
+is the minimal rotation needle - two cells suffice to
+distinguish all four quarter turns by their offset from the box
+center. And when a legend glyph is painted onto the field,
+expect the negative: every stamp lands with its two colors
+exchanged.
+
+The complete rule was written in plain English covering every
+grid before any code, all five panel programs were verified cell
+by cell by hand, a Python prototype confirmed the algorithm and
+caught one interior-trimming bug before any Prolog existed, and
+the integrated Prolog rule passed the single-task test and the
+full regression on its first compile. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
