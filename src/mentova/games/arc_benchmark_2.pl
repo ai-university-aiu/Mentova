@@ -527,6 +527,38 @@ arc2_induce_rule(TrainingPairs, master_fragment(Master)) :-
 % Each training pair must transform correctly under master_fragment.
            arc2_transform(master_fragment(Master), In, Out)).
 
+% ring_dock: early dispatch before generic clause (WP-338, Layer 313).
+% arc2_induce_rule(ring_dock): two border colors pre-filter + verify.
+arc2_induce_rule(TrainingPairs, ring_dock(L, R)) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The first output must share the input height.
+    length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, W),
+% The first output must share the input width.
+    length(FOR, W),
+% Determine the background color of the first training input.
+    arc2_bg_color_(First, Bg),
+% Detect every five-by-five ring object in the first input.
+    rd_rings_(First, Bg, Rings),
+% At least one ring must be present.
+    Rings \== [],
+% Collect the border color of every detected ring.
+    findall(B, member(ring(_, _, B, _), Rings), Bs),
+% Deduplicate the border colors and demand exactly two of them.
+    sort(Bs, [B1, B2]),
+% Try each of the two possible left/right color assignments.
+    member(L-R, [B1-B2, B2-B1]),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under ring_dock.
+           arc2_transform(ring_dock(L, R), In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -16343,3 +16375,232 @@ mf_subgrid_(Sub, Grid) :-
                     ( CJ is C0 + J,
 % The container cell must carry the same color as the fragment cell.
                       nth0(CJ, GRow, V) )) )).
+
+% ---------------------------------------------------------------------------
+% RING DOCK
+% Five-by-five ring objects (a one-cell border of one color around a solid
+% three-by-three interior of another color) float in the grid.  Rings whose
+% border carries the left color slide horizontally to the left edge; rings
+% whose border carries the right color slide to the right edge.  Each ring
+% keeps its rows.  Rings on the same side pack against the edge in order of
+% edge distance, each blocked by the edge or by an already-parked same-side
+% ring; opposite-side rings pass each other freely.
+% Reference: ARC-AGI-2 task b5ca7ac4 -- border 8 docks left, border 2 right.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(ring_dock): slide every ring sideways into its docking lane.
+arc2_transform(ring_dock(L, R), Grid, Out) :-
+% Determine the background color of the grid.
+    arc2_bg_color_(Grid, Bg),
+% Detect every five-by-five ring object in the grid.
+    rd_rings_(Grid, Bg, Rings),
+% At least one ring must be present.
+    Rings \== [],
+% Count the detected rings.
+    length(Rings, NRings),
+% Count every non-background cell in the grid.
+    aggregate_all(count, ( member(Row, Grid), member(V, Row), V \== Bg ), NonBg),
+% Every non-background cell must belong to exactly one detected ring.
+    NonBg =:= NRings * 25,
+% Keep the rings whose border carries the left color.
+    include([ring(_, _, B, _)]>>(B == L), Rings, Lefts0),
+% Keep the rings whose border carries the right color.
+    include([ring(_, _, B, _)]>>(B == R), Rings, Rights0),
+% Count the left-moving rings.
+    length(Lefts0, NL),
+% Count the right-moving rings.
+    length(Rights0, NRt),
+% Every ring must move either left or right.
+    NL + NRt =:= NRings,
+% Sort the left movers by ascending column so edge-nearest rings park first.
+    predsort([O, ring(Ra, Ca, _, _), ring(Rb, Cb, _, _)]>>
+% Compare primarily on the column and secondarily on the row.
+             compare(O, Ca-Ra, Cb-Rb), Lefts0, Lefts),
+% Sort the right movers by descending column so edge-nearest rings park first.
+    predsort([O, ring(Ra, Ca, _, _), ring(Rb, Cb, _, _)]>>
+% Compare primarily on the reversed column and secondarily on the row.
+             compare(O, Cb-Ra, Ca-Rb), Rights0, Rights),
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first grid row.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Build an all-background canvas of the grid dimensions.
+    rd_canvas_(H, W, Bg, Canvas0),
+% Park every left mover against the left edge on its own canvas.
+    rd_place_left_(Canvas0, Bg, Lefts, LeftCanvas),
+% Park every right mover against the right edge on its own canvas.
+    rd_place_right_(Canvas0, Bg, W, Rights, RightCanvas),
+% Merge the two side canvases into the final output grid.
+    rd_merge_(Bg, LeftCanvas, RightCanvas, Out).
+
+% rd_ring_(+Grid, +Bg, -Ring): detect one five-by-five ring object.
+rd_ring_(Grid, Bg, ring(R0, C0, B, Block)) :-
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first grid row.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Compute the largest feasible top row of a five-by-five block.
+    MaxR is H - 5,
+% Compute the largest feasible left column of a five-by-five block.
+    MaxC is W - 5,
+% Choose a candidate top row.
+    between(0, MaxR, R0),
+% Choose a candidate left column.
+    between(0, MaxC, C0),
+% Read the border color from the top-left corner of the block.
+    arc2_cell_(Grid, R0, C0, B),
+% The border color must differ from the background.
+    B \== Bg,
+% Every border cell of the five-by-five block must carry the border color.
+    forall(( between(0, 4, DR), between(0, 4, DC),
+% A border cell lies on the first or last row or column of the block.
+             ( DR =:= 0 ; DR =:= 4 ; DC =:= 0 ; DC =:= 4 ) ),
+% Check that the border cell carries the border color.
+           ( RR is R0 + DR, CC is C0 + DC, arc2_cell_(Grid, RR, CC, B) )),
+% Locate the top-left interior cell of the block.
+    R1 is R0 + 1, C1 is C0 + 1,
+% Read the interior color from the top-left interior cell.
+    arc2_cell_(Grid, R1, C1, IC),
+% The interior color must differ from the border color.
+    IC \== B,
+% The interior color must differ from the background.
+    IC \== Bg,
+% Every interior cell of the block must carry the interior color.
+    forall(( between(1, 3, DR), between(1, 3, DC) ),
+% Check that the interior cell carries the interior color.
+           ( RR is R0 + DR, CC is C0 + DC, arc2_cell_(Grid, RR, CC, IC) )),
+% Extract the five-by-five block content row by row.
+    findall(Sub,
+% Walk the five block rows.
+            ( between(0, 4, DR),
+% Locate the grid row holding this block row.
+              RR is R0 + DR,
+% Fetch the grid row.
+              nth0(RR, Grid, GRow),
+% Skip the cells left of the block.
+              length(Pre, C0),
+% Split the grid row at the block's left column.
+              append(Pre, Rest, GRow),
+% Take exactly five cells for the block row.
+              length(Sub, 5),
+% Split off the block row from the remainder.
+              append(Sub, _, Rest) ),
+% Bind the list of five block rows.
+            Block).
+
+% rd_rings_(+Grid, +Bg, -Rings): collect every ring object in the grid.
+rd_rings_(Grid, Bg, Rings) :-
+% Enumerate and collect every detected ring.
+    findall(Ring, rd_ring_(Grid, Bg, Ring), Rings).
+
+% rd_canvas_(+H, +W, +Bg, -Canvas): build an all-background grid.
+rd_canvas_(H, W, Bg, Canvas) :-
+% Allocate the requested number of rows.
+    length(Canvas, H),
+% Fill every row with the background color at the requested width.
+    maplist([Row]>>( length(Row, W), maplist(=(Bg), Row) ), Canvas).
+
+% rd_free_(+Canvas, +Bg, +R0, +C0): the five-by-five block region is empty.
+rd_free_(Canvas, Bg, R0, C0) :-
+% Every cell of the block region must still carry the background color.
+    forall(( between(0, 4, DR), between(0, 4, DC) ),
+% Check that the region cell is background on the canvas.
+           ( RR is R0 + DR, CC is C0 + DC, arc2_cell_(Canvas, RR, CC, Bg) )).
+
+% rd_slide_left_(+Canvas, +Bg, +R0, +C, -Final): slide a ring leftward.
+rd_slide_left_(Canvas, Bg, R0, C, Final) :-
+% The ring can only move while columns remain on its left.
+    C > 0,
+% Compute the next column one step to the left.
+    C1 is C - 1,
+% The block region at the next column must be free.
+    rd_free_(Canvas, Bg, R0, C1),
+% Commit to the step and continue sliding.
+    !,
+% Recurse from the new column.
+    rd_slide_left_(Canvas, Bg, R0, C1, Final).
+% The ring stops when it can no longer move left.
+rd_slide_left_(_, _, _, C, C).
+
+% rd_slide_right_(+Canvas, +Bg, +W, +R0, +C, -Final): slide a ring rightward.
+rd_slide_right_(Canvas, Bg, W, R0, C, Final) :-
+% Compute the next column one step to the right.
+    C1 is C + 1,
+% The block must stay inside the grid at the next column.
+    C1 + 5 =< W,
+% The block region at the next column must be free.
+    rd_free_(Canvas, Bg, R0, C1),
+% Commit to the step and continue sliding.
+    !,
+% Recurse from the new column.
+    rd_slide_right_(Canvas, Bg, W, R0, C1, Final).
+% The ring stops when it can no longer move right.
+rd_slide_right_(_, _, _, _, C, C).
+
+% rd_draw_(+Canvas, +R0, +C0, +Block, -Out): stamp a block onto the canvas.
+rd_draw_(Canvas, R0, C0, Block, Out) :-
+% Rebuild the canvas row by row.
+    findall(NewRow,
+% Walk every canvas row with its index.
+            ( nth0(RI, Canvas, Row),
+% Rows inside the block band receive block content.
+              ( RI >= R0, RI =< R0 + 4 ->
+% Locate the block row for this canvas row.
+                  DR is RI - R0,
+% Fetch the block row.
+                  nth0(DR, Block, BRow),
+% Skip the cells left of the block.
+                  length(Pre, C0),
+% Split the canvas row at the block's left column.
+                  append(Pre, Rest, Row),
+% Take exactly five cells to replace.
+                  length(Mid, 5),
+% Split off the replaced cells from the remainder.
+                  append(Mid, Post, Rest),
+% Join the prefix with the block row.
+                  append(Pre, BRow, Front),
+% Join the front with the untouched suffix.
+                  append(Front, Post, NewRow)
+% Rows outside the block band pass through unchanged.
+              ; NewRow = Row ) ),
+% Bind the rebuilt canvas.
+            Out).
+
+% rd_place_left_(+Canvas, +Bg, +Rings, -Out): park left movers in order.
+% With no rings left the canvas is complete.
+rd_place_left_(Canvas, _, [], Canvas).
+% Park the next left mover and recurse.
+rd_place_left_(Canvas, Bg, [ring(R0, C0, _, Block)|Rings], Out) :-
+% Slide the ring leftward until blocked.
+    rd_slide_left_(Canvas, Bg, R0, C0, Final),
+% Stamp the ring at its final column.
+    rd_draw_(Canvas, R0, Final, Block, Canvas1),
+% Park the remaining left movers.
+    rd_place_left_(Canvas1, Bg, Rings, Out).
+
+% rd_place_right_(+Canvas, +Bg, +W, +Rings, -Out): park right movers in order.
+% With no rings left the canvas is complete.
+rd_place_right_(Canvas, _, _, [], Canvas).
+% Park the next right mover and recurse.
+rd_place_right_(Canvas, Bg, W, [ring(R0, C0, _, Block)|Rings], Out) :-
+% Slide the ring rightward until blocked.
+    rd_slide_right_(Canvas, Bg, W, R0, C0, Final),
+% Stamp the ring at its final column.
+    rd_draw_(Canvas, R0, Final, Block, Canvas1),
+% Park the remaining right movers.
+    rd_place_right_(Canvas1, Bg, W, Rings, Out).
+
+% rd_merge_(+Bg, +LeftCanvas, +RightCanvas, -Out): overlay the two sides.
+rd_merge_(Bg, LeftCanvas, RightCanvas, Out) :-
+% Merge the canvases row by row.
+    maplist([LRow, RRow, ORow]>>
+% Merge one row cell by cell, preferring non-background left cells.
+            maplist([LV, RV, OV]>>( LV \== Bg -> OV = LV ; OV = RV ),
+% Apply the cell merge across the paired rows.
+                    LRow, RRow, ORow),
+% Apply the row merge across the paired canvases.
+            LeftCanvas, RightCanvas, Out).

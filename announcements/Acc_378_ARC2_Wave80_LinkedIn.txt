@@ -1,0 +1,35 @@
+Accomplishment 378: ARC-AGI-2 Wave 80 - Ring Dock: Sideways Ring Parking with Per-Side Collision
+
+PrologAI solves ARC-AGI-2 task b5ca7ac4 with a new glass-box rule
+called ring_dock (WP-338, Layer 313), raising the benchmark score
+from 76/120 = 63.33% to 77/120 = 64.17%.
+
+Each grid scatters six to eight five-by-five ring objects over a
+solid background - every ring is a one-cell uniform border of color 8
+or color 2 around a solid three-by-three interior of another color.
+In the output every 8-bordered ring has slid horizontally into a
+parking lane against the left edge and every 2-bordered ring against
+the right edge, each ring keeping its rows exactly. Same-side rings
+whose rows overlap pack side by side, and rings starting on the wrong
+side of the grid cross the whole board to reach their lane.
+
+The engine detects the rings by scanning for the border-plus-interior
+signature under a total-coverage guard - exactly twenty-five
+non-background cells per ring, nothing else in the grid - then learns
+which border color goes left and which goes right by trying both
+assignments against the training pairs. Each side simulates on its
+own fresh canvas: movers sorted edge-nearest first slide one column
+at a time until the grid edge or an already-parked same-side ring
+blocks them, and the two canvases merge into the output.
+
+The key insight is that collision must be scoped to destination. The
+first prototype slid every ring over one shared board and failed:
+a right mover was blocked by a left mover sitting in its path, even
+though the training outputs show the two groups passing straight
+through each other as they trade sides. One canvas per side, merged
+afterward, fixed all three training pairs at once, and the hidden
+test case passed on the same run. Pure induction. No pretraining.
+Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

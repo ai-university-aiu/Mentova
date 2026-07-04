@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 79 complete: 76/120 = 63.33%.
+Last updated: 2026-07-03. Wave 80 complete: 77/120 = 64.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -201,6 +201,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  74 / 120  | 61.67%  | Wave 77: palette_jigsaw four scattered pieces, one carrying an embedded 2 x 2 color palette; quarter-turn rotations assemble the unique perfect N x N square tiling with the palette carrier anchoring the top-left corner; each piece repainted with the palette color of the output corner it covers
 2026-07-03  |  75 / 120  | 62.50%  | Wave 78: gadget_assembly scattered gadget pieces carry color-2 connector studs; studs pair across pieces by exact coincidence under translation with opposite facings; a backtracking open-stud search assembles the unique connected machine; the connection graph's center piece stays at its input position and the machine is drawn around it
 2026-07-03  |  76 / 120  | 63.33%  | Wave 79: master_fragment every training output is one shared two-color 20 x 20 master pattern up to a dihedral isometry and a two-color bijection, and every input is a contiguous fragment cut from its own output; the first training output is stored as the canonical master, and the answer is the unique candidate among the eight isometries crossed with the two color bijections that contains the test fragment as an exact contiguous subgrid
+2026-07-03  |  77 / 120  | 64.17%  | Wave 80: ring_dock five-by-five ring objects (one-cell border around a solid three-by-three interior) float in the grid; rings with one border color slide left and rings with the other border color slide right, each keeping its rows; same-side rings pack against the edge in order of edge distance, blocked by the edge or an already-parked same-side ring, while opposite-side rings pass each other freely
 
 
 COMPLETE SCORE PROGRESSION
@@ -1221,6 +1222,69 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 80 - 2026-07-03 - Score: 77/120 = 64.17%
+
+Date: 2026-07-03
+
+Confirmed score: 77 / 120 = 64.17%
+
+Rules added in this wave:
+  ring_dock (WP-338, Layer 313)
+
+Task solved: b5ca7ac4 (3 training pairs + 1 test case; grids 22x22 in
+  training and 22x25 in test; each grid scatters six to eight
+  five-by-five ring objects over a solid background - every ring is a
+  one-cell border of color 8 or color 2 around a solid three-by-three
+  interior of some other color; in the output every 8-bordered ring
+  has slid horizontally into a parking lane against the left edge and
+  every 2-bordered ring against the right edge, each ring keeping its
+  rows, with same-side rings that share rows packing side by side).
+
+Algorithm: sideways ring docking with per-side collision. Stage 1:
+  the background is the most frequent color, and every five-by-five
+  ring is detected by scanning all top-left corners for a sixteen-cell
+  uniform border of a non-background color around a nine-cell uniform
+  interior of a different non-background color; a total-coverage guard
+  demands that the non-background cell count equal exactly twenty-five
+  times the ring count, so nothing in the grid is lost. Stage 2: the
+  rings split by border color into left movers and right movers - the
+  assignment of the two border colors to the two directions is the
+  induced rule parameter ring_dock(L, R), found by trying both
+  assignments against the training pairs. Stage 3: each side gets its
+  own fresh background canvas; left movers sort by ascending column
+  (edge-nearest first, ties by row) and each in turn slides leftward
+  one column at a time until the grid edge or an already-parked
+  same-side ring blocks it, then stamps its five-by-five block; right
+  movers do the mirror image toward the right edge. Stage 4: the two
+  side canvases merge cell by cell into the output - opposite-side
+  rings never collide during sliding because they park on separate
+  canvases, which is exactly why input rings can swap sides freely.
+
+Bugs fixed: one. The first prototype slid every ring over a single
+  shared canvas, so a right mover was blocked by a left mover sitting
+  in its path even though the training outputs show the two groups
+  passing through each other (an 8-ring starting at the right edge and
+  a 2-ring starting at the left edge trade places). Splitting the
+  simulation into one canvas per side and merging afterward fixed all
+  three training pairs at once.
+
+Lessons learned: when objects migrate to opposite edges, collision
+  must be scoped to objects with the same destination - a physical
+  single-board simulation is the wrong model even though it feels more
+  realistic. Ordering movers by distance to their target edge makes
+  stepwise sliding equivalent to final-position packing, keeping the
+  simulation loop trivially glass-box. The total-coverage guard
+  (twenty-five cells per ring, nothing else non-background) makes the
+  five-by-five detector safe against false positives without any
+  connected-component machinery. Full regression of all 76 locally
+  verified tasks (75 prior plus b5ca7ac4) still induces and passes.
+
+Accomplishment: Acc_378.  Paper: Acc_378_ARC2_Wave80_RingDock.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4012,6 +4076,7 @@ edb79dae  - Wave 75 - glyph_swap         - color-5 frame encloses solid square b
 f560132c  - Wave 77 - palette_jigsaw     - four scattered pieces, one key piece embedding a 2 x 2 palette block; quarter-turn exact-cover tiling with the key at the top-left corner; each piece repainted with the palette color of the output corner it covers
 cbebaa4b  - Wave 78 - gadget_assembly    - gadget pieces with color-2 connector studs slide together by translation until every stud coincides with its opposite-facing partner; the connection graph's center piece keeps its input position and the assembled machine is drawn around it
 269e22fb  - Wave 79 - master_fragment    - every training output is one shared two-color master pattern up to a dihedral isometry and a two-color bijection; the input fragment is located among the sixteen candidates and the unique full-size candidate containing it is the answer
+b5ca7ac4  - Wave 80 - ring_dock          - five-by-five rings with a one-cell border around a solid three-by-three interior slide sideways into parking lanes, one border color to the left edge and the other to the right, packing against already-parked same-side rings while opposite-side rings pass freely
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4360,4 +4425,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 78: Gadget-assembly - the grid scatters five
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 79: Master-fragment - every training output of the task is one shared canonical two-color 20-by-20 master pattern, reproduced up to one of the eight dihedral isometries and one of the two possible two-color bijections, and every input is a contiguous rectangular fragment cut directly from its own output; induction stores the first training output verbatim as the canonical master after cheap guards (output strictly larger than input, exactly two colors, all outputs sharing the master dimensions), and the transform enumerates the eight isometries of the master crossed with the two color bijections onto the fragment palette - sixteen candidates - keeps only those containing the fragment as an exact contiguous subgrid at some offset, and demands after deduplication that exactly one full-size candidate survives, which is the answer; the uniqueness demand doubles as the induction verifier, five training pairs each admitting exactly one candidate, and this is the first wave whose induced rule carries a whole learned grid as a rule argument, master_fragment(Master), extending the parameterized-rule machinery from scalar color parameters to grid-valued parameters.
   Score: 76/120 = 63.33%. Task 269e22fb solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 80: Ring-dock - the grid scatters six to eight five-by-five ring objects over a solid background, each ring a one-cell uniform border of color 8 or color 2 around a solid three-by-three uniform interior of another color; every 8-bordered ring slides horizontally into a parking lane against the left edge and every 2-bordered ring against the right edge, each ring keeping its rows; rings are detected by scanning all top-left corners for the border-plus-interior signature under a total-coverage guard demanding exactly twenty-five non-background cells per ring, the two border colors are assigned to the two directions by trying both assignments of the induced parameters ring_dock(L, R) against the training pairs, and each side simulates on its own fresh canvas - movers sorted edge-nearest first slide one column at a time until blocked by the grid edge or an already-parked same-side ring, and the two canvases merge into the output; scoping collision to same-destination rings is the load-bearing insight, because input rings on opposite sides trade places and must pass through each other's paths.
+  Score: 77/120 = 64.17%. Task b5ca7ac4 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
