@@ -1619,6 +1619,38 @@ arc2_induce_rule(TrainingPairs, pipe_router) :-
 % Each training pair must reproduce its output exactly.
            arc2_transform(pipe_router, In, Out)).
 
+% snake_dock: early dispatch before generic clause (WP-368, Layer 343).
+% Enumerate snake_dock as a known rule name.
+arc2_named_rule(snake_dock).
+% arc2_induce_rule(snake_dock): cheap structural pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, snake_dock) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output height must match the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [FRow|_],
+% Measure the first input width.
+    length(FRow, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output width must match the input width.
+    length(ORow, W),
+% Identify the background of the first input.
+    arc2_bg_color_(First, Bg),
+% The output must keep the same background color.
+    arc2_bg_color_(FirstOut, Bg),
+% Count the foreground cells of the first input.
+    snd_fg_count_(First, Bg, N),
+% The docked snake keeps every cell: foreground counts must agree.
+    snd_fg_count_(FirstOut, Bg, N),
+% Verify every training pair under the snake_dock transform.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must reproduce its output exactly.
+           arc2_transform(snake_dock, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -25015,3 +25047,376 @@ prl_render_(Field, Painted, Out) :-
                         ( memberchk(R-C, Painted) -> V2 = 8 ; V2 = V ) ),
                       ORow) ),
             Out).
+
+% ---------------------------------------------------------------------------
+% SNAKE DOCK TRANSFORM (WP-368, Layer 343)
+% snake_dock: the scene holds two-colored "snakes" (a 4-connected piece made
+% of exactly two single-color segments touching orthogonally) and single-color
+% "containers" (one or two nearby wall components whose bounding-box holds a
+% pocket of background cells — the socket). For each container, exactly one
+% segment of one snake matches the socket shape under one of the 8 grid
+% isometries; the whole snake docks rigidly so that segment fills the socket
+% and the other segment trails outside on background cells; the original snake
+% cells are erased. Color law: a proper rotation keeps each segment's color; a
+% reflection swaps the two segment colors (the flipped snake shows its
+% underside). Reference: ARC-AGI-2 task a25697e4.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(snake_dock): dock every snake into its matching container.
+arc2_transform(snake_dock, Grid, Out) :-
+% Identify the background as the majority color.
+    arc2_bg_color_(Grid, Bg),
+% Collect the per-color 4-connected foreground components.
+    snd_components_(Grid, Bg, Comps),
+% Split the components into two-colored snakes and loose wall components.
+    snd_split_snakes_(Comps, Snakes, Loose),
+% At least one snake must be present.
+    Snakes \= [],
+% Cluster nearby same-color wall components into containers.
+    snd_clusters_(Loose, Clusters),
+% Extract each container's socket: the background cells inside its box.
+    findall(Socket,
+% Every cluster must contribute a non-empty socket.
+            ( member(Cluster, Clusters),
+% Compute the socket for this cluster.
+              snd_socket_(Grid, Bg, Cluster, Socket) ),
+% Gather the sockets in cluster discovery order.
+            Sockets),
+% Every container must find a snake: counts must agree.
+    same_length(Sockets, Snakes),
+% Erase every snake from the grid before docking.
+    snd_erase_snakes_(Grid, Bg, Snakes, G1),
+% Dock one snake into each socket, threading the grid.
+    snd_match_all_(Sockets, Snakes, Bg, G1, Out).
+
+% snd_fg_count_(+Grid, +Bg, -N): count the non-background cells of a grid.
+snd_fg_count_(Grid, Bg, N) :-
+% Enumerate every foreground cell of the grid.
+    findall(x, (member(Row, Grid), member(V, Row), V =\= Bg), Xs),
+% The count is the length of that enumeration.
+    length(Xs, N).
+
+% snd_nbrs_(+Cell, -Nbrs): the four orthogonal neighbors of a cell.
+snd_nbrs_(R-C, [R1-C, R2-C, R-C1, R-C2]) :-
+% Compute the row below.
+    R1 is R + 1,
+% Compute the row above.
+    R2 is R - 1,
+% Compute the column to the right.
+    C1 is C + 1,
+% Compute the column to the left.
+    C2 is C - 1.
+
+% snd_components_(+Grid, +Bg, -Comps): per-color 4-connected components.
+snd_components_(Grid, Bg, Comps) :-
+% Enumerate every foreground cell with its color.
+    findall(c(R, C, V),
+% A foreground cell holds any non-background color.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= Bg ),
+% Gather the cells in reading order.
+            Cells),
+% Peel connected components off the pool until it is empty.
+    snd_comps_loop_(Cells, Comps).
+
+% snd_comps_loop_(+Pool, -Comps): peel one component per iteration.
+snd_comps_loop_([], []).
+% A non-empty pool seeds a new component from its first cell.
+snd_comps_loop_([c(R, C, V)|Rest], [comp(V, Cells)|Comps]) :-
+% Grow the component from the seed by same-color 4-adjacency.
+    snd_grow_([R-C], V, Rest, [R-C], Remain, Acc),
+% Canonicalize the component cells into sorted order.
+    msort(Acc, Cells),
+% Continue peeling components from the remaining pool.
+    snd_comps_loop_(Remain, Comps).
+
+% snd_grow_(+Frontier, +Color, +Pool, +Acc, -Remain, -Cells): BFS growth.
+snd_grow_([], _, Pool, Acc, Pool, Acc).
+% Expand the first frontier cell into its same-color neighbors.
+snd_grow_([P|F], V, Pool, Acc, Remain, Cells) :-
+% List the four orthogonal neighbors of the frontier cell.
+    snd_nbrs_(P, Nbrs),
+% Move every matching neighbor from the pool into the component.
+    snd_take_(Nbrs, V, Pool, Taken, Pool2),
+% Add the newly taken cells to the accumulator.
+    append(Taken, Acc, Acc2),
+% Queue the newly taken cells for further expansion.
+    append(F, Taken, F2),
+% Recurse until the frontier is exhausted.
+    snd_grow_(F2, V, Pool2, Acc2, Remain, Cells).
+
+% snd_take_(+Nbrs, +Color, +Pool, -Taken, -Pool2): claim matching pool cells.
+snd_take_([], _, Pool, [], Pool).
+% A neighbor present in the pool with the right color is claimed.
+snd_take_([R-C|Ns], V, Pool, [R-C|T], Pool2) :-
+% Remove the matching cell from the pool exactly once.
+    selectchk(c(R, C, V), Pool, Pool1),
+% Commit to the claim.
+    !,
+% Continue claiming the remaining neighbors.
+    snd_take_(Ns, V, Pool1, T, Pool2).
+% A neighbor absent from the pool is skipped.
+snd_take_([_|Ns], V, Pool, T, Pool2) :-
+% Continue claiming the remaining neighbors.
+    snd_take_(Ns, V, Pool, T, Pool2).
+
+% snd_adjacent_(+Comp1, +Comp2): true if the two components touch orthogonally.
+snd_adjacent_(comp(_, Cells1), comp(_, Cells2)) :-
+% Pick any cell of the first component.
+    member(P, Cells1),
+% List its four orthogonal neighbors.
+    snd_nbrs_(P, Nbrs),
+% Some neighbor must belong to the second component.
+    member(N, Nbrs),
+% Confirm membership in the second component.
+    memberchk(N, Cells2),
+% One witness suffices.
+    !.
+
+% snd_split_snakes_(+Comps, -Snakes, -Loose): find two-colored snake pairs.
+snd_split_snakes_(Comps, Snakes, Loose) :-
+% Enumerate every adjacent index pair in ascending order.
+    findall(I-J,
+% Touching components form a candidate pair.
+            ( nth0(I, Comps, CI), nth0(J, Comps, CJ), I < J,
+% Only orthogonally touching components qualify.
+              snd_adjacent_(CI, CJ) ),
+% Gather the candidate pairs.
+            Pairs),
+% Flatten the paired indices into one list.
+    findall(K, (member(I-J, Pairs), (K = I ; K = J)), Ks),
+% Sort the indices keeping duplicates.
+    msort(Ks, MKs),
+% Sort the indices removing duplicates.
+    sort(Ks, SKs),
+% Every component may belong to at most one snake.
+    same_length(MKs, SKs),
+% Build a snake term for each pair of differently colored components.
+    findall(snake(CP, P, CQ, Q),
+% Look up both components of the pair.
+            ( member(I-J, Pairs), nth0(I, Comps, comp(CP, P)),
+% The partner component supplies the second segment.
+              nth0(J, Comps, comp(CQ, Q)),
+% A snake's two segments must differ in color.
+              CP =\= CQ ),
+% Gather the snakes in pair order.
+            Snakes),
+% Every candidate pair must have yielded a snake.
+    same_length(Pairs, Snakes),
+% The remaining components are loose container walls.
+    findall(Comp,
+% Keep every component whose index is unpaired.
+            ( nth0(K2, Comps, Comp), \+ memberchk(K2, Ks) ),
+% Gather the loose components in discovery order.
+            Loose).
+
+% snd_near_same_(+Comp1, +Comp2): same color and within Chebyshev distance 2.
+snd_near_same_(comp(V, Cs1), comp(V, Cs2)) :-
+% Pick a cell of the first component.
+    member(R1-C1, Cs1),
+% Pick a cell of the second component.
+    member(R2-C2, Cs2),
+% The rows must lie within two steps.
+    abs(R1 - R2) =< 2,
+% The columns must lie within two steps.
+    abs(C1 - C2) =< 2,
+% One witness suffices.
+    !.
+
+% snd_clusters_(+Loose, -Clusters): group nearby same-color wall components.
+snd_clusters_([], []).
+% Seed a cluster from the first loose component.
+snd_clusters_([Comp|Rest], [Cluster|Clusters]) :-
+% Grow the cluster to a fixpoint over the remaining pool.
+    snd_grow_cluster_([Comp], Rest, Cluster, Remain),
+% Continue clustering the untouched components.
+    snd_clusters_(Remain, Clusters).
+
+% snd_grow_cluster_(+Cluster0, +Pool, -Cluster, -Remain): fixpoint absorption.
+snd_grow_cluster_(Cluster0, Pool, Cluster, Remain) :-
+% Look for a pool component near some cluster member.
+    ( select(Comp, Pool, Pool1),
+% The candidate must share color and be within distance two.
+      member(C0, Cluster0),
+% Test proximity and color agreement.
+      snd_near_same_(Comp, C0)
+% Absorb the candidate and iterate.
+    -> snd_grow_cluster_([Comp|Cluster0], Pool1, Cluster, Remain)
+% No candidate remains: the cluster is complete.
+    ;  Cluster = Cluster0, Remain = Pool ).
+
+% snd_socket_(+Grid, +Bg, +Cluster, -Socket): background pocket in the box.
+snd_socket_(Grid, Bg, Cluster, Socket) :-
+% Collect every wall cell of the cluster.
+    findall(P, (member(comp(_, Cs), Cluster), member(P, Cs)), All),
+% Extract the wall rows.
+    findall(R, member(R-_, All), Rs),
+% Extract the wall columns.
+    findall(C, member(_-C, All), Cols),
+% Compute the top edge of the bounding box.
+    min_list(Rs, R0),
+% Compute the bottom edge of the bounding box.
+    max_list(Rs, R1),
+% Compute the left edge of the bounding box.
+    min_list(Cols, C0),
+% Compute the right edge of the bounding box.
+    max_list(Cols, C1),
+% The socket is every background cell inside the bounding box.
+    findall(R-C,
+% Sweep the bounding box row by row.
+            ( between(R0, R1, R), between(C0, C1, C),
+% Keep only background cells.
+              arc2_cell_(Grid, R, C, Bg) ),
+% Gather the socket cells in reading order.
+            Socket),
+% A container must hold a non-empty pocket.
+    Socket \= [].
+
+% snd_erase_snakes_(+Grid, +Bg, +Snakes, -G1): blank every snake cell.
+snd_erase_snakes_(Grid, _, [], Grid).
+% Erase the first snake's two segments, then recurse.
+snd_erase_snakes_(Grid, Bg, [snake(_, P, _, Q)|Snakes], G1) :-
+% Blank the first segment.
+    snd_paint_(Grid, P, Bg, GA),
+% Blank the second segment.
+    snd_paint_(GA, Q, Bg, GB),
+% Continue with the remaining snakes.
+    snd_erase_snakes_(GB, Bg, Snakes, G1).
+
+% snd_paint_(+Grid, +Cells, +V, -G2): paint a list of cells with one color.
+snd_paint_(Grid, [], _, Grid).
+% Paint the first cell, then recurse over the rest.
+snd_paint_(Grid, [R-C|Ps], V, G2) :-
+% Set the single cell to the requested color.
+    arc2_set_cell_(Grid, R, C, V, G1),
+% Continue painting the remaining cells.
+    snd_paint_(G1, Ps, V, G2).
+
+% snd_iso_parity_(+Iso, -Parity): rotations are proper, flips improper.
+snd_iso_parity_(id, proper).
+% A quarter turn clockwise is a proper rotation.
+snd_iso_parity_(r90, proper).
+% A half turn is a proper rotation.
+snd_iso_parity_(r180, proper).
+% A quarter turn counter-clockwise is a proper rotation.
+snd_iso_parity_(r270, proper).
+% A horizontal mirror is an improper reflection.
+snd_iso_parity_(flh, improper).
+% A vertical mirror is an improper reflection.
+snd_iso_parity_(flv, improper).
+% A main-diagonal transpose is an improper reflection.
+snd_iso_parity_(tr, improper).
+% An anti-diagonal transpose is an improper reflection.
+snd_iso_parity_(atr, improper).
+
+% snd_apply_iso_(+Iso, +Cell, -Cell2): apply one grid isometry to a cell.
+snd_apply_iso_(id, R-C, R-C).
+% Rotate a cell a quarter turn clockwise.
+snd_apply_iso_(r90, R-C, C-NR) :-
+% Negate the row for the clockwise turn.
+    NR is -R.
+% Rotate a cell a half turn.
+snd_apply_iso_(r180, R-C, NR-NC) :-
+% Negate the row for the half turn.
+    NR is -R,
+% Negate the column for the half turn.
+    NC is -C.
+% Rotate a cell a quarter turn counter-clockwise.
+snd_apply_iso_(r270, R-C, NC-R) :-
+% Negate the column for the counter-clockwise turn.
+    NC is -C.
+% Mirror a cell left-to-right.
+snd_apply_iso_(flh, R-C, R-NC) :-
+% Negate the column for the horizontal mirror.
+    NC is -C.
+% Mirror a cell top-to-bottom.
+snd_apply_iso_(flv, R-C, NR-C) :-
+% Negate the row for the vertical mirror.
+    NR is -R.
+% Transpose a cell across the main diagonal.
+snd_apply_iso_(tr, R-C, C-R).
+% Transpose a cell across the anti-diagonal.
+snd_apply_iso_(atr, R-C, NC-NR) :-
+% Negate the column for the anti-transpose.
+    NC is -C,
+% Negate the row for the anti-transpose.
+    NR is -R.
+
+% snd_map_cells_(+Iso, +Cells, -Cells2): apply one isometry to every cell.
+snd_map_cells_(Iso, Cells, Cells2) :-
+% Transform each cell through the isometry.
+    findall(P2, (member(P, Cells), snd_apply_iso_(Iso, P, P2)), Cells2).
+
+% snd_norm_(+Cells, -Norm, -Min): shift cells to the origin, sorted.
+snd_norm_(Cells, Norm, MinR-MinC) :-
+% Extract the cell rows.
+    findall(R, member(R-_, Cells), Rs),
+% Extract the cell columns.
+    findall(C, member(_-C, Cells), Cs),
+% Find the minimum row.
+    min_list(Rs, MinR),
+% Find the minimum column.
+    min_list(Cs, MinC),
+% Shift every cell so the minimum corner sits at the origin.
+    findall(NR-NC,
+% Translate one cell to normalized coordinates.
+            ( member(R-C, Cells), NR is R - MinR, NC is C - MinC ),
+% Gather the shifted cells.
+            Shifted),
+% Canonicalize the normalized cells into sorted order.
+    msort(Shifted, Norm).
+
+% snd_match_all_(+Sockets, +Snakes, +Bg, +G0, -Out): dock snakes into sockets.
+snd_match_all_([], [], _, G, G).
+% Dock the first socket, then recurse with the remaining snakes.
+snd_match_all_([Socket|Sockets], Snakes, Bg, G0, Out) :-
+% Commit to the first valid docking in deterministic order.
+    once(snd_match_one_(Socket, Snakes, Bg, G0, G1, Rest)),
+% Continue docking the remaining sockets.
+    snd_match_all_(Sockets, Rest, Bg, G1, Out).
+
+% snd_match_one_(+Socket, +Snakes, +Bg, +G0, -G1, -Rest): one docking event.
+snd_match_one_(Socket, Snakes, Bg, G0, G1, Rest) :-
+% Choose a snake, removing it from the pool.
+    select(snake(CP, P, CQ, Q), Snakes, Rest),
+% Try the first segment inside, then the second segment inside.
+    ( Seg = seg(CP, P, CQ, Q) ; Seg = seg(CQ, Q, CP, P) ),
+% Name the inner and outer segments.
+    Seg = seg(CIn, PIn, COut, POut),
+% The inner segment must have exactly as many cells as the socket.
+    same_length(PIn, Socket),
+% Try the eight grid isometries in fixed order.
+    member(Iso, [id, r90, r180, r270, flh, flv, tr, atr]),
+% Transform the inner segment through the isometry.
+    snd_map_cells_(Iso, PIn, TP),
+% Normalize the transformed inner segment.
+    snd_norm_(TP, NormP, PR-PC),
+% Normalize the socket.
+    snd_norm_(Socket, NormS, SR-SC),
+% The normalized shapes must match exactly.
+    NormP == NormS,
+% Compute the docking row offset.
+    DR is SR - PR,
+% Compute the docking column offset.
+    DC is SC - PC,
+% Transform the outer segment through the same isometry.
+    snd_map_cells_(Iso, POut, TQ0),
+% Translate the outer segment by the docking offset.
+    findall(R-C,
+% Shift one outer cell into place.
+            ( member(R0-C0, TQ0), R is R0 + DR, C is C0 + DC ),
+% Gather the trailing cells.
+            TQ),
+% Every trailing cell must land on an in-grid background cell.
+    forall(member(TR-TC, TQ), arc2_cell_(G0, TR, TC, Bg)),
+% The trail must not overlap the socket itself.
+    \+ ( member(PT, TQ), memberchk(PT, Socket) ),
+% Read the parity of the docking isometry.
+    snd_iso_parity_(Iso, Parity),
+% A proper rotation keeps colors; a reflection swaps them.
+    ( Parity == proper -> InColor = CIn, OutColor = COut
+% The flipped snake shows its underside: exchange the two colors.
+    ; InColor = COut, OutColor = CIn ),
+% Paint the socket with the inner color.
+    snd_paint_(G0, Socket, InColor, GA),
+% Paint the trail with the outer color.
+    snd_paint_(GA, TQ, OutColor, G1).
