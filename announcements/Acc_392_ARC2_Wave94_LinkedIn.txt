@@ -1,0 +1,42 @@
+Accomplishment 392: ARC-AGI-2 Wave 94 - Seam Weld: Assembling Pieces by Duplicated Connector Stubs
+
+PrologAI solves ARC-AGI-2 task 4e34c42c with a new glass-box rule
+called seam_weld (WP-352, Layer 327), raising the benchmark score
+from 90/120 = 75.00% to 91/120 = 75.83%.
+
+Each input of this task scatters several multi-color pieces on a
+plain background. Look closely and you find that pairs of pieces
+carry the same small pattern drawn twice - a five-cell column here
+and the identical five-cell column there, a checkerboard corner, a
+short bar, even just two lonely marker cells. These duplicated
+patterns are connector stubs, and the answer is the single
+assembly you get by welding every piece onto its partner so the
+twin stubs sit exactly on top of each other.
+
+The catch is that welding by maximum overlap alone fails. A big
+piece can brush against another piece and agree on a few cells
+purely by accident, and a greedy solver happily glues them
+together the wrong way. The property that separates a true weld
+from a false one is totality: in a true weld, a complete
+same-color cluster of one piece lands exactly on a complete
+same-color cluster of the other - the whole stub, not a part of
+it. And since the smallest genuine connector in this task is just
+two marker cells, no size threshold can stand in for that
+condition.
+
+The rule reads the pieces off the grid, inventories their
+same-color clusters, seeds a canvas with the largest piece, and
+welds the rest on one by one - every landed cell must agree
+exactly, and one whole stub must cover one whole canvas stub. The
+training scenes weld into flat horizontal chains; the test scene
+welds six pieces into a two-dimensional tree taller and wider than
+anything the training pairs show. The union bounding box of the
+finished weld is the answer, cell for cell.
+
+The complete rule was written in plain English covering every grid
+before any code, and the integrated rule passed the single-task
+test and the full regression on the first compile. Pure induction.
+No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
