@@ -446,6 +446,51 @@ arc2_induce_rule(TrainingPairs, palette_jigsaw) :-
 % Each training pair must transform correctly under palette_jigsaw.
            arc2_transform(palette_jigsaw, In, Out)).
 
+% gadget_assembly: early dispatch before generic clause (WP-336, Layer 311).
+arc2_named_rule(gadget_assembly).
+% arc2_induce_rule(gadget_assembly): halved stud count pre-filter + verify.
+arc2_induce_rule(TrainingPairs, gadget_assembly) :-
+% Fast filter: inspect the first training pair only.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output height must equal the input height.
+    length(FirstOut, H),
+% Fetch the first row of the input.
+    First = [FR|_],
+% Fetch the first row of the output.
+    FirstOut = [OR0|_],
+% Measure the first input width.
+    length(FR, W),
+% The output width must equal the input width.
+    length(OR0, W),
+% Flatten the first input into a flat cell list.
+    flatten(First, InCells),
+% Flatten the first output into a flat cell list.
+    flatten(FirstOut, OutCells),
+% Collect the connector stud cells (color 2) of the input.
+    include(==(2), InCells, InStuds),
+% Count the connector studs in the input.
+    length(InStuds, NIn),
+% Collect the connector stud cells (color 2) of the output.
+    include(==(2), OutCells, OutStuds),
+% Count the connector studs in the output.
+    length(OutStuds, NOut),
+% The input must carry at least one stud pair.
+    NIn >= 2,
+% Paired studs merge one-to-one: the output holds exactly half as many.
+    NIn =:= 2 * NOut,
+% Every non-stud color must keep its exact cell count.
+    forall(( between(0, 9, V), V =\= 2 ),
+% Count the color's cells in the input and require the same in the output.
+           ( aggregate_all(count, member(V, InCells), NV),
+% The output count must equal the input count for the color.
+             aggregate_all(count, member(V, OutCells), NV) )),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under gadget_assembly.
+           arc2_transform(gadget_assembly, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -15920,3 +15965,222 @@ pj_color_(K, K, _, _, _, Ptr, _, _, Ptr) :- !.
 pj_color_(K, _, K, _, _, _, Pbl, _, Pbl) :- !.
 % pj_color_(K4): the bottom-right corner piece takes the bottom-right color.
 pj_color_(K, _, _, K, _, _, _, Pbr, Pbr) :- !.
+
+% ---------------------------------------------------------------------------
+% GADGET ASSEMBLY
+% Scattered gadget pieces carry color-2 connector studs; studs pair across
+% pieces by exact coincidence under translation, assembling every piece into
+% one connected machine anchored on the connection graph's center piece.
+% Reference: ARC-AGI-2 task cbebaa4b (WP-336, Layer 311).
+% ---------------------------------------------------------------------------
+
+% arc2_transform(gadget_assembly): slide gadgets so connector studs meet.
+arc2_transform(gadget_assembly, Grid, Out) :-
+% Determine the background color of the input grid.
+    arc2_bg_color_(Grid, BG),
+% Collect every non-background cell with its row, column, and color.
+    pf_cells_(Grid, BG, Cells),
+% Group the cells into 8-connected multi-color gadget pieces.
+    pf_comps_(Cells, Pieces),
+% Count the gadget pieces on the grid.
+    length(Pieces, NP),
+% At least two pieces are needed to assemble a machine.
+    NP >= 2,
+% Number the pieces 1 through NP.
+    numlist(1, NP, Ks),
+% Pair every piece index with its cell list.
+    pairs_keys_values(KPs, Ks, Pieces),
+% Split off piece 1 as the assembly seed at translation (0,0).
+    KPs = [1-P1|RestKP],
+% Prepare the seed piece's occupancy cells and open connector studs.
+    ga_prep_(1, P1, Occ1, Open1),
+% Search for the first assembly that places every piece and pairs every stud.
+    once(ga_loop_(RestKP, Open1, Occ1, [1-(0-0)], [], Occ, Placements, Edges)),
+% Find the center piece of the connection graph.
+    ga_center_(Ks, Edges, Kc),
+% Read the center piece's translation within the assembly space.
+    memberchk(Kc-(DRc-DCc), Placements),
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Shift the whole assembly so the center piece regains its input position.
+    findall(R-C-V,
+% Translate every assembled cell by the negated center piece offset.
+            ( member(Ra-Ca-V, Occ), R is Ra - DRc, C is Ca - DCc ),
+% Bind the shifted cell list.
+            Final0),
+% Deduplicate the merged stud cells into a sorted cell list.
+    sort(Final0, Final),
+% Every assembled cell must land inside the grid bounds.
+    forall(member(R-C-_, Final),
+% Check the row and the column against the grid dimensions.
+           ( R >= 0, R < H, C >= 0, C < W )),
+% Render the assembled machine on a fresh background canvas.
+    ga_render_(Final, H, W, BG, Out).
+
+% ga_prep_(+K, +Piece, -Occ, -Open): occupancy cells and open studs of piece K.
+ga_prep_(K, Piece, Occ, Open) :-
+% Every piece cell occupies its position with its color.
+    findall(R-C-V, member(R-C-V, Piece), Occ),
+% Every color-2 cell is an open connector stud tagged with owner and direction.
+    findall(s(R, C, K, D),
+% Compute each stud's outward facing direction from its body neighbor.
+            ( member(R-C-2, Piece), ga_dir_(R, C, Piece, D) ),
+% Bind the open stud list.
+            Open).
+
+% ga_dir_(+R, +C, +Piece, -D): outward direction of the stud at (R,C).
+ga_dir_(R, C, Piece, D) :-
+% Collect the 4-adjacent non-stud cells of the same piece.
+    findall(DR-DC,
+% Probe each orthogonal neighbor offset for a body cell of the piece.
+            ( member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1]),
+% Compute the neighbor row.
+              R2 is R + DR,
+% Compute the neighbor column.
+              C2 is C + DC,
+% The neighbor must belong to the piece and must not be a stud.
+              member(R2-C2-V, Piece), V =\= 2 ),
+% Bind the body neighbor offset list.
+            Ns),
+% A unique body neighbor fixes the stud's outward direction.
+    (   Ns = [BR-BC]
+% The stud faces away from its body neighbor.
+    ->  NR is -BR, NC is -BC, D = NR-NC
+% Without a unique body neighbor the direction stays unconstrained.
+    ;   D = none ).
+
+% ga_opp_(+D1, +D2): the two stud directions are compatible for pairing.
+ga_opp_(none, _) :- !.
+% An unconstrained partner direction always pairs.
+ga_opp_(_, none) :- !.
+% Two fixed directions pair only when they point opposite ways.
+ga_opp_(A-B, A2-B2) :- A2 =:= -A, B2 =:= -B.
+
+% ga_loop_: done when every piece is placed and no open stud remains.
+ga_loop_([], [], Occ, Pl, Ed, Occ, Pl, Ed).
+% Attach one unplaced piece to the first open stud, then continue.
+ga_loop_(Unplaced, [S|Open], Occ, Pl, Ed, OccF, PlF, EdF) :-
+% Read the open stud's position and facing direction.
+    S = s(R, C, _, D1),
+% Choose an unplaced piece to attach.
+    select(K2-P2, Unplaced, Rest),
+% Choose one of the piece's connector studs as the mating stud.
+    member(R2-C2-2, P2),
+% Compute the mating stud's outward direction.
+    ga_dir_(R2, C2, P2, D2),
+% Mating studs must face opposite directions.
+    ga_opp_(D1, D2),
+% Compute the row translation that brings the two studs together.
+    DR is R - R2,
+% Compute the column translation that brings the two studs together.
+    DC is C - C2,
+% Translate the whole piece by the computed delta.
+    findall(RR-CC-V,
+% Shift each piece cell by the translation delta.
+            ( member(Ra-Ca-V, P2), RR is Ra + DR, CC is Ca + DC ),
+% Bind the translated cell list.
+            NewCells),
+% Prepare the piece's stud list in its original coordinates.
+    ga_prep_(K2, P2, _, Open2a),
+% Translate the piece's studs by the same delta.
+    findall(s(RR, CC, K2, D),
+% Shift each stud position by the translation delta.
+            ( member(s(Ra, Ca, K2, D), Open2a), RR is Ra + DR, CC is Ca + DC ),
+% Bind the translated stud list.
+            NewOpen0),
+% Merge the translated piece into the assembly, pairing coinciding studs.
+    ga_merge_(NewCells, NewOpen0, K2, [S|Open], Occ, Ed, Open3, Ed3),
+% Add the translated cells to the assembly occupancy.
+    append(Occ, NewCells, Occ2),
+% Record the placement and continue attaching the remaining pieces.
+    ga_loop_(Rest, Open3, Occ2, [K2-(DR-DC)|Pl], Ed3, OccF, PlF, EdF).
+
+% ga_merge_: all cells checked; surviving studs of both sides stay open.
+ga_merge_([], NewOpen, _, Open, _, Ed, Open3, Ed) :-
+% The unpaired old and new studs together form the next open list.
+    append(Open, NewOpen, Open3).
+% Check one translated cell against the existing assembly occupancy.
+ga_merge_([R-C-V|Cs], NewOpen, K2, Open, Occ, Ed, Open3, Ed3) :-
+% Detect a collision with an already placed cell.
+    (   member(R-C-_, Occ)
+% A collision is legal only for a stud landing on an open stud.
+    ->  V =:= 2,
+% The colliding position must hold an open stud of a placed piece.
+        selectchk(s(R, C, K0, D0), Open, OpenRest),
+% The colliding position must also be a stud of the new piece.
+        selectchk(s(R, C, K2, D2), NewOpen, NewOpenRest),
+% The two coinciding studs must face opposite directions.
+        ga_opp_(D0, D2),
+% Record the connection edge and close both studs.
+        ga_merge_(Cs, NewOpenRest, K2, OpenRest, Occ, [K0-K2|Ed], Open3, Ed3)
+% A collision-free cell needs no pairing bookkeeping.
+    ;   ga_merge_(Cs, NewOpen, K2, Open, Occ, Ed, Open3, Ed3)
+    ).
+
+% ga_center_(+Ks, +Edges, -Kc): center piece of the connection graph.
+ga_center_(Ks, Edges, Kc) :-
+% Pair every piece with its graph eccentricity.
+    findall(E-K,
+% Compute the eccentricity of each piece by breadth-first search.
+            ( member(K, Ks), ga_ecc_(K, Edges, E) ),
+% Bind the eccentricity-piece pair list.
+            EKs),
+% The piece with the minimum eccentricity is the graph center.
+    msort(EKs, [_-Kc|_]).
+
+% ga_ecc_(+K, +Edges, -E): eccentricity of piece K in the connection graph.
+ga_ecc_(K, Edges, E) :-
+% Breadth-first search from K records the maximum reached depth.
+    ga_bfs_([K-0], [K], Edges, 0, E).
+
+% ga_bfs_: queue exhausted, the accumulated maximum depth is the result.
+ga_bfs_([], _, _, E, E).
+% Expand the next queued piece and track the maximum depth.
+ga_bfs_([K-D|Q], Seen, Edges, EAcc, E) :-
+% Update the running maximum depth.
+    E1 is max(EAcc, D),
+% Neighbors sit one step deeper.
+    D2 is D + 1,
+% Collect the unvisited neighbors of the current piece.
+    findall(K2-D2,
+% Follow the connection edges in both directions.
+            ( ( member(K-K2, Edges) ; member(K2-K, Edges) ),
+% Skip pieces already visited.
+              \+ member(K2, Seen) ),
+% Bind the raw neighbor list.
+            Next0),
+% Deduplicate the neighbor list.
+    sort(Next0, Next),
+% Extract the neighbor piece indices.
+    pairs_keys_values(Next, NKs, _),
+% Mark the neighbors as visited.
+    append(Seen, NKs, Seen2),
+% Queue the neighbors for expansion.
+    append(Q, Next, Q2),
+% Continue the breadth-first search.
+    ga_bfs_(Q2, Seen2, Edges, E1, E).
+
+% ga_render_(+Cells, +H, +W, +BG, -Out): paint the cells on a BG canvas.
+ga_render_(Cells, H, W, BG, Out) :-
+% Compute the last row index.
+    H1 is H - 1,
+% Compute the last column index.
+    W1 is W - 1,
+% Build the output grid row by row.
+    findall(Row,
+% Walk every row index of the canvas.
+            ( between(0, H1, R),
+% Build one output row cell by cell.
+              findall(V,
+% Walk every column index of the canvas.
+                      ( between(0, W1, C),
+% Paint the assembled cell color or the background.
+                        ( memberchk(R-C-V, Cells) -> true ; V = BG ) ),
+% Bind the completed row.
+                      Row) ),
+% Bind the completed grid.
+            Out).
