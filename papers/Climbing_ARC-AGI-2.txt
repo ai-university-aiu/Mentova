@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 111 complete: 108/120 = 90.00%.
+Last updated: 2026-07-04. Wave 112 complete: 109/120 = 90.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -233,6 +233,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  | 106 / 120  | 88.33%  | Wave 109: pipe_router a six-row legend strip of framed color swatches sits above the playing field, each six-wide swatch holding one colored pixel among its four interior cells - a pixel on the left half declares that blocks of that color turn pipes left and a pixel on the right half declares they turn pipes right; the field below holds a majority-color background, colored rectangular blocks, and one square seed of 8s, and four 8-pipes exactly as wide as the seed shoot from the seed in the four orthogonal directions, each traveling straight painting 8s over background and crossing other pipes freely, ending when it leaves the grid, and stopping beside any colored block it meets head-on to turn left or right according to that block color's legend handedness before continuing; the output is the field alone with all pipes painted - the legend handedness is the discriminating observation, because the sixteen block-hit turns across the four grids follow no larger-extent rule, no nearest-edge rule, and no fixed chirality, yet every single turn matches the side of the swatch on which that block color's legend pixel sits
 2026-07-04  | 107 / 120  | 89.17%  | Wave 110: snake_dock the scene holds two-colored snakes - each a 4-connected piece made of exactly two single-color segments touching orthogonally - and single-color containers whose bounding boxes hold a pocket of background cells, the socket; exactly one segment of one snake matches each socket's shape under one of the eight grid isometries, and the whole snake docks rigidly so that segment fills the socket while the other segment trails outside on background cells, the original snake erased; the discriminating observation is the color law - a proper rotation keeps each segment's own color but a reflection exchanges the two segment colors, because a snake that must be flipped over to fit shows its underside, and this parity rule predicts all five docking events across the three training grids and the two-container test grid
 2026-07-04  | 108 / 120  | 90.00%  | Wave 111: fractal_stamp legend panels sit beside full-height divider columns of color 6, each panel holding a two-color stamp glyph, a one-color layout glyph, a bordered box whose single 4 names a corner of the playing field, and a second box whose two-cell 7-domino points a rotation - up for none, right for a quarter turn clockwise, down for a half turn, left for three quarters; the output is the field alone with the layout glyph, rotated as the domino commands and scaled up by the stamp's dimensions, painted flush at the named corner, every layout cell replaced by a full copy of the stamp with its two colors exchanged; the corner-and-needle instruction pair is the discriminating observation, because the three training panels and the two test panels combine anchors and rotations five different ways - top-left with no turn, top-right with a quarter turn, bottom-right with a half turn, bottom-right with no turn, and top-left with a half turn - so neither marker alone predicts any placement, yet the pair predicts all five
+2026-07-04  | 109 / 120  | 90.83%  | Wave 112: anchor_jigsaw scattered 4-connected colored fragments are jigsaw pieces, and a three-cell L-tromino marker drawn in a color unique to it cups one grid cell - the missing cell of its two-by-two bounding box; the diagonal step from the marker's corner cell to the cupped cell names which corner of the finished picture sits on that cell, the pieces tile by translation alone a rectangle whose area equals their total cell count, the piece containing the cupped cell is pinned at that corner and keeps its absolute grid position, the rectangle's outer ring must be uniformly the color found at the cupped cell, and the output erases marker and fragments and paints the assembled rectangle anchored at the cupped cell; the coherence law is the discriminating observation, because the twenty-two by ten test rectangle admits two exact tilings with a flawless uniform border, and only the demand that every non-border color of the finished picture form exactly one 4-connected component rejects the false assembly, whose color frames fall apart into separated clusters, while accepting the true stacked nested-ring picture
 
 
 COMPLETE SCORE PROGRESSION
@@ -1253,6 +1254,77 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 112 - 2026-07-04 - Score: 109/120 = 90.83%
+
+Date: 2026-07-04
+
+Confirmed score: 109 / 120 = 90.83%
+
+Rules added in this wave:
+  anchor_jigsaw (WP-370, Layer 345)
+
+Task solved: 446ef5d2 (2 training pairs + 1 test case; training
+  grids 12x20 and 10x10 on background 8 with a color-4 marker,
+  test grid 26x26 on background 4 with a color-2 marker; the
+  training inputs scatter four fragments each, the test input
+  scatters ten, two of them non-rectangular).
+
+Algorithm: reassemble the scattered fragments into one rectangle
+  at the spot the marker names.
+  Stage 1: the background is the most common color; the marker is
+  the 4-connected L-tromino whose color occupies exactly three
+  cells in the whole grid; the cupped cell P is the missing
+  fourth cell of the marker's two-by-two bounding box, and the
+  diagonal step from the marker's corner cell K to P names which
+  corner of the finished picture sits on P.
+  Stage 2: every remaining 4-connected non-background component
+  is a jigsaw piece; the piece containing P is the anchor piece,
+  and the border color of the picture is the fragment color at P.
+  Stage 3: the picture is a rectangle whose area is the total
+  fragment cell count; for every height-width factorization that
+  fits the tallest and widest pieces, pin the anchor piece at the
+  P-corner and tile the rest by backtracking - translation only,
+  no overlaps, and every cell landing on the rectangle's outer
+  ring must carry the border color.
+  Stage 4: keep only coherent assemblies, those in which every
+  non-border color of the finished picture forms exactly one
+  4-connected component, and take the first.
+  Stage 5: the output is the background grid with the assembled
+  rectangle painted so its P-corner sits exactly on P; the
+  marker and the scattered fragments are erased.
+
+Bugs fixed: none in Prolog - the integrated rule passed the
+  single-task test and the full regression on the first compile.
+  The Python prototype stage caught the wave's one real trap: an
+  exact-cover tiler with only the uniform-border constraint
+  returned TWO tilings of the 22x10 test rectangle and preferred
+  the false one, whose color-3 and color-7 frames each split
+  into two separated clusters; the coherence filter of Stage 4
+  rejects it. The prototype stage also corrected a hand-reading
+  error: eyeballing the 26-column test dump had misplaced the
+  rectangle by one row, and the programmatic diff fixed the
+  anchor law before any code was written.
+
+Lessons learned: a three-cell L-tromino is the minimal corner
+  bracket - the missing cell of its two-by-two box simultaneously
+  names WHERE the picture stands, WHICH corner touches it, and
+  WHICH piece never moves, three commands in three cells; an
+  exact-cover tiling with a uniform border can still be ambiguous,
+  so demand COHERENCE - every non-border color of the finished
+  picture must form exactly one connected component, the
+  jigsaw-solver's instinct that a picture's frames must not fall
+  apart into clusters; the piece cupped by the marker keeps its
+  absolute grid position, echoing Wave 78's center piece that
+  anchors the assembled machine; and verify placement arithmetic
+  programmatically before theorizing - a one-row eyeballing slip
+  in a 26-column dump nearly discarded the correct anchor law.
+
+Accomplishment: Acc_410.  Paper: Acc_410_ARC2_Wave112_AnchorJigsaw.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -6147,6 +6219,7 @@ e12f9a14  - Wave 107 - ray_merge          - rectangular rings leak interior-colo
 e87109e9  - Wave 109 - pipe_router        - a six-row legend of framed swatches gives every block color a turn handedness by pixel side; four 8-pipes as wide as the square seed shoot in the four directions, painting over background, crossing pipes freely, exiting at edges, and turning at blocks per the legend
 a25697e4  - Wave 110 - snake_dock         - two-colored snakes dock rigidly into container pockets whose shape matches one segment under a grid isometry, the other segment trailing outside; a proper rotation keeps the segment colors and a reflection swaps them - the flipped snake shows its underside
 a32d8b75  - Wave 111 - fractal_stamp      - legend panels beside full-height 6-columns each hold a two-color stamp glyph, a one-color layout glyph, a 4 naming a field corner, and a 7-domino needle naming a rotation; the layout, rotated and scaled by the stamp, is painted flush at that corner with every set cell a copy of the stamp in exchanged colors
+446ef5d2  - Wave 112 - anchor_jigsaw      - scattered fragments tile a rectangle by translation alone; an L-tromino marker cups the missing cell of its two-by-two box, naming the picture corner that sits there and pinning the piece that holds it; the outer ring is uniformly the color at the cupped cell and every other color must form exactly one connected component
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
@@ -6638,4 +6711,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 110: Snake-dock - the scene holds two-colore
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 111: Fractal-stamp - legend panels sit beside full-height divider columns of color 6, each panel holding a two-color stamp glyph, a one-color layout glyph, a bordered box whose single 4 names a corner of the playing field, and a second box whose two-cell 7-domino needle names a rotation - up for none, right for a quarter turn clockwise, down for a half turn, left for three quarters; the output drops the panels and paints the layout glyph, rotated as the needle commands and scaled up by the stamp's dimensions, flush at the named field corner, every set layout cell replaced by a full copy of the stamp with its two colors exchanged and every clear cell keeping the field underneath; the corner-and-needle instruction pair is the discriminating observation of the wave, because the three training panels and the two panels of the two-legend test grid combine anchors and rotations five different ways, so neither marker alone predicts any placement, yet the pair predicts all five.
   Score: 108/120 = 90.00%. Task a32d8b75 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 112: Anchor-jigsaw - scattered 4-connected colored fragments are jigsaw pieces, and a three-cell L-tromino marker drawn in a color unique to it cups one grid cell, the missing cell of its two-by-two bounding box; the diagonal step from the marker's corner cell to the cupped cell names which corner of the finished picture sits on that cell, the pieces tile by translation alone a rectangle whose area equals their total cell count, the piece containing the cupped cell is pinned at that corner and keeps its absolute grid position, the rectangle's outer ring is uniformly the color found at the cupped cell, and the output erases marker and fragments and paints the assembled rectangle anchored on the cupped cell; the coherence law is the discriminating observation of the wave, because the twenty-two by ten test rectangle admits two exact tilings with a flawless uniform border, and only the demand that every non-border color of the finished picture form exactly one 4-connected component rejects the false assembly, whose color frames fall apart into separated clusters, while accepting the true stacked nested-ring picture.
+  Score: 109/120 = 90.83%. Task 446ef5d2 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.

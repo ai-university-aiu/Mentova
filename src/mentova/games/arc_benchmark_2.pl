@@ -1681,6 +1681,34 @@ arc2_induce_rule(TrainingPairs, fractal_stamp) :-
 % Each training pair must reproduce its output exactly.
            arc2_transform(fractal_stamp, In, Out)).
 
+% anchor_jigsaw: early dispatch before generic clause (WP-370, Layer 345).
+% Enumerate anchor_jigsaw as a known rule name.
+arc2_named_rule(anchor_jigsaw).
+% arc2_induce_rule(anchor_jigsaw): cheap structural pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, anchor_jigsaw) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output height must match the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [FRow|_],
+% Measure the first input width.
+    length(FRow, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output width must match the input width.
+    length(ORow, W),
+% The background is the most common color of the first input.
+    arc2_bg_color_(First, Bg),
+% The first input must carry an L-tromino marker of a unique color.
+    aj_marker_(First, Bg, _, _),
+% Verify every training pair under the anchor_jigsaw transform.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must reproduce its output exactly.
+           arc2_transform(anchor_jigsaw, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -25911,3 +25939,282 @@ frs_overlay_row_([V|Vs], R, C, PaintA, [OV|OVs]) :-
     C1 is C + 1,
 % Overlay the remaining cells.
     frs_overlay_row_(Vs, R, C1, PaintA, OVs).
+
+% ---------------------------------------------------------------------------
+% WAVE 112 — anchor_jigsaw (WP-370, Layer 345)
+% Task 446ef5d2
+% Rule: Scattered 4-connected colored fragments are jigsaw pieces.  A
+% 3-cell L-tromino marker of a color unique to it cups one grid cell P:
+% the missing cell of the marker's 2x2 bounding box.  The diagonal step
+% from the marker's corner cell K to P names which corner of the finished
+% picture sits at P.  The pieces tile, by translation only, a rectangle
+% whose area equals their total cell count; the piece containing P is
+% pinned at the P-corner; the rectangle's outer ring is uniformly the
+% color found at P; and every other color of the finished picture forms
+% exactly one 4-connected component.  The output is the background grid
+% with the assembled rectangle anchored at P; the marker and the
+% scattered fragments are erased.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(anchor_jigsaw): reassemble the fragments at the marker.
+arc2_transform(anchor_jigsaw, Grid, Out) :-
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% The background is the most common color.
+    arc2_bg_color_(Grid, Bg),
+% Find the L-tromino marker and its concave point P.
+    aj_marker_(Grid, Bg, Marker, PR-PC),
+% Pick the marker cell diagonal from P: the marker corner K.
+    member(KR-KC, Marker),
+% K sits exactly one row away from P.
+    1 =:= abs(KR - PR),
+% K sits exactly one column away from P.
+    1 =:= abs(KC - PC),
+% The picture extends from P in the row direction away from K.
+    DDR is PR - KR,
+% The picture extends from P in the column direction away from K.
+    DDC is PC - KC,
+% The border color of the picture is the fragment color at P.
+    arc2_cell_(Grid, PR, PC, B),
+% The cell at P must belong to a fragment, not the background.
+    B \= Bg,
+% Collect every fragment cell: non-background and outside the marker.
+    findall(R-C,
+% Enumerate colored cells and skip the marker cells.
+            ( nth0(R, Grid, Rw), nth0(C, Rw, V), V \= Bg,
+% The marker cells are not fragment cells.
+              \+ memberchk(R-C, Marker) ),
+% Gather the fragment cells.
+            Frag),
+% Group the fragment cells into 4-connected pieces.
+    arc2_sx_comps4_(Frag, Comps),
+% Normalise each piece to its bounding-box origin.
+    maplist(aj_piece_(Grid), Comps, Pieces),
+% Sum the piece areas to get the picture area.
+    findall(N, ( member(piece(Rel0, _, _, _), Pieces), length(Rel0, N) ), Ns),
+% The picture area is the total fragment cell count.
+    sum_list(Ns, A),
+% Collect the piece heights.
+    findall(Hp, member(piece(_, Hp, _, _), Pieces), Hs),
+% The picture is at least as tall as the tallest piece.
+    max_list(Hs, MaxH),
+% Collect the piece widths.
+    findall(Wp, member(piece(_, _, Wp, _), Pieces), Ws),
+% The picture is at least as wide as the widest piece.
+    max_list(Ws, MaxW),
+% Split off the anchor piece from the others.
+    select(Anchor, Pieces, Others),
+% Expose the anchor piece's absolute cells.
+    Anchor = piece(_, _, _, AbsCells),
+% The anchor piece is the one whose cells include P.
+    memberchk(PR-PC, AbsCells),
+% Collect every legal assembly across all factorizations.
+    findall(sol(Hr0, Wr0, Assoc0),
+% Assemble all pieces into a candidate rectangle.
+            aj_assemble_(Others, Anchor, A, MaxH, MaxW, DDR, DDC, B,
+% Receive the candidate dimensions and placement map.
+                         Hr0, Wr0, Assoc0),
+% Gather the candidate assemblies.
+            Sols),
+% Keep only coherent assemblies: one component per non-border color.
+    include(aj_coherent_(B), Sols, Good),
+% Take the first coherent assembly.
+    Good = [sol(Hr, Wr, Assoc)|_],
+% Absolute top row of the picture: P is either its top or bottom row.
+    ( DDR =:= 1 -> R0 = PR ; R0 is PR - Hr + 1 ),
+% Absolute left column: P is either its left or right column.
+    ( DDC =:= 1 -> C0 = PC ; C0 is PC - Wr + 1 ),
+% Paint the picture over a blank background grid.
+    aj_render_(H, W, Bg, R0, C0, Assoc, Out).
+
+% aj_marker_(+Grid, +Bg, -Marker, -P): find the L-tromino marker and P.
+aj_marker_(Grid, Bg, Marker, PR-PC) :-
+% Flatten the grid to enumerate candidate colors.
+    append(Grid, All),
+% Deduplicate the cell values.
+    sort(All, Colors),
+% Pick a candidate marker color.
+    member(V, Colors),
+% The marker color differs from the background.
+    V \= Bg,
+% Collect every cell of the candidate color.
+    findall(R-C, ( nth0(R, Grid, Rw), nth0(C, Rw, V) ), Cells),
+% The marker color has exactly three cells in the whole grid.
+    Cells = [R1-C1, R2-C2, R3-C3],
+% Top row of the marker's bounding box.
+    RMin is min(R1, min(R2, R3)),
+% Bottom row of the marker's bounding box.
+    RMax is max(R1, max(R2, R3)),
+% Left column of the marker's bounding box.
+    CMin is min(C1, min(C2, C3)),
+% Right column of the marker's bounding box.
+    CMax is max(C1, max(C2, C3)),
+% The bounding box is exactly two rows tall.
+    RMax =:= RMin + 1,
+% The bounding box is exactly two columns wide.
+    CMax =:= CMin + 1,
+% Enumerate the rows of the bounding box.
+    between(RMin, RMax, PR),
+% Enumerate the columns of the bounding box.
+    between(CMin, CMax, PC),
+% The concave point P is the box cell missing from the marker.
+    \+ memberchk(PR-PC, Cells),
+% Return the marker cells.
+    Marker = Cells.
+
+% aj_piece_(+Grid, +Cells, -Piece): normalise a component to its origin.
+aj_piece_(Grid, Cells, piece(Rel, Hp, Wp, Cells)) :-
+% Row indices of the component.
+    findall(R, member(R-_, Cells), Rs),
+% Column indices of the component.
+    findall(C, member(_-C, Cells), Cs),
+% Topmost row of the component.
+    min_list(Rs, R0),
+% Bottommost row of the component.
+    max_list(Rs, R1),
+% Leftmost column of the component.
+    min_list(Cs, C0),
+% Rightmost column of the component.
+    max_list(Cs, C1),
+% Piece height.
+    Hp is R1 - R0 + 1,
+% Piece width.
+    Wp is C1 - C0 + 1,
+% Shift each cell to the bounding-box origin and attach its color.
+    findall((DR-DC)-V,
+% Normalise one cell of the component.
+            ( member(R-C, Cells), DR is R - R0, DC is C - C0,
+% Read the cell color from the grid.
+              arc2_cell_(Grid, R, C, V) ),
+% Gather the normalised colored cells.
+            Rel0),
+% Sort the cells into row-major order.
+    msort(Rel0, Rel).
+
+% aj_assemble_(+Others, +Anchor, +A, +MaxH, +MaxW, +DDR, +DDC, +B,
+%              -Hr, -Wr, -Assoc): tile all pieces into a rectangle.
+aj_assemble_(Others, Anchor, A, MaxH, MaxW, DDR, DDC, B, Hr, Wr, Assoc) :-
+% Expose the anchor piece's cells and dimensions.
+    Anchor = piece(ARel, AH, AW, _),
+% Enumerate candidate picture heights.
+    between(MaxH, A, Hr),
+% The height must divide the picture area.
+    0 =:= A mod Hr,
+% The width is the co-factor of the height.
+    Wr is A // Hr,
+% The width must fit the widest piece.
+    Wr >= MaxW,
+% Pin the anchor piece's rows at the P-corner.
+    ( DDR =:= 1 -> AOR = 0 ; AOR is Hr - AH ),
+% Pin the anchor piece's columns at the P-corner.
+    ( DDC =:= 1 -> AOC = 0 ; AOC is Wr - AW ),
+% Start from an empty placement map.
+    empty_assoc(Empty),
+% Place the anchor piece first.
+    aj_place_(ARel, AOR, AOC, Hr, Wr, B, Empty, Assoc1),
+% Tile the remaining pieces over the rest of the rectangle.
+    aj_tile_(Others, Hr, Wr, B, Assoc1, Assoc).
+
+% aj_tile_(+Pieces, +Hr, +Wr, +B, +A0, -A): cover every empty cell.
+aj_tile_(Pieces, Hr, Wr, B, A0, A) :-
+% Look for the first empty cell in row-major order.
+    (   aj_first_empty_(Hr, Wr, A0, R, C)
+% An empty cell remains: choose the piece that covers it.
+    ->  select(piece(Rel, _, _, _), Pieces, Rest),
+% The piece's row-major first cell must land on the empty cell.
+        Rel = [(FR-FC)-_|_],
+% Row offset that drops the first cell onto the target.
+        OR is R - FR,
+% Column offset that drops the first cell onto the target.
+        OC is C - FC,
+% Place the piece if it fits.
+        aj_place_(Rel, OR, OC, Hr, Wr, B, A0, A1),
+% Continue with the remaining pieces.
+        aj_tile_(Rest, Hr, Wr, B, A1, A)
+% No empty cell remains: every piece must have been used.
+    ;   Pieces = [],
+% The finished placement map is the assembly.
+        A = A0
+% End of the tiling choice.
+    ).
+
+% aj_first_empty_(+Hr, +Wr, +Assoc, -R, -C): first unfilled cell.
+aj_first_empty_(Hr, Wr, Assoc, R, C) :-
+% Highest row index of the rectangle.
+    H1 is Hr - 1,
+% Highest column index of the rectangle.
+    W1 is Wr - 1,
+% Scan the rows from top to bottom.
+    between(0, H1, R),
+% Scan the columns from left to right.
+    between(0, W1, C),
+% Stop at the first cell missing from the placement map.
+    \+ get_assoc(R-C, Assoc, _),
+% Commit to the first empty cell found.
+    !.
+
+% aj_place_(+RelCells, +OR, +OC, +Hr, +Wr, +B, +A0, -A): place one piece.
+aj_place_([], _, _, _, _, _, A, A).
+% Place one cell of the piece, then the rest.
+aj_place_([(DR-DC)-V|T], OR, OC, Hr, Wr, B, A0, A) :-
+% Absolute row of the cell inside the rectangle.
+    R is OR + DR,
+% Absolute column of the cell inside the rectangle.
+    C is OC + DC,
+% The cell must lie inside the rectangle.
+    R >= 0, R < Hr, C >= 0, C < Wr,
+% The cell must still be empty.
+    \+ get_assoc(R-C, A0, _),
+% A cell on the outer ring must carry the border color.
+    ( ( R =:= 0 ; R =:= Hr - 1 ; C =:= 0 ; C =:= Wr - 1 ) -> V =:= B ; true ),
+% Record the cell in the placement map.
+    put_assoc(R-C, A0, V, A1),
+% Place the remaining cells of the piece.
+    aj_place_(T, OR, OC, Hr, Wr, B, A1, A).
+
+% aj_coherent_(+B, +Sol): every non-border color is one connected piece.
+aj_coherent_(B, sol(_, _, Assoc)) :-
+% List the placed cells with their colors.
+    assoc_to_list(Assoc, Cells),
+% Collect the colors of the picture.
+    findall(V, member(_-V, Cells), Vs),
+% Deduplicate the colors.
+    sort(Vs, Colors),
+% Check every color other than the border color.
+    forall(( member(Col, Colors), Col \= B ),
+% The color's cells must form exactly one 4-connected component.
+           ( findall(R-C, member((R-C)-Col, Cells), Pts),
+% Group the color's cells and demand a single component.
+             arc2_sx_comps4_(Pts, [_]) )).
+
+% aj_render_(+H, +W, +Bg, +R0, +C0, +Assoc, -Out): paint the picture.
+aj_render_(H, W, Bg, R0, C0, Assoc, Out) :-
+% Highest row index of the output grid.
+    H1 is H - 1,
+% Build every output row.
+    findall(Row,
+% Enumerate the row indices.
+            ( between(0, H1, R),
+% Build one output row.
+              aj_render_row_(W, Bg, R, R0, C0, Assoc, Row) ),
+% Gather the output rows.
+            Out).
+
+% aj_render_row_(+W, +Bg, +R, +R0, +C0, +Assoc, -Row): paint one row.
+aj_render_row_(W, Bg, R, R0, C0, Assoc, Row) :-
+% Highest column index of the output grid.
+    W1 is W - 1,
+% Build every cell of the row.
+    findall(V,
+% Enumerate the column indices.
+            ( between(0, W1, C),
+% Translate to rectangle-local coordinates.
+              RR is R - R0, RC is C - C0,
+% A cell inside the picture takes its color; others take background.
+              ( get_assoc(RR-RC, Assoc, PV) -> V = PV ; V = Bg ) ),
+% Gather the cells of the row.
+            Row).
