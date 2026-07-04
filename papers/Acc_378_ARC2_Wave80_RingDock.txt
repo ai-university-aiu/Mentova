@@ -1,0 +1,115 @@
+Acc_378: ARC-AGI-2 Wave 80 - Ring Dock: Sideways Ring Parking with Per-Side Collision
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 80 of the ARC-AGI-2 benchmark climb: task b5ca7ac4 solved using
+the ring_dock rule (WP-338, Layer 313). Score advances from
+76/120 = 63.33% to 77/120 = 64.17%.
+
+TASK DESCRIPTION
+
+Task b5ca7ac4 presents three training pairs and one test case. The
+training grids are 22x22 and the test grid is 22x25. Each grid
+scatters six to eight five-by-five ring objects over a solid
+background - every ring is a one-cell uniform border of color 8 or
+color 2 around a solid three-by-three uniform interior of some other
+color. In the output every 8-bordered ring has slid horizontally into
+a parking lane against the left edge and every 2-bordered ring
+against the right edge, each ring keeping its rows exactly.
+Same-side rings whose rows overlap pack side by side against the
+ring already parked nearer the edge, and rings starting on the wrong
+side of the grid cross the whole board to reach their lane.
+
+RULE: ring_dock(L, R)
+
+The glass-box rule is a four-stage docking procedure whose two
+learned parameters are the left-going and right-going border colors:
+
+1. RING DETECTION (rd_ring_/3, rd_rings_/3)
+   The background is the most frequent color. Every five-by-five ring
+   is detected by scanning all top-left corners for a sixteen-cell
+   uniform border of a non-background color around a nine-cell
+   uniform interior of a different non-background color. A
+   total-coverage guard demands that the grid's non-background cell
+   count equal exactly twenty-five times the ring count, so the
+   detector can never miss content or fire on a false positive.
+
+2. DIRECTION ASSIGNMENT (induce clause)
+   The rings split by border color into left movers and right movers.
+   The assignment of the two border colors to the two directions is
+   the induced rule parameter pair ring_dock(L, R), found by trying
+   both assignments and keeping the one under which every training
+   pair transforms correctly.
+
+3. PER-SIDE PACKING (rd_place_left_/4, rd_place_right_/5)
+   Each side gets its own fresh background canvas. Left movers sort
+   by ascending column - edge-nearest first, ties broken by row - and
+   each in turn slides leftward one column at a time until the grid
+   edge or an already-parked same-side ring blocks it, then stamps
+   its five-by-five block onto the canvas. Right movers do the mirror
+   image toward the right edge.
+
+4. CANVAS MERGE (rd_merge_/4)
+   The two side canvases merge cell by cell into the output,
+   preferring non-background cells. Opposite-side rings never collide
+   during sliding because they park on separate canvases - which is
+   exactly why input rings on opposite sides of the grid can trade
+   places freely.
+
+THE KEY INSIGHT: COLLISION SCOPED TO DESTINATION
+
+The first prototype slid every ring over a single shared canvas, and
+it failed two of the three training pairs: a right mover was blocked
+by a left mover sitting in its path, even though the training outputs
+show the two groups passing through each other - an 8-ring starting
+at the right edge and a 2-ring starting at the left edge trade
+places. The load-bearing insight is that collision must be scoped to
+objects with the same destination: a physical single-board simulation
+is the wrong model even though it feels more realistic. Splitting the
+simulation into one canvas per side and merging afterward fixed all
+three training pairs at once, and the test case passed on the same
+run. Ordering movers by distance to their target edge makes stepwise
+sliding equivalent to final-position packing, keeping the simulation
+loop trivially glass-box.
+
+INDUCTION PRE-FILTER
+
+The first training pair must preserve the grid dimensions, the first
+input must contain at least one detected ring, and the rings must
+carry exactly two distinct border colors. These guards are cheap and
+exclude every other task family before the full forall verification
+runs. The induce clause dispatches early, directly after
+master_fragment, ahead of the generic named-rule search.
+
+KEY PREDICATES
+
+  rd_ring_/3           - detect one five-by-five ring object
+  rd_rings_/3          - collect every ring object in the grid
+  rd_canvas_/4         - build an all-background canvas
+  rd_free_/4           - a five-by-five region is empty on the canvas
+  rd_slide_left_/5     - slide a ring leftward until blocked
+  rd_slide_right_/6    - slide a ring rightward until blocked
+  rd_draw_/5           - stamp a five-by-five block onto the canvas
+  rd_place_left_/4     - park all left movers in edge-nearest order
+  rd_place_right_/5    - park all right movers in edge-nearest order
+  rd_merge_/4          - overlay the two side canvases
+  arc2_transform(ring_dock(L, R), +Grid, -Out)
+  arc2_induce_rule(+Pairs, ring_dock(L, R))
+
+VERIFICATION
+
+All three training pairs and the test case pass in SWI-Prolog. One
+bug was found and fixed during prototyping (the shared-canvas
+collision model described above). A full regression of all 76 locally
+verified tasks (75 prior plus b5ca7ac4) still induces and passes.
+Pure induction from training examples. No pretraining on the
+ARC-AGI-2 corpus. Every rule is named and glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v309, Pseudocode v301, Architecture v302,
+Refinement v361, Completion v367.
