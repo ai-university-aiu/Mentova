@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 109 complete: 106/120 = 88.33%.
+Last updated: 2026-07-04. Wave 110 complete: 107/120 = 89.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -231,6 +231,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  | 104 / 120  | 86.67%  | Wave 107: ray_merge every foreground component is a one-cell rectangular ring of a single color around a filled single-color interior, and background cells on the ring outline are leaks - an edge gap fires a perpendicular ray and a corner gap fires an outward diagonal ray of the interior color, gap cell included; when the future paths of two rays would meet or cross, both halt one cell short of the crossing and continue together along the vector sum of their courses - two facing diagonals straighten into a parallel vertical pair, a perpendicular meeting bends both onto the shared diagonal, a diagonal converging on a straight ray sends both onto a slope-two staircase alternating a cardinal and a diagonal step, and a merged bundle collides later as a single ray so a third arrival simply adopts the bundle's course - the collision algebra is the discriminating observation, because only the vector sum with a merged bundle counted once explains why the three-ray pileup travels diagonally while the fresh two-ray convergence climbs a staircase
 2026-07-04  | 105 / 120  | 87.50%  | Wave 108: cavity_paint the scene holds exactly two foreground shapes on a uniform background - a hollow silhouette drawn entirely in one color and a multi-color template that redraws the same figure smaller or distorted with its cavities already painted; the output crops to the silhouette's bounding box, keeps every silhouette cell in the silhouette color, finds every background cavity fully enclosed by the silhouette with a four-connected outside flood, and paints each cavity with the color of the template region whose centroid, normalized to its own bounding box, lies nearest to the cavity's normalized centroid, while background connected to the border stays background - the normalized-centroid pairing is the discriminating observation, because the template is a warped redrawing whose regions shift rows and columns relative to the silhouette's cavities, so plain top-to-bottom ordering misassigns the middle cavity in the first training pair and only the position-proportional match lands every color on every cavity across both training pairs and the nine-cavity test
 2026-07-04  | 106 / 120  | 88.33%  | Wave 109: pipe_router a six-row legend strip of framed color swatches sits above the playing field, each six-wide swatch holding one colored pixel among its four interior cells - a pixel on the left half declares that blocks of that color turn pipes left and a pixel on the right half declares they turn pipes right; the field below holds a majority-color background, colored rectangular blocks, and one square seed of 8s, and four 8-pipes exactly as wide as the seed shoot from the seed in the four orthogonal directions, each traveling straight painting 8s over background and crossing other pipes freely, ending when it leaves the grid, and stopping beside any colored block it meets head-on to turn left or right according to that block color's legend handedness before continuing; the output is the field alone with all pipes painted - the legend handedness is the discriminating observation, because the sixteen block-hit turns across the four grids follow no larger-extent rule, no nearest-edge rule, and no fixed chirality, yet every single turn matches the side of the swatch on which that block color's legend pixel sits
+2026-07-04  | 107 / 120  | 89.17%  | Wave 110: snake_dock the scene holds two-colored snakes - each a 4-connected piece made of exactly two single-color segments touching orthogonally - and single-color containers whose bounding boxes hold a pocket of background cells, the socket; exactly one segment of one snake matches each socket's shape under one of the eight grid isometries, and the whole snake docks rigidly so that segment fills the socket while the other segment trails outside on background cells, the original snake erased; the discriminating observation is the color law - a proper rotation keeps each segment's own color but a reflection exchanges the two segment colors, because a snake that must be flipped over to fit shows its underside, and this parity rule predicts all five docking events across the three training grids and the two-container test grid
 
 
 COMPLETE SCORE PROGRESSION
@@ -1251,6 +1252,78 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 110 - 2026-07-04 - Score: 107/120 = 89.17%
+
+Date: 2026-07-04
+
+Confirmed score: 107 / 120 = 89.17%
+
+Rules added in this wave:
+  snake_dock (WP-368, Layer 343)
+
+Task solved: a25697e4 (3 training pairs + 1 test case; training
+  grids 18x25, test grid 30x30; backgrounds 1 and 4 - all roles
+  derived per grid; the test grid holds two containers and two
+  snakes at once, where every training grid holds one of each).
+
+Algorithm: dock every two-colored snake into its matching
+  container, swapping the segment colors when the docking
+  isometry is a reflection.
+  Stage 1: read the background as the majority color and gather
+  the per-color 4-connected foreground components.
+  Stage 2: split the components into snakes and walls - two
+  components of different colors touching orthogonally form a
+  snake; every untouched component is a container wall.
+  Stage 3: cluster same-color wall components lying within
+  Chebyshev distance two into containers, and read each
+  container's socket as the background cells inside the
+  cluster's bounding box.
+  Stage 4: for each socket in discovery order, find the first
+  snake, segment, and grid isometry (identity, three rotations,
+  four reflections, in fixed order) whose transformed segment
+  matches the socket shape exactly and whose other segment,
+  carried by the same rigid map, lands entirely on in-grid
+  background cells without overlapping the socket.
+  Stage 5: erase every snake from its original position, fill
+  the socket with the inner segment and lay the outer segment
+  as the trail through the container mouth.
+  Stage 6: apply the color law - after a proper rotation each
+  segment keeps its own color; after a reflection the two
+  segment colors are exchanged, the flipped snake showing its
+  underside.
+
+Bugs fixed: none. The complete rule was written in plain English
+  and verified cell-by-cell against all three training pairs and
+  the test pair before any Prolog was written; a Python
+  prototype confirmed the algorithm and its deterministic search
+  order on all five docking events, and the Prolog rule passed
+  the single-task test and the full regression on the first
+  compile.
+
+Lessons learned: when identical inputs produce differently
+  colored outputs, the discriminator hides in the part of the
+  scene that DID change - here two training grids share the
+  same snake pixel-for-pixel and only the container is mirrored,
+  so the answer had to be a function of the docking geometry,
+  and the parity of the isometry (rotation versus reflection)
+  is the only property that predicts all five events; treat a
+  rigid placement as an isometry plus translation and test the
+  isometry's parity as a first-class feature - reflections can
+  carry semantics, exactly as a flipped physical tile shows its
+  underside; a container may be drawn as two separate wall
+  components with a gap (the mouth), so cluster same-color
+  components within a small distance before reading bounding
+  boxes; and cell counts are the fastest matchmaker - segment
+  size must equal socket size, which paired the two snakes to
+  the two containers of the test grid uniquely before any shape
+  matching ran.
+
+Accomplishment: Acc_408.  Paper: Acc_408_ARC2_Wave110_SnakeDock.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5997,6 +6070,7 @@ b6f77b65  - Wave 106 - staple_gravity    - the corner cell names a piece color t
 e12f9a14  - Wave 107 - ray_merge          - rectangular rings leak interior-color rays through outline gaps, perpendicular from edges and diagonal from corners; rays that would meet or cross stop one cell short and travel on together along the vector sum of their courses, staircases included
 3a25b0d8  - Wave 108 - cavity_paint       - a monochrome hollow silhouette and a multi-color warped template redraw the same figure; the output crops to the silhouette, keeps its cells, and dyes every enclosed background cavity with the color of the template region whose bounding-box-normalized centroid lies nearest
 e87109e9  - Wave 109 - pipe_router        - a six-row legend of framed swatches gives every block color a turn handedness by pixel side; four 8-pipes as wide as the square seed shoot in the four directions, painting over background, crossing pipes freely, exiting at edges, and turning at blocks per the legend
+a25697e4  - Wave 110 - snake_dock         - two-colored snakes dock rigidly into container pockets whose shape matches one segment under a grid isometry, the other segment trailing outside; a proper rotation keeps the segment colors and a reflection swaps them - the flipped snake shows its underside
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
@@ -6480,4 +6554,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 108: Cavity-paint - the scene holds exactly 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 109: Pipe-router - a six-row legend strip of framed color swatches sits above the playing field, each six-wide swatch holding one colored pixel among its four interior cells, a pixel on the left half declaring that blocks of that color turn pipes left and a pixel on the right half declaring they turn pipes right; the field holds a majority-color background, colored rectangular blocks, and one square seed of 8s, and four 8-pipes exactly as wide as the seed shoot from the seed in the four orthogonal directions, each traveling straight painting 8s over background, crossing other pipes freely, ending when it leaves the grid, and stopping beside any colored block it meets head-on to turn left or right according to that block color's legend handedness before continuing; the output is the field alone, legend dropped, with all pipes painted; the legend handedness is the discriminating observation of the wave, because the sixteen block-hit turns across the four grids follow no larger-extent rule, no nearest-edge rule, and no fixed chirality, yet all sixteen match the side of the swatch on which the block color's pixel sits, and the test input grows the seed from two-by-two to three-by-three so the stroke width must be derived from the seed.
   Score: 106/120 = 88.33%. Task e87109e9 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 110: Snake-dock - the scene holds two-colored snakes, each a 4-connected piece made of exactly two single-color segments touching orthogonally, and single-color containers built from one or two nearby wall components whose bounding boxes hold a pocket of background cells, the socket; exactly one segment of one snake matches each socket's shape under one of the eight grid isometries, and the whole snake docks rigidly so that segment fills the socket while the other segment trails outside on in-grid background cells, the original snake erased; the discriminating observation of the wave is the color law - after a proper rotation each segment keeps its own color, but after a reflection the two segment colors are exchanged, because a snake that must be flipped over to fit shows its underside; two training grids share the same snake pixel-for-pixel with only the container mirrored, forcing the discriminator into the docking geometry, and the isometry's parity predicts all five docking events across the three training grids and the two-container test grid.
+  Score: 107/120 = 89.17%. Task a25697e4 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.

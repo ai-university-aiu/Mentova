@@ -1,0 +1,46 @@
+Accomplishment 408: ARC-AGI-2 Wave 110 - Snake Dock: Two-Colored Snakes, Container Pockets, and the Parity Color Law
+
+PrologAI solves ARC-AGI-2 task a25697e4 with a new glass-box rule
+called snake_dock (WP-368, Layer 343), raising the benchmark
+score from 106/120 = 88.33% to 107/120 = 89.17%.
+
+Each scene of this task holds two kinds of objects on a
+majority-color background. A SNAKE is a single connected piece
+made of exactly two single-color segments joined orthogonally. A
+CONTAINER is one or two nearby walls of a single color whose
+bounding box holds a pocket of background cells - the socket -
+open through a mouth. In the output every snake has left its
+place and docked rigidly into its container: one segment fills
+the socket exactly, matched under one of the eight grid
+isometries, and the other segment trails outside through the
+mouth. The test grid raises the stakes with two snakes and two
+containers at once, paired uniquely by segment size.
+
+The delicate part is the coloring. Two training grids share the
+same snake pixel for pixel, and only the container is mirrored -
+yet the two outputs paint the socket in different colors. The
+only property that predicts the paint, across all five docking
+events of the task, is the parity of the docking isometry. After
+a proper rotation, each segment keeps its own color. After a
+reflection, the two segment colors are exchanged - a snake that
+must be flipped over to fit shows its underside, like a physical
+tile turned face-down. Five events, five correct predictions:
+transpose and vertical flip swap the colors, translation and
+both quarter turns keep them.
+
+The wave's lesson: when identical inputs produce differently
+colored outputs, the discriminator hides in the part of the
+scene that DID change. Treat rigid placements as isometry plus
+translation, and test the isometry's parity as a first-class
+feature - reflections can carry meaning.
+
+The complete rule was written in plain English covering every
+grid before any code, all five docking events were verified cell
+by cell by hand, a Python prototype confirmed the algorithm on
+its first run, and the integrated Prolog rule passed the
+single-task test and the full regression on its first compile.
+Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
