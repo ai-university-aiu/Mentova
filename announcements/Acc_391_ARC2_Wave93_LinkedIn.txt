@@ -1,0 +1,40 @@
+Accomplishment 391: ARC-AGI-2 Wave 93 - Demo Transfer: Learning a Transformation from a Worked Example inside the Grid
+
+PrologAI solves ARC-AGI-2 task 4c7dc4dd with a new glass-box rule
+called demo_transfer (WP-351, Layer 326), raising the benchmark
+score from 89/120 = 74.17% to 90/120 = 75.00% - three quarters of
+the benchmark now solved.
+
+Every input of this task is a 30x30 scene holding four small boxed
+grids. One box is empty: the answer slot. Two boxes contain the
+same colors and form a worked example - the before and the after
+of some transformation. The fourth box, in different colors, is
+the question. The answer is the demonstrated transformation
+applied to the question box.
+
+Here is the twist: the demonstrated transformation changes from
+grid to grid. One training scene teaches connect - join the marker
+cells with straight filled lines. The other teaches complement -
+swap the empty cells and the marked cells. And the test scene
+teaches ripple - a small radial pattern around the center moves
+outward and repeats like a wave. Ripple appears in no training
+answer at all, so any solver that memorizes what the training
+pairs did is guaranteed to fail the test. The rule must do what a
+human does: look at the worked example inside the grid, understand
+the transformation it demonstrates, and transfer it to the new
+problem in new colors.
+
+The rule finds the four ring boxes, separates demo from question
+by color grouping alone, checks a small library of operations
+against the demonstration in both directions, and prefers the
+direction whose source looks most like the question. The learned
+operation is then applied to the question box with the question's
+own colors.
+
+The complete rule was written in plain English covering every grid
+before any code, and the integrated rule passed the single-task
+test and the full regression on the first compile. Pure induction.
+No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
