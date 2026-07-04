@@ -835,6 +835,62 @@ arc2_induce_rule(TrainingPairs, twin_toggle) :-
 % Each training pair must transform correctly under twin_toggle.
            arc2_transform(twin_toggle, In, Out)).
 
+% band_jigsaw: early dispatch before generic clause (WP-346, Layer 321).
+% Enumerate band_jigsaw as a known rule name.
+arc2_named_rule(band_jigsaw).
+% arc2_induce_rule(band_jigsaw): full-span band pre-filter + verify.
+arc2_induce_rule(TrainingPairs, band_jigsaw) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, IH),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The shapes restack in place, so the height must be preserved.
+    IH =:= OH,
+% Fetch the first row of the input.
+    First = [FR|_],
+% Fetch the first row of the output.
+    FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, IW),
+% Measure the first output width.
+    length(FOR, OW),
+% The shapes restack in place, so the width must be preserved.
+    IW =:= OW,
+% Determine the majority background color of the first input.
+    tw_background_(First, BG),
+% Collect every foreground cell of the first input.
+    findall(c(R, C, V),
+% Walk each cell keeping only non-background values.
+            ( nth0(R, First, Row), nth0(C, Row, V), V \= BG ),
+% Bind the collected foreground cell list.
+            Cells),
+% Count the foreground cells.
+    length(Cells, NF),
+% Require a band plus several shapes, not a tiny or dense scene.
+    NF >= 20, NF =< 500,
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Keep the components that span the full grid width or height.
+    include(bj_fullspan_(IH, IW), Comps, Bands),
+% Drop the full-span components, leaving the movable shapes.
+    exclude(bj_fullspan_(IH, IW), Comps, Movable),
+% Exactly one component must span the full grid width or height.
+    Bands = [_],
+% Count the movable shapes.
+    length(Movable, NM),
+% Between two and eight movable shapes must form the jigsaw stack.
+    NM >= 2, NM =< 8,
+% Every movable shape must be small enough to be a jigsaw piece.
+    forall(member(M, Movable),
+% Check the cell count of each movable shape.
+           ( length(M, ML), ML =< 40 )),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under band_jigsaw.
+           arc2_transform(band_jigsaw, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -18439,3 +18495,279 @@ tt_render_(H, W, BG, Draws, Out) :-
                       Row) ),
 % Bind the finished output grid.
             Out).
+
+% ---------------------------------------------------------------------------
+% BAND JIGSAW (WP-346, Layer 321)
+% band_jigsaw: one component spans the full grid width or height and acts
+% as an immovable ragged band; every other shape is translated (never
+% rotated or flipped) so the shapes stack flush against the band's ragged
+% edges, exactly tiling the region between the band profile and a straight
+% outer edge on one or both sides of the band.
+% Reference: ARC-AGI-2 task 16b78196 -- shapes restack against a wide band
+% that is horizontal in training but vertical in the test input.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(band_jigsaw): restack every shape flush against the band.
+arc2_transform(band_jigsaw, Grid, Out) :-
+% Determine the majority background color of the grid.
+    tw_background_(Grid, BG),
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Collect every foreground cell of the grid.
+    findall(c(R, C, V),
+% Walk each cell keeping only non-background values.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V \= BG ),
+% Bind the collected foreground cell list.
+            Cells),
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Pick the band component, leaving the movable shape components.
+    select(Band, Comps, ShapeComps),
+% At least one movable shape must exist.
+    ShapeComps \= [],
+% The band must span the full grid width or the full grid height.
+    bj_span_(Band, H, W, Trans),
+% Derive the canonical dimensions with the band lying horizontally.
+    bj_canon_dims_(Trans, H, W, CH, CW),
+% Map the band cells into the canonical orientation.
+    bj_canon_cells_(Trans, Band, BandC),
+% Map every shape component into the canonical orientation.
+    maplist(bj_canon_cells_(Trans), ShapeComps, ShapesC),
+% Compute the band's bottom edge profile per canonical column.
+    bj_profile_(BandC, CW, max, PB),
+% Compute the band's top edge profile per canonical column.
+    bj_profile_(BandC, CW, min, PT),
+% Flip the top profile so the above side solves as a below chain.
+    maplist(bj_flipnum_(CH), PT, PF),
+% Split the shapes into a below-side group and an above-side group.
+    bj_partition_(ShapesC, BelowComps, AboveComps),
+% Normalize each below-side shape to its bounding-box origin.
+    maplist(bj_norm_, BelowComps, BelowShapes),
+% Flip and normalize each above-side shape into the flipped frame.
+    maplist(bj_flipnorm_(CH), AboveComps, AboveShapes),
+% Exact-tile the below-side chain against the bottom profile.
+    bj_chain_(PB, CH, CW, BelowShapes, CellsB),
+% Exact-tile the above-side chain against the flipped top profile.
+    bj_chain_(PF, CH, CW, AboveShapes, CellsAF),
+% Map the above-side chain cells back out of the flipped frame.
+    maplist(bj_unflip_(CH), CellsAF, CellsA),
+% Combine the placed cells of both chains.
+    append(CellsB, CellsA, Placed),
+% Combine the untouched band cells with the placed shape cells.
+    append(BandC, Placed, FinalC),
+% Map every final cell back into the original orientation.
+    maplist(bj_uncanon_cell_(Trans), FinalC, FinalCells),
+% Render the final cells onto a fresh background canvas.
+    tt_render_(H, W, BG, FinalCells, Out),
+% Commit to the first complete restacking found.
+    !.
+
+% bj_fullspan_(+H, +W, +Comp): the component spans a full grid dimension.
+bj_fullspan_(H, W, Comp) :-
+% Determine whether the component spans the width or the height.
+    bj_span_(Comp, H, W, _).
+
+% bj_span_(+Comp, +H, +W, -Trans): full-width gives false, full-height true.
+bj_span_(Comp, H, W, Trans) :-
+% Collect the row index of every component cell.
+    findall(R, member(c(R, _, _), Comp), Rs),
+% Collect the column index of every component cell.
+    findall(C, member(c(_, C, _), Comp), Cs),
+% The topmost row of the component.
+    min_list(Rs, MinR),
+% The bottommost row of the component.
+    max_list(Rs, MaxR),
+% The leftmost column of the component.
+    min_list(Cs, MinC),
+% The rightmost column of the component.
+    max_list(Cs, MaxC),
+% A horizontal band spans the width without filling the height.
+    (   MaxC - MinC + 1 =:= W, MaxR - MinR + 1 < H
+% Horizontal bands need no coordinate transposition.
+    ->  Trans = false
+% A vertical band spans the height without filling the width.
+    ;   MaxR - MinR + 1 =:= H, MaxC - MinC + 1 < W
+% Vertical bands are handled by transposing all coordinates.
+    ->  Trans = true
+    ).
+
+% bj_canon_dims_(+Trans, +H, +W, -CH, -CW): canonical grid dimensions.
+bj_canon_dims_(false, H, W, H, W).
+% A transposed frame swaps the height and width.
+bj_canon_dims_(true, H, W, W, H).
+
+% bj_canon_cells_(+Trans, +Cells, -Canon): map cells into canonical frame.
+bj_canon_cells_(false, Cs, Cs).
+% A transposed frame swaps the row and column of every cell.
+bj_canon_cells_(true, Cs, Ts) :-
+% Swap the row and column coordinates of each cell.
+    maplist([c(R, C, V), c(C, R, V)]>>true, Cs, Ts).
+
+% bj_uncanon_cell_(+Trans, +Cell, -Orig): map one cell back to the grid.
+bj_uncanon_cell_(false, Cell, Cell).
+% A transposed frame swaps the row and column back.
+bj_uncanon_cell_(true, c(R, C, V), c(C, R, V)).
+
+% bj_flipnum_(+CH, +R, -F): reflect a row index vertically.
+bj_flipnum_(CH, R, F) :-
+% Reflect the row index against the last canonical row.
+    F is CH - 1 - R.
+
+% bj_profile_(+BandC, +CW, +Mode, -P): per-column band edge profile.
+bj_profile_(BandC, CW, Mode, P) :-
+% Compute the last canonical column index.
+    CW1 is CW - 1,
+% Build the profile column by column.
+    findall(E,
+% Walk each canonical column.
+            ( between(0, CW1, Col),
+% Collect the band rows present in this column.
+              findall(R, member(c(R, Col, _), BandC), Rs),
+% Every canonical column must hold at least one band cell.
+              Rs \= [],
+% The bottom profile takes the maximum row, the top the minimum.
+              ( Mode = max -> max_list(Rs, E) ; min_list(Rs, E) ) ),
+% Bind the finished profile list.
+            P),
+% The profile must cover every canonical column.
+    length(P, CW).
+
+% bj_partition_(+Shapes, -Below, -Above): assign each shape to a side.
+bj_partition_([], [], []).
+% Try placing the next shape on the below side first.
+bj_partition_([S|Ss], [S|B], A) :-
+% Partition the remaining shapes.
+    bj_partition_(Ss, B, A).
+% Otherwise place the next shape on the above side.
+bj_partition_([S|Ss], B, [S|A]) :-
+% Partition the remaining shapes.
+    bj_partition_(Ss, B, A).
+
+% bj_norm_(+Comp, -Shape): sorted cells relative to the bbox top-left.
+bj_norm_(Comp, sh(Norm)) :-
+% Collect the row index of every component cell.
+    findall(R, member(c(R, _, _), Comp), Rs),
+% Collect the column index of every component cell.
+    findall(C, member(c(_, C, _), Comp), Cs),
+% The topmost row is the bounding-box top.
+    min_list(Rs, R0),
+% The leftmost column is the bounding-box left.
+    min_list(Cs, C0),
+% Shift every cell so the bounding box starts at the origin.
+    findall(n(NR, NC, V),
+% Rebase each cell against the bounding-box corner.
+            ( member(c(R, C, V), Comp), NR is R - R0, NC is C - C0 ),
+% Bind the rebased cell list.
+            Ns),
+% Sort the cells into row-major order for anchored tiling.
+    sort(Ns, Norm).
+
+% bj_flipnorm_(+CH, +Comp, -Shape): flip vertically, then normalize.
+bj_flipnorm_(CH, Comp, Sh) :-
+% Reflect the row of every cell against the last canonical row.
+    maplist([c(R, C, V), c(FR, C, V)]>>(FR is CH - 1 - R), Comp, Flipped),
+% Normalize the flipped component to its bounding-box origin.
+    bj_norm_(Flipped, Sh).
+
+% bj_unflip_(+CH, +Cell, -Orig): reflect a placed cell back vertically.
+bj_unflip_(CH, c(R, C, V), c(FR, C, V)) :-
+% Reflect the row index against the last canonical row.
+    FR is CH - 1 - R.
+
+% bj_chain_(+P, +CH, +CW, +Shapes, -Cells): exact-tile one side chain.
+% An empty side needs no placements.
+bj_chain_(_, _, _, [], []) :- !.
+% A non-empty side must tile a region flush against the band profile.
+bj_chain_(P, CH, CW, Shapes, Cells) :-
+% Sum the cell counts of all chain shapes.
+    foldl([sh(N), A0, A1]>>(length(N, L), A1 is A0 + L), Shapes, 0, A),
+% Measure the bounding-box width of every chain shape.
+    findall(SW,
+% Walk each chain shape.
+            ( member(sh(N), Shapes),
+% Collect the normalized column of every shape cell.
+              findall(C, member(n(_, C, _), N), NCs),
+% The rightmost normalized column fixes the shape width.
+              max_list(NCs, MaxC),
+% Convert the rightmost column into a width.
+              SW is MaxC + 1 ),
+% Bind the collected shape widths.
+            SWs),
+% The widest shape bounds the narrowest possible chain interval.
+    max_list(SWs, MW),
+% Compute the last feasible left column for the interval.
+    CWm is CW - MW,
+% Choose the left column of the chain interval.
+    between(0, CWm, C1),
+% Compute the widest interval starting at this left column.
+    MaxWid is CW - C1,
+% Choose the interval width, at least the widest shape.
+    between(MW, MaxWid, Wid),
+% Compute the right column of the chain interval.
+    C2 is C1 + Wid - 1,
+% Collect the band profile values across the interval.
+    findall(Pc, (between(C1, C2, Cc), nth0(Cc, P, Pc)), Ps),
+% Sum the profile values across the interval.
+    sum_list(Ps, SumP),
+% The region area equals Wid * Rend - SumP, which must equal A.
+    Num is A + SumP,
+% The outer edge row must come out as a whole number.
+    0 =:= Num mod Wid,
+% Solve for the straight outer edge row of the region.
+    Rend is Num // Wid,
+% The outer edge must stay inside the canonical grid.
+    Rend =< CH - 1,
+% The deepest profile value across the interval.
+    max_list(Ps, MaxP),
+% Every interval column must contribute at least one region cell.
+    Rend > MaxP,
+% Build the region between the band profile and the outer edge.
+    findall(rc(R, C),
+% Walk each interval column from the profile down to the edge.
+            ( between(C1, C2, C), nth0(C, P, Pc), RLo is Pc + 1,
+% Walk each region row of this column.
+              between(RLo, Rend, R) ),
+% Bind the unsorted region cells.
+            Reg0),
+% Sort the region cells into row-major order.
+    sort(Reg0, Region),
+% Exact-tile the region with the chain shapes.
+    bj_tile_(Region, Shapes, Cells).
+
+% bj_tile_(+Region, +Shapes, -Cells): anchored exact-cover tiling.
+% An empty region must leave no unplaced shapes.
+bj_tile_([], [], []).
+% The first uncovered cell must host some shape's first cell.
+bj_tile_([rc(R, C)|Rest], Shapes, AllCells) :-
+% Choose the shape whose first cell lands on the uncovered cell.
+    select(sh(Norm), Shapes, Others),
+% The row-major first cell of the shape anchors the placement.
+    Norm = [n(NR0, NC0, _)|_],
+% Solve the placement row offset from the anchor.
+    OR is R - NR0,
+% Solve the placement column offset from the anchor.
+    OC is C - NC0,
+% Compute the absolute position of every shape cell.
+    findall(rc(AR, AC),
+% Offset each normalized shape cell.
+            ( member(n(NR, NC, _), Norm), AR is OR + NR, AC is OC + NC ),
+% Bind the absolute position list, already row-major sorted.
+            Abs),
+% Every shape cell must land on a still-uncovered region cell.
+    ord_subset(Abs, [rc(R, C)|Rest]),
+% Remove the newly covered cells from the region.
+    ord_subtract([rc(R, C)|Rest], Abs, Remaining),
+% Emit the placed shape cells with their colors.
+    findall(c(AR, AC, V),
+% Offset each normalized shape cell keeping its color.
+            ( member(n(NR, NC, V), Norm), AR is OR + NR, AC is OC + NC ),
+% Bind the placed cell list.
+            Placed),
+% Tile the remaining region with the remaining shapes.
+    bj_tile_(Remaining, Others, More),
+% Combine this placement with the rest of the tiling.
+    append(Placed, More, AllCells).

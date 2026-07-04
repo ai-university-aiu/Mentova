@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 87 complete: 84/120 = 70.00%.
+Last updated: 2026-07-03. Wave 88 complete: 85/120 = 70.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -209,6 +209,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  82 / 120  | 68.33%  | Wave 85: dial_rotor one framed square figure wrapped in a dotted ring, plus detached straight dial pieces lying far away; a dial piece of color C with length L commands "rotate color C's layer by L quarter turns clockwise"; the crop box merges the main figure with every component within Chebyshev distance 3, the ring color is the unique color on the crop's outermost layer, the ring-zone thickness is the minimum inset of any non-ring-colored cell, the ring zone spins by the ring color's dial (staying put without one) and the core block spins by the largest dial among its own colors
 2026-07-03  |  83 / 120  | 69.17%  | Wave 86: xray_frame one large rectangular frame with a uniform interior occludes partial rectangle outlines drawn outside it; the output is the frame interior with every shape's hidden perimeter cells restored - the shapes' bounding boxes are completed through the frame as if it were transparent; single-color shapes restore their own color, and two-color alternating shapes restore the color-swapped mirror (vertical first, then horizontal) of the visible cell inside the shape's bounding box
 2026-07-03  |  84 / 120  | 70.00%  | Wave 87: twin_toggle shapes scattered on a uniform background are integer-scaled copies of exactly two variant templates that share an identical body of same-colored cells under a best-overlap alignment; every shape is redrawn as the other variant at its own scale, positioned so the shared body cells stay exactly where they were - stem-and-base colors toggle, and side decorations jump from below one shape to above its twin
+2026-07-03  |  85 / 120  | 70.83%  | Wave 88: band_jigsaw one component spans the full grid width or height and acts as an immovable ragged band; every other shape is translated - never rotated or flipped - so the shapes stack flush against the band's ragged edges, exactly tiling the region between the band's per-column edge profile and a straight outer edge on one or both sides; the band is horizontal in both training pairs but vertical in the test, so the solver canonicalizes by transposition and solves the far side by vertical flip
 
 
 COMPLETE SCORE PROGRESSION
@@ -1229,6 +1230,76 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 88 - 2026-07-03 - Score: 85/120 = 70.83%
+
+Date: 2026-07-03
+
+Confirmed score: 85 / 120 = 70.83%
+
+Rules added in this wave:
+  band_jigsaw (WP-346, Layer 321)
+
+Task solved: 16b78196 (2 training pairs + 1 test case; all grids
+  30x30 with same-size input and output; each grid holds one wide
+  band component that spans the full grid width - or, in the test,
+  the full grid height - with ragged, notched edges, plus three to
+  five small single-color shapes scattered around it; the output
+  keeps the band exactly where it is and restacks every shape flush
+  against the band so the pieces interlock like a jigsaw puzzle).
+
+Algorithm: translation-only jigsaw packing against a band profile.
+  Stage 1: the majority color is the background, the foreground
+  cells group into 8-connected components, and the unique component
+  whose bounding box spans the full grid width or height is the
+  band; a vertical band is transposed into the canonical horizontal
+  frame. Stage 2: the band's bottom profile takes the maximum band
+  row per column and its top profile the minimum; the top side is
+  reflected vertically so both sides solve as a bottom-side chain.
+  Stage 3: the shapes are partitioned between the two sides; for
+  each side the solver picks a column interval at least as wide as
+  the widest assigned shape, derives the unique straight outer edge
+  row from the exact-area equation (interval width times outer row
+  minus profile sum equals total shape area), and builds the region
+  of all cells between the profile and that outer edge. Stage 4:
+  the region is exact-tiled by anchored exact cover - the row-major
+  first uncovered cell must host some unused shape's row-major
+  first cell, shapes translate but never rotate or flip, and every
+  shape cell must land inside the region. Stage 5: the output is a
+  fresh background canvas holding the untouched band cells plus the
+  placed shape cells, mapped back through the flip and the
+  transposition.
+
+Bugs fixed: none. The rule passed both training pairs and the test
+  case on the first prototype run, and the integrated version passed
+  the single-task test and the full regression on the first compile.
+
+Lessons learned: the proven method carried the wave again - all six
+  grids were dumped to text and the complete rule was written in
+  plain English before any code. Hand-tracing showed that each
+  shape keeps its exact cell pattern and orientation and only
+  translates, that consecutive shapes in a stack interlock with
+  complementary profiles, and that the union of each chain fills a
+  region bounded by the band's ragged edge on one side and a
+  perfectly straight line on the other. That straight outer edge is
+  the key constraint: given a column interval and the total area of
+  the assigned shapes, the outer edge row is forced by arithmetic,
+  which collapses the search to a handful of exact-cover calls. The
+  human-steps reading ("wide shapes above, narrow shapes below")
+  is wrong in general - the second training pair stacks all three
+  shapes below the band - so the side split is searched, not
+  assumed. The test grid rotates the whole scene ninety degrees
+  (vertical band, chains left and right), confirming that
+  orientation-general canonicalization by transposition plus
+  vertical flip was mandatory, exactly as the Wave 85-87 surveys
+  predicted. Full regression of all 84 locally verified tasks (83
+  prior plus 16b78196) still induces and passes.
+
+Accomplishment: Acc_386.  Paper: Acc_386_ARC2_Wave88_BandJigsaw.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4529,6 +4600,7 @@ a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing m
 6ffbe589  - Wave 85 - dial_rotor         - a framed square wrapped in a dotted ring is cropped together with every nearby component; detached straight dial pieces command rotations - a run of color C with length L spins color C's layer by L quarter turns clockwise - so the ring zone spins by the ring color's dial and the core block spins by the largest dial among its own colors
 a6f40cea  - Wave 86 - xray_frame         - a large rectangular frame with a uniform interior occludes partial rectangle outlines drawn outside it; the output is the frame interior with every shape's hidden bounding-box perimeter cells restored - single-color shapes restore their own color and two-color alternating shapes restore the color-swapped mirror of the visible cell inside their own bounding box
 c7f57c3e  - Wave 87 - twin_toggle        - shapes on a uniform background are integer-scaled copies of exactly two variant templates sharing an identical aligned body; every shape is redrawn as the other variant at its own scale, positioned so the shared body cells stay exactly where they were
+16b78196  - Wave 88 - band_jigsaw        - one component spans the full grid width or height as an immovable ragged band; every other shape is translated, never rotated or flipped, so the shapes stack flush against the band's ragged edges, exactly tiling the region between the band's edge profile and a straight outer edge on one or both sides
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4909,4 +4981,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 86: Xray-frame - each grid holds one large r
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 87: Twin-toggle - each grid holds several shapes on a uniform majority-color background, and every shape is an integer-scaled copy of one of exactly two variant templates; each component is cropped to its bounding box on a clean local canvas and fully reduced by the largest uniform block scale, yielding its canonical template and scale factor; the two templates are aligned by the translation offset maximizing the count of overlapping same-colored cells, and those agreeing cells are the shared body; the output redraws every shape as the other variant, upscaled by the shape's own scale and positioned through the alignment offset so the shared body stays fixed; the toggle formulation is the discriminating observation of the wave, because the surface reading suggests three color roles with an adjacency-driven swap-versus-promotion choice, yet one uniform twin-toggle mechanism explains the recolored stems and bases of the first pair, the below-versus-above markers of the second pair, and the test's combined center recolor plus side jump at scales one and three.
   Score: 84/120 = 70.00%. Task c7f57c3e solved.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 88: Band-jigsaw - each grid holds one component whose bounding box spans the full grid width or height, an immovable band with ragged, notched edges, plus several small single-color shapes; the majority color is the background, the foreground groups into 8-connected components, and a vertical band is transposed into a canonical horizontal frame; the band's bottom and top edge profiles take the maximum and minimum band row per column, the top side is reflected vertically so both sides solve identically, and the shapes are partitioned between the two sides by search; for each side the solver picks a column interval at least as wide as its widest shape, forces the straight outer edge row from the exact-area equation, and exact-tiles the region between profile and edge by anchored exact cover in which the row-major first uncovered cell must host some unused shape's row-major first cell, with translation only and no rotation or reflection; the output is a fresh background canvas holding the untouched band plus the placed shapes mapped back through flip and transposition; the straight-outer-edge arithmetic is the discriminating observation of the wave, because it makes the outer edge a computed quantity rather than a searched one, and the orientation-general canonicalization handles the test grid's vertical band with left and right chains even though both training bands are horizontal.
+  Score: 85/120 = 70.83%. Task 16b78196 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
