@@ -1,0 +1,39 @@
+Accomplishment 388: ARC-AGI-2 Wave 90 - Compartment Tally: A Census of Subdivided Boxes
+
+PrologAI solves ARC-AGI-2 task 89565ca0 with a new glass-box rule
+called compartment_tally (WP-348, Layer 323), raising the benchmark
+score from 86/120 = 71.67% to 87/120 = 72.50%.
+
+Each grid holds one scattered noise color plus three to five box
+colors on a majority background. Every box color draws one
+rectangular outline, subdivided by internal partition lines into
+table-like compartments - one to six per box. The boxes nest,
+overlap, and cross each other's lines, and the noise cells land
+everywhere, including on top of the box lines themselves. The
+answer is a tiny census grid: one row per box, sorted by
+compartment count, each row painting the box color once per
+compartment and padding with the noise color.
+
+The key insight is that the compartment count is structural, not
+decorative. The rule finds the noise color as the one whose cells
+shatter into the most fragments, then counts each box's
+compartments by flood-filling the box interior. The walls are the
+box's own cells plus a guarded single-cell repair: a non-background
+cell directly flanked by two box-colored cells vertically or
+horizontally is a partition cell that noise or a crossing box
+overwrote, and is restored. The background guard matters as much as
+the repair - without it, genuine single-row and single-column
+compartments get walled off and vanish from the census; without the
+repair, the flood leaks through every damaged partition. One box in
+the training data hides a third compartment below an internal
+partition that first looks like stray decoration; the flood fill
+finds it without any special case.
+
+The rule has no learned parameters. The background, the noise
+color, the boxes, the repaired walls, and the compartment counts
+are all read off the input grid at answer time, and induction is
+pure verification of all three training pairs. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

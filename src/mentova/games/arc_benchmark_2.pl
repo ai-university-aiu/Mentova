@@ -939,6 +939,52 @@ arc2_induce_rule(TrainingPairs, wire_wrap) :-
 % Each training pair must transform correctly under wire_wrap.
            arc2_transform(wire_wrap, In, Out)).
 
+% compartment_tally: early dispatch before generic clause (WP-348, Layer 323).
+% Enumerate compartment_tally as a known rule name.
+arc2_named_rule(compartment_tally).
+% arc2_induce_rule(compartment_tally): box-census pre-filter + verify.
+arc2_induce_rule(TrainingPairs, compartment_tally) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, IH),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The census output is strictly shorter than the input scene.
+    OH < IH,
+% Fetch the first row of the input.
+    First = [FR|_],
+% Fetch the first row of the output.
+    FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, IW),
+% Measure the first output width.
+    length(FOR, OW),
+% The census output is strictly narrower than the input scene.
+    OW < IW,
+% The census holds one row per box, between two and nine boxes.
+    OH >= 2, OH =< 9,
+% The census width equals the largest compartment count, at most nine.
+    OW >= 2, OW =< 9,
+% Determine the majority background color of the first input.
+    tw_background_(First, BG),
+% Collect every foreground color of the first input.
+    findall(V,
+% Walk each cell keeping only non-background values.
+            ( member(Row, First), member(V, Row), V \== BG ),
+% Bind the collected foreground color list.
+            Vs),
+% Reduce the foreground colors to the distinct color set.
+    sort(Vs, DVs),
+% Count the distinct foreground colors.
+    length(DVs, NC),
+% The scene holds one noise color plus one box color per output row.
+    NC =:= OH + 1,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under compartment_tally.
+           arc2_transform(compartment_tally, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -19196,3 +19242,186 @@ ww_ingrid_prefix_([rc(R, C)|Rest], H, W, Out) :-
       Out = [rc(R, C)|More], ww_ingrid_prefix_(Rest, H, W, More)
 % Cut the path at the first off-grid cell.
     ; Out = [] ).
+
+% ---------------------------------------------------------------------------
+% COMPARTMENT TALLY (WP-348, Layer 323)
+% compartment_tally: each foreground color except one draws a rectangular
+% box outline, possibly subdivided by internal partition lines into N
+% compartments; the remaining color is scattered noise.  The output holds
+% one row per box, sorted by compartment count ascending (ties by leftmost
+% bounding-box column), each row being the box color repeated N times and
+% padded with the noise color to the maximum count.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(compartment_tally): tally every box's compartments.
+arc2_transform(compartment_tally, Grid, Out) :-
+% Determine the majority background color of the scene.
+    tw_background_(Grid, BG),
+% Collect every foreground cell keyed by its color.
+    findall(V-rc(R, C),
+% Walk each cell keeping only non-background values with positions.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V \== BG ),
+% Bind the keyed foreground cell list.
+            Keyed),
+% Order the keyed cells so equal colors sit adjacent.
+    msort(Keyed, SortedKeyed),
+% Group the keyed cells into one cell set per color.
+    ww_groups_(SortedKeyed, Groups),
+% Count the color groups in the scene.
+    length(Groups, NG),
+% The scene needs one noise color and at least two boxes.
+    NG >= 3,
+% Count the four-connected fragments of every color's cell set.
+    findall(NF-V,
+% The noise color shatters into the most fragments.
+            ( member(col(V, Cs), Groups), ct_comps_(Cs, NF) ),
+% Bind the fragment-count color pairs.
+            Frag),
+% Order the pairs by ascending fragment count.
+    msort(Frag, SortedFrag),
+% The last pair carries the scattered noise color.
+    last(SortedFrag, _-Noise),
+% Tally the compartments of every non-noise box color.
+    findall(B,
+% Each remaining color group yields one tallied box term.
+            ( member(col(V, Cs), Groups), V \== Noise,
+% Tally the compartments inside the box of color V.
+              ct_box_(Grid, BG, V, Cs, B) ),
+% Bind the tallied box list.
+            Boxes),
+% Order the boxes by count, then leftmost column, then top row.
+    msort(Boxes, SortedBoxes),
+% The last box carries the maximum compartment count.
+    last(SortedBoxes, b(MaxN, _, _, _)),
+% Emit one census row per box in sorted order.
+    findall(RowOut,
+% Each box paints its color N times padded with noise.
+            ( member(b(N, _, _, V), SortedBoxes),
+% Build the census row for the box.
+              ct_row_(V, N, Noise, MaxN, RowOut) ),
+% Bind the finished census grid.
+            Out).
+
+% ct_box_(+Grid, +BG, +V, +Cells, -Box): tally one box's compartments.
+ct_box_(Grid, BG, V, Cells, b(N, C1, R1, V)) :-
+% Compute the bounding box of the box color's cells.
+    ww_ends_(Cells, rc(R1, C1), rc(R2, C2)),
+% First interior row strictly inside the bounding box.
+    RI1 is R1 + 1,
+% Last interior row strictly inside the bounding box.
+    RI2 is R2 - 1,
+% First interior column strictly inside the bounding box.
+    CI1 is C1 + 1,
+% Last interior column strictly inside the bounding box.
+    CI2 is C2 - 1,
+% Collect every open interior cell not blocked by a wall.
+    findall(rc(R, C),
+% Walk the interior keeping cells that are not walls.
+            ( between(RI1, RI2, R), between(CI1, CI2, C),
+% An open cell is any interior cell failing the wall test.
+              \+ ct_wall_(Grid, BG, V, R, C) ),
+% Bind the open interior cell list.
+            Open),
+% Each four-connected open region is one compartment.
+    ct_comps_(Open, N).
+
+% ct_wall_(+Grid, +BG, +V, +R, +C): the cell blocks box color V's flood.
+ct_wall_(Grid, BG, V, R, C) :-
+% Fetch the color of the tested cell.
+    arc2_cell_(Grid, R, C, X),
+% Classify the cell against the box color and background.
+    ct_wall_x_(Grid, BG, V, R, C, X).
+
+% ct_wall_x_(+Grid, +BG, +V, +R, +C, +X): classify one cell as wall.
+% A cell of the box color itself is always a wall.
+ct_wall_x_(_, _, V, _, _, X) :-
+% The cell carries the box color.
+    X == V,
+% Commit to the box-color wall.
+    !.
+% A background cell is always open, never repaired.
+ct_wall_x_(_, BG, _, _, _, X) :-
+% The cell carries the background color.
+    X == BG,
+% Commit and reject the background cell as a wall.
+    !, fail.
+% Repair a vertical gap: both vertical neighbors carry the box color.
+ct_wall_x_(Grid, _, V, R, C, _) :-
+% Row index of the neighbor above.
+    RU is R - 1,
+% Row index of the neighbor below.
+    RD is R + 1,
+% The neighbor above must carry the box color.
+    arc2_cell_(Grid, RU, C, V),
+% The neighbor below must carry the box color.
+    arc2_cell_(Grid, RD, C, V),
+% Commit to the vertical gap repair.
+    !.
+% Repair a horizontal gap: both horizontal neighbors carry the box color.
+ct_wall_x_(Grid, _, V, R, C, _) :-
+% Column index of the neighbor to the left.
+    CL is C - 1,
+% Column index of the neighbor to the right.
+    CR is C + 1,
+% The neighbor to the left must carry the box color.
+    arc2_cell_(Grid, R, CL, V),
+% The neighbor to the right must carry the box color.
+    arc2_cell_(Grid, R, CR, V).
+
+% ct_comps_(+Cells, -N): count four-connected components of a cell set.
+ct_comps_(Cells, N) :-
+% Order the cells into the standard order of terms.
+    msort(Cells, Sorted),
+% Count the components of the ordered cell set.
+    ct_comps_s_(Sorted, N).
+
+% ct_comps_s_(+SortedCells, -N): count components of an ordered set.
+% An empty cell set holds no components.
+ct_comps_s_([], 0).
+% Grow one component from the first cell, then count the rest.
+ct_comps_s_([C|Rest], N) :-
+% Absorb every cell reachable from the first cell.
+    ct_grow_([C], Rest, Remaining),
+% Count the components among the unreached cells.
+    ct_comps_s_(Remaining, M),
+% Add the grown component to the tally.
+    N is M + 1.
+
+% ct_grow_(+Frontier, +Set, -Remaining): absorb one component's cells.
+% An empty frontier leaves the unreached cells as the remainder.
+ct_grow_([], Set, Set).
+% Expand the first frontier cell into its unreached orthogonal neighbors.
+ct_grow_([rc(R, C)|Front], Set, Remaining) :-
+% Collect the unreached orthogonal neighbors of the frontier cell.
+    findall(rc(R2, C2),
+% Step to each of the four orthogonal neighbor offsets.
+            ( member(d(DR, DC), [d(1, 0), d(-1, 0), d(0, 1), d(0, -1)]),
+% Row index of the stepped neighbor.
+              R2 is R + DR,
+% Column index of the stepped neighbor.
+              C2 is C + DC,
+% The stepped neighbor must remain unreached in the set.
+              memberchk(rc(R2, C2), Set) ),
+% Bind the absorbed neighbor list.
+            Ns),
+% Remove the absorbed neighbors from the unreached set.
+    subtract(Set, Ns, Set2),
+% Queue the absorbed neighbors onto the frontier.
+    append(Ns, Front, Front2),
+% Continue growing from the extended frontier.
+    ct_grow_(Front2, Set2, Remaining).
+
+% ct_row_(+V, +N, +Noise, +MaxN, -Row): one census row for one box.
+ct_row_(V, N, Noise, MaxN, Row) :-
+% Allocate the box-color segment of the row.
+    length(Seg, N),
+% Fill the segment with the box color.
+    maplist(=(V), Seg),
+% Measure the noise padding needed to reach the census width.
+    Pad is MaxN - N,
+% Allocate the noise padding segment of the row.
+    length(PadSeg, Pad),
+% Fill the padding segment with the noise color.
+    maplist(=(Noise), PadSeg),
+% Join the box segment and the padding into the census row.
+    append(Seg, PadSeg, Row).
