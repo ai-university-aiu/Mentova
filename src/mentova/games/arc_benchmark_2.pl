@@ -559,6 +559,219 @@ arc2_induce_rule(TrainingPairs, ring_dock(L, R)) :-
 % Each training pair must transform correctly under ring_dock.
            arc2_transform(ring_dock(L, R), In, Out)).
 
+% pinwheel_spiral: early dispatch before generic clause (WP-373, Layer 348).
+% arc2_induce_rule(pinwheel_spiral): single plus seed on a background pre-filter + verify.
+arc2_induce_rule(TrainingPairs, pinwheel_spiral) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The first output must share the input height.
+    length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, W),
+% The first output must share the input width.
+    length(FOR, W),
+% The first input must hold exactly one plus seed of a single color.
+    ps_seed_(First, _Bg, _Fg, _Cr, _Cc, L),
+% The plus seed must have arms of length at least one.
+    L >= 1,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under pinwheel_spiral.
+           arc2_transform(pinwheel_spiral, In, Out)).
+
+% arc2_transform(pinwheel_spiral): grow four clockwise period-two spiral arms.
+arc2_transform(pinwheel_spiral, Grid, Out) :-
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first row to measure the grid width.
+    Grid = [Row0|_], length(Row0, W),
+% Locate the plus seed: background color, seed color, center, and arm length.
+    ps_seed_(Grid, Bg, Fg, Cr, Cc, L),
+% Compute the outward run length before the first turn.
+    Fr is max(1, L - 1),
+% Compute the sideways jog length inside each spiral layer.
+    Jog is max(0, L - 2),
+% Compute the trailing straight length inside each spiral layer.
+    Small is max(2, L),
+% Bound the number of spiral layers so the arms just overrun the grid.
+    Max is (H + W) // 4 + 4,
+% Paint the four arms and gather every visited cell coordinate.
+    ps_arms_(Cr, Cc, Fr, Jog, Small, Max, Coords),
+% Reduce the coordinate list to a sorted set of Row-Col keys.
+    ps_coord_set_(Coords, Set),
+% Render the output grid from the painted set over the background.
+    ps_render_(H, W, Bg, Fg, Set, Out).
+
+% ps_seed_(+Grid, -Bg, -Fg, -Cr, -Cc, -L): find a single plus seed.
+ps_seed_(Grid, Bg, Fg, Cr, Cc, L) :-
+% Flatten every cell value in the grid.
+    append(Grid, Cells),
+% Determine the most frequent value as the background color.
+    ps_majority_(Cells, Bg),
+% Collect the distinct non-background colors present, demanding exactly one.
+    setof(V, ps_nonbg_(V, Cells, Bg), [Fg]),
+% Collect the coordinates of every seed cell.
+    findall(R-C, ps_cell_(Grid, R, C, Fg), Ps),
+% There must be at least four seed cells.
+    length(Ps, N), N >= 4,
+% Extract the row indices of the seed cells.
+    findall(R, member(R-_, Ps), Rs),
+% Extract the column indices of the seed cells.
+    findall(C, member(_-C, Ps), Cs),
+% Compute the seed bounding box top row.
+    min_list(Rs, R0),
+% Compute the seed bounding box bottom row.
+    max_list(Rs, R1),
+% Compute the seed bounding box left column.
+    min_list(Cs, C0),
+% Compute the seed bounding box right column.
+    max_list(Cs, C1),
+% The center row is the bounding box vertical midpoint.
+    Cr is (R0 + R1) // 2,
+% The center column is the bounding box horizontal midpoint.
+    Cc is (C0 + C1) // 2,
+% The arm length is half of the vertical span.
+    L is R1 - Cr,
+% The plus must be square: the horizontal half-span equals the arm length.
+    L =:= C1 - Cc,
+% A proper plus holds exactly four arms of L cells each.
+    N =:= 4 * L.
+
+% ps_nonbg_(-V, +Cells, +Bg): a value present in Cells other than Bg.
+ps_nonbg_(V, Cells, Bg) :-
+% Choose a cell value.
+    member(V, Cells),
+% The value must differ from the background.
+    V \== Bg.
+
+% ps_cell_(+Grid, ?R, ?C, +V): enumerate cells equal to V.
+ps_cell_(Grid, R, C, V) :-
+% Pick a row and its index.
+    nth0(R, Grid, Row),
+% Pick a column and its value in that row.
+    nth0(C, Row, V).
+
+% ps_majority_(+Values, -Best): the most frequent value.
+ps_majority_(Values, Best) :-
+% Collect the distinct values.
+    sort(Values, Distinct),
+% Pair each distinct value with its occurrence count.
+    findall(Cnt-V, (member(V, Distinct), ps_count_(V, Values, Cnt)), Counts),
+% Sort the count-value pairs in ascending order.
+    sort(Counts, Sorted),
+% The last pair holds the highest count.
+    last(Sorted, _-Best).
+
+% ps_count_(+V, +List, -N): count occurrences of V in List.
+ps_count_(V, List, N) :-
+% Keep only the elements equal to V.
+    include(==(V), List, Sub),
+% The count is the length of the kept sublist.
+    length(Sub, N).
+
+% ps_arms_(+Cr,+Cc,+Fr,+Jog,+Small,+Max,-Coords): four clockwise spiral arms.
+ps_arms_(Cr, Cc, Fr, Jog, Small, Max, Coords) :-
+% Build one spiral arm per cardinal starting direction.
+    findall(Cs,
+        ( member(DR-DC, [0-1, 1-0, 0-(-1), (-1)-0]),
+          ps_arm_(Cr, Cc, DR, DC, Fr, Jog, Small, Max, Cs) ),
+        Lists),
+% Concatenate the four arm coordinate lists.
+    append(Lists, Coords).
+
+% ps_arm_(+Cr,+Cc,+DR,+DC,+Fr,+Jog,+Small,+Max,-Coords): one arm's cells.
+ps_arm_(Cr, Cc, DR, DC, Fr, Jog, Small, Max, Coords) :-
+% The arm starts at the inner cell one step out from the center.
+    SR is Cr + DR, SC is Cc + DC,
+% Rotate the outward heading clockwise to get the spiral heading.
+    ps_cw_(DR, DC, HR, HC),
+% Build the spiral layer segments after the initial outward run.
+    ps_layers_(HR, HC, 0, Max, Jog, Small, LayerSegs),
+% Prepend the initial outward run segment before the layers.
+    Segs = [seg(DR, DC, Fr)|LayerSegs],
+% Walk the segment list from the start cell collecting coordinates.
+    ps_walk_(SR, SC, Segs, [r(SR, SC)], Coords).
+
+% ps_cw_(+DR,+DC,-ER,-EC): rotate a direction ninety degrees clockwise.
+ps_cw_(0, 1, 1, 0).
+ps_cw_(1, 0, 0, -1).
+ps_cw_(0, -1, -1, 0).
+ps_cw_(-1, 0, 0, 1).
+
+% ps_layers_(+HR,+HC,+K,+Max,+Jog,+Small,-Segs): spiral layer segments.
+ps_layers_(_, _, K, Max, _, _, []) :-
+% Stop once the layer index exceeds the bound.
+    K > Max.
+ps_layers_(HR, HC, K, Max, Jog, Small,
+           [seg(HR,HC,Big), seg(JR,JC,Jog), seg(HR,HC,Small)|T]) :-
+% Continue while the layer index is within the bound.
+    K =< Max,
+% The big run grows by four cells each layer.
+    Big is 2 + 4 * K,
+% Rotate the heading clockwise for the jog direction.
+    ps_cw_(HR, HC, JR, JC),
+% Advance to the next layer index.
+    K1 is K + 1,
+% Recurse with the clockwise-rotated heading for the next layer.
+    ps_layers_(JR, JC, K1, Max, Jog, Small, T).
+
+% ps_walk_(+R,+C,+Segs,+Acc,-Coords): trace segments accumulating cells.
+ps_walk_(_, _, [], Acc, Acc).
+ps_walk_(R, C, [seg(DR,DC,Len)|T], Acc, Coords) :-
+% Draw one straight segment and get its cells and end position.
+    ps_line_(R, C, DR, DC, Len, Cells, R2, C2),
+% Prepend the segment cells to the accumulator.
+    append(Cells, Acc, Acc1),
+% Continue walking from the segment end position.
+    ps_walk_(R2, C2, T, Acc1, Coords).
+
+% ps_line_(+R,+C,+DR,+DC,+Len,-Cells,-RE,-CE): step Len cells in a direction.
+ps_line_(R, C, _, _, 0, [], R, C) :- !.
+ps_line_(R, C, DR, DC, N, [r(R1,C1)|T], RE, CE) :-
+% Only proceed while cells remain to draw.
+    N > 0,
+% Step one cell along the direction.
+    R1 is R + DR, C1 is C + DC,
+% Decrement the remaining count.
+    N1 is N - 1,
+% Recurse to draw the rest of the segment.
+    ps_line_(R1, C1, DR, DC, N1, T, RE, CE).
+
+% ps_coord_set_(+Coords,-Set): sorted set of Row-Col keys.
+ps_coord_set_(Coords, Set) :-
+% Convert each visited cell to a Row-Col pair.
+    findall(R-C, member(r(R,C), Coords), Pairs),
+% Sort and deduplicate the pairs.
+    sort(Pairs, Set).
+
+% ps_render_(+H,+W,+Bg,+Fg,+Set,-Out): build the output grid.
+ps_render_(H, W, Bg, Fg, Set, Out) :-
+% Compute the last row index.
+    H1 is H - 1,
+% Enumerate all row indices.
+    numlist(0, H1, Rs),
+% Build each output row over the painted set.
+    findall(Row, (member(R, Rs), ps_row_(R, W, Bg, Fg, Set, Row)), Out).
+
+% ps_row_(+R,+W,+Bg,+Fg,+Set,-Row): build one output row.
+ps_row_(R, W, Bg, Fg, Set, Row) :-
+% Compute the last column index.
+    W1 is W - 1,
+% Enumerate all column indices.
+    numlist(0, W1, Cs),
+% Choose the seed color for painted cells and the background otherwise.
+    findall(V, (member(C, Cs), ps_pick_(R, C, Bg, Fg, Set, V)), Row).
+
+% ps_pick_(+R,+C,+Bg,+Fg,+Set,-V): select a cell's output color.
+ps_pick_(R, C, _, Fg, Set, Fg) :-
+% The cell is painted when its Row-Col key is in the set.
+    memberchk(R-C, Set), !.
+ps_pick_(_, _, Bg, _, _, Bg).
+
 % wire_relay: early dispatch before generic clause (WP-339, Layer 314).
 % Enumerate wire_relay as a known rule name.
 arc2_named_rule(wire_relay).
