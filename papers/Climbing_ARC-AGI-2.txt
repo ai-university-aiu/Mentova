@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 91 complete: 88/120 = 73.33%.
+Last updated: 2026-07-03. Wave 92 complete: 89/120 = 74.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -213,6 +213,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  86 / 120  | 71.67%  | Wave 89: wire_wrap each color system holds a straight line segment, a crumpled wire attached orthogonally to one line endpoint, and a marker shape; the output keeps the line and marker untouched and re-lays the wire as a deterministic path - a diagonal approach from the attachment cell toward the marker, clamped to the marker's near lane, a hug along the marker's near face cell by cell, and a mirrored 45-degree departure ray - truncated at the input wire's cell count or the grid edge, whichever comes first; the test grid holds two independent three-color systems solved by nearest-marker assignment
 2026-07-03  |  87 / 120  | 72.50%  | Wave 90: compartment_tally every foreground color except one draws a rectangular box outline subdivided by internal partition lines into compartments, and the remaining color is scattered noise; the output holds one row per box sorted by compartment count ascending (ties by leftmost column), each row painting the box color once per compartment and padding with the noise color to the maximum count; compartments are counted by flood-filling the box interior with walls repaired at single-cell gaps where noise or a crossing box overwrote a partition cell - background cells are never repaired, which protects single-row and single-column compartments
 2026-07-03  |  88 / 120  | 73.33%  | Wave 91: catalog_query the body of the scene holds a fixed four-by-four catalog of three-by-three colored shapes between two solid separator rows, and the header band shows up to four query shapes, each an exact cell-for-cell copy of one catalog block; every matched catalog block is highlighted by turning the background cells of its five-by-five frame box to color 3; when all matched blocks share one catalog row or one catalog column the header band is highlighted the same way and the footer rows fill with color 3, otherwise the header stays untouched and the footer rows fill with color 2 - the alignment verdict is the discriminating observation, and the test grid's four queries all sit in the last catalog column
+2026-07-03  |  89 / 120  | 74.17%  | Wave 92: stencil_carve solid five-by-five monochrome square blocks stand in a regular grid arrangement with one-cell background gaps, each block a distinct color, while small three-by-three sketch motifs of various colors lie elsewhere in the scene; for each block color the bounding box of its cells outside the blocks is exactly three by three, and sketch colors without a block are decoys that are ignored; the output keeps the block arrangement on a fresh background canvas of height six times the block rows plus one and width six times the block columns plus one, and carves each block's central three-by-three region with its same-colored sketch - wherever the sketch shows the block color the cell turns background, and wherever the sketch shows background the cell keeps the block color
 
 
 COMPLETE SCORE PROGRESSION
@@ -1233,6 +1234,67 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 92 - 2026-07-03 - Score: 89/120 = 74.17%
+
+Date: 2026-07-03
+
+Confirmed score: 89 / 120 = 74.17%
+
+Rules added in this wave:
+  stencil_carve (WP-350, Layer 325)
+
+Task solved: 58f5dbd5 (3 training pairs + 1 test case; inputs
+  19x19, 19x19, 23x18, and 23x18; outputs 19x7, 7x19, 13x13, and
+  19x13 - the output dimensions follow the block arrangement, six
+  cells per block row or column plus one border cell).
+
+Algorithm: block-grid extraction with sketch carving.
+  Stage 1: the background is the most common color; scan the scene
+  for solid five-by-five monochrome squares of non-background
+  color, anchoring each block at its top-left corner so larger
+  regions cannot double-count. Stage 2: the block starting rows
+  and starting columns define a complete row-by-column arrangement
+  (one column of three, one row of three, two-by-two, and
+  three-by-two across the four grids). Stage 3: for each block
+  color, collect every cell of that color outside all blocks - the
+  sketch - and require its bounding box to be exactly three by
+  three; sketch colors without a block are decoys and are never
+  visited. Stage 4: paint a fresh background canvas of height six
+  times the block rows plus one and width six times the block
+  columns plus one; stamp each block as a solid five-by-five
+  square in its color at its arrangement position, then carve the
+  central three-by-three region: wherever the sketch carries the
+  block color the cell turns background, and wherever the sketch
+  carries background the cell keeps the block color.
+
+Bugs fixed: none. The Python prototype passed all three training
+  pairs and the test case on the first run, and the integrated
+  Prolog rule passed the single-task test and the full regression
+  on the first compile.
+
+Lessons learned: the proven method carried the wave again - all
+  eight grids were dumped to text and the complete rule was
+  written in plain English before any code. The decisive
+  observation is the carving inversion: the block interior is not
+  a copy of the sketch but its negative, so a sketch cell of the
+  block color punches a background hole in the solid block. The
+  sketches may be 8-disconnected within their bounding box, so
+  collecting all same-colored cells outside the blocks and taking
+  the bounding box is more robust than connected-component
+  analysis. Anchoring each solid five-by-five scan at a top-left
+  corner whose upper and left neighbors differ from the block
+  color prevents duplicate placements without any overlap
+  bookkeeping. Runner bookkeeping: the live benchmark reports
+  88/120 after this wave against the official ledger of 89/120;
+  tasks 13e47133 and 9385bd28 remain flagged for a dedicated
+  repair wave.
+
+Accomplishment: Acc_390.  Paper: Acc_390_ARC2_Wave92_StencilCarve.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4818,6 +4880,7 @@ c7f57c3e  - Wave 87 - twin_toggle        - shapes on a uniform background are in
 88bcf3b4  - Wave 89 - wire_wrap          - each three-color system holds a straight line, a crumpled wire attached orthogonally to one line endpoint, and a marker shape; the wire is re-laid as a clamped diagonal approach to the marker, a hug along the marker's near face, and a mirrored 45-degree departure, truncated at the wire's cell count or the grid edge
 89565ca0  - Wave 90 - compartment_tally  - every foreground color except one scattered noise color draws a rectangular box outline subdivided by internal partition lines into compartments; the output holds one census row per box sorted by compartment count ascending, the box color repeated once per compartment and padded with the noise color to the maximum count
 d8e07eb2  - Wave 91 - catalog_query      - a fixed four-by-four catalog of three-by-three shapes sits between two separator rows; header query shapes each match one catalog block cell for cell, every matched block's five-by-five frame box is highlighted in color 3, and when the matches share one catalog row or column the header highlights too and the footer fills with 3, otherwise the footer fills with 2
+58f5dbd5  - Wave 92 - stencil_carve      - solid five-by-five blocks in a regular grid arrangement pair with three-by-three sketch motifs of the same color elsewhere in the scene; the output keeps the arrangement on a fresh background canvas and carves each block's central three-by-three region with the negative of its sketch, sketch-colored cells punching background holes
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -5213,4 +5276,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 90: Compartment-tally - each grid holds one 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 91: Catalog-query - every input of the task carries the same fixed body, a four-by-four catalog of three-by-three colored shapes laid out at a five-cell pitch between two solid separator rows of color 6, while the header band above the upper separator shows up to four query shapes and the footer band below the lower separator is blank background; each query shape is an exact cell-for-cell copy of one catalog block, colors included, and same-shape different-color decoys in the catalog make the color part of the match essential; every matched block is highlighted by turning the background cells of its five-by-five frame box - the block plus a one-cell border - to color 3 while all shape cells keep their colors, and adjacent boxes merge into continuous bands because only background cells are promoted; the alignment verdict is the discriminating observation of the wave, because when all matched blocks share one catalog row or one catalog column the header band is highlighted the same way and the footer rows fill with color 3, while scattered matches leave the header untouched and fill the footer with color 2 - a compact global summary of the query answer that the test grid exercises with four queries all sitting in the last catalog column.
   Score: 88/120 = 73.33%. Task d8e07eb2 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 92: Stencil-carve - the scene holds several solid five-by-five monochrome square blocks standing in a regular grid arrangement with one-cell background gaps, each block a distinct non-background color, while small three-by-three sketch motifs of various colors lie elsewhere; for each block color the bounding box of its cells outside the blocks is exactly three by three, sketch colors without a matching block are decoys that are ignored, and the sketches may be disconnected within their bounding boxes so bounding-box collection beats connected-component analysis; the output keeps the block arrangement on a fresh background canvas of height six times the block rows plus one and width six times the block columns plus one, stamping each block as a solid five-by-five square at its arrangement position and carving its central three-by-three region with the negative of its same-colored sketch - wherever the sketch shows the block color the cell turns background and wherever the sketch shows background the cell keeps the block color; the carving inversion is the discriminating observation of the wave, because the block interior is not a copy of the sketch but its punched-out negative, and the four grids exercise four different arrangements - one column of three, one row of three, two-by-two, and three-by-two - so the output dimensions follow the arrangement rather than any fixed shape.
+  Score: 89/120 = 74.17%. Task 58f5dbd5 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

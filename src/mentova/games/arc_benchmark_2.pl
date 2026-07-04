@@ -1013,6 +1013,32 @@ arc2_induce_rule(TrainingPairs, catalog_query) :-
 % Each training pair must transform correctly under catalog_query.
            arc2_transform(catalog_query, In, Out)).
 
+% stencil_carve: early dispatch before generic clause (WP-350, Layer 325).
+% Enumerate stencil_carve as a known rule name.
+arc2_named_rule(stencil_carve).
+% arc2_induce_rule(stencil_carve): block-grid pre-filter + verify.
+arc2_induce_rule(TrainingPairs, stencil_carve) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Count the rows of the first output grid.
+    length(FirstOut, OH),
+% The output height is one more than a multiple of six.
+    OH mod 6 =:= 1,
+% Fetch the first row of the first output grid.
+    FirstOut = [FOR|_],
+% Count the columns of the first output grid.
+    length(FOR, OW),
+% The output width is one more than a multiple of six.
+    OW mod 6 =:= 1,
+% The background is the most common color of the input.
+    tw_background_(First, Bg),
+% The top-left output cell carries the background color.
+    FOR = [Bg|_],
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under stencil_carve.
+           arc2_transform(stencil_carve, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -19601,3 +19627,213 @@ cq_paint_(R, C, 8, Matches, _, 3) :-
     C =< 5 + 5 * J, !.
 % Every other cell keeps its original color.
 cq_paint_(_, _, V, _, _, V).
+
+% ---------------------------------------------------------------------------
+% stencil_carve: the scene holds several solid five-by-five monochrome
+% square blocks arranged in a regular grid with one-cell background gaps,
+% each block a distinct non-background color.  Elsewhere the scene shows
+% small three-by-three sketch motifs; for each block color the bounding
+% box of its cells outside the blocks is exactly three by three.  Sketch
+% colors without a block are decoys and are ignored.  The output keeps
+% the block arrangement on a fresh background canvas and carves each
+% block's central three-by-three region with its sketch: wherever the
+% sketch shows the block color the cell turns background, and wherever
+% the sketch shows background the cell keeps the block color.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(stencil_carve): carve each block's center with its sketch.
+arc2_transform(stencil_carve, Grid, Out) :-
+% The background is the most common color of the scene.
+    tw_background_(Grid, Bg),
+% Collect every solid five-by-five block of the scene.
+    findall(bl(R, C, Col),
+% Each block is a solid five-by-five square of one non-background color.
+            stc_block_(Grid, Bg, R, C, Col),
+% Bind the collected block list.
+            Blocks),
+% At least one block must be present.
+    Blocks \= [],
+% Collect the starting rows of the blocks.
+    findall(R1, member(bl(R1, _, _), Blocks), Rs0),
+% Deduplicate and order the block starting rows.
+    sort(Rs0, Rows),
+% Collect the starting columns of the blocks.
+    findall(C1, member(bl(_, C1, _), Blocks), Cs0),
+% Deduplicate and order the block starting columns.
+    sort(Cs0, Cols),
+% Count the block rows of the arrangement.
+    length(Rows, NR),
+% Count the block columns of the arrangement.
+    length(Cols, NC),
+% Count the collected blocks.
+    length(Blocks, NB),
+% The blocks fill the complete row-by-column arrangement.
+    NB =:= NR * NC,
+% Compute the carved five-by-five tile of every block position.
+    findall(tile(BI, BJ, Tile),
+% Each tile pairs a block row index with a block column index.
+            ( nth0(BI, Rows, BR),
+% Fetch the block column start of the tile.
+              nth0(BJ, Cols, BC),
+% Fetch the block color at this arrangement position.
+              member(bl(BR, BC, Col), Blocks),
+% Find the three-by-three sketch of the block color.
+              stc_sketch_(Grid, Blocks, Col, Sk),
+% Carve the sketch into a solid tile of the block color.
+              stc_tile_(Col, Bg, Sk, Tile) ),
+% Bind the carved tile list.
+            Tiles),
+% Every block position must yield exactly one carved tile.
+    length(Tiles, NB),
+% Compute the output height from the block row count.
+    OH is 6 * NR + 1,
+% Compute the output width from the block column count.
+    OW is 6 * NC + 1,
+% Compute the last output row index.
+    RMax is OH - 1,
+% Compute the last output column index.
+    CMax is OW - 1,
+% Assemble the output grid row by row.
+    findall(RowOut,
+% Walk each output row index.
+            ( between(0, RMax, R0),
+% Rebuild the row cell by cell.
+              findall(V,
+% Walk each output column index.
+                      ( between(0, CMax, C0),
+% Paint the cell from the tiles or the background.
+                        stc_cell_(R0, C0, Tiles, Bg, V) ),
+% Bind the rebuilt output row.
+                      RowOut) ),
+% Bind the finished output grid.
+            Out).
+
+% stc_block_(+Grid, +Bg, -R, -C, -Col): find a solid five-by-five block.
+stc_block_(Grid, Bg, R, C, Col) :-
+% Walk each grid row with its index.
+    nth0(R, Grid, Row),
+% Walk each row cell with its index.
+    nth0(C, Row, Col),
+% The block color departs from the background.
+    Col \== Bg,
+% Compute the row index above the candidate block.
+    RUp is R - 1,
+% The cell above the block corner does not carry the block color.
+    \+ arc2_cell_(Grid, RUp, C, Col),
+% Compute the column index left of the candidate block.
+    CLeft is C - 1,
+% The cell left of the block corner does not carry the block color.
+    \+ arc2_cell_(Grid, R, CLeft, Col),
+% Every cell of the five-by-five square carries the block color.
+    forall(( between(0, 4, I), between(0, 4, J) ),
+% Test one square cell against the block color.
+           ( RI is R + I, CJ is C + J, arc2_cell_(Grid, RI, CJ, Col) )).
+
+% stc_in_block_(+R, +C, +Blocks): the cell lies inside some block.
+stc_in_block_(R, C, Blocks) :-
+% Test the cell against every collected block.
+    member(bl(BR, BC, _), Blocks),
+% The cell row lies at or below the block top.
+    R >= BR,
+% The cell row lies at or above the block bottom.
+    R =< BR + 4,
+% The cell column lies at or right of the block left edge.
+    C >= BC,
+% The cell column lies at or left of the block right edge.
+    C =< BC + 4,
+% Stop after the first containing block.
+    !.
+
+% stc_sketch_(+Grid, +Blocks, +Col, -Sk): offsets of the color's sketch cells.
+stc_sketch_(Grid, Blocks, Col, Sk) :-
+% Collect every cell of the color outside the blocks.
+    findall(R-C,
+% Walk each grid row with its index.
+            ( nth0(R, Grid, Row),
+% Walk each row cell with its index.
+              nth0(C, Row, V),
+% Keep only cells that carry the sketch color.
+              V == Col,
+% Skip cells that lie inside a block.
+              \+ stc_in_block_(R, C, Blocks) ),
+% Bind the collected sketch cell list.
+            Cells),
+% The sketch must hold at least one cell.
+    Cells \= [],
+% Collect the rows of the sketch cells.
+    findall(R1, member(R1-_, Cells), Rs),
+% Find the top row of the sketch bounding box.
+    min_list(Rs, R0),
+% Find the bottom row of the sketch bounding box.
+    max_list(Rs, R1M),
+% Collect the columns of the sketch cells.
+    findall(C1, member(_-C1, Cells), Cs),
+% Find the left column of the sketch bounding box.
+    min_list(Cs, C0),
+% Find the right column of the sketch bounding box.
+    max_list(Cs, C1M),
+% The sketch bounding box spans exactly three rows.
+    R1M - R0 =:= 2,
+% The sketch bounding box spans exactly three columns.
+    C1M - C0 =:= 2,
+% Convert the sketch cells into bounding-box offsets.
+    findall(I-J,
+% Each offset pairs a row shift with a column shift.
+            ( member(R2-C2, Cells),
+% Compute the row shift inside the bounding box.
+              I is R2 - R0,
+% Compute the column shift inside the bounding box.
+              J is C2 - C0 ),
+% Bind the sketch offset list.
+            Sk).
+
+% stc_tile_(+Col, +Bg, +Sk, -Tile): carve the sketch into a solid tile.
+stc_tile_(Col, Bg, Sk, Tile) :-
+% Assemble the tile row by row.
+    findall(TRow,
+% Walk each tile row index.
+            ( between(0, 4, I),
+% Rebuild the tile row cell by cell.
+              findall(V,
+% Walk each tile column index.
+                      ( between(0, 4, J),
+% Paint the tile cell from the sketch offsets.
+                        stc_tcell_(I, J, Col, Bg, Sk, V) ),
+% Bind the rebuilt tile row.
+                      TRow) ),
+% Bind the finished five-by-five tile.
+            Tile).
+
+% stc_tcell_(+I, +J, +Col, +Bg, +Sk, -V): paint one tile cell.
+stc_tcell_(I, J, Col, Bg, Sk, V) :-
+% Test whether the cell lies in the carved central region.
+    (   I >= 1, I =< 3, J >= 1, J =< 3,
+% Compute the sketch row offset of the cell.
+        I1 is I - 1,
+% Compute the sketch column offset of the cell.
+        J1 is J - 1,
+% Test the cell against the sketch offsets.
+        memberchk(I1-J1, Sk)
+% A sketch hit carves the cell down to the background color.
+    ->  V = Bg
+% Every other tile cell keeps the block color.
+    ;   V = Col ).
+
+% stc_cell_(+R0, +C0, +Tiles, +Bg, -V): paint one output cell.
+stc_cell_(R0, C0, Tiles, Bg, V) :-
+% Compute the cell position inside its six-cell row band.
+    RM is R0 mod 6,
+% Compute the cell position inside its six-cell column band.
+    CM is C0 mod 6,
+% Test whether the cell lies inside a block tile.
+    (   RM >= 1, RM =< 5, CM >= 1, CM =< 5,
+% Compute the block row index of the cell.
+        BI is R0 // 6,
+% Compute the block column index of the cell.
+        BJ is C0 // 6,
+% Fetch the carved tile at this block position.
+        memberchk(tile(BI, BJ, Tile), Tiles)
+% Read the cell color out of the carved tile.
+    ->  I is RM - 1, J is CM - 1, nth0(I, Tile, TRow), nth0(J, TRow, V)
+% Every cell outside the tiles carries the background color.
+    ;   V = Bg ).
