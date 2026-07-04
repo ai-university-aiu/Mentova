@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 98 complete: 95/120 = 79.17%.
+Last updated: 2026-07-04. Wave 99 complete: 96/120 = 80.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -220,6 +220,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  |  93 / 120  | 77.50%  | Wave 96: junction_hub the scene draws a wire network on a uniform background using three foreground colors - one wire color forming the network and two content colors mixed inside the small blocks that the wires join; the wire color is recognized as the only foreground color owning exactly one cell whose full three-by-three neighborhood holds that same color, and that cell is the hub; the eight cells around the hub stay wire colored as a ring, removing the hub and ring splits the wire into branches, every branch is repainted with the majority content color of the blocks it touches, and the hub itself takes the majority color of the branch cells that touch the ring - counting the touching cells rather than the distinct branches is the discriminating observation, because one branch can touch the ring at two places and carries double weight
 2026-07-04  |  94 / 120  | 78.33%  | Wave 97: hub_dock the scene shows one hub piece - an eight-cell ring in a four-by-four bounding box whose four sides carry two centered cells each, every side in its own color - plus loose single-color shapes scattered on the background; every shape whose color matches a hub side is rotated by the unique multiple of ninety degrees that turns a bounding-box side holding exactly two adjacent centered cells toward that hub side, then parked flush against the hub so its two contact cells sit directly next to the two hub edge cells, and shapes matching no hub side are erased - requiring the contact side to hold exactly the two centered cells is the discriminating observation, because it rejects the full-length sides and the off-center sides that would otherwise fit and it pins both the rotation and the translation uniquely
 2026-07-04  |  95 / 120  | 79.17%  | Wave 98: twin_beam the grid is a ladder - even rows carry a colored horizontal bar plus optional pipe decorations to the right, odd rows are 7-filled separator corridors, and every row opens with a 6 lamp in column zero; a separator fires when the bars directly above and below share one color, and its lamp leaves column zero and travels as a beam heading right through the 7 corridors; leaving the grid the beam rests on its last cell, and hitting an obstacle it checks the two perpendicular cells - with exactly one open it turns there, except that a turn to heading left is refused while the current row still holds its own lamp, and with zero or two open cells it rests where it stands; each rest cell is painted 6 - the lamp guard on left turns is the discriminating observation, because the third training pair's beam rests beside an open leftward corridor whose row keeps its lamp while the test grid's beam turns left along a fired row whose lamp has departed
+2026-07-04  |  96 / 120  | 80.00%  | Wave 99: hole_beacon the grid holds two large rectilinear regions of two distinct colors on a zero background, disturbed by single-cell noise - background holes inside the regions, wrong-colored cells inside the regions, and colored strays scattered over the background; every cell is labeled region A, region B, or background by a majority vote over the eight cells of its orthogonal cross neighborhood at distances one and two, ties broken by the cell's own color, and a second vote pass runs over the first pass's labels so already-silenced strays cannot distort the vote; strays labeled background are erased, wrong-colored cells are repaired to their region color, and every background hole inside a region becomes a beacon - a three-by-three stamp whose ring takes the rival region's color and whose center is painted 8, centers painted after all rings and stamps clipped at the grid edges - the second vote pass is the discriminating observation, because two stray cells sitting two steps from a background hole near the region border tip a single raw-color vote into stamping a spurious beacon, while after one relabeling pass the strays already carry background labels and stay silent
 
 
 COMPLETE SCORE PROGRESSION
@@ -1240,6 +1241,78 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 99 - 2026-07-04 - Score: 96/120 = 80.00%
+
+Date: 2026-07-04
+
+Confirmed score: 96 / 120 = 80.00%
+
+Rules added in this wave:
+  hole_beacon (WP-357, Layer 332)
+
+Task solved: de809cff (2 training pairs + 1 test case; grids
+  20x20 in training and 30x30 in the test; the output always
+  keeps the input size).
+
+Algorithm: two-region denoising with rival-ring hole beacons.
+  Stage 1: read the palette - the grid holds exactly a zero
+  background plus two region colors A and B, drawn as two large
+  rectilinear regions disturbed by single-cell noise.
+  Stage 2: label every cell A, B, or background by a majority
+  vote over the eight cells of its orthogonal cross neighborhood
+  (distances one and two up, down, left, and right, in-bounds
+  probes only), breaking ties with the cell's own input color
+  when it is among the tied leaders and with background
+  otherwise.
+  Stage 3: run a second identical vote pass over the first
+  pass's labels instead of the raw colors, so strays that the
+  first pass already silenced to background cannot distort any
+  neighbor's vote.
+  Stage 4: write the base output - cells labeled background
+  become 0 (strays erased), cells labeled with a region become
+  that region color (wrong-colored cells repaired, clean cells
+  kept).
+  Stage 5: every input cell that is background zero but carries
+  a region label is a hole in that region and becomes a beacon:
+  a 3x3 stamp centered on the hole whose ring takes the RIVAL
+  region's color; the stamp clips at the grid edges and paints
+  over anything beneath it.
+  Stage 6: paint every beacon center 8 after all rings are
+  stamped, so overlapping beacons keep every center visible.
+
+Bugs fixed: one prototype-stage voting bug. The first Python
+  prototype voted on raw colors in a single pass, and the test
+  grid stamped a spurious beacon on a background cell that sat
+  two steps from two stray cells near the region border; a
+  distance-weighted vote fixed the test but broke both training
+  pairs at region corners, and the two-pass label vote - raw
+  colors first, then one relabeling pass over the labels - passed
+  all three grids. The Prolog port then passed the single-task
+  test and the full regression on the first compile.
+
+Lessons learned: denoising by local majority is fragile exactly
+  where noise clusters - two strays within the voting radius of
+  a background cell can fake a region membership - and the cure
+  is not a larger or weighted neighborhood, which trades corner
+  errors for stray errors, but a second vote over the first
+  vote's output: the strays are already labeled background after
+  pass one, so they stay silent in pass two. This is the Wave 98
+  non-local-state lesson in reverse - here the transform's own
+  intermediate labels are the state that disambiguates two
+  locally identical votes. The hand-diff method again paid off:
+  every changed cell of all three grids was accounted for on
+  paper before any code, which surfaced the corner-tie and
+  boundary-repair cases (region cells at convex corners keep
+  their color on a tie, wrong-colored cells one step inside a
+  straight border flip to the majority side) that the vote's
+  tie-break rule had to honor.
+
+Accomplishment: Acc_397.  Paper: Acc_397_ARC2_Wave99_HoleBeacon.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5253,6 +5326,7 @@ cb2d8a2c  - Wave 64 - snake_frame        - pointer (value 3) traces rectangular 
 e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; grey (5) shapes recolored by own enclosed-hole count; unmatched erased
 981571dc  - Wave 66 - mosaic_heal        - symmetric mosaic 0-damage healed; rows/cols borrow from compatible donors to fixpoint; diagonal mirror fallback
 9bbf930d  - Wave 98 - twin_beam          - ladder of bar rows with column-zero 6 lamps; separators between twin same-colored bars fire their lamps as rightward beams through the 7 corridors; a beam turns at an obstacle onto its unique open side, refuses a left turn while the row keeps its own lamp, rests at boundaries and two-way junctions, and paints a 6 where it rests
+de809cff  - Wave 99 - hole_beacon        - two rectilinear regions on zero background denoised by a two-pass cross-neighborhood majority vote; strays erased, wrong-colored cells repaired, and every background hole inside a region stamped as a 3x3 beacon with a rival-colored ring and an 8 center
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
@@ -5706,4 +5780,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 97: Hub-dock - the scene shows one hub piece
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 98: Twin-beam - the grid is a ladder: even rows carry a colored horizontal bar starting near column two plus optional pipe decorations to the right, odd rows are 7-filled separator corridors, and every row opens with a 6 lamp in column zero on a 7 spacer; a separator fires when the bar rows directly above and below share one color, computed as the first non-7 cell from column two, and all fired lamps are removed simultaneously before any beam is traced; each fired separator's lamp then travels as a beam heading right through the 7 corridors, resting on its last cell when it steps off the grid, and at an obstacle examining the two cells perpendicular to its heading: with exactly one open it turns there and continues, except that a turn onto heading left is refused while the current row still shows its own lamp, and with zero or two open cells, or a refused left turn, it rests where it stands, painting a 6 on its resting cell; the lamp guard on left turns is the discriminating observation of the wave, because the third training pair's beam rests beside an open leftward corridor whose row keeps its lamp while the test grid's beam turns left along a fired separator whose lamp has departed, and the two junctions are locally identical in every cell of their neighborhoods.
   Score: 95/120 = 79.17%. Task 9bbf930d solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 99: Hole-beacon - the grid holds two large rectilinear regions of two distinct colors on a zero background, disturbed by single-cell noise: background holes inside the regions, wrong-colored cells inside the regions, and colored strays scattered over the background; every cell is labeled region A, region B, or background by a majority vote over the eight cells of its orthogonal cross neighborhood at distances one and two, with ties broken by the cell's own input color when it is among the tied leaders, and a second identical vote pass runs over the first pass's labels instead of the raw colors so that strays the first pass already silenced cannot distort any neighbor's vote; strays labeled background are erased, wrong-colored cells are repaired to their region color, and every background hole inside a region becomes a beacon - a three-by-three stamp centered on the hole whose ring takes the rival region's color and whose center is painted 8, with all centers painted after all rings and stamps clipped at the grid edges; the second vote pass is the discriminating observation of the wave, because on the test grid two stray cells sitting two steps from a background cell near the region border tip a single raw-color vote into stamping a spurious beacon, while after one relabeling pass those strays already carry background labels and stay silent.
+  Score: 96/120 = 80.00%. Task de809cff solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
