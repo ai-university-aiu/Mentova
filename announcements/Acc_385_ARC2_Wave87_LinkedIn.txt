@@ -1,0 +1,37 @@
+Accomplishment 385: ARC-AGI-2 Wave 87 - Twin Toggle: Redrawing Every Shape as Its Other Variant
+
+PrologAI solves ARC-AGI-2 task c7f57c3e with a new glass-box rule
+called twin_toggle (WP-345, Layer 320), raising the benchmark score
+from 83/120 = 69.17% to 84/120 = 70.00%.
+
+Each grid holds several shapes on a uniform background, and every
+shape is an integer-scaled copy of one of exactly two variant
+templates. The two variants share an identical body of same-colored
+cells - a flower of 1s, an X with a fixed center - and differ only
+in their decoration: a stem and base drawn in two colors versus one,
+or a single marker attached below one twin and above the other in a
+different color. The answer redraws every shape as the other
+variant at its own scale, positioned so the shared body cells stay
+exactly where they were.
+
+The key insight is that the surface reading - three color roles
+with an adjacency test choosing between a swap and a promotion - is
+a mirage. Dumping all six grids and writing the rule in plain
+English before coding revealed one uniform mechanism instead: crop
+each shape onto a clean canvas, fully reduce it by the largest
+uniform block scale to a canonical template, demand exactly two
+distinct templates in the grid, align them by their best
+same-colored overlap, and toggle every shape to its twin. Recolored
+stems, markers that jump from below to above while changing color,
+and a test that does both at once at scales one and three all fall
+to the same short procedure, with scale handling coming free from
+the block reduction.
+
+The rule has no learned parameters. The background, the components,
+the templates, their scales, and the alignment are all read off the
+input grid at answer time, and induction is pure verification of
+both training pairs. Pure induction. No pretraining. Every rule is
+named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

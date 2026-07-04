@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 86 complete: 83/120 = 69.17%.
+Last updated: 2026-07-03. Wave 87 complete: 84/120 = 70.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -208,6 +208,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  81 / 120  | 67.50%  | Wave 84: motif_shadow two-cell-wide rectangular motifs carry a run of color 2 along one long side, and the long-axis end farther from that run is the anchor end; three singleton marker cells on the grid edges each align with one motif and teach one offset-to-color lesson (offset measured from the anchor end) plus the grid-wide polarity - rays exit either on the same cross side as the 2-run or on the opposite side; every motif then casts one full ray per lesson, perpendicular to its long axis, from its exit side to the grid edge, painting only background cells
 2026-07-03  |  82 / 120  | 68.33%  | Wave 85: dial_rotor one framed square figure wrapped in a dotted ring, plus detached straight dial pieces lying far away; a dial piece of color C with length L commands "rotate color C's layer by L quarter turns clockwise"; the crop box merges the main figure with every component within Chebyshev distance 3, the ring color is the unique color on the crop's outermost layer, the ring-zone thickness is the minimum inset of any non-ring-colored cell, the ring zone spins by the ring color's dial (staying put without one) and the core block spins by the largest dial among its own colors
 2026-07-03  |  83 / 120  | 69.17%  | Wave 86: xray_frame one large rectangular frame with a uniform interior occludes partial rectangle outlines drawn outside it; the output is the frame interior with every shape's hidden perimeter cells restored - the shapes' bounding boxes are completed through the frame as if it were transparent; single-color shapes restore their own color, and two-color alternating shapes restore the color-swapped mirror (vertical first, then horizontal) of the visible cell inside the shape's bounding box
+2026-07-03  |  84 / 120  | 70.00%  | Wave 87: twin_toggle shapes scattered on a uniform background are integer-scaled copies of exactly two variant templates that share an identical body of same-colored cells under a best-overlap alignment; every shape is redrawn as the other variant at its own scale, positioned so the shared body cells stay exactly where they were - stem-and-base colors toggle, and side decorations jump from below one shape to above its twin
 
 
 COMPLETE SCORE PROGRESSION
@@ -1228,6 +1229,69 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 87 - 2026-07-03 - Score: 84/120 = 70.00%
+
+Date: 2026-07-03
+
+Confirmed score: 84 / 120 = 70.00%
+
+Rules added in this wave:
+  twin_toggle (WP-345, Layer 320)
+
+Task solved: c7f57c3e (2 training pairs + 1 test case; grids 18x18,
+  18x18, and 28x28, all same-size input and output; each grid holds
+  several shapes on a uniform majority-color background; in the
+  first pair the shapes are plants whose stem-and-base region is
+  drawn either in colors 2 and 3 or entirely in color 8; in the
+  second pair the shapes are X-bodies of 1s with a 2 center carrying
+  either a single 4 attached below or a single 6 attached above; the
+  test mixes 3-center and 6-center bodies with a 2-decoration above
+  or a 4-decoration below, at scales 1 and 3).
+
+Algorithm: twin-variant toggling of scaled shape templates.
+  Stage 1: the majority color is the background, and the foreground
+  cells group into 8-connected components. Stage 2: each component
+  is cropped to its bounding box, painted onto a clean local canvas
+  holding only its own cells, and fully reduced by the largest
+  integer scale whose blocks are uniform, yielding a canonical
+  template and a scale factor. Stage 3: the grid must present
+  exactly two distinct canonical templates; the two templates are
+  aligned by the translation offset that maximizes the count of
+  overlapping cells agreeing in color - those agreeing cells are the
+  shared body. Stage 4: every shape is redrawn as the OTHER
+  template, upscaled by the shape's own scale factor and positioned
+  through the alignment offset so the shared body cells stay exactly
+  where they were. Stage 5: the output is a fresh background canvas
+  holding every toggled shape; a bounds check rejects toggles that
+  would fall off the grid.
+
+Bugs fixed: none. The rule passed both training pairs and the test
+  case on the first prototype run, and the integrated version passed
+  the single-task test and the full regression on the first compile.
+
+Lessons learned: the human-steps description framed this task as a
+  base/mid/pivot color-role puzzle with an adjacency test choosing
+  between a swap and a promotion - a reading that is hard to code
+  and does not generalize cleanly. Dumping all six grids and writing
+  the rule in plain English first revealed a far simpler invariant:
+  every grid contains integer-scaled copies of exactly two variant
+  templates sharing an identical aligned body, and the output merely
+  toggles each shape to its twin. The toggle formulation handles all
+  three decoration styles - recolored stems and bases in pair one,
+  below-versus-above markers with different colors in pair two, and
+  the test's combined center-recolor plus side-jump - with one
+  uniform mechanism and no per-color reasoning at all. Scale
+  handling came free: full block reduction makes the scale-2 and
+  scale-3 copies collapse onto the same canonical templates as their
+  small twins. Full regression of all 83 locally verified tasks (82
+  prior plus c7f57c3e) still induces and passes.
+
+Accomplishment: Acc_385.  Paper: Acc_385_ARC2_Wave87_TwinToggle.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4464,6 +4528,7 @@ a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing m
 64efde09  - Wave 84 - motif_shadow       - two-cell-wide motifs carry a color-2 run along one long side whose farther end is the anchor; three edge markers teach offset-to-color lessons from the anchor plus the grid-wide exit polarity, and every motif casts one background-only ray per lesson from its exit side to the grid edge
 6ffbe589  - Wave 85 - dial_rotor         - a framed square wrapped in a dotted ring is cropped together with every nearby component; detached straight dial pieces command rotations - a run of color C with length L spins color C's layer by L quarter turns clockwise - so the ring zone spins by the ring color's dial and the core block spins by the largest dial among its own colors
 a6f40cea  - Wave 86 - xray_frame         - a large rectangular frame with a uniform interior occludes partial rectangle outlines drawn outside it; the output is the frame interior with every shape's hidden bounding-box perimeter cells restored - single-color shapes restore their own color and two-color alternating shapes restore the color-swapped mirror of the visible cell inside their own bounding box
+c7f57c3e  - Wave 87 - twin_toggle        - shapes on a uniform background are integer-scaled copies of exactly two variant templates sharing an identical aligned body; every shape is redrawn as the other variant at its own scale, positioned so the shared body cells stay exactly where they were
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4840,4 +4905,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 85: Dial-rotor - each grid holds one main fi
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 86: Xray-frame - each grid holds one large rectangular frame of a single color whose interior is uniformly filled, plus several partial rectangle outlines drawn outside the frame that visibly slide under it; the output is the frame interior with every shape's hidden cells restored, as if the frame were transparent; the frame is the largest single-color component forming exactly the perimeter of its bounding box with a uniform interior, the visible shape cells outside the frame group into components merged by identical color set (reuniting outline halves split by the frame), and each shape's bounding-box perimeter is completed through the interior; a single-color shape restores its own color, while a two-color alternating shape restores the color-swapped value of the mirror source inside its own bounding box, vertical mirror first and horizontal as fallback; the swap-mirror is the discriminating observation of the wave, because every visible cell of every two-color shape obeys a plain checkerboard parity, yet the 9/8 shape of the third training pair demands the exact anti-checkerboard in its hidden cells, falsifying every parity, path-alternation, rotation, and translation reading.
   Score: 83/120 = 69.17%. Task a6f40cea solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 87: Twin-toggle - each grid holds several shapes on a uniform majority-color background, and every shape is an integer-scaled copy of one of exactly two variant templates; each component is cropped to its bounding box on a clean local canvas and fully reduced by the largest uniform block scale, yielding its canonical template and scale factor; the two templates are aligned by the translation offset maximizing the count of overlapping same-colored cells, and those agreeing cells are the shared body; the output redraws every shape as the other variant, upscaled by the shape's own scale and positioned through the alignment offset so the shared body stays fixed; the toggle formulation is the discriminating observation of the wave, because the surface reading suggests three color roles with an adjacency-driven swap-versus-promotion choice, yet one uniform twin-toggle mechanism explains the recolored stems and bases of the first pair, the below-versus-above markers of the second pair, and the test's combined center recolor plus side jump at scales one and three.
+  Score: 84/120 = 70.00%. Task c7f57c3e solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

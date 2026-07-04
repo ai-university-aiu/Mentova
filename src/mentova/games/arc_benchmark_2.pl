@@ -785,6 +785,56 @@ arc2_induce_rule(TrainingPairs, xray_frame) :-
 % Each training pair must transform correctly under xray_frame.
            arc2_transform(xray_frame, In, Out)).
 
+% twin_toggle: early dispatch before generic clause (WP-345, Layer 320).
+% Enumerate twin_toggle as a known rule name.
+arc2_named_rule(twin_toggle).
+% arc2_induce_rule(twin_toggle): two-template shape pre-filter + verify.
+arc2_induce_rule(TrainingPairs, twin_toggle) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, IH),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The shapes toggle in place, so the height must be preserved.
+    IH =:= OH,
+% Fetch the first row of the input.
+    First = [FR|_],
+% Fetch the first row of the output.
+    FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, IW),
+% Measure the first output width.
+    length(FOR, OW),
+% The shapes toggle in place, so the width must be preserved.
+    IW =:= OW,
+% Determine the majority background color of the first input.
+    tw_background_(First, BG),
+% Collect every foreground cell of the first input.
+    findall(c(R, C, V),
+% Walk each cell keeping only non-background values.
+            ( nth0(R, First, Row), nth0(C, Row, V), V \= BG ),
+% Bind the collected foreground cell list.
+            Cells),
+% Count the foreground cells.
+    length(Cells, NF),
+% Require a sparse multi-shape foreground, not a dense scene.
+    NF >= 8, NF =< 400,
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% At least two shapes are needed so both variants appear.
+    length(Comps, NC), NC >= 2,
+% Reduce every shape to its canonical template and scale.
+    maplist(tt_shape_(BG), Comps, Shapes),
+% Collect the canonical template of every shape.
+    findall(T, member(sh(_, _, _, T), Shapes), Ts),
+% Exactly two distinct variant templates must exist.
+    sort(Ts, [_, _]),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under twin_toggle.
+           arc2_transform(twin_toggle, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -18103,3 +18153,289 @@ xr_visible_(Grid, R0, C0, R1, C1, CS, R, C, V) :-
 xr_swap_([A, B], A, B).
 % The second color swaps to the first color.
 xr_swap_([A, B], B, A).
+
+% ---------------------------------------------------------------------------
+% TWIN TOGGLE (WP-345, Layer 320)
+% twin_toggle: the grid holds shapes that are integer-scaled copies of
+% exactly two variant templates sharing an identical aligned body; the
+% output redraws every shape as the OTHER variant at the same scale,
+% positioned so the shared body cells stay exactly where they were.
+% Reference: ARC-AGI-2 task c7f57c3e -- plant shapes toggle stem/base
+% colors, marker shapes toggle top-6 versus bottom-4 decorations.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(twin_toggle): toggle every shape to its twin variant.
+arc2_transform(twin_toggle, Grid, Out) :-
+% Determine the majority background color of the grid.
+    tw_background_(Grid, BG),
+% Collect every foreground cell of the grid.
+    findall(c(R, C, V),
+% Walk each cell keeping only non-background values.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V \= BG ),
+% Bind the collected foreground cell list.
+            Cells),
+% At least one foreground cell must exist.
+    Cells \= [],
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% At least two shapes are needed so both variants appear.
+    length(Comps, NC), NC >= 2,
+% Reduce every shape to its canonical template and scale.
+    maplist(tt_shape_(BG), Comps, Shapes),
+% Collect the canonical template of every shape.
+    findall(T, member(sh(_, _, _, T), Shapes), Ts),
+% Exactly two distinct variant templates must exist.
+    sort(Ts, [T1, T2]),
+% Align the two templates over their shared body cells.
+    tt_align_(T1, T2, BG, DR, DC),
+% Draw the toggled twin of every shape as a cell list.
+    findall(D,
+% Each shape contributes the cells of its twin variant.
+            ( member(Sh, Shapes), tt_draw_(Sh, T1, T2, BG, DR, DC, D) ),
+% Bind the collected toggled draw cells.
+            Draws),
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Every toggled cell must land inside the grid bounds.
+    forall(member(c(R, C, _), Draws),
+% Check the row and column of each toggled cell.
+           ( R >= 0, R < H, C >= 0, C < W )),
+% Render the toggled cells onto a fresh background canvas.
+    tt_render_(H, W, BG, Draws, Out).
+
+% tt_shape_(+BG, +Comp, -Shape): canonical template, scale, and origin.
+tt_shape_(BG, Comp, sh(R0, C0, S, Templ)) :-
+% Collect the row index of every component cell.
+    findall(R, member(c(R, _, _), Comp), Rs),
+% Collect the column index of every component cell.
+    findall(C, member(c(_, C, _), Comp), Cs),
+% The topmost row is the bounding-box top.
+    min_list(Rs, R0),
+% The bottommost row is the bounding-box bottom.
+    max_list(Rs, R1),
+% The leftmost column is the bounding-box left.
+    min_list(Cs, C0),
+% The rightmost column is the bounding-box right.
+    max_list(Cs, C1),
+% Compute the local height of the bounding box.
+    LH is R1 - R0 + 1,
+% Compute the local width of the bounding box.
+    LW is C1 - C0 + 1,
+% Compute the last local row index.
+    LH1 is LH - 1,
+% Compute the last local column index.
+    LW1 is LW - 1,
+% Build the local crop holding only this component's cells.
+    findall(Row,
+% Walk each local row of the bounding box.
+            ( between(0, LH1, LR),
+% Build one local row cell by cell.
+              findall(V,
+% Walk each local column of the bounding box.
+                      ( between(0, LW1, LC),
+% Map the local row back to the grid row.
+                        GR is R0 + LR,
+% Map the local column back to the grid column.
+                        GC is C0 + LC,
+% Component cells keep their color; all others become background.
+                        ( memberchk(c(GR, GC, V0), Comp) -> V = V0 ; V = BG ) ),
+% Bind the finished local row.
+                      Row) ),
+% Bind the finished local crop.
+            Local),
+% Fully reduce the crop to its canonical template and scale.
+    tt_reduce_(Local, LH, LW, Templ, S).
+
+% tt_reduce_(+Local, +LH, +LW, -Templ, -S): maximal block reduction.
+tt_reduce_(Local, LH, LW, Templ, S) :-
+% The scale must divide both dimensions, so bound it by their gcd.
+    G is gcd(LH, LW),
+% Walk candidate scales from largest to smallest.
+    between(1, G, Down),
+% Convert the walk counter into a descending scale candidate.
+    S is G + 1 - Down,
+% The scale must divide the local height.
+    0 =:= LH mod S,
+% The scale must divide the local width.
+    0 =:= LW mod S,
+% Every scale-sized block of the crop must be uniform.
+    tt_blocky_(Local, LH, LW, S),
+% Commit to the first, hence largest, working scale.
+    !,
+% Shrink the crop by the chosen scale into the canonical template.
+    tt_shrink_(Local, LH, LW, S, Templ).
+
+% tt_blocky_(+Local, +LH, +LW, +S): every SxS block is uniform.
+tt_blocky_(Local, LH, LW, S) :-
+% Count the block rows of the crop.
+    TH is LH // S,
+% Count the block columns of the crop.
+    TW is LW // S,
+% Compute the last block row index.
+    TH1 is TH - 1,
+% Compute the last block column index.
+    TW1 is TW - 1,
+% Compute the last in-block offset.
+    S1 is S - 1,
+% Check uniformity of every block of the crop.
+    forall(( between(0, TH1, BR), between(0, TW1, BC) ),
+% Each block must repeat its top-left color everywhere.
+           ( BR0 is BR * S,
+% Compute the block's leftmost crop column.
+             BC0 is BC * S,
+% Fetch the block's top row from the crop.
+             nth0(BR0, Local, TopRow),
+% Read the block's top-left color.
+             nth0(BC0, TopRow, V),
+% Every cell inside the block must carry that color.
+             forall(( between(0, S1, DR2), between(0, S1, DC2) ),
+% Check one in-block cell against the block color.
+                    ( R is BR0 + DR2,
+% Compute the in-block cell's crop column.
+                      C is BC0 + DC2,
+% Fetch the in-block cell's crop row.
+                      nth0(R, Local, Row2),
+% The in-block cell must match the block color.
+                      nth0(C, Row2, V) )) )).
+
+% tt_shrink_(+Local, +LH, +LW, +S, -Templ): sample block top-left cells.
+tt_shrink_(Local, LH, LW, S, Templ) :-
+% Compute the last template row index.
+    TH1 is LH // S - 1,
+% Compute the last template column index.
+    TW1 is LW // S - 1,
+% Build the template row by row.
+    findall(Row,
+% Walk each template row.
+            ( between(0, TH1, TR),
+% Build one template row cell by cell.
+              findall(V,
+% Walk each template column.
+                      ( between(0, TW1, TC),
+% Map the template row to its crop row.
+                        R is TR * S,
+% Map the template column to its crop column.
+                        C is TC * S,
+% Fetch the sampled crop row.
+                        nth0(R, Local, Row2),
+% Read the sampled block color.
+                        nth0(C, Row2, V) ),
+% Bind the finished template row.
+                      Row) ),
+% Bind the finished canonical template.
+            Templ).
+
+% tt_align_(+T1, +T2, +BG, -DR, -DC): best-overlap body alignment.
+tt_align_(T1, T2, BG, DR, DC) :-
+% Measure the first template's height.
+    length(T1, H1),
+% Fetch the first template's first row.
+    T1 = [T1R|_],
+% Measure the first template's width.
+    length(T1R, W1),
+% Measure the second template's height.
+    length(T2, H2),
+% Fetch the second template's first row.
+    T2 = [T2R|_],
+% Measure the second template's width.
+    length(T2R, W2),
+% Compute the lowest candidate row offset.
+    DRLo is 1 - H2,
+% Compute the highest candidate row offset.
+    DRHi is H1 - 1,
+% Compute the lowest candidate column offset.
+    DCLo is 1 - W2,
+% Compute the highest candidate column offset.
+    DCHi is W1 - 1,
+% Keep the offset whose equal-colored overlap is largest.
+    aggregate_all(max(N, DR0-DC0),
+% Score every candidate offset of the second template.
+                  ( between(DRLo, DRHi, DR0),
+% Walk every candidate column offset.
+                    between(DCLo, DCHi, DC0),
+% Count the overlapping cells that agree in color.
+                    aggregate_all(count,
+% A body cell agrees in color across both templates.
+                                  ( nth0(R, T1, Row),
+% Read a first-template cell color.
+                                    nth0(C, Row, V),
+% Only foreground cells can form the shared body.
+                                    V \= BG,
+% Map the cell into the second template's rows.
+                                    R2 is R - DR0,
+% Map the cell into the second template's columns.
+                                    C2 is C - DC0,
+% The mapped row must exist in the second template.
+                                    R2 >= 0,
+% The mapped column must exist in the second template.
+                                    C2 >= 0,
+% Fetch the mapped second-template row.
+                                    nth0(R2, T2, Row2),
+% The mapped cell must carry the very same color.
+                                    nth0(C2, Row2, V) ),
+% Bind the agreement count for this offset.
+                                  N),
+% Only offsets with at least one shared body cell qualify.
+                    N >= 1 ),
+% Bind the winning offset of the second template.
+                  max(_, DR-DC)).
+
+% tt_draw_(+Shape, +T1, +T2, +BG, +DR, +DC, -Cell): one toggled cell.
+tt_draw_(sh(R0, C0, S, T), T1, T2, BG, DR, DC, c(GR, GC, V)) :-
+% Choose the twin template and its aligned grid origin.
+    ( T == T1 ->
+% A first-variant shape is redrawn as the second variant.
+        Other = T2,
+% Shift the origin by the alignment offset scaled up.
+        OR0 is R0 + S * DR,
+% Shift the origin column by the alignment offset scaled up.
+        OC0 is C0 + S * DC
+% Otherwise the shape carries the second variant.
+    ;
+% A second-variant shape is redrawn as the first variant.
+        Other = T1,
+% Shift the origin back by the alignment offset scaled up.
+        OR0 is R0 - S * DR,
+% Shift the origin column back by the alignment offset scaled up.
+        OC0 is C0 - S * DC ),
+% Walk each row of the twin template.
+    nth0(TR, Other, Row),
+% Walk each cell of the twin template row.
+    nth0(TC, Row, V),
+% Only foreground template cells are drawn.
+    V \= BG,
+% Compute the last in-block offset for upscaling.
+    S1 is S - 1,
+% Walk each upscaled row copy of the template cell.
+    between(0, S1, DR2),
+% Walk each upscaled column copy of the template cell.
+    between(0, S1, DC2),
+% Compute the toggled cell's grid row.
+    GR is OR0 + S * TR + DR2,
+% Compute the toggled cell's grid column.
+    GC is OC0 + S * TC + DC2.
+
+% tt_render_(+H, +W, +BG, +Draws, -Out): paint draws on a fresh canvas.
+tt_render_(H, W, BG, Draws, Out) :-
+% Compute the last grid row index.
+    H1 is H - 1,
+% Compute the last grid column index.
+    W1 is W - 1,
+% Build the output grid row by row.
+    findall(Row,
+% Walk each output row.
+            ( between(0, H1, R),
+% Build one output row cell by cell.
+              findall(V,
+% Walk each output column.
+                      ( between(0, W1, C),
+% Toggled cells take their drawn color; the rest is background.
+                        ( memberchk(c(R, C, V0), Draws) -> V = V0 ; V = BG ) ),
+% Bind the finished output row.
+                      Row) ),
+% Bind the finished output grid.
+            Out).

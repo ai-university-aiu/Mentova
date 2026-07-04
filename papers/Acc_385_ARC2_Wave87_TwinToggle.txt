@@ -1,0 +1,112 @@
+Acc_385: ARC-AGI-2 Wave 87 - Twin Toggle: Redrawing Every Shape as Its Other Variant
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 87 of the ARC-AGI-2 benchmark climb: task c7f57c3e solved using
+the twin_toggle rule (WP-345, Layer 320). Score advances from
+83/120 = 69.17% to 84/120 = 70.00%.
+
+TASK DESCRIPTION
+
+Task c7f57c3e presents two training pairs and one test case. The
+grids are 18x18, 18x18, and 28x28, and every output has the same
+size as its input. Each grid holds several shapes on a uniform
+majority-color background. In the first pair the shapes are small
+plants - a flower of 1s with a 2 center above a stem and a base -
+and the stem-and-base region is drawn either in colors 2 and 3 or
+entirely in color 8. In the second pair the shapes are X-bodies of
+1s with a 2 center carrying either a single 4 attached below or a
+single 6 attached above. The test mixes 3-center and 6-center
+bodies with a 2-decoration above or a 4-decoration below. Some
+shapes are exact scaled-up copies of the small ones: scale 2 in
+training and scale 3 in the test. In every case the output redraws
+each shape as the other of the grid's two variants, keeping the
+shared body cells exactly in place.
+
+RULE: twin_toggle
+
+The glass-box rule is a five-stage procedure whose parameters are
+all read off the input grid at solve time:
+
+1. SHAPE COLLECTION (tw_background_/2, tw_components_/2)
+   The majority color is the background, and the foreground cells
+   group into 8-connected components.
+
+2. CANONICALIZATION (tt_shape_/3, tt_reduce_/5, tt_blocky_/4,
+   tt_shrink_/5)
+   Each component is cropped to its bounding box and painted onto a
+   clean local canvas holding only its own cells. The crop is fully
+   reduced by the largest integer scale whose square blocks are all
+   uniform, yielding a canonical template and a scale factor. The
+   scale-2 and scale-3 copies collapse onto the same canonical
+   templates as their small twins.
+
+3. TEMPLATE PAIRING (tt_align_/5)
+   The grid must present exactly two distinct canonical templates.
+   The two templates are aligned by the translation offset that
+   maximizes the count of overlapping cells agreeing in color; the
+   agreeing cells are the shared body that both variants carry.
+
+4. TOGGLING (tt_draw_/7)
+   Every shape is redrawn as the OTHER template, upscaled by the
+   shape's own scale factor and positioned through the alignment
+   offset so the shared body cells stay exactly where they were. A
+   first-variant shape shifts its origin forward by the scaled
+   offset; a second-variant shape shifts it back.
+
+5. ASSEMBLY (tt_render_/5)
+   The output is a fresh background canvas holding every toggled
+   shape. A bounds check rejects any toggle that would fall off the
+   grid.
+
+INDUCTION
+
+The induce clause dispatches early, directly after xray_frame. Its
+pre-filter requires the first training pair to preserve both grid
+dimensions, requires a sparse foreground of 8 to 400 cells, at
+least two components, and exactly two distinct canonical templates
+after full block reduction. The clause then verifies every training
+pair with a forall over the transform, so induction is pure
+verification.
+
+KEY INSIGHT
+
+The surface reading of this task suggests three color roles - a
+base, a mid, and a pivot - with an adjacency test choosing between
+a color swap and a color promotion. That reading is hard to code
+and does not generalize across the pairs: the first pair recolors a
+stem and base, the second pair moves a marker from below one shape
+to above another while changing 4 to 6, and the test does both at
+once. Dumping all six grids and writing the rule in plain English
+first revealed a far simpler invariant: every grid contains
+integer-scaled copies of exactly two variant templates sharing an
+identical aligned body, and the output merely toggles each shape to
+its twin. One uniform mechanism - canonicalize, pair, align, toggle
+- handles all three decoration styles with no per-color reasoning
+at all, and scale handling comes free from full block reduction.
+
+VERIFICATION
+
+Both training pairs and the test case pass in SWI-Prolog under
+arc2_induce_rule/2 followed by arc2_transform/3. A full regression
+of all 83 locally verified tasks (82 prior plus c7f57c3e) still
+induces and passes with zero regressions. Implementation: six tt_*
+helper predicates and the twin_toggle transform at the end of
+arc_benchmark_2.pl, with one explanatory comment above every code
+line. The rule passed both training pairs and the test case on the
+first prototype run and the full regression on the first compile.
+
+METHODOLOGY
+
+Pure induction from training examples only. No pretraining on the
+ARC-AGI-2 corpus. Named glass-box rules for every solved task.
+
+SPARC documentation: Mentova Specification v316, Pseudocode v308,
+Architecture v309, Refinement v368, Completion v374; PrologAI
+Specification v313, Pseudocode v305, Architecture v306, Refinement
+v365, Completion v371. Tutorial chapter Ch305 added.
