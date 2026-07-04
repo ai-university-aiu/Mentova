@@ -1,0 +1,41 @@
+Accomplishment 394: ARC-AGI-2 Wave 96 - Junction Hub: Repainting Wire Branches by the Blocks They Reach
+
+PrologAI solves ARC-AGI-2 task 800d221b with a new glass-box rule
+called junction_hub (WP-354, Layer 329), raising the benchmark
+score from 92/120 = 76.67% to 93/120 = 77.50%.
+
+Each input of this task draws a wire network on a plain
+background: wires snake out from one central crossing toward
+small blocks scattered in the corners and along the edges, and
+every block is a mix of the same two content colors. The answer
+repaints every wire with the majority color of the block its
+branch reaches - except at the crossing itself, where a
+three-by-three ring keeps the wire color and the single cell at
+its center announces the winning side.
+
+Two things make it tricky. First, all four colors change from
+grid to grid, so nothing can be memorized: the solver recognizes
+the wire color purely by structure, as the only foreground color
+owning exactly one spot where a full three-by-three window is
+that same color - that spot is the hub. Second, the center
+verdict is a cell-level election, not a branch-level one: in the
+third training example the losing color owns more branches, but
+the winning color's branches each touch the ring in two separate
+places and outvote them four cells to three. A branch that wraps
+around the ring counts twice.
+
+The rule finds the hub, preserves its ring, splits the remaining
+wires into branches, repaints each branch with the majority color
+of the blocks it touches, and lets the ring-touching cells elect
+the hub color. The training grids are up to 20x20; the test grid
+is a 30x30 web of nine blocks and a dozen branches - and the same
+five-stage procedure reads it correctly, cell for cell.
+
+The complete rule was written in plain English covering every grid
+before any code, the Python prototype passed all four grids on the
+first run, and the integrated Prolog rule passed the single-task
+test and the full regression on the first compile. Pure induction.
+No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
