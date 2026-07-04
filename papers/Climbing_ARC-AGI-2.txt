@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 84 complete: 81/120 = 67.50%.
+Last updated: 2026-07-03. Wave 85 complete: 82/120 = 68.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -206,6 +206,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  79 / 120  | 65.83%  | Wave 82: twin_lift small shapes scattered on a uniform majority-color background; every 8-connected shape whose cell count matches the cell count of at least one other shape floats straight up flush to the top edge, and every shape with a unique cell count sinks straight down flush to the bottom edge; columns, forms, and colors preserved; the direction decision is per shape, not per color - the test grid holds two same-colored shapes moving in opposite directions
 2026-07-03  |  80 / 120  | 66.67%  | Wave 83: stripe_cycle one edge row (top or bottom) carries a horizontal color-4 bar marking the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance D from the marker row - D of 0 or 2 paints the stripe columns with 4, odd D paints them with the background color, and D of 4 paints the stripe columns with 3 while overlaying 3 on every non-background cell of that row outside the stripes; the test grid moves the marker from the bottom row to the top row, so the palette must be anchored at the marker, not at row zero
 2026-07-03  |  81 / 120  | 67.50%  | Wave 84: motif_shadow two-cell-wide rectangular motifs carry a run of color 2 along one long side, and the long-axis end farther from that run is the anchor end; three singleton marker cells on the grid edges each align with one motif and teach one offset-to-color lesson (offset measured from the anchor end) plus the grid-wide polarity - rays exit either on the same cross side as the 2-run or on the opposite side; every motif then casts one full ray per lesson, perpendicular to its long axis, from its exit side to the grid edge, painting only background cells
+2026-07-03  |  82 / 120  | 68.33%  | Wave 85: dial_rotor one framed square figure wrapped in a dotted ring, plus detached straight dial pieces lying far away; a dial piece of color C with length L commands "rotate color C's layer by L quarter turns clockwise"; the crop box merges the main figure with every component within Chebyshev distance 3, the ring color is the unique color on the crop's outermost layer, the ring-zone thickness is the minimum inset of any non-ring-colored cell, the ring zone spins by the ring color's dial (staying put without one) and the core block spins by the largest dial among its own colors
 
 
 COMPLETE SCORE PROGRESSION
@@ -1226,6 +1227,65 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 85 - 2026-07-03 - Score: 82/120 = 68.33%
+
+Date: 2026-07-03
+
+Confirmed score: 82 / 120 = 68.33%
+
+Rules added in this wave:
+  dial_rotor (WP-343, Layer 318)
+
+Task solved: 6ffbe589 (3 training pairs + 1 test case; 20x20 inputs
+  cropping to 13x13, 10x10, 10x10, and 13x13 outputs; each grid
+  holds one main figure - a framed square wrapped in a dotted ring -
+  plus two or three small detached straight pieces lying far away
+  from the figure; the palettes vary per grid: ring 3 with core 8
+  and 6, ring 5 with core 3 and 4, ring 4 with core 1 and 2, and
+  ring 5 with core 3 and 4 again in the test).
+
+Algorithm: dial-commanded quarter-turn rotations of ring and core.
+  Stage 1: the 8-connected foreground components are computed and
+  the component with the largest bounding box is the main figure;
+  every component within Chebyshev distance 3 of that bounding box
+  merges into the crop box (this pulls in detached ring dots), and
+  everything farther away is a dial piece. Stage 2: each dial piece
+  must be a straight single-color run; a run of color C with length
+  L commands "rotate color C's layer by L quarter turns clockwise"
+  (L mod 4). Stage 3: the square crop splits into a ring zone and a
+  core block - the ring color is the unique color on the crop's
+  outermost layer, and the ring-zone thickness K is the minimum
+  inset of any non-ring-colored cell. Stage 4: the ring zone spins
+  by the ring color's dial, staying put when the ring color has no
+  dial, and the core block spins by the largest dial among the
+  colors present in the core. Stage 5: the output is the spun crop -
+  full crop rotated by the ring amount with the independently
+  rotated core pasted back into the center.
+
+Bugs fixed: none. The rule passed the single-task test and the full
+  regression on the first compile.
+
+Lessons learned: the palette-variant hypothesis suggested by the
+  human-steps summary is a red herring - the second training grid
+  and the test grid share the same palette (ring 5, core 3 and 4)
+  yet need different rotations (core quarter turn versus core half
+  turn). The debris pieces that looked like noise are the actual
+  instruction stream: their lengths are dials. Training dials read
+  3-to-1 quarter turns cleanly, and the test's length-5 ring dial
+  proves the intended reading is L mod 4, a full revolution plus a
+  quarter. Brute-forcing (ring transform, core transform) pairs per
+  training pair and then hunting for the input feature that selects
+  each pair's combination was the decisive method: length-of-piece
+  matched all four grids with zero contradictions. Full regression
+  of all 81 locally verified tasks (80 prior plus 6ffbe589) still
+  induces and passes.
+
+Accomplishment: Acc_383.  Paper: Acc_383_ARC2_Wave85_DialRotor.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4335,6 +4395,7 @@ a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing m
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
 64efde09  - Wave 84 - motif_shadow       - two-cell-wide motifs carry a color-2 run along one long side whose farther end is the anchor; three edge markers teach offset-to-color lessons from the anchor plus the grid-wide exit polarity, and every motif casts one background-only ray per lesson from its exit side to the grid edge
+6ffbe589  - Wave 85 - dial_rotor         - a framed square wrapped in a dotted ring is cropped together with every nearby component; detached straight dial pieces command rotations - a run of color C with length L spins color C's layer by L quarter turns clockwise - so the ring zone spins by the ring color's dial and the core block spins by the largest dial among its own colors
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4703,4 +4764,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 83: Stripe-cycle - one edge row of the grid 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 84: Motif-shadow - rectangular motifs two cells wide and seven or nine cells long carry a run of color 2 along exactly one long side, and the long-axis end farther from that run is the motif's anchor end; three singleton marker cells sit on the grid edges, each aligned with one motif across the motif's short axis, and each marker teaches one lesson - the pair of its axis offset from the aligned motif's anchor end and its own color - while also casting one polarity vote that says whether rays exit on the same cross side as the color-2 run or on the opposite side; every motif then casts one full ray per lesson, perpendicular to its long axis at the lesson offset from its own anchor end, from its exit side out to the grid edge, painting only background cells; the polarity is the discriminating observation of the wave, because the first training grid exits on the 2-run side while the second training grid and the test grid exit on the opposite side, and only the markers reveal which reading each grid uses.
   Score: 81/120 = 67.50%. Task 64efde09 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 85: Dial-rotor - each grid holds one main figure, a framed square wrapped in a dotted ring, plus a few small detached straight pieces lying far away; the crop box merges the largest-bounding-box component with every component within Chebyshev distance 3 of it, and each detached piece is a dial: a straight single-color run of color C with length L commanding "rotate color C's layer by L quarter turns clockwise" (L mod 4); the ring color is the unique color on the crop's outermost layer, the ring-zone thickness is the minimum inset of any non-ring-colored cell, the ring zone spins by the ring color's dial (staying put without one), and the core block spins by the largest dial among the colors present in the core; the dials are the discriminating observation of the wave, because the second training grid and the test grid share the same palette yet need different rotations, and the test's length-5 ring dial proves the L-mod-4 reading - a full revolution plus a quarter turn.
+  Score: 82/120 = 68.33%. Task 6ffbe589 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

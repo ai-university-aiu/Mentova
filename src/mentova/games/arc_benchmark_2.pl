@@ -711,6 +711,44 @@ arc2_induce_rule(TrainingPairs, motif_shadow) :-
 % Each training pair must transform correctly under motif_shadow.
            arc2_transform(motif_shadow, In, Out)).
 
+% dial_rotor: early dispatch before generic clause (WP-343, Layer 318).
+% Enumerate dial_rotor as a known rule name.
+arc2_named_rule(dial_rotor).
+% arc2_induce_rule(dial_rotor): crop-and-dial pre-filter + verify.
+arc2_induce_rule(TrainingPairs, dial_rotor) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, IH),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output is a crop, so it must be strictly shorter than the input.
+    OH < IH,
+% Fetch the first row of the output.
+    FirstOut = [FOR|_],
+% Measure the first output width.
+    length(FOR, OW),
+% The cropped figure is square, so output height equals output width.
+    OH =:= OW,
+% Collect every non-empty cell of the first input.
+    findall(c(R, C, V),
+% Walk each cell keeping only non-zero values.
+            ( nth0(R, First, Row), nth0(C, Row, V), V =\= 0 ),
+% Bind the collected foreground cell list.
+            Cells),
+% Count the foreground cells.
+    length(Cells, NF),
+% Require a sparse figure-and-dial foreground, not a dense scene.
+    NF >= 10, NF =< 300,
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% A main figure plus at least one dial piece are required.
+    length(Comps, NC), NC >= 2,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under dial_rotor.
+           arc2_transform(dial_rotor, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -17588,3 +17626,214 @@ ms_row_(Row0, R, BG, Rays, ORow) :-
               ( V =:= BG, memberchk(c(R, C, K), Rays) -> V2 = K ; V2 = V ) ),
 % Bind the rebuilt row.
             ORow).
+
+% ---------------------------------------------------------------------------
+% WP-343: dial_rotor (Layer 318) — dial pieces set quarter-turn rotations
+% for the ring and the core of a framed square figure.
+%
+% dial_rotor: the grid holds one main figure — a framed square wrapped in a
+% dotted ring — plus a few detached straight "dial" pieces lying far away.
+% A dial piece of color C with length L commands: rotate color C's layer by
+% L quarter turns clockwise (L mod 4).  The crop box is the bounding box of
+% the main figure merged with every component within Chebyshev distance 3.
+% The ring color is the unique color on the crop's outermost layer; the
+% ring-zone thickness K is the minimum inset of any non-ring-colored cell.
+% The ring zone rotates by the ring color's dial (0 when absent) and the
+% core block rotates by the largest dial among the core's colors.
+% Reference: ARC-AGI-2 task 6ffbe589 — dials spin the ring and the core.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(dial_rotor): crop the figure and spin ring and core.
+arc2_transform(dial_rotor, Grid, Out) :-
+% Collect every non-empty cell with its coordinates and color.
+    findall(c(R, C, V),
+% Walk each cell of the grid keeping only non-zero values.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= 0 ),
+% Bind the collected foreground cell list.
+            Cells),
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Pick the component with the largest bounding-box area as the main figure.
+    dr_maxbbox_(Comps, Main),
+% Compute the main figure's bounding box.
+    dr_bbox_(Main, R0a, R1a, C0a, C1a),
+% Split components into figure-adjacent parts and detached dial pieces.
+    partition(dr_near_box_(R0a, R1a, C0a, C1a), Comps, Near, Dials0),
+% At least one dial piece must exist to command a rotation.
+    Dials0 \== [],
+% Merge the figure-adjacent components into one cell set.
+    findall(Cell, ( member(NC, Near), member(Cell, NC) ), MCells),
+% Compute the bounding box of the merged figure.
+    dr_bbox_(MCells, R0, R1, C0, C1),
+% Crop the merged figure out of the grid.
+    dr_crop_(Grid, R0, R1, C0, C1, Crop),
+% Measure the crop height.
+    length(Crop, H),
+% Fetch the first crop row.
+    Crop = [CR|_],
+% Measure the crop width.
+    length(CR, W),
+% The cropped figure must be square.
+    H =:= W,
+% Read every dial piece as one color-to-rotation command.
+    findall(DCol-Rot,
+% Walk each dial piece and parse it as a straight single-color run.
+            ( member(D, Dials0), dr_run_(D, DCol, L), Rot is L mod 4 ),
+% Bind the collected dial command list.
+            DialCmds),
+% Every dial piece must parse as a straight run.
+    length(Dials0, ND), length(DialCmds, ND),
+% Precompute the last row and column index of the crop.
+    Hm1 is H - 1, Wm1 is W - 1,
+% Collect every color on the crop's outermost layer.
+    findall(V,
+% Walk the crop border keeping only non-zero values.
+            ( nth0(R, Crop, Row), nth0(C, Row, V), V =\= 0,
+% Keep only cells on the outermost layer of the crop.
+              ( R =:= 0 ; R =:= Hm1 ; C =:= 0 ; C =:= Wm1 ) ),
+% Bind the border color list.
+            RingVs),
+% The ring color is the unique color of the outermost layer.
+    sort(RingVs, [RingCol]),
+% Compute the inset of every non-ring-colored cell in the crop.
+    findall(Ins,
+% Walk every non-ring foreground cell of the crop.
+            ( nth0(R, Crop, Row), nth0(C, Row, V), V =\= 0, V =\= RingCol,
+% The inset is the distance to the nearest crop edge.
+              Ins is min(min(R, C), min(Hm1 - R, Wm1 - C)) ),
+% Bind the inset list.
+            Insets),
+% The ring-zone thickness is the smallest non-ring inset.
+    min_list(Insets, K),
+% The ring zone must be at least one layer thick.
+    K >= 1,
+% Compute the core block's last row and column inside the ring zone.
+    RK is Hm1 - K, CK is Wm1 - K,
+% Crop the core block out of the figure.
+    dr_crop_(Crop, K, RK, K, CK, Core),
+% Collect the distinct colors of the core block.
+    findall(V, ( member(Row, Core), member(V, Row), V =\= 0 ), CoreVs0),
+% Deduplicate the core colors.
+    sort(CoreVs0, CoreCols),
+% Collect the dial rotations commanded for core colors.
+    findall(Rot, ( member(CCol, CoreCols), member(CCol-Rot, DialCmds) ), CoreRots),
+% At least one core color must have a dial command.
+    CoreRots \== [],
+% The core rotates by the largest commanded quarter-turn count.
+    max_list(CoreRots, CoreRot),
+% The ring rotates by its own dial command, or stays put without one.
+    ( memberchk(RingCol-RingRot, DialCmds) -> true ; RingRot = 0 ),
+% Rotate the full crop by the ring's quarter-turn count.
+    dr_rotn_(RingRot, Crop, RingG),
+% Rotate the core block by the core's quarter-turn count.
+    dr_rotn_(CoreRot, Core, CoreT),
+% Rebuild the output row by row.
+    findall(ORow,
+% Walk every output row index.
+            ( between(0, Hm1, R),
+% Rebuild one output row from the ring grid and the rotated core.
+              dr_row_(R, Wm1, K, RK, CK, RingG, CoreT, ORow) ),
+% Bind the rebuilt output grid.
+            Out).
+
+% dr_row_(+R, +Wm1, +K, +RK, +CK, +RingG, +CoreT, -ORow): one output row.
+dr_row_(R, Wm1, K, RK, CK, RingG, CoreT, ORow) :-
+% Rebuild the row cell by cell.
+    findall(V,
+% Walk every column index of the output row.
+            ( between(0, Wm1, C),
+% Core cells come from the rotated core; ring cells from the spun ring.
+              ( R >= K, R =< RK, C >= K, C =< CK ->
+% Translate to core-local coordinates.
+                  ( RI is R - K, CI is C - K,
+% Fetch the rotated core row.
+                    nth0(RI, CoreT, CRow),
+% Fetch the rotated core cell value.
+                    nth0(CI, CRow, V) )
+% Outside the core the spun ring grid supplies the value.
+              ; ( nth0(R, RingG, GRow),
+% Fetch the spun ring cell value.
+                  nth0(C, GRow, V) ) ) ),
+% Bind the rebuilt row.
+            ORow).
+
+% dr_bbox_(+Cells, -R0, -R1, -C0, -C1): bounding box of a cell list.
+dr_bbox_(Cells, R0, R1, C0, C1) :-
+% Collect the row indices of the cells.
+    findall(R, member(c(R, _, _), Cells), Rs),
+% Collect the column indices of the cells.
+    findall(C, member(c(_, C, _), Cells), Cs),
+% The topmost row of the cell set.
+    min_list(Rs, R0),
+% The bottommost row of the cell set.
+    max_list(Rs, R1),
+% The leftmost column of the cell set.
+    min_list(Cs, C0),
+% The rightmost column of the cell set.
+    max_list(Cs, C1).
+
+% dr_maxbbox_(+Comps, -Best): component with the largest bounding-box area.
+dr_maxbbox_(Comps, Best) :-
+% Score every component by its bounding-box area.
+    findall(A-Comp,
+% Walk each component and compute its bounding-box area.
+            ( member(Comp, Comps), dr_bbox_(Comp, R0, R1, C0, C1),
+% The area is height times width of the bounding box.
+              A is (R1 - R0 + 1) * (C1 - C0 + 1) ),
+% Bind the scored component list.
+            Scored),
+% Keep the component with the largest bounding-box area.
+    max_member(_-Best, Scored).
+
+% dr_near_box_(+R0, +R1, +C0, +C1, +Comp): Comp lies within distance 3.
+dr_near_box_(R0, R1, C0, C1, Comp) :-
+% Expand the box limits by three cells on every side.
+    RL is R0 - 3, RH is R1 + 3, CL is C0 - 3, CH is C1 + 3,
+% Some component cell must fall inside the expanded box.
+    member(c(R, C, _), Comp),
+% The cell row must lie within the expanded row range.
+    R >= RL, R =< RH,
+% The cell column must lie within the expanded column range.
+    C >= CL, C =< CH,
+% One witness cell suffices.
+    !.
+
+% dr_crop_(+Grid, +R0, +R1, +C0, +C1, -Crop): crop a rectangular window.
+dr_crop_(Grid, R0, R1, C0, C1, Crop) :-
+% Rebuild the window row by row.
+    findall(SubRow,
+% Walk every row index of the window.
+            ( between(R0, R1, R), nth0(R, Grid, Row),
+% Keep only the window's column range of the row.
+              findall(V, ( between(C0, C1, C), nth0(C, Row, V) ), SubRow) ),
+% Bind the cropped window.
+            Crop).
+
+% dr_run_(+Comp, -Col, -L): parse a dial piece as a straight run.
+dr_run_(Comp, Col, L) :-
+% Collect the distinct colors of the piece.
+    findall(V, member(c(_, _, V), Comp), Vs),
+% The piece must carry exactly one color.
+    sort(Vs, [Col]),
+% The run length is the piece's cell count.
+    length(Comp, L),
+% Compute the piece's bounding box.
+    dr_bbox_(Comp, R0, R1, C0, C1),
+% A straight run spans a single row or a single column.
+    ( R0 =:= R1 -> L =:= C1 - C0 + 1 ; C0 =:= C1, L =:= R1 - R0 + 1 ).
+
+% dr_rotn_(+N, +Grid, -Out): rotate a grid N quarter turns clockwise.
+% Zero quarter turns leave the grid unchanged.
+dr_rotn_(0, Grid, Grid).
+% One quarter turn reuses the rotate_90_cw named rule.
+dr_rotn_(1, Grid, Out) :-
+% Delegate to the existing clockwise rotation transform.
+    arc2_transform(rotate_90_cw, Grid, Out).
+% Two quarter turns reuse the rotate_180 named rule.
+dr_rotn_(2, Grid, Out) :-
+% Delegate to the existing half-turn rotation transform.
+    arc2_transform(rotate_180, Grid, Out).
+% Three quarter turns reuse the rotate_90_ccw named rule.
+dr_rotn_(3, Grid, Out) :-
+% Delegate to the existing counter-clockwise rotation transform.
+    arc2_transform(rotate_90_ccw, Grid, Out).
