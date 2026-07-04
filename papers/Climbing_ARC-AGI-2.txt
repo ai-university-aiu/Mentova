@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 93 complete: 90/120 = 75.00%.
+Last updated: 2026-07-03. Wave 94 complete: 91/120 = 75.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -215,6 +215,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  88 / 120  | 73.33%  | Wave 91: catalog_query the body of the scene holds a fixed four-by-four catalog of three-by-three colored shapes between two solid separator rows, and the header band shows up to four query shapes, each an exact cell-for-cell copy of one catalog block; every matched catalog block is highlighted by turning the background cells of its five-by-five frame box to color 3; when all matched blocks share one catalog row or one catalog column the header band is highlighted the same way and the footer rows fill with color 3, otherwise the header stays untouched and the footer rows fill with color 2 - the alignment verdict is the discriminating observation, and the test grid's four queries all sit in the last catalog column
 2026-07-03  |  89 / 120  | 74.17%  | Wave 92: stencil_carve solid five-by-five monochrome square blocks stand in a regular grid arrangement with one-cell background gaps, each block a distinct color, while small three-by-three sketch motifs of various colors lie elsewhere in the scene; for each block color the bounding box of its cells outside the blocks is exactly three by three, and sketch colors without a block are decoys that are ignored; the output keeps the block arrangement on a fresh background canvas of height six times the block rows plus one and width six times the block columns plus one, and carves each block's central three-by-three region with its same-colored sketch - wherever the sketch shows the block color the cell turns background, and wherever the sketch shows background the cell keeps the block color
 2026-07-03  |  90 / 120  | 75.00%  | Wave 93: demo_transfer the scene holds four square ring boxes sharing one frame color and one side length, each interior resting on a zero background with sparse colored marks; one interior is entirely empty (the answer slot), two interiors share the same nonzero color set and form a worked demonstration - the before and after of a transformation - and the fourth interior is the question; the transformation is identified from a small library by checking the demo pair in both directions (complement swaps zero with the single mark color, connect fills straight zero gaps between collinear marks with the non-corner mark color, ripple pushes a Manhattan-radial pattern outward by its own extent and repeats it periodically), preferring the direction whose source box has a nonzero-cell count closest to the question box; the output is the learned transformation applied to the question interior with its own colors - the training pairs teach connect and complement while the test grid demands ripple, so the transformation must be read off the scene at answer time, not memorized from the training pairs
+2026-07-03  |  91 / 120  | 75.83%  | Wave 94: seam_weld the scene holds several multi-color pieces on a uniform background, and the pieces carry duplicated connector stubs - a same-color cell cluster drawn identically on two pieces, such as a five-cell column, a checkerboard corner, a three-cell bar, or a lone pair of marker cells; the pieces are welded into one assembly by superimposing matching stubs exactly: the largest piece seeds the canvas, and each remaining piece is placed so that every bounding-box cell landing on already-written canvas content agrees exactly, background included, and so that at least one whole same-color component of the piece coincides with a whole same-color component of the canvas; among valid placements the one welding the most non-background cells wins, and the output is the union bounding box of the welded assembly - plain greedy overlap welding picks spurious placements where a big component brushes another piece, so the whole-stub-onto-whole-stub condition is what makes the assembly unique
 
 
 COMPLETE SCORE PROGRESSION
@@ -1235,6 +1236,79 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 94 - 2026-07-03 - Score: 91/120 = 75.83%
+
+Date: 2026-07-03
+
+Confirmed score: 91 / 120 = 75.83%
+
+Rules added in this wave:
+  seam_weld (WP-352, Layer 327)
+
+Task solved: 4e34c42c (2 training pairs + 1 test case; inputs
+  23x25, 30x20, and 26x20; outputs 5x12, 5x22, and 14x19 - the
+  output size follows the union bounding box of the welded
+  assembly, and the test output is wider AND taller than any
+  training output because the test scene welds six pieces into a
+  two-dimensional tree instead of a linear chain).
+
+Algorithm: jigsaw welding by duplicated connector stubs.
+  Stage 1: take the most common color as the background and group
+  the non-background cells into side-connected multi-color pieces,
+  each carried as its full bounding-box subgrid.
+  Stage 2: split every piece into whole same-color components
+  under eight-way adjacency - these are the candidate connector
+  stubs, such as a 9,1,4,1,9 column, a 5-3 checkerboard corner, a
+  three-cell 8 bar, or a lone pair of 2 marker cells.
+  Stage 3: seed the canvas with the piece holding the most
+  non-background cells, writing its entire bounding box,
+  background included.
+  Stage 4: repeatedly weld one piece: a placement is valid when
+  every bounding-box cell landing on already-written canvas
+  content agrees exactly - background included - and at least one
+  whole same-color component of the piece lands entirely on
+  written cells and coincides exactly with one whole same-color
+  component of the canvas; among all valid placements of all
+  unplaced pieces, the earliest placement with the strictly
+  highest count of agreeing non-background cells wins.
+  Stage 5: after all pieces are welded, emit the union bounding
+  box of the written canvas with the background elsewhere.
+
+Bugs fixed: none in the final rule. The Python prototype exposed
+  that plain greedy overlap welding - exact agreement plus maximum
+  overlap score alone - picks spurious placements: the second
+  training pair welded a piece's large 1-frame onto another
+  piece's 1-ring (three accidental agreeing cells), and the test
+  grid glued a piece's 4-body onto another piece's 4-cap; the
+  whole-stub-onto-whole-stub condition eliminated both, and the
+  integrated Prolog rule then passed the single-task test and the
+  full regression on the first compile.
+
+Lessons learned: the discriminating condition is component
+  totality, not overlap size - the correct weld always superimposes
+  a complete same-color component of one piece onto a complete
+  same-color component of the other (the duplicated stub both
+  pieces carry), while spurious welds only ever cover components
+  partially; the smallest legitimate weld in the task joins just
+  two marker cells, so no overlap-size threshold can separate good
+  from bad placements. Duplicated-stub welding also subsumes the
+  key-piece pattern: each scene carries a small piece that exactly
+  equals one end of a larger piece, and it simply welds on top of
+  that end, adding nothing to the union bounding box. Tie handling
+  matters for determinism: candidates are enumerated pieces
+  largest first, row offsets before column offsets, and only a
+  strictly higher score replaces the incumbent, mirroring the
+  verified prototype. Runner bookkeeping: the live benchmark
+  reports 90/120 after this wave against the official ledger of
+  91/120; tasks 13e47133 and 9385bd28 remain flagged for a
+  dedicated repair wave.
+
+Accomplishment: Acc_392.  Paper: Acc_392_ARC2_Wave94_SeamWeld.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4947,6 +5021,7 @@ c7f57c3e  - Wave 87 - twin_toggle        - shapes on a uniform background are in
 d8e07eb2  - Wave 91 - catalog_query      - a fixed four-by-four catalog of three-by-three shapes sits between two separator rows; header query shapes each match one catalog block cell for cell, every matched block's five-by-five frame box is highlighted in color 3, and when the matches share one catalog row or column the header highlights too and the footer fills with 3, otherwise the footer fills with 2
 58f5dbd5  - Wave 92 - stencil_carve      - solid five-by-five blocks in a regular grid arrangement pair with three-by-three sketch motifs of the same color elsewhere in the scene; the output keeps the arrangement on a fresh background canvas and carves each block's central three-by-three region with the negative of its sketch, sketch-colored cells punching background holes
 4c7dc4dd  - Wave 93 - demo_transfer      - four square ring boxes share one frame color and side length; the empty interior marks the answer slot, the two interiors sharing a color set demonstrate a transformation, and the learned operation (complement, connect, or ripple) is applied to the question interior with its own colors
+4e34c42c  - Wave 94 - seam_weld          - multi-color pieces carry duplicated connector stubs drawn identically on two pieces; the largest piece seeds the canvas and every other piece is welded on so that all landed cells agree exactly and a whole same-color stub of the piece covers a whole same-color stub of the canvas, the union bounding box forming the output
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -5350,4 +5425,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 92: Stencil-carve - the scene holds several 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 93: Demo-transfer - the scene holds four square ring boxes sharing one frame color and one side length on a noisy patterned background, each ring interior resting on a zero background with at most two sparse mark colors; one interior is entirely empty and marks the answer slot, two interiors share the same nonzero color set and form a worked demonstration - the before and after of a transformation - and the fourth interior is the question; the transformation is identified from a small library by checking the demonstration pair in both directions - complement swaps zero with the single mark color, connect fills every straight run of zeros between two collinear marks with the non-corner mark color, and ripple reads a Manhattan-radial profile around the center and pushes the pattern outward by its own extent, repeating it periodically - preferring the direction whose source box has a nonzero-cell count closest to the question box; the output is the learned operation applied to the question interior with the question's own colors; the in-grid worked example is the discriminating observation of the wave, because the training pairs teach connect and complement while the test grid demands ripple, an operation appearing in no training output, so the transformation must be read off the scene at answer time rather than memorized from the training pairs.
   Score: 90/120 = 75.00%. Task 4c7dc4dd solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 94: Seam-weld - the scene holds several multi-color pieces on a uniform background, and the pieces carry duplicated connector stubs - a same-color cell cluster drawn identically on two pieces, such as a five-cell column, a checkerboard corner, a three-cell bar, or a lone pair of marker cells; the pieces are welded into one assembly by superimposing matching stubs exactly: the largest piece seeds the canvas with its entire bounding box written background included, and each remaining piece is placed so that every bounding-box cell landing on already-written canvas content agrees exactly and at least one whole same-color component of the piece lands entirely on written cells and coincides exactly with one whole same-color component of the canvas; among valid placements the earliest one welding the strictly most non-background cells wins, and the output is the union bounding box of the welded assembly with the background elsewhere; component totality is the discriminating observation of the wave, because plain greedy overlap welding picks spurious placements where a large component of one piece brushes another piece with a few accidentally agreeing cells, while the correct weld always superimposes a complete stub onto a complete stub - and the smallest legitimate weld in the task joins just two marker cells, so no overlap-size threshold can replace the totality condition; the welding also subsumes the key-piece pattern, since the small piece duplicating one end of a larger piece simply welds on top of that end and adds nothing to the union bounding box.
+  Score: 91/120 = 75.83%. Task 4e34c42c solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

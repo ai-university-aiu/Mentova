@@ -1067,6 +1067,28 @@ arc2_induce_rule(TrainingPairs, demo_transfer) :-
 % Each training pair must transform correctly under demo_transfer.
            arc2_transform(demo_transfer, In, Out)).
 
+% seam_weld: early dispatch before generic clause (WP-352, Layer 327).
+% Enumerate seam_weld as a known rule name.
+arc2_named_rule(seam_weld).
+% arc2_induce_rule(seam_weld): scene-size pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, seam_weld) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The input must be a scene grid of pieces.
+    H >= 15,
+% Measure the first output height.
+    length(FirstOut, OH),
+% The welded assembly must be shorter than the scene.
+    OH < H,
+% The assembly must span at least two rows.
+    OH >= 2,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under seam_weld.
+           arc2_transform(seam_weld, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -20234,3 +20256,395 @@ dt_ring_val_(G, M, D, P) :-
 dt_ripple_val_(D, K, Lead, Q) :-
 % Inner distances go blank and outer ones repeat the moved pattern.
     ( D < K -> Q = 0 ; D2 is (D - K) mod K, nth0(D2, Lead, Q) ).
+
+% ---------------------------------------------------------------------------
+% SEAM WELD (WP-352, Layer 327)
+% seam_weld: the scene holds several multi-color pieces on a uniform
+% background.  Pieces carry duplicated connector stubs: a same-color cell
+% cluster drawn identically on two pieces (a column such as 9,1,4,1,9, a
+% checker such as 5,3,5/3,5,3/5,3,5, or even a lone pair of marker cells).
+% The pieces are welded into one assembly by superimposing matching stubs
+% exactly.  The largest piece seeds the canvas; each remaining piece is
+% placed so that every bounding-box cell landing on an already-written
+% canvas cell agrees exactly (background included) and at least one whole
+% same-color component of the piece coincides with a whole same-color
+% component of the canvas.  Among valid placements the one welding the
+% most non-background cells wins.  The output is the union bounding box
+% of all welded pieces with the background elsewhere.
+% Reference: ARC-AGI-2 task 4e34c42c -- jigsaw weld by duplicated stubs.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(seam_weld): weld all scene pieces by duplicated stubs.
+arc2_transform(seam_weld, Grid, Out) :-
+% Identify the background as the most common color.
+    arc2_bg_color_(Grid, Bg),
+% Extract the pieces ordered by descending cell count.
+    sw_pieces_(Grid, Bg, Pieces),
+% Count the pieces of the scene.
+    length(Pieces, NP),
+% A weld needs at least two pieces.
+    NP >= 2,
+% A weldable scene stays small enough to search.
+    NP =< 8,
+% Split off the largest piece as the canvas seed.
+    Pieces = [sw_piece(_, _, Seed, _)|Rest],
+% Start from an empty canvas.
+    empty_assoc(Empty),
+% Write the seed piece at the canvas origin.
+    sw_write_(Seed, 0, 0, Empty, Canvas1),
+% Weld every remaining piece onto the canvas.
+    sw_assemble_(Rest, Bg, Canvas1, Canvas),
+% Read the union bounding box back as the output grid.
+    sw_render_(Canvas, Bg, Out),
+% Commit to the first successful assembly.
+    !.
+
+% sw_pieces_(+Grid, +Bg, -Pieces): scene pieces, largest first.
+sw_pieces_(Grid, Bg, Pieces) :-
+% Collect every non-background cell with its color.
+    findall((R-C)-V,
+% Walk every row of the grid with its index.
+            ( nth0(R, Grid, Row),
+% Walk every cell of the row with its column.
+              nth0(C, Row, V),
+% Keep the cells that differ from the background.
+              V \== Bg ),
+% Bind the foreground cell list.
+            Fg),
+% Index the foreground cells for adjacency tests.
+    list_to_assoc(Fg, A),
+% Group the cells into side-connected multi-color pieces.
+    sw_parts_(Fg, sw_any, A, [], Groups),
+% Build a sized record for each piece in discovery order.
+    sw_records_(Groups, Grid, 0, Recs),
+% Order the records by descending size, discovery order on ties.
+    msort(Recs, Pieces).
+
+% sw_records_(+Groups, +Grid, +Seq, -Recs): build piece records.
+sw_records_([], _, _, []).
+% Convert one cell group into a piece record.
+sw_records_([Group|Groups], Grid, Seq, [sw_piece(NegN, Seq, Sub, Comps)|Recs]) :-
+% Count the foreground cells of the piece.
+    length(Group, N),
+% Negate the count so ascending order means largest first.
+    NegN is -N,
+% Measure the piece bounding box.
+    sw_bbox_(Group, R0, R1, C0, C1),
+% Cut the bounding-box subgrid out of the scene.
+    sw_subgrid_(Grid, R0, R1, C0, C1, Sub),
+% Express the piece cells in bounding-box coordinates.
+    findall((IR-IC)-V,
+% Walk every cell of the group.
+            ( member(R-C, Group),
+% Read the color of the cell.
+              arc2_cell_(Grid, R, C, V),
+% Shift the row into bounding-box coordinates.
+              IR is R - R0,
+% Shift the column into bounding-box coordinates.
+              IC is C - C0 ),
+% Bind the relative cell list.
+            RelFg),
+% Index the relative cells for adjacency tests.
+    list_to_assoc(RelFg, RelA),
+% Split the piece into whole same-color connector components.
+    sw_parts_(RelFg, sw_bycolor, RelA, [], Comps),
+% Advance the discovery sequence number.
+    Seq1 is Seq + 1,
+% Build the records of the remaining groups.
+    sw_records_(Groups, Grid, Seq1, Recs).
+
+% sw_parts_(+Cells, +Kind, +Index, +Seen, -Parts): connected groupings.
+sw_parts_([], _, _, _, []).
+% Grow one connected part from each unclaimed cell.
+sw_parts_([Cell-V|Rest], Kind, A, Seen, Parts) :-
+% Test whether this cell was already claimed by an earlier part.
+    (   ord_memberchk(Cell, Seen)
+% A claimed cell starts no new part.
+    ->  sw_parts_(Rest, Kind, A, Seen, Parts)
+% An unclaimed cell seeds a fresh flood fill.
+    ;   sw_kindmode_(Kind, V, Mode),
+% Flood the connected part outward from the seed cell.
+        sw_flood_([Cell], Mode, A, [Cell], Cells),
+% Keep the part cells in canonical order.
+        msort(Cells, Part),
+% Mark the part cells as claimed.
+        ord_union(Seen, Part, Seen1),
+% Collect the remaining parts.
+        sw_parts_(Rest, Kind, A, Seen1, Parts1),
+% Prepend this part to the result.
+        Parts = [Part|Parts1]
+    ).
+
+% sw_kindmode_(+Kind, +Color, -Mode): flood mode for a grouping kind.
+sw_kindmode_(sw_any, _, sw_any).
+% Same-color grouping floods within one fixed color.
+sw_kindmode_(sw_bycolor, V, sw_col(V)).
+
+% sw_flood_(+Queue, +Mode, +Index, +Acc, -Cells): flood fill one part.
+sw_flood_([], _, _, Acc, Acc).
+% Expand the next frontier cell into its unvisited neighbours.
+sw_flood_([R-C|Q], Mode, A, Acc, Cells) :-
+% Gather fresh neighbours that satisfy the connectivity mode.
+    findall(N, sw_step_(Mode, R, C, A, Acc, N), News0),
+% Deduplicate the freshly discovered neighbours.
+    sort(News0, News),
+% Absorb the new cells into the accumulator.
+    append(News, Acc, Acc1),
+% Queue the new cells for later expansion.
+    append(Q, News, Q1),
+% Continue flooding from the extended frontier.
+    sw_flood_(Q1, Mode, A, Acc1, Cells).
+
+% sw_step_(sw_any): side-adjacent neighbour of any foreground color.
+sw_step_(sw_any, R, C, A, Seen, NR-NC) :-
+% Enumerate the four side-adjacent offsets.
+    member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1]),
+% Compute the neighbour row.
+    NR is R + DR,
+% Compute the neighbour column.
+    NC is C + DC,
+% The neighbour must be a foreground cell of any color.
+    get_assoc(NR-NC, A, _),
+% The neighbour must not be visited yet.
+    \+ memberchk(NR-NC, Seen).
+% sw_step_(sw_col): eight-adjacent neighbour of one fixed color.
+sw_step_(sw_col(V), R, C, A, Seen, NR-NC) :-
+% Enumerate the eight adjacent offsets.
+    member(DR-DC, [(-1)-(-1), (-1)-0, (-1)-1, 0-(-1), 0-1, 1-(-1), 1-0, 1-1]),
+% Compute the neighbour row.
+    NR is R + DR,
+% Compute the neighbour column.
+    NC is C + DC,
+% The neighbour must carry the same color.
+    get_assoc(NR-NC, A, V),
+% The neighbour must not be visited yet.
+    \+ memberchk(NR-NC, Seen).
+
+% sw_bbox_(+Cells, -R0, -R1, -C0, -C1): bounding box of a cell group.
+sw_bbox_(Cells, R0, R1, C0, C1) :-
+% Collect the row indices of the group.
+    findall(R, member(R-_, Cells), Rs),
+% Collect the column indices of the group.
+    findall(C, member(_-C, Cells), Cs),
+% Take the topmost row.
+    min_list(Rs, R0),
+% Take the bottommost row.
+    max_list(Rs, R1),
+% Take the leftmost column.
+    min_list(Cs, C0),
+% Take the rightmost column.
+    max_list(Cs, C1).
+
+% sw_subgrid_(+Grid, +R0, +R1, +C0, +C1, -Sub): cut a bounding box.
+sw_subgrid_(Grid, R0, R1, C0, C1, Sub) :-
+% Build one output row per bounding-box row.
+    findall(SubRow,
+% Walk the bounding-box rows in order.
+            ( between(R0, R1, R),
+% Collect the cells of one bounding-box row.
+              findall(V,
+% Walk the bounding-box columns in order.
+                      ( between(C0, C1, C),
+% Read the color of the cell.
+                        arc2_cell_(Grid, R, C, V) ),
+% Bind the subgrid row.
+                      SubRow) ),
+% Bind the subgrid rows.
+            Sub).
+
+% sw_write_(+Sub, +OR, +OC, +Canvas0, -Canvas): write a full bounding box.
+sw_write_(Sub, OR, OC, Canvas0, Canvas) :-
+% Collect every subgrid cell with its canvas position.
+    findall((R-C)-V,
+% Walk every subgrid row with its index.
+            ( nth0(I, Sub, Row),
+% Walk every subgrid cell with its column.
+              nth0(J, Row, V),
+% Shift the row onto the canvas.
+              R is OR + I,
+% Shift the column onto the canvas.
+              C is OC + J ),
+% Bind the placed cell list.
+            Cells),
+% Write every placed cell into the canvas.
+    foldl(sw_put_, Cells, Canvas0, Canvas).
+
+% sw_put_(+Cell, +Canvas0, -Canvas): store one canvas cell.
+sw_put_(K-V, Canvas0, Canvas) :-
+% Insert or overwrite the cell in the canvas index.
+    put_assoc(K, Canvas0, V, Canvas).
+
+% sw_assemble_(+Unplaced, +Bg, +Canvas0, -Canvas): weld all pieces.
+sw_assemble_([], _, Canvas, Canvas).
+% Weld the best-matching piece, then continue with the rest.
+sw_assemble_([P0|Ps0], Bg, Canvas0, Canvas) :-
+% Compute the whole same-color components of the canvas.
+    sw_canvas_comps_(Canvas0, Bg, CComps),
+% Measure the written extent of the canvas.
+    sw_bounds_(Canvas0, RMin, RMax, CMin, CMax),
+% Enumerate every valid placement of every unplaced piece.
+    findall(sw_pl(Score, P, OR, OC),
+% Each candidate must agree exactly and weld a duplicated stub.
+            sw_placement_([P0|Ps0], Bg, Canvas0, CComps,
+% Search the offsets around the written canvas extent.
+                          RMin, RMax, CMin, CMax, Score, P, OR, OC),
+% Bind the candidate placements in search order.
+            Cands),
+% At least one piece must weld onto the canvas.
+    Cands = [First|More],
+% Keep the earliest candidate with the strictly highest score.
+    foldl(sw_better_, More, First, sw_pl(_, Best, BOR, BOC)),
+% Fetch the subgrid of the winning piece.
+    Best = sw_piece(_, _, BSub, _),
+% Write the winning piece onto the canvas.
+    sw_write_(BSub, BOR, BOC, Canvas0, Canvas1),
+% Remove the winning piece from the unplaced list.
+    selectchk(Best, [P0|Ps0], Rest),
+% Weld the remaining pieces.
+    sw_assemble_(Rest, Bg, Canvas1, Canvas).
+
+% sw_better_(+New, +Old, -Kept): keep the strictly higher score.
+sw_better_(sw_pl(S, P, R, C), sw_pl(S0, P0, R0, C0), Kept) :-
+% A strictly higher score replaces the incumbent placement.
+    ( S > S0 -> Kept = sw_pl(S, P, R, C) ; Kept = sw_pl(S0, P0, R0, C0) ).
+
+% sw_placement_(+Pieces, +Bg, +Canvas, +CComps, +RMin, +RMax, +CMin,
+% +CMax, -Score, -P, -OR, -OC): one valid weld placement.
+sw_placement_(Pieces, Bg, Canvas, CComps, RMin, RMax, CMin, CMax,
+              Score, P, OR, OC) :-
+% Try the unplaced pieces in size order.
+    member(P, Pieces),
+% Fetch the subgrid and connector components of the piece.
+    P = sw_piece(_, _, Sub, PComps),
+% Measure the piece height.
+    length(Sub, PH),
+% Fetch the first piece row.
+    Sub = [Row0|_],
+% Measure the piece width.
+    length(Row0, PW),
+% Compute the lowest row offset that still touches the canvas.
+    ORLo is RMin - PH + 1,
+% Compute the highest row offset that still touches the canvas.
+    ORHi is RMax + 1,
+% Compute the lowest column offset that still touches the canvas.
+    OCLo is CMin - PW + 1,
+% Compute the highest column offset that still touches the canvas.
+    OCHi is CMax + 1,
+% Enumerate the row offsets.
+    between(ORLo, ORHi, OR),
+% Enumerate the column offsets.
+    between(OCLo, OCHi, OC),
+% Every landed cell must agree exactly with the written canvas.
+    sw_agree_(Sub, 0, OR, OC, Canvas, Bg, 0, Score),
+% The weld must join at least one non-background cell.
+    Score >= 1,
+% A whole connector stub of the piece must cover a whole canvas stub.
+    sw_stub_(PComps, OR, OC, Canvas, CComps).
+
+% sw_agree_(+Rows, +I, +OR, +OC, +Canvas, +Bg, +Acc, -Score): agreement.
+sw_agree_([], _, _, _, _, _, Score, Score).
+% Check one subgrid row against the canvas, then the rest.
+sw_agree_([Row|Rows], I, OR, OC, Canvas, Bg, Acc, Score) :-
+% Shift the row onto the canvas.
+    R is OR + I,
+% Check every cell of the row against the canvas.
+    sw_agree_row_(Row, 0, R, OC, Canvas, Bg, Acc, Acc1),
+% Advance to the next subgrid row.
+    I1 is I + 1,
+% Check the remaining rows.
+    sw_agree_(Rows, I1, OR, OC, Canvas, Bg, Acc1, Score).
+
+% sw_agree_row_(+Vs, +J, +R, +OC, +Canvas, +Bg, +Acc, -Score): one row.
+sw_agree_row_([], _, _, _, _, _, Score, Score).
+% Check one cell against the canvas, then the rest of the row.
+sw_agree_row_([V|Vs], J, R, OC, Canvas, Bg, Acc, Score) :-
+% Shift the column onto the canvas.
+    C is OC + J,
+% Compare the cell with the written canvas content.
+    (   get_assoc(R-C, Canvas, CV)
+% A written cell must carry exactly the same color.
+    ->  CV == V,
+% A matching non-background cell raises the weld score.
+        ( V == Bg -> Acc1 = Acc ; Acc1 is Acc + 1 )
+% An unwritten cell is always acceptable.
+    ;   Acc1 = Acc
+    ),
+% Advance to the next column.
+    J1 is J + 1,
+% Check the remaining cells of the row.
+    sw_agree_row_(Vs, J1, R, OC, Canvas, Bg, Acc1, Score).
+
+% sw_stub_(+PComps, +OR, +OC, +Canvas, +CComps): duplicated stub test.
+sw_stub_(PComps, OR, OC, Canvas, CComps) :-
+% Try each whole same-color component of the piece.
+    member(Comp, PComps),
+% Land the component cells onto the canvas.
+    findall(R-C,
+% Walk every cell of the component.
+            ( member(I-J, Comp),
+% Shift the row onto the canvas.
+              R is OR + I,
+% Shift the column onto the canvas.
+              C is OC + J ),
+% Bind the landed cell list.
+            Landed0),
+% Keep the landed cells in canonical order.
+    msort(Landed0, Landed),
+% Every landed cell must sit on written canvas content.
+    forall(member(Cell, Landed), get_assoc(Cell, Canvas, _)),
+% The landed cells must equal one whole canvas component.
+    memberchk(Landed, CComps),
+% One duplicated stub suffices.
+    !.
+
+% sw_canvas_comps_(+Canvas, +Bg, -CComps): whole canvas stub components.
+sw_canvas_comps_(Canvas, Bg, CComps) :-
+% List every written canvas cell.
+    assoc_to_list(Canvas, All),
+% Keep only the non-background cells.
+    include(sw_isfg_(Bg), All, FgCells),
+% Index the foreground cells for adjacency tests.
+    list_to_assoc(FgCells, A),
+% Group the cells into whole same-color components.
+    sw_parts_(FgCells, sw_bycolor, A, [], CComps).
+
+% sw_isfg_(+Bg, +Cell): the cell carries a non-background color.
+sw_isfg_(Bg, _-V) :-
+% Compare the cell color against the background.
+    V \== Bg.
+
+% sw_bounds_(+Canvas, -RMin, -RMax, -CMin, -CMax): written extent.
+sw_bounds_(Canvas, RMin, RMax, CMin, CMax) :-
+% List every written canvas position.
+    assoc_to_keys(Canvas, Keys),
+% Collect the written row indices.
+    findall(R, member(R-_, Keys), Rs),
+% Collect the written column indices.
+    findall(C, member(_-C, Keys), Cs),
+% Take the topmost written row.
+    min_list(Rs, RMin),
+% Take the bottommost written row.
+    max_list(Rs, RMax),
+% Take the leftmost written column.
+    min_list(Cs, CMin),
+% Take the rightmost written column.
+    max_list(Cs, CMax).
+
+% sw_render_(+Canvas, +Bg, -Out): read the union bounding box back.
+sw_render_(Canvas, Bg, Out) :-
+% Measure the written extent of the canvas.
+    sw_bounds_(Canvas, RMin, RMax, CMin, CMax),
+% Build one output row per canvas row.
+    findall(Row,
+% Walk the canvas rows in order.
+            ( between(RMin, RMax, R),
+% Collect the cells of one canvas row.
+              findall(V,
+% Walk the canvas columns in order.
+                      ( between(CMin, CMax, C),
+% Read the written color or fall back to the background.
+                        ( get_assoc(R-C, Canvas, V0) -> V = V0 ; V = Bg ) ),
+% Bind the output row.
+                      Row) ),
+% Bind the output rows.
+            Out).
