@@ -1,0 +1,113 @@
+Acc_386: ARC-AGI-2 Wave 88 - Band Jigsaw: Restacking Every Shape Flush Against a Ragged Band
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 88 of the ARC-AGI-2 benchmark climb: task 16b78196 solved using
+the band_jigsaw rule (WP-346, Layer 321). Score advances from
+84/120 = 70.00% to 85/120 = 70.83%.
+
+TASK DESCRIPTION
+
+Task 16b78196 presents two training pairs and one test case. All
+grids are 30x30, and every output has the same size as its input.
+Each grid holds one wide band component whose bounding box spans
+the full grid width - or, in the test case, the full grid height -
+with ragged, notched edges, plus three to five small single-color
+shapes scattered around it. The output keeps the band exactly where
+it is, erases the shapes from their original positions, and
+restacks every shape flush against the band so the pieces interlock
+like a jigsaw puzzle: each chain of shapes exactly fills the space
+between the band's ragged edge and a perfectly straight outer line,
+plugging the band's notches on the way.
+
+RULE: band_jigsaw
+
+The glass-box rule is a five-stage procedure whose parameters are
+all read off the input grid at solve time:
+
+1. SHAPE COLLECTION (tw_background_/2, tw_components_/2, bj_span_/4)
+   The majority color is the background, the foreground cells group
+   into 8-connected components, and the unique component whose
+   bounding box spans the full grid width or height is the band.
+
+2. CANONICALIZATION (bj_canon_dims_/5, bj_canon_cells_/3,
+   bj_profile_/4, bj_flipnum_/3)
+   A vertical band is transposed into the canonical horizontal
+   frame. The band's bottom profile takes the maximum band row per
+   column and its top profile the minimum; the top side is
+   reflected vertically so both sides solve as a bottom-side chain.
+
+3. SIDE ASSIGNMENT (bj_partition_/3, bj_norm_/2, bj_flipnorm_/3)
+   The shapes are partitioned between the two sides of the band by
+   search, and each shape is normalized to a sorted cell list
+   relative to its bounding-box corner. The human-steps reading -
+   wide shapes above, narrow shapes below - is wrong in general,
+   because the second training pair stacks all three shapes below.
+
+4. CHAIN SOLVING (bj_chain_/5)
+   For each side the solver picks a column interval at least as
+   wide as the widest assigned shape. The straight outer edge row
+   is then forced by arithmetic: interval width times outer row
+   minus the profile sum must equal the total shape area. The
+   region of all cells between the profile and that outer edge is
+   built and exact-tiled by anchored exact cover (bj_tile_/3): the
+   row-major first uncovered cell must host some unused shape's
+   row-major first cell, shapes translate but never rotate or flip,
+   and every shape cell must land inside the region.
+
+5. ASSEMBLY (bj_unflip_/3, bj_uncanon_cell_/3, tt_render_/5)
+   The output is a fresh background canvas holding the untouched
+   band cells plus the placed shape cells, mapped back through the
+   vertical flip and the transposition.
+
+INDUCTION
+
+The induce clause dispatches early, directly after twin_toggle. Its
+pre-filter requires the first training pair to preserve both grid
+dimensions, requires 20 to 500 foreground cells, exactly one
+component spanning a full grid dimension, and two to eight movable
+shapes of at most 40 cells each. The clause then verifies every
+training pair with a forall over the transform, so induction is
+pure verification.
+
+KEY INSIGHT
+
+Hand-tracing all six grids before coding showed that every shape
+keeps its exact cell pattern and orientation and only translates,
+and that the union of each chain fills a region bounded by the
+band's ragged edge on one side and a perfectly straight line on the
+other. That straight outer edge is the discriminating observation:
+given a column interval and the total area of the assigned shapes,
+the outer edge row is a computed quantity rather than a searched
+one, which collapses the packing search to a handful of exact-cover
+calls. The test grid rotates the whole scene ninety degrees - a
+vertical band with chains pressing on its left and right - so the
+orientation-general canonicalization by transposition plus vertical
+flip, flagged as mandatory by the Wave 85-87 surveys, carried the
+test case unchanged.
+
+VERIFICATION
+
+Both training pairs and the test case pass in SWI-Prolog under
+arc2_induce_rule/2 followed by arc2_transform/3. A full regression
+of all 84 locally verified tasks (83 prior plus 16b78196) still
+induces and passes with zero regressions. Implementation: twelve
+bj_* helper predicates and the band_jigsaw transform at the end of
+arc_benchmark_2.pl, with one explanatory comment above every code
+line. The rule passed both training pairs and the test case on the
+first prototype run and the full regression on the first compile.
+
+METHODOLOGY
+
+Pure induction from training examples only. No pretraining on the
+ARC-AGI-2 corpus. Named glass-box rules for every solved task.
+
+SPARC documentation: Mentova Specification v317, Pseudocode v309,
+Architecture v310, Refinement v369, Completion v375; PrologAI
+Specification v314, Pseudocode v306, Architecture v307, Refinement
+v366, Completion v372. Tutorial chapter Ch306 added.

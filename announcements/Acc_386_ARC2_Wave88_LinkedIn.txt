@@ -1,0 +1,39 @@
+Accomplishment 386: ARC-AGI-2 Wave 88 - Band Jigsaw: Restacking Every Shape Flush Against a Ragged Band
+
+PrologAI solves ARC-AGI-2 task 16b78196 with a new glass-box rule
+called band_jigsaw (WP-346, Layer 321), raising the benchmark score
+from 84/120 = 70.00% to 85/120 = 70.83%.
+
+Each grid holds one wide band component that spans the full grid
+width - or, in the test case, the full grid height - with ragged,
+notched edges, plus a handful of small single-color shapes
+scattered around it. The answer keeps the band exactly where it is
+and restacks every shape flush against it, so the pieces interlock
+like a jigsaw puzzle: each chain of shapes exactly fills the space
+between the band's ragged edge and a perfectly straight outer line,
+plugging the band's notches on the way. Shapes translate only -
+they are never rotated, flipped, or recolored.
+
+The key insight is that the straight outer edge is a computed
+quantity, not a searched one. Once a column interval is chosen, the
+exact-area equation - interval width times outer row minus the
+band's profile sum equals the total shape area - forces the outer
+edge row, and the region between profile and edge is exact-tiled by
+anchored exact cover: the first uncovered cell in row-major order
+must host some unused shape's first cell. The human-steps reading
+of the task, wide shapes above and narrow shapes below, is wrong in
+general - one training pair stacks all three shapes below the band
+- so the side split is searched rather than assumed. And because
+the test grid rotates the whole scene ninety degrees, the solver
+canonicalizes a vertical band by transposition and solves the far
+side by vertical flip, handling all orientations with one
+mechanism.
+
+The rule has no learned parameters. The background, the band, its
+edge profiles, the shape inventory, the side split, and every
+placement are all read off the input grid at answer time, and
+induction is pure verification of both training pairs. Pure
+induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
