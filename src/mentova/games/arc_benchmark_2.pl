@@ -1243,6 +1243,40 @@ arc2_induce_rule(TrainingPairs, hole_beacon) :-
 % Each training pair must transform correctly under hole_beacon.
            arc2_transform(hole_beacon, In, Out)).
 
+% corner_glyph: early dispatch before generic clause (WP-358, Layer 333).
+% Enumerate corner_glyph as a known rule name.
+arc2_named_rule(corner_glyph).
+% arc2_induce_rule(corner_glyph): template-corner pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, corner_glyph) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Identify the background as the most frequent color.
+    arc2_bg_color_(First, Bg),
+% The background must not be the zero border color.
+    Bg =\= 0,
+% Flatten the first input for palette analysis.
+    append(First, AllCells),
+% Zero box borders must be present in the input.
+    memberchk(0, AllCells),
+% A fully decorated template corner must exist in the first input.
+    once(cg_template_(First, Bg, _, _)),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under corner_glyph.
+           arc2_transform(corner_glyph, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -21786,3 +21820,196 @@ hb_paint_(V, RR-CC, Grid0, Grid) :-
 hb_center_(R-C-_, Grid0, Grid) :-
 % The beacon center is always in bounds and is painted 8.
     arc2_set_cell_(Grid0, R, C, 8, Grid).
+
+% ---------------------------------------------------------------------------
+% CORNER GLYPH (WP-358, Layer 333)
+% corner_glyph: boxes outlined in the zero border color sit on a solid
+% background; one box corner already carries a full multi-cell decoration
+% (the template) whose cells define a shape in that corner's outward frame,
+% and the shape's most inward diagonal cell is the marker position.  Every
+% box corner is detected by a tolerant L-junction test that lets decoration
+% cells overwrite border cells along the corner arms.  Every corner whose
+% own marker position holds a single non-background, non-border color then
+% receives the complete template shape stamped in that marker color,
+% mirrored into the corner's orientation, with out-of-bounds stamp cells
+% clipped away; template corners repaint themselves unchanged.
+% Reference: ARC-AGI-2 task 4c416de3 -- marked corners grow the template.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(corner_glyph): stamp the template shape at marked corners.
+arc2_transform(corner_glyph, Grid, Out) :-
+% Identify the background as the most frequent color.
+    arc2_bg_color_(Grid, Bg),
+% The background must not be the zero border color.
+    Bg =\= 0,
+% Learn the template shape from the first fully decorated corner.
+    once(cg_template_(Grid, Bg, _, Shape)),
+% Locate the marker offset on the shape's inward diagonal.
+    cg_marker_(Shape, M),
+% Collect every corner whose marker cell holds a stamp color.
+    findall(corner(R, C, U, V, X),
+% Enumerate every detected box corner with its orientation.
+            (cg_corner_(Grid, Bg, R, C, U, V),
+% Compute the marker row for this corner.
+             MR is R + M * U,
+% Compute the marker column for this corner.
+             MC is C + M * V,
+% Read the marker cell color.
+             arc2_cell_(Grid, MR, MC, X),
+% The marker color must not be the background.
+             X =\= Bg,
+% The marker color must not be the zero border color.
+             X =\= 0),
+% Bind the collected marked corners.
+            Corners),
+% At least one marked corner must exist for the rule to be meaningful.
+    Corners \= [],
+% Stamp the template shape at every marked corner.
+    foldl(cg_stamp_(Shape), Corners, Grid, Out).
+
+% cg_not_zero_(+Grid, +R, +C): the cell is out of bounds or not zero.
+cg_not_zero_(Grid, R, C) :-
+% Read the cell when it lies inside the grid.
+    (   arc2_cell_(Grid, R, C, V)
+% An in-bounds cell must not carry the zero border color.
+    ->  V =\= 0
+% Out-of-bounds cells never carry a border.
+    ;   true
+    ).
+
+% cg_arm_(+Grid, +Bg, +R, +C, +DR, +DC): a border arm runs inward from a corner.
+cg_arm_(Grid, Bg, R, C, DR, DC) :-
+% Collect the colors of the in-bounds arm cells.
+    findall(V,
+% Step one to four cells along the arm direction.
+            (between(1, 4, K),
+% Compute the probed arm row.
+             RR is R + K * DR,
+% Compute the probed arm column.
+             CC is C + K * DC,
+% Read the probed cell; out-of-bounds probes are clipped away.
+             arc2_cell_(Grid, RR, CC, V)),
+% Bind the collected arm colors.
+            Vs),
+% No arm cell may show the background; decorations may overwrite borders.
+    forall(member(V, Vs), V =\= Bg),
+% Count the arm cells that still show the zero border color.
+    aggregate_all(count, member(0, Vs), NZ),
+% At least two zero border cells must survive on the arm.
+    NZ >= 2.
+
+% cg_corner_(+Grid, +Bg, -R, -C, -U, -V): a box corner with its outward frame.
+cg_corner_(Grid, Bg, R, C, U, V) :-
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% The highest row index of the grid.
+    HM is H - 1,
+% The highest column index of the grid.
+    WM is W - 1,
+% Enumerate every row index.
+    between(0, HM, R),
+% Enumerate every column index.
+    between(0, WM, C),
+% Read the candidate corner cell.
+    arc2_cell_(Grid, R, C, Val),
+% The corner cell is a border zero or a decoration, never background.
+    Val =\= Bg,
+% Enumerate the outward row direction.
+    member(U, [-1, 1]),
+% Enumerate the outward column direction.
+    member(V, [-1, 1]),
+% The inward horizontal direction.
+    NV is -V,
+% A border arm must run inward horizontally.
+    cg_arm_(Grid, Bg, R, C, 0, NV),
+% The inward vertical direction.
+    NU is -U,
+% A border arm must run inward vertically.
+    cg_arm_(Grid, Bg, R, C, NU, 0),
+% The outward row neighbor.
+    OR is R + U,
+% No border may continue outward vertically.
+    cg_not_zero_(Grid, OR, C),
+% The outward column neighbor.
+    OC is C + V,
+% No border may continue outward horizontally.
+    cg_not_zero_(Grid, R, OC),
+% The inward diagonal row.
+    IR is R - U,
+% The inward diagonal column.
+    IC is C - V,
+% Read the inward diagonal cell; the box interior must exist.
+    arc2_cell_(Grid, IR, IC, IV),
+% The inward diagonal cell is interior, never a border zero.
+    IV =\= 0.
+
+% cg_template_(+Grid, +Bg, -X, -Shape): a decorated template corner's shape.
+cg_template_(Grid, Bg, X, Shape) :-
+% Enumerate every detected box corner.
+    cg_corner_(Grid, Bg, R, C, U, V),
+% Collect every decorated cell near the corner in frame coordinates.
+    findall(Col-P-Q,
+% Scan the rows of the five-by-five window around the corner.
+            (between(-2, 2, DR),
+% Scan the columns of the five-by-five window around the corner.
+             between(-2, 2, DC),
+% Compute the probed window row.
+             RR is R + DR,
+% Compute the probed window column.
+             CC is C + DC,
+% Read the probed cell inside the grid.
+             arc2_cell_(Grid, RR, CC, Col),
+% Decoration cells are never the background.
+             Col =\= Bg,
+% Decoration cells are never the zero border color.
+             Col =\= 0,
+% The frame row coordinate: positive points outward.
+             P is DR * U,
+% The frame column coordinate: positive points outward.
+             Q is DC * V),
+% Bind the collected decorated cells.
+            Marks),
+% List the colors of all decorated cells near the corner.
+    findall(Col, member(Col-_-_, Marks), Cols),
+% Order the colors so duplicates sit together.
+    msort(Cols, Sorted),
+% The distinct decoration colors near the corner.
+    sort(Sorted, Uniq),
+% Choose a candidate template color.
+    member(X, Uniq),
+% Count the cells of the candidate color.
+    aggregate_all(count, member(X, Sorted), N),
+% A template decoration covers at least three cells; glyphs cover one.
+    N >= 3,
+% Collect the frame offsets of the template color's cells.
+    findall(P-Q, member(X-P-Q, Marks), Shape0),
+% Order the shape offsets canonically.
+    sort(Shape0, Shape).
+
+% cg_marker_(+Shape, -M): the shape's most inward diagonal offset.
+cg_marker_(Shape, M) :-
+% Collect every inward offset on the shape's own diagonal.
+    findall(P, (member(P-P, Shape), P < 0), Ps),
+% The shape must reach inward along the diagonal.
+    Ps \= [],
+% The most inward diagonal offset is the marker position.
+    min_list(Ps, M).
+
+% cg_stamp_(+Shape, +Corner, +Grid0, -Grid): stamp one corner's decoration.
+cg_stamp_(Shape, corner(R, C, U, V, X), Grid0, Grid) :-
+% Map every shape offset to an absolute grid cell for this corner.
+    findall(RR-CC,
+% Take each offset of the template shape.
+            (member(P-Q, Shape),
+% Compute the absolute stamp row from the frame offset.
+             RR is R + P * U,
+% Compute the absolute stamp column from the frame offset.
+             CC is C + Q * V),
+% Bind the collected stamp cells.
+            Cells),
+% Paint the marker color over every in-bounds stamp cell.
+    foldl(hb_paint_(X), Cells, Grid0, Grid).

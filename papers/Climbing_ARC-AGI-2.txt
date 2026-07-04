@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 99 complete: 96/120 = 80.00%.
+Last updated: 2026-07-04. Wave 100 complete: 97/120 = 80.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -221,6 +221,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  |  94 / 120  | 78.33%  | Wave 97: hub_dock the scene shows one hub piece - an eight-cell ring in a four-by-four bounding box whose four sides carry two centered cells each, every side in its own color - plus loose single-color shapes scattered on the background; every shape whose color matches a hub side is rotated by the unique multiple of ninety degrees that turns a bounding-box side holding exactly two adjacent centered cells toward that hub side, then parked flush against the hub so its two contact cells sit directly next to the two hub edge cells, and shapes matching no hub side are erased - requiring the contact side to hold exactly the two centered cells is the discriminating observation, because it rejects the full-length sides and the off-center sides that would otherwise fit and it pins both the rotation and the translation uniquely
 2026-07-04  |  95 / 120  | 79.17%  | Wave 98: twin_beam the grid is a ladder - even rows carry a colored horizontal bar plus optional pipe decorations to the right, odd rows are 7-filled separator corridors, and every row opens with a 6 lamp in column zero; a separator fires when the bars directly above and below share one color, and its lamp leaves column zero and travels as a beam heading right through the 7 corridors; leaving the grid the beam rests on its last cell, and hitting an obstacle it checks the two perpendicular cells - with exactly one open it turns there, except that a turn to heading left is refused while the current row still holds its own lamp, and with zero or two open cells it rests where it stands; each rest cell is painted 6 - the lamp guard on left turns is the discriminating observation, because the third training pair's beam rests beside an open leftward corridor whose row keeps its lamp while the test grid's beam turns left along a fired row whose lamp has departed
 2026-07-04  |  96 / 120  | 80.00%  | Wave 99: hole_beacon the grid holds two large rectilinear regions of two distinct colors on a zero background, disturbed by single-cell noise - background holes inside the regions, wrong-colored cells inside the regions, and colored strays scattered over the background; every cell is labeled region A, region B, or background by a majority vote over the eight cells of its orthogonal cross neighborhood at distances one and two, ties broken by the cell's own color, and a second vote pass runs over the first pass's labels so already-silenced strays cannot distort the vote; strays labeled background are erased, wrong-colored cells are repaired to their region color, and every background hole inside a region becomes a beacon - a three-by-three stamp whose ring takes the rival region's color and whose center is painted 8, centers painted after all rings and stamps clipped at the grid edges - the second vote pass is the discriminating observation, because two stray cells sitting two steps from a background hole near the region border tip a single raw-color vote into stamping a spurious beacon, while after one relabeling pass the strays already carry background labels and stay silent
+2026-07-04  |  97 / 120  | 80.83%  | Wave 100: corner_glyph the scene holds boxes outlined in zero on a solid background; one box corner already carries a full multi-cell decoration - the template - whose cells define a shape in that corner's outward frame, and the shape's most inward diagonal cell is the marker position; box corners are detected by a tolerant L-junction test whose border arms allow decoration cells to overwrite border cells, and every corner whose own marker position holds a single non-background, non-border color receives the complete template shape stamped in that marker color, mirrored into the corner's orientation, with out-of-bounds stamp cells clipped away - the tolerant arm test is the discriminating observation, because the template decoration overwrites the border cells beside its own corner and, on a five-cell box side, even sits within arm reach of the opposite corner, so a strict all-zero arm test loses exactly the marked corners that must be stamped
 
 
 COMPLETE SCORE PROGRESSION
@@ -1241,6 +1242,80 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 100 - 2026-07-04 - Score: 97/120 = 80.83%
+
+Date: 2026-07-04
+
+Confirmed score: 97 / 120 = 80.83%
+
+Milestone: this is the one hundredth wave of the climb.
+
+Rules added in this wave:
+  corner_glyph (WP-358, Layer 333)
+
+Task solved: 4c416de3 (3 training pairs + 1 test case; grids
+  from 19x22 to 23x23; the output always keeps the input size).
+
+Algorithm: template-corner learning with oriented glyph stamps.
+  Stage 1: read the background as the most frequent color; boxes
+  are axis-aligned rectangles outlined in zero, possibly clipped
+  by the grid edge.
+  Stage 2: detect every box corner together with its outward
+  orientation frame (u, v) by a tolerant L-junction test: the
+  corner cell is never background, two border arms run inward
+  (horizontally and vertically) whose first four cells are never
+  background and keep at least two zero cells each - decoration
+  cells may overwrite border cells anywhere on the arm - while
+  the outward neighbors carry no border and the inward diagonal
+  cell is interior.
+  Stage 3: find the template corner - a corner with at least
+  three cells of one color within Chebyshev distance two - and
+  record those cells as the shape, each offset expressed in
+  frame coordinates (p = dr times u, q = dc times v), so the
+  shape is automatically mirrored between corner orientations.
+  Stage 4: the marker position is the shape's most inward offset
+  on its own diagonal (p equals q, p negative, p minimal).
+  Stage 5: every detected corner whose marker cell holds a
+  non-background, non-zero color receives the complete template
+  shape stamped in that color, transformed through its own frame,
+  with out-of-bounds stamp cells clipped away; template corners
+  repaint themselves unchanged, so the stamp is idempotent.
+
+Bugs fixed: one prototype-stage arm-test bug. The first corner
+  detector required arm cells at distances three and four to be
+  exact border zeros, which lost two corners of the third
+  training pair's five-cell box - the template decoration at one
+  corner sits within arm reach of the opposite corner - and one
+  of the lost corners carried a marker, so one stamp went
+  missing. Relaxing the arm test to forbid only background cells
+  while still demanding two surviving zeros per arm fixed the
+  third pair without admitting any false corner; every
+  previously rejected false candidate still fails on the zero
+  count or on the perpendicular arm. The Prolog port then passed
+  the single-task test and the full regression on the first
+  compile.
+
+Lessons learned: when decorations are allowed to overwrite the
+  very structure that locates them - here corner stamps painting
+  over their own box borders - the structural detector must be
+  exactly as tolerant as the decoration is destructive, and no
+  more: forbid what can never happen (background on a border
+  arm), count what must survive (two zeros per arm), and let
+  everything the transform itself may legally paint pass
+  through. Expressing the template shape in each corner's
+  outward frame made mirroring free: one coordinate transform
+  (p = dr times u, q = dc times v) canonicalizes the shape at
+  the template corner and orients it correctly at all four
+  corner types, which is the same derive-roles-per-grid habit
+  that carried Waves 95 through 97, applied this time to
+  geometry instead of color.
+
+Accomplishment: Acc_398.  Paper: Acc_398_ARC2_Wave100_CornerGlyph.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5327,6 +5402,7 @@ e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; gre
 981571dc  - Wave 66 - mosaic_heal        - symmetric mosaic 0-damage healed; rows/cols borrow from compatible donors to fixpoint; diagonal mirror fallback
 9bbf930d  - Wave 98 - twin_beam          - ladder of bar rows with column-zero 6 lamps; separators between twin same-colored bars fire their lamps as rightward beams through the 7 corridors; a beam turns at an obstacle onto its unique open side, refuses a left turn while the row keeps its own lamp, rests at boundaries and two-way junctions, and paints a 6 where it rests
 de809cff  - Wave 99 - hole_beacon        - two rectilinear regions on zero background denoised by a two-pass cross-neighborhood majority vote; strays erased, wrong-colored cells repaired, and every background hole inside a region stamped as a 3x3 beacon with a rival-colored ring and an 8 center
+4c416de3  - Wave 100 - corner_glyph      - zero-outlined boxes on a solid background; the one fully decorated corner teaches a shape in frame coordinates, and every corner holding a single glyph color at the shape's inward-diagonal marker position gets the full shape stamped in that color, mirrored to its orientation
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
@@ -5784,4 +5860,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 98: Twin-beam - the grid is a ladder: even r
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 99: Hole-beacon - the grid holds two large rectilinear regions of two distinct colors on a zero background, disturbed by single-cell noise: background holes inside the regions, wrong-colored cells inside the regions, and colored strays scattered over the background; every cell is labeled region A, region B, or background by a majority vote over the eight cells of its orthogonal cross neighborhood at distances one and two, with ties broken by the cell's own input color when it is among the tied leaders, and a second identical vote pass runs over the first pass's labels instead of the raw colors so that strays the first pass already silenced cannot distort any neighbor's vote; strays labeled background are erased, wrong-colored cells are repaired to their region color, and every background hole inside a region becomes a beacon - a three-by-three stamp centered on the hole whose ring takes the rival region's color and whose center is painted 8, with all centers painted after all rings and stamps clipped at the grid edges; the second vote pass is the discriminating observation of the wave, because on the test grid two stray cells sitting two steps from a background cell near the region border tip a single raw-color vote into stamping a spurious beacon, while after one relabeling pass those strays already carry background labels and stay silent.
   Score: 96/120 = 80.00%. Task de809cff solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 100: Corner-glyph - the scene holds boxes outlined in the zero border color on a solid background; one box corner already carries a full multi-cell decoration, the template, whose cells define a shape expressed in that corner's outward frame (p = dr times u, q = dc times v), and the shape's most inward cell on its own diagonal is the marker position; every box corner is detected together with its orientation by a tolerant L-junction test whose two inward border arms may carry decoration cells anywhere but never background cells and must keep at least two zero border cells each, while the outward neighbors carry no border and the inward diagonal cell is interior; every corner whose own marker position holds a single non-background, non-zero color then receives the complete template shape stamped in that marker color, transformed through its own frame so the shape mirrors correctly at all four corner types, with out-of-bounds stamp cells clipped away and template corners repainting themselves unchanged; the tolerant arm test is the discriminating observation of the wave, because the template decoration overwrites the border cells beside its own corner and, on a five-cell box side, even sits within arm reach of the opposite corner, so a strict all-zero arm test loses exactly the marked corners that must be stamped.
+  Score: 97/120 = 80.83%. Task 4c416de3 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.

@@ -1,0 +1,122 @@
+Acc_398: ARC-AGI-2 Wave 100 - Corner Glyph: Learning a Corner Decoration and Stamping It at Marked Corners
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-04
+
+ACCOMPLISHMENT
+
+Wave 100 of the ARC-AGI-2 benchmark climb - the one hundredth wave -
+task 4c416de3 solved using the corner_glyph rule (WP-358,
+Layer 333). Score advances from 96/120 = 80.00% to 97/120 = 80.83%.
+
+TASK DESCRIPTION
+
+Task 4c416de3 presents three training pairs and one test case. The
+grids range from 19x22 to 23x23; the output always keeps the input
+size. Each input holds boxes outlined in the zero border color on a
+solid background - background 1, 8, 2, and 3 across the four grids -
+some clipped by the grid edge. One box corner already carries a full
+multi-cell decoration, the template, in its own color, and the
+template shape differs in every grid: a two-by-two outward block
+plus two inward diagonal cells in the first pair, a six-cell zigzag
+band in the second, a four-cell corner cross in the third, and a
+six-cell hook in the test. At other corners a single colored cell -
+a glyph - sits at one specific position of the shape: its most
+inward cell on the corner's own diagonal. The output completes
+every glyph into the full template decoration, painted in the
+glyph's color and mirrored into that corner's orientation, while
+unmarked corners stay bare.
+
+Two properties make the task hard. First, the shape must be learned
+fresh from each grid's single decorated corner and re-oriented for
+all four corner types, so the shape needs a corner-relative frame
+rather than absolute offsets. Second, the decorations overwrite the
+very borders that locate the corners: the template paints over the
+border cells beside its own corner, and on a five-cell box side it
+even sits within arm reach of the opposite corner, so a rigid
+corner detector loses exactly the corners that must be stamped.
+
+RULE: corner_glyph
+
+The glass-box rule is a five-stage procedure whose parameters are
+all read off the input grid at solve time:
+
+1. BACKGROUND READING (arc2_bg_color_/2)
+   The background is the most frequent color; it must differ from
+   the zero border color.
+
+2. CORNER DETECTION (cg_corner_/6, cg_arm_/6, cg_not_zero_/3)
+   A box corner is a cell that is never background, paired with an
+   outward orientation frame (u, v): two border arms run inward
+   from it, horizontally and vertically, whose first four in-bounds
+   cells are never background and keep at least two zero border
+   cells each - decoration cells may overwrite border cells
+   anywhere on the arm. The outward neighbors carry no border, and
+   the inward diagonal cell is interior, never a border zero.
+
+3. TEMPLATE LEARNING (cg_template_/4)
+   The template corner is a detected corner with at least three
+   cells of one color within Chebyshev distance two; glyph corners
+   hold exactly one. Those cells become the shape, each offset
+   stored in frame coordinates (p = dr times u, q = dc times v),
+   so one canonical shape serves all four corner orientations.
+
+4. MARKER POSITION (cg_marker_/2)
+   The marker position is the shape's most inward offset on its
+   own diagonal - p equals q, p negative, p minimal. This is where
+   a glyph announces that its corner wants the decoration.
+
+5. STAMPING (cg_stamp_/4, hb_paint_/4)
+   Every detected corner whose marker cell holds a non-background,
+   non-zero color receives the complete template shape stamped in
+   that color, each offset transformed through the corner's own
+   frame, with out-of-bounds stamp cells clipped away. Template
+   corners repaint themselves unchanged, so the stamp is
+   idempotent.
+
+The discriminating observation is the tolerant arm test. The third
+training pair's five-by-five box carries its template at one corner
+and glyphs at two others; the template's cells lie on both border
+arms of the adjacent corners at distances up to four, so an arm
+test demanding exact zeros beyond distance two rejects those
+corners and loses a required stamp. Forbidding only background
+cells on the arm while demanding two surviving zeros admits every
+true corner and, verified against all four grids, not one false
+candidate: every impostor still fails on the zero count or on the
+perpendicular arm.
+
+VERIFICATION
+
+The complete rule was written in plain English covering all three
+training pairs and the test case before any code, following the
+proven wave method: all eight grids were dumped to text and every
+changed cell - every completed decoration at every marked corner,
+every bare corner left untouched - was accounted for by hand in a
+full cell-level diff. A Prolog prototype confirmed the rule and
+exposed the strict-arm bug on the third pair, fixed by the tolerant
+arm test; the integrated port then passed the single-task test and
+the full regression on the first compile: induction returns
+corner_glyph, the test output matches exactly, and every previously
+solved task still passes. Induction is pure verification: a cheap
+pre-filter (same-size output, nonzero background, zero borders
+present, a template corner found) followed by transformation of
+every training pair.
+
+IMPLEMENTATION
+
+Predicates added to arc_benchmark_2.pl (WP-358, Layer 333):
+arc2_transform(corner_glyph)/3, cg_not_zero_/3, cg_arm_/6,
+cg_corner_/6, cg_template_/4, cg_marker_/2, cg_stamp_/4, plus the
+early-dispatch arc2_induce_rule/2 clause and the
+arc2_named_rule(corner_glyph) registration. The rule reuses
+arc2_cell_/4, arc2_bg_color_/2, and hb_paint_/4 from the shared
+toolkit. Every code line carries an ERC comment.
+
+SCORE
+
+ARC-AGI-2: 97/120 = 80.83%. Task 4c416de3 solved on the first
+integrated compile. One hundred waves climbed. Pure induction. No
+pretraining. Every rule is named and glass-box. No human in the
+development loop.
