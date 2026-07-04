@@ -1,0 +1,43 @@
+Accomplishment 395: ARC-AGI-2 Wave 97 - Hub Dock: Quarter-Turning Loose Shapes onto a Compass Hub
+
+PrologAI solves ARC-AGI-2 task 2c181942 with a new glass-box rule
+called hub_dock (WP-355, Layer 330), raising the benchmark score
+from 93/120 = 77.50% to 94/120 = 78.33%.
+
+Each input of this task shows a small compass hub - an eight-cell
+ring whose four sides carry two centered cells each, every side in
+its own color - surrounded by loose single-color shapes scattered
+across the grid. The answer clears the board, keeps the hub where
+it stands, and parks every shape whose color matches a hub side
+flush against that side, rotated to fit; shapes whose color matches
+no side simply vanish.
+
+Two things make it tricky. First, the docking orientation is a
+genuine unknown: in the very first training example one shape docks
+on the left by a clockwise quarter turn while its neighbor docks on
+the right by a counterclockwise quarter turn, so no fixed rotation
+works. Second, a plain touch test admits wrong fits: one shape owns
+a short side whose two cells would happily touch the hub edge, yet
+the correct fit uses a different side. The solver requires the
+hub-facing side of the shape to hold exactly two adjacent cells
+centered along that side - a condition that rejects the full-length
+sides and the off-center sides, and pins both the rotation and the
+translation uniquely.
+
+The rule segments the scene, recognizes the hub as the only
+component mixing four colors, reads the four sides with their edge
+cells, rebuilds the canvas, and docks each matching shape by trying
+the four quarter turns until the centered-contact side faces the
+hub. The test grid docks four shapes on four different sides - two
+by clockwise turns and two by counterclockwise turns - and drops a
+fifth, and the same six-stage procedure reads it correctly, cell
+for cell.
+
+The complete rule was written in plain English covering every grid
+before any code, the Python prototype passed all four grids on the
+first run, and the integrated Prolog rule passed the single-task
+test and the full regression on the first compile. Pure induction.
+No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

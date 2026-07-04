@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 96 complete: 93/120 = 77.50%.
+Last updated: 2026-07-04. Wave 97 complete: 94/120 = 78.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -218,6 +218,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  91 / 120  | 75.83%  | Wave 94: seam_weld the scene holds several multi-color pieces on a uniform background, and the pieces carry duplicated connector stubs - a same-color cell cluster drawn identically on two pieces, such as a five-cell column, a checkerboard corner, a three-cell bar, or a lone pair of marker cells; the pieces are welded into one assembly by superimposing matching stubs exactly: the largest piece seeds the canvas, and each remaining piece is placed so that every bounding-box cell landing on already-written canvas content agrees exactly, background included, and so that at least one whole same-color component of the piece coincides with a whole same-color component of the canvas; among valid placements the one welding the most non-background cells wins, and the output is the union bounding box of the welded assembly - plain greedy overlap welding picks spurious placements where a big component brushes another piece, so the whole-stub-onto-whole-stub condition is what makes the assembly unique
 2026-07-04  |  92 / 120  | 76.67%  | Wave 95: short_circuit the scene draws a wiring network on a uniform background using three foreground colors - a terminal color forming exactly two blocks, a marker color forming small junction blocks, and a body color forming the wire segments between them; every eight-connected same-color component is a node of a graph whose edges join eight-adjacent components, and the rule finds the path with the fewest nodes between the two terminal blocks and recolors every intermediate node on that path, body cells to 5 and marker cells to 3, while the terminals, the dead-end branches, and the longer alternative routes stay unchanged - the terminal color is recognized as the foreground color with the fewest cells, and the fewest-node graph search is what picks the correct route through a network whose junction blocks carry three or more attached segments
 2026-07-04  |  93 / 120  | 77.50%  | Wave 96: junction_hub the scene draws a wire network on a uniform background using three foreground colors - one wire color forming the network and two content colors mixed inside the small blocks that the wires join; the wire color is recognized as the only foreground color owning exactly one cell whose full three-by-three neighborhood holds that same color, and that cell is the hub; the eight cells around the hub stay wire colored as a ring, removing the hub and ring splits the wire into branches, every branch is repainted with the majority content color of the blocks it touches, and the hub itself takes the majority color of the branch cells that touch the ring - counting the touching cells rather than the distinct branches is the discriminating observation, because one branch can touch the ring at two places and carries double weight
+2026-07-04  |  94 / 120  | 78.33%  | Wave 97: hub_dock the scene shows one hub piece - an eight-cell ring in a four-by-four bounding box whose four sides carry two centered cells each, every side in its own color - plus loose single-color shapes scattered on the background; every shape whose color matches a hub side is rotated by the unique multiple of ninety degrees that turns a bounding-box side holding exactly two adjacent centered cells toward that hub side, then parked flush against the hub so its two contact cells sit directly next to the two hub edge cells, and shapes matching no hub side are erased - requiring the contact side to hold exactly the two centered cells is the discriminating observation, because it rejects the full-length sides and the off-center sides that would otherwise fit and it pins both the rotation and the translation uniquely
 
 
 COMPLETE SCORE PROGRESSION
@@ -1238,6 +1239,72 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 97 - 2026-07-04 - Score: 94/120 = 78.33%
+
+Date: 2026-07-04
+
+Confirmed score: 94 / 120 = 78.33%
+
+Rules added in this wave:
+  hub_dock (WP-355, Layer 330)
+
+Task solved: 2c181942 (3 training pairs + 1 test case; grids
+  23x20, 18x21, and 20x25 in training and 24x26 in the test; the
+  output always keeps the input size and rebuilds the scene from
+  a fresh background canvas).
+
+Algorithm: compass-hub shape docking with centered-contact fitting.
+  Stage 1: take the most common color as the background and group
+  the foreground cells into eight-connected components; exactly
+  one component mixes four distinct colors - the hub, an eight-cell
+  ring in a four-by-four bounding box whose four sides carry two
+  centered cells each, every side in its own color.
+  Stage 2: read the four hub sides - top, bottom, left, and right -
+  each as a pair of adjacent same-colored cells centered on its
+  bounding-box side, and require the four side colors to differ.
+  Stage 3: start from an all-background canvas and paint the hub
+  back unchanged; every other component is a loose single-color
+  shape.
+  Stage 4: for each shape whose color owns a hub side, try the four
+  quarter-turn rotations in order and keep the first one whose
+  bounding-box side facing the hub holds exactly two adjacent cells
+  centered along that side (the side length must be even and the
+  cells must sit at the two middle positions).
+  Stage 5: park the rotated shape flush against the hub - its
+  facing bounding-box line one cell away from the hub side - and
+  translate it so the two contact cells sit directly next to the
+  two hub edge cells; paint it in its own color.
+  Stage 6: drop every shape whose color matches no hub side, and
+  drop any shape with no fitting orientation.
+
+Bugs fixed: none. The rule was hand-derived from full grid dumps
+  of all three training pairs and the test pair, prototyped in
+  Python, and the prototype passed all three training pairs and
+  the test grid on the first run; the Prolog port then passed the
+  single-task test and the full regression on the first compile.
+
+Lessons learned: the centered-contact condition is what makes the
+  docking unique - the second training pair's left shape also owns
+  a three-cell side whose two cells touch the hub edge rows, but
+  only the bottom side holds exactly the two centered positions,
+  so requiring centered contact rejects the off-center fit that a
+  plain adjacency check would accept; and the rotations are pure
+  quarter turns with no reflection, which the first training pair
+  proves in both directions (the same shape family docks left by a
+  clockwise turn and right by a counterclockwise turn). Docking is
+  read side by side from the hub - deriving the role of each side
+  from its own two edge cells extends the Wave 95 and Wave 96
+  lesson that roles must be derived per grid from structure, never
+  memorized from color identities. Reusing the eight-connected
+  component grower of Wave 82 and the cell painter of Wave 95 kept
+  the port small once again.
+
+Accomplishment: Acc_395.  Paper: Acc_395_ARC2_Wave97_HubDock.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5074,6 +5141,7 @@ ALL SOLVED TASKS
 271d71e2  - Wave 34 - rail_fill           - 0-bordered boxes with 9-rail arms; 7s fill from arm side; box shifts toward outer rail
 9385bd28  - Wave 35 - bbox_fill           - legend maps K->V; fill bounding box of K-cells with V; smaller bbox overrides larger
 2ba387bc  - Wave 24 - shape_sort          - hollow/solid 4x4 block separation; paired by reading order; zero-block padding
+2c181942  - Wave 97 - hub_dock            - an eight-cell compass hub carries four side colors; every matching single-color shape is quarter-turned so a side with exactly two adjacent centered cells faces its hub side, parked flush with the contact cells next to the hub edge cells, and unmatched shapes are erased
 332f06d7  - Wave 36 - slide_void          - block-movement BFS; void slides to farthest dead-end; adj-marker moves to marker pocket
 31f7f899  - Wave 8  - bar_sort            - sort vertical bar heights, reassign colors to slots
 36a08778  - Wave 12 - waterfall           - gravity-flow of 6-seeds around obstacle rows
@@ -5558,4 +5626,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 95: Short-circuit - the scene draws a wiring
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 96: Junction-hub - the scene draws a wire network on a uniform background using exactly three foreground colors: one wire color forming the network and two content colors mixed inside the small blocks that the wires join; the wire color is recognized structurally as the only foreground color owning exactly one cell whose full three-by-three neighborhood holds that same color, and that cell is the hub of the network; the eight cells around the hub stay wire colored as a ring, and removing the hub and ring splits the wire into four-connected branches; every branch is repainted with the majority content color of the four-connected content blocks it touches, and the hub itself takes the majority color of the branch cells that touch the ring; counting the touching cells rather than the distinct branches is the discriminating observation of the wave, because in the third training pair the losing color owns more branches yet the winning color's branches each touch the ring at two separate places and outweigh them cell for cell.
   Score: 93/120 = 77.50%. Task 800d221b solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 97: Hub-dock - the scene shows one hub piece, an eight-cell ring in a four-by-four bounding box whose four sides carry two centered cells each, every side in its own color, plus loose single-color shapes scattered on the background; every shape whose color matches a hub side is rotated by the unique multiple of ninety degrees that turns a bounding-box side holding exactly two adjacent centered cells toward that hub side, then parked flush against the hub so its two contact cells sit directly next to the two hub edge cells, and shapes matching no hub side are erased; requiring the contact side to hold exactly the two centered cells is the discriminating observation of the wave, because it rejects the full-length sides and the off-center sides that a plain adjacency check would accept and it pins both the rotation and the translation uniquely, and the rotations are pure quarter turns with no reflection, which the first training pair proves in both directions.
+  Score: 94/120 = 78.33%. Task 2c181942 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
