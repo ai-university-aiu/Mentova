@@ -1149,6 +1149,40 @@ arc2_induce_rule(TrainingPairs, junction_hub) :-
 % Each training pair must transform correctly under junction_hub.
            arc2_transform(junction_hub, In, Out)).
 
+% hub_dock: early dispatch before generic clause (WP-355, Layer 330).
+% Enumerate hub_dock as a known rule name.
+arc2_named_rule(hub_dock).
+% arc2_induce_rule(hub_dock): shape and palette pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, hub_dock) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Flatten the first input for palette analysis.
+    append(First, AllCells),
+% Collect the distinct colors of the first input.
+    sort(AllCells, Palette),
+% Count the distinct colors of the first input.
+    length(Palette, PL),
+% A hub scene needs a background, four side colors, and loose shapes.
+    PL >= 5,
+% A hub scene stays within eight distinct colors overall.
+    PL =< 8,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under hub_dock.
+           arc2_transform(hub_dock, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -21120,3 +21154,245 @@ jh_majority_(Values, V) :-
 jh_paint_branch_(Col-Cells, Grid0, Grid) :-
 % Write the branch color over every branch cell.
     scc_paint_(Cells, Col, Grid0, Grid).
+
+% ---------------------------------------------------------------------------
+% HUB DOCK SHAPE ASSEMBLY
+% hub_dock: the scene shows one hub piece — an eight-cell ring in a
+% four-by-four bounding box whose four sides carry two centered cells each,
+% every side in its own color — plus loose single-color shapes scattered on
+% the background.  Each shape whose color matches a hub side is rotated by
+% the unique multiple of ninety degrees that turns a bounding-box side with
+% exactly two adjacent centered cells toward that hub side, then parked
+% flush against the hub so its two contact cells sit directly next to the
+% two hub edge cells; shapes matching no hub side are erased outright.
+% Reference: ARC-AGI-2 task 2c181942 -- the compass hub collects its shapes.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(hub_dock): dock every matching shape onto its hub side.
+arc2_transform(hub_dock, Grid, Out) :-
+% Find the background as the most common color of the grid.
+    arc2_bg_color_(Grid, Bg),
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Collect every foreground cell as a c(Row, Col, Color) term.
+    findall(c(R, C, V), (nth0(R, Grid, Row), nth0(C, Row, V), V =\= Bg), Cells),
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Exactly one component mixes four distinct colors: the hub.
+    include(hd_hub_, Comps, [Hub]),
+% The hub ring owns exactly eight cells, two per side.
+    length(Hub, 8),
+% Collect the hub row indices.
+    findall(R, member(c(R, _, _), Hub), HRs),
+% Collect the hub column indices.
+    findall(C, member(c(_, C, _), Hub), HCs),
+% The top row of the hub bounding box.
+    min_list(HRs, R0),
+% The bottom row of the hub bounding box.
+    max_list(HRs, R1),
+% The left column of the hub bounding box.
+    min_list(HCs, C0),
+% The right column of the hub bounding box.
+    max_list(HCs, C1),
+% Read the top side: two same-colored cells in the bounding-box top row.
+    hd_edge_(Hub, row, R0, TE, TCol),
+% Read the bottom side likewise from the bounding-box bottom row.
+    hd_edge_(Hub, row, R1, BE, BCol),
+% Read the left side from the bounding-box left column.
+    hd_edge_(Hub, col, C0, LE, LCol),
+% Read the right side from the bounding-box right column.
+    hd_edge_(Hub, col, C1, RE, RCol),
+% The four side colors must all differ.
+    sort([TCol, BCol, LCol, RCol], FourCols),
+% Confirm four distinct side colors.
+    length(FourCols, 4),
+% Package each side as side(Color, Direction, EdgeStart) for the docking.
+    Sides = [side(TCol, top, TE), side(BCol, bottom, BE),
+             side(LCol, left, LE), side(RCol, right, RE)],
+% Start from an all-background canvas of the input size.
+    arc2_sb_blank_(H, W, Bg, Blank),
+% Paint the hub back onto the canvas unchanged.
+    foldl(hd_put_, Hub, Blank, Canvas),
+% Keep every component except the hub as a loose shape.
+    exclude(==(Hub), Comps, Shapes),
+% Dock or drop each loose shape around the hub.
+    foldl(hd_dock_(H, W, box(R0, R1, C0, C1), Sides), Shapes, Canvas, Out).
+
+% hd_hub_(+Comp): succeed if the component mixes exactly four colors.
+hd_hub_(Comp) :-
+% Collect the colors of the component cells.
+    findall(V, member(c(_, _, V), Comp), Vs),
+% Deduplicate the collected colors.
+    sort(Vs, Set),
+% The hub is the only component holding four distinct colors.
+    length(Set, 4).
+
+% hd_edge_(+Hub, +Axis, +Idx, -Start, -Col): read one hub side.
+hd_edge_(Hub, row, Idx, Start, Col) :-
+% Keep the hub cells lying on the requested bounding-box row.
+    findall(C-V, member(c(Idx, C, V), Hub), Sel),
+% A side holds exactly two cells.
+    Sel = [C1-V1, C2-V2],
+% Both side cells share one color.
+    V1 =:= V2,
+% Return the shared side color.
+    Col = V1,
+% Return the smaller column as the side start.
+    Start is min(C1, C2),
+% The two side cells sit next to each other.
+    1 =:= abs(C1 - C2).
+hd_edge_(Hub, col, Idx, Start, Col) :-
+% Keep the hub cells lying on the requested bounding-box column.
+    findall(R-V, member(c(R, Idx, V), Hub), Sel),
+% A side holds exactly two cells.
+    Sel = [R1-V1, R2-V2],
+% Both side cells share one color.
+    V1 =:= V2,
+% Return the shared side color.
+    Col = V1,
+% Return the smaller row as the side start.
+    Start is min(R1, R2),
+% The two side cells sit next to each other.
+    1 =:= abs(R1 - R2).
+
+% hd_put_(+Cell, +Grid0, -Grid): write one colored cell onto the grid.
+hd_put_(c(R, C, V), Grid0, Grid) :-
+% Replace the cell at (R, C) with color V.
+    arc2_set_cell_(Grid0, R, C, V, Grid).
+
+% hd_dock_(+H, +W, +Box, +Sides, +Comp, +Grid0, -Grid): place one shape.
+hd_dock_(H, W, Box, Sides, Comp, Grid0, Grid) :-
+% Collect the colors of the shape cells.
+    findall(V, member(c(_, _, V), Comp), Vs),
+% A loose shape must be single-colored.
+    sort(Vs, [V]),
+% Dock the shape when its color owns a hub side, else drop it.
+    ( member(side(V, Dir, E1), Sides) ->
+% Collect the shape row indices.
+        findall(R, member(c(R, _, _), Comp), Rs),
+% Collect the shape column indices.
+        findall(C, member(c(_, C, _), Comp), Cs),
+% The top row of the shape bounding box.
+        min_list(Rs, SR0),
+% The bottom row of the shape bounding box.
+        max_list(Rs, SR1),
+% The left column of the shape bounding box.
+        min_list(Cs, SC0),
+% The right column of the shape bounding box.
+        max_list(Cs, SC1),
+% Measure the shape bounding-box height.
+        SH is SR1 - SR0 + 1,
+% Measure the shape bounding-box width.
+        SW is SC1 - SC0 + 1,
+% Express every shape cell relative to its bounding-box corner.
+        findall(R-C, (member(c(AR, AC, _), Comp), R is AR - SR0, C is AC - SC0), Rel),
+% Search the unique orientation and placement that fits the hub side.
+        ( hd_orient_(Rel, SH, SW, Dir, Box, E1, Abs) ->
+% Every docked cell must stay inside the grid.
+            ( forall(member(PR-PC, Abs), (PR >= 0, PR < H, PC >= 0, PC < W)) ->
+% Paint the docked shape in its color.
+                scc_paint_(Abs, V, Grid0, Grid)
+% An out-of-bounds docking leaves the canvas unchanged.
+            ; Grid = Grid0 )
+% A shape with no fitting orientation is dropped.
+        ; Grid = Grid0 )
+% A shape whose color owns no hub side is dropped.
+    ; Grid = Grid0 ).
+
+% hd_orient_(+Rel, +SH, +SW, +Dir, +Box, +E1, -Abs): fit one rotation.
+hd_orient_(Rel, SH, SW, Dir, Box, E1, Abs) :-
+% Try the four quarter-turn rotations in order.
+    member(K, [0, 1, 2, 3]),
+% Rotate the relative cells K quarter turns clockwise.
+    hd_rot_(Rel, SH, SW, K, RC, RH, RW),
+% The side facing the hub must show two adjacent centered cells.
+    hd_face_(Dir, RC, RH, RW),
+% Compute the placement corner from the hub box and the edge start.
+    hd_place_(Dir, Box, E1, RH, RW, PR, PC),
+% Translate the rotated cells to their absolute positions.
+    findall(AR-AC, (member(R-C, RC), AR is PR + R, AC is PC + C), Abs),
+% Commit to the first fitting orientation.
+    !.
+
+% hd_rot_(+Cells, +H, +W, +K, -RCells, -RH, -RW): rotate K quarter turns.
+% Zero turns leave the cells and the bounding box unchanged.
+hd_rot_(Cells, H, W, 0, Cells, H, W) :-
+% Close the rotation recursion.
+    !.
+% A positive turn count applies one clockwise turn and recurses.
+hd_rot_(Cells, H, W, K, RCells, RH, RW) :-
+% Map every cell (R, C) to its clockwise image (C, H-1-R).
+    findall(NR-NC, (member(R-C, Cells), NR is C, NC is H - 1 - R), Cells1),
+% One turn swaps the bounding-box height and width.
+    K1 is K - 1,
+% Rotate the remaining quarter turns.
+    hd_rot_(Cells1, W, H, K1, RCells, RH, RW).
+
+% hd_face_(+Dir, +RC, +RH, +RW): check the hub-facing side of the shape.
+% Docking on top: the bottom row of the shape faces the hub.
+hd_face_(top, RC, RH, RW) :-
+% Collect the columns of the cells in the shape bottom row.
+    findall(C, (member(R-C, RC), R =:= RH - 1), Line),
+% Validate two adjacent centered cells along a side of length RW.
+    hd_centered_(Line, RW).
+% Docking below: the top row of the shape faces the hub.
+hd_face_(bottom, RC, _RH, RW) :-
+% Collect the columns of the cells in the shape top row.
+    findall(C, (member(R-C, RC), R =:= 0), Line),
+% Validate two adjacent centered cells along a side of length RW.
+    hd_centered_(Line, RW).
+% Docking on the left: the right column of the shape faces the hub.
+hd_face_(left, RC, RH, RW) :-
+% Collect the rows of the cells in the shape right column.
+    findall(R, (member(R-C, RC), C =:= RW - 1), Line),
+% Validate two adjacent centered cells along a side of length RH.
+    hd_centered_(Line, RH).
+% Docking on the right: the left column of the shape faces the hub.
+hd_face_(right, RC, RH, _RW) :-
+% Collect the rows of the cells in the shape left column.
+    findall(R, (member(R-C, RC), C =:= 0), Line),
+% Validate two adjacent centered cells along a side of length RH.
+    hd_centered_(Line, RH).
+
+% hd_centered_(+Line, +L): the side holds exactly the two centered cells.
+hd_centered_(Line, L) :-
+% Sort the collected side positions.
+    msort(Line, Sorted),
+% The side length must be even to center two cells.
+    0 =:= L mod 2,
+% The first centered position on the side.
+    M1 is L // 2 - 1,
+% The second centered position on the side.
+    M2 is L // 2,
+% The side must hold exactly the two centered positions.
+    Sorted == [M1, M2].
+
+% hd_place_(+Dir, +Box, +E1, +RH, +RW, -PR, -PC): shape corner position.
+% Docking on top: the shape sits just above the hub bounding box.
+hd_place_(top, box(R0, _, _, _), E1, RH, RW, PR, PC) :-
+% The shape bottom row lands one cell above the hub top row.
+    PR is R0 - RH,
+% The first contact cell lines up with the edge start column.
+    PC is E1 - (RW // 2 - 1).
+% Docking below: the shape sits just under the hub bounding box.
+hd_place_(bottom, box(_, R1, _, _), E1, _RH, RW, PR, PC) :-
+% The shape top row lands one cell below the hub bottom row.
+    PR is R1 + 1,
+% The first contact cell lines up with the edge start column.
+    PC is E1 - (RW // 2 - 1).
+% Docking on the left: the shape sits just left of the hub bounding box.
+hd_place_(left, box(_, _, C0, _), E1, RH, RW, PR, PC) :-
+% The shape right column lands one cell left of the hub left column.
+    PC is C0 - RW,
+% The first contact cell lines up with the edge start row.
+    PR is E1 - (RH // 2 - 1).
+% Docking on the right: the shape sits just right of the hub bounding box.
+hd_place_(right, box(_, _, _, C1), E1, RH, _RW, PR, PC) :-
+% The shape left column lands one cell right of the hub right column.
+    PC is C1 + 1,
+% The first contact cell lines up with the edge start row.
+    PR is E1 - (RH // 2 - 1).
