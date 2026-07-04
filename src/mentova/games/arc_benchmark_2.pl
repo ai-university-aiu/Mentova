@@ -1119,6 +1119,36 @@ arc2_induce_rule(TrainingPairs, short_circuit) :-
 % Each training pair must transform correctly under short_circuit.
            arc2_transform(short_circuit, In, Out)).
 
+% junction_hub: early dispatch before generic clause (WP-354, Layer 329).
+% Enumerate junction_hub as a known rule name.
+arc2_named_rule(junction_hub).
+% arc2_induce_rule(junction_hub): shape and palette pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, junction_hub) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Flatten the first input for palette analysis.
+    append(First, AllCells),
+% Collect the distinct colors of the first input.
+    sort(AllCells, Palette),
+% A junction scene uses exactly four colors.
+    length(Palette, 4),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under junction_hub.
+           arc2_transform(junction_hub, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -20876,3 +20906,217 @@ scc_paint_([R-C|Cs], V, Grid0, Grid) :-
     arc2_set_cell_(Grid0, R, C, V, Grid1),
 % Paint the remaining cells.
     scc_paint_(Cs, V, Grid1, Grid).
+
+% ---------------------------------------------------------------------------
+% JUNCTION HUB RECOLORING
+% junction_hub: the scene draws a wire network on a uniform background
+% using three foreground colors: one wire color forming the network and
+% two content colors mixed inside the small blocks that the wires join.
+% The wire color is the only foreground color owning exactly one cell
+% whose full three-by-three neighborhood holds that same color; that
+% cell is the hub.  The eight cells around the hub stay wire colored as
+% a ring.  Removing the hub and ring splits the wire into branches, and
+% every branch is repainted with the majority content color of the
+% blocks it touches.  The hub itself takes the majority color of the
+% branch cells that touch the ring.  Background and blocks are kept.
+% Reference: ARC-AGI-2 task 800d221b -- junction ring branch recoloring.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(junction_hub): repaint wire branches with their block colors.
+arc2_transform(junction_hub, Grid, Out) :-
+% Identify the background as the most common color.
+    arc2_bg_color_(Grid, Bg),
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Flatten the grid for palette analysis.
+    append(Grid, All),
+% Collect the distinct colors of the grid.
+    sort(All, Palette),
+% A junction scene uses exactly four colors.
+    length(Palette, 4),
+% Separate the three foreground colors from the background.
+    exclude(==(Bg), Palette, Fg),
+% Find each foreground color owning exactly one solid three-by-three center.
+    findall(Col-Ctr, (member(Col, Fg), jh_centers_(Grid, H, W, Col, [Ctr])), Hubs),
+% Exactly one foreground color may qualify as the wire.
+    Hubs = [WCol-(JR-JC)],
+% The two remaining foreground colors fill the content blocks.
+    exclude(==(WCol), Fg, Content),
+% List the eight ring cells around the hub.
+    findall(RR-CC, (member(DR, [-1, 0, 1]), member(DC, [-1, 0, 1]), (DR =\= 0 ; DC =\= 0), RR is JR + DR, CC is JC + DC), Ring),
+% Collect every content cell of the grid.
+    jh_cells_(Grid, Content, BlockCells),
+% Index the content cells for adjacency tests.
+    list_to_assoc(BlockCells, BlockA),
+% Strip the colors from the content cell list.
+    pairs_keys_values(BlockCells, BlockKeys, _),
+% Split the content cells into four-connected blocks.
+    jh_parts_(BlockKeys, BlockA, [], Blocks),
+% Collect every wire cell of the grid.
+    jh_cells_(Grid, [WCol], WireCells),
+% Strip the colors from the wire cell list.
+    pairs_keys_values(WireCells, WireKeys0, _),
+% Exclude the hub and ring cells from the wire network.
+    subtract(WireKeys0, [JR-JC|Ring], WireKeys),
+% Mark every branch cell for the flood fill index.
+    findall(K-true, member(K, WireKeys), WirePairs),
+% Index the branch cells for the flood fill.
+    list_to_assoc(WirePairs, WireA),
+% Split the branch cells into four-connected branches.
+    jh_parts_(WireKeys, WireA, [], Branches),
+% Assign the touching block majority color to every branch.
+    maplist(jh_branch_color_(Grid, BlockA, Blocks, WCol), Branches, BranchCols),
+% Pair every branch with its assigned color.
+    pairs_keys_values(Tagged, BranchCols, Branches),
+% Tally the assigned colors of the branch cells that touch the ring.
+    findall(Col, (member(Col-Cells, Tagged), member(R-C, Cells), once((jh_step_(R, C, NR, NC), memberchk(NR-NC, Ring)))), Touch),
+% The hub takes the majority color of the touching branch cells.
+    jh_majority_(Touch, HubCol),
+% Paint every branch with its assigned color.
+    foldl(jh_paint_branch_, Tagged, Grid, Mid),
+% Paint the hub with the majority touch color.
+    arc2_set_cell_(Mid, JR, JC, HubCol, Out),
+% Commit to the first successful reading.
+    !.
+
+% jh_centers_(+Grid, +H, +W, +Col, -Centers): solid three-by-three centers.
+jh_centers_(Grid, H, W, Col, Centers) :-
+% Last row index that still fits a full three-by-three window.
+    RMax is H - 2,
+% Last column index that still fits a full three-by-three window.
+    CMax is W - 2,
+% Enumerate every interior cell whose full window holds the color.
+    findall(R-C,
+% Walk the candidate window centers.
+            ( between(1, RMax, R),
+% Walk the candidate window columns.
+              between(1, CMax, C),
+% Keep only centers whose window is solid.
+              jh_solid_(Grid, R, C, Col) ),
+% Bind the solid center list.
+            Centers).
+
+% jh_solid_(+Grid, +R, +C, +Col): the full three-by-three window holds Col.
+jh_solid_(Grid, R, C, Col) :-
+% Check all nine window offsets.
+    forall(( member(DR, [-1, 0, 1]), member(DC, [-1, 0, 1]) ),
+% Every window cell must hold the wire color.
+           ( RR is R + DR, CC is C + DC, arc2_cell_(Grid, RR, CC, Col) )).
+
+% jh_cells_(+Grid, +Cols, -Cells): grid cells holding one of Cols as Key-Color.
+jh_cells_(Grid, Cols, Cells) :-
+% Enumerate every matching cell in reading order.
+    findall((R-C)-V,
+% Walk the rows of the grid.
+            ( nth0(R, Grid, Row),
+% Walk the cells of one row.
+              nth0(C, Row, V),
+% Keep only the wanted colors.
+              memberchk(V, Cols) ),
+% Bind the matching cell list.
+            Cells).
+
+% jh_step_(+R, +C, -NR, -NC): one four-connected neighbour of a cell.
+jh_step_(R, C, NR, NC) :-
+% Enumerate the four orthogonal offsets.
+    member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1]),
+% Compute the neighbour row.
+    NR is R + DR,
+% Compute the neighbour column.
+    NC is C + DC.
+
+% jh_parts_(+Keys, +SetA, +Acc, -Parts): four-connected components of a set.
+jh_parts_([], _, Acc, Parts) :-
+% Restore the discovery order of the components.
+    reverse(Acc, Parts).
+% Grow one component from the next unclaimed seed.
+jh_parts_([Seed|Rest], SetA, Acc, Parts) :-
+% Mark the seed as visited.
+    list_to_assoc([Seed-true], Seen0),
+% Flood the component reachable from the seed.
+    jh_flood_([Seed], SetA, Seen0, SeenA),
+% Read the component cells in sorted order.
+    assoc_to_keys(SeenA, Comp),
+% Drop the claimed cells from the pending list.
+    subtract(Rest, Comp, Rest1),
+% Continue over the remaining cells.
+    jh_parts_(Rest1, SetA, [Comp|Acc], Parts).
+
+% jh_flood_(+Queue, +SetA, +Seen0, -Seen): four-connected flood fill.
+jh_flood_([], _, Seen, Seen).
+% Expand the next queued cell into its unvisited neighbours.
+jh_flood_([R-C|Q], SetA, Seen0, Seen) :-
+% Collect the unvisited in-set neighbours of the cell.
+    findall(NR-NC,
+% Walk the four orthogonal neighbours.
+            ( jh_step_(R, C, NR, NC),
+% The neighbour must belong to the cell set.
+              get_assoc(NR-NC, SetA, _),
+% The neighbour must not have been visited yet.
+              \+ get_assoc(NR-NC, Seen0, _) ),
+% Bind the fresh neighbour list.
+            News),
+% Mark the fresh neighbours as visited.
+    foldl([P, S0, S]>>put_assoc(P, S0, true, S), News, Seen0, Seen1),
+% Queue the fresh neighbours behind the pending cells.
+    append(Q, News, Q1),
+% Continue the flood over the extended queue.
+    jh_flood_(Q1, SetA, Seen1, Seen).
+
+% jh_branch_color_(+Grid, +BlockA, +Blocks, +WCol, +Branch, -Col): branch color.
+jh_branch_color_(Grid, BlockA, Blocks, WCol, Branch, Col) :-
+% Collect the content cells four-adjacent to the branch.
+    findall(NR-NC,
+% Walk the cells of the branch.
+            ( member(R-C, Branch),
+% Walk the four orthogonal neighbours of one cell.
+              jh_step_(R, C, NR, NC),
+% Keep only neighbours that are content cells.
+              get_assoc(NR-NC, BlockA, _) ),
+% Bind the raw adjacency list.
+            Adj0),
+% Deduplicate the adjacency list.
+    sort(Adj0, Adj),
+% Gather every cell color of every touched block.
+    findall(V,
+% Walk the content blocks.
+            ( member(Block, Blocks),
+% Keep only blocks touched by the branch.
+              jh_meets_(Adj, Block),
+% Walk the cells of one touched block.
+              member(BR-BC, Block),
+% Read the color of the block cell.
+              arc2_cell_(Grid, BR, BC, V) ),
+% Bind the touched block colors.
+            Vs),
+% An untouched branch keeps the wire color; otherwise take the majority.
+    ( Vs == [] -> Col = WCol ; jh_majority_(Vs, Col) ).
+
+% jh_meets_(+Adj, +Block): some adjacent cell lies inside the block.
+jh_meets_(Adj, Block) :-
+% Find one adjacency cell inside the block.
+    member(P, Adj),
+% The cell must belong to the block.
+    memberchk(P, Block),
+% Commit to the first witness.
+    !.
+
+% jh_majority_(+Values, -V): most frequent value of a list.
+jh_majority_(Values, V) :-
+% Group equal values together.
+    msort(Values, S),
+% Run-length encode the grouped values.
+    scc_runs_(S, Runs),
+% Order the runs by ascending count.
+    msort(Runs, Ranked),
+% The last run carries the most frequent value.
+    last(Ranked, _-V).
+
+% jh_paint_branch_(+Tagged, +Grid0, -Grid): paint one branch onto the grid.
+jh_paint_branch_(Col-Cells, Grid0, Grid) :-
+% Write the branch color over every branch cell.
+    scc_paint_(Cells, Col, Grid0, Grid).
