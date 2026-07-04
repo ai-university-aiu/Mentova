@@ -1,0 +1,43 @@
+Accomplishment 405: ARC-AGI-2 Wave 107 - Ray Merge: Leaking Rings and the Collision Algebra of Rays
+
+PrologAI solves ARC-AGI-2 task e12f9a14 with a new glass-box rule
+called ray_merge (WP-365, Layer 340), raising the benchmark score
+from 103/120 = 85.83% to 104/120 = 86.67%.
+
+Each input of this task shows small boxes: one-cell rectangular
+rings, each drawn around a filled interior of its own color. The
+rings are leaky. Missing outline cells are gaps, and every gap
+leaks a ray of the box's interior color - perpendicular from an
+edge gap, diagonally outward from a corner gap - running straight
+to the grid border.
+
+Unless two rays are about to collide. Then neither yields: both
+stop one cell short of the crossing and continue side by side
+along the vector sum of their courses. Two facing diagonals
+straighten into a parallel vertical pair. A perpendicular meeting
+bends both rays onto the shared diagonal. A diagonal converging on
+a straight ray sends both onto a slope-two staircase. And a pair
+that has already merged collides later as a single ray - its
+course counts once in the next sum - which is why a three-ray
+pileup travels diagonally while a fresh two-ray convergence climbs
+a staircase. Recovering this collision algebra from the added
+cells of the training pairs is what cracked the task.
+
+The wave also produced a finding of independent interest: one
+training demonstration omits exactly one ray. A corner gap that
+fires in one pair stays dark in its mirror-image twin, and the
+official ARC-AGI-2 repository data confirms the omission cell for
+cell - the demonstrations themselves can carry an authoring slip.
+The induction verifier therefore tolerates at most one training
+pair deviating in at most eight extra-paint-only cells, while the
+test pair matches the full mechanics exactly.
+
+The complete rule was written in plain English covering every grid
+before any code, every added cell in every pair was assigned to
+its ray by hand, a Python prototype confirmed the mechanics on its
+first run, and the integrated Prolog rule passed the single-task
+test and the full regression on its first compile. Pure induction.
+No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

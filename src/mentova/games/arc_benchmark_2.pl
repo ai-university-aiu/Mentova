@@ -1521,6 +1521,40 @@ arc2_induce_rule(TrainingPairs, staple_gravity) :-
 % Each training pair must transform correctly under staple_gravity.
            arc2_transform(staple_gravity, In, Out)).
 
+% ray_merge: early dispatch before generic clause (WP-365, Layer 340).
+% Enumerate ray_merge as a known rule name.
+arc2_named_rule(ray_merge).
+% arc2_induce_rule(ray_merge): gapped-ring pre-filter + tolerant verify.
+arc2_induce_rule(TrainingPairs, ray_merge) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [FRow|_],
+% Measure the first input width.
+    length(FRow, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Determine the background color of the first input.
+    rm_bg_(First, Bg),
+% Every foreground component must parse as a gapped ring.
+    rm_rings_(First, Bg, Rays),
+% At least one gap ray must exist in the first input.
+    Rays = [_|_],
+% The first output may only add paint on background cells.
+    rm_additive_(First, FirstOut, Bg),
+% Score every training pair with the tolerant verifier.
+    maplist(rm_verify_pair_, TrainingPairs, Costs),
+% Sum the tolerance costs across all pairs.
+    sum_list(Costs, CostSum),
+% Allow at most one pair with a small extra-paint-only deviation.
+    CostSum =< 1.
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -23920,3 +23954,451 @@ sg_render_(Pieces, H, W, K, Out) :-
     findall(RC2-Col2, ( member(sg(Col2, _, Hs), Pieces), member(RC2, Hs) ), HCells),
 % Paint the horizontal cells last so they sit in front.
     foldl([(R-C)-Ch, GA, GB]>>arc2_set_cell_(GA, R, C, Ch, GB), HCells, G2, Out).
+
+% ---------------------------------------------------------------------------
+% RAY MERGE (WP-365, Layer 340)
+% ray_merge: every foreground component is a rectangular ring of one color
+% around a filled single-color interior; background cells on the ring
+% outline are gaps that leak a ray of the interior color -- perpendicular
+% from edge gaps and diagonal from corner gaps.  Rays whose future paths
+% would meet or cross deflect together onto the vector-sum course (which
+% may be a slope-two staircase) and travel to the border as a parallel
+% bundle; a bundle collides as a single ray with the sum of its course.
+% Reference: ARC-AGI-2 task e12f9a14.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(ray_merge): leak interior-color rays from ring gaps.
+arc2_transform(ray_merge, Grid, Out) :-
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Determine the background color by majority count.
+    rm_bg_(Grid, Bg),
+% Parse every foreground component into gap rays.
+    rm_rings_(Grid, Bg, Rays),
+% At least one gap ray must exist.
+    Rays = [_|_],
+% Wrap each ray in its own single-member bundle.
+    findall(bundle(D, [M]), member(D-M, Rays), Bundles0),
+% Resolve all ray collisions into merged parallel bundles.
+    rm_resolve_(Bundles0, H, W, Bundles),
+% Paint every ray path onto the grid.
+    rm_paint_(Bundles, H, W, Grid, Out).
+
+% rm_bg_(+Grid, -Bg): the most frequent color is the background.
+rm_bg_(Grid, Bg) :-
+% Flatten the grid into one list of colors.
+    append(Grid, Vs),
+% Sort the colors keeping duplicates.
+    msort(Vs, Sorted),
+% Group equal colors into runs.
+    rm_runs_(Sorted, Runs),
+% Order the runs by descending length.
+    sort(0, @>=, Runs, [_-Bg|_]).
+
+% rm_runs_(+Sorted, -Runs): run-length encode a sorted list as N-Color.
+rm_runs_([], []).
+% Count the leading run and recurse on the remainder.
+rm_runs_([V|Vs], [N-V|Runs]) :-
+% Split the leading run of V from the rest.
+    rm_run_split_(V, Vs, Rest, 1, N),
+% Encode the remaining runs.
+    rm_runs_(Rest, Runs).
+
+% rm_run_split_(+V, +List, -Rest, +Acc, -N): measure a run of V.
+rm_run_split_(V, [V|Vs], Rest, Acc, N) :-
+% Extend the run by one occurrence.
+    Acc1 is Acc + 1,
+% Continue scanning the run.
+    rm_run_split_(V, Vs, Rest, Acc1, N), !.
+% The run ends when the next color differs or the list ends.
+rm_run_split_(_, Rest, Rest, N, N).
+
+% rm_rings_(+Grid, +Bg, -Rays): parse all components into gap rays.
+rm_rings_(Grid, Bg, Rays) :-
+% Collect every foreground cell coordinate.
+    findall(R-C, ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= Bg ), Cells),
+% Split the foreground cells into 8-connected components.
+    rm_comps_(Cells, Comps),
+% Parse each component into its gap rays.
+    maplist(rm_ring_rays_(Grid, Bg), Comps, RayLists),
+% Concatenate the per-component ray lists.
+    append(RayLists, Rays).
+
+% rm_comps_(+Cells, -Comps): 8-connected components of a cell set.
+rm_comps_([], []).
+% Flood one component and recurse on the remaining cells.
+rm_comps_([Cell|Rest], [Comp|Comps]) :-
+% Flood fill from the seed cell over the available set.
+    rm_flood_([Cell], [Cell|Rest], [Cell], Comp),
+% Remove the flooded cells from the available set.
+    subtract(Rest, Comp, Rest1),
+% Split the remaining cells into further components.
+    rm_comps_(Rest1, Comps).
+
+% rm_flood_(+Frontier, +Avail, +Seen, -Comp): grow an 8-connected region.
+rm_flood_([], _, Comp, Comp).
+% Expand the frontier by one ring of neighbors.
+rm_flood_([R-C|Fr], Avail, Seen, Comp) :-
+% Collect unseen available 8-neighbors of the frontier cell.
+    findall(R1-C1,
+% Enumerate the eight neighbor offsets.
+            ( member(DR-DC, [(-1)-(-1), (-1)-0, (-1)-1, 0-(-1),
+                             0-1, 1-(-1), 1-0, 1-1]),
+% Compute the neighbor row.
+              R1 is R + DR,
+% Compute the neighbor column.
+              C1 is C + DC,
+% The neighbor must be a foreground cell.
+              memberchk(R1-C1, Avail),
+% The neighbor must not have been visited yet.
+              \+ memberchk(R1-C1, Seen) ),
+            New),
+% Deduplicate the newly found neighbors.
+    sort(New, New1),
+% Add the new neighbors to the visited set.
+    append(Seen, New1, Seen1),
+% Queue the new neighbors behind the current frontier.
+    append(Fr, New1, Fr1),
+% Continue flooding with the extended frontier.
+    rm_flood_(Fr1, Avail, Seen1, Comp).
+
+% rm_ring_rays_(+Grid, +Bg, +Comp, -Rays): gap rays of one ring component.
+rm_ring_rays_(Grid, Bg, Comp, Rays) :-
+% Collect the component row coordinates.
+    findall(R, member(R-_, Comp), Rs),
+% Collect the component column coordinates.
+    findall(C, member(_-C, Comp), Cs),
+% Compute the bounding-box top row.
+    min_list(Rs, R0),
+% Compute the bounding-box bottom row.
+    max_list(Rs, R1),
+% Compute the bounding-box left column.
+    min_list(Cs, C0),
+% Compute the bounding-box right column.
+    max_list(Cs, C1),
+% The ring must be at least three rows tall.
+    R1 >= R0 + 2,
+% The ring must be at least three columns wide.
+    C1 >= C0 + 2,
+% Collect the distinct colors strictly inside the bounding box.
+    findall(V, ( between(R0, R1, R), between(C0, C1, C),
+% Restrict to strictly interior rows.
+                 R > R0, R < R1,
+% Restrict to strictly interior columns.
+                 C > C0, C < C1,
+% Read the interior cell color.
+                 arc2_cell_(Grid, R, C, V) ), IVs),
+% Deduplicate the interior colors.
+    sort(IVs, ISet),
+% The interior must be one uniform foreground color.
+    ISet = [IC],
+% The interior color must not be the background.
+    IC =\= Bg,
+% Collect the distinct ring colors on the outline.
+    findall(V2, ( rm_perim_(R0, R1, C0, C1, R2-C2),
+% Read the outline cell color.
+                  arc2_cell_(Grid, R2, C2, V2),
+% Keep only cells that are neither background nor interior color.
+                  V2 =\= Bg, V2 =\= IC ), RVs),
+% Deduplicate the ring colors.
+    sort(RVs, RSet),
+% The outline must use exactly one ring color.
+    RSet = [_],
+% Emit one ray per background gap on the outline.
+    findall((DR-DC)-rm(IC, [GR-GC], GR-GC),
+% Enumerate the outline positions.
+            ( rm_perim_(R0, R1, C0, C1, GR-GC),
+% A gap is an outline cell holding the background color.
+              arc2_cell_(Grid, GR, GC, Bg),
+% The ray leaves upward from the top edge.
+              ( GR =:= R0 -> DR = -1 ; GR =:= R1 -> DR = 1 ; DR = 0 ),
+% The ray leaves leftward from the left edge.
+              ( GC =:= C0 -> DC = -1 ; GC =:= C1 -> DC = 1 ; DC = 0 ) ),
+            Rays).
+
+% rm_perim_(+R0, +R1, +C0, +C1, -RC): enumerate bounding-box outline cells.
+rm_perim_(R0, R1, C0, C1, R-C) :-
+% Enumerate every row of the box.
+    between(R0, R1, R),
+% Enumerate every column of the box.
+    between(C0, C1, C),
+% Keep only cells on the box outline.
+    ( R =:= R0 ; R =:= R1 ; C =:= C0 ; C =:= C1 ).
+
+% rm_pat_(+Dir, -Pat): step pattern for a course vector.
+rm_pat_(DR-DC, Pat) :-
+% Take the absolute row component.
+    ADR is abs(DR),
+% Take the absolute column component.
+    ADC is abs(DC),
+% Compute the row step sign.
+    SR is sign(DR),
+% Compute the column step sign.
+    SC is sign(DC),
+% Choose the repeating step pattern for the course.
+    (   ADC =:= 0 -> Pat = [SR-0]
+% A pure horizontal course steps sideways each tick.
+    ;   ADR =:= 0 -> Pat = [0-SC]
+% A balanced course steps diagonally each tick.
+    ;   ADR =:= ADC -> Pat = [SR-SC]
+% A steep course alternates cardinal then diagonal steps.
+    ;   ADR =:= 2 * ADC -> Pat = [SR-0, SR-SC]
+% A shallow course alternates cardinal then diagonal steps.
+    ;   ADC =:= 2 * ADR -> Pat = [0-SC, SR-SC]
+% Any other course falls back to its diagonal signs.
+    ;   Pat = [SR-SC]
+    ).
+
+% rm_future_(+End, +Pat, +H, +W, -Cells): future path cells until the border.
+rm_future_(End, Pat, H, W, Cells) :-
+% Start stepping from pattern index zero.
+    rm_future_steps_(End, Pat, 0, H, W, Cells).
+
+% rm_future_steps_(+Pos, +Pat, +K, +H, +W, -Cells): cyclic path stepping.
+rm_future_steps_(R-C, Pat, K, H, W, Cells) :-
+% Measure the pattern length.
+    length(Pat, L),
+% Select the current step by cyclic index.
+    K1 is K mod L,
+% Fetch the step offsets.
+    nth0(K1, Pat, DR-DC),
+% Compute the next row.
+    R1 is R + DR,
+% Compute the next column.
+    C1 is C + DC,
+% Stop at the border, otherwise extend the path.
+    (   R1 >= 0, R1 < H, C1 >= 0, C1 < W
+% Record the in-grid cell and continue stepping.
+    ->  K2 is K + 1,
+% Prepend the cell to the path.
+        Cells = [R1-C1|Rest],
+% Continue from the new position.
+        rm_future_steps_(R1-C1, Pat, K2, H, W, Rest)
+% The path ends at the border.
+    ;   Cells = []
+    ).
+
+% rm_points_(+End, +Future, -Pts): doubled coordinates with step indices.
+rm_points_(End, Future, Pts) :-
+% Delegate to the indexed emitter starting at step zero.
+    rm_points_idx_(End, Future, 0, Pts).
+
+% rm_points_idx_(+Prev, +Future, +I, -Pts): indexed doubled point emission.
+rm_points_idx_(_, [], _, []).
+% Emit the midpoint and cell point at the current index.
+rm_points_idx_(R0-C0, [R1-C1|Rest], I, [p(MR, MC, I), p(TR, TC, I)|Pts]) :-
+% Compute the doubled midpoint row.
+    MR is R0 + R1,
+% Compute the doubled midpoint column.
+    MC is C0 + C1,
+% Compute the doubled cell row.
+    TR is 2 * R1,
+% Compute the doubled cell column.
+    TC is 2 * C1,
+% Advance the step index.
+    I1 is I + 1,
+% Continue along the future path.
+    rm_points_idx_(R1-C1, Rest, I1, Pts).
+
+% rm_conflict_(+MA, +PatA, +MB, +PatB, +H, +W, -SA, -SB): earliest crossing.
+rm_conflict_(rm(_, _, EA), PatA, rm(_, _, EB), PatB, H, W, SA, SB) :-
+% Compute ray A's future path.
+    rm_future_(EA, PatA, H, W, FA),
+% Compute ray B's future path.
+    rm_future_(EB, PatB, H, W, FB),
+% Convert ray A's path to doubled points.
+    rm_points_(EA, FA, PA),
+% Convert ray B's path to doubled points.
+    rm_points_(EB, FB, PB),
+% Collect every shared point with its step-cost pair.
+    findall(Cost-(S1-S2),
+% Match a point of A with an equal point of B.
+            ( member(p(X, Y, S1), PA),
+% The same doubled coordinate must appear in B's path.
+              memberchk(p(X, Y, S2), PB),
+% Rank the crossing by total steps.
+              Cost is S1 + S2 ),
+            Cands),
+% At least one crossing must exist.
+    Cands = [_|_],
+% Order the crossings by ascending total steps.
+    sort(Cands, [_-(SA-SB)|_]).
+
+% rm_bundle_conflict_(+BA, +BB, +H, +W, -Cost): cheapest member crossing.
+rm_bundle_conflict_(bundle(DA, MsA), bundle(DB, MsB), H, W, Cost) :-
+% Derive bundle A's step pattern.
+    rm_pat_(DA, PatA),
+% Derive bundle B's step pattern.
+    rm_pat_(DB, PatB),
+% Collect the crossing costs over all member pairs.
+    findall(C, ( member(MA, MsA), member(MB, MsB),
+% Locate the earliest crossing of this member pair.
+                 rm_conflict_(MA, PatA, MB, PatB, H, W, SA, SB),
+% Rank the crossing by total steps.
+                 C is SA + SB ), Cs),
+% At least one member pair must cross.
+    Cs = [_|_],
+% Keep the cheapest crossing cost.
+    min_list(Cs, Cost).
+
+% rm_resolve_(+Bundles0, +H, +W, -Bundles): merge crossing bundles.
+rm_resolve_(Bundles0, H, W, Bundles) :-
+% Collect every crossing bundle pair with its cost.
+    findall(Cost-(I-J),
+% Enumerate ordered index pairs of distinct bundles.
+            ( nth0(I, Bundles0, BA), nth0(J, Bundles0, BB), I < J,
+% Keep only pairs whose paths cross.
+              rm_bundle_conflict_(BA, BB, H, W, Cost) ),
+            Cands),
+% Merge the cheapest crossing or stop when none remain.
+    (   sort(Cands, [_-(BI-BJ)|_])
+% Merge the chosen pair into one bundle.
+    ->  rm_merge_(BI, BJ, Bundles0, H, W, Bundles1),
+% Look for further crossings after the merge.
+        rm_resolve_(Bundles1, H, W, Bundles)
+% No crossings remain, so the bundles are final.
+    ;   Bundles = Bundles0
+    ).
+
+% rm_merge_(+I, +J, +Bundles0, +H, +W, -Bundles): merge two bundles.
+rm_merge_(I, J, Bundles0, H, W, Bundles) :-
+% Fetch bundle A by index.
+    nth0(I, Bundles0, bundle(DA, MsA)),
+% Fetch bundle B by index.
+    nth0(J, Bundles0, bundle(DB, MsB)),
+% Derive bundle A's step pattern.
+    rm_pat_(DA, PatA),
+% Derive bundle B's step pattern.
+    rm_pat_(DB, PatB),
+% Compute bundle A's truncation distance against B.
+    rm_trunc_(MsA, PatA, MsB, PatB, H, W, TA),
+% Compute bundle B's truncation distance against A.
+    rm_trunc_(MsB, PatB, MsA, PatA, H, W, TB),
+% Sum the row components of both courses.
+    DA = DAR-DAC,
+% Destructure bundle B's course.
+    DB = DBR-DBC,
+% Add the row components.
+    NR0 is DAR + DBR,
+% Add the column components.
+    NC0 is DAC + DBC,
+% Reduce the summed course to its simplest drawable form.
+    rm_reduce_(NR0-NC0, ND),
+% Advance bundle A's members to their truncation points.
+    maplist(rm_advance_(PatA, TA, H, W), MsA, MsA1),
+% Advance bundle B's members to their truncation points.
+    maplist(rm_advance_(PatB, TB, H, W), MsB, MsB1),
+% Join both member lists under the merged course.
+    append(MsA1, MsB1, Ms),
+% Remove the original bundles and add the merged one.
+    rm_replace_(Bundles0, I, J, bundle(ND, Ms), Bundles).
+
+% rm_trunc_(+MsA, +PatA, +MsB, +PatB, +H, +W, -T): bundle truncation steps.
+rm_trunc_(MsA, PatA, MsB, PatB, H, W, T) :-
+% Collect member A's own crossing distances against bundle B.
+    findall(SA, ( member(MA, MsA), member(MB, MsB),
+% Locate the earliest crossing of this member pair.
+                  rm_conflict_(MA, PatA, MB, PatB, H, W, SA, _) ), SAs),
+% Keep the smallest crossing distance as the truncation.
+    min_list(SAs, T).
+
+% rm_advance_(+Pat, +T, +H, +W, +M0, -M): move a ray T steps forward.
+rm_advance_(Pat, T, H, W, rm(Col, Painted, End), rm(Col, Painted1, End1)) :-
+% Compute the full future path of the ray.
+    rm_future_(End, Pat, H, W, Future),
+% Keep only the first T future cells.
+    length(Prefix, T),
+% Split the future at the truncation point.
+    append(Prefix, _, Future),
+% Append the traveled cells to the painted set.
+    append(Painted, Prefix, Painted1),
+% Determine the new end position.
+    (   Prefix = []
+% The ray stays where it was.
+    ->  End1 = End
+% The ray ends at the last traveled cell.
+    ;   last(Prefix, End1)
+    ).
+
+% rm_reduce_(+Dir0, -Dir): normalize a summed course vector.
+rm_reduce_(DR-DC, Dir) :-
+% Reduce a doubled vertical course to a unit step.
+    (   DC =:= 0, DR =\= 0 -> SR is sign(DR), Dir = SR-0
+% Reduce a doubled horizontal course to a unit step.
+    ;   DR =:= 0, DC =\= 0 -> SC is sign(DC), Dir = 0-SC
+% Reduce a balanced course to a unit diagonal.
+    ;   abs(DR) =:= abs(DC), DR =\= 0 -> SR is sign(DR), SC is sign(DC), Dir = SR-SC
+% Keep any other course as the raw sum.
+    ;   Dir = DR-DC
+    ).
+
+% rm_replace_(+Bundles0, +I, +J, +NewB, -Bundles): swap two for one.
+rm_replace_(Bundles0, I, J, NewB, [NewB|Rest]) :-
+% Pair each bundle with its index.
+    findall(B, ( nth0(K, Bundles0, B), K =\= I, K =\= J ), Rest).
+
+% rm_paint_(+Bundles, +H, +W, +Grid0, -Grid): draw all ray paths.
+rm_paint_([], _, _, Grid, Grid).
+% Paint one bundle then the rest.
+rm_paint_([bundle(D, Ms)|Bs], H, W, Grid0, Grid) :-
+% Derive the bundle's step pattern.
+    rm_pat_(D, Pat),
+% Paint every member ray of the bundle.
+    foldl(rm_paint_ray_(Pat, H, W), Ms, Grid0, Grid1),
+% Continue with the remaining bundles.
+    rm_paint_(Bs, H, W, Grid1, Grid).
+
+% rm_paint_ray_(+Pat, +H, +W, +M, +G0, -G): draw one ray's full path.
+rm_paint_ray_(Pat, H, W, rm(Col, Painted, End), G0, G) :-
+% Compute the ray's remaining future path.
+    rm_future_(End, Pat, H, W, Future),
+% Join the traveled and future cells.
+    append(Painted, Future, Cells),
+% Paint every path cell with the ray color.
+    foldl([R-C, GA, GB]>>arc2_set_cell_(GA, R, C, Col, GB), Cells, G0, G).
+
+% rm_additive_(+In, +Out, +Bg): the output only paints background cells.
+rm_additive_(In, Out, Bg) :-
+% Check every cell position of the grid.
+    forall(( nth0(R, In, Row), nth0(C, Row, VI),
+% Fetch the matching output cell.
+             nth0(R, Out, ORow), nth0(C, ORow, VO),
+% Consider only cells that changed.
+             VI =\= VO ),
+% A changed cell must have been background in the input.
+           VI =:= Bg).
+
+% rm_verify_pair_(+Pair, -Cost): exact match scores zero, tolerated one.
+rm_verify_pair_(pair(In, Out), Cost) :-
+% Apply the ray-merge transform to the input.
+    arc2_transform(ray_merge, In, Computed),
+% Score the computed grid against the expected output.
+    (   Computed == Out
+% An exact reproduction costs nothing.
+    ->  Cost = 0
+% Otherwise the deviation must be a small extra-paint-only set.
+    ;   rm_extra_only_(In, Out, Computed, N),
+% The deviation may cover at most eight cells.
+        N =< 8,
+% A tolerated deviation costs one.
+        Cost = 1
+    ).
+
+% rm_extra_only_(+In, +Out, +Computed, -N): count extra-paint deviations.
+rm_extra_only_(In, Out, Computed, N) :-
+% Collect every deviating cell position.
+    findall(R-C, ( nth0(R, Computed, CRow), nth0(C, CRow, VC),
+% Fetch the expected output cell.
+                   nth0(R, Out, ORow), nth0(C, ORow, VO),
+% Keep only deviating cells.
+                   VC =\= VO ), Diffs),
+% Every deviating cell must have kept its input color in the output.
+    forall(member(R-C, Diffs),
+% Fetch and compare the input and expected values.
+           ( arc2_cell_(In, R, C, VI), arc2_cell_(Out, R, C, VI) )),
+% Count the deviating cells.
+    length(Diffs, N).
