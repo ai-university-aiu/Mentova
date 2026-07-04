@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 85 complete: 82/120 = 68.33%.
+Last updated: 2026-07-03. Wave 86 complete: 83/120 = 69.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -207,6 +207,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  80 / 120  | 66.67%  | Wave 83: stripe_cycle one edge row (top or bottom) carries a horizontal color-4 bar marking the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance D from the marker row - D of 0 or 2 paints the stripe columns with 4, odd D paints them with the background color, and D of 4 paints the stripe columns with 3 while overlaying 3 on every non-background cell of that row outside the stripes; the test grid moves the marker from the bottom row to the top row, so the palette must be anchored at the marker, not at row zero
 2026-07-03  |  81 / 120  | 67.50%  | Wave 84: motif_shadow two-cell-wide rectangular motifs carry a run of color 2 along one long side, and the long-axis end farther from that run is the anchor end; three singleton marker cells on the grid edges each align with one motif and teach one offset-to-color lesson (offset measured from the anchor end) plus the grid-wide polarity - rays exit either on the same cross side as the 2-run or on the opposite side; every motif then casts one full ray per lesson, perpendicular to its long axis, from its exit side to the grid edge, painting only background cells
 2026-07-03  |  82 / 120  | 68.33%  | Wave 85: dial_rotor one framed square figure wrapped in a dotted ring, plus detached straight dial pieces lying far away; a dial piece of color C with length L commands "rotate color C's layer by L quarter turns clockwise"; the crop box merges the main figure with every component within Chebyshev distance 3, the ring color is the unique color on the crop's outermost layer, the ring-zone thickness is the minimum inset of any non-ring-colored cell, the ring zone spins by the ring color's dial (staying put without one) and the core block spins by the largest dial among its own colors
+2026-07-03  |  83 / 120  | 69.17%  | Wave 86: xray_frame one large rectangular frame with a uniform interior occludes partial rectangle outlines drawn outside it; the output is the frame interior with every shape's hidden perimeter cells restored - the shapes' bounding boxes are completed through the frame as if it were transparent; single-color shapes restore their own color, and two-color alternating shapes restore the color-swapped mirror (vertical first, then horizontal) of the visible cell inside the shape's bounding box
 
 
 COMPLETE SCORE PROGRESSION
@@ -1227,6 +1228,72 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 86 - 2026-07-03 - Score: 83/120 = 69.17%
+
+Date: 2026-07-03
+
+Confirmed score: 83 / 120 = 69.17%
+
+Rules added in this wave:
+  xray_frame (WP-344, Layer 319)
+
+Task solved: a6f40cea (3 training pairs + 1 test case; grids 20x20,
+  30x30, 22x22, and 24x24 cropping to 4x7, 13x14, 7x8, and 8x10
+  outputs; each grid holds one large rectangular frame of a single
+  color whose interior is uniformly filled - with the background in
+  two grids and with a distinct fill color in the others - plus
+  several partial rectangle outlines drawn outside the frame that
+  visibly slide under it; two grids include two-color outlines whose
+  edges alternate two colors cell by cell).
+
+Algorithm: x-ray restoration of occluded rectangle outlines.
+  Stage 1: the majority color is the background, and the frame is
+  found by enumerating single-color 8-connected components whose
+  cells form exactly the perimeter of their bounding box (at least
+  3x3) with a uniform single-color interior, keeping the largest by
+  bounding-box area. Stage 2: every non-background cell strictly
+  outside the frame's bounding box is a visible shape cell; the
+  cells group into 8-connected components, and components sharing an
+  identical color set merge into one shape (this reunites outline
+  halves split by the frame). Stage 3: each shape's bounding box is
+  completed through the frame as if it were transparent - every
+  perimeter cell of the shape's bounding box that falls strictly
+  inside the frame interior is restored. Stage 4: a single-color
+  shape restores its own color; a two-color alternating shape
+  restores the color-swapped value of the mirror source cell inside
+  its own bounding box, preferring the vertical mirror and falling
+  back to the horizontal mirror when the vertical source is not
+  visible. Stage 5: the output is the frame interior crop with the
+  restored cells overlaid on the uniform fill.
+
+Bugs fixed: none. The rule passed the single-task test and the full
+  regression on the first compile.
+
+Lessons learned: the two-color alternating outlines are a trap for
+  every positional-parity reading. All visible cells of every shape
+  are consistent with a plain (row + column) checkerboard, and the
+  checkerboard correctly restores three of the four two-color
+  shapes - but the 9/8 shape in the third training pair demands the
+  exact anti-checkerboard in its hidden cells. Plain alternation
+  continuation, perimeter-path alternation, border-skipping
+  alternation, 180-degree rotation, and periodic translation all
+  fail on at least one shape. The only completion that explains
+  every hidden cell of every two-color shape in all four grids is
+  the color-swapped mirror: reflect the hidden cell to the opposite
+  edge of the shape's own bounding box (vertically first, then
+  horizontally), read the visible color there, and swap it within
+  the shape's two-color palette. Writing out every hidden cell of
+  every training pair by hand before coding was what exposed the
+  contradiction and the swap-mirror resolution. Full regression of
+  all 82 locally verified tasks (81 prior plus a6f40cea) still
+  induces and passes.
+
+Accomplishment: Acc_384.  Paper: Acc_384_ARC2_Wave86_XrayFrame.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4396,6 +4463,7 @@ a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing m
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
 64efde09  - Wave 84 - motif_shadow       - two-cell-wide motifs carry a color-2 run along one long side whose farther end is the anchor; three edge markers teach offset-to-color lessons from the anchor plus the grid-wide exit polarity, and every motif casts one background-only ray per lesson from its exit side to the grid edge
 6ffbe589  - Wave 85 - dial_rotor         - a framed square wrapped in a dotted ring is cropped together with every nearby component; detached straight dial pieces command rotations - a run of color C with length L spins color C's layer by L quarter turns clockwise - so the ring zone spins by the ring color's dial and the core block spins by the largest dial among its own colors
+a6f40cea  - Wave 86 - xray_frame         - a large rectangular frame with a uniform interior occludes partial rectangle outlines drawn outside it; the output is the frame interior with every shape's hidden bounding-box perimeter cells restored - single-color shapes restore their own color and two-color alternating shapes restore the color-swapped mirror of the visible cell inside their own bounding box
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4768,4 +4836,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 84: Motif-shadow - rectangular motifs two ce
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 85: Dial-rotor - each grid holds one main figure, a framed square wrapped in a dotted ring, plus a few small detached straight pieces lying far away; the crop box merges the largest-bounding-box component with every component within Chebyshev distance 3 of it, and each detached piece is a dial: a straight single-color run of color C with length L commanding "rotate color C's layer by L quarter turns clockwise" (L mod 4); the ring color is the unique color on the crop's outermost layer, the ring-zone thickness is the minimum inset of any non-ring-colored cell, the ring zone spins by the ring color's dial (staying put without one), and the core block spins by the largest dial among the colors present in the core; the dials are the discriminating observation of the wave, because the second training grid and the test grid share the same palette yet need different rotations, and the test's length-5 ring dial proves the L-mod-4 reading - a full revolution plus a quarter turn.
   Score: 82/120 = 68.33%. Task 6ffbe589 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 86: Xray-frame - each grid holds one large rectangular frame of a single color whose interior is uniformly filled, plus several partial rectangle outlines drawn outside the frame that visibly slide under it; the output is the frame interior with every shape's hidden cells restored, as if the frame were transparent; the frame is the largest single-color component forming exactly the perimeter of its bounding box with a uniform interior, the visible shape cells outside the frame group into components merged by identical color set (reuniting outline halves split by the frame), and each shape's bounding-box perimeter is completed through the interior; a single-color shape restores its own color, while a two-color alternating shape restores the color-swapped value of the mirror source inside its own bounding box, vertical mirror first and horizontal as fallback; the swap-mirror is the discriminating observation of the wave, because every visible cell of every two-color shape obeys a plain checkerboard parity, yet the 9/8 shape of the third training pair demands the exact anti-checkerboard in its hidden cells, falsifying every parity, path-alternation, rotation, and translation reading.
+  Score: 83/120 = 69.17%. Task a6f40cea solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

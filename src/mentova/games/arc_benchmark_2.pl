@@ -749,6 +749,42 @@ arc2_induce_rule(TrainingPairs, dial_rotor) :-
 % Each training pair must transform correctly under dial_rotor.
            arc2_transform(dial_rotor, In, Out)).
 
+% xray_frame: early dispatch before generic clause (WP-344, Layer 319).
+% Enumerate xray_frame as a known rule name.
+arc2_named_rule(xray_frame).
+% arc2_induce_rule(xray_frame): frame-crop pre-filter + verify.
+arc2_induce_rule(TrainingPairs, xray_frame) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, IH),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output is an interior crop, so it must be strictly shorter.
+    OH < IH,
+% Fetch the first row of the input.
+    First = [FR|_],
+% Fetch the first row of the output.
+    FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, IW),
+% Measure the first output width.
+    length(FOR, OW),
+% The output is an interior crop, so it must be strictly narrower.
+    OW < IW,
+% Determine the majority background color of the first input.
+    tw_background_(First, BG),
+% The first input must hold a rectangular frame with a uniform interior.
+    xr_frame_(First, BG, R0, C0, R1, C1),
+% The output height must equal the frame interior height.
+    OH =:= R1 - R0 - 1,
+% The output width must equal the frame interior width.
+    OW =:= C1 - C0 - 1,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under xray_frame.
+           arc2_transform(xray_frame, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -17837,3 +17873,233 @@ dr_rotn_(2, Grid, Out) :-
 dr_rotn_(3, Grid, Out) :-
 % Delegate to the existing counter-clockwise rotation transform.
     arc2_transform(rotate_90_ccw, Grid, Out).
+
+% ---------------------------------------------------------------------------
+% XRAY_FRAME (WP-344, Layer 319) — task a6f40cea.
+% A large rectangular frame with a uniform interior occludes partial
+% rectangle outlines drawn outside it.  The output is the frame interior
+% with each shape's hidden perimeter cells restored.  Single-color shapes
+% restore their own color; two-color alternating shapes restore the
+% color-swapped mirror (vertical first, then horizontal) of the visible
+% cell inside the shape's bounding box.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(xray_frame): crop the frame interior and restore shapes.
+arc2_transform(xray_frame, Grid, Out) :-
+% Determine the majority background color of the grid.
+    tw_background_(Grid, BG),
+% Locate the largest rectangular frame with a uniform interior.
+    xr_frame_(Grid, BG, R0, C0, R1, C1),
+% Collect the merged partial-outline shapes outside the frame box.
+    xr_shapes_(Grid, BG, R0, C0, R1, C1, Shapes),
+% Compute every restored hidden perimeter cell of every shape.
+    findall(d(R, C, V),
+% Each shape contributes its hidden interior perimeter cells.
+            ( member(Shape, Shapes),
+% Restore one hidden cell of the shape inside the frame interior.
+              xr_hidden_(Grid, R0, C0, R1, C1, Shape, R, C, V) ),
+% Bind the list of restored cells.
+            Drawn),
+% The interior starts one row below the frame top.
+    IR0 is R0 + 1,
+% The interior ends one row above the frame bottom.
+    IR1 is R1 - 1,
+% The interior starts one column right of the frame left edge.
+    IC0 is C0 + 1,
+% The interior ends one column left of the frame right edge.
+    IC1 is C1 - 1,
+% Build the output as the interior crop overlaid with restored cells.
+    findall(RowOut,
+% Walk each interior row from top to bottom.
+            ( between(IR0, IR1, R),
+% Build one output row cell by cell.
+              findall(V,
+% Walk each interior column from left to right.
+                      ( between(IC0, IC1, C),
+% Take the restored value when present, else the input value.
+                        xr_out_cell_(Grid, Drawn, R, C, V) ),
+% Bind the completed output row.
+                      RowOut) ),
+% Bind the completed output grid.
+            Out).
+
+% xr_out_cell_(+Grid, +Drawn, +R, +C, -V): restored value or input value.
+xr_out_cell_(Grid, Drawn, R, C, V) :-
+% Prefer a restored cell when one covers this position.
+    ( memberchk(d(R, C, V0), Drawn) -> V = V0
+% Otherwise keep the uniform interior fill from the input.
+    ; arc2_cell_(Grid, R, C, V) ).
+
+% xr_frame_(+Grid, +BG, -R0, -C0, -R1, -C1): largest uniform-interior ring.
+xr_frame_(Grid, BG, R0, C0, R1, C1) :-
+% Collect every candidate ring together with its bounding-box area.
+    findall(f(A, Ra, Ca, Rb, Cb),
+% Enumerate each perfect single-color ring with a uniform interior.
+            xr_ring_(Grid, BG, A, Ra, Ca, Rb, Cb),
+% Bind the candidate list.
+            Frames),
+% At least one candidate frame must exist.
+    Frames \= [],
+% Order the candidates by ascending bounding-box area.
+    msort(Frames, Sorted),
+% The last candidate is the largest frame.
+    last(Sorted, f(_, R0, C0, R1, C1)).
+
+% xr_ring_(+Grid, +BG, -Area, -R0, -C0, -R1, -C1): one perfect ring.
+xr_ring_(Grid, BG, Area, R0, C0, R1, C1) :-
+% Flatten the grid to enumerate its colors.
+    flatten(Grid, Vals),
+% Deduplicate the color list.
+    sort(Vals, Colors),
+% Pick one candidate ring color.
+    member(V, Colors),
+% The ring color must differ from the background.
+    V =\= BG,
+% Collect every cell of the candidate color.
+    findall(c(R, C, V),
+% Walk each cell keeping only the candidate color.
+            ( nth0(R, Grid, Row), nth0(C, Row, V) ),
+% Bind the collected same-color cells.
+            Cells),
+% Group the same-color cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Pick one component as the ring candidate.
+    member(Comp, Comps),
+% Compute the component's bounding box.
+    xr_bbox_(Comp, R0, R1, C0, C1),
+% The ring must be at least three rows tall.
+    R1 - R0 >= 2,
+% The ring must be at least three columns wide.
+    C1 - C0 >= 2,
+% Measure the bounding-box height.
+    H is R1 - R0 + 1,
+% Measure the bounding-box width.
+    W is C1 - C0 + 1,
+% A perfect ring has exactly the perimeter cell count.
+    PN is 2 * (H + W) - 4,
+% The component must carry exactly the perimeter cell count.
+    length(Comp, PN),
+% Every component cell must lie on the bounding-box border.
+    forall(member(c(R, C, _), Comp),
+% A border cell touches the top, bottom, left, or right edge.
+           ( R =:= R0 ; R =:= R1 ; C =:= C0 ; C =:= C1 )),
+% The interior starts one row below the ring top.
+    IR0 is R0 + 1,
+% The interior ends one row above the ring bottom.
+    IR1 is R1 - 1,
+% The interior starts one column right of the ring left edge.
+    IC0 is C0 + 1,
+% The interior ends one column left of the ring right edge.
+    IC1 is C1 - 1,
+% Read the fill color from the interior's top-left cell.
+    arc2_cell_(Grid, IR0, IC0, F),
+% Every interior cell must carry the same fill color.
+    forall(( between(IR0, IR1, R), between(IC0, IC1, C) ),
+% Check one interior cell against the fill color.
+           arc2_cell_(Grid, R, C, F)),
+% Rank the ring by its bounding-box area.
+    Area is H * W.
+
+% xr_bbox_(+Comp, -R0, -R1, -C0, -C1): bounding box of a component.
+xr_bbox_(Comp, R0, R1, C0, C1) :-
+% Collect the row indices of the component cells.
+    findall(R, member(c(R, _, _), Comp), Rs),
+% Collect the column indices of the component cells.
+    findall(C, member(c(_, C, _), Comp), Cs),
+% The topmost row of the component.
+    min_list(Rs, R0),
+% The bottommost row of the component.
+    max_list(Rs, R1),
+% The leftmost column of the component.
+    min_list(Cs, C0),
+% The rightmost column of the component.
+    max_list(Cs, C1).
+
+% xr_shapes_(+Grid, +BG, +R0, +C0, +R1, +C1, -Shapes): merged shapes.
+xr_shapes_(Grid, BG, R0, C0, R1, C1, Shapes) :-
+% Collect every foreground cell outside the frame bounding box.
+    findall(c(R, C, V),
+% Walk each cell keeping non-background cells outside the frame.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= BG,
+% A visible shape cell lies strictly outside the frame box.
+              ( R < R0 ; R > R1 ; C < C0 ; C > C1 ) ),
+% Bind the collected visible shape cells.
+            SCells),
+% Group the visible cells into 8-connected components.
+    tw_components_(SCells, Comps),
+% Pair each component with its sorted color set.
+    findall(CS-Comp,
+% Compute one component's color-set key.
+            ( member(Comp, Comps), xr_colorset_(Comp, CS) ),
+% Bind the keyed component list.
+            Keyed),
+% Collect the distinct color-set keys.
+    findall(CS, member(CS-_, Keyed), KeysDup),
+% Deduplicate the color-set keys.
+    sort(KeysDup, Keys),
+% Merge the components that share a color-set key.
+    findall(sh(CS, SR0, SC0, SR1, SC1),
+% Build one merged shape per color-set key.
+            ( member(CS, Keys),
+% Gather every cell of every component under this key.
+              findall(Cell,
+% One matching component contributes all of its cells.
+                      ( member(CS-Comp, Keyed), member(Cell, Comp) ),
+% Bind the merged cell list.
+                      Merged),
+% Compute the merged shape's bounding box.
+              xr_bbox_(Merged, SR0, SR1, SC0, SC1) ),
+% Bind the merged shape list.
+            Shapes).
+
+% xr_colorset_(+Comp, -CS): sorted set of colors in a component.
+xr_colorset_(Comp, CS) :-
+% Collect the color of every component cell.
+    findall(V, member(c(_, _, V), Comp), Vs),
+% Deduplicate the colors into a sorted set.
+    sort(Vs, CS).
+
+% xr_hidden_(+Grid, +R0, +C0, +R1, +C1, +Shape, -R, -C, -V): one cell.
+xr_hidden_(Grid, R0, C0, R1, C1, sh(CS, SR0, SC0, SR1, SC1), R, C, V) :-
+% Walk each row of the shape's bounding box.
+    between(SR0, SR1, R),
+% Walk each column of the shape's bounding box.
+    between(SC0, SC1, C),
+% Keep only the perimeter cells of the shape's bounding box.
+    ( R =:= SR0 ; R =:= SR1 ; C =:= SC0 ; C =:= SC1 ),
+% The cell must lie strictly inside the frame interior rows.
+    R > R0, R < R1,
+% The cell must lie strictly inside the frame interior columns.
+    C > C0, C < C1,
+% Restore the cell color from the shape's visible pattern.
+    xr_restore_(Grid, R0, C0, R1, C1, CS, SR0, SC0, SR1, SC1, R, C, V).
+
+% xr_restore_: single-color shapes restore their own color.
+xr_restore_(_, _, _, _, _, [V], _, _, _, _, _, _, V).
+% xr_restore_: two-color shapes restore the color-swapped mirror cell.
+xr_restore_(Grid, R0, C0, R1, C1, [A, B], SR0, SC0, SR1, SC1, R, C, V) :-
+% Compute the vertical-mirror row inside the shape's bounding box.
+    MR is SR0 + SR1 - R,
+% Compute the horizontal-mirror column inside the shape's bounding box.
+    MC is SC0 + SC1 - C,
+% Prefer the vertical mirror when it is visible, else the horizontal one.
+    ( xr_visible_(Grid, R0, C0, R1, C1, [A, B], MR, C, V0) -> true
+% Fall back to the horizontal mirror source cell.
+    ; xr_visible_(Grid, R0, C0, R1, C1, [A, B], R, MC, V0) ),
+% Restore the color-swapped value of the mirror source.
+    xr_swap_([A, B], V0, V).
+
+% xr_visible_(+Grid, +R0, +C0, +R1, +C1, +CS, +R, +C, -V): visible source.
+xr_visible_(Grid, R0, C0, R1, C1, CS, R, C, V) :-
+% The source cell must lie strictly outside the frame bounding box.
+    ( R < R0 ; R > R1 ; C < C0 ; C > C1 ),
+% Read the source cell's color.
+    arc2_cell_(Grid, R, C, V),
+% The source color must belong to the shape's color set.
+    memberchk(V, CS).
+
+% xr_swap_(+Pair, +V, -W): swap between the two shape colors.
+% The first color swaps to the second color.
+xr_swap_([A, B], A, B).
+% The second color swaps to the first color.
+xr_swap_([A, B], B, A).
