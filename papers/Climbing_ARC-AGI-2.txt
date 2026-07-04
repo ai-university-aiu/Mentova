@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 110 complete: 107/120 = 89.17%.
+Last updated: 2026-07-04. Wave 111 complete: 108/120 = 90.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -232,6 +232,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  | 105 / 120  | 87.50%  | Wave 108: cavity_paint the scene holds exactly two foreground shapes on a uniform background - a hollow silhouette drawn entirely in one color and a multi-color template that redraws the same figure smaller or distorted with its cavities already painted; the output crops to the silhouette's bounding box, keeps every silhouette cell in the silhouette color, finds every background cavity fully enclosed by the silhouette with a four-connected outside flood, and paints each cavity with the color of the template region whose centroid, normalized to its own bounding box, lies nearest to the cavity's normalized centroid, while background connected to the border stays background - the normalized-centroid pairing is the discriminating observation, because the template is a warped redrawing whose regions shift rows and columns relative to the silhouette's cavities, so plain top-to-bottom ordering misassigns the middle cavity in the first training pair and only the position-proportional match lands every color on every cavity across both training pairs and the nine-cavity test
 2026-07-04  | 106 / 120  | 88.33%  | Wave 109: pipe_router a six-row legend strip of framed color swatches sits above the playing field, each six-wide swatch holding one colored pixel among its four interior cells - a pixel on the left half declares that blocks of that color turn pipes left and a pixel on the right half declares they turn pipes right; the field below holds a majority-color background, colored rectangular blocks, and one square seed of 8s, and four 8-pipes exactly as wide as the seed shoot from the seed in the four orthogonal directions, each traveling straight painting 8s over background and crossing other pipes freely, ending when it leaves the grid, and stopping beside any colored block it meets head-on to turn left or right according to that block color's legend handedness before continuing; the output is the field alone with all pipes painted - the legend handedness is the discriminating observation, because the sixteen block-hit turns across the four grids follow no larger-extent rule, no nearest-edge rule, and no fixed chirality, yet every single turn matches the side of the swatch on which that block color's legend pixel sits
 2026-07-04  | 107 / 120  | 89.17%  | Wave 110: snake_dock the scene holds two-colored snakes - each a 4-connected piece made of exactly two single-color segments touching orthogonally - and single-color containers whose bounding boxes hold a pocket of background cells, the socket; exactly one segment of one snake matches each socket's shape under one of the eight grid isometries, and the whole snake docks rigidly so that segment fills the socket while the other segment trails outside on background cells, the original snake erased; the discriminating observation is the color law - a proper rotation keeps each segment's own color but a reflection exchanges the two segment colors, because a snake that must be flipped over to fit shows its underside, and this parity rule predicts all five docking events across the three training grids and the two-container test grid
+2026-07-04  | 108 / 120  | 90.00%  | Wave 111: fractal_stamp legend panels sit beside full-height divider columns of color 6, each panel holding a two-color stamp glyph, a one-color layout glyph, a bordered box whose single 4 names a corner of the playing field, and a second box whose two-cell 7-domino points a rotation - up for none, right for a quarter turn clockwise, down for a half turn, left for three quarters; the output is the field alone with the layout glyph, rotated as the domino commands and scaled up by the stamp's dimensions, painted flush at the named corner, every layout cell replaced by a full copy of the stamp with its two colors exchanged; the corner-and-needle instruction pair is the discriminating observation, because the three training panels and the two test panels combine anchors and rotations five different ways - top-left with no turn, top-right with a quarter turn, bottom-right with a half turn, bottom-right with no turn, and top-left with a half turn - so neither marker alone predicts any placement, yet the pair predicts all five
 
 
 COMPLETE SCORE PROGRESSION
@@ -1252,6 +1253,80 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 111 - 2026-07-04 - Score: 108/120 = 90.00%
+
+Date: 2026-07-04
+
+Confirmed score: 108 / 120 = 90.00%
+
+Rules added in this wave:
+  fractal_stamp (WP-369, Layer 344)
+
+Task solved: a32d8b75 (3 training pairs + 1 test case; training
+  grids 20x30 with one left legend panel each, test grid 30x30
+  with two legend panels, one on each side; the output drops the
+  panels, so training outputs are 20x24 and the test output is
+  30x20).
+
+Algorithm: read each legend panel as a four-part stamping
+  program and run every program against the shared playing field.
+  Stage 1: find every full-height column of divider color 6;
+  each divider owns a legend panel on the side toward the nearer
+  grid edge, and the playing field is what remains between the
+  panels.
+  Stage 2: inside a panel, find the two all-6 separator rows;
+  above the first lies the glyph zone, between them lies the
+  anchor box, and below the second lies the rotation box.
+  Stage 3: split the glyph zone into 8-connected components of
+  non-background cells; the component drawn in two colors is the
+  STAMP glyph and the component drawn in one color is the LAYOUT
+  glyph.
+  Stage 4: the anchor box holds a single 4 whose corner within
+  the box interior (border 6 columns trimmed) names the field
+  corner where the painting is anchored flush.
+  Stage 5: the rotation box holds a two-cell 7-domino needle;
+  a vertical needle in the upper half commands no rotation, in
+  the lower half a half turn, and a horizontal needle in the
+  right half a quarter turn clockwise, in the left half three
+  quarter turns.
+  Stage 6: rotate the layout mask as commanded, scale it up by
+  the stamp's height and width, and paint it at the anchored
+  corner - every set layout cell becomes a full copy of the
+  stamp with its two colors exchanged, and every clear cell
+  keeps the field underneath untouched.
+
+Bugs fixed: one, caught by the Python prototype before any
+  Prolog was written - the box interiors were first taken as
+  fixed columns one through panel-width-minus-two, which
+  wrongly kept the divider-adjacent border column inside the
+  interior and misread the vertical 7-needle as horizontal;
+  the fix trims every all-6 column from the box rows instead.
+  The Prolog rule then passed the single-task test and the full
+  regression on the first compile.
+
+Lessons learned: instruction boxes in a legend can carry a
+  TWO-PART placement command - one marker naming a corner and
+  one marker naming a rotation - and the pair must be read
+  jointly, because across the five panels of this task the same
+  corner appears with two different rotations and the same
+  rotation with two different corners, so any single-marker
+  theory collapses; a domino is the minimal rotation needle,
+  since its offset from the box center distinguishes the four
+  quarter-turn commands with just two cells; when a legend glyph
+  is painted onto the field, expect the NEGATIVE - this task
+  paints every stamp with its two colors exchanged, exactly as
+  Wave 110's reflected snakes showed their undersides; and a
+  grid may carry several independent legend panels, so the
+  parser must treat panels as a list and fold their programs
+  over the shared field, which is precisely what the two-panel
+  test grid demands.
+
+Accomplishment: Acc_409.  Paper: Acc_409_ARC2_Wave111_FractalStamp.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -6071,6 +6146,7 @@ e12f9a14  - Wave 107 - ray_merge          - rectangular rings leak interior-colo
 3a25b0d8  - Wave 108 - cavity_paint       - a monochrome hollow silhouette and a multi-color warped template redraw the same figure; the output crops to the silhouette, keeps its cells, and dyes every enclosed background cavity with the color of the template region whose bounding-box-normalized centroid lies nearest
 e87109e9  - Wave 109 - pipe_router        - a six-row legend of framed swatches gives every block color a turn handedness by pixel side; four 8-pipes as wide as the square seed shoot in the four directions, painting over background, crossing pipes freely, exiting at edges, and turning at blocks per the legend
 a25697e4  - Wave 110 - snake_dock         - two-colored snakes dock rigidly into container pockets whose shape matches one segment under a grid isometry, the other segment trailing outside; a proper rotation keeps the segment colors and a reflection swaps them - the flipped snake shows its underside
+a32d8b75  - Wave 111 - fractal_stamp      - legend panels beside full-height 6-columns each hold a two-color stamp glyph, a one-color layout glyph, a 4 naming a field corner, and a 7-domino needle naming a rotation; the layout, rotated and scaled by the stamp, is painted flush at that corner with every set cell a copy of the stamp in exchanged colors
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
@@ -6558,4 +6634,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 109: Pipe-router - a six-row legend strip of
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 110: Snake-dock - the scene holds two-colored snakes, each a 4-connected piece made of exactly two single-color segments touching orthogonally, and single-color containers built from one or two nearby wall components whose bounding boxes hold a pocket of background cells, the socket; exactly one segment of one snake matches each socket's shape under one of the eight grid isometries, and the whole snake docks rigidly so that segment fills the socket while the other segment trails outside on in-grid background cells, the original snake erased; the discriminating observation of the wave is the color law - after a proper rotation each segment keeps its own color, but after a reflection the two segment colors are exchanged, because a snake that must be flipped over to fit shows its underside; two training grids share the same snake pixel-for-pixel with only the container mirrored, forcing the discriminator into the docking geometry, and the isometry's parity predicts all five docking events across the three training grids and the two-container test grid.
   Score: 107/120 = 89.17%. Task a25697e4 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 111: Fractal-stamp - legend panels sit beside full-height divider columns of color 6, each panel holding a two-color stamp glyph, a one-color layout glyph, a bordered box whose single 4 names a corner of the playing field, and a second box whose two-cell 7-domino needle names a rotation - up for none, right for a quarter turn clockwise, down for a half turn, left for three quarters; the output drops the panels and paints the layout glyph, rotated as the needle commands and scaled up by the stamp's dimensions, flush at the named field corner, every set layout cell replaced by a full copy of the stamp with its two colors exchanged and every clear cell keeping the field underneath; the corner-and-needle instruction pair is the discriminating observation of the wave, because the three training panels and the two panels of the two-legend test grid combine anchors and rotations five different ways, so neither marker alone predicts any placement, yet the pair predicts all five.
+  Score: 108/120 = 90.00%. Task a32d8b75 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
