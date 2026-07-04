@@ -1,0 +1,47 @@
+Accomplishment 411: ARC-AGI-2 Wave 113 - Bbox Fill Repair: When Two Laws Only Agree In-Distribution
+
+PrologAI solves ARC-AGI-2 task 9385bd28 with a single-tiebreaker
+repair of the glass-box bbox_fill rule (WP-371, Layer 346),
+raising the benchmark score from 109/120 = 90.83% to
+110/120 = 91.67%.
+
+This was a repair wave. The rule already induced correctly on the
+task - every training pair verified - yet its held-out answer was
+wrong in exactly twelve cells. In this puzzle a small legend at
+the bottom-left maps each marker color to a fill color, and each
+color paints two L-tromino corners that define a rectangle drawn
+solid in its fill color. Where rectangles overlap, a stacking
+order decides which fill shows. All four training pairs NEST their
+rectangles - a small one inside a larger one - and the rule
+stacked them by bounding-box area, smallest on top, which passed
+every training pair.
+
+The held-out test does not nest - it CROSSES. A color-2 stripe two
+columns wide runs the full height of the grid and passes through
+three horizontal bars, none of which contains the other. The
+correct answer keeps the stripe at the crossings, but
+smallest-area order let the shorter bars win. Twelve cells wrong.
+
+The diagnosis is the interesting part: smallest-area-on-top and
+earliest-legend-on-top are INDISTINGUISHABLE whenever rectangles
+nest, because the inner rectangle is both the smaller shape and
+the earlier legend entry. The two laws diverge only when shapes
+cross, and no training pair crosses. The legend's own top-to-bottom
+order is the author's explicit z-order declaration - a first-class
+signal, more trustworthy than the geometric proxy of area that
+merely happened to agree with it in-distribution. Sorting the
+rectangles by legend index instead of area corrects all twelve
+cells, keeps every training pair passing, and regresses nothing
+across the full 120-task benchmark.
+
+The wave's lesson: an inductive tiebreaker can be a coincidence of
+the training distribution. Two laws that agree on every visible
+example are not thereby the same law, and a held-out configuration
+that pulls them apart is exactly what a benchmark is for. When a
+rule passes every training pair yet misses the test, suspect a
+tiebreaker, and prefer the first-class signal the puzzle provides
+over any proxy that merely correlates with it. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

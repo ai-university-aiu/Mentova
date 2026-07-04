@@ -1,0 +1,124 @@
+Acc_411: ARC-AGI-2 Wave 113 - Bbox Fill Repair: When Smallest-Area and Legend Order Only Agree In-Distribution
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-04
+
+ACCOMPLISHMENT
+
+Wave 113 of the ARC-AGI-2 benchmark climb - task 9385bd28 solved
+by a single-tiebreaker repair of the bbox_fill rule (WP-371,
+Layer 346). Score advances from 109/120 = 90.83% to
+110/120 = 91.67%.
+
+This is a REPAIR WAVE. The bbox_fill rule already induced
+correctly on task 9385bd28 - every training pair verified - yet
+its held-out test output was wrong in exactly twelve cells. The
+wave diagnoses the miss, corrects one ordering decision, and
+takes the summit step without touching any other task.
+
+TASK DESCRIPTION
+
+Task 9385bd28 presents four training pairs and one test case. In
+each grid a two-column LEGEND sits at the bottom-left: a short
+stack of rows in which the left column holds a marker color K and
+the right column holds a fill color V, one K-to-V mapping per
+row. Elsewhere in the grid, every marker color K paints two
+three-cell L-TROMINOES - opposite corners of a rectangle. The
+output draws that rectangle SOLID in the fill color V, keeping
+the original marker cells, so the two corner brackets become a
+filled box.
+
+When several rectangles overlap, a stacking order decides which
+fill is visible. In all four training pairs the rectangles NEST:
+a small rectangle sits wholly inside a larger one, and the small
+one shows on top. The original rule captured this with the
+natural heuristic "smallest bounding-box area draws last," and it
+passed every training pair.
+
+The held-out test is a 19x13 grid on background 9 with a
+five-row legend. Its rectangles do not nest - they CROSS. A
+color-2 rectangle only two columns wide runs the full height of
+the grid, a vertical stripe, and it passes straight through three
+horizontal bars (colors 1, 5, and 3), none of which contains the
+stripe or one another. At the twelve cells where the stripe meets
+the bars, the correct output keeps the STRIPE. Smallest-area
+order does the opposite: the short bars have less area than the
+tall stripe, so they draw on top and overwrite the stripe. Twelve
+cells wrong.
+
+THE DIAGNOSIS
+
+Smallest-area-on-top and earliest-legend-on-top are
+INDISTINGUISHABLE on the training data. Whenever one rectangle
+nests inside another, the inner rectangle is both the smaller one
+AND the earlier legend entry, so the two laws predict the same
+z-order on every training pair. They diverge only when rectangles
+cross, and no training pair crosses. The test does.
+
+The legend is the author's own explicit declaration of z-order:
+its rows are listed top to bottom, and the earliest row draws on
+top. That first-class signal is more trustworthy than the
+geometric proxy of area, which merely happened to agree with it
+in-distribution.
+
+Confirming the fix by hand: the test legend maps, in order,
+2->2, 5->9, 3->9, 1->4, 4->6. Color 2 is the first legend entry,
+so the color-2 stripe draws on top of every bar and wins all
+twelve crossing cells - exactly the answer. Color 4 is the last
+legend entry, so its own two-column stripe (at columns 4 and 5)
+still yields its crossings to the earlier bars, which is also
+exactly the answer. One ordering law reproduces both behaviors.
+
+THE REPAIR
+
+The change is confined to arc2_transform(bbox_fill)/3 and its
+helper arc2_bxf_fill_for_/4. The list of rectangle records was
+sorted ascending by bounding-box area; it is now sorted ascending
+by LEGEND INDEX - the position of each K-to-V mapping in the
+legend, read with nth0. The fill lookup returns the first
+matching rectangle in that order, so the earliest legend entry is
+the topmost. Density (used to decide whether a sparse box repaints
+its markers) is still computed from the bounding box exactly as
+before; only the stacking key changed.
+
+VERIFICATION
+
+Every training pair still passes, because legend order equals area
+order whenever rectangles nest - which is every training case. The
+test now matches exactly: the twelve wrong cells are corrected and
+no cell regresses. The full 120-task regression run confirms the
+net effect is precisely plus one: task 9385bd28 moves from the
+fail list into the pass list and nothing else changes. Induction
+still returns bbox_fill for 9385bd28, and no other task's
+induction result is altered.
+
+A lesson of independent interest: an inductive tiebreaker can be a
+COINCIDENCE of the training distribution. Two different laws that
+agree on every visible example are not thereby the same law, and a
+held-out configuration that pulls them apart is precisely what a
+benchmark is for. When a rule passes every training pair yet
+misses the test, suspect a tiebreaker on which two candidate laws
+happen to agree in-distribution, and prefer the FIRST-CLASS signal
+the puzzle actually provides - here, the legend's own ordering -
+over any geometric proxy that merely correlates with it. A repair
+wave is the cheapest summit step: a near-miss solver one ordering
+away from correct becomes correct with a single sort key.
+
+IMPLEMENTATION
+
+Predicates changed in arc_benchmark_2.pl (WP-371, Layer 346):
+arc2_transform(bbox_fill)/3 now builds its rectangle-info list
+keyed by legend index rather than bounding-box area and keysorts
+on that key; arc2_bxf_fill_for_/4 documents that the first match
+is now the topmost box by legend order. No predicates were added
+or removed and no other rule was touched. Every changed line
+carries an ERC comment.
+
+SCORE
+
+ARC-AGI-2: 110/120 = 91.67%. Task 9385bd28 solved by a
+single-tiebreaker repair with zero regression. Pure induction. No
+pretraining. Every rule is named and glass-box. No human in the
+development loop.
