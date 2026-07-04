@@ -1,0 +1,33 @@
+Accomplishment 382: ARC-AGI-2 Wave 84 - Motif Shadow: Marker-Taught Rays Cast from Anchored Motifs
+
+PrologAI solves ARC-AGI-2 task 64efde09 with a new glass-box rule
+called motif_shadow (WP-342, Layer 317), raising the benchmark score
+from 80/120 = 66.67% to 81/120 = 67.50%.
+
+Each grid holds up to four rectangular motifs, two cells wide and
+seven or nine cells long, plus exactly three lone marker cells on
+the grid edges. Every motif carries a run of color 2 along one long
+side, and the far end of its long axis - the end away from that run -
+is its anchor. Each marker aligns with one motif and teaches a
+lesson: paint a ray of my color at my offset from the anchor end.
+Every motif then casts all three rays sideways, from its exit side
+out to the grid edge, over background cells only.
+
+The key insight was the exit direction. In the first training grid
+every motif fires its rays on the same side as its color-2 run; in
+the second training grid and in the hidden test, every motif fires
+on the opposite side - and nothing in the motifs themselves says
+which, because even their color palettes change from grid to grid.
+The markers break the tie: each marker lies on the ray of its own
+color, so its side of the aligned motif reveals the polarity of the
+whole grid. What looked like an inconsistent rule became a single
+parameter read off the input at answer time.
+
+The rule has no learned parameters. The background is the most
+frequent color, the motifs, anchors, lessons, and polarity are all
+found in the grid at answer time, and induction is pure verification
+of both training pairs. Pure induction. No pretraining. Every rule
+is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
