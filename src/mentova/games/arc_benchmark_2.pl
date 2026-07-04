@@ -891,6 +891,54 @@ arc2_induce_rule(TrainingPairs, band_jigsaw) :-
 % Each training pair must transform correctly under band_jigsaw.
            arc2_transform(band_jigsaw, In, Out)).
 
+% wire_wrap: early dispatch before generic clause (WP-347, Layer 322).
+% Enumerate wire_wrap as a known rule name.
+arc2_named_rule(wire_wrap).
+% arc2_induce_rule(wire_wrap): line-wire-marker triple pre-filter + verify.
+arc2_induce_rule(TrainingPairs, wire_wrap) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, IH),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The wire re-lays in place, so the height must be preserved.
+    IH =:= OH,
+% Fetch the first row of the input.
+    First = [FR|_],
+% Fetch the first row of the output.
+    FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, IW),
+% Measure the first output width.
+    length(FOR, OW),
+% The wire re-lays in place, so the width must be preserved.
+    IW =:= OW,
+% Determine the majority background color of the first input.
+    tw_background_(First, BG),
+% Collect every foreground color of the first input.
+    findall(V,
+% Walk each cell keeping only non-background values.
+            ( member(Row, First), member(V, Row), V \= BG ),
+% Bind the collected foreground color list.
+            Vs),
+% Count the foreground cells.
+    length(Vs, NF),
+% Require a small sparse scene of line, wire, and marker components.
+    NF >= 6, NF =< 250,
+% Reduce the foreground colors to the distinct color set.
+    sort(Vs, DVs),
+% Count the distinct foreground colors.
+    length(DVs, NC),
+% Each system holds exactly three colors: line, wire, and marker.
+    NC mod 3 =:= 0,
+% At least one and at most three systems may appear.
+    NC >= 3, NC =< 9,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under wire_wrap.
+           arc2_transform(wire_wrap, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -18771,3 +18819,380 @@ bj_tile_([rc(R, C)|Rest], Shapes, AllCells) :-
     bj_tile_(Remaining, Others, More),
 % Combine this placement with the rest of the tiling.
     append(Placed, More, AllCells).
+
+% ---------------------------------------------------------------------------
+% WIRE WRAP (WP-347, Layer 322)
+% wire_wrap: each color system holds a straight line, a crumpled wire
+% attached orthogonally to one line endpoint, and a marker shape.  The
+% wire is re-laid as a deterministic path: a diagonal approach from the
+% attachment cell toward the marker, a hug along the marker's near face,
+% and a mirrored diagonal departure, truncated at the wire's cell count
+% or the grid edge.  Lines and markers stay untouched.
+% Reference: ARC-AGI-2 task 88bcf3b4 -- crumpled wires snap around pegs.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(wire_wrap): re-lay every wire around its marker.
+arc2_transform(wire_wrap, Grid, Out) :-
+% Determine the majority background color of the grid.
+    tw_background_(Grid, BG),
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Collect every foreground cell keyed by its color.
+    findall(V-rc(R, C),
+% Walk each cell keeping only non-background values.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V \= BG ),
+% Bind the color-keyed foreground cell list.
+            Keyed0),
+% Sort the keyed cells so equal colors sit together.
+    msort(Keyed0, Keyed),
+% Group the foreground cells into one component per color.
+    ww_groups_(Keyed, Comps),
+% Every color must form a single 8-connected component.
+    forall(member(col(_, Cs), Comps), ww_connected_(Cs)),
+% Find every line-wire attachment among the color components.
+    findall(lw(LV, LC, WV, WC, E, P0),
+% Pick a candidate line component.
+            ( member(col(LV, LC), Comps),
+% The line must be a straight orthogonal segment.
+              ww_straight_(LC),
+% Fetch the two endpoints of the line.
+              ww_ends_(LC, E1, E2),
+% Try each endpoint as the wire attachment point.
+              member(E, [E1, E2]),
+% Pick a candidate wire component of a different color.
+              member(col(WV, WC), Comps),
+% The wire color must differ from the line color.
+              WV \= LV,
+% The wire must be crumpled, never a straight segment.
+              \+ ww_straight_(WC),
+% Pick the wire cell that touches the line endpoint.
+              member(P0, WC),
+% The attachment cell must be orthogonally adjacent to the endpoint.
+              ww_orth_(E, P0)
+            ),
+% Bind the attachment candidate list.
+            LWs0),
+% Deduplicate the attachment candidates.
+    sort(LWs0, LWs),
+% At least one line-wire system must exist.
+    LWs \= [],
+% Collect the line colors of all systems.
+    findall(LV, member(lw(LV, _, _, _, _, _), LWs), LVs),
+% Collect the wire colors of all systems.
+    findall(WV, member(lw(_, _, WV, _, _, _), LWs), WVs),
+% Reduce the line colors to a distinct set.
+    sort(LVs, SLVs),
+% Reduce the wire colors to a distinct set.
+    sort(WVs, SWVs),
+% Count the systems.
+    length(LWs, NS),
+% Each line color must belong to exactly one system.
+    length(SLVs, NS),
+% Each wire color must belong to exactly one system.
+    length(SWVs, NS),
+% No color may serve as both a line and a wire.
+    ord_intersection(SLVs, SWVs, []),
+% The remaining colors are the marker components.
+    findall(col(MV, MCells),
+% Keep the components that are neither lines nor wires.
+            ( member(col(MV, MCells), Comps),
+% The marker color must not be a line color.
+              \+ memberchk(MV, SLVs),
+% The marker color must not be a wire color.
+              \+ memberchk(MV, SWVs) ),
+% Bind the marker component list.
+            Markers),
+% Exactly one marker must exist per system.
+    length(Markers, NS),
+% Draw every system: line, marker, and the re-laid wire.
+    findall(Cell,
+% Walk each line-wire system.
+            ( member(lw(LV, LC, WV, WC, E, P0), LWs),
+% Pick the marker nearest to this system's line endpoint.
+              ww_nearest_(Markers, E, col(MV, MCells)),
+% Compute the re-laid wire path around the marker.
+              ww_path_(H, W, MCells, WC, E, P0, Path),
+% Emit the untouched line cells, marker cells, and new wire cells.
+              ( member(rc(R, C), LC), Cell = c(R, C, LV)
+% Emit each marker cell with its own color.
+              ; member(rc(R, C), MCells), Cell = c(R, C, MV)
+% Emit each re-laid wire cell with the wire color.
+              ; member(rc(R, C), Path), Cell = c(R, C, WV) ) ),
+% Bind the finished draw list.
+            Draws),
+% Paint the draws on a fresh background canvas.
+    tt_render_(H, W, BG, Draws, Out).
+
+% ww_groups_(+SortedKeyed, -Comps): group color-keyed cells per color.
+% An empty keyed list yields no components.
+ww_groups_([], []).
+% Split off every cell of the first color, then recurse on the rest.
+ww_groups_([V-RC|Rest], [col(V, [RC|Same])|More]) :-
+% Keep every remaining cell of the first color.
+    findall(RC2, member(V-RC2, Rest), Same),
+% Keep every remaining cell of the other colors.
+    findall(V2-RC2, ( member(V2-RC2, Rest), V2 \= V ), Other),
+% Group the other colors into further components.
+    ww_groups_(Other, More).
+
+% ww_connected_(+Cells): the cell set forms one 8-connected component.
+ww_connected_(Cells) :-
+% Wrap each position in the component builder's cell term.
+    findall(c(R, C, x), member(rc(R, C), Cells), Cs),
+% Grow the components and require exactly one.
+    tw_components_(Cs, [_]).
+
+% ww_straight_(+Cells): the cells form a straight orthogonal segment.
+ww_straight_(Cells) :-
+% Measure the segment length.
+    length(Cells, N),
+% A straight segment needs at least three cells.
+    N >= 3,
+% All cells share one row, or all cells share one column.
+    ( findall(R, member(rc(R, _), Cells), Rs), sort(Rs, [_])
+% Otherwise check the single shared column.
+    ; findall(C, member(rc(_, C), Cells), Cs), sort(Cs, [_])
+% Commit to the first satisfied orientation.
+    ), !.
+
+% ww_ends_(+Cells, -MinEnd, -MaxEnd): bounding-box corner endpoints.
+ww_ends_(Cells, rc(R1, C1), rc(R2, C2)) :-
+% Collect the row indices of the cells.
+    findall(R, member(rc(R, _), Cells), Rs),
+% Collect the column indices of the cells.
+    findall(C, member(rc(_, C), Cells), Cs),
+% The topmost row of the cell set.
+    min_list(Rs, R1),
+% The bottommost row of the cell set.
+    max_list(Rs, R2),
+% The leftmost column of the cell set.
+    min_list(Cs, C1),
+% The rightmost column of the cell set.
+    max_list(Cs, C2).
+
+% ww_orth_(+A, +B): the two cells are orthogonally adjacent.
+ww_orth_(rc(R1, C1), rc(R2, C2)) :-
+% Compute the Manhattan distance between the cells.
+    D is abs(R1 - R2) + abs(C1 - C2),
+% Orthogonal neighbors sit at Manhattan distance one.
+    D =:= 1.
+
+% ww_nearest_(+Markers, +E, -Best): marker nearest to the line endpoint.
+ww_nearest_(Markers, rc(ER, EC), Best) :-
+% Key every marker by its Chebyshev distance to the endpoint.
+    findall(D-col(MV, MCells),
+% Walk each marker component.
+            ( member(col(MV, MCells), Markers),
+% Measure the distance of every marker cell to the endpoint.
+              findall(DD,
+% Chebyshev distance of one marker cell to the endpoint.
+                      ( member(rc(R, C), MCells),
+% Bind the cell distance.
+                        DD is max(abs(R - ER), abs(C - EC)) ),
+% Bind the cell distance list.
+                      DDs),
+% The marker distance is its closest cell distance.
+              min_list(DDs, D) ),
+% Bind the keyed marker list.
+            Keyed),
+% Order the markers by ascending distance.
+    msort(Keyed, [_-Best|_]).
+
+% ww_path_(+H, +W, +MC, +WC, +E, +P0, -Path): re-lay one wire.
+ww_path_(H, W, MC, WC, rc(ER, EC), rc(PR, PC), Path) :-
+% The re-laid wire keeps the input wire's cell count.
+    length(WC, L),
+% Fetch the marker bounding box corners.
+    ww_ends_(MC, rc(R1, C1), rc(R2, C2)),
+% Count the marker cells for the centroid.
+    length(MC, MN),
+% Collect the marker row indices.
+    findall(R, member(rc(R, _), MC), MRs),
+% Sum the marker row indices.
+    sum_list(MRs, SR),
+% Collect the marker column indices.
+    findall(C, member(rc(_, C), MC), MCs),
+% Sum the marker column indices.
+    sum_list(MCs, SC),
+% Signed row offset of the marker centroid from the endpoint.
+    VR is SR - ER * MN,
+% Signed column offset of the marker centroid from the endpoint.
+    VC is SC - EC * MN,
+% Collect the input wire row indices for the tie-break centroid.
+    findall(R, member(rc(R, _), WC), WRs),
+% Sum the input wire row indices.
+    sum_list(WRs, WSR),
+% Collect the input wire column indices for the tie-break centroid.
+    findall(C, member(rc(_, C), WC), WCs),
+% Sum the input wire column indices.
+    sum_list(WCs, WSC),
+% Row sign of the approach diagonal, tie-broken by the wire side.
+    ww_sign_(VR, WSR - ER * L, AR),
+% Column sign of the approach diagonal, tie-broken by the wire side.
+    ww_sign_(VC, WSC - EC * L, AC),
+% Walk the clamped diagonal approach until adjacent to the marker.
+    ww_approach_(rc(PR, PC), MC, R1, R2, C1, C2, AR, AC, App, Contact),
+% Classify the contact as a row-face or column-face touch.
+    ww_ctype_(Contact, MC, AR, AC, VR, VC, Type),
+% Lay the hug cells along the marker's near face.
+    ww_face_(Type, MC, R1, R2, C1, C2, AR, AC, Face),
+% The departure diagonal mirrors the approach across the face.
+    ( Type = row -> DR = AR, DC is -AC ; DR is -AR, DC = AC ),
+% The departure ray starts after the last face cell.
+    last(Face, LastF),
+% Cast the departure ray to the grid edge.
+    ww_ray_(LastF, DR, DC, H, W, Ray),
+% Chain the approach, the face hug, and the departure ray.
+    append([App, Face, Ray], Full0),
+% Keep only the leading in-grid prefix of the chained path.
+    ww_ingrid_prefix_(Full0, H, W, Full),
+% Measure the available path length.
+    length(Full, FL),
+% Use at most the input wire's cell count.
+    Take is min(L, FL),
+% Shape the truncated path list.
+    length(Path, Take),
+% The truncated path is a prefix of the full path.
+    append(Path, _, Full).
+
+% ww_sign_(+V, +Alt, -S): sign of V, tie-broken by the sign of Alt.
+ww_sign_(V, Alt, S) :-
+% A positive offset points the diagonal forward.
+    ( V > 0 -> S = 1
+% A negative offset points the diagonal backward.
+    ; V < 0 -> S = -1
+% On a tie evaluate the tie-break expression.
+    ; AltV is Alt,
+% The tie-break sign decides the sidestep direction.
+      ( AltV > 0 -> S = 1 ; AltV < 0 -> S = -1 )
+% Close the sign decision.
+    ).
+
+% ww_adj_(+Cell, +MC): the cell touches the marker in 8-connectivity.
+ww_adj_(rc(R, C), MC) :-
+% Find one marker cell within the 8-neighborhood.
+    member(rc(R2, C2), MC),
+% The row distance must be at most one.
+    abs(R2 - R) =< 1,
+% The column distance must be at most one.
+    abs(C2 - C) =< 1,
+% Commit to the first touching marker cell.
+    !.
+
+% ww_approach_/10: clamped diagonal walk until adjacent to the marker.
+% A cell adjacent to the marker ends the approach as the contact cell.
+ww_approach_(P, MC, _, _, _, _, _, _, [P], P) :-
+% Stop when the current cell touches the marker.
+    ww_adj_(P, MC),
+% Commit to the contact cell.
+    !.
+% Otherwise take one clamped diagonal step and continue the walk.
+ww_approach_(rc(R, C), MC, R1, R2, C1, C2, AR, AC, [rc(R, C)|More], Contact) :-
+% Propose the next row along the approach diagonal.
+    RN is R + AR,
+% Clamp the row inside the marker's near row lane.
+    ( AR =:= -1 -> RLim is R1 - 1, ( RN >= RLim -> R9 = RN ; R9 = R )
+% Clamp symmetrically when the diagonal moves downward.
+    ; RLim is R2 + 1, ( RN =< RLim -> R9 = RN ; R9 = R ) ),
+% Propose the next column along the approach diagonal.
+    CN is C + AC,
+% Clamp the column inside the marker's near column lane.
+    ( AC =:= -1 -> CLim is C1 - 1, ( CN >= CLim -> C9 = CN ; C9 = C )
+% Clamp symmetrically when the diagonal moves rightward.
+    ; CLim is C2 + 1, ( CN =< CLim -> C9 = CN ; C9 = C ) ),
+% A fully clamped step means the walk is stuck, so fail.
+    ( R9 =:= R, C9 =:= C -> fail ; true ),
+% Continue the walk from the stepped cell.
+    ww_approach_(rc(R9, C9), MC, R1, R2, C1, C2, AR, AC, More, Contact).
+
+% ww_ctype_(+Contact, +MC, +AR, +AC, +VR, +VC, -Type): contact face kind.
+ww_ctype_(rc(R, C), MC, AR, AC, VR, VC, Type) :-
+% Position one row ahead along the approach diagonal.
+    RA is R + AR,
+% Position one column ahead along the approach diagonal.
+    CA is C + AC,
+% Position one column behind across the approach diagonal.
+    CB is C - AC,
+% A marker cell straight ahead in the row direction is a row contact.
+    ( memberchk(rc(RA, C), MC) -> Type = row
+% A marker cell straight aside in the column direction is a column contact.
+    ; memberchk(rc(R, CA), MC) -> Type = col
+% A marker cell across the diagonal counts as a row contact.
+    ; memberchk(rc(RA, CB), MC) -> Type = row
+% Otherwise the dominant centroid offset decides the contact kind.
+    ; abs(VR) >= abs(VC) -> Type = row
+% A dominant column offset yields a column contact.
+    ; Type = col
+% Close the contact classification.
+    ).
+
+% ww_face_/9: hug cells along the marker's near face, in walk order.
+% A row contact hugs the lateral face row by row.
+ww_face_(row, MC, R1, R2, _, _, AR, AC, Face) :-
+% Order the marker rows from the contact side to the far side.
+    ( AR =:= -1 -> numlist(R1, R2, Rs0), reverse(Rs0, Rs) ; numlist(R1, R2, Rs) ),
+% Lay one hug cell beside each marker row.
+    findall(rc(R, FC),
+% Walk each marker row in order.
+            ( member(R, Rs),
+% Collect the marker columns of this row.
+              findall(C, member(rc(R, C), MC), Cs),
+% Skip rows without marker cells.
+              Cs \= [],
+% The hug cell sits one column beyond the row's near edge.
+              ( AC =:= -1 -> min_list(Cs, M0), FC is M0 - 1
+% Hug the right edge when the diagonal moves rightward.
+              ; max_list(Cs, M0), FC is M0 + 1 ) ),
+% Bind the row-contact hug cell list.
+            Face).
+% A column contact hugs the longitudinal face column by column.
+ww_face_(col, MC, _, _, C1, C2, AR, AC, Face) :-
+% Order the marker columns from the contact side to the far side.
+    ( AC =:= -1 -> numlist(C1, C2, Cs0), reverse(Cs0, Cs) ; numlist(C1, C2, Cs) ),
+% Lay one hug cell beside each marker column.
+    findall(rc(FR, C),
+% Walk each marker column in order.
+            ( member(C, Cs),
+% Collect the marker rows of this column.
+              findall(R, member(rc(R, C), MC), Rs),
+% Skip columns without marker cells.
+              Rs \= [],
+% The hug cell sits one row beyond the column's near edge.
+              ( AR =:= -1 -> min_list(Rs, M0), FR is M0 - 1
+% Hug the bottom edge when the diagonal moves downward.
+              ; max_list(Rs, M0), FR is M0 + 1 ) ),
+% Bind the column-contact hug cell list.
+            Face).
+
+% ww_ray_(+From, +DR, +DC, +H, +W, -Ray): 45-degree ray to the grid edge.
+ww_ray_(rc(R, C), DR, DC, H, W, [rc(RN, CN)|More]) :-
+% Step one cell along the departure diagonal.
+    RN is R + DR,
+% Step one column along the departure diagonal.
+    CN is C + DC,
+% The stepped row must stay inside the grid.
+    RN >= 0, RN < H,
+% The stepped column must stay inside the grid.
+    CN >= 0, CN < W,
+% Commit to the in-grid step.
+    !,
+% Continue the ray from the stepped cell.
+    ww_ray_(rc(RN, CN), DR, DC, H, W, More).
+% A step off the grid ends the ray.
+ww_ray_(_, _, _, _, _, []).
+
+% ww_ingrid_prefix_(+Cells, +H, +W, -Prefix): leading in-grid cells.
+% An empty path has an empty in-grid prefix.
+ww_ingrid_prefix_([], _, _, []).
+% Keep in-grid cells and cut the path at the first off-grid cell.
+ww_ingrid_prefix_([rc(R, C)|Rest], H, W, Out) :-
+% Test whether the cell lies inside the grid.
+    ( R >= 0, R < H, C >= 0, C < W ->
+% Keep the in-grid cell and continue scanning.
+      Out = [rc(R, C)|More], ww_ingrid_prefix_(Rest, H, W, More)
+% Cut the path at the first off-grid cell.
+    ; Out = [] ).

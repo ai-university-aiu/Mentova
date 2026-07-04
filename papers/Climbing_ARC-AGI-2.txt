@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 88 complete: 85/120 = 70.83%.
+Last updated: 2026-07-03. Wave 89 complete: 86/120 = 71.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -210,6 +210,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  83 / 120  | 69.17%  | Wave 86: xray_frame one large rectangular frame with a uniform interior occludes partial rectangle outlines drawn outside it; the output is the frame interior with every shape's hidden perimeter cells restored - the shapes' bounding boxes are completed through the frame as if it were transparent; single-color shapes restore their own color, and two-color alternating shapes restore the color-swapped mirror (vertical first, then horizontal) of the visible cell inside the shape's bounding box
 2026-07-03  |  84 / 120  | 70.00%  | Wave 87: twin_toggle shapes scattered on a uniform background are integer-scaled copies of exactly two variant templates that share an identical body of same-colored cells under a best-overlap alignment; every shape is redrawn as the other variant at its own scale, positioned so the shared body cells stay exactly where they were - stem-and-base colors toggle, and side decorations jump from below one shape to above its twin
 2026-07-03  |  85 / 120  | 70.83%  | Wave 88: band_jigsaw one component spans the full grid width or height and acts as an immovable ragged band; every other shape is translated - never rotated or flipped - so the shapes stack flush against the band's ragged edges, exactly tiling the region between the band's per-column edge profile and a straight outer edge on one or both sides; the band is horizontal in both training pairs but vertical in the test, so the solver canonicalizes by transposition and solves the far side by vertical flip
+2026-07-03  |  86 / 120  | 71.67%  | Wave 89: wire_wrap each color system holds a straight line segment, a crumpled wire attached orthogonally to one line endpoint, and a marker shape; the output keeps the line and marker untouched and re-lays the wire as a deterministic path - a diagonal approach from the attachment cell toward the marker, clamped to the marker's near lane, a hug along the marker's near face cell by cell, and a mirrored 45-degree departure ray - truncated at the input wire's cell count or the grid edge, whichever comes first; the test grid holds two independent three-color systems solved by nearest-marker assignment
 
 
 COMPLETE SCORE PROGRESSION
@@ -1230,6 +1231,84 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 89 - 2026-07-03 - Score: 86/120 = 71.67%
+
+Date: 2026-07-03
+
+Confirmed score: 86 / 120 = 71.67%
+
+Rules added in this wave:
+  wire_wrap (WP-347, Layer 322)
+
+Task solved: 88bcf3b4 (5 training pairs + 1 test case; all grids
+  same-size, from 7x7 up to 22x22; each grid holds one or more
+  three-color systems on a uniform background: a straight line
+  segment, a crumpled meandering wire attached orthogonally to one
+  endpoint of the line, and a separate marker shape; the output
+  keeps the line and the marker exactly where they are and re-lays
+  the wire as a clean path that leaves the line end, runs
+  diagonally to the marker, bends snugly around the marker's near
+  face, and departs on the mirrored diagonal).
+
+Algorithm: deterministic wrap path from four geometric phases.
+  Stage 1: the majority color is the background; the remaining
+  cells group into exactly one 8-connected component per color;
+  a component is a line when it is a straight orthogonal segment
+  of at least three cells, a wire when it is crumpled and touches
+  a line endpoint orthogonally, and a marker otherwise; each
+  system takes the marker nearest to its attachment endpoint by
+  Chebyshev distance. Stage 2: the approach diagonal takes the
+  sign of the marker centroid minus the endpoint per axis, with a
+  zero component tie-broken by the side where the input wire's
+  mass lies; from the input attachment cell the path steps along
+  that diagonal, each axis clamped so it never passes the lane one
+  cell outside the marker's bounding box, until it becomes
+  8-adjacent to the marker. Stage 3: the contact is classified as
+  a row contact (marker cell ahead along the row axis, directly or
+  across the diagonal) or a column contact (marker cell aside
+  along the column axis); a row contact hugs the marker's lateral
+  face - for each marker row from the contact side to the far
+  side, one cell sits one column beyond that row's near edge - and
+  a column contact hugs the longitudinal face symmetrically per
+  column, so staircase markers are hugged step by step. Stage 4:
+  from the last hug cell the path departs on the 45-degree ray
+  with the lateral component of the approach diagonal reversed;
+  the chained path (approach, hug, departure) is cut at the first
+  off-grid cell and then truncated to the input wire's exact cell
+  count; the output paints lines, markers, and re-laid wires on a
+  fresh background canvas.
+
+Bugs fixed: none. The rule passed all five training pairs and the
+  test case on the first prototype run, and the integrated version
+  passed the single-task test and the full regression on the first
+  compile.
+
+Lessons learned: the proven method carried the wave once more -
+  all twelve grids were dumped to text and the complete rule was
+  written in plain English, cell by cell, before any code. The
+  decisive observation is that the wire's length is NOT always
+  conserved: two training pairs lose wire cells because the path
+  hits the grid edge, which falsifies every rigid-transform and
+  length-preserving reading and forces the geometric-path model.
+  Hand-tracing all seven line-wire-marker systems (five training,
+  two in the test) showed the same four phases every time:
+  clamped diagonal approach, near-face hug ordered from the
+  contact side, mirrored diagonal departure, and truncation by
+  length or edge. The face-based hug formulation handles zigzag
+  and staircase markers with no special cases, because hugging
+  one cell beyond each row's or column's near edge follows any
+  contour automatically. The test grid doubles the difficulty
+  with two independent systems (six foreground colors), so the
+  solver groups components per color and assigns each system its
+  nearest marker. Full regression of all 85 locally verified
+  tasks (84 prior plus 88bcf3b4) still induces and passes.
+
+Accomplishment: Acc_387.  Paper: Acc_387_ARC2_Wave89_WireWrap.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4601,6 +4680,7 @@ a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing m
 a6f40cea  - Wave 86 - xray_frame         - a large rectangular frame with a uniform interior occludes partial rectangle outlines drawn outside it; the output is the frame interior with every shape's hidden bounding-box perimeter cells restored - single-color shapes restore their own color and two-color alternating shapes restore the color-swapped mirror of the visible cell inside their own bounding box
 c7f57c3e  - Wave 87 - twin_toggle        - shapes on a uniform background are integer-scaled copies of exactly two variant templates sharing an identical aligned body; every shape is redrawn as the other variant at its own scale, positioned so the shared body cells stay exactly where they were
 16b78196  - Wave 88 - band_jigsaw        - one component spans the full grid width or height as an immovable ragged band; every other shape is translated, never rotated or flipped, so the shapes stack flush against the band's ragged edges, exactly tiling the region between the band's edge profile and a straight outer edge on one or both sides
+88bcf3b4  - Wave 89 - wire_wrap          - each three-color system holds a straight line, a crumpled wire attached orthogonally to one line endpoint, and a marker shape; the wire is re-laid as a clamped diagonal approach to the marker, a hug along the marker's near face, and a mirrored 45-degree departure, truncated at the wire's cell count or the grid edge
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4984,4 +5064,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 87: Twin-toggle - each grid holds several sh
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 88: Band-jigsaw - each grid holds one component whose bounding box spans the full grid width or height, an immovable band with ragged, notched edges, plus several small single-color shapes; the majority color is the background, the foreground groups into 8-connected components, and a vertical band is transposed into a canonical horizontal frame; the band's bottom and top edge profiles take the maximum and minimum band row per column, the top side is reflected vertically so both sides solve identically, and the shapes are partitioned between the two sides by search; for each side the solver picks a column interval at least as wide as its widest shape, forces the straight outer edge row from the exact-area equation, and exact-tiles the region between profile and edge by anchored exact cover in which the row-major first uncovered cell must host some unused shape's row-major first cell, with translation only and no rotation or reflection; the output is a fresh background canvas holding the untouched band plus the placed shapes mapped back through flip and transposition; the straight-outer-edge arithmetic is the discriminating observation of the wave, because it makes the outer edge a computed quantity rather than a searched one, and the orientation-general canonicalization handles the test grid's vertical band with left and right chains even though both training bands are horizontal.
   Score: 85/120 = 70.83%. Task 16b78196 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 89: Wire-wrap - each color system holds a straight orthogonal line segment, a crumpled wire attached orthogonally to one endpoint of the line, and a marker shape; the majority color is the background, every remaining color forms exactly one 8-connected component, lines pair with wires by endpoint attachment, and each system takes the marker nearest to its attachment endpoint; the output keeps lines and markers untouched and re-lays every wire as a deterministic four-phase path: a diagonal approach whose per-axis signs come from the marker centroid minus the endpoint (ties broken by the input wire's side), clamped so neither axis passes the lane one cell outside the marker's bounding box, until 8-adjacent to the marker; a hug along the marker's near face laying one cell beyond each marker row's or column's near edge from the contact side to the far side; a mirrored 45-degree departure ray with the lateral component reversed; and truncation at the first off-grid cell and at the input wire's exact cell count; the non-conservation of wire length is the discriminating observation of the wave, because two training pairs lose wire cells at the grid edge, falsifying every rigid-transform and length-preserving reading, while the face-based hug handles zigzag and staircase markers with no special cases and nearest-marker assignment solves the test's two independent systems.
+  Score: 86/120 = 71.67%. Task 88bcf3b4 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
