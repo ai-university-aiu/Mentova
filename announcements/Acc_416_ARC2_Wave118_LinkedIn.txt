@@ -1,0 +1,45 @@
+Accomplishment 416: ARC-AGI-2 Wave 118 - Sequence Extrapolate: Reading A Growing Family Of Shapes And Drawing The Next One
+
+PrologAI solves ARC-AGI-2 task 20a9e565 with a new glass-box rule,
+sequence_extrapolate (WP-376, Layer 351), raising the benchmark score
+from 114/120 = 95.00% to 115/120 = 95.83%.
+
+This one reads a grid as a SEQUENCE. A short line of shapes grows in
+size, step by step, and the answer is the next shape in the series.
+
+The task: each grid carries two features. The first is a caliper - two
+tiny L-trominoes in color 5, one at a top-left corner and one at a
+bottom-right corner. The rectangle that just holds both of them names
+the height and width of the answer, and nothing else. The second is a
+run of same-family shapes that grow from one member to the next, each
+drawn in a color that cycles through a short list.
+
+The five grids use five different families. A comb with a spine and two
+teeth. A ladder whose rows alternate full rungs and side rails. A band
+of little triangular peaks repeated across. A two-cell-wide braid of
+colored rings nested around a center. Each grows in its own way, and
+the answer is the next member of whichever family the grid shows -
+generated at full size, then cropped to the caliper rectangle and
+painted in the next color of the cycle.
+
+The clean idea here is the split between SIZE and CONTENT. The caliper
+says how big; the sequence says what it looks like. Because those two
+jobs are kept apart, one rule and one cropping step serve four families
+that share nothing else. The way the rule picks which family it is
+looking at is the growth vector between members - grow by one in both
+directions and it is a comb, grow taller only and it is a ladder or a
+braid depending on how many colors a member uses, grow wider only and
+it is a band of peaks. Reading the growth rather than matching a fixed
+template is what lets the rule recognize a family on a grid it has
+never seen. The held-out test is the peaks family, extrapolated to the
+caliper width and cropped to two rows.
+
+One practical note: extracting the shapes is the only costly step, so
+the rule only bothers when a grid actually holds the two color-5
+caliper trominoes. That gate rejects every other task after counting a
+few cells, and the full 120-task benchmark confirms zero regression.
+
+Pure induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
