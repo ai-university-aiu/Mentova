@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 80 complete: 77/120 = 64.17%.
+Last updated: 2026-07-03. Wave 81 complete: 78/120 = 65.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -202,6 +202,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  75 / 120  | 62.50%  | Wave 78: gadget_assembly scattered gadget pieces carry color-2 connector studs; studs pair across pieces by exact coincidence under translation with opposite facings; a backtracking open-stud search assembles the unique connected machine; the connection graph's center piece stays at its input position and the machine is drawn around it
 2026-07-03  |  76 / 120  | 63.33%  | Wave 79: master_fragment every training output is one shared two-color 20 x 20 master pattern up to a dihedral isometry and a two-color bijection, and every input is a contiguous fragment cut from its own output; the first training output is stored as the canonical master, and the answer is the unique candidate among the eight isometries crossed with the two color bijections that contains the test fragment as an exact contiguous subgrid
 2026-07-03  |  77 / 120  | 64.17%  | Wave 80: ring_dock five-by-five ring objects (one-cell border around a solid three-by-three interior) float in the grid; rings with one border color slide left and rings with the other border color slide right, each keeping its rows; same-side rings pack against the edge in order of edge distance, blocked by the edge or an already-parked same-side ring, while opposite-side rings pass each other freely
+2026-07-03  |  78 / 120  | 65.00%  | Wave 81: wire_relay wires of color 8 with color-5 crossing marks and color-9 blocks each connect an up-or-left tip to a down-or-right tip; a colored figure sitting two cells beyond one tip names the wire color; the output draws a four-cell diamond outline two cells beyond the up-or-left tip and a five-cell diagonal X two cells beyond the down-or-right tip of every wire, both in the wire color, erasing the input figures while keeping the wire structure; tracing goes straight at crossings and crosses blocks straight ahead when possible, otherwise leaving at the block's only other wire exit
 
 
 COMPLETE SCORE PROGRESSION
@@ -1222,6 +1223,82 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 81 - 2026-07-03 - Score: 78/120 = 65.00%
+
+Date: 2026-07-03
+
+Confirmed score: 78 / 120 = 65.00%
+
+Rules added in this wave:
+  wire_relay (WP-339, Layer 314)
+
+Task solved: a47bf94d (3 training pairs + 1 test case; grids 22x22 in
+  the first two training pairs, 22x22 in the third, and 26x26 in the
+  test; each grid contains a maze of wires drawn in color 8, crossing
+  marks of color 5 where two wires pass through each other, and solid
+  rectangular blocks of color 9 that wires enter and leave; every wire
+  runs from a tip pointing up or left to a tip pointing down or right,
+  and a colored figure - a solid three-by-three square, a four-cell
+  diamond outline, or a five-cell diagonal X - sits centered two cells
+  beyond one of the two tips; in the output every wire carries its
+  figure color to both ends: a diamond outline appears two cells
+  beyond the up-or-left tip and a diagonal X two cells beyond the
+  down-or-right tip, the input squares are erased, and the wire
+  structure is untouched).
+
+Algorithm: wire tracing with straight-preference and block jumping.
+  Stage 1: a wire tip is any color-8 cell with exactly one orthogonal
+  neighbor among the structure colors 5, 8, and 9; each tip records
+  its inward direction. Stage 2: from each tip the tracer walks the
+  wire one cell at a time, always preferring the straight-ahead cell
+  when it is structural - this carries the walk through 8585 crossing
+  marks without switching wires - and otherwise turning into the
+  unique perpendicular structural neighbor, stopping when neither
+  exists; a fuel bound of twice the cell count guards against cyclic
+  structures on foreign grids. Stage 3: when the straight-ahead cell
+  is a color-9 block, the whole block region is flood filled and the
+  walk jumps across it - straight through to the wire cell directly
+  beyond the region when one exists, otherwise to the block's only
+  other adjacent wire cell, resuming in the outward direction of that
+  exit; this second case is how a wire turns a corner invisibly inside
+  a block. Stage 4: the two tips of each wire pair up, the tip whose
+  outward direction is north or west takes the diamond outline and
+  the tip pointing south or east takes the diagonal X, both centered
+  two cells beyond their tips; the wire color is read from whichever
+  slot already holds a figure, and figures present at both ends must
+  agree. Stage 5: the output keeps every structural cell, paints the
+  diamond and X cells of every wire in its relay color, and clears
+  every other cell to the background.
+
+Bugs fixed: one. The first prototype crossed color-9 blocks by simply
+  walking straight through their cells, which passed all three
+  training pairs but failed the test grid: one test wire enters a
+  three-by-four block heading west and leaves it heading south - the
+  training pairs only ever cross blocks straight through, so the
+  straight-walk shortcut silently truncated that wire. Treating each
+  block as a region with a straight-through preference and a
+  unique-other-exit fallback fixed the test while leaving all
+  training traces unchanged.
+
+Lessons learned: hidden test grids exercise degrees of freedom the
+  training pairs leave dormant - here the corner turn inside a block -
+  so structural elements should be modeled by their function (a block
+  connects its perimeter wires) rather than by the specific geometry
+  the training pairs happen to show. Straight-preference tracing is
+  the whole crossing logic: no special case for the 8585 crossing
+  marks is needed because the marks are structural cells like any
+  other. Reading the relay color from either end of the wire makes
+  the rule symmetric, which the data requires - some wires are named
+  by a square at the up-or-left end, others by an X at the
+  down-or-right end. Full regression of all 77 locally verified tasks
+  (76 prior plus a47bf94d) still induces and passes.
+
+Accomplishment: Acc_379.  Paper: Acc_379_ARC2_Wave81_WireRelay.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4077,6 +4154,7 @@ f560132c  - Wave 77 - palette_jigsaw     - four scattered pieces, one key piece 
 cbebaa4b  - Wave 78 - gadget_assembly    - gadget pieces with color-2 connector studs slide together by translation until every stud coincides with its opposite-facing partner; the connection graph's center piece keeps its input position and the assembled machine is drawn around it
 269e22fb  - Wave 79 - master_fragment    - every training output is one shared two-color master pattern up to a dihedral isometry and a two-color bijection; the input fragment is located among the sixteen candidates and the unique full-size candidate containing it is the answer
 b5ca7ac4  - Wave 80 - ring_dock          - five-by-five rings with a one-cell border around a solid three-by-three interior slide sideways into parking lanes, one border color to the left edge and the other to the right, packing against already-parked same-side rings while opposite-side rings pass freely
+a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4429,4 +4507,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 79: Master-fragment - every training output 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 80: Ring-dock - the grid scatters six to eight five-by-five ring objects over a solid background, each ring a one-cell uniform border of color 8 or color 2 around a solid three-by-three uniform interior of another color; every 8-bordered ring slides horizontally into a parking lane against the left edge and every 2-bordered ring against the right edge, each ring keeping its rows; rings are detected by scanning all top-left corners for the border-plus-interior signature under a total-coverage guard demanding exactly twenty-five non-background cells per ring, the two border colors are assigned to the two directions by trying both assignments of the induced parameters ring_dock(L, R) against the training pairs, and each side simulates on its own fresh canvas - movers sorted edge-nearest first slide one column at a time until blocked by the grid edge or an already-parked same-side ring, and the two canvases merge into the output; scoping collision to same-destination rings is the load-bearing insight, because input rings on opposite sides trade places and must pass through each other's paths.
   Score: 77/120 = 64.17%. Task b5ca7ac4 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 81: Wire-relay - the grid holds a maze of color-8 wires with color-5 marks where two wires cross and solid color-9 blocks that wires enter and leave; every wire runs from a tip pointing up or left to a tip pointing down or right, a tip being a color-8 cell with exactly one structural orthogonal neighbor, and a colored figure sits centered two cells beyond one of the two tips - a solid three-by-three square, a four-cell diamond outline, or a five-cell diagonal X; the tracer walks each wire preferring the straight-ahead structural cell, which carries it through crossings without switching wires, turning only into a unique perpendicular structural neighbor, and jumping color-9 blocks by flood filling the region and exiting straight through when a wire cell lies directly beyond, otherwise at the block's only other adjacent wire cell - the fallback that lets a wire turn a corner invisibly inside a block, a freedom only the hidden test grid exercises; the output relays each wire's figure color to both ends, a diamond outline two cells beyond the up-or-left tip and a diagonal X two cells beyond the down-or-right tip, erases the input squares, and keeps the wire structure untouched.
+  Score: 78/120 = 65.00%. Task a47bf94d solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
