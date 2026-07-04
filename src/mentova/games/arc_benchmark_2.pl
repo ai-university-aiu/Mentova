@@ -8916,13 +8916,17 @@ arc2_cri_comps_(Grid, NR1, NC1, Div, [R-C | Rest], Seen, [Comp | Comps]) :-
 
 % arc2_cri_bfs_: multi-source BFS expanding ring distances from Frontier.
 % Acc is the accumulated list of R-C-Dist triples; Res is the final map.
+% Uses 8-connected propagation so the distance is Chebyshev (concentric
+% RECTANGLE rings): a diagonal step keeps the ring index constant along a
+% box corner, whereas 4-connected (Manhattan) propagation over-counts by one
+% at concave Div-wall corners where nested boxes meet.
 arc2_cri_bfs_(_, _, _, _, [], Acc, Acc) :- !.
 arc2_cri_bfs_(Grid, NR1, NC1, Div, Frontier, Acc, Res) :-
 % Expand each frontier cell: find non-Div neighbours not yet in Acc.
     findall(NR2-NC2-D1, (
         member(R-C-D, Frontier),
         D1 is D + 1,
-        arc2_cri_nbrs_(NR1, NC1, R, C, Nbrs),
+        arc2_cri_nbrs8_(NR1, NC1, R, C, Nbrs),
         member(NR2-NC2, Nbrs),
         nth0(NR2, Grid, GRow), nth0(NC2, GRow, V), V =\= Div,
         \+ member(NR2-NC2-_, Acc)

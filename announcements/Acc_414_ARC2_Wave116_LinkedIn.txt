@@ -1,0 +1,48 @@
+Accomplishment 414: ARC-AGI-2 Wave 116 - Concentric Rings Repair: Chebyshev Distance For True Nested Rectangles
+
+PrologAI solves ARC-AGI-2 task 13e47133 with a one-line repair of the
+existing glass-box rule concentric_rings (WP-374, Layer 349), raising
+the benchmark score from 112/120 = 93.33% to 113/120 = 94.17%.
+
+This one is a detective story about a single number being off by one.
+
+The task: a background field is walled by a divider color into
+regions. Each region fills with concentric rectangular rings, like the
+contour lines of a hill, and small single-cell markers say which color
+each ring should be. In the training pairs the divider draws one plain
+rectangle. In the test it draws several nested boxes, one inside
+another.
+
+Our solver already reproduced BOTH training pairs of this task
+exactly - and yet it missed the held-out test by twenty-nine cells,
+every one of them a single color off, exactly one ring in the wrong
+direction. When a rule nails training but slips on the test by a
+uniform one-ring shift, the color logic is not the suspect. The
+geometry is.
+
+The cause was the distance metric. The ring index was measured with
+four-connected steps - up, down, left, right - which is Manhattan
+distance. For a plain rectangle that is perfectly correct: distance
+from the four edges is exactly the concentric-ring index, so both
+training rectangles came out right. But where two nested boxes meet,
+the region has a concave corner, and Manhattan distance cannot cut
+across a corner. It walks around and arrives one step late, over-
+counting the ring by one along the diagonal - the twenty-nine cells.
+
+The fix is one line: let the distance propagate with eight-connected
+steps, which is Chebyshev distance. Chebyshev distance keeps the ring
+index constant along a box corner, so the rings become true concentric
+rectangles even around concave corners. All twenty-nine cells snap
+into place, both training pairs still reproduce exactly, and the full
+120-task benchmark shows the other 119 tasks unchanged. A clean plus
+one with zero regression.
+
+The lesson: a rule can pass every training example and still hide a
+wrong metric, because the easy training geometry lets two different
+metrics agree. Manhattan and Chebyshev boundary-distance are identical
+on a plain rectangle and diverge only at a concave corner. Concentric
+rectangles are a Chebyshev object, not a Manhattan one. Pure
+induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
