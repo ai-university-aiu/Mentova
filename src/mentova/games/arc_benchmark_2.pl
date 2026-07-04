@@ -8429,7 +8429,9 @@ arc2_transform(rail_fill, Grid, Out) :-
 % erase entries where V=0 and BG≠0): collect all K-cells outside the legend,
 % compute their bounding box, fill the entire box with V, then re-paint the
 % original K-cells at their positions if the box is sparse (< 100% density).
-% Smaller boxes are drawn last so they override larger overlapping boxes.
+% Boxes are stacked in LEGEND ORDER: the earliest legend entry draws on top of
+% later ones where they overlap.  For nested rectangles this matches
+% smallest-first, but for crossing rectangles legend order is the true z-order.
 % When V = BG (not zero), the fill is the background value, which effectively
 % blocks any earlier fill from a larger enclosing box.
 % ---------------------------------------------------------------------------
@@ -8498,10 +8500,10 @@ arc2_bxf_is_erase_(V, BG) :-
 % Value 0 with non-zero background signals "erase K-cells, no fill".
     V =:= 0, BG =\= 0.
 
-% arc2_bxf_fill_for_: find fill value for (R,C) from smallest containing bbox.
-% InfosAsc is sorted ascending by bbox area, so first match = smallest box.
+% arc2_bxf_fill_for_: find fill value for (R,C) from the top-z containing bbox.
+% InfosAsc is sorted ascending by legend index, so first match = topmost box.
 arc2_bxf_fill_for_(R, C, [inf(_, V, BR1, BC1, BR2, BC2, _) | _], V) :-
-% First matching (smallest) bbox wins.
+% First matching (topmost by legend order) bbox wins.
     between(BR1, BR2, R), between(BC1, BC2, C), !.
 arc2_bxf_fill_for_(R, C, [_ | Rest], V) :-
 % Try the next bbox if this one does not contain (R,C).
@@ -8549,9 +8551,12 @@ arc2_transform(bbox_fill, Grid, Out) :-
 % Collect all legend cell positions (both col LC and LC+1).
     LC1 is LC + 1,
     findall(R-C, (member(R, LegRows), (C = LC ; C = LC1)), LegCells),
-% Build sorted info list (ascending by area) for non-erase fills.
-    findall(Area-inf(K, V, BR1, BC1, BR2, BC2, Dense), (
-        member(K-V, LegMap),
+% Build sorted info list (ascending by legend index) for non-erase fills.
+% Legend order is the z-order: earlier legend entries draw on top. For nested
+% rectangles this coincides with smallest-area-first, but for CROSSING
+% rectangles (neither contains the other) legend order is the true tiebreaker.
+    findall(Idx-inf(K, V, BR1, BC1, BR2, BC2, Dense), (
+        nth0(Idx, LegMap, K-V),
         \+ arc2_bxf_is_erase_(V, BG),
 % Collect all non-legend K-cells in the grid.
         findall(R-C, (
@@ -8566,7 +8571,7 @@ arc2_transform(bbox_fill, Grid, Out) :-
         length(KCells, NK),
         (NK =:= Area -> Dense = true ; Dense = false)
     ), Pairs),
-% Sort ascending by area so smallest bbox is first (fill_for finds smallest).
+% Sort ascending by legend index so earliest legend entry is first (top z-order).
     keysort(Pairs, SortedAsc), pairs_values(SortedAsc, InfosAsc),
 % Build output grid row by row.
     numlist(0, NR1, RowIs),
