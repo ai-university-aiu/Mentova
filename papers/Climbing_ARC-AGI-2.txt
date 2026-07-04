@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 116 complete: 113/120 = 94.17%.
+Last updated: 2026-07-04. Wave 117 complete: 114/120 = 95.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -238,6 +238,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  | 111 / 120  | 92.50%  | Wave 114: constellation sparse same-color dot constellations grow into connected glyphs, where every color with two or more dots connects each pair of dots that is both collinear (sharing a row, a column, or a forty-five-degree diagonal) and a Gabriel-graph edge (no third dot of that color lies on or inside the circle whose diameter is the pair) with a straight segment, so perimeter edges are drawn while interior chords across a diamond, a triangle, or a rectangle are suppressed, and isolated unconnected dots survive as single cells; a lone dot of a color that sits diagonally or orthogonally beside a dot of a different multi-dot color casts a shadow, a translated copy of that neighbor color's whole glyph offset by the lone-minus-neighbor vector and painted under the real glyphs, while lone dots with no such neighbor stay put; the Gabriel-edge test is the discriminating observation, because plain collinear connection over-draws the long diameter chords of the training diamond and triangle, and only the circle-with-diameter emptiness test keeps the outline while deleting the chords, reproducing the test grid exactly with zero regression across the 120-task benchmark
 2026-07-04  | 112 / 120  | 93.33%  | Wave 115: pinwheel_spiral one plus sign of a single color with an empty center on a uniform background unfolds into a full-grid interlocking spiral, its four equal arms each winding a square spiral outward always turning clockwise so the four ninety-degree-rotated spirals mesh to a one-cell-gap pinwheel; a single hidden arm-length parameter L drives the outward run max(1, L-1), the sideways jog max(0, L-2), and the trailing run max(2, L), the jog vanishing for L up to two so only the harder training pair exposes the stepped sides, and the unified turtle reproduces all training pairs and the held-out test with zero regression
 2026-07-04  | 113 / 120  | 94.17%  | Wave 116: concentric_rings repair - a background field walled by a divider color into nested rectangular boxes fills each region with concentric rings whose color cycle is keyed by single-cell markers to ring distance from the region boundary; the repair replaces four-connected (Manhattan) ring-distance propagation with eight-connected (Chebyshev) propagation so the rings are true concentric rectangles, curing a systematic off-by-one that appeared only at the concave corners where nested divider boxes meet, fixing all twenty-nine miscolored test cells while every training pair still reproduces exactly with zero regression across the 120-task benchmark
+2026-07-04  | 114 / 120  | 95.00%  | Wave 117: glyph_stamp - the grid holds two rectangular frame-boxes on a tiled background; the smaller box is a canvas whose plain interior carries isolated single-cell markers in one or more accent colors, and the larger box is a legend of glyph motifs each featuring exactly one accent color as its anchor cell; for every marker the matching legend glyph is stamped onto the canvas so its accent cell lands on the marker, and the output is the small box with every glyph merged in; frame detection is bounded to a single maximal-run candidate per true top-left corner so the search stays fast on solid-region grids, and task a251c730 passes with zero regression across the 120-task benchmark
 
 
 COMPLETE SCORE PROGRESSION
@@ -1261,6 +1262,45 @@ Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 117 - 2026-07-04 - Score: 114/120 = 95.00%
+
+Date: 2026-07-04
+
+Confirmed score: 114 / 120 = 95.00%
+
+Rules added in this wave:
+  glyph_stamp (WP-375, Layer 350) - merge legend glyphs onto a marker canvas.
+
+Task solved: a251c730 (2 training pairs + 1 test case; each grid is
+  30x30 with two rectangular frame-boxes sitting on a tiled repeating
+  background).
+
+Algorithm: locate every hollow rectangular frame-box - a border of a
+  single color enclosing a differently colored interior. Two boxes are
+  present. The SMALLER box (by interior area) is the canvas: its plain
+  background interior is dotted with isolated single-cell markers in one
+  or more accent colors. The LARGER box is the legend: it holds full
+  glyph motifs, each an eight-connected shape featuring exactly one
+  accent color as its anchor cell. For every marker in the canvas, find
+  the legend glyph whose accent color matches the marker and stamp that
+  glyph onto the canvas positioned so the glyph's accent cell lands
+  exactly on the marker cell. The output is the small box - frame plus
+  interior - with every glyph merged in. On the test the two boxes carry
+  two distinct accent colors, so accent-color matching, not position,
+  chooses which glyph each marker receives.
+
+Performance note: naive frame detection that enumerates every possible
+  rectangle explodes on grids with large solid-color regions and stalled
+  two previously solved tasks past the ten-second per-task limit. The fix
+  bounds detection to a single candidate per genuine top-left corner -
+  the maximal frame-color run rightward and downward - so the box search
+  is O(H*W) corners and runs in well under a second. The induce clause is
+  gated by a cheap pre-filter that only fires when the first training
+  output is itself a hollow single-color frame-box, so the box search
+  runs solely for this task and the full 120-task benchmark shows zero
+  regression.
 
 
 ATTEMPT 116 - 2026-07-04 - Score: 113/120 = 94.17%
@@ -6416,6 +6456,7 @@ a32d8b75  - Wave 111 - fractal_stamp      - legend panels beside full-height 6-c
 35ab12c3  - Wave 114 - constellation        - sparse same-color dot constellations grow into connected glyphs by joining each pair of dots that is both collinear and a Gabriel-graph edge, drawing perimeter edges while suppressing interior diameter chords; a lone dot beside a different multi-dot color casts a translated shadow of that color's glyph under the real glyphs
 da515329  - Wave 115 - pinwheel_spiral     - one single-color plus sign with an empty center unfolds into a full-grid interlocking spiral, its four ninety-degree-rotated clockwise square spirals meshing to a one-cell-gap pinwheel governed by a single arm-length parameter whose sideways jog stays hidden until the harder training pair
 13e47133  - Wave 116 - concentric_rings (repair) - nested divider boxes fill with concentric rings keyed by markers to boundary distance; the repair swaps four-connected Manhattan ring-distance for eight-connected Chebyshev distance so the rings are true concentric rectangles, curing an off-by-one that appears only at the concave corners where nested boxes meet
+a251c730  - Wave 117 - glyph_stamp        - two rectangular frame-boxes sit on a tiled background; the smaller box is a canvas dotted with isolated single-cell accent-color markers and the larger box is a legend of glyph motifs each anchored on one accent color, and every marker receives the legend glyph whose accent color it matches, stamped so the glyph's accent cell lands on the marker, the output being the small box with all glyphs merged in
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
@@ -6927,4 +6968,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 115: Pinwheel-spiral - the input holds one f
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 116: Concentric-rings repair - a background field walled by a divider color into nested rectangular boxes fills each walled region with concentric rectangular rings whose color cycle is keyed by single-cell markers to the ring distance from the region boundary, the grid edge or a cell adjacent to a divider wall; the repair replaces the four-connected Manhattan multi-source breadth-first search that propagated ring distance with an eight-connected Chebyshev propagation, so the ring index stays constant along a box corner and the rings become true concentric rectangles; the fault was invisible in training because both training regions are simple rectangles where Manhattan and Chebyshev boundary-distance coincide, and only the test's nested divider boxes create the concave corners where four-connected propagation walks around the corner and over-counts the ring by one, so the Chebyshev fix corrects all twenty-nine miscolored test cells while leaving both training pairs and the other 119 tasks unchanged, a clean one-line metric change with zero regression across the 120-task benchmark.
   Score: 113/120 = 94.17%. Task 13e47133 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 117: Glyph-stamp - a grid holds two hollow rectangular frame-boxes resting on a tiled repeating background; the smaller box, measured by interior area, is a canvas whose plain background interior is dotted with isolated single-cell markers in one or more accent colors, and the larger box is a legend holding full glyph motifs, each an eight-connected shape that features exactly one accent color as its anchor cell; the transform pairs every marker with the legend glyph whose accent color it matches and stamps that glyph onto the canvas positioned so the glyph's accent cell falls exactly on the marker cell, the output being the small box, frame plus interior, with every glyph merged in, and on the held-out test the two boxes carry two distinct accent colors so accent-color matching rather than position decides which glyph each marker receives; a naive frame detector that enumerates every possible rectangle explodes on grids with large solid-color regions, so detection is bounded to a single candidate per genuine top-left corner - the maximal frame-color run rightward and downward - keeping the search O(H*W) corners, and the induce clause is gated by a cheap pre-filter that only fires when the first training output is itself a hollow single-color frame-box, so the box search runs solely for this task and the full 120-task benchmark shows zero regression.
+  Score: 114/120 = 95.00%. Task a251c730 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.

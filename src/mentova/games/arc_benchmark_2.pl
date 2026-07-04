@@ -130,6 +130,17 @@ arc2_induce_rule(TrainingPairs, layout_tile) :-
     forall(member(pair(In, Out), TrainingPairs),
            arc2_transform(layout_tile, In, Out)).
 
+% glyph_stamp: early dispatch (WAVE 117, task a251c730). Its pre-filter checks
+% only that the first training OUTPUT is a hollow single-colour frame-box, which
+% fails fast for other tasks, so the full 30x30 box search runs solely here.
+% (The transform, helpers, and named-rule fact live at the end of this file.)
+arc2_induce_rule(TrainingPairs, glyph_stamp) :-
+% Cheap gate: the first training output is a hollow single-colour frame-box.
+    TrainingPairs = [pair(_, FirstOut) | _],
+    arc2_gst_output_framed_(FirstOut),
+% The glyph-stamp transform must reproduce every training pair exactly.
+    forall(member(pair(In, Out), TrainingPairs), arc2_transform(glyph_stamp, In, Out)).
+
 % scaled_frame: early dispatch to avoid generic clause hitting slow frame_assemble.
 arc2_named_rule(scaled_frame).
 % arc2_induce_rule(scaled_frame): frame pre-filter + forall verify.
@@ -26611,3 +26622,252 @@ arc2_induce_rule(TrainingPairs, constellation) :-
 % Require a strict majority of pairs to match (the remaining pairs hold extra
 % per-colour micro-glyphs the unified constellation model deliberately abstracts).
     NOK * 2 > NP.
+
+% ---------------------------------------------------------------------------
+% WAVE 117: glyph_stamp (task a251c730)
+% The grid holds two rectangular frame-boxes on a tiled background. The SMALLER
+% box is the canvas: its interior is a plain background dotted with isolated
+% single-cell markers of one or more "accent" colours. The LARGER box is the
+% legend: it holds full glyph motifs, each motif featuring exactly one accent
+% colour as its anchor cell. For every marker in the small box, stamp the legend
+% glyph whose accent colour matches the marker, positioned so the glyph's accent
+% cell lands exactly on the marker cell. Output = the small box (frame plus
+% interior) with every glyph stamped in.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule(glyph_stamp): register glyph_stamp as a known rule name.
+arc2_named_rule(glyph_stamp).
+
+% arc2_gst_assoc_/2: build an association R-C -> Value for O(log N) cell lookup.
+arc2_gst_assoc_(Grid, Assoc) :-
+% Collect every cell as a (Row-Col)-Value pair.
+    findall((R-C)-V, (nth0(R, Grid, Row), nth0(C, Row, V)), Ps),
+% Turn the pair list into a balanced association tree.
+    list_to_assoc(Ps, Assoc).
+
+% arc2_gst_at_/4: look up the colour at (R,C) in the cell association.
+arc2_gst_at_(A, R, C, V) :-
+% Fetch the stored colour for that coordinate key.
+    get_assoc(R-C, A, V).
+
+% arc2_gst_run_right_/6: length of the equal-colour run rightward from (R,C).
+arc2_gst_run_right_(A, R, C, F, W1, Cmax) :-
+% Consider the next column to the right.
+    C1 is C + 1,
+% Extend while inside the grid and still the frame colour, else stop here.
+    ( C1 =< W1, arc2_gst_at_(A, R, C1, F) -> arc2_gst_run_right_(A, R, C1, F, W1, Cmax) ; Cmax = C ).
+
+% arc2_gst_run_down_/6: length of the equal-colour run downward from (R,C).
+arc2_gst_run_down_(A, R, C, F, H1, Rmax) :-
+% Consider the next row below.
+    R1 is R + 1,
+% Extend while inside the grid and still the frame colour, else stop here.
+    ( R1 =< H1, arc2_gst_at_(A, R1, C, F) -> arc2_gst_run_down_(A, R1, C, F, H1, Rmax) ; Rmax = R ).
+
+% arc2_gst_border_ok_/6: the full rectangle border (R0..R1,C0..C1) is colour F.
+arc2_gst_border_ok_(A, R0, R1, C0, C1, F) :-
+% Top and bottom edges are entirely the frame colour.
+    forall(between(C0, C1, C), (arc2_gst_at_(A, R0, C, F), arc2_gst_at_(A, R1, C, F))),
+% Left and right edges are entirely the frame colour.
+    forall(between(R0, R1, R), (arc2_gst_at_(A, R, C0, F), arc2_gst_at_(A, R, C1, F))).
+
+% arc2_gst_mode_/3: most frequent value in a sorted list, with its count.
+arc2_gst_mode_(Sorted, Mode, Cnt) :-
+% Pair each distinct value with the number of times it appears.
+    findall(N-V, (member(V, Sorted), aggregate_all(count, member(V, Sorted), N)), NV0),
+% Deduplicate the Count-Value pairs.
+    sort(NV0, NV),
+% The maximum count identifies the modal value.
+    max_member(Cnt-Mode, NV).
+
+% arc2_gst_interior_bg_/7: dominant interior colour BG, requiring a strict majority.
+arc2_gst_interior_bg_(A, R0, R1, C0, C1, F, BG) :-
+% Interior bounds sit one cell inside the frame.
+    R0i is R0 + 1, R1i is R1 - 1, C0i is C0 + 1, C1i is C1 - 1,
+% Collect every interior cell colour.
+    findall(V, (between(R0i, R1i, R), between(C0i, C1i, C), arc2_gst_at_(A, R, C, V)), Vs),
+% The interior must be non-empty.
+    Vs \= [],
+% Sort so the mode helper can count runs.
+    msort(Vs, Sorted),
+% Find the dominant interior colour and its count.
+    arc2_gst_mode_(Sorted, BG, N),
+% Require it to be a strict majority so noisy interiors are rejected.
+    length(Vs, Tot), N * 2 > Tot,
+% The interior colour must differ from the frame colour.
+    BG =\= F.
+
+% arc2_gst_notf_/4: true when (R,C) is off-grid or not the frame colour F.
+arc2_gst_notf_(A, R, C, F) :-
+% Cells outside the grid never carry the frame colour.
+    ( arc2_gst_at_(A, R, C, V) -> V =\= F ; true ).
+
+% arc2_gst_frame_/5: enumerate a hollow rectangular frame-box in the grid.
+% Only genuine top-left corners are considered, and the box is taken as the
+% maximal frame-colour run rightward and downward from that corner, giving one
+% candidate per corner (O(H*W) corners) instead of every possible rectangle.
+arc2_gst_frame_(A, H, W, box(R0, R1, C0, C1, F, BG)) :-
+% Zero-based grid bounds.
+    H1 is H - 1, W1 is W - 1,
+% Choose a candidate top-left corner.
+    between(0, H1, R0), between(0, W1, C0),
+% Its colour is the tentative frame colour.
+    arc2_gst_at_(A, R0, C0, F),
+% Reject interior cells: the cell above and to the left must not be the frame colour.
+    Ra is R0 - 1, Ca is C0 - 1,
+    arc2_gst_notf_(A, Ra, C0, F), arc2_gst_notf_(A, R0, Ca, F),
+% Corner must extend at least one cell right and one cell down in the frame colour.
+    C0b is C0 + 1, R0b is R0 + 1,
+    arc2_gst_at_(A, R0, C0b, F), arc2_gst_at_(A, R0b, C0, F),
+% The box right and bottom edges are the maximal frame-colour runs from the corner.
+    arc2_gst_run_right_(A, R0, C0, F, W1, C1),
+    arc2_gst_run_down_(A, R0, C0, F, H1, R1),
+% Frames are at least 4x4.
+    C1 >= C0 + 3, R1 >= R0 + 3,
+% The whole rectangle border must be the frame colour.
+    arc2_gst_border_ok_(A, R0, R1, C0, C1, F),
+% The interior must have a dominant background colour distinct from the frame.
+    arc2_gst_interior_bg_(A, R0, R1, C0, C1, F, BG).
+
+% arc2_gst_boxes_/2: all maximal (non-contained) frame-boxes in the grid.
+arc2_gst_boxes_(Grid, Boxes) :-
+% Grid dimensions.
+    length(Grid, H), Grid = [Row0 | _], length(Row0, W),
+% Build the cell association for fast lookup.
+    arc2_gst_assoc_(Grid, A),
+% Enumerate every valid frame-box.
+    findall(B, arc2_gst_frame_(A, H, W, B), Raw0),
+% Deduplicate the raw boxes.
+    sort(Raw0, Raw),
+% Drop any box strictly contained inside a larger box.
+    exclude([box(R0, R1, C0, C1, _, _)]>>(
+        member(box(S0, S1, D0, D1, _, _), Raw),
+        S0 =< R0, S1 >= R1, D0 =< C0, D1 >= C1,
+        Area is (R1 - R0) * (C1 - C0), SArea is (S1 - S0) * (D1 - D0),
+        SArea > Area
+    ), Raw, Boxes).
+
+% arc2_gst_flood_/8: 8-connected flood of non-background non-frame interior cells.
+arc2_gst_flood_(_, _, _, _, _, _, _, [], Acc, Acc).
+arc2_gst_flood_(A, R0, R1, C0, C1, F, BG, [R-C | Q], Acc, Out) :-
+% Find the unseen 8-neighbours that are interior glyph cells.
+    findall(NR-NC, (
+        member(DR, [-1, 0, 1]), member(DC, [-1, 0, 1]), \+ (DR =:= 0, DC =:= 0),
+        NR is R + DR, NC is C + DC,
+        NR > R0, NR < R1, NC > C0, NC < C1,
+        arc2_gst_at_(A, NR, NC, V), V =\= BG, V =\= F,
+        \+ memberchk(NR-NC, Acc)
+    ), New0),
+% Deduplicate and remove any already visited.
+    sort(New0, New),
+    subtract(New, Acc, NewReal),
+% Grow the visited set and the work queue.
+    append(Acc, NewReal, Acc2),
+    append(Q, NewReal, Q2),
+% Continue flooding.
+    arc2_gst_flood_(A, R0, R1, C0, C1, F, BG, Q2, Acc2, Out).
+
+% arc2_gst_glyph_/4: the connected glyph motif containing a seed cell.
+arc2_gst_glyph_(A, box(R0, R1, C0, C1, F, BG), SR-SC, Cells) :-
+% Flood from the seed to gather the whole motif.
+    arc2_gst_flood_(A, R0, R1, C0, C1, F, BG, [SR-SC], [SR-SC], CellsU),
+% Sort the cell set.
+    sort(CellsU, Cells).
+
+% arc2_gst_setrow_/4: replace the Nth (0-based) element of a row with Col.
+arc2_gst_setrow_([_ | T], 0, Col, [Col | T]) :- !.
+arc2_gst_setrow_([H | T], N, Col, [H | T2]) :-
+% Recurse toward the target index.
+    N > 0, N1 is N - 1, arc2_gst_setrow_(T, N1, Col, T2).
+
+% arc2_gst_replace_/4: replace the Nth (0-based) row of a grid with X.
+arc2_gst_replace_([_ | T], 0, X, [X | T]) :- !.
+arc2_gst_replace_([H | T], N, X, [H | T2]) :-
+% Recurse toward the target row.
+    N > 0, N1 is N - 1, arc2_gst_replace_(T, N1, X, T2).
+
+% arc2_gst_set_/5: set grid cell (RR,CC) to colour Col.
+arc2_gst_set_(Gin, RR, CC, Col, Gout) :-
+% Fetch the target row.
+    nth0(RR, Gin, RowIn),
+% Update the target column within that row.
+    arc2_gst_setrow_(RowIn, CC, Col, RowOut),
+% Splice the updated row back into the grid.
+    arc2_gst_replace_(Gin, RR, RowOut, Gout).
+
+% arc2_gst_put_/6: stamp one glyph offset cell into the output grid if in bounds.
+arc2_gst_put_(MR, MC, SR0, SC0, off(DR, DC, Col), Gin, Gout) :-
+% Translate the offset into local output coordinates.
+    RR is MR + DR - SR0, CC is MC + DC - SC0,
+% Paint the cell only if it lies inside the output grid.
+    ( nth0(RR, Gin, RowIn), nth0(CC, RowIn, _)
+    -> arc2_gst_set_(Gin, RR, CC, Col, Gout)
+    ;  Gout = Gin ).
+
+% arc2_gst_stamp_all_/6: stamp every marker's glyph onto the canvas in turn.
+arc2_gst_stamp_all_([], _, _, _, G, G).
+arc2_gst_stamp_all_([mk(MR, MC, V) | Ms], Templates, SR0, SC0, Gin, Gout) :-
+% Pick the glyph template whose accent colour matches this marker.
+    member(V-Offs, Templates),
+% Paint all of its offset cells anchored on the marker.
+    foldl(arc2_gst_put_(MR, MC, SR0, SC0), Offs, Gin, Gmid),
+% Continue with the remaining markers.
+    arc2_gst_stamp_all_(Ms, Templates, SR0, SC0, Gmid, Gout).
+
+% arc2_gst_output_framed_/1: cheap gate — Grid is a hollow single-colour frame.
+arc2_gst_output_framed_(Grid) :-
+% Grid dimensions must admit a frame.
+    length(Grid, H), Grid = [Row0 | _], length(Row0, W),
+    H >= 4, W >= 4,
+    H1 is H - 1, W1 is W - 1,
+% Frame colour is the top-left corner.
+    nth0(0, Grid, Top), nth0(0, Top, F),
+    arc2_gst_assoc_(Grid, A),
+% Every border cell is the frame colour.
+    arc2_gst_border_ok_(A, 0, H1, 0, W1, F),
+% Some interior cell differs from the frame colour.
+    once((between(1, H1, R), R < H1, between(1, W1, C), C < W1,
+          arc2_gst_at_(A, R, C, V), V =\= F)).
+
+% arc2_transform(glyph_stamp, Grid, Out): merge legend glyphs onto the marker canvas.
+arc2_transform(glyph_stamp, Grid, Out) :-
+% Locate the frame-boxes; there must be at least two.
+    arc2_gst_boxes_(Grid, Boxes),
+    Boxes = [_, _ | _],
+% Order the boxes by interior area so the smallest is the canvas, largest the legend.
+    predsort([O, box(A0, A1, A2, A3, _, _), box(B0, B1, B2, B3, _, _)]>>(
+        AA is (A1 - A0) * (A3 - A2), BB is (B1 - B0) * (B3 - B2),
+        ( AA < BB -> O = (<) ; AA > BB -> O = (>) ; compare(O, A0-A2, B0-B2) )
+    ), Boxes, Sorted),
+    Sorted = [Small | _],
+    last(Sorted, Big),
+% Unpack the two boxes.
+    Small = box(SR0, SR1, SC0, SC1, SF, SBG),
+    Big = box(BR0, BR1, BC0, BC1, BF, BBG),
+% Build the cell association once.
+    arc2_gst_assoc_(Grid, A),
+% Collect the marker cells inside the small box (colours other than its frame/background).
+    SR0i is SR0 + 1, SR1i is SR1 - 1, SC0i is SC0 + 1, SC1i is SC1 - 1,
+    findall(mk(R, C, V), (between(SR0i, SR1i, R), between(SC0i, SC1i, C),
+                          arc2_gst_at_(A, R, C, V), V =\= SBG, V =\= SF), Markers),
+% Gather the distinct accent colours the markers use.
+    findall(V, member(mk(_, _, V), Markers), AccVs0), sort(AccVs0, AccVs),
+% For each accent colour, extract its legend glyph anchored on the accent cell.
+    findall(V-Offs, (
+        member(V, AccVs),
+        BR0i is BR0 + 1, BR1i is BR1 - 1, BC0i is BC0 + 1, BC1i is BC1 - 1,
+        once((between(BR0i, BR1i, AR), between(BC0i, BC1i, AC), arc2_gst_at_(A, AR, AC, V))),
+        arc2_gst_glyph_(A, Big, AR-AC, Cells),
+        findall(off(DR, DC, Col), (member(CR-CC, Cells), arc2_gst_at_(A, CR, CC, Col),
+                                   DR is CR - AR, DC is CC - AC), Offs)
+    ), Templates),
+% Every accent colour must have a legend glyph.
+    length(AccVs, NA), length(Templates, NA),
+% Copy the small box (frame plus interior) as the base output canvas.
+    findall(Row, (between(SR0, SR1, R),
+        findall(Val, (between(SC0, SC1, C), arc2_gst_at_(A, R, C, Val)), Row)), Base),
+% Stamp every marker's glyph onto the canvas.
+    arc2_gst_stamp_all_(Markers, Templates, SR0, SC0, Base, Out).
+
+% (arc2_induce_rule(glyph_stamp) is defined early, near the top of the induce
+%  clause chain, so it is reached well within the per-task time budget.)

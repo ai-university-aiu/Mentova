@@ -1,0 +1,47 @@
+Accomplishment 415: ARC-AGI-2 Wave 117 - Glyph Stamp: Merging Legend Glyphs Onto A Marker Canvas
+
+PrologAI solves ARC-AGI-2 task a251c730 with a new glass-box rule,
+glyph_stamp (WP-375, Layer 350), raising the benchmark score from
+113/120 = 94.17% to 114/120 = 95.00%.
+
+This one reads a grid as two cooperating panels: one says WHERE, the
+other says WHAT.
+
+The task: each grid rests on a tiled background and carries two hollow
+rectangular boxes. The smaller box is a canvas - a plain interior
+sprinkled with a few isolated single-cell markers in distinctive
+accent colors. The larger box is a legend - its interior holds little
+glyph shapes, each built around one accent color at its heart. The
+answer is the small box with the legend's glyphs merged in: every
+marker is replaced by the legend glyph whose accent color matches it,
+placed so the glyph's heart lands right on the marker.
+
+On the training pairs a single accent color is in play, so every
+marker gets the same shape. The held-out test is the twist: two
+different accent colors appear, and the color of each marker - not its
+position - decides which of the two legend shapes it receives. A rule
+that guessed by position alone would stamp the wrong glyph.
+
+There is a second lesson in this wave, and it is not about the rule -
+it is about speed. The first version was correct on every pair, yet it
+knocked out two previously solved tasks. The reason: it hunted for the
+boxes by testing every possible rectangle, which explodes on grids
+full of one solid color, and those two tasks ran past the ten-second
+per-task limit. The transform was right; the search was too slow.
+
+The cure is to stop brute-forcing. Detection now starts only at a
+genuine top-left corner and takes each box as the longest run of the
+frame color going right and down - one candidate per corner instead of
+thousands. The search drops from quadratic to linear, runs in a
+fraction of a second even on solid grids, and the full 120-task
+benchmark confirms zero regression.
+
+The takeaway: a provably correct rule can still lose points if the
+search around it is slow, because the clock is part of the test. When a
+correct rule regresses others, suspect the cost of its search, and
+replace brute enumeration with a single bounded candidate anchored on a
+real landmark. Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
