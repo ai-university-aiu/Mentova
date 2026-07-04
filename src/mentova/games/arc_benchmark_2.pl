@@ -1345,6 +1345,46 @@ arc2_induce_rule(TrainingPairs, ray_scatter) :-
 % Each training pair must transform correctly under ray_scatter.
            arc2_transform(ray_scatter, In, Out)).
 
+% tower_donate: early dispatch before generic clause (WP-361, Layer 336).
+% Enumerate tower_donate as a known rule name.
+arc2_named_rule(tower_donate).
+% arc2_induce_rule(tower_donate): bar-and-glyph pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, tower_donate) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Determine the background as the most frequent color.
+    td_background_(First, Bg),
+% The bottom row must hold only five-wide bars of colors 2 and 3.
+    td_bars_(First, Bg, Bars),
+% At least one donor bar of color 2 must be present.
+    memberchk(bar(2, _), Bars),
+% At least one receiver bar of color 3 must be present.
+    memberchk(bar(3, _), Bars),
+% Collect every diamond glyph in the scene.
+    td_glyphs_(First, Bg, Glyphs),
+% At least one glyph must be present.
+    Glyphs = [_|_],
+% Group the glyphs into single-color towers keyed by start column.
+    td_towers_(Glyphs, Towers),
+% Every bar must sit exactly under a tower's column window.
+    forall(member(bar(_, BC), Bars), memberchk(tower(BC, _, _), Towers)),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under tower_donate.
+           arc2_transform(tower_donate, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -22601,3 +22641,272 @@ rs_shift_put_(Blob, DR, DC, R-C, G0, G) :-
     C2 is C + DC,
 % Paint the blob color at the translated position.
     arc2_set_cell_(G0, R2, C2, Blob, G).
+
+% ---------------------------------------------------------------------------
+% TOWER DONATE (WP-361, Layer 336)
+% tower_donate: the scene holds towers of three-by-five diamond glyphs
+% stacked upward from the bottom of the grid, one background row between
+% glyphs, all glyphs of one tower sharing one color.  The bottom grid row
+% carries five-wide marker bars aligned under specific towers: color 2
+% marks a donor tower and color 3 marks a receiver tower.  Every donor
+% tower keeps its height but is repainted gray (color 5); the donated
+% total is the sum of all donor tower heights, and every receiver tower
+% grows by that many extra glyphs stacked on top in its own color.  All
+% marker bars are erased to background in the output.
+% Reference: ARC-AGI-2 task 9aaea919 -- donor towers feed receiver growth.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(tower_donate): gray the donors, grow the receivers.
+arc2_transform(tower_donate, Grid, Out) :-
+% Determine the background as the most frequent color.
+    td_background_(Grid, Bg),
+% Read the five-wide marker bars from the bottom row.
+    td_bars_(Grid, Bg, Bars),
+% At least one donor bar of color 2 must be present.
+    memberchk(bar(2, _), Bars),
+% At least one receiver bar of color 3 must be present.
+    memberchk(bar(3, _), Bars),
+% Collect every diamond glyph in the scene.
+    td_glyphs_(Grid, Bg, Glyphs),
+% Group the glyphs into single-color towers keyed by start column.
+    td_towers_(Glyphs, Towers),
+% Every bar must sit exactly under a tower's column window.
+    forall(member(bar(_, BC), Bars), memberchk(tower(BC, _, _), Towers)),
+% Collect the height of every donor tower marked by a color-2 bar.
+    findall(N, (member(bar(2, DC), Bars),
+% Match the donor bar to its tower and measure the glyph count.
+                member(tower(DC, _, DRs), Towers), length(DRs, N)), Ns),
+% The donated total is the sum of all donor tower heights.
+    sum_list(Ns, Donated),
+% At least one glyph must be donated for the rule to act.
+    Donated > 0,
+% Measure the grid height.
+    length(Grid, H),
+% The marker bars live on the last grid row.
+    BarRow is H - 1,
+% Erase every marker bar back to the background color.
+    foldl(td_erase_bar_(BarRow, Bg), Bars, Grid, Canvas1),
+% Collect every donor tower as a column window plus glyph center rows.
+    findall(t(DC2, DRs2), (member(bar(2, DC2), Bars),
+% Match each donor bar to its tower's glyph center rows.
+                           member(tower(DC2, _, DRs2), Towers)), Donors),
+% Repaint every donor tower gray with color 5.
+    foldl(td_gray_tower_, Donors, Canvas1, Canvas2),
+% Collect every receiver tower with its color and topmost center row.
+    findall(g(RC, RCol, TopR), (member(bar(3, RC), Bars),
+% Match each receiver bar to its tower's color and center rows.
+                                member(tower(RC, RCol, RRs), Towers),
+% The topmost glyph center is the smallest center row.
+                                min_list(RRs, TopR)), Receivers),
+% Grow every receiver tower by the donated glyph total.
+    foldl(td_grow_tower_(Donated), Receivers, Canvas2, Out).
+
+% td_background_(+Grid, -Bg): the most frequent color is the background.
+td_background_(Grid, Bg) :-
+% Flatten the grid into a single cell list.
+    append(Grid, Cells),
+% Order the cells so equal colors become adjacent.
+    msort(Cells, Sorted),
+% Compress the ordered cells into color-count pairs.
+    clumped(Sorted, Counted),
+% Re-key each pair by its count for frequency ordering.
+    findall(N-V, member(V-N, Counted), ByCount),
+% The most frequent color heads the descending order.
+    sort(0, @>=, ByCount, [_-Bg|_]).
+
+% td_bars_(+Grid, +Bg, -Bars): read five-wide marker bars off the last row.
+td_bars_(Grid, Bg, Bars) :-
+% Take the bottom row of the grid.
+    last(Grid, BottomRow),
+% Scan the bottom row for maximal non-background runs.
+    td_row_runs_(BottomRow, 0, Bg, Bars).
+
+% td_row_runs_(+Cells, +Col, +Bg, -Bars): scan a row into bar terms.
+td_row_runs_([], _, _, []).
+% td_row_runs_/4 second case: skip over a background cell.
+td_row_runs_([Bg|T], C, Bg, Bars) :-
+% Commit to the background-skip branch.
+    !,
+% Advance the column counter past the background cell.
+    C1 is C + 1,
+% Continue scanning the remaining cells.
+    td_row_runs_(T, C1, Bg, Bars).
+% td_row_runs_/4 third case: read one marker bar run.
+td_row_runs_([X|T], C, Bg, [bar(X, C)|Bars]) :-
+% Measure the maximal run of the bar color.
+    td_take_run_(T, X, 1, Len, Rest),
+% Every marker bar must be exactly five cells wide.
+    Len =:= 5,
+% Every marker bar must be a donor 2 or a receiver 3.
+    memberchk(X, [2, 3]),
+% Advance the column counter past the whole bar.
+    C1 is C + Len,
+% Continue scanning after the bar.
+    td_row_runs_(Rest, C1, Bg, Bars).
+
+% td_take_run_(+Cells, +X, +N0, -N, -Rest): count a run of color X.
+td_take_run_([X|T], X, N0, N, Rest) :-
+% Commit to extending the current run.
+    !,
+% Count the matching cell.
+    N1 is N0 + 1,
+% Continue counting the run.
+    td_take_run_(T, X, N1, N, Rest).
+% td_take_run_/5 second case: the run ends here.
+td_take_run_(Rest, _, N, N, Rest).
+
+% td_glyphs_(+Grid, +Bg, -Glyphs): find every diamond glyph in the scene.
+td_glyphs_(Grid, Bg, Glyphs) :-
+% Measure the grid height.
+    length(Grid, H),
+% Take the first grid row.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Glyph centers keep one row of clearance above and below.
+    RMax is H - 2,
+% Glyph windows are five columns wide.
+    CMax is W - 5,
+% Collect every position where the diamond pattern holds.
+    findall(glyph(R, C0, Col),
+% Enumerate candidate center rows and window start columns.
+            (between(1, RMax, R), between(0, CMax, C0),
+% Test the full diamond pattern at the candidate window.
+             td_glyph_(Grid, Bg, R, C0, Col)),
+% Bind the collected glyph terms.
+            Glyphs).
+
+% td_glyph_(+Grid, +Bg, +R, +C0, -Col): diamond glyph at center row R.
+td_glyph_(Grid, Bg, R, C0, Col) :-
+% Compute the row above the center.
+    R1 is R - 1,
+% Compute the row below the center.
+    R2 is R + 1,
+% Compute the second window column.
+    C1 is C0 + 1,
+% Compute the middle window column.
+    C2 is C0 + 2,
+% Compute the fourth window column.
+    C3 is C0 + 3,
+% Compute the last window column.
+    C4 is C0 + 4,
+% The center row starts with the glyph color.
+    arc2_cell_(Grid, R, C0, Col),
+% The glyph color must differ from the background.
+    Col \== Bg,
+% The center row is solid across the window.
+    arc2_cell_(Grid, R, C1, Col),
+% Check the middle cell of the center row.
+    arc2_cell_(Grid, R, C2, Col),
+% Check the fourth cell of the center row.
+    arc2_cell_(Grid, R, C3, Col),
+% Check the last cell of the center row.
+    arc2_cell_(Grid, R, C4, Col),
+% The top row starts with a background corner.
+    arc2_cell_(Grid, R1, C0, Bg),
+% The top row carries the color over the middle three cells.
+    arc2_cell_(Grid, R1, C1, Col),
+% Check the middle cell of the top row.
+    arc2_cell_(Grid, R1, C2, Col),
+% Check the fourth cell of the top row.
+    arc2_cell_(Grid, R1, C3, Col),
+% The top row ends with a background corner.
+    arc2_cell_(Grid, R1, C4, Bg),
+% The bottom row starts with a background corner.
+    arc2_cell_(Grid, R2, C0, Bg),
+% The bottom row carries the color over the middle three cells.
+    arc2_cell_(Grid, R2, C1, Col),
+% Check the middle cell of the bottom row.
+    arc2_cell_(Grid, R2, C2, Col),
+% Check the fourth cell of the bottom row.
+    arc2_cell_(Grid, R2, C3, Col),
+% The bottom row ends with a background corner.
+    arc2_cell_(Grid, R2, C4, Bg).
+
+% td_towers_(+Glyphs, -Towers): group glyphs into single-color towers.
+td_towers_(Glyphs, Towers) :-
+% Collect every glyph window start column.
+    findall(C0, member(glyph(_, C0, _), Glyphs), Cs0),
+% Deduplicate the start columns.
+    sort(Cs0, Cols),
+% Build one tower term per start column.
+    findall(tower(C0, Col, Rs),
+% Enumerate each distinct start column.
+            (member(C0, Cols),
+% Collect the center row and color of every glyph in the column.
+             findall(R-GC, member(glyph(R, C0, GC), Glyphs), Pairs),
+% Read the tower color from the first glyph.
+             Pairs = [_-Col|_],
+% Every glyph in the tower must share the same color.
+             forall(member(_-X, Pairs), X == Col),
+% Collect the glyph center rows.
+             findall(R, member(R-_, Pairs), Rs0),
+% Order the center rows top to bottom.
+             sort(Rs0, Rs)),
+% Bind the collected tower terms.
+            Towers).
+
+% td_erase_bar_(+BarRow, +Bg, +Bar, +G0, -G): erase one marker bar.
+td_erase_bar_(BarRow, Bg, bar(_, C0), G0, G) :-
+% The bar spans five consecutive columns.
+    C4 is C0 + 4,
+% Enumerate the five bar columns.
+    numlist(C0, C4, Cs),
+% Paint every bar cell back to the background color.
+    foldl(td_set_bg_(BarRow, Bg), Cs, G0, G).
+
+% td_set_bg_(+R, +Bg, +C, +G0, -G): paint one cell back to background.
+td_set_bg_(R, Bg, C, G0, G) :-
+% Write the background color at the cell.
+    arc2_set_cell_(G0, R, C, Bg, G).
+
+% td_gray_tower_(+Donor, +G0, -G): repaint one donor tower gray.
+td_gray_tower_(t(C0, Rs), G0, G) :-
+% Paint every glyph of the donor tower with color 5.
+    foldl(td_paint_glyph_(5, C0), Rs, G0, G).
+
+% td_grow_tower_(+Donated, +Receiver, +G0, -G): grow one receiver tower.
+td_grow_tower_(Donated, g(C0, Col, TopR), G0, G) :-
+% Enumerate one index per donated glyph.
+    numlist(1, Donated, Ks),
+% Each new glyph center sits four rows above the previous one.
+    findall(R, (member(K, Ks), R is TopR - 4 * K), NewRs),
+% Paint every new glyph in the receiver tower color.
+    foldl(td_paint_glyph_(Col, C0), NewRs, G0, G).
+
+% td_paint_glyph_(+Col, +C0, +R, +G0, -G): paint one diamond glyph.
+td_paint_glyph_(Col, C0, R, G0, G) :-
+% Compute the row above the center.
+    R1 is R - 1,
+% Compute the row below the center.
+    R2 is R + 1,
+% Compute the second window column.
+    C1 is C0 + 1,
+% Compute the middle window column.
+    C2 is C0 + 2,
+% Compute the fourth window column.
+    C3 is C0 + 3,
+% Compute the last window column.
+    C4 is C0 + 4,
+% Paint the left cell of the top arc.
+    arc2_set_cell_(G0, R1, C1, Col, A1),
+% Paint the middle cell of the top arc.
+    arc2_set_cell_(A1, R1, C2, Col, A2),
+% Paint the right cell of the top arc.
+    arc2_set_cell_(A2, R1, C3, Col, A3),
+% Paint the first cell of the center row.
+    arc2_set_cell_(A3, R, C0, Col, A4),
+% Paint the second cell of the center row.
+    arc2_set_cell_(A4, R, C1, Col, A5),
+% Paint the middle cell of the center row.
+    arc2_set_cell_(A5, R, C2, Col, A6),
+% Paint the fourth cell of the center row.
+    arc2_set_cell_(A6, R, C3, Col, A7),
+% Paint the last cell of the center row.
+    arc2_set_cell_(A7, R, C4, Col, A8),
+% Paint the left cell of the bottom arc.
+    arc2_set_cell_(A8, R2, C1, Col, A9),
+% Paint the middle cell of the bottom arc.
+    arc2_set_cell_(A9, R2, C2, Col, A10),
+% Paint the right cell of the bottom arc.
+    arc2_set_cell_(A10, R2, C3, Col, G).
