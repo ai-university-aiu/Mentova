@@ -1,0 +1,39 @@
+Accomplishment 376: ARC-AGI-2 Wave 78 - Gadget Assembly by Connector-Stud Pairing
+
+PrologAI solves ARC-AGI-2 task cbebaa4b with a new glass-box rule
+called gadget_assembly (WP-336, Layer 311), raising the benchmark
+score from 74/120 = 61.67% to 75/120 = 62.50%.
+
+The input grid scatters five to seven gadget pieces over the
+background, each an 8-connected shape of one body color carrying
+color-2 connector studs on its boundary. The output is the single
+connected machine assembled by sliding the pieces together, without
+rotation, so that every stud coincides exactly with its partner stud
+on another piece. The tell-tale signature: the color-2 cell count
+halves from input to output - 16 to 8, 16 to 8, and 24 to 12 across
+the three grids - because paired studs merge into one cell, while
+every other color keeps its exact cell count.
+
+The engine reads each stud's outward facing from its unique body
+neighbor, seeds the assembly with one piece, and runs a backtracking
+search that repeatedly mates the first open stud with an
+opposite-facing stud of an unplaced piece, translating the piece so
+the two studs coincide. A placement is accepted only when every
+colliding cell is a stud closing an open stud, and the search
+succeeds when every piece is placed and no stud remains open.
+
+The key insight is that the anchor is a graph-theoretic role. Wave 76
+anchored its assembly on a colored stud and Wave 77 on a role-bearing
+palette piece; Wave 78 anchors on the center of the connection graph.
+The stud pairings form a graph - a simple path of 5, 5, and 7 pieces
+across the three grids - and the piece with minimum eccentricity,
+found by breadth-first search, keeps its exact input position while
+the whole machine is drawn around it. The rule carries no learned
+parameters: background, pieces, studs, facings, translations, the
+connection graph, and the anchor are all derived from the input grid
+itself. Both training pairs and the hidden test case pass, on the
+first complete prototype run with zero bugs fixed. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

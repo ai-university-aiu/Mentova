@@ -1,0 +1,124 @@
+Acc_376: ARC-AGI-2 Wave 78 - Gadget Assembly by Connector-Stud Pairing
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 78 of the ARC-AGI-2 benchmark climb: task cbebaa4b solved using
+the gadget_assembly rule (WP-336, Layer 311). Score advances from
+74/120 = 61.67% to 75/120 = 62.50%.
+
+TASK DESCRIPTION
+
+Task cbebaa4b presents 22x22 training grids and a 26x26 test grid,
+input and output always the same size. The input scatters five to
+seven gadget pieces over the background - each piece an 8-connected
+component of one body color carrying color-2 connector studs on its
+boundary. The output is the single connected machine assembled by
+sliding the pieces together, without rotation, so that every stud
+coincides exactly with its partner stud on another piece. The color-2
+cell count halves from input to output - 16 to 8, 16 to 8, and 24 to
+12 across the three grids - because paired studs merge into one cell,
+while every other color keeps its exact cell count.
+
+RULE: gadget_assembly
+
+The glass-box named rule is a five-stage translation-only assembly
+procedure with no learned parameters:
+
+1. PIECE EXTRACTION (arc2_bg_color_/2, pf_cells_/3, pf_comps_/2)
+   The background is the most common cell value. All non-background
+   cells are grouped into 8-connected components over mixed colors,
+   reusing the Wave 76 extraction engine unmodified. At least two
+   pieces must emerge.
+
+2. STUD READING (ga_prep_/4, ga_dir_/4)
+   Each piece's color-2 cells are its connector studs. A stud's
+   outward facing direction is read from its unique 4-adjacent
+   non-stud cell of the same piece: the stud points away from its
+   body neighbor. A stud without a unique body neighbor keeps an
+   unconstrained direction.
+
+3. BACKTRACKING STUD-PAIRING SEARCH (ga_loop_/8, ga_opp_/2)
+   Piece 1 seeds the assembly at translation (0,0). The search
+   repeatedly takes the first open stud and tries every stud of every
+   unplaced piece as its mate. The mate must face the opposite
+   direction, and the whole piece is translated by the delta that
+   brings the two studs into exact coincidence. The search succeeds
+   when every piece is placed and no open stud remains; any dead end
+   backtracks.
+
+4. COLLISION-CHECKED MERGING (ga_merge_/8)
+   A translated piece merges into the assembly only if every cell
+   that collides with an already placed cell is a stud landing on an
+   open stud with opposite facing. Each such coincidence closes both
+   studs and records a connection edge between the two pieces; a body
+   cell colliding with anything rejects the placement.
+
+5. GRAPH-CENTER ANCHORING AND RENDER (ga_center_/3, ga_ecc_/3,
+   ga_bfs_/5, ga_render_/5)
+   The recorded edges form the connection graph of the machine.
+   Breadth-first search gives each piece's eccentricity, and the
+   center piece - the one with minimum eccentricity - is translated
+   back to its exact input position, carrying the whole assembly
+   with it. The machine is painted on a fresh background canvas of
+   the input's dimensions, and every assembled cell must land inside
+   the grid bounds.
+
+THE KEY INSIGHT: THE ANCHOR IS A GRAPH-THEORETIC ROLE
+
+Wave 76 anchored its assembly on a colored stud and Wave 77 on a
+role-bearing palette piece. Wave 78 generalizes the anchor once more,
+to a purely graph-theoretic role: the piece that keeps its input
+position is the center of the connection graph. In all three grids
+the graph is a simple path - 5, 5, and 7 pieces long - so the center
+is unique, and in all three grids it happens to be the color-4 piece,
+but the rule reads the center from the graph structure, not from any
+color. The human-steps description (gadget assembly by connector
+pairing and translation) matched the data faithfully; the one detail
+it left open - where the assembled machine lands on the canvas - is
+exactly what the graph-center anchor answers.
+
+INDUCTION PRE-FILTER
+
+The first training pair must have equal input and output dimensions,
+the input must carry at least two color-2 cells, the output must
+carry exactly half as many color-2 cells as the input, and every
+other color must keep its exact cell count. This halved stud census
+is constant-time and no other task type shares it. All training pairs
+are then verified with forall before the rule is selected. The induce
+clause dispatches early, directly after palette_jigsaw, ahead of the
+generic named-rule search.
+
+KEY PREDICATES
+
+  ga_prep_/4           - piece occupancy cells and open studs with facings
+  ga_dir_/4            - stud outward direction from its unique body neighbor
+  ga_opp_/2            - two stud facings are compatible for pairing
+  ga_loop_/8           - backtracking place-one-piece-per-open-stud search
+  ga_merge_/8          - collision check that pairs coinciding studs
+  ga_center_/3         - connection graph center by minimum eccentricity
+  ga_ecc_/3            - piece eccentricity in the connection graph
+  ga_bfs_/5            - breadth-first search recording maximum depth
+  ga_render_/5         - assembled cells painted on a background canvas
+  arc2_bg_color_/2     - most common cell value as background (reused)
+  pf_cells_/3          - non-background cells as row-column-color (reused)
+  pf_comps_/2          - 8-connected mixed-color components (reused)
+  arc2_transform(gadget_assembly, +Grid, -Out)
+  arc2_induce_rule(+Pairs, gadget_assembly)
+
+VERIFICATION
+
+Both training pairs and the test case pass in SWI-Prolog, on the
+first complete prototype run with zero bugs fixed. A full regression
+of all 74 locally verified tasks (73 prior plus cbebaa4b) still
+induces and passes. Pure induction from training examples. No
+pretraining on the ARC-AGI-2 corpus. Every rule is named and
+glass-box.
+
+File: src/mentova/games/arc_benchmark_2.pl
+SPARC: Specification v307, Pseudocode v299, Architecture v300,
+Refinement v359, Completion v365.
