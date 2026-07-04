@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 97 complete: 94/120 = 78.33%.
+Last updated: 2026-07-04. Wave 98 complete: 95/120 = 79.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -219,6 +219,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  |  92 / 120  | 76.67%  | Wave 95: short_circuit the scene draws a wiring network on a uniform background using three foreground colors - a terminal color forming exactly two blocks, a marker color forming small junction blocks, and a body color forming the wire segments between them; every eight-connected same-color component is a node of a graph whose edges join eight-adjacent components, and the rule finds the path with the fewest nodes between the two terminal blocks and recolors every intermediate node on that path, body cells to 5 and marker cells to 3, while the terminals, the dead-end branches, and the longer alternative routes stay unchanged - the terminal color is recognized as the foreground color with the fewest cells, and the fewest-node graph search is what picks the correct route through a network whose junction blocks carry three or more attached segments
 2026-07-04  |  93 / 120  | 77.50%  | Wave 96: junction_hub the scene draws a wire network on a uniform background using three foreground colors - one wire color forming the network and two content colors mixed inside the small blocks that the wires join; the wire color is recognized as the only foreground color owning exactly one cell whose full three-by-three neighborhood holds that same color, and that cell is the hub; the eight cells around the hub stay wire colored as a ring, removing the hub and ring splits the wire into branches, every branch is repainted with the majority content color of the blocks it touches, and the hub itself takes the majority color of the branch cells that touch the ring - counting the touching cells rather than the distinct branches is the discriminating observation, because one branch can touch the ring at two places and carries double weight
 2026-07-04  |  94 / 120  | 78.33%  | Wave 97: hub_dock the scene shows one hub piece - an eight-cell ring in a four-by-four bounding box whose four sides carry two centered cells each, every side in its own color - plus loose single-color shapes scattered on the background; every shape whose color matches a hub side is rotated by the unique multiple of ninety degrees that turns a bounding-box side holding exactly two adjacent centered cells toward that hub side, then parked flush against the hub so its two contact cells sit directly next to the two hub edge cells, and shapes matching no hub side are erased - requiring the contact side to hold exactly the two centered cells is the discriminating observation, because it rejects the full-length sides and the off-center sides that would otherwise fit and it pins both the rotation and the translation uniquely
+2026-07-04  |  95 / 120  | 79.17%  | Wave 98: twin_beam the grid is a ladder - even rows carry a colored horizontal bar plus optional pipe decorations to the right, odd rows are 7-filled separator corridors, and every row opens with a 6 lamp in column zero; a separator fires when the bars directly above and below share one color, and its lamp leaves column zero and travels as a beam heading right through the 7 corridors; leaving the grid the beam rests on its last cell, and hitting an obstacle it checks the two perpendicular cells - with exactly one open it turns there, except that a turn to heading left is refused while the current row still holds its own lamp, and with zero or two open cells it rests where it stands; each rest cell is painted 6 - the lamp guard on left turns is the discriminating observation, because the third training pair's beam rests beside an open leftward corridor whose row keeps its lamp while the test grid's beam turns left along a fired row whose lamp has departed
 
 
 COMPLETE SCORE PROGRESSION
@@ -1239,6 +1240,76 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 98 - 2026-07-04 - Score: 95/120 = 79.17%
+
+Date: 2026-07-04
+
+Confirmed score: 95 / 120 = 79.17%
+
+Rules added in this wave:
+  twin_beam (WP-356, Layer 331)
+
+Task solved: 9bbf930d (3 training pairs + 1 test case; grids
+  17x16, 19x14, and 17x16 in training and 23x21 in the test; the
+  output always keeps the input size and changes only a handful
+  of cells).
+
+Algorithm: twin-bar beam probing with a lamp guard on left turns.
+  Stage 1: read the grid as a ladder - even rows carry a colored
+  horizontal bar starting near column two plus optional pipe
+  decorations to the right, odd rows are 7-filled separator
+  corridors, and every row opens with a 6 lamp in column zero on
+  a 7 spacer; color 7 is the background.
+  Stage 2: compute each bar row's color as the first non-7 cell
+  scanning from column two, and fire every separator whose bar
+  rows directly above and below share one color (twin bars).
+  Stage 3: remove the lamp of every fired separator (column zero
+  turns from 6 to 7) before tracing any beam, so all fired rows
+  are vacated simultaneously.
+  Stage 4: trace each fired separator's beam from column zero
+  heading right: the beam advances while the next cell holds 7;
+  stepping off the grid it rests on the cell it occupies; hitting
+  an obstacle it examines the two cells perpendicular to its
+  heading - up and down for a horizontal heading, left and right
+  for a vertical one.
+  Stage 5: with exactly one perpendicular cell open the beam
+  turns there and continues - except that a turn onto heading
+  left is refused while the current row still shows its own 6
+  lamp in column zero; with zero or two open cells, or a refused
+  left turn, the beam rests where it stands.
+  Stage 6: paint a 6 on every beam's resting cell; every other
+  cell is unchanged.
+
+Bugs fixed: one prototype-stage ordering bug. The first Python
+  prototype applied the lamp guard while collecting perpendicular
+  candidates, which let a guarded junction collapse to a single
+  candidate and turned a beam that must rest at a two-way
+  junction; testing openness first and applying the guard only to
+  a uniquely open left turn fixed the third training pair, and
+  the corrected prototype passed all four grids. The Prolog port
+  then passed the single-task test and the full regression on the
+  first compile.
+
+Lessons learned: the lamp guard on left turns is the wave's
+  discriminating observation - the third training pair's beam
+  descends a pipe and rests beside an open leftward corridor
+  because that row still holds its 6 lamp, while the test grid's
+  beam turns left along a fired separator whose lamp has already
+  departed; the two junctions are locally identical, so only the
+  row's own lamp state separates them. Junction arity is tested
+  on raw openness before any guard is applied: a beam facing a
+  two-way junction rests even when the guard would have thinned
+  the choice to one side. This extends the Wave 95 through 97
+  lesson - structure must be read per grid - to the beam's own
+  bookkeeping: the vacated column-zero lamps are not cosmetic,
+  they are state that later beams consult.
+
+Accomplishment: Acc_396.  Paper: Acc_396_ARC2_Wave98_TwinBeam.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5181,6 +5252,7 @@ b9e38dc0  - Wave 61 - frame_pour         - rectangular frame with fill-seed; int
 cb2d8a2c  - Wave 64 - snake_frame        - pointer (value 3) traces rectangular wrap-path around 1/2 snakes; near/far = snake_edge +/-(N1+1)
 e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; grey (5) shapes recolored by own enclosed-hole count; unmatched erased
 981571dc  - Wave 66 - mosaic_heal        - symmetric mosaic 0-damage healed; rows/cols borrow from compatible donors to fixpoint; diagonal mirror fallback
+9bbf930d  - Wave 98 - twin_beam          - ladder of bar rows with column-zero 6 lamps; separators between twin same-colored bars fire their lamps as rightward beams through the 7 corridors; a beam turns at an obstacle onto its unique open side, refuses a left turn while the row keeps its own lamp, rests at boundaries and two-way junctions, and paints a 6 where it rests
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
@@ -5630,4 +5702,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 96: Junction-hub - the scene draws a wire ne
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 97: Hub-dock - the scene shows one hub piece, an eight-cell ring in a four-by-four bounding box whose four sides carry two centered cells each, every side in its own color, plus loose single-color shapes scattered on the background; every shape whose color matches a hub side is rotated by the unique multiple of ninety degrees that turns a bounding-box side holding exactly two adjacent centered cells toward that hub side, then parked flush against the hub so its two contact cells sit directly next to the two hub edge cells, and shapes matching no hub side are erased; requiring the contact side to hold exactly the two centered cells is the discriminating observation of the wave, because it rejects the full-length sides and the off-center sides that a plain adjacency check would accept and it pins both the rotation and the translation uniquely, and the rotations are pure quarter turns with no reflection, which the first training pair proves in both directions.
   Score: 94/120 = 78.33%. Task 2c181942 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 98: Twin-beam - the grid is a ladder: even rows carry a colored horizontal bar starting near column two plus optional pipe decorations to the right, odd rows are 7-filled separator corridors, and every row opens with a 6 lamp in column zero on a 7 spacer; a separator fires when the bar rows directly above and below share one color, computed as the first non-7 cell from column two, and all fired lamps are removed simultaneously before any beam is traced; each fired separator's lamp then travels as a beam heading right through the 7 corridors, resting on its last cell when it steps off the grid, and at an obstacle examining the two cells perpendicular to its heading: with exactly one open it turns there and continues, except that a turn onto heading left is refused while the current row still shows its own lamp, and with zero or two open cells, or a refused left turn, it rests where it stands, painting a 6 on its resting cell; the lamp guard on left turns is the discriminating observation of the wave, because the third training pair's beam rests beside an open leftward corridor whose row keeps its lamp while the test grid's beam turns left along a fired separator whose lamp has departed, and the two junctions are locally identical in every cell of their neighborhoods.
+  Score: 95/120 = 79.17%. Task 9bbf930d solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.

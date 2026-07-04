@@ -1183,6 +1183,32 @@ arc2_induce_rule(TrainingPairs, hub_dock) :-
 % Each training pair must transform correctly under hub_dock.
            arc2_transform(hub_dock, In, Out)).
 
+% twin_beam: early dispatch before generic clause (WP-356, Layer 331).
+% Enumerate twin_beam as a known rule name.
+arc2_named_rule(twin_beam).
+% arc2_induce_rule(twin_beam): ladder-frame pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, twin_beam) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Every input row must open with the lamp column: a 6 then a 7.
+    forall(member(R, First), R = [6, 7|_]),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under twin_beam.
+           arc2_transform(twin_beam, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -21396,3 +21422,153 @@ hd_place_(right, box(_, _, _, C1), E1, RH, _RW, PR, PC) :-
     PC is C1 + 1,
 % The first contact cell lines up with the edge start row.
     PR is E1 - (RH // 2 - 1).
+
+% ---------------------------------------------------------------------------
+% TWIN-BEAM PROBE (WP-356, Layer 331)
+% twin_beam: the grid is a ladder — even rows carry a colored horizontal
+% bar (plus optional pipe decorations to the right), odd rows are 7-filled
+% separator corridors, and every row opens with a 6 lamp in column zero.
+% A separator fires when the bars directly above and below share one
+% color: its lamp leaves column zero and travels as a beam heading right.
+% The beam advances through 7 cells; leaving the grid it rests on the last
+% cell; hitting an obstacle it checks the two perpendicular cells — with
+% exactly one open it turns there, except that a turn to heading left is
+% refused while the current row still holds its own lamp; with zero or two
+% open cells the beam rests where it stands.  Each rest cell is painted 6.
+% Reference: ARC-AGI-2 task 9bbf930d -- twin bars send probes down pipes.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(twin_beam): fire twin-bar separators and trace each beam.
+arc2_transform(twin_beam, Grid, Out) :-
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% The highest separator row index worth checking.
+    HMax is H - 2,
+% Collect every firing separator: odd row with equal bar colors around it.
+    findall(R,
+% Enumerate candidate separator rows between two bar rows.
+            (between(1, HMax, R),
+% Keep only odd row indices: the separator rungs of the ladder.
+             1 =:= R mod 2,
+% Name the bar row directly above the separator.
+             RA is R - 1,
+% Name the bar row directly below the separator.
+             RB is R + 1,
+% Read the bar color above.
+             tb_bar_color_(Grid, RA, Col),
+% The bar color below must match the bar color above.
+             tb_bar_color_(Grid, RB, Col)),
+% Bind the list of firing separator rows.
+            Fired),
+% At least one separator must fire for the rule to be meaningful.
+    Fired \= [],
+% Remove every firing lamp from column zero before tracing any beam.
+    foldl(tb_douse_, Fired, Grid, Work),
+% Trace every beam on the doused grid and collect the resting cells.
+    findall(RR-RC,
+% Each firing row launches one beam from column zero heading right.
+            (member(R, Fired),
+% Trace the beam to its unique resting cell.
+             tb_trace_(Work, H, W, R, 0, 0, 1, RR, RC)),
+% Bind the list of resting cells.
+            Rests),
+% Paint a 6 lamp on every resting cell to finish the output.
+    foldl(tb_light_, Rests, Work, Out).
+
+% tb_douse_(+Row, +Grid0, -Grid): clear the lamp of a firing separator.
+tb_douse_(R, Grid0, Grid) :-
+% Replace the 6 in column zero of the firing row with background 7.
+    arc2_set_cell_(Grid0, R, 0, 7, Grid).
+
+% tb_light_(+Rest, +Grid0, -Grid): paint a beam resting cell with a 6.
+tb_light_(RR-RC, Grid0, Grid) :-
+% Replace the resting 7 cell with the delivered 6 lamp.
+    arc2_set_cell_(Grid0, RR, RC, 6, Grid).
+
+% tb_bar_color_(+Grid, +R, -Col): first non-7 color from column two.
+tb_bar_color_(Grid, R, Col) :-
+% Fetch the requested bar row.
+    nth0(R, Grid, Row),
+% Skip the lamp column and the spacer column.
+    Row = [_, _|Rest],
+% Scan rightward for the first foreground color.
+    tb_first_fg_(Rest, Col).
+
+% tb_first_fg_(+Cells, -Col): the first color differing from background 7.
+tb_first_fg_([V|_], V) :-
+% A non-7 cell is the bar color; stop scanning.
+    V =\= 7, !.
+% Skip a background cell and keep scanning rightward.
+tb_first_fg_([7|T], V) :-
+% Recurse on the remaining cells of the row.
+    tb_first_fg_(T, V).
+
+% tb_trace_(+Work, +H, +W, +Pr, +Pc, +Dr, +Dc, -RR, -RC): walk one beam.
+tb_trace_(Work, H, W, Pr, Pc, Dr, Dc, RR, RC) :-
+% Compute the row of the cell directly ahead of the beam.
+    Nr is Pr + Dr,
+% Compute the column of the cell directly ahead of the beam.
+    Nc is Pc + Dc,
+% Branch on whether the cell ahead leaves the grid.
+    (   (Nr < 0 ; Nr >= H ; Nc < 0 ; Nc >= W)
+% The beam rests on the boundary cell it currently occupies.
+    ->  RR = Pr, RC = Pc
+% Otherwise read the color of the cell ahead.
+    ;   arc2_cell_(Work, Nr, Nc, V),
+% Branch on whether the cell ahead is an open background cell.
+        (   V =:= 7
+% Advance the beam one step along its current heading.
+        ->  tb_trace_(Work, H, W, Nr, Nc, Dr, Dc, RR, RC)
+% Blocked by an obstacle: try to turn perpendicular to the heading.
+        ;   tb_turn_(Work, H, W, Pr, Pc, Dr, Dc, RR, RC)
+        )
+    ).
+
+% tb_turn_(+Work, +H, +W, +Pr, +Pc, +Dr, +Dc, -RR, -RC): resolve a block.
+tb_turn_(Work, H, W, Pr, Pc, _Dr, Dc, RR, RC) :-
+% A horizontal beam may deflect up or down; a vertical one left or right.
+    (   Dc =\= 0
+% Perpendicular candidates for a horizontal heading.
+    ->  Perps = [d(-1, 0), d(1, 0)]
+% Perpendicular candidates for a vertical heading.
+    ;   Perps = [d(0, -1), d(0, 1)]
+    ),
+% Keep the perpendicular cells that are inside the grid and open.
+    include(tb_open_(Work, H, W, Pr, Pc), Perps, Raw),
+% Branch on whether exactly one open side exists and is not lamp-guarded.
+    (   Raw = [d(Qr, Qc)],
+% A leftward turn is refused while the current row keeps its own lamp.
+        \+ tb_guarded_(Work, Pr, Qc)
+% Turn the beam onto the unique open side and continue walking.
+    ->  tb_trace_(Work, H, W, Pr, Pc, Qr, Qc, RR, RC)
+% Zero or two open sides, or a guarded left turn: the beam rests here.
+    ;   RR = Pr, RC = Pc
+    ).
+
+% tb_open_(+Work, +H, +W, +Pr, +Pc, +Dir): the side cell is open ground.
+tb_open_(Work, H, W, Pr, Pc, d(Qr, Qc)) :-
+% Compute the row of the side cell.
+    Tr is Pr + Qr,
+% Compute the column of the side cell.
+    Tc is Pc + Qc,
+% The side cell must lie above the top boundary check.
+    Tr >= 0,
+% The side cell must lie above row H.
+    Tr < H,
+% The side cell must lie right of the left boundary.
+    Tc >= 0,
+% The side cell must lie left of column W.
+    Tc < W,
+% The side cell must be open background.
+    arc2_cell_(Work, Tr, Tc, 7).
+
+% tb_guarded_(+Work, +Pr, +Qc): a left turn blocked by the row's own lamp.
+tb_guarded_(Work, Pr, Qc) :-
+% Only a turn to heading left is subject to the lamp guard.
+    Qc =:= -1,
+% The guard holds while column zero of the current row still shows a 6.
+    arc2_cell_(Work, Pr, 0, 6).
