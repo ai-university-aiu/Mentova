@@ -559,6 +559,38 @@ arc2_induce_rule(TrainingPairs, ring_dock(L, R)) :-
 % Each training pair must transform correctly under ring_dock.
            arc2_transform(ring_dock(L, R), In, Out)).
 
+% wire_relay: early dispatch before generic clause (WP-339, Layer 314).
+% Enumerate wire_relay as a known rule name.
+arc2_named_rule(wire_relay).
+% arc2_induce_rule(wire_relay): wire tip and crossing mark pre-filter + verify.
+arc2_induce_rule(TrainingPairs, wire_relay) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The first output must share the input height.
+    length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, W),
+% The first output must share the input width.
+    length(FOR, W),
+% The first input must contain at least one crossing mark of color 5.
+    once(( member(Row5, First), memberchk(5, Row5) )),
+% Collect every wire tip in the first input.
+    findall(E, wr_endpoint_(First, E), Eps),
+% Count the wire tips.
+    length(Eps, NE),
+% At least four tips are required, two per wire.
+    NE >= 4,
+% Wire tips must pair up, so the tip count must be even.
+    0 is NE mod 2,
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under wire_relay.
+           arc2_transform(wire_relay, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -16604,3 +16636,381 @@ rd_merge_(Bg, LeftCanvas, RightCanvas, Out) :-
                     LRow, RRow, ORow),
 % Apply the row merge across the paired canvases.
             LeftCanvas, RightCanvas, Out).
+
+% ---------------------------------------------------------------------------
+% WIRE RELAY (WP-339, Layer 314)
+% wire_relay: wires of color 8 (crossings marked with 5, passing through or
+% turning inside blocks of color 9) connect an up/left tip to a down/right
+% tip.  A colored figure near one tip names the wire color; the output draws
+% a four-cell diamond outline two cells beyond the up/left tip and a
+% five-cell diagonal X two cells beyond the down/right tip, both in the wire
+% color, erasing the original figures while keeping the wire structure.
+% Tracing goes straight at crossings; a wire entering a 9-block leaves it
+% straight ahead when possible, otherwise at the block's only other exit.
+% Reference: ARC-AGI-2 task a47bf94d -- squares become diamonds plus X marks.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(wire_relay): relay each wire color from tip to tip.
+arc2_transform(wire_relay, Grid, Out) :-
+% Collect every wire tip in the grid.
+    findall(E, wr_endpoint_(Grid, E), Eps),
+% At least one wire tip must be present.
+    Eps \== [],
+% Pair the tips into traced wires carrying their relay colors.
+    wr_wires_(Grid, Eps, Wires),
+% Collect every diamond and X cell to be painted.
+    wr_draws_(Wires, Draws),
+% Rebuild the grid row by row.
+    findall(ORow,
+% Walk every input row with its index.
+            ( nth0(R, Grid, Row),
+% Rebuild one row cell by cell.
+              findall(V2,
+% Walk every cell of the row with its column index.
+                      ( nth0(C, Row, V),
+% Structure cells are kept, painted cells take the wire color.
+                        ( wr_struct_(V) -> V2 = V
+% Painted cells take the color recorded for them.
+                        ; memberchk(wrcell(R, C, K), Draws) -> V2 = K
+% Every remaining cell becomes background.
+                        ; V2 = 0 ) ),
+% Bind the rebuilt row.
+                      ORow) ),
+% Bind the rebuilt grid.
+            Out).
+
+% wr_struct_(+V): V is a structure color (crossing 5, wire 8, block 9).
+% The crossing marker color 5 is structural.
+wr_struct_(5).
+% The wire color 8 is structural.
+wr_struct_(8).
+% The block color 9 is structural.
+wr_struct_(9).
+
+% wr_at_(+Grid, +R, +C, -V): fetch cell (R,C); fail out of bounds.
+wr_at_(Grid, R, C, V) :-
+% Reject negative row coordinates.
+    R >= 0,
+% Reject negative column coordinates.
+    C >= 0,
+% Fetch the row.
+    nth0(R, Grid, Row),
+% Fetch the cell.
+    nth0(C, Row, V).
+
+% wr_structcell_(+Grid, +R, +C): cell (R,C) holds a structure color.
+wr_structcell_(Grid, R, C) :-
+% Fetch the cell value.
+    wr_at_(Grid, R, C, V),
+% The value must be structural.
+    wr_struct_(V).
+
+% wr_delta_(?Dir, ?DR, ?DC): unit step for each compass direction.
+% North decreases the row index.
+wr_delta_(n, -1, 0).
+% South increases the row index.
+wr_delta_(s, 1, 0).
+% West decreases the column index.
+wr_delta_(w, 0, -1).
+% East increases the column index.
+wr_delta_(e, 0, 1).
+
+% wr_opposite_(?D, ?O): opposite compass directions.
+% North opposes south.
+wr_opposite_(n, s).
+% South opposes north.
+wr_opposite_(s, n).
+% West opposes east.
+wr_opposite_(w, e).
+% East opposes west.
+wr_opposite_(e, w).
+
+% wr_perp_(?D, ?P): perpendicular compass directions.
+% West is perpendicular to north.
+wr_perp_(n, w).
+% East is perpendicular to north.
+wr_perp_(n, e).
+% West is perpendicular to south.
+wr_perp_(s, w).
+% East is perpendicular to south.
+wr_perp_(s, e).
+% North is perpendicular to west.
+wr_perp_(w, n).
+% South is perpendicular to west.
+wr_perp_(w, s).
+% North is perpendicular to east.
+wr_perp_(e, n).
+% South is perpendicular to east.
+wr_perp_(e, s).
+
+% wr_head_dir_(?D): outward tip directions that receive the diamond.
+% A tip pointing north receives the diamond.
+wr_head_dir_(n).
+% A tip pointing west receives the diamond.
+wr_head_dir_(w).
+
+% wr_tail_dir_(?D): outward tip directions that receive the X figure.
+% A tip pointing south receives the X figure.
+wr_tail_dir_(s).
+% A tip pointing east receives the X figure.
+wr_tail_dir_(e).
+
+% wr_endpoint_(+Grid, -Ep): a wire tip cell with its inward direction.
+wr_endpoint_(Grid, ep(R, C, DirIn)) :-
+% Enumerate every row with its index.
+    nth0(R, Grid, Row),
+% Enumerate every wire cell of the row with its column index.
+    nth0(C, Row, 8),
+% Collect the structural neighbor directions of the cell.
+    findall(D,
+% Probe each compass neighbor for a structure color.
+            ( wr_delta_(D, DR, DC),
+% Compute the neighbor row.
+              R1 is R + DR,
+% Compute the neighbor column.
+              C1 is C + DC,
+% The neighbor must be structural.
+              wr_structcell_(Grid, R1, C1) ),
+% A tip has exactly one structural neighbor.
+            [DirIn]).
+
+% wr_trace_(+Grid,+R,+C,+Dir,+Fuel,-ER,-EC): walk the wire to the far tip.
+wr_trace_(Grid, R, C, Dir, Fuel, ER, EC) :-
+% The fuel bound guards against cyclic wire structures.
+    Fuel > 0,
+% Spend one unit of fuel per step.
+    Fuel1 is Fuel - 1,
+% Compute the step for the current heading.
+    wr_delta_(Dir, DR, DC),
+% Compute the straight-ahead row.
+    R1 is R + DR,
+% Compute the straight-ahead column.
+    C1 is C + DC,
+% Blocks are crossed with the jump logic, wire cells are walked straight.
+    ( wr_at_(Grid, R1, C1, 9) ->
+% Jump across the block to its exit wire cell.
+        wr_block_jump_(Grid, R, C, R1, C1, Dir, R2, C2, Dir2),
+% Resume the walk from the block exit.
+        wr_trace_(Grid, R2, C2, Dir2, Fuel1, ER, EC)
+% A structural straight-ahead cell continues the walk unchanged.
+    ; wr_structcell_(Grid, R1, C1) ->
+% Step straight ahead.
+        wr_trace_(Grid, R1, C1, Dir, Fuel1, ER, EC)
+% Otherwise collect the perpendicular continuation options.
+    ; findall(D2,
+% Probe both perpendicular directions for structure.
+              ( wr_perp_(Dir, D2),
+% Compute the perpendicular step.
+                wr_delta_(D2, DR2, DC2),
+% Compute the perpendicular row.
+                R2 is R + DR2,
+% Compute the perpendicular column.
+                C2 is C + DC2,
+% The perpendicular cell must be structural.
+                wr_structcell_(Grid, R2, C2) ),
+% Bind the list of turn options.
+              Ds),
+% Exactly one turn continues the walk and no turn ends it.
+      ( Ds = [D2] ->
+% Turn in place and keep walking.
+          wr_trace_(Grid, R, C, D2, Fuel1, ER, EC)
+% With no continuation the current cell is the far tip.
+      ; Ds = [] ->
+% Bind the far tip row.
+          ER = R,
+% Bind the far tip column.
+          EC = C ) ).
+
+% wr_region_(+Grid, +R, +C, -Region): flood fill the 9-block at (R,C).
+wr_region_(Grid, R, C, Region) :-
+% Start the flood fill from the entry cell.
+    wr_region_fill_([R-C], Grid, [], Region).
+
+% wr_region_fill_(+Queue, +Grid, +Acc, -Region): breadth-first 9 flood fill.
+% An empty queue closes the region.
+wr_region_fill_([], _, Acc, Acc).
+% Expand the next queued cell.
+wr_region_fill_([R-C|Q], Grid, Acc, Region) :-
+% Already-visited cells are skipped, block cells expand, others drop.
+    ( memberchk(R-C, Acc) ->
+% Skip a cell that is already in the region.
+        wr_region_fill_(Q, Grid, Acc, Region)
+% A block cell joins the region and queues its neighbors.
+    ; wr_at_(Grid, R, C, 9) ->
+% Compute the northern neighbor row.
+        RN is R - 1,
+% Compute the southern neighbor row.
+        RS is R + 1,
+% Compute the western neighbor column.
+        CW is C - 1,
+% Compute the eastern neighbor column.
+        CE is C + 1,
+% Queue the four orthogonal neighbors.
+        append(Q, [RN-C, RS-C, R-CW, R-CE], Q1),
+% Add the cell to the region and continue.
+        wr_region_fill_(Q1, Grid, [R-C|Acc], Region)
+% A non-block cell is dropped from the queue.
+    ; wr_region_fill_(Q, Grid, Acc, Region)
+    ).
+
+% wr_block_jump_(+Grid,+FromR,+FromC,+BR,+BC,+Dir,-OutR,-OutC,-OutDir):
+% cross the 9-block entered at (BR,BC) heading Dir from wire (FromR,FromC).
+wr_block_jump_(Grid, FromR, FromC, BR, BC, Dir, OutR, OutC, OutDir) :-
+% Compute the full extent of the entered block.
+    wr_region_(Grid, BR, BC, Region),
+% Prefer the straight-through exit when one exists.
+    ( wr_block_straight_(Grid, Region, BR, BC, Dir, SR, SC) ->
+% Bind the straight exit row.
+        OutR = SR,
+% Bind the straight exit column.
+        OutC = SC,
+% A straight crossing keeps the heading.
+        OutDir = Dir
+% Otherwise the block must expose exactly one other wire exit.
+    ; findall(exit(WR, WC, D2),
+% Enumerate every wire cell orthogonally adjacent to the region.
+              ( member(ZR-ZC, Region),
+% Probe each compass neighbor of the region cell.
+                wr_delta_(D2, DR2, DC2),
+% Compute the neighbor row.
+                WR is ZR + DR2,
+% Compute the neighbor column.
+                WC is ZC + DC2,
+% The neighbor must lie outside the region.
+                \+ memberchk(WR-WC, Region),
+% Fetch the neighbor value.
+                wr_at_(Grid, WR, WC, V),
+% The neighbor must be a wire or crossing cell.
+                ( V =:= 8 ; V =:= 5 ),
+% The entry wire cell is not an exit.
+                \+ (WR =:= FromR, WC =:= FromC) ),
+% Bind the candidate exits.
+              Exits0),
+% Deduplicate and demand exactly one exit with its outward heading.
+      sort(Exits0, [exit(OutR, OutC, OutDir)])
+    ).
+
+% wr_block_straight_(+Grid,+Region,+R,+C,+Dir,-SR,-SC): straight crossing.
+wr_block_straight_(Grid, Region, R, C, Dir, SR, SC) :-
+% Compute the step for the current heading.
+    wr_delta_(Dir, DR, DC),
+% Compute the next row.
+    R1 is R + DR,
+% Compute the next column.
+    C1 is C + DC,
+% Region cells continue the crossing, the first cell beyond must be wire.
+    ( memberchk(R1-C1, Region) ->
+% Keep walking straight inside the region.
+        wr_block_straight_(Grid, Region, R1, C1, Dir, SR, SC)
+% Fetch the first cell beyond the region.
+    ; wr_at_(Grid, R1, C1, V),
+% The exit cell must be a wire or crossing cell.
+      ( V =:= 8 ; V =:= 5 ),
+% Bind the exit row.
+      SR = R1,
+% Bind the exit column.
+      SC = C1
+    ).
+
+% wr_center_(+R, +C, +Dir, -CR, -CC): figure slot center beyond a tip.
+wr_center_(R, C, Dir, CR, CC) :-
+% Compute the outward step.
+    wr_delta_(Dir, DR, DC),
+% The slot center lies two cells beyond the tip row-wise.
+    CR is R + 2 * DR,
+% The slot center lies two cells beyond the tip column-wise.
+    CC is C + 2 * DC.
+
+% wr_fig_color_(+Grid, +CR, +CC, -K): figure color in the slot box.
+wr_fig_color_(Grid, CR, CC, K) :-
+% Scan the row offsets of the three-by-three slot box.
+    between(-1, 1, DR),
+% Scan the column offsets of the three-by-three slot box.
+    between(-1, 1, DC),
+% Compute the probed row.
+    R is CR + DR,
+% Compute the probed column.
+    C is CC + DC,
+% Fetch the probed cell.
+    wr_at_(Grid, R, C, K),
+% The color must not be background.
+    K =\= 0,
+% The color must not be structural.
+    \+ wr_struct_(K),
+% Commit to the first figure color found.
+    !.
+
+% wr_wires_(+Grid, +Eps, -Wires): pair the tips into colored wires.
+% With no tips left the wire list is complete.
+wr_wires_(_, [], []).
+% Trace the next tip to its partner and record the wire.
+wr_wires_(Grid, [ep(R, C, DirIn)|Rest], [wire(HR, HC, TR, TC, K)|Ws]) :-
+% Measure the grid height for the fuel bound.
+    length(Grid, H),
+% Fetch the first grid row.
+    Grid = [Row0|_],
+% Measure the grid width for the fuel bound.
+    length(Row0, W),
+% Allow two visits per cell before giving up.
+    Fuel is 2 * H * W,
+% Trace the wire from this tip to the far tip.
+    wr_trace_(Grid, R, C, DirIn, Fuel, ER, EC),
+% The far tip must be an unconsumed endpoint.
+    select(ep(ER, EC, DirIn2), Rest, Rest1),
+% Compute the outward direction of the first tip.
+    wr_opposite_(DirIn, Out1),
+% Compute the outward direction of the far tip.
+    wr_opposite_(DirIn2, Out2),
+% Assign the diamond end and the X end by outward direction.
+    ( wr_head_dir_(Out1) ->
+% The far tip must then point down or right.
+        wr_tail_dir_(Out2),
+% The first tip hosts the diamond.
+        HEp = ep(R, C, Out1),
+% The far tip hosts the X figure.
+        TEp = ep(ER, EC, Out2)
+% Otherwise the far tip hosts the diamond.
+    ; wr_head_dir_(Out2),
+% The first tip must then point down or right.
+      wr_tail_dir_(Out1),
+% The far tip hosts the diamond.
+      HEp = ep(ER, EC, Out2),
+% The first tip hosts the X figure.
+      TEp = ep(R, C, Out1) ),
+% Destructure the diamond tip.
+    HEp = ep(RA, CA, OA),
+% Compute the diamond slot center.
+    wr_center_(RA, CA, OA, HR, HC),
+% Destructure the X tip.
+    TEp = ep(RB, CB, OB),
+% Compute the X slot center.
+    wr_center_(RB, CB, OB, TR, TC),
+% Read the wire color from either slot.
+    ( wr_fig_color_(Grid, HR, HC, K) -> true ; wr_fig_color_(Grid, TR, TC, K) ),
+% A figure at the X slot must agree with the wire color.
+    ( wr_fig_color_(Grid, TR, TC, K2) -> K2 == K ; true ),
+% A figure at the diamond slot must agree with the wire color.
+    ( wr_fig_color_(Grid, HR, HC, K3) -> K3 == K ; true ),
+% Pair the remaining tips.
+    wr_wires_(Grid, Rest1, Ws).
+
+% wr_draws_(+Wires, -Draws): every diamond and X cell with its color.
+wr_draws_(Wires, Draws) :-
+% Collect the painted cells of every wire.
+    findall(wrcell(R, C, K),
+% Walk every traced wire.
+            ( member(wire(HR, HC, TR, TC, K), Wires),
+% Paint either the diamond outline or the X figure.
+              ( member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1]),
+% Compute the diamond cell row.
+                R is HR + DR,
+% Compute the diamond cell column.
+                C is HC + DC
+% The X figure covers the center and the four diagonals.
+              ; member(DR-DC, [0-0, (-1)-(-1), (-1)-1, 1-(-1), 1-1]),
+% Compute the X cell row.
+                R is TR + DR,
+% Compute the X cell column.
+                C is TC + DC ) ),
+% Bind the painted cell list.
+            Draws).

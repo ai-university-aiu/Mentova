@@ -1,0 +1,35 @@
+Accomplishment 379: ARC-AGI-2 Wave 81 - Wire Relay: Tip-to-Tip Color Relay over a Wire Maze
+
+PrologAI solves ARC-AGI-2 task a47bf94d with a new glass-box rule
+called wire_relay (WP-339, Layer 314), raising the benchmark score
+from 77/120 = 64.17% to 78/120 = 65.00%.
+
+Each grid holds a maze of wires drawn in color 8, crossing marks of
+color 5 where two wires pass through each other, and solid blocks of
+color 9 that wires enter and leave. Every wire runs from a tip
+pointing up or left to a tip pointing down or right, and a colored
+figure - a solid square, a diamond outline, or a diagonal X - sits
+two cells beyond one of the two tips. In the output every wire
+carries its figure color to both ends: a diamond outline appears
+beyond the up-or-left tip and a diagonal X beyond the down-or-right
+tip, while the wire maze itself stays untouched.
+
+The engine finds every tip as a wire cell with exactly one structural
+neighbor, then traces each wire cell by cell, always preferring the
+straight-ahead cell - which carries the walk through crossings
+without switching wires - and turning only into a unique
+perpendicular neighbor. A color-9 block is flood filled and jumped:
+straight through when a wire waits directly beyond, otherwise to the
+block's only other adjacent wire cell.
+
+The key insight is that hidden test grids exercise freedoms the
+training pairs leave dormant. The first prototype walked blocks
+straight through and passed all three training pairs, but the test
+grid hides a corner turn inside one block - a wire enters heading
+west and leaves heading south. Modeling the block by its function,
+as a connector of its perimeter wires, fixed the test while leaving
+every training trace unchanged. Pure induction. No pretraining.
+Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
