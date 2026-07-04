@@ -591,6 +591,52 @@ arc2_induce_rule(TrainingPairs, wire_relay) :-
 % Each training pair must transform correctly under wire_relay.
            arc2_transform(wire_relay, In, Out)).
 
+% twin_lift: early dispatch before generic clause (WP-340, Layer 315).
+% Enumerate twin_lift as a known rule name.
+arc2_named_rule(twin_lift).
+% arc2_induce_rule(twin_lift): twin-size and unique-size pre-filter + verify.
+arc2_induce_rule(TrainingPairs, twin_lift) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The first output must share the input height.
+    length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, W),
+% The first output must share the input width.
+    length(FOR, W),
+% Determine the majority background color of the first input.
+    tw_background_(First, BG),
+% Collect every foreground cell of the first input.
+    findall(c(R, C, V),
+% Walk each cell keeping only non-background values.
+            ( nth0(R, First, Row), nth0(C, Row, V), V =\= BG ),
+% Bind the collected foreground cell list.
+            Cells),
+% Count the foreground cells.
+    length(Cells, NF),
+% Require a small scattered-shapes foreground, not a dense scene.
+    NF >= 8, NF =< 150,
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Count the components.
+    length(Comps, NC),
+% At least three shapes are needed for twins plus a singleton.
+    NC >= 3,
+% Record the size of every component.
+    findall(N, (member(Cm, Comps), length(Cm, N)), Sizes),
+% At least one size must occur on two or more shapes.
+    once(( member(N1, Sizes), include(==(N1), Sizes, S1), length(S1, K1), K1 >= 2 )),
+% At least one size must occur on exactly one shape.
+    once(( member(N2, Sizes), include(==(N2), Sizes, S2), length(S2, 1) )),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under twin_lift.
+           arc2_transform(twin_lift, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -17014,3 +17060,137 @@ wr_draws_(Wires, Draws) :-
                 C is TC + DC ) ),
 % Bind the painted cell list.
             Draws).
+
+% ---------------------------------------------------------------------------
+% twin_lift: several small shapes are scattered on a uniform background; a
+% shape whose cell count matches the cell count of at least one other shape
+% floats straight up until it touches the top edge, while a shape whose cell
+% count is unique among all shapes sinks straight down until it touches the
+% bottom edge.  Every shape keeps its columns, its form, and its colors.
+% Reference: ARC-AGI-2 task 62593bfd -- twin shapes rise, lone shapes sink.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(twin_lift): float twin-sized shapes up, sink unique ones.
+arc2_transform(twin_lift, Grid, Out) :-
+% Measure the grid height.
+    length(Grid, H),
+% Determine the majority background color.
+    tw_background_(Grid, BG),
+% Collect every foreground cell with its coordinates and color.
+    findall(c(R, C, V),
+% Walk each cell of the grid keeping only non-background values.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= BG ),
+% Bind the collected foreground cell list.
+            Cells),
+% At least one foreground cell must be present.
+    Cells \== [],
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Record the size of every component.
+    findall(N, (member(Cm, Comps), length(Cm, N)), Sizes),
+% Compute the shifted cells of every component.
+    findall(SC,
+% Walk each component, shift it to its edge, and emit its cells.
+            ( member(Comp, Comps), tw_shifted_(H, Sizes, Comp, SCs), member(SC, SCs) ),
+% Bind the full list of repositioned cells.
+            Painted),
+% Rebuild the grid row by row.
+    findall(ORow,
+% Walk every input row with its index and rebuild it.
+            ( nth0(R, Grid, Row0), tw_row_(Row0, R, BG, Painted, ORow) ),
+% Bind the rebuilt grid.
+            Out).
+
+% tw_row_(+Row0, +R, +BG, +Painted, -ORow): rebuild one output row.
+tw_row_(Row0, R, BG, Painted, ORow) :-
+% Rebuild the row cell by cell.
+    findall(V2,
+% Walk every column index of the input row.
+            ( nth0(C, Row0, _),
+% A repositioned cell takes its shape color, all others take background.
+              ( memberchk(c(R, C, K), Painted) -> V2 = K ; V2 = BG ) ),
+% Bind the rebuilt row.
+            ORow).
+
+% tw_background_(+Grid, -BG): the most frequent color in the grid.
+tw_background_(Grid, BG) :-
+% Flatten the grid into a single value list.
+    flatten(Grid, Vals),
+% Sort the values keeping duplicates so equal colors are adjacent.
+    msort(Vals, Sorted),
+% Count each color run in the sorted list.
+    tw_runs_(Sorted, Runs),
+% Order the count-color pairs by ascending count.
+    msort(Runs, RS),
+% The last pair carries the most frequent color.
+    last(RS, _-BG).
+
+% tw_runs_(+SortedVals, -Runs): count-color pairs for a sorted value list.
+% An empty value list yields no runs.
+tw_runs_([], []).
+% Count the run of the first value, then recurse on the other values.
+tw_runs_([V|Vs], [N-V|Rest]) :-
+% Keep every copy of the first value.
+    include(==(V), [V|Vs], Same),
+% Count the copies of the first value.
+    length(Same, N),
+% Drop every copy of the first value from the tail.
+    exclude(==(V), Vs, Other),
+% Count the runs of the remaining values.
+    tw_runs_(Other, Rest).
+
+% tw_near_(+R, +C, +Cell): Cell lies in the 8-neighborhood of (R,C).
+tw_near_(R, C, c(R2, C2, _)) :-
+% The row distance must be at most one.
+    abs(R2 - R) =< 1,
+% The column distance must be at most one.
+    abs(C2 - C) =< 1.
+
+% tw_components_(+Cells, -Comps): 8-connected components of foreground cells.
+% An empty cell list yields no components.
+tw_components_([], []).
+% Grow one component from the first cell, then recurse on the leftovers.
+tw_components_([C|Rest], [Comp|More]) :-
+% Grow the component around the first seed cell.
+    tw_grow_([C], Rest, [C], Left, Comp),
+% Group the remaining cells into further components.
+    tw_components_(Left, More).
+
+% tw_grow_(+Queue, +Pool, +Acc, -Left, -Comp): flood-fill one component.
+% An empty queue closes the component and returns the untouched pool.
+tw_grow_([], Pool, Acc, Pool, Acc).
+% Expand the component around the first queued cell.
+tw_grow_([c(R, Cc, _)|Q], Pool, Acc, Left, Comp) :-
+% Keep the pool cells adjacent to the queued cell.
+    include(tw_near_(R, Cc), Pool, Near),
+% Drop the adjacent cells from the pool.
+    exclude(tw_near_(R, Cc), Pool, Far),
+% Queue the newly reached cells for expansion.
+    append(Q, Near, Q2),
+% Add the newly reached cells to the component.
+    append(Acc, Near, Acc2),
+% Continue growing with the extended queue and reduced pool.
+    tw_grow_(Q2, Far, Acc2, Left, Comp).
+
+% tw_shifted_(+H, +Sizes, +Comp, -SCs): shift one component to its edge.
+tw_shifted_(H, Sizes, Comp, SCs) :-
+% Measure this component's size.
+    length(Comp, N),
+% Keep every recorded size equal to this component's size.
+    include(==(N), Sizes, Same),
+% Count how many shapes share this size.
+    length(Same, K),
+% Collect the row indices of the component cells.
+    findall(R, member(c(R, _, _), Comp), Rs),
+% The topmost row of the component.
+    min_list(Rs, MinR),
+% The bottommost row of the component.
+    max_list(Rs, MaxR),
+% Twin-sized shapes float flush to the top, unique shapes sink to the bottom.
+    ( K >= 2 -> Shift is -MinR ; Shift is H - 1 - MaxR ),
+% Apply the vertical shift to every cell, keeping columns and colors.
+    findall(c(R2, C, V),
+% Walk every component cell and move it by the shift.
+            ( member(c(R, C, V), Comp), R2 is R + Shift ),
+% Bind the repositioned cell list.
+            SCs).
