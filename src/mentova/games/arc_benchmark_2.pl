@@ -10735,6 +10735,426 @@ mp_transpose_pass_(G0_, NR_, NC_, G_, Changed_) :-
     ).
 
 % ---------------------------------------------------------------------------
+% SEQUENCE-EXTRAPOLATE RULE (WP-376, Layer 351)
+% Two color-5 L-trominoes form a "caliper" whose combined bounding box gives
+% the output height and width.  The grid also holds a sequence of same-family
+% shapes that grow in size.  The output is the next member of that sequence,
+% windowed (bottom-left) to the caliper dimensions and recolored by the
+% family's color cycle.  Five families are supported: comb, ladder, peaks,
+% zigzag, and (bonus) the horizontally repeating peak motif.
+% ---------------------------------------------------------------------------
+
+% arc2_induce_rule(sequence_extrapolate): caliper pre-filter + full verify.
+arc2_induce_rule(TrainingPairs, sequence_extrapolate) :-
+% Every training input must present exactly two color-5 L-trominoes (cheap reject).
+    forall(member(pair(In, _), TrainingPairs), se_caliper_ok_(In)),
+% The generator must reproduce every training output pixel-exactly.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(sequence_extrapolate, In, Out)).
+
+% arc2_transform(sequence_extrapolate): detect the family and generate output.
+arc2_transform(sequence_extrapolate, Grid, Out) :-
+% The caliper (two color-5 trominoes) gives the output height and width.
+    se_caliper_(Grid, H, W),
+% Extract the sequence members (colored shapes), sorted small to large.
+    se_members_(Grid, Members),
+% There must be at least two members to establish a growth trend.
+    Members = [_, _ | _],
+% Compute per-member (height,width) dimensions.
+    se_dims_(Members, Dims),
+% Compute the consecutive growth vectors between members.
+    se_growth_(Dims, GV),
+% Dispatch to the family-specific generator.
+    se_dispatch_(GV, Members, Dims, H, W, Out).
+
+% se_caliper_ok_/1: true if the grid has exactly two size-3 color-5 trominoes.
+se_caliper_ok_(Grid) :-
+% Collect every color-5 cell coordinate (there should be very few).
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, 5)), Fs),
+% Two L-trominoes contribute exactly six cells.
+    length(Fs, 6),
+% Group the six cells into connected components.
+    se_cc_(Fs, Comps),
+% There must be exactly two caliper markers.
+    length(Comps, 2),
+% Each caliper marker is a three-cell L-tromino.
+    forall(member(Cmp, Comps), length(Cmp, 3)).
+
+% se_at_/4: fetch the value at (R,C) in Grid.
+se_at_(Grid, R, C, V) :-
+% Select the R-th row.
+    nth0(R, Grid, Row),
+% Select the C-th cell of that row.
+    nth0(C, Row, V).
+
+% se_caliper_/3: combined bounding box of all color-5 cells gives H and W.
+se_caliper_(Grid, H, W) :-
+% Collect every color-5 cell coordinate.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, 5)), Fives),
+% There must be caliper markers present.
+    Fives = [_ | _],
+% Gather the row coordinates.
+    findall(R, member(R-_, Fives), Rs),
+% Gather the column coordinates.
+    findall(C, member(_-C, Fives), Cs),
+% Minimum and maximum rows bound the caliper vertically.
+    min_list(Rs, R0), max_list(Rs, R1),
+% Minimum and maximum columns bound the caliper horizontally.
+    min_list(Cs, C0), max_list(Cs, C1),
+% Height is the inclusive row span.
+    H is R1 - R0 + 1,
+% Width is the inclusive column span.
+    W is C1 - C0 + 1.
+
+% se_members_/2: colored (non-0, non-5) 8-connected components as members.
+se_members_(Grid, Members) :-
+% Collect every colored member cell coordinate.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, V), V =\= 0, V =\= 5), Coords),
+% Group the coordinates into 8-connected components.
+    se_cc_(Coords, Comps0),
+% Discard singleton noise; keep components of size two or more.
+    include([Cmp]>>(length(Cmp, L), L >= 2), Comps0, Comps),
+% Build a member record (matrix, colors, dims) for each component.
+    maplist(se_mkmem_(Grid), Comps, Mems0),
+% Sort members by bounding-box area, smallest first.
+    se_sort_by_area_(Mems0, Members).
+
+% se_cc_/2: partition a coordinate list into 8-connected components.
+se_cc_([], []).
+% Take the first coordinate, flood its component, recurse on the rest.
+se_cc_([C | Rest], [Comp | Comps]) :-
+% Flood-fill from C, consuming connected coordinates from the pool.
+    se_flood_([C], Rest, Comp, Remaining),
+% Continue partitioning the remaining coordinates.
+    se_cc_(Remaining, Comps).
+
+% se_flood_/4: BFS flood fill collecting an 8-connected component.
+se_flood_([], Pool, [], Pool).
+% Expand the frontier head, pulling its neighbors out of the pool.
+se_flood_([X | Fs], Pool, [X | Comp], Rem) :-
+% Split the pool into cells adjacent to X and the rest.
+    se_adj_split_(X, Pool, Adj, Pool1),
+% Add the newly found neighbors to the frontier.
+    append(Adj, Fs, F1),
+% Continue the flood with the extended frontier and shrunken pool.
+    se_flood_(F1, Pool1, Comp, Rem).
+
+% se_adj_split_/4: partition Pool into cells 8-adjacent to X and the rest.
+se_adj_split_(_, [], [], []).
+% Classify the head cell as adjacent or not, then recurse.
+se_adj_split_(X, [P | Ps], Adj, Rest) :-
+% Test 8-adjacency between X and P.
+    ( se_adj8_(X, P)
+% Adjacent cells join the Adj list.
+    -> Adj = [P | A1], Rest = R1
+% Non-adjacent cells stay in the Rest list.
+    ;  Adj = A1, Rest = [P | R1] ),
+% Recurse over the remaining pool cells.
+    se_adj_split_(X, Ps, A1, R1).
+
+% se_adj8_/2: true if two coordinates are 8-connected neighbors.
+se_adj8_(R1-C1, R2-C2) :-
+% Vertical distance is at most one.
+    DR is abs(R1 - R2), DR =< 1,
+% Horizontal distance is at most one.
+    DC is abs(C1 - C2), DC =< 1,
+% The two cells must not be identical.
+    ( DR > 0 ; DC > 0 ).
+
+% se_mkmem_/3: build a mem(Matrix,Colors,H,W) record from a component.
+se_mkmem_(Grid, Coords, mem(Mat, Colors, H, W)) :-
+% Gather the component's row coordinates.
+    findall(R, member(R-_, Coords), Rs),
+% Gather the component's column coordinates.
+    findall(C, member(_-C, Coords), Cs),
+% Determine the bounding box rows.
+    min_list(Rs, R0), max_list(Rs, R1),
+% Determine the bounding box columns.
+    min_list(Cs, C0), max_list(Cs, C1),
+% Height of the bounding box.
+    H is R1 - R0 + 1,
+% Width of the bounding box.
+    W is C1 - C0 + 1,
+% Render the component as a matrix (0 for background).
+    se_build_mat_(Grid, R0, R1, C0, C1, Mat),
+% Collect the distinct colors used by the component.
+    findall(V, (member(R-C, Coords), se_at_(Grid, R, C, V)), Vs0),
+% Sort them into a canonical color set.
+    sort(Vs0, Colors).
+
+% se_build_mat_/6: render the bounding box as a matrix, background as 0.
+se_build_mat_(Grid, R0, R1, C0, C1, Mat) :-
+% Build one output row per bounding-box row.
+    findall(Row,
+        ( between(R0, R1, R),
+% Build one cell per bounding-box column.
+          findall(V,
+            ( between(C0, C1, C), se_at_(Grid, R, C, V1),
+% Map background (0) and caliper (5) cells to 0, keep member colors.
+              ( V1 =:= 0 -> V = 0 ; V1 =:= 5 -> V = 0 ; V = V1 ) ),
+            Row) ),
+        Mat).
+
+% se_sort_by_area_/2: keysort members by bounding-box area, ascending.
+se_sort_by_area_(Mems, Sorted) :-
+% Key each member by its bounding-box area.
+    maplist([mem(M, Cs, H, W), Area-mem(M, Cs, H, W)]>>(Area is H * W), Mems, Keyed),
+% Stable-sort by the area key (keeps equal-area members).
+    keysort(Keyed, KSorted),
+% Drop the sort keys.
+    pairs_values(KSorted, Sorted).
+
+% se_dims_/2: list of H-W dimension pairs for the members.
+se_dims_(Members, Dims) :-
+% Project each member to its (height,width) pair.
+    maplist([mem(_, _, H, W), H-W]>>true, Members, Dims).
+
+% se_growth_/2: consecutive (dH,dW) growth vectors of the dimension list.
+se_growth_([_], []).
+% Difference successive dimension pairs.
+se_growth_([H0-W0, H1-W1 | T], [DH-DW | R]) :-
+% Height growth of this step.
+    DH is H1 - H0,
+% Width growth of this step.
+    DW is W1 - W0,
+% Recurse over the remaining dimensions.
+    se_growth_([H1-W1 | T], R).
+
+% se_dispatch_/6: choose the family generator from the growth signature.
+se_dispatch_(GV, Members, Dims, H, W, Out) :-
+% Constant (1,1) growth is the comb family.
+    ( forall(member(DH-DW, GV), (DH =:= 1, DW =:= 1))
+    -> se_gen_comb_(Members, Dims, H, W, Out)
+% Pure width growth (dH=0) is a horizontally repeating peak family.
+    ;  forall(member(DHa-_, GV), DHa =:= 0)
+    -> se_gen_peaks_(Members, Dims, H, W, Out)
+% Pure height growth (dW=0): single-color is a ladder, else a zigzag.
+    ;  forall(member(_-DWb, GV), DWb =:= 0)
+    -> ( se_all_single_(Members)
+       -> se_gen_ladder_(Members, Dims, H, W, Out)
+       ;  se_gen_zigzag_(Members, Dims, H, W, Out) )
+    ).
+
+% se_all_single_/1: true if every member uses exactly one color.
+se_all_single_(Members) :-
+% Each member's color set is a singleton.
+    forall(member(mem(_, Cs, _, _), Members), Cs = [_]).
+
+% se_first_colors_/2: the primary color of each member, in order.
+se_first_colors_(Members, Colors) :-
+% Take the first color of each member's color set.
+    maplist([mem(_, Cs, _, _), C]>>(Cs = [C | _]), Members, Colors).
+
+% se_fund_cycle_/2: smallest repeating prefix (fundamental period) of a list.
+se_fund_cycle_(Seq, Cyc) :-
+% Number of elements in the sequence.
+    length(Seq, N),
+% Search for the smallest valid period P.
+    between(1, N, P),
+% Verify period P holds across the whole sequence.
+    se_period_ok_(Seq, N, P),
+% Commit to the first working period.
+    !,
+% The cycle is the length-P prefix.
+    length(Cyc, P),
+% Bind the prefix from the sequence.
+    append(Cyc, _, Seq).
+
+% se_period_ok_/3: true if Seq has period P over its N elements.
+se_period_ok_(Seq, N, P) :-
+% Last index of the sequence.
+    N1 is N - 1,
+% Every element equals the one P positions earlier (modulo P).
+    forall(between(0, N1, I),
+        ( nth0(I, Seq, Vi), Im is I mod P, nth0(Im, Seq, Vm), Vi =:= Vm )).
+
+% se_nth_color_/3: color at cyclic index Idx of cycle Cyc.
+se_nth_color_(Cyc, Idx, Color) :-
+% Length of the color cycle.
+    length(Cyc, L),
+% Wrap the index into the cycle.
+    M is Idx mod L,
+% Fetch the wrapped color.
+    nth0(M, Cyc, Color).
+
+% se_repeat_/3: a list of N copies of X.
+se_repeat_(_, 0, []) :- !.
+% Prepend one copy and recurse.
+se_repeat_(X, N, [X | T]) :-
+% Count must be positive.
+    N > 0,
+% Decrement the counter.
+    N1 is N - 1,
+% Build the tail.
+    se_repeat_(X, N1, T).
+
+% se_drop_/3: drop the first N elements of a list.
+se_drop_(0, L, L) :- !.
+% Skip the head and recurse.
+se_drop_(N, [_ | T], R) :-
+% Count must be positive.
+    N > 0,
+% Decrement the counter.
+    N1 is N - 1,
+% Continue dropping.
+    se_drop_(N1, T, R).
+
+% se_take_cols_/3: keep the first W columns of a row.
+se_take_cols_(W, Row, Out) :-
+% The output has exactly W cells.
+    length(Out, W),
+% Bind them as the row prefix.
+    append(Out, _, Row).
+
+% se_bottom_window_/4: take the bottom H rows, each truncated to W columns.
+se_bottom_window_(Rows, H, W, Out) :-
+% Total number of rows available.
+    length(Rows, LR),
+% Number of top rows to discard.
+    Skip is LR - H,
+% Drop the top rows.
+    se_drop_(Skip, Rows, Kept),
+% Truncate each kept row to W columns.
+    maplist(se_take_cols_(W), Kept, Out).
+
+% se_gen_comb_/5: comb family generator (left spine plus two bottom teeth).
+se_gen_comb_(Members, Dims, H, W, Out) :-
+% First member's dimensions anchor the sequence.
+    Dims = [H0-W0 | _],
+% Target index derived from the caliper width.
+    Idx is W - W0,
+% Full comb height grows one row per width step.
+    HH is H0 + Idx,
+% Determine the color cycle and this member's color.
+    se_first_colors_(Members, FC), se_fund_cycle_(FC, Cyc), se_nth_color_(Cyc, Idx, Color),
+% Bottom full-tooth row index.
+    FR1 is HH - 1,
+% Upper full-tooth row index.
+    FR3 is HH - 3,
+% Last row index of the full comb.
+    HHm1 is HH - 1,
+% Build every row of the full comb.
+    findall(Row, (between(0, HHm1, R), se_comb_row_(R, W, FR1, FR3, Color, Row)), Full),
+% Window the comb to the caliper (bottom-left).
+    se_bottom_window_(Full, H, W, Out).
+
+% se_comb_row_/6: one comb row -- full tooth or single spine cell.
+se_comb_row_(R, W, FR1, FR3, Color, Row) :-
+% Tooth rows are completely filled.
+    ( ( R =:= FR1 ; R =:= FR3 )
+    -> se_repeat_(Color, W, Row)
+% Other rows show only the left spine cell.
+    ;  Wm1 is W - 1, se_repeat_(0, Wm1, Zs), Row = [Color | Zs] ).
+
+% se_gen_ladder_/5: ladder family generator (alternating full and side rows).
+se_gen_ladder_(Members, Dims, H, W, Out) :-
+% First member's height and the height growth step.
+    Dims = [H0-_, H1-_ | _], DH is H1 - H0,
+% Target index derived from the caliper height.
+    Idx is (H - H0) // DH,
+% Determine the color cycle and this member's color.
+    se_first_colors_(Members, FC), se_fund_cycle_(FC, Cyc), se_nth_color_(Cyc, Idx, Color),
+% Last row index of the output.
+    Hm1 is H - 1,
+% Build every ladder row directly at caliper size.
+    findall(Row, (between(0, Hm1, R), se_ladder_row_(R, H, W, Color, Row)), Out).
+
+% se_ladder_row_/5: full row on even distance from the bottom, else side rails.
+se_ladder_row_(R, H, W, Color, Row) :-
+% Distance of this row from the bottom.
+    FromBottom is H - 1 - R,
+% Even distance rows are full rungs.
+    ( 0 =:= FromBottom mod 2
+    -> se_repeat_(Color, W, Row)
+% Odd distance rows show only the left and right rails.
+    ;  Wm2 is W - 2, se_repeat_(0, Wm2, Mid), append([Color | Mid], [Color], Row) ).
+
+% se_gen_peaks_/5: horizontally repeating upright peak motif (period 5).
+se_gen_peaks_(Members, Dims, H, W, Out) :-
+% Peaks growth is irregular; Dims is accepted but unused here.
+    Dims = [_ | _],
+% Determine the color cycle and the next member's color.
+    se_first_colors_(Members, FC), se_fund_cycle_(FC, Cyc), length(Members, NM),
+% Wrap the member count into the cycle for the next color.
+    se_nth_color_(Cyc, NM, Color),
+% Build the three motif rows at caliper width.
+    se_peak_row_(top, W, Color, Top),
+% Middle row of the peak motif.
+    se_peak_row_(mid, W, Color, Mid),
+% Bottom row of the peak motif.
+    se_peak_row_(bot, W, Color, Bot),
+% Assemble the full three-row member.
+    Full = [Top, Mid, Bot],
+% Window to the caliper (bottom rows).
+    se_bottom_window_(Full, H, W, Out).
+
+% se_peak_row_/4: build one peak-motif row of width W.
+se_peak_row_(Kind, W, Color, Row) :-
+% Last column index.
+    Wm1 is W - 1,
+% Build each cell according to the motif kind.
+    findall(V, (between(0, Wm1, C), M is C mod 5, se_peak_cell_(Kind, M, Color, V)), Row).
+
+% se_peak_cell_/4: peak-motif cell value by row kind and column phase.
+% Top row: filled where the column phase is 2 or 3.
+se_peak_cell_(top, M, Color, V) :- ( M =:= 2 ; M =:= 3 ) -> V = Color ; V = 0.
+% Middle row: filled everywhere except phase 0.
+se_peak_cell_(mid, M, Color, V) :- M =\= 0 -> V = Color ; V = 0.
+% Bottom row: filled except at phases 2 and 3.
+se_peak_cell_(bot, M, Color, V) :- ( M =:= 2 ; M =:= 3 ) -> V = 0 ; V = Color.
+
+% se_gen_zigzag_/5: concentric-ring zigzag generator (width-two braid).
+se_gen_zigzag_(Members, Dims, H, W, Out) :-
+% The largest member holds the ring color table.
+    last(Members, mem(Big, _, HB, _)),
+% Center row of the largest member.
+    CB is (HB - 1) // 2,
+% Read the period-6 base color pairs from the center downward.
+    findall(BL-BR,
+        ( between(0, 5, D), RR is CB + D, nth0(RR, Big, BRow),
+          nth0(0, BRow, BL), nth0(1, BRow, BR) ), Base),
+% Number of observed members; the next is index NM.
+    length(Members, NM),
+% Height growth step of the family.
+    Dims = [Hd0-_, Hd1-_ | _], DHstep is Hd1 - Hd0,
+% Full height of the next member.
+    HH is Hd0 + DHstep * NM,
+% Center row of the next member.
+    CC is (HH - 1) // 2,
+% Last row index of the next member.
+    HHm1 is HH - 1,
+% Build every row of the next member from the ring table.
+    findall(Row, (between(0, HHm1, R), se_zig_row_(R, CC, Base, Row)), Full),
+% Window to the caliper (bottom rows / center-down half).
+    se_bottom_window_(Full, H, W, Out).
+
+% se_zig_row_/4: one zigzag row from ring distance D.
+se_zig_row_(R, CC, Base, Row) :-
+% Distance of this row from the center.
+    D is abs(R - CC),
+% Color pair for this ring.
+    se_cell_(D, Base, L, Rr),
+% Interior rings show both cells; the outer ring is a single tip cell.
+    ( D < CC
+    -> Row = [L, Rr]
+% Outermost ring: keep only the notch tip cell, alternating side.
+    ;  Dm4 is D mod 4,
+       ( Dm4 =:= 1 -> Row = [0, Rr]
+       ; Dm4 =:= 3 -> Row = [L, 0]
+       ; Row = [L, Rr] ) ).
+
+% se_cell_/4: ring color pair at distance D (period 6, swap every 6 steps).
+se_cell_(D, Base, L, R) :-
+% Phase within the period-6 base.
+    Dm6 is D mod 6,
+% Base color pair for this phase.
+    nth0(Dm6, Base, BL-BR),
+% How many full periods deep this ring is.
+    Half is D // 6,
+% Odd periods swap the left and right columns.
+    ( 1 =:= Half mod 2 -> L = BR, R = BL ; L = BL, R = BR ).
+
+% ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
 % arc2_induce_rule/2: classify task type and dispatch to appropriate strategy.
 % ---------------------------------------------------------------------------

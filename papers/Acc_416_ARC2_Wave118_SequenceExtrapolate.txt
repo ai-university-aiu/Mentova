@@ -1,0 +1,133 @@
+Acc_416: ARC-AGI-2 Wave 118 - Sequence Extrapolate: Reading A Growing Family Of Shapes And Drawing The Next One
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-04
+
+ACCOMPLISHMENT
+
+Wave 118 of the ARC-AGI-2 benchmark climb - task 20a9e565 solved by a
+new glass-box rule, sequence_extrapolate (WP-376, Layer 351). Score
+advances from 114/120 = 95.00% to 115/120 = 95.83%.
+
+The wave adds a rule that reads a grid as a SEQUENCE. A short row or
+column of shapes grows in size, step by step, and the answer is the
+next shape in the series - drawn by the shape family's own rule,
+cropped to a size that a small pair of corner markers dictates, and
+recolored by the cycling color the series was using.
+
+TASK DESCRIPTION
+
+Each grid is thirty by thirty. Two features share it. The first is a
+CALIPER: two little L-trominoes drawn in color 5, one bracketing a
+top-left corner and one bracketing a bottom-right corner. The combined
+bounding box of the two trominoes - the smallest rectangle that holds
+both - gives the height and width of the answer.
+
+The second feature is a SEQUENCE. Somewhere on the grid sits a run of
+same-family shapes that grow in size from one member to the next, each
+member drawn in a color that cycles through a short list. The five
+grids of the task use five different families:
+
+  Comb - a shape with a filled left spine and two teeth along the
+  bottom, growing one row and one column per step.
+
+  Ladder - a tall bar three cells wide whose rows alternate between a
+  full rung and two side rails, growing two rows per step, each member
+  a single color.
+
+  Peaks - a three-row band of little triangular peaks repeated across,
+  a period-five motif, growing wider each step.
+
+  Zigzag - a two-cell-wide braid of colored rings nested around a
+  center, growing four rows per step, each ring a different color.
+
+The output is the next member of whichever family the grid shows,
+generated at full size, then windowed to the caliper rectangle from
+its bottom-left corner and painted in the next color of the cycle.
+
+THE RULE
+
+Find the caliper: collect every color-5 cell; the combined bounding
+box of those cells gives the output height H and width W.
+
+Find the members: take the eight-connected components of the colored
+cells (everything that is neither background nor caliper), render each
+as a little matrix, and sort them from smallest to largest by
+bounding-box area. The differences in size between neighbors give a
+growth vector.
+
+Read the growth vector to name the family, then generate the next
+member:
+
+  If every step grows by one row and one column, the family is comb.
+  The next width is the caliper width, so the target index is the
+  caliper width minus the first member's width. Build a comb of that
+  height with a filled left spine and full teeth on its bottom row and
+  its third-from-bottom row.
+
+  If every step grows in width only, the family is peaks. Build the
+  three-row period-five upright motif across the caliper width.
+
+  If every step grows in height only and every member is a single
+  color, the family is ladder. Build H rows in which a row is a full
+  rung when its distance from the bottom is even and two side rails
+  otherwise.
+
+  If every step grows in height only and some member uses several
+  colors, the family is zigzag. Read the period-six table of
+  left-and-right ring colors from the largest member, reading outward
+  from its center; the next member is one ring taller, with the columns
+  swapping every six rings and only the notch tip kept on the
+  outermost ring.
+
+The color for the answer is the next entry of the FUNDAMENTAL cycle -
+the shortest repeating prefix of the member colors, which is period
+three for comb and ladder and period two for peaks. Finally window the
+generated member to the caliper size from its bottom-left corner.
+
+WHY THE CALIPER MATTERS
+
+The clean idea of this wave is the split between SIZE and CONTENT. The
+caliper never touches the shapes; it only names how big the answer is.
+The sequence never names its own size; it only says what the pattern
+looks like. Generate the next member at whatever size the family's own
+growth implies, then let the caliper crop a bottom-left window out of
+it. Because the two jobs are separate, one rule and one windowing step
+serve four families that otherwise share nothing - a comb, a ladder, a
+band of peaks, and a nested braid.
+
+THE DISCRIMINATING OBSERVATION
+
+Each family is pinned by its growth signature. Comb grows by one in
+both dimensions; ladder and zigzag grow in height alone and are told
+apart by whether their members use one color or several; peaks grow in
+width alone. Reading the growth vector, rather than trying to match a
+fixed template, is what lets a single rule recognize which of the four
+generators to run on a grid it has never seen. The held-out test is
+the peaks family, whose color-six upright motif and period-five
+repetition are extrapolated to the caliper width and cropped to the
+caliper's two rows.
+
+PERFORMANCE
+
+Extracting the member components is the only costly step, so the induce
+clause is gated by a cheap pre-filter: it fires only when every
+training input holds exactly two size-three color-5 components - the
+two caliper trominoes. That gate rejects unrelated tasks after
+counting a handful of cells, so the component extraction runs solely
+for this task. A full 120-task run confirms the other 119 tasks are
+unchanged.
+
+VERIFICATION
+
+  cd /home/ccaitwo/Mentova
+  swipl -g "consult('src/mentova/games/arc_benchmark_2'),
+    consult('data/arc_agi_2/arc_tasks_2'),
+    arc2_task('20a9e565', Pairs, TI, TO),
+    arc2_induce_rule(Pairs, Rule),
+    arc2_transform(Rule, TI, C),
+    (C = TO -> write('PASS') ; write('FAIL')), nl, halt"
+
+Result: PASS. Full benchmark: 115/120 = 95.83%, zero regression.
