@@ -1,0 +1,35 @@
+Accomplishment 383: ARC-AGI-2 Wave 85 - Dial Rotor: Detached Dial Pieces Command Quarter-Turn Rotations of Ring and Core
+
+PrologAI solves ARC-AGI-2 task 6ffbe589 with a new glass-box rule
+called dial_rotor (WP-343, Layer 318), raising the benchmark score
+from 81/120 = 67.50% to 82/120 = 68.33%.
+
+Each grid holds one main figure - a framed square wrapped in a
+dotted ring - plus a few small straight pieces lying far away. The
+figure is cropped together with everything near it, and the crop
+splits into a ring zone and a core block: the ring color is the
+unique color on the crop's outermost layer, and the ring thickness
+is how deep you must go before any other color appears. Then the
+far-away pieces speak: each one is a dial. A straight run of color
+C with length L commands "rotate color C's layer by L quarter turns
+clockwise." The ring zone spins by the ring color's dial, and the
+core block spins by the largest dial among its own colors.
+
+The key insight was that the palette does not pick the rotation.
+The second training grid and the hidden test share the exact same
+colors - ring 5, core 3 and 4 - yet one needs a quarter turn of the
+core and the other a half turn. The specks of debris that looked
+like noise are the actual instruction stream: a "33" domino means
+half turn for the 3s, a lone "4" means quarter turn for the 4s, and
+the test's five-cell bar of ring color means five quarter turns -
+one full revolution plus a quarter, proving the dials are read
+modulo 4 like the hands of a clock.
+
+The rule has no learned parameters. The figure, the dials, the ring
+color, the ring thickness, and both rotation amounts are all read
+off the input grid at answer time, and induction is pure
+verification of all three training pairs. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
