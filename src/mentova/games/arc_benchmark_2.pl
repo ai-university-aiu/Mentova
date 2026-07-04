@@ -1089,6 +1089,36 @@ arc2_induce_rule(TrainingPairs, seam_weld) :-
 % Each training pair must transform correctly under seam_weld.
            arc2_transform(seam_weld, In, Out)).
 
+% short_circuit: early dispatch before generic clause (WP-353, Layer 328).
+% Enumerate short_circuit as a known rule name.
+arc2_named_rule(short_circuit).
+% arc2_induce_rule(short_circuit): shape and palette pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, short_circuit) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Flatten the first input for palette analysis.
+    append(First, AllCells),
+% Collect the distinct colors of the first input.
+    sort(AllCells, Palette),
+% A wiring scene uses exactly four colors.
+    length(Palette, 4),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under short_circuit.
+           arc2_transform(short_circuit, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -20648,3 +20678,201 @@ sw_render_(Canvas, Bg, Out) :-
                       Row) ),
 % Bind the output rows.
             Out).
+
+% ---------------------------------------------------------------------------
+% SHORT_CIRCUIT (WP-353, Layer 328)
+% short_circuit: the scene draws a wiring network on a uniform background
+% using three foreground colors: a terminal color forming exactly two
+% blocks, a marker color forming small junction blocks, and a body color
+% forming the wire segments between them.  Every eight-connected
+% same-color component is a node of a graph whose edges join
+% eight-adjacent components.  The rule finds the path with the fewest
+% nodes between the two terminal blocks and recolors every intermediate
+% node on that path: body cells become 5 and marker cells become 3.
+% The terminals and all cells off the path stay unchanged.
+% The terminal color is the foreground color with the fewest cells and
+% the marker color is the foreground color with the middle cell count.
+% Reference: ARC-AGI-2 task 7b0280bc -- shortest wire route recoloring.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(short_circuit): recolor the shortest terminal-to-terminal route.
+arc2_transform(short_circuit, Grid, Out) :-
+% Identify the background as the most common color.
+    arc2_bg_color_(Grid, Bg),
+% Rank the three foreground colors by ascending cell count.
+    scc_palette_(Grid, Bg, ECol, DCol, _BCol),
+% Collect every foreground cell keyed by position.
+    scc_fgcells_(Grid, Bg, FgCells),
+% Index the foreground cells for adjacency tests.
+    list_to_assoc(FgCells, A),
+% Split the foreground into whole same-color eight-connected components.
+    sw_parts_(FgCells, sw_bycolor, A, [], Parts),
+% Attach a color tag to every component.
+    maplist(scc_tag_(A), Parts, Comps),
+% Locate the components carrying the terminal color.
+    findall(I, nth0(I, Comps, ECol-_), Terminals),
+% The terminal color must form exactly two components.
+    Terminals = [Src, Dst],
+% Index every foreground cell by its component number.
+    scc_index_(Comps, CellIdx),
+% Build the adjacency list of the component graph.
+    scc_adj_(Comps, CellIdx, AdjList),
+% Find the fewest-node path between the two terminals.
+    scc_bfs_([[Src]], Dst, AdjList, [Src], Path),
+% Drop the source terminal from the path.
+    Path = [_|Mid0],
+% Drop the destination terminal from the path.
+    append(Mid, [_], Mid0),
+% Recolor every intermediate component on the path.
+    scc_recolor_(Mid, Comps, DCol, Grid, Out),
+% Commit to the first successful route.
+    !.
+
+% scc_palette_(+Grid, +Bg, -ECol, -DCol, -BCol): rank foreground colors.
+scc_palette_(Grid, Bg, ECol, DCol, BCol) :-
+% Flatten the grid to a single cell list.
+    append(Grid, All),
+% Keep only the foreground cells.
+    exclude(==(Bg), All, Fg),
+% Group equal colors into contiguous runs.
+    msort(Fg, SortedFg),
+% Measure the run length of every color.
+    scc_runs_(SortedFg, Runs),
+% A wiring scene uses exactly three foreground colors.
+    length(Runs, 3),
+% Order the colors by ascending cell count.
+    msort(Runs, [_-ECol, _-DCol, _-BCol]).
+
+% scc_runs_(+SortedList, -Runs): run-length encode a sorted list.
+scc_runs_([], []).
+% Measure one run and recurse over the remainder.
+scc_runs_([H|T], [N-H|Runs]) :-
+% Count the copies of the head value.
+    scc_take_(T, H, 1, N, Rest),
+% Encode the remaining runs.
+    scc_runs_(Rest, Runs).
+
+% scc_take_(+List, +Value, +Acc, -Count, -Rest): count leading copies.
+scc_take_([H|T], H, Acc, N, Rest) :-
+% Absorb one more copy of the run value.
+    !,
+% Advance the running count.
+    Acc1 is Acc + 1,
+% Continue counting the run.
+    scc_take_(T, H, Acc1, N, Rest).
+% A different value or the list end closes the run.
+scc_take_(L, _, N, N, L).
+
+% scc_fgcells_(+Grid, +Bg, -FgCells): list foreground cells as Key-Color.
+scc_fgcells_(Grid, Bg, FgCells) :-
+% Enumerate every non-background cell in reading order.
+    findall((R-C)-V,
+% Walk the rows of the grid.
+            ( nth0(R, Grid, Row),
+% Walk the cells of one row.
+              nth0(C, Row, V),
+% Keep only the foreground colors.
+              V \== Bg ),
+% Bind the foreground cell list.
+            FgCells).
+
+% scc_tag_(+Index, +Part, -Tagged): attach the component color to its cells.
+scc_tag_(A, Part, Color-Part) :-
+% Take the first cell of the component.
+    Part = [Key|_],
+% Read the color of that cell.
+    get_assoc(Key, A, Color).
+
+% scc_index_(+Comps, -CellIdx): map every cell to its component number.
+scc_index_(Comps, CellIdx) :-
+% Pair every cell with the number of its component.
+    findall(Key-I,
+% Walk the numbered components.
+            ( nth0(I, Comps, _-Cells),
+% Walk the cells of one component.
+              member(Key, Cells) ),
+% Bind the cell-to-component pairs.
+            Pairs),
+% Index the pairs for constant-time lookup.
+    list_to_assoc(Pairs, CellIdx).
+
+% scc_adj_(+Comps, +CellIdx, -AdjList): adjacency list of the component graph.
+scc_adj_(Comps, CellIdx, AdjList) :-
+% Build one neighbour set per component.
+    findall(Ns,
+% Walk the numbered components.
+            ( nth0(I, Comps, _-Cells),
+% Collect the neighbours of one component.
+              scc_neigh_(Cells, I, CellIdx, Ns) ),
+% Bind the adjacency list.
+            AdjList).
+
+% scc_neigh_(+Cells, +I, +CellIdx, -Ns): components eight-adjacent to component I.
+scc_neigh_(Cells, I, CellIdx, Ns) :-
+% Enumerate every foreign component touching the cells.
+    findall(J,
+% Walk the cells of the component.
+            ( member(R-C, Cells),
+% Enumerate the eight adjacent offsets.
+              member(DR-DC, [(-1)-(-1), (-1)-0, (-1)-1, 0-(-1), 0-1, 1-(-1), 1-0, 1-1]),
+% Compute the neighbour row.
+              NR is R + DR,
+% Compute the neighbour column.
+              NC is C + DC,
+% Look up the component of the neighbour cell.
+              get_assoc(NR-NC, CellIdx, J),
+% Keep only foreign components.
+              J =\= I ),
+% Bind the raw neighbour list.
+            Ns0),
+% Deduplicate the neighbour list.
+    sort(Ns0, Ns).
+
+% scc_bfs_(+Queue, +Dst, +AdjList, +Visited, -Path): fewest-node path search.
+scc_bfs_([[Dst|Rest]|_], Dst, _, _, Path) :-
+% The destination surfaced: read the path back in forward order.
+    reverse([Dst|Rest], Path).
+% Expand the next queued path by one hop.
+scc_bfs_([[U|Rest]|Q], Dst, AdjList, Vis, Path) :-
+% Only expand paths that have not reached the destination.
+    U \== Dst,
+% Read the neighbour set of the path head.
+    nth0(U, AdjList, Ns),
+% Extend the path into every unvisited neighbour.
+    findall([N, U|Rest],
+% Walk the neighbours of the path head.
+            ( member(N, Ns),
+% Keep only unvisited components.
+              \+ memberchk(N, Vis) ),
+% Bind the freshly extended paths.
+            New),
+% List the components claimed by the fresh paths.
+    findall(N, member([N|_], New), NewIds),
+% Mark the fresh components as visited.
+    append(Vis, NewIds, Vis1),
+% Queue the fresh paths behind the pending ones.
+    append(Q, New, Q1),
+% Continue the search over the extended queue.
+    scc_bfs_(Q1, Dst, AdjList, Vis1, Path).
+
+% scc_recolor_(+Mid, +Comps, +DCol, +Grid0, -Grid): recolor the route nodes.
+scc_recolor_([], _, _, Grid, Grid).
+% Recolor one intermediate component and recurse.
+scc_recolor_([I|Is], Comps, DCol, Grid0, Grid) :-
+% Read the color and cells of the component.
+    nth0(I, Comps, Color-Cells),
+% Marker junctions turn 3 and wire segments turn 5.
+    ( Color == DCol -> New = 3 ; New = 5 ),
+% Paint every cell of the component.
+    scc_paint_(Cells, New, Grid0, Grid1),
+% Recolor the remaining components.
+    scc_recolor_(Is, Comps, DCol, Grid1, Grid).
+
+% scc_paint_(+Cells, +V, +Grid0, -Grid): write one color over listed cells.
+scc_paint_([], _, Grid, Grid).
+% Write one cell and recurse over the remainder.
+scc_paint_([R-C|Cs], V, Grid0, Grid) :-
+% Replace the cell with the new color.
+    arc2_set_cell_(Grid0, R, C, V, Grid1),
+% Paint the remaining cells.
+    scc_paint_(Cs, V, Grid1, Grid).
