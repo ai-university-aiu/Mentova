@@ -1,0 +1,38 @@
+Accomplishment 387: ARC-AGI-2 Wave 89 - Wire Wrap: Re-Laying a Crumpled Wire Snugly Around a Marker
+
+PrologAI solves ARC-AGI-2 task 88bcf3b4 with a new glass-box rule
+called wire_wrap (WP-347, Layer 322), raising the benchmark score
+from 85/120 = 70.83% to 86/120 = 71.67%.
+
+Each grid holds one or more three-color systems on a uniform
+background: a straight line segment, a crumpled meandering wire
+attached to one endpoint of the line, and a separate marker shape -
+a single cell, a short bar, a zigzag, or a staircase blob. The
+answer keeps the line and the marker exactly where they are and
+re-lays the wire as a clean path: it leaves the line end, runs
+diagonally to the marker, bends snugly around the marker's near
+face cell by cell, and departs on the mirrored diagonal, cut off at
+the grid edge or when the wire's cells run out.
+
+The key insight is that the wire's length is not always conserved.
+Two of the five training pairs lose wire cells because the re-laid
+path hits the grid edge before the length is spent, which rules out
+every rigid-transform, rotation, and length-preserving reading of
+the task. The wire is not moved - it is recomputed as pure
+geometry: a diagonal approach clamped to the marker's near lane, a
+hug that lays one cell beyond each marker row's or column's near
+edge so zigzags and staircases are followed automatically, and a
+45-degree departure with the sideways direction reversed. The test
+case doubles the difficulty with two independent systems in one
+scene - six foreground colors - and the solver pairs each line with
+its wire by endpoint attachment and each system with its nearest
+marker.
+
+The rule has no learned parameters. The background, the lines, the
+wires, the markers, the approach diagonal, the hug cells, and the
+truncation length are all read off the input grid at answer time,
+and induction is pure verification of all five training pairs. Pure
+induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
