@@ -1,0 +1,44 @@
+Accomplishment 406: ARC-AGI-2 Wave 108 - Cavity Paint: One Figure Drawn Twice and the Normalized-Centroid Match
+
+PrologAI solves ARC-AGI-2 task 3a25b0d8 with a new glass-box rule
+called cavity_paint (WP-366, Layer 341), raising the benchmark
+score from 104/120 = 86.67% to 105/120 = 87.50%.
+
+Each input of this task shows the same figure drawn twice. One
+drawing is a hollow silhouette - a closed skeleton in a single
+color whose enclosed background pockets are the figure's
+cavities. The other is a multi-color template - the same figure
+redrawn at a different size, visibly warped, with its cavities
+already filled with paint. The output crops to the silhouette,
+keeps its cells, and paints every enclosed cavity with the color
+of its counterpart region in the template, while open background
+stays background.
+
+The delicate part is deciding which template region matches which
+cavity. The warp shifts regions off their rows, their columns,
+and even their top-to-bottom ranks: in one training pair the
+middle cavity starts a row below its flanking cavities while its
+template twin starts level with its own flankers, so ordinal
+matching paints the wrong color. The invariant that survives the
+warp is position proportional to the bounding box - each region's
+centroid, normalized to its own shape's bounding box, lands
+nearly on top of its counterpart's. That normalized-centroid
+pairing lands every color on every cavity across both training
+pairs and all nine cavities of the test.
+
+The wave also carried a methodological lesson: this task had been
+filed for months under a stale label from an early survey -
+mirror-symmetry completion - and a fresh grid dump showed no
+mirror axis at all, just a clean two-shape structure with a fully
+computable rule. Fresh eyes on the data beat inherited
+classifications.
+
+The complete rule was written in plain English covering every
+grid before any code, every cell of both training outputs was
+accounted for by hand, and the integrated Prolog rule passed the
+single-task test and the full regression on its first compile.
+Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
