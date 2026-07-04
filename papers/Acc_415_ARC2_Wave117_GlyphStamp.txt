@@ -1,0 +1,117 @@
+Acc_415: ARC-AGI-2 Wave 117 - Glyph Stamp: Merging Legend Glyphs Onto A Marker Canvas
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-04
+
+ACCOMPLISHMENT
+
+Wave 117 of the ARC-AGI-2 benchmark climb - task a251c730 solved by
+a new glass-box rule, glyph_stamp (WP-375, Layer 350). Score advances
+from 113/120 = 94.17% to 114/120 = 95.00%.
+
+The wave adds a rule that treats the grid as two cooperating panels: a
+canvas that says WHERE, and a legend that says WHAT. It also carries a
+performance lesson - a correct transform can still fail the benchmark
+if its search is too slow, and the cure is to detect structure with a
+single bounded candidate per corner rather than by brute enumeration.
+
+TASK DESCRIPTION
+
+Each grid is thirty by thirty and rests on a tiled repeating
+background. Sitting on that background are two hollow rectangular
+frame-boxes - a border of a single color enclosing a differently
+colored interior.
+
+The two boxes play different roles. The SMALLER box, measured by
+interior area, is the canvas. Its interior is a plain background
+dotted with a few isolated single-cell markers, each a distinctive
+accent color. The LARGER box is the legend. Its interior holds full
+glyph motifs, each an eight-connected little shape that features
+exactly one accent color as its anchor cell, surrounded by body cells
+of another color.
+
+The output is the small box - frame and interior - with the legend's
+glyphs merged in. For every marker on the canvas, the legend glyph
+whose accent color matches that marker is stamped onto the canvas,
+positioned so the glyph's own accent cell lands exactly on the marker.
+
+THE RULE
+
+Find every hollow rectangular frame-box. Order the two boxes by
+interior area. The smaller is the canvas, the larger is the legend.
+
+Read the canvas interior for markers: any cell that is neither the
+canvas frame color nor its background color. The set of marker colors
+is the set of accent colors in play.
+
+For each accent color, look in the legend for a cell of that color,
+flood its eight-connected motif of non-background non-frame cells, and
+record the motif as a list of offsets relative to the accent cell -
+its anchor. This yields one glyph template per accent color.
+
+Copy the small box as the base output. For each marker, take the
+template for the marker's color and paint every one of its offset
+cells onto the canvas, anchored on the marker. The result is the
+small box with all glyphs stamped in.
+
+On the two training pairs a single accent color is in play, so every
+marker receives the same glyph. On the held-out test two distinct
+accent colors appear, and accent-color matching - not position -
+decides which of the two legend glyphs each marker receives. That is
+the discriminating case: a rule keyed only on position would place the
+wrong shape.
+
+THE PERFORMANCE FAULT AND ITS CURE
+
+The first working version detected frame-boxes by enumerating every
+possible rectangle - every top-left corner paired with every right
+edge and every bottom edge - and checking each for a solid border.
+That is correct but quadratic in area. On grids with large solid-color
+regions the number of candidate rectangles explodes, and two
+previously solved tasks, tower_donate and template_expand, stalled
+past the ten-second per-task limit and were scored as failures. The
+transform was right; the search was too slow.
+
+The cure is to detect each frame with a single bounded candidate. Only
+a genuine top-left corner is considered - a frame-color cell whose
+neighbors above and to the left are not that color. From such a corner
+the box is taken as the maximal frame-color run rightward and downward,
+giving exactly one candidate per corner. Detection becomes O(H*W)
+corners, each with a cheap border and interior check, and runs in well
+under a second even on solid grids.
+
+The induce clause is also gated by a cheap pre-filter: it fires only
+when the first training output is itself a hollow single-color
+frame-box. That gate fails fast for other tasks, so the frame search
+runs solely for this task, and a full 120-task run confirms the other
+119 tasks are unchanged.
+
+THE LESSON
+
+A transform can be provably correct on all pairs and still lose points
+if the search around it is slow, because the benchmark caps time per
+task. When a correct rule regresses previously solved tasks, suspect
+the cost of its search, not its logic. The structural cure is to
+replace brute enumeration with a single bounded candidate anchored on
+a genuine landmark - here, a true top-left corner extended by maximal
+runs - turning a quadratic scan into a linear one while detecting the
+same objects.
+
+More broadly, glyph_stamp is a WHERE-meets-WHAT rule. One panel names
+positions, another names shapes, and the two are joined by a shared
+key - here the accent color. Reading the grid as two cooperating
+panels linked by a key is a recurring shape of ARC-AGI-2 puzzles.
+
+VERIFICATION
+
+  cd /home/ccaitwo/Mentova
+  swipl -g "consult('src/mentova/games/arc_benchmark_2'),
+    consult('data/arc_agi_2/arc_tasks_2'),
+    arc2_task('a251c730', Pairs, TI, TO),
+    arc2_induce_rule(Pairs, Rule),
+    arc2_transform(Rule, TI, C),
+    (C = TO -> write('PASS') ; write('FAIL')), nl, halt"
+
+Result: PASS. Full benchmark: 114/120 = 95.00%, zero regression.
