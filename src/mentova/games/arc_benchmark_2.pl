@@ -667,6 +667,50 @@ arc2_induce_rule(TrainingPairs, stripe_cycle) :-
 % Each training pair must transform correctly under stripe_cycle.
            arc2_transform(stripe_cycle, In, Out)).
 
+% motif_shadow: early dispatch before generic clause (WP-342, Layer 317).
+% Enumerate motif_shadow as a known rule name.
+arc2_named_rule(motif_shadow).
+% arc2_induce_rule(motif_shadow): motif-and-marker pre-filter + verify.
+arc2_induce_rule(TrainingPairs, motif_shadow) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The first output must share the input height.
+    length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, W),
+% The first output must share the input width.
+    length(FOR, W),
+% Determine the majority background color of the first input.
+    tw_background_(First, BG),
+% Collect every foreground cell of the first input.
+    findall(c(R, C, V),
+% Walk each cell keeping only non-background values.
+            ( nth0(R, First, Row), nth0(C, Row, V), V =\= BG ),
+% Bind the collected foreground cell list.
+            Cells),
+% Count the foreground cells.
+    length(Cells, NF),
+% Require a sparse motif-and-marker foreground, not a dense scene.
+    NF >= 10, NF =< 200,
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Split the components into motif rectangles and singleton markers.
+    ms_classify_(Comps, MotifComps, Markers),
+% At least two motif rectangles are needed to share the lessons.
+    length(MotifComps, NM), NM >= 2,
+% Exactly three markers teach the three offset-color lessons.
+    length(Markers, 3),
+% Every motif component must parse as a 2-wide motif rectangle.
+    forall(member(Comp, MotifComps), ms_motif_(Comp, _)),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under motif_shadow.
+           arc2_transform(motif_shadow, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -17290,3 +17334,257 @@ st_cell_(D, BG, StripeCols, C, V, V2) :-
     ; ( D =:= 1 ; D =:= 3 ; D =:= 5 ), memberchk(C, StripeCols) -> V2 = BG
 % Every other cell keeps its input value.
     ; V2 = V ).
+
+% ---------------------------------------------------------------------------
+% motif_shadow: 2-cell-wide rectangular motifs carry a run of color 2 along
+% one long side; the long-axis end farther from that run is the anchor end.
+% Three singleton marker cells sit on grid edges, each aligned with one
+% motif; a marker teaches one offset-to-color entry (offset measured from
+% the anchor end) plus the grid-wide polarity: rays exit either on the same
+% cross side as the 2-run or on the opposite side.  Every motif then casts
+% one full ray per learned entry, perpendicular to its long axis, from its
+% exit side out to the grid edge, painting only background cells.
+% Reference: ARC-AGI-2 task 64efde09 -- motifs cast marker-taught shadows.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(motif_shadow): cast marker-taught rays from every motif.
+arc2_transform(motif_shadow, Grid, Out) :-
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first row of the grid.
+    Grid = [Row1|_],
+% Measure the grid width.
+    length(Row1, W),
+% Determine the majority background color.
+    tw_background_(Grid, BG),
+% Collect every foreground cell with its coordinates and color.
+    findall(c(R, C, V),
+% Walk each cell of the grid keeping only non-background values.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= BG ),
+% Bind the collected foreground cell list.
+            Cells),
+% Group the foreground cells into 8-connected components.
+    tw_components_(Cells, Comps),
+% Split the components into motif rectangles and singleton markers.
+    ms_classify_(Comps, MotifComps, Markers),
+% At least one motif rectangle must be present.
+    MotifComps \== [],
+% At least one marker cell must be present.
+    Markers \== [],
+% Analyze every motif rectangle into its geometric description.
+    findall(M, ( member(Comp, MotifComps), ms_motif_(Comp, M) ), Motifs),
+% Count the motif components.
+    length(MotifComps, NM),
+% Every motif component must yield exactly one description.
+    length(Motifs, NM),
+% Read one offset-color-polarity lesson from every marker.
+    findall(lesson(Off, Col, Pol),
+% Walk each marker and associate it with its aligned motif.
+            ( member(c(MR, MC, Col), Markers),
+% The aligned motif fixes the lesson offset and the polarity vote.
+              ms_lesson_(Motifs, H, W, MR, MC, Off, Pol) ),
+% Bind the collected lesson list.
+            Lessons),
+% Count the markers.
+    length(Markers, NK),
+% Every marker must contribute exactly one lesson.
+    length(Lessons, NK),
+% Collect the polarity votes.
+    findall(P, member(lesson(_, _, P), Lessons), Pols),
+% All polarity votes must agree on a single value.
+    sort(Pols, [Pol]),
+% Collect the offset-color entries.
+    findall(Off-Col, member(lesson(Off, Col, _), Lessons), Entries0),
+% Deduplicate the offset-color entries.
+    sort(Entries0, Entries),
+% Compute every ray cell cast by every motif.
+    findall(RC,
+% Walk each motif and emit its ray cells under the learned entries.
+            ( member(M, Motifs), ms_ray_(M, Pol, Entries, H, W, RC) ),
+% Bind the full list of ray cells.
+            Rays),
+% Rebuild the grid row by row.
+    findall(ORow,
+% Walk every input row with its index and rebuild it.
+            ( nth0(R, Grid, Row0), ms_row_(Row0, R, BG, Rays, ORow) ),
+% Bind the rebuilt grid.
+            Out).
+
+% ms_classify_(+Comps, -MotifComps, -Markers): split motifs from markers.
+% An empty component list yields no motifs and no markers.
+ms_classify_([], [], []).
+% A singleton component is a marker cell.
+ms_classify_([[Cell]|T], Motifs, [Cell|Markers]) :-
+% Commit to the marker reading for a singleton component.
+    !,
+% Split the remaining components.
+    ms_classify_(T, Motifs, Markers).
+% A larger component is a candidate motif rectangle.
+ms_classify_([Comp|T], [Comp|Motifs], Markers) :-
+% Split the remaining components.
+    ms_classify_(T, Motifs, Markers).
+
+% ms_motif_(+Comp, -Motif): geometric description of one motif rectangle.
+ms_motif_(Comp, motif(Orient, R0, C0, R1, C1, Anchor, Sign, TwoSide)) :-
+% Collect the row indices of the component cells.
+    findall(R, member(c(R, _, _), Comp), Rs),
+% Collect the column indices of the component cells.
+    findall(C, member(c(_, C, _), Comp), Cs),
+% The topmost row of the component.
+    min_list(Rs, R0),
+% The bottommost row of the component.
+    max_list(Rs, R1),
+% The leftmost column of the component.
+    min_list(Cs, C0),
+% The rightmost column of the component.
+    max_list(Cs, C1),
+% Measure the bounding-box height.
+    NR is R1 - R0 + 1,
+% Measure the bounding-box width.
+    NC is C1 - C0 + 1,
+% Count the component cells.
+    length(Comp, N),
+% The component must fill its bounding box completely.
+    N =:= NR * NC,
+% A motif is two cells wide across its long axis and at least four long.
+    ( NC =:= 2, NR >= 4 -> Orient = vert ; NR =:= 2, NC >= 4, Orient = horiz ),
+% Collect the axis and cross positions of the color-2 cells.
+    findall(A-X, ( member(c(R, C, 2), Comp), ms_axis_(Orient, R, C, A, X) ), Twos),
+% The motif must carry at least one color-2 cell.
+    Twos \== [],
+% Collect the cross positions of the color-2 cells.
+    findall(X, member(_-X, Twos), Xs),
+% All color-2 cells must sit on a single long side.
+    sort(Xs, [XSide]),
+% Name the low bound of the cross axis.
+    ms_cross_low_(Orient, R0, C0, XLow),
+% The 2-run side is low or high within the cross axis.
+    ( XSide =:= XLow -> TwoSide = low ; TwoSide = high ),
+% Collect the axis positions of the color-2 cells.
+    findall(A, member(A-_, Twos), As),
+% The color-2 cell nearest the low axis end.
+    min_list(As, AMin),
+% The color-2 cell nearest the high axis end.
+    max_list(As, AMax),
+% Name the low and the high bound of the long axis.
+    ms_axis_bounds_(Orient, R0, C0, R1, C1, ALow, AHigh),
+% Distance from the 2-run to the low axis end.
+    DLow is AMin - ALow,
+% Distance from the 2-run to the high axis end.
+    DHigh is AHigh - AMax,
+% The anchor is the axis end farther from the 2-run.
+    ( DLow > DHigh -> Anchor = ALow, Sign = 1 ; Anchor = AHigh, Sign = -1 ).
+
+% ms_axis_(+Orient, +R, +C, -A, -X): axis and cross position of one cell.
+% A vertical motif runs along rows, so the row is the axis position.
+ms_axis_(vert, R, C, R, C).
+% A horizontal motif runs along columns, so the column is the axis position.
+ms_axis_(horiz, R, C, C, R).
+
+% ms_axis_bounds_(+Orient, +R0, +C0, +R1, +C1, -ALow, -AHigh): axis ends.
+% A vertical motif spans its row range along the long axis.
+ms_axis_bounds_(vert, R0, _, R1, _, R0, R1).
+% A horizontal motif spans its column range along the long axis.
+ms_axis_bounds_(horiz, _, C0, _, C1, C0, C1).
+
+% ms_cross_low_(+Orient, +R0, +C0, -XLow): low bound of the cross axis.
+% A vertical motif has its leftmost column as the low cross bound.
+ms_cross_low_(vert, _, C0, C0).
+% A horizontal motif has its topmost row as the low cross bound.
+ms_cross_low_(horiz, R0, _, R0).
+
+% ms_lesson_(+Motifs, +H, +W, +MR, +MC, -Off, -Pol): one marker lesson.
+% A marker on the left or right grid edge aligns with a vertical motif.
+ms_lesson_(Motifs, _H, W, MR, MC, Off, Pol) :-
+% The marker must sit on the left or on the right grid edge.
+    ( MC =:= 0 ; MC =:= W - 1 ),
+% Find a vertical motif whose row span holds the marker row.
+    member(motif(vert, R0, C0, R1, C1, Anchor, _, TwoSide), Motifs),
+% The marker row must fall inside the motif row span.
+    MR >= R0, MR =< R1,
+% The marker side is low left of the motif and high right of it.
+    ( MC < C0 -> Side = low ; MC > C1, Side = high ),
+% The lesson offset is the axis distance from the anchor end.
+    Off is abs(MR - Anchor),
+% The polarity compares the marker side with the 2-run side.
+    ( Side == TwoSide -> Pol = same ; Pol = opposite ),
+% Commit to the first aligned motif.
+    !.
+% A marker on the top or bottom grid edge aligns with a horizontal motif.
+ms_lesson_(Motifs, H, _W, MR, MC, Off, Pol) :-
+% The marker must sit on the top or on the bottom grid edge.
+    ( MR =:= 0 ; MR =:= H - 1 ),
+% Find a horizontal motif whose column span holds the marker column.
+    member(motif(horiz, R0, C0, R1, C1, Anchor, _, TwoSide), Motifs),
+% The marker column must fall inside the motif column span.
+    MC >= C0, MC =< C1,
+% The marker side is low above the motif and high below it.
+    ( MR < R0 -> Side = low ; MR > R1, Side = high ),
+% The lesson offset is the axis distance from the anchor end.
+    Off is abs(MC - Anchor),
+% The polarity compares the marker side with the 2-run side.
+    ( Side == TwoSide -> Pol = same ; Pol = opposite ),
+% Commit to the first aligned motif.
+    !.
+
+% ms_ray_(+Motif, +Pol, +Entries, +H, +W, -RC): one ray cell of a motif.
+ms_ray_(motif(Orient, R0, C0, R1, C1, Anchor, Sign, TwoSide), Pol, Entries, H, W, RC) :-
+% The exit side matches the 2-run side under same polarity.
+    ( Pol == same -> Exit = TwoSide ; ms_other_(TwoSide, Exit) ),
+% Walk every learned offset-color entry.
+    member(Off-Col, Entries),
+% The ray line lies at the lesson offset from the anchor end.
+    Line is Anchor + Sign * Off,
+% The ray line must stay inside the motif span along the long axis.
+    ms_axis_bounds_(Orient, R0, C0, R1, C1, ALow, AHigh),
+% Reject a lesson offset that overshoots this motif.
+    Line >= ALow, Line =< AHigh,
+% Emit the ray cells of this line toward the exit edge.
+    ms_line_cell_(Orient, R0, C0, R1, C1, Exit, Line, Col, H, W, RC).
+
+% ms_other_(+Side, -Other): the opposite cross side.
+% The low side faces the high side.
+ms_other_(low, high).
+% The high side faces the low side.
+ms_other_(high, low).
+
+% ms_line_cell_(+Orient, +R0, +C0, +R1, +C1, +Exit, +Line, +Col, +H, +W, -RC).
+% A leftward ray runs from the left grid edge up to the motif.
+ms_line_cell_(vert, _R0, C0, _R1, _C1, low, Line, Col, _H, _W, c(Line, C, Col)) :-
+% The ray stops one column short of the motif.
+    CE is C0 - 1,
+% Walk every column strictly left of the motif.
+    between(0, CE, C).
+% A rightward ray runs from the motif out to the right grid edge.
+ms_line_cell_(vert, _R0, _C0, _R1, C1, high, Line, Col, _H, W, c(Line, C, Col)) :-
+% The ray starts one column past the motif.
+    CS is C1 + 1,
+% The ray ends at the right grid edge.
+    WE is W - 1,
+% Walk every column strictly right of the motif.
+    between(CS, WE, C).
+% An upward ray runs from the top grid edge down to the motif.
+ms_line_cell_(horiz, R0, _C0, _R1, _C1, low, Line, Col, _H, _W, c(R, Line, Col)) :-
+% The ray stops one row short of the motif.
+    RE is R0 - 1,
+% Walk every row strictly above the motif.
+    between(0, RE, R).
+% A downward ray runs from the motif out to the bottom grid edge.
+ms_line_cell_(horiz, _R0, _C0, R1, _C1, high, Line, Col, H, _W, c(R, Line, Col)) :-
+% The ray starts one row past the motif.
+    RS is R1 + 1,
+% The ray ends at the bottom grid edge.
+    HE is H - 1,
+% Walk every row strictly below the motif.
+    between(RS, HE, R).
+
+% ms_row_(+Row0, +R, +BG, +Rays, -ORow): rebuild one output row.
+ms_row_(Row0, R, BG, Rays, ORow) :-
+% Rebuild the row cell by cell.
+    findall(V2,
+% Walk every column of the input row with its value.
+            ( nth0(C, Row0, V),
+% A background cell under a ray takes the ray color; others persist.
+              ( V =:= BG, memberchk(c(R, C, K), Rays) -> V2 = K ; V2 = V ) ),
+% Bind the rebuilt row.
+            ORow).
