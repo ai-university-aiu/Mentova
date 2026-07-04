@@ -1,0 +1,44 @@
+Accomplishment 398: ARC-AGI-2 Wave 100 - Corner Glyph: Learning a Corner Decoration and Stamping It at Marked Corners
+
+PrologAI solves ARC-AGI-2 task 4c416de3 with a new glass-box rule
+called corner_glyph (WP-358, Layer 333), raising the benchmark
+score from 96/120 = 80.00% to 97/120 = 80.83% - on the one
+hundredth wave of the climb.
+
+Each input of this task shows boxes outlined in a border color on
+a solid background. One box corner is already dressed up: a small
+multi-cell decoration in its own color, different in every grid -
+a block with a diagonal tail, a zigzag band, a corner cross, a
+hook. Other corners carry just a single colored dot, tucked one or
+two cells inside the corner on its diagonal. The output finishes
+the job: every dotted corner grows the complete decoration in the
+dot's own color, correctly mirrored for its corner, while unmarked
+corners stay bare.
+
+The rule learns the decoration fresh from each grid. It finds the
+one corner with a full multi-cell decoration and records its cells
+in the corner's own frame - offsets measured outward along that
+corner's directions - so one canonical shape automatically flips
+into place at all four corner types. The shape's most inward
+diagonal cell doubles as the marker position: any corner holding a
+single color exactly there is asking to be decorated.
+
+The trick that cracks the task: the decorations paint over the very
+borders that define the corners. A strict corner detector demanding
+clean border lines loses exactly the corners that must be stamped -
+on a five-cell box side the template even reaches within arm's
+length of the opposite corner. The fix is a tolerant L-junction
+test: border arms may carry decoration cells anywhere, must never
+carry background, and must keep at least two surviving border
+cells each. Verified against all four grids, that test finds every
+true corner and not one impostor.
+
+The complete rule was written in plain English covering every grid
+before any code, a full cell-level diff accounted for every changed
+cell by hand, a Prolog prototype exposed and fixed the strict-arm
+bug, and the integrated rule passed the single-task test and the
+full regression on the first compile. One hundred waves climbed.
+Pure induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
