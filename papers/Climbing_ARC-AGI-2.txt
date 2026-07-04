@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 78 complete: 75/120 = 62.50%.
+Last updated: 2026-07-03. Wave 79 complete: 76/120 = 63.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -200,6 +200,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  73 / 120  | 60.83%  | Wave 76: puzzle_fit four scattered multi-color puzzle pieces, one carrying a color-5 anchor stud; each piece rotated by quarter turns only (no reflections) and assembled by exact-cover search into the unique perfect N x N square tiling with the anchor stud at the top-left corner
 2026-07-03  |  74 / 120  | 61.67%  | Wave 77: palette_jigsaw four scattered pieces, one carrying an embedded 2 x 2 color palette; quarter-turn rotations assemble the unique perfect N x N square tiling with the palette carrier anchoring the top-left corner; each piece repainted with the palette color of the output corner it covers
 2026-07-03  |  75 / 120  | 62.50%  | Wave 78: gadget_assembly scattered gadget pieces carry color-2 connector studs; studs pair across pieces by exact coincidence under translation with opposite facings; a backtracking open-stud search assembles the unique connected machine; the connection graph's center piece stays at its input position and the machine is drawn around it
+2026-07-03  |  76 / 120  | 63.33%  | Wave 79: master_fragment every training output is one shared two-color 20 x 20 master pattern up to a dihedral isometry and a two-color bijection, and every input is a contiguous fragment cut from its own output; the first training output is stored as the canonical master, and the answer is the unique candidate among the eight isometries crossed with the two color bijections that contains the test fragment as an exact contiguous subgrid
 
 
 COMPLETE SCORE PROGRESSION
@@ -1220,6 +1221,69 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 79 - 2026-07-03 - Score: 76/120 = 63.33%
+
+Date: 2026-07-03
+
+Confirmed score: 76 / 120 = 63.33%
+
+Rules added in this wave:
+  master_fragment (WP-337, Layer 312)
+
+Task solved: 269e22fb (5 training pairs + 1 test case; inputs 8x10,
+  16x8, 10x10, 13x12, and 8x10, test input 10x10; every output is
+  20x20; each grid uses exactly two colors - four pairs use 7 and 8,
+  one pair uses 0 and 3; every training output is one shared
+  canonical two-color master pattern up to a dihedral isometry and a
+  two-color bijection, and every input is a contiguous fragment cut
+  from its own output; the answer is the full master rendered in the
+  fragment's orientation and colors).
+
+Algorithm: canonical-master fragment location. Stage 1: induction
+  stores the first training output verbatim as the canonical master
+  pattern after cheap guards - the output must be strictly larger
+  than the input, carry exactly two colors, and all training outputs
+  must share the master dimensions. Stage 2: the transform reads the
+  two colors of the fragment and the two colors of the master, then
+  enumerates the eight dihedral isometries of the master (identity,
+  three rotations, two axis mirrors, two diagonal mirrors, built
+  from the registry transforms rotate_90_cw, rotate_180,
+  rotate_90_ccw, reverse_rows, vertical_flip, and transpose) crossed
+  with the two possible two-color bijections onto the fragment
+  palette, sixteen candidates in all. Stage 3: a candidate survives
+  only when the fragment appears inside it as an exact contiguous
+  subgrid, checked by sliding the fragment over every feasible
+  offset. Stage 4: the surviving candidates are deduplicated and
+  exactly one full-size grid must remain - that unique candidate is
+  the answer, so ambiguity is impossible by construction and the
+  training pairs verify uniqueness on every pair.
+
+Bugs fixed: none; the standalone prototype matched all five training
+  pairs and the test on its first run, and the in-module port passed
+  unchanged.
+
+Lessons learned: this is the first wave where the induced rule
+  carries a whole learned grid as a rule argument -
+  master_fragment(Master) - rather than colors or scalar parameters;
+  the parameterized-rule machinery introduced for recolor_plus
+  generalizes cleanly to grid-valued parameters. The uniqueness
+  demand (sort the candidate set and require a singleton) doubles as
+  both the correctness proof and the induction verifier: five
+  training pairs each admit exactly one candidate among sixteen, so
+  the rule is self-checking. The human-steps description promised a
+  memorization-flavored task, but the clean formulation - master =
+  first output, fragment location by isometry-times-bijection
+  search - needs no memorization beyond the training pairs
+  themselves and stays fully glass-box. Full regression of all 75
+  locally verified tasks (74 prior plus 269e22fb) still induces and
+  passes.
+
+Accomplishment: Acc_377.  Paper: Acc_377_ARC2_Wave79_MasterFragment.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -3947,6 +4011,7 @@ edb79dae  - Wave 75 - glyph_swap         - color-5 frame encloses solid square b
 7b3084d4  - Wave 76 - puzzle_fit         - four scattered multi-color puzzle pieces, one with a color-5 anchor stud; quarter-turn rotations only; exact-cover search assembles the unique perfect N x N square tiling with the stud at the top-left corner
 f560132c  - Wave 77 - palette_jigsaw     - four scattered pieces, one key piece embedding a 2 x 2 palette block; quarter-turn exact-cover tiling with the key at the top-left corner; each piece repainted with the palette color of the output corner it covers
 cbebaa4b  - Wave 78 - gadget_assembly    - gadget pieces with color-2 connector studs slide together by translation until every stud coincides with its opposite-facing partner; the connection graph's center piece keeps its input position and the assembled machine is drawn around it
+269e22fb  - Wave 79 - master_fragment    - every training output is one shared two-color master pattern up to a dihedral isometry and a two-color bijection; the input fragment is located among the sixteen candidates and the unique full-size candidate containing it is the answer
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4291,4 +4356,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 77: Palette-jigsaw - the grid scatters four 
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 78: Gadget-assembly - the grid scatters five to seven gadget pieces over the background, each an 8-connected component of one body color carrying color-2 connector studs on its boundary, and the color-2 census halves from input to output because paired studs merge into one cell; each stud's outward facing is read from its unique 4-adjacent body neighbor, piece 1 seeds the assembly, and a backtracking search repeatedly mates the first open stud with an opposite-facing stud of an unplaced piece, sliding the piece by the translation that brings the two studs into exact coincidence, accepting a placement only when every colliding cell is a stud closing an open stud, and succeeding when every piece is placed and no stud remains open; the stud pairings form a connection graph - a simple path of 5, 5, and 7 pieces across the three grids - and the graph's center piece, found by breadth-first eccentricity, keeps its exact input position while the whole machine is drawn around it on a fresh canvas of the input's size.
   Score: 75/120 = 62.50%. Task cbebaa4b solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 79: Master-fragment - every training output of the task is one shared canonical two-color 20-by-20 master pattern, reproduced up to one of the eight dihedral isometries and one of the two possible two-color bijections, and every input is a contiguous rectangular fragment cut directly from its own output; induction stores the first training output verbatim as the canonical master after cheap guards (output strictly larger than input, exactly two colors, all outputs sharing the master dimensions), and the transform enumerates the eight isometries of the master crossed with the two color bijections onto the fragment palette - sixteen candidates - keeps only those containing the fragment as an exact contiguous subgrid at some offset, and demands after deduplication that exactly one full-size candidate survives, which is the answer; the uniqueness demand doubles as the induction verifier, five training pairs each admitting exactly one candidate, and this is the first wave whose induced rule carries a whole learned grid as a rule argument, master_fragment(Master), extending the parameterized-rule machinery from scalar color parameters to grid-valued parameters.
+  Score: 76/120 = 63.33%. Task 269e22fb solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

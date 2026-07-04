@@ -1,0 +1,36 @@
+Accomplishment 377: ARC-AGI-2 Wave 79 - Master Fragment Location by Isometry Search
+
+PrologAI solves ARC-AGI-2 task 269e22fb with a new glass-box rule
+called master_fragment (WP-337, Layer 312), raising the benchmark
+score from 75/120 = 62.50% to 76/120 = 63.33%.
+
+Every training output of the task is one shared canonical two-color
+20 by 20 master pattern, reproduced up to one of the eight dihedral
+isometries - identity, three rotations, two axis mirrors, and two
+diagonal mirrors - and one of the two possible two-color bijections.
+Every input is a contiguous rectangular fragment cut directly from
+its own output. The answer is the full master pattern rendered in
+the fragment's orientation and colors.
+
+The engine stores the first training output verbatim as the
+canonical master, then enumerates the eight isometries of the master
+crossed with the two color bijections onto the fragment palette -
+sixteen full-size candidates in all. A candidate survives only when
+the fragment appears inside it as an exact contiguous subgrid, and
+after deduplication exactly one candidate must remain: that unique
+survivor is the answer, so an ambiguous fragment can never produce a
+guessed output.
+
+The key insight is a grid-valued rule parameter. This is the first
+wave whose induced rule carries a whole learned grid as a rule
+argument - master_fragment(Master) - rather than colors or scalar
+parameters, extending the platform's parameterized-rule machinery
+from scalars to grids. The uniqueness demand doubles as both the
+correctness proof and the induction verifier: each of the five
+training pairs admits exactly one candidate among sixteen, so the
+rule is self-checking, and the same check answered the hidden test
+case on the first complete prototype run with zero bugs fixed. Pure
+induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

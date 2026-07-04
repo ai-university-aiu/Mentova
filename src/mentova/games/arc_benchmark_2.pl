@@ -491,6 +491,42 @@ arc2_induce_rule(TrainingPairs, gadget_assembly) :-
 % Each training pair must transform correctly under gadget_assembly.
            arc2_transform(gadget_assembly, In, Out)).
 
+% master_fragment: early dispatch before generic clause (WP-337, Layer 312).
+% arc2_induce_rule(master_fragment): two-color enlargement pre-filter + verify.
+arc2_induce_rule(TrainingPairs, master_fragment(Master)) :-
+% Fast filter: the first training output is the candidate master pattern.
+    TrainingPairs = [pair(First, Master)|_],
+% Measure the first input height.
+    length(First, H),
+% Measure the master pattern height.
+    length(Master, MH),
+% The master must have at least as many rows as the fragment.
+    MH >= H,
+% Fetch the first row of the fragment and of the master.
+    First = [FR|_], Master = [MR|_],
+% Measure the first input width.
+    length(FR, W),
+% Measure the master pattern width.
+    length(MR, MW),
+% The master must have at least as many columns as the fragment.
+    MW >= W,
+% The master must be strictly larger than the fragment overall.
+    MH * MW > H * W,
+% Flatten the master pattern into a flat cell list.
+    flatten(Master, MCells),
+% Collect the distinct colors of the master pattern.
+    sort(MCells, MUniq),
+% The master pattern must use exactly two colors.
+    length(MUniq, 2),
+% Every training output must share the master dimensions exactly.
+    forall(member(pair(_, Out), TrainingPairs),
+% Each output must have the master height and the master width.
+           ( length(Out, MH), Out = [OR|_], length(OR, MW) )),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under master_fragment.
+           arc2_transform(master_fragment(Master), In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -16184,3 +16220,126 @@ ga_render_(Cells, H, W, BG, Out) :-
                       Row) ),
 % Bind the completed grid.
             Out).
+
+% ---------------------------------------------------------------------------
+% MASTER FRAGMENT (WP-337, Layer 312) — task 269e22fb
+% Every training output is one shared two-color master pattern, up to a
+% dihedral isometry and a two-color bijection; every input is a contiguous
+% fragment cut from its own output.  The rule stores the first training
+% output as the canonical master, and to answer it enumerates the eight
+% isometries of the master crossed with the two color bijections onto the
+% fragment palette, keeping the unique full-size candidate that contains
+% the fragment as an exact contiguous subgrid.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(master_fragment): locate the fragment, emit the full master.
+arc2_transform(master_fragment(Master), Grid, Out) :-
+% Collect the two distinct colors of the input fragment.
+    mf_colors_(Grid, [A, B]),
+% Collect the two distinct colors of the master pattern.
+    mf_colors_(Master, [MA, MB]),
+% Enumerate every full-size candidate that contains the fragment.
+    findall(Cand,
+% Walk the eight isometries of the master pattern.
+            ( mf_iso_(Master, Iso),
+% Choose one of the two possible two-color bijections.
+              member(Map, [[MA-A, MB-B], [MA-B, MB-A]]),
+% Repaint the isometry through the chosen color bijection.
+              mf_recolor_(Iso, Map, Cand),
+% Keep the candidate only when the fragment appears inside it.
+              once(mf_subgrid_(Grid, Cand)) ),
+% Bind the list of matching candidates.
+            Cands),
+% Deduplicate the candidates and demand exactly one survivor.
+    sort(Cands, [Out]).
+
+% mf_colors_(+Grid, -Colors): sorted list of distinct cell colors.
+mf_colors_(Grid, Colors) :-
+% Flatten the grid into a flat cell list.
+    flatten(Grid, Cells),
+% Sort and deduplicate the cell colors.
+    sort(Cells, Colors).
+
+% mf_iso_(+Grid, -Iso): enumerate the eight dihedral isometries of Grid.
+% The identity isometry returns the grid unchanged.
+mf_iso_(Grid, Grid).
+% The quarter-turn clockwise isometry.
+mf_iso_(Grid, Iso) :-
+% Apply the registry rotate_90_cw transform.
+    arc2_transform(rotate_90_cw, Grid, Iso).
+% The half-turn isometry.
+mf_iso_(Grid, Iso) :-
+% Apply the registry rotate_180 transform.
+    arc2_transform(rotate_180, Grid, Iso).
+% The quarter-turn counterclockwise isometry.
+mf_iso_(Grid, Iso) :-
+% Apply the registry rotate_90_ccw transform.
+    arc2_transform(rotate_90_ccw, Grid, Iso).
+% The left-right mirror isometry.
+mf_iso_(Grid, Iso) :-
+% Apply the registry reverse_rows transform.
+    arc2_transform(reverse_rows, Grid, Iso).
+% The top-bottom mirror isometry.
+mf_iso_(Grid, Iso) :-
+% Apply the registry vertical_flip transform.
+    arc2_transform(vertical_flip, Grid, Iso).
+% The main-diagonal mirror isometry.
+mf_iso_(Grid, Iso) :-
+% Apply the registry transpose transform.
+    arc2_transform(transpose, Grid, Iso).
+% The anti-diagonal mirror isometry.
+mf_iso_(Grid, Iso) :-
+% Rotate the grid by a half turn first.
+    arc2_transform(rotate_180, Grid, T),
+% Then mirror across the main diagonal.
+    arc2_transform(transpose, T, Iso).
+
+% mf_recolor_(+Grid, +Map, -Out): repaint every cell through a color map.
+mf_recolor_(Grid, Map, Out) :-
+% Repaint the grid row by row.
+    maplist(mf_recolor_row_(Map), Grid, Out).
+
+% mf_recolor_row_(+Map, +Row, -Out): repaint one row through the map.
+mf_recolor_row_(Map, Row, Out) :-
+% Repaint the row cell by cell.
+    maplist(mf_recolor_cell_(Map), Row, Out).
+
+% mf_recolor_cell_(+Map, +C, -D): translate one color through the map.
+mf_recolor_cell_(Map, C, D) :-
+% Look up the color pair in the bijection map.
+    memberchk(C-D, Map).
+
+% mf_subgrid_(+Sub, +Grid): Sub appears as a contiguous block inside Grid.
+mf_subgrid_(Sub, Grid) :-
+% Measure the fragment height.
+    length(Sub, SH),
+% Fetch the first fragment row.
+    Sub = [S0|_],
+% Measure the fragment width.
+    length(S0, SW),
+% Measure the container height.
+    length(Grid, GH),
+% Fetch the first container row.
+    Grid = [G0|_],
+% Measure the container width.
+    length(G0, GW),
+% Compute the largest feasible row offset.
+    MaxR is GH - SH,
+% Compute the largest feasible column offset.
+    MaxC is GW - SW,
+% Choose a candidate row offset.
+    between(0, MaxR, R0),
+% Choose a candidate column offset.
+    between(0, MaxC, C0),
+% Every fragment cell must equal the container cell under the offset.
+    forall(nth0(I, Sub, SRow),
+% Check one fragment row against the container.
+           ( RI is R0 + I,
+% Fetch the matching container row.
+             nth0(RI, Grid, GRow),
+% Every cell of the fragment row must match the container cell.
+             forall(nth0(J, SRow, V),
+% Compare the fragment cell with the shifted container cell.
+                    ( CJ is C0 + J,
+% The container cell must carry the same color as the fragment cell.
+                      nth0(CJ, GRow, V) )) )).
