@@ -1443,6 +1443,54 @@ arc2_induce_rule(TrainingPairs, box_tally) :-
 % Each training pair must transform correctly under box_tally.
            arc2_transform(box_tally, In, Out)).
 
+% dot_crawler: early dispatch before generic clause (WP-363, Layer 338).
+% Enumerate dot_crawler as a known rule name.
+arc2_named_rule(dot_crawler).
+% arc2_induce_rule(dot_crawler): crawler-and-dots pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, dot_crawler) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Determine the background as the most frequent color.
+    td_background_(First, Bg),
+% Split the input into panels at full-height separator columns.
+    dc_panels_(First, Bg, [Panel|_]),
+% Take the first panel row.
+    Panel = [PRow|_],
+% Measure the panel width.
+    length(PRow, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output width must equal the panel width.
+    length(ORow, W),
+% Collect every foreground cell in the panel.
+    bt_fg_cells_(Panel, Bg, Cells),
+% Read the crawler color from the first cell.
+    Cells = [_-_-Color|_],
+% Every foreground cell must carry the crawler color.
+    forall(member(_-_-V, Cells), V == Color),
+% Project the cells onto their positions.
+    findall(R-C, member(R-C-_, Cells), Pts),
+% Group the positions into 8-connected components.
+    dc_comps8_(Pts, Comps),
+% Order the components by descending size.
+    dc_by_size_(Comps, [Shape|Others]),
+% Measure the crawler shape.
+    length(Shape, SN),
+% The crawler shape needs at least three cells.
+    SN >= 3,
+% Every other component must be a single-cell dot.
+    forall(member(O, Others), O = [_]),
+% At least one dot must accompany the crawler.
+    Others = [_|_],
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under dot_crawler.
+           arc2_transform(dot_crawler, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -23168,3 +23216,341 @@ bt_draw_dots_(box(R0, R1, _, C1), Col, N, GridIn, GridOut) :-
     findall(DC, ( between(1, N, K), DC is C1 - 2 * K ), DCs),
 % Paint each dot with the box color.
     foldl([DC, GA, GB]>>arc2_set_cell_(GA, Mid, DC, Col, GB), DCs, GridIn, GridOut).
+
+% ---------------------------------------------------------------------------
+% DOT CRAWLER (WP-363, Layer 338)
+% dot_crawler: the scene holds one multi-cell crawler shape whose nose cell
+% protrudes alone on an edge of its bounding box, plus a field of single-cell
+% dots forming an orthogonal chain; full-height single-color separator
+% columns may split the grid into panels showing earlier snapshots of the
+% crawl; the output is one background-only panel with the crawler docked
+% nose-first on the final chain dot, rotated so the nose points along the
+% direction of the last chain leg.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(dot_crawler): crawl the dot chain and render the final dock.
+arc2_transform(dot_crawler, Grid, Out) :-
+% Determine the background as the most frequent color.
+    td_background_(Grid, Bg),
+% Split the grid into panels at full-height separator columns.
+    dc_panels_(Grid, Bg, Panels),
+% The leftmost panel carries the scene to solve.
+    Panels = [Panel|RestPanels],
+% Measure the panel height.
+    length(Panel, H),
+% Take the first panel row.
+    Panel = [PRow|_],
+% Measure the panel width.
+    length(PRow, W),
+% Collect every foreground cell in the panel.
+    bt_fg_cells_(Panel, Bg, Cells),
+% Read the crawler color from the first cell.
+    Cells = [_-_-Color|_],
+% Every foreground cell must carry the crawler color.
+    forall(member(_-_-V, Cells), V == Color),
+% Project the cells onto their positions.
+    findall(R-C, member(R-C-_, Cells), Pts),
+% Group the positions into 8-connected components.
+    dc_comps8_(Pts, Comps),
+% Order the components by descending size.
+    dc_by_size_(Comps, [Shape|Others]),
+% Measure the crawler shape.
+    length(Shape, SN),
+% The crawler shape needs at least three cells.
+    SN >= 3,
+% Every other component must be a single-cell dot.
+    forall(member(O, Others), O = [_]),
+% Collect the dot positions.
+    findall(P, member([P], Others), Dots),
+% At least one dot must be present.
+    Dots = [_|_],
+% Select the nose whose greedy chain consumes every dot.
+    dc_pick_nose_(Shape, Dots, RestPanels, Bg, Nose, Dir0, Path),
+% The final dot is the last chain stop.
+    last(Path, Final),
+% The arrival direction is the direction of the last chain leg.
+    dc_arrival_(Nose, Path, Dir),
+% Count the clockwise quarter turns from the nose heading to the arrival.
+    dc_turns_(Dir0, Dir, K),
+% Unpack the nose position.
+    Nose = NR-NC,
+% Express the shape as offsets from the nose.
+    findall(DR-DC, ( member(R-C, Shape), DR is R - NR, DC is C - NC ), Offs),
+% Rotate the offsets by the computed quarter turns.
+    dc_rot_offs_(K, Offs, ROffs),
+% Build a blank background canvas of panel size.
+    bt_blank_(H, W, Bg, Canvas),
+% Unpack the final dot position.
+    Final = FR-FC,
+% Paint each rotated offset cell around the final dot.
+    foldl([DR-DC, GA, GB]>>( R is FR + DR, C is FC + DC, arc2_set_cell_(GA, R, C, Color, GB) ),
+% Fold the rotated offsets over the blank canvas.
+          ROffs, Canvas, Out).
+
+% dc_panels_(+Grid, +Bg, -Panels): split at full-height non-bg uniform columns.
+dc_panels_(Grid, Bg, Panels) :-
+% Take the first grid row.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Compute the last column index.
+    WM is W - 1,
+% Collect every separator column index.
+    findall(C, ( between(0, WM, C), dc_sep_col_(Grid, C, Bg) ), Seps),
+% Convert the separator indices into panel column ranges.
+    dc_ranges_(0, Seps, W, Ranges),
+% Slice the grid columns for each panel range.
+    findall(Panel, ( member(Lo-Hi, Ranges), dc_slice_(Grid, Lo, Hi, Panel) ), Panels).
+
+% dc_sep_col_(+Grid, +C, +Bg): column C is uniform in a non-background color.
+dc_sep_col_(Grid, C, Bg) :-
+% Split the grid into its first row and the rest.
+    Grid = [Row0|Rest],
+% Read the column color from the first row.
+    nth0(C, Row0, V),
+% A separator color differs from the background.
+    V \== Bg,
+% Every remaining row must repeat the same color in this column.
+    forall(member(Row, Rest), ( nth0(C, Row, V2), V2 == V )).
+
+% dc_ranges_(+Lo, +Seps, +W, -Ranges): non-empty column ranges between separators.
+dc_ranges_(Lo, [], W, Ranges) :-
+% The last range ends at the final column.
+    Hi is W - 1,
+% Keep the range only when it is non-empty.
+    ( Hi >= Lo -> Ranges = [Lo-Hi] ; Ranges = [] ).
+% Cut a range before the next separator, then continue after it.
+dc_ranges_(Lo, [S|Ss], W, Ranges) :-
+% The range ends one column before the separator.
+    Hi is S - 1,
+% The next range starts one column after the separator.
+    Lo2 is S + 1,
+% Process the remaining separators.
+    dc_ranges_(Lo2, Ss, W, More),
+% Keep the range only when it is non-empty.
+    ( Hi >= Lo -> Ranges = [Lo-Hi|More] ; Ranges = More ).
+
+% dc_slice_(+Grid, +Lo, +Hi, -Panel): keep columns Lo..Hi of every row.
+dc_slice_(Grid, Lo, Hi, Panel) :-
+% Slice each row to the requested column window.
+    maplist([Row, Seg]>>findall(V, ( between(Lo, Hi, C), nth0(C, Row, V) ), Seg), Grid, Panel).
+
+% dc_comps8_(+Pts, -Comps): group points into 8-connected components.
+dc_comps8_([], []).
+% Grow a component from the first point, then recurse on the rest.
+dc_comps8_([P|Rest], [Comp|More]) :-
+% Expand the seed point into its full component.
+    dc_grow8_([P], Rest, [P], Comp),
+% Remove the component's points from the remaining pool.
+    subtract(Rest, Comp, Left),
+% Group the points that are still unassigned.
+    dc_comps8_(Left, More).
+
+% dc_grow8_(+Frontier, +Pool, +Acc, -Comp): flood-fill over 8-neighbors.
+dc_grow8_([], _, Acc, Comp) :-
+% The finished component is the sorted accumulator.
+    sort(Acc, Comp).
+% Expand one frontier point into its unvisited king-move neighbors.
+dc_grow8_([R-C|Fr], Pool, Acc, Comp) :-
+% Enumerate pool points adjacent under king moves.
+    findall(NR-NC,
+% A neighbor sits within one step on each axis without coinciding.
+            ( member(NR-NC, Pool),
+% Skip points that are already part of the component.
+              \+ member(NR-NC, Acc),
+% Require at most one step along the row axis.
+              abs(NR - R) =< 1,
+% Require at most one step along the column axis.
+              abs(NC - C) =< 1 ),
+% Gather the newly reached points.
+            News),
+% Deduplicate the newly reached points.
+    sort(News, NewsS),
+% Push the new points onto the frontier.
+    append(Fr, NewsS, Fr2),
+% Record the new points as visited.
+    append(Acc, NewsS, Acc2),
+% Continue flooding from the extended frontier.
+    dc_grow8_(Fr2, Pool, Acc2, Comp).
+
+% dc_by_size_(+Comps, -Sorted): order components by descending cell count.
+dc_by_size_(Comps, Sorted) :-
+% Key each component by its size.
+    findall(N-Comp, ( member(Comp, Comps), length(Comp, N) ), Keyed),
+% Order the keyed components with the largest first.
+    sort(0, @>=, Keyed, Ordered),
+% Drop the size keys.
+    findall(Comp, member(_-Comp, Ordered), Sorted).
+
+% dc_pick_nose_(+Shape, +Dots, +RestPanels, +Bg, -Nose, -Dir0, -Path):
+% choose the unique nose whose greedy chain consumes every dot.
+dc_pick_nose_(Shape, Dots, RestPanels, Bg, Nose, Dir0, Path) :-
+% Enumerate every candidate nose with a full-consumption chain.
+    findall(n(N, D, P), dc_nose_cand_(Shape, Dots, N, D, P), Cands),
+% Accept a unique candidate, or disambiguate with the second panel.
+    ( Cands = [n(Nose, Dir0, Path)] -> true
+% Two or more candidates require a second panel snapshot.
+    ; Cands = [_, _|_],
+% Take the second panel from the remaining panels.
+      RestPanels = [Panel2|_],
+% Collect the dot positions still present in the second panel.
+      dc_panel_dots_(Panel2, Bg, Dots2),
+% The true first stop is already consumed or covered in the second panel.
+      findall(n(N2, D2, P2),
+% Keep candidates whose first stop is no longer a free dot.
+              ( member(n(N2, D2, P2), Cands),
+% Read the first chain stop.
+                P2 = [FirstStop|_],
+% The first stop must not remain a free dot in the second panel.
+                \+ memberchk(FirstStop, Dots2) ),
+% Exactly one candidate must survive the filter.
+              [n(Nose, Dir0, Path)] ) ).
+
+% dc_panel_dots_(+Panel, +Bg, -Dots): single-cell foreground components.
+dc_panel_dots_(Panel, Bg, Dots) :-
+% Collect every foreground cell in the panel.
+    bt_fg_cells_(Panel, Bg, Cells),
+% Project the cells onto their positions.
+    findall(R-C, member(R-C-_, Cells), Pts),
+% Group the positions into 8-connected components.
+    dc_comps8_(Pts, Comps),
+% Keep the positions of the single-cell components.
+    findall(P, member([P], Comps), Dots).
+
+% dc_nose_cand_(+Shape, +Dots, -Nose, -Dir, -Path): one valid nose candidate.
+dc_nose_cand_(Shape, Dots, Nose, Dir, Path) :-
+% Compute the shape's bounding box.
+    bt_bbox_(Shape, Box),
+% Try each of the four axis directions.
+    member(Dir, [up, down, left, right]),
+% The nose must sit alone on the box edge facing the direction.
+    dc_extreme_cell_(Dir, Box, Shape, Nose),
+% The nose ray must hit a nearest first dot.
+    dc_first_dot_(Nose, Dir, Dots, First),
+% Remove the first dot from the pool.
+    subtract(Dots, [First], Rest),
+% The greedy chain must consume every remaining dot.
+    dc_chain_(First, Rest, [First], Path).
+
+% dc_extreme_cell_(+Dir, +Box, +Shape, -Cell): sole shape cell on the edge.
+dc_extreme_cell_(up, box(R0, _, _, _), Shape, Cell) :-
+% Collect the shape cells on the top edge row.
+    findall(R-C, ( member(R-C, Shape), R =:= R0 ), [Cell]).
+% The bottom edge must hold exactly one shape cell.
+dc_extreme_cell_(down, box(_, R1, _, _), Shape, Cell) :-
+% Collect the shape cells on the bottom edge row.
+    findall(R-C, ( member(R-C, Shape), R =:= R1 ), [Cell]).
+% The left edge must hold exactly one shape cell.
+dc_extreme_cell_(left, box(_, _, C0, _), Shape, Cell) :-
+% Collect the shape cells on the left edge column.
+    findall(R-C, ( member(R-C, Shape), C =:= C0 ), [Cell]).
+% The right edge must hold exactly one shape cell.
+dc_extreme_cell_(right, box(_, _, _, C1), Shape, Cell) :-
+% Collect the shape cells on the right edge column.
+    findall(R-C, ( member(R-C, Shape), C =:= C1 ), [Cell]).
+
+% dc_first_dot_(+Nose, +Dir, +Dots, -First): nearest dot along the nose ray.
+dc_first_dot_(NR-NC, up, Dots, First) :-
+% Collect the dots above the nose in the same column, keyed by distance.
+    findall(D-(R-NC), ( member(R-NC, Dots), R < NR, D is NR - R ), Keyed),
+% Pick the nearest keyed dot.
+    dc_nearest_(Keyed, First).
+% Scan downward along the nose column.
+dc_first_dot_(NR-NC, down, Dots, First) :-
+% Collect the dots below the nose in the same column, keyed by distance.
+    findall(D-(R-NC), ( member(R-NC, Dots), R > NR, D is R - NR ), Keyed),
+% Pick the nearest keyed dot.
+    dc_nearest_(Keyed, First).
+% Scan leftward along the nose row.
+dc_first_dot_(NR-NC, left, Dots, First) :-
+% Collect the dots left of the nose in the same row, keyed by distance.
+    findall(D-(NR-C), ( member(NR-C, Dots), C < NC, D is NC - C ), Keyed),
+% Pick the nearest keyed dot.
+    dc_nearest_(Keyed, First).
+% Scan rightward along the nose row.
+dc_first_dot_(NR-NC, right, Dots, First) :-
+% Collect the dots right of the nose in the same row, keyed by distance.
+    findall(D-(NR-C), ( member(NR-C, Dots), C > NC, D is C - NC ), Keyed),
+% Pick the nearest keyed dot.
+    dc_nearest_(Keyed, First).
+
+% dc_nearest_(+Keyed, -P): point with the smallest distance key.
+dc_nearest_(Keyed, P) :-
+% The list must hold at least one keyed point.
+    Keyed = [_|_],
+% Order the keyed points by ascending distance.
+    msort(Keyed, [_-P|_]).
+
+% dc_chain_(+Cur, +Rest, +Acc, -Path): greedy nearest aligned-dot chain.
+dc_chain_(_, [], Acc, Path) :-
+% The finished chain is the reversed accumulator.
+    reverse(Acc, Path).
+% Hop to the nearest remaining dot sharing a row or column.
+dc_chain_(CR-CC, Rest, Acc, Path) :-
+% Collect the aligned remaining dots keyed by Manhattan distance.
+    findall(D-(R-C),
+% An aligned dot shares the current row or the current column.
+            ( member(R-C, Rest),
+% Require row or column alignment with the current stop.
+              ( R =:= CR ; C =:= CC ),
+% Key the dot by its Manhattan distance.
+              D is abs(R - CR) + abs(C - CC) ),
+% Gather the keyed aligned dots.
+            Keyed),
+% Pick the nearest aligned dot.
+    dc_nearest_(Keyed, Next),
+% Remove the chosen dot from the pool.
+    subtract(Rest, [Next], Rest2),
+% Continue the chain from the chosen dot.
+    dc_chain_(Next, Rest2, [Next|Acc], Path).
+
+% dc_arrival_(+Nose, +Path, -Dir): direction of the final chain leg.
+dc_arrival_(Nose, Path, Dir) :-
+% A single-stop chain arrives straight from the nose.
+    ( Path = [Only] -> From = Nose, To = Only
+% A longer chain arrives along its last two stops.
+    ; append(_, [From, To], Path) ),
+% Convert the leg endpoints into an axis direction.
+    dc_dir_(From, To, Dir).
+
+% dc_dir_(+From, +To, -Dir): axis direction from one point to another.
+dc_dir_(R1-C1, R2-C2, Dir) :-
+% A shared column means vertical travel; otherwise horizontal travel.
+    ( C2 =:= C1 -> ( R2 < R1 -> Dir = up ; Dir = down )
+% Horizontal travel points left or right by column order.
+    ; ( C2 < C1 -> Dir = left ; Dir = right ) ).
+
+% dc_turns_(+Dir0, +Dir, -K): clockwise quarter turns from Dir0 to Dir.
+dc_turns_(Dir, Dir, 0).
+% One clockwise turn reaches the target heading.
+dc_turns_(Dir0, Dir, K) :-
+% The headings must differ for a positive turn count.
+    Dir0 \== Dir,
+% Advance one clockwise step.
+    dc_cw_(Dir0, Dir1),
+% Count the remaining turns.
+    dc_turns_(Dir1, Dir, K1),
+% Add the step just taken.
+    K is K1 + 1.
+
+% dc_cw_(+Dir, -Next): one clockwise quarter turn of a heading.
+dc_cw_(up, right).
+% Rightward rotates to downward.
+dc_cw_(right, down).
+% Downward rotates to leftward.
+dc_cw_(down, left).
+% Leftward rotates to upward.
+dc_cw_(left, up).
+
+% dc_rot_offs_(+K, +Offs, -Rotated): rotate offsets K clockwise quarter turns.
+dc_rot_offs_(0, Offs, Offs).
+% Apply one clockwise quarter turn, then recurse on the remainder.
+dc_rot_offs_(K, Offs, Rotated) :-
+% The turn count must be positive.
+    K > 0,
+% Rotate each offset one clockwise quarter turn.
+    maplist([DR-DC, ER-EC]>>( ER is DC, EC is -DR ), Offs, Offs1),
+% Decrement the turn count.
+    K1 is K - 1,
+% Apply the remaining turns.
+    dc_rot_offs_(K1, Offs1, Rotated).
