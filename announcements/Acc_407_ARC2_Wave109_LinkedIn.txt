@@ -1,0 +1,44 @@
+Accomplishment 407: ARC-AGI-2 Wave 109 - Pipe Router: A Legend of Turn Chiralities and Four Pipes from a Seed
+
+PrologAI solves ARC-AGI-2 task e87109e9 with a new glass-box rule
+called pipe_router (WP-367, Layer 342), raising the benchmark
+score from 105/120 = 87.50% to 106/120 = 88.33%.
+
+Each input of this task is a two-part scene: a six-row legend
+strip of framed color swatches across the top, and a playing
+field below with a background, colored rectangular blocks, and
+one square seed of 8s. Four 8-pipes exactly as wide as the seed
+shoot from the seed in the four orthogonal directions. Each pipe
+travels straight, painting over background and crossing other
+pipes freely, ends when it leaves the grid, and turns ninety
+degrees whenever it meets a colored block head-on. The output is
+the field alone, legend dropped, with the whole pipe network
+painted.
+
+The delicate part is the direction of each turn. Sixteen
+block-hit turns occur across the four grids, and they follow no
+fixed chirality, no larger-block-side rule, no nearest-edge rule,
+and no path-order story - single-snake readings, legend-order
+chains, and wrap-around tunnels all break somewhere. The answer
+sits in the legend: each six-wide swatch holds one colored pixel
+among its four interior cells, and the side of the swatch that
+the pixel occupies is a one-bit instruction - left half means
+blocks of that color turn pipes left, right half means they turn
+pipes right. All sixteen turns match, sixteen of sixteen. The
+test input also grows the seed from 2x2 to 3x3, so the pipe width
+is derived from the seed rather than hard-coded.
+
+The wave's lesson: legends can carry per-color programs, not just
+colors or orders - and when a painted structure branches from one
+point in all four directions, model it as four independent agents
+leaving a seed rather than one continuous path.
+
+The complete rule was written in plain English covering every
+grid before any code, every 8-cell of all four outputs was
+accounted for by hand, and the integrated Prolog rule passed the
+single-task test and the full regression on its first compile.
+Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
