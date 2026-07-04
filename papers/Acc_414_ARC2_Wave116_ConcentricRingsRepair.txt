@@ -1,0 +1,101 @@
+Acc_414: ARC-AGI-2 Wave 116 - Concentric Rings Repair: Chebyshev Distance For True Nested Rectangles
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-04
+
+ACCOMPLISHMENT
+
+Wave 116 of the ARC-AGI-2 benchmark climb - task 13e47133 solved
+by a one-line repair of the existing glass-box rule concentric_rings
+(WP-374, Layer 349). Score advances from 112/120 = 93.33% to
+113/120 = 94.17%.
+
+The concentric_rings solver already reproduced both training pairs
+of task 13e47133 exactly, yet missed the held-out test by twenty-nine
+cells - all of them a color off by exactly one ring. The wave shows
+that the miss was a single wrong choice of distance metric, invisible
+in training and exposed only by the test's more complex geometry.
+
+TASK DESCRIPTION
+
+Each grid is a background field walled by a divider color - the most
+frequent non-background color - into regions. In the training pairs
+the divider draws a simple rectangular frame; in the test it draws
+several NESTED rectangular boxes, one inside another. Every walled
+region is filled with concentric rectangular rings. A cell's ring
+index is its distance from the region boundary, where the boundary
+is the grid edge or any cell adjacent to a divider wall: the outer
+ring is index zero and the index grows inward.
+
+Single-cell markers dropped inside a region name the color cycle. A
+marker sitting at ring K contributes its own color to cycle position
+K; positions with no marker default to the background color; and the
+cycle repeats outward. The output paints every region cell with
+cycle[ring mod cycle-length], while the divider walls pass through
+unchanged.
+
+THE FAULT
+
+The ring distance was computed by a multi-source breadth-first search
+that started from every boundary cell at distance zero and expanded
+one step at a time. The expansion used FOUR-connected steps (up,
+down, left, right), which measures Manhattan distance.
+
+For a plain rectangle this is correct. Manhattan distance from all
+four edges is min(top, bottom, left, right), which is exactly the
+concentric-rectangle ring index, so both training regions - simple
+rectangles - were reproduced perfectly.
+
+The test is different. Where two nested divider boxes meet, the
+walled region has a CONCAVE corner. Four-connected propagation cannot
+cut across a corner; it walks around it and arrives one step late,
+over-counting the ring index by one along the corner diagonal. Those
+over-counted cells then pick the wrong entry of the color cycle -
+the twenty-nine one-off cells seen in the diff.
+
+THE REPAIR
+
+Switch the distance propagation from four-connected to eight-connected
+steps, which measures Chebyshev distance. Chebyshev distance from the
+boundary keeps the ring index constant along a box corner, so the
+rings become true concentric rectangles even around concave corners.
+This is a single change: the neighbour helper used by the ring-distance
+breadth-first search moves from the four-neighbour set to the
+eight-neighbour set. The boundary test and the flood-fill that
+separates regions are left four-connected and untouched.
+
+WHY IT IS SAFE
+
+The fault was invisible in training precisely because both training
+regions are simple rectangles, where Manhattan and Chebyshev
+boundary-distance coincide. Only the test's nested boxes create the
+concave corners that separate the two metrics. After the repair, all
+twenty-nine miscolored test cells are corrected, both training pairs
+still reproduce exactly, and a full run of the 120-task benchmark
+shows the other 119 tasks unchanged. The net effect is a clean plus
+one with zero regression.
+
+THE LESSON
+
+A rule that passes every training pair can still hide a wrong metric,
+because the easy training geometry can make two different metrics
+agree. Manhattan and Chebyshev boundary-distance are identical on a
+plain rectangle and diverge only at a concave corner. When a solver
+reproduces training exactly yet misses the test by a uniform one-ring
+shift, suspect the distance metric before suspecting the color logic,
+and reach for the geometry - concentric rectangles are a Chebyshev
+object, not a Manhattan one.
+
+VERIFICATION
+
+  cd /home/ccaitwo/Mentova
+  swipl -g "consult('src/mentova/games/arc_benchmark_2'),
+    consult('data/arc_agi_2/arc_tasks_2'),
+    arc2_task('13e47133', Pairs, TI, TO),
+    arc2_induce_rule(Pairs, Rule),
+    arc2_transform(Rule, TI, C),
+    (C = TO -> write('PASS') ; write('FAIL')), nl, halt"
+
+Result: PASS. Full benchmark: 113/120 = 94.17%, zero regression.

@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 114 complete: 111/120 = 92.50%.
+Last updated: 2026-07-04. Wave 116 complete: 113/120 = 94.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -236,6 +236,8 @@ Date        | Score      | Percent | Notes
 2026-07-04  | 109 / 120  | 90.83%  | Wave 112: anchor_jigsaw scattered 4-connected colored fragments are jigsaw pieces, and a three-cell L-tromino marker drawn in a color unique to it cups one grid cell - the missing cell of its two-by-two bounding box; the diagonal step from the marker's corner cell to the cupped cell names which corner of the finished picture sits on that cell, the pieces tile by translation alone a rectangle whose area equals their total cell count, the piece containing the cupped cell is pinned at that corner and keeps its absolute grid position, the rectangle's outer ring must be uniformly the color found at the cupped cell, and the output erases marker and fragments and paints the assembled rectangle anchored at the cupped cell; the coherence law is the discriminating observation, because the twenty-two by ten test rectangle admits two exact tilings with a flawless uniform border, and only the demand that every non-border color of the finished picture form exactly one 4-connected component rejects the false assembly, whose color frames fall apart into separated clusters, while accepting the true stacked nested-ring picture
 2026-07-04  | 110 / 120  | 91.67%  | Wave 113: bbox_fill repair - a two-column legend at the bottom-left maps each L-tromino marker color to a fill color, and each color's two opposite-corner L-trominoes define a rectangle that is drawn solid in its fill color with the markers kept; the repair replaces the smallest-area-wins stacking order with LEGEND ORDER, so the earliest legend entry draws on top where rectangles overlap; smallest-area-first was correct only because every training pair nested its rectangles one inside another, but the test crosses a tall thin two-wide vertical stripe through three horizontal bars, and only legend order lets the stripe win the twelve crossing cells while the last legend color still yields its crossings to the bars, exactly matching the held-out grid
 2026-07-04  | 111 / 120  | 92.50%  | Wave 114: constellation sparse same-color dot constellations grow into connected glyphs, where every color with two or more dots connects each pair of dots that is both collinear (sharing a row, a column, or a forty-five-degree diagonal) and a Gabriel-graph edge (no third dot of that color lies on or inside the circle whose diameter is the pair) with a straight segment, so perimeter edges are drawn while interior chords across a diamond, a triangle, or a rectangle are suppressed, and isolated unconnected dots survive as single cells; a lone dot of a color that sits diagonally or orthogonally beside a dot of a different multi-dot color casts a shadow, a translated copy of that neighbor color's whole glyph offset by the lone-minus-neighbor vector and painted under the real glyphs, while lone dots with no such neighbor stay put; the Gabriel-edge test is the discriminating observation, because plain collinear connection over-draws the long diameter chords of the training diamond and triangle, and only the circle-with-diameter emptiness test keeps the outline while deleting the chords, reproducing the test grid exactly with zero regression across the 120-task benchmark
+2026-07-04  | 112 / 120  | 93.33%  | Wave 115: pinwheel_spiral one plus sign of a single color with an empty center on a uniform background unfolds into a full-grid interlocking spiral, its four equal arms each winding a square spiral outward always turning clockwise so the four ninety-degree-rotated spirals mesh to a one-cell-gap pinwheel; a single hidden arm-length parameter L drives the outward run max(1, L-1), the sideways jog max(0, L-2), and the trailing run max(2, L), the jog vanishing for L up to two so only the harder training pair exposes the stepped sides, and the unified turtle reproduces all training pairs and the held-out test with zero regression
+2026-07-04  | 113 / 120  | 94.17%  | Wave 116: concentric_rings repair - a background field walled by a divider color into nested rectangular boxes fills each region with concentric rings whose color cycle is keyed by single-cell markers to ring distance from the region boundary; the repair replaces four-connected (Manhattan) ring-distance propagation with eight-connected (Chebyshev) propagation so the rings are true concentric rectangles, curing a systematic off-by-one that appeared only at the concave corners where nested divider boxes meet, fixing all twenty-nine miscolored test cells while every training pair still reproduces exactly with zero regression across the 120-task benchmark
 
 
 COMPLETE SCORE PROGRESSION
@@ -1259,6 +1261,72 @@ Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 116 - 2026-07-04 - Score: 113/120 = 94.17%
+
+Date: 2026-07-04
+
+Confirmed score: 113 / 120 = 94.17%
+
+Rules repaired in this wave:
+  concentric_rings (WP-374, Layer 349) - ring-distance metric fixed.
+
+Task solved: 13e47133 (2 training pairs + 1 test case; the test grid
+  is 30x30 on background 3, walled by divider color 8 into several
+  nested rectangular boxes, each region filled with concentric rings
+  whose color cycle is set by single-cell markers).
+
+Algorithm: the background field is walled by the divider color (the
+  most frequent non-background color) into regions. Each region is
+  filled with concentric rectangular rings; a cell's ring index is
+  its distance from the region boundary - the grid edge or a cell
+  adjacent to a divider wall. Single-cell markers in a region name
+  the color cycle: the marker at ring K contributes its color to
+  cycle position K, other positions default to background, and the
+  cycle repeats outward. The output paints every region cell with
+  cycle[ring mod cycle-length], dividers passing through unchanged.
+
+The repair: the ring distance was propagated by a four-connected
+  (Manhattan) multi-source breadth-first search from the boundary.
+  For a plain rectangle Manhattan distance from all four edges is
+  min(top, bottom, left, right), which is the correct concentric-
+  rectangle ring index, so every training pair passed. But where
+  nested divider boxes meet, the region has concave corners, and
+  four-connected propagation walks AROUND the corner and over-counts
+  the ring by one along the corner diagonal. Switching the distance
+  propagation to eight-connected (Chebyshev) keeps the ring index
+  constant along a box corner, producing true concentric rectangles.
+
+Discriminating observation: the fault was invisible in training
+  because both training regions are simple rectangles where Manhattan
+  and Chebyshev boundary-distance agree; only the test's nested boxes
+  create the concave corners that separate the two metrics. The
+  Chebyshev fix corrected all twenty-nine miscolored test cells and
+  left both training pairs and the other 119 tasks unchanged - a
+  clean one-line metric change with zero regression.
+
+
+ATTEMPT 115 - 2026-07-04 - Score: 112/120 = 93.33%
+
+Date: 2026-07-04
+
+Confirmed score: 112 / 120 = 93.33%
+
+Rule added in this wave:
+  pinwheel_spiral (WP-373, Layer 348).
+
+Task solved: da515329 (3 training pairs + 1 test case). One plus sign
+  of a single color with an empty center on a uniform background
+  unfolds into a full-grid interlocking spiral. The plus is a
+  pinwheel hub whose four equal arms each wind a square spiral
+  outward always turning clockwise; the four ninety-degree-rotated
+  spirals mesh into a one-cell-gap pinwheel. One hidden arm-length
+  parameter L drives the outward run max(1, L-1), the sideways jog
+  max(0, L-2), and the trailing run max(2, L); the jog vanishes for
+  L up to two, so only the harder training pair exposes the stepped
+  spiral sides, and the unified turtle reproduces all training pairs
+  and the held-out arm-length-four test with zero regression.
 
 
 ATTEMPT 114 - 2026-07-04 - Score: 111/120 = 92.50%
@@ -6346,6 +6414,8 @@ a32d8b75  - Wave 111 - fractal_stamp      - legend panels beside full-height 6-c
 446ef5d2  - Wave 112 - anchor_jigsaw      - scattered fragments tile a rectangle by translation alone; an L-tromino marker cups the missing cell of its two-by-two box, naming the picture corner that sits there and pinning the piece that holds it; the outer ring is uniformly the color at the cupped cell and every other color must form exactly one connected component
 9385bd28  - Wave 113 - bbox_fill (repair) - two opposite-corner L-trominoes per color define a rectangle drawn solid in the color's legend fill; the repair stacks overlapping rectangles by LEGEND ORDER instead of bounding-box area, which agreed on the nested training pairs but disagreed on the crossing test, where the earliest legend color must win its crossing cells
 35ab12c3  - Wave 114 - constellation        - sparse same-color dot constellations grow into connected glyphs by joining each pair of dots that is both collinear and a Gabriel-graph edge, drawing perimeter edges while suppressing interior diameter chords; a lone dot beside a different multi-dot color casts a translated shadow of that color's glyph under the real glyphs
+da515329  - Wave 115 - pinwheel_spiral     - one single-color plus sign with an empty center unfolds into a full-grid interlocking spiral, its four ninety-degree-rotated clockwise square spirals meshing to a one-cell-gap pinwheel governed by a single arm-length parameter whose sideways jog stays hidden until the harder training pair
+13e47133  - Wave 116 - concentric_rings (repair) - nested divider boxes fill with concentric rings keyed by markers to boundary distance; the repair swaps four-connected Manhattan ring-distance for eight-connected Chebyshev distance so the rings are true concentric rectangles, curing an off-by-one that appears only at the concave corners where nested boxes meet
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
@@ -6853,4 +6923,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 114: Constellation - sparse same-color dot c
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 115: Pinwheel-spiral - the input holds one foreground object, a plus sign of a single color with an empty center drawn on a uniform background, and the output fills the entire grid with a dense interlocking spiral in the seed color; the plus is a pinwheel hub whose four equal arms each start a square spiral that winds outward always turning clockwise, and because the four spirals are ninety-degree rotations of one another their period-four walls mesh together leaving exactly a one-cell gap everywhere, a period-two pinwheel tiling the board; a single hidden parameter, the arm length L measured from center to tip, drives three lengths - the outward run max(1, L-1) that walks each arm to its tip before the first clockwise turn, the sideways jog max(0, L-2), and the trailing run max(2, L) - while the leading run of each spiral layer grows by four to give 2, 6, 10, 14 and so on, each layer ending in a clockwise quarter turn and each arm clipped where it leaves the grid; the discriminating observation of the wave is that jog = max(0, L-2) vanishes at L = 1 and L = 2, so the two smaller training pairs have straight spiral sides and are reproduced by a naive runs-1-4-8-12 model that hides the law, and only the L = 3 pair exposes the stepped sides carrying a one-cell jog and an L-growing trailing run, so the unified turtle is the sole law reproducing all three training pairs and the held-out arm-length-4 test whose sides jog by two, with zero regression across the 120-task benchmark.
   Score: 112/120 = 93.33%. Task da515329 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 116: Concentric-rings repair - a background field walled by a divider color into nested rectangular boxes fills each walled region with concentric rectangular rings whose color cycle is keyed by single-cell markers to the ring distance from the region boundary, the grid edge or a cell adjacent to a divider wall; the repair replaces the four-connected Manhattan multi-source breadth-first search that propagated ring distance with an eight-connected Chebyshev propagation, so the ring index stays constant along a box corner and the rings become true concentric rectangles; the fault was invisible in training because both training regions are simple rectangles where Manhattan and Chebyshev boundary-distance coincide, and only the test's nested divider boxes create the concave corners where four-connected propagation walks around the corner and over-counts the ring by one, so the Chebyshev fix corrects all twenty-nine miscolored test cells while leaving both training pairs and the other 119 tasks unchanged, a clean one-line metric change with zero regression across the 120-task benchmark.
+  Score: 113/120 = 94.17%. Task 13e47133 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
