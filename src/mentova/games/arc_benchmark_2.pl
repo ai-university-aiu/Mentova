@@ -1039,6 +1039,34 @@ arc2_induce_rule(TrainingPairs, stencil_carve) :-
 % Each training pair must transform correctly under stencil_carve.
            arc2_transform(stencil_carve, In, Out)).
 
+% demo_transfer: early dispatch before generic clause (WP-351, Layer 326).
+% Enumerate demo_transfer as a known rule name.
+arc2_named_rule(demo_transfer).
+% arc2_induce_rule(demo_transfer): four-ring-box pre-filter + verify.
+arc2_induce_rule(TrainingPairs, demo_transfer) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The input must be a large scene grid.
+    H >= 20,
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output must be as small as a box interior.
+    OH =< 8,
+% Fetch the first output row.
+    FirstOut = [FOR|_],
+% Measure the first output width.
+    length(FOR, OW),
+% The output width must be as small as a box interior.
+    OW =< 8,
+% The scene must contain the four ring boxes.
+    once(dt_boxes_(First, _)),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under demo_transfer.
+           arc2_transform(demo_transfer, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -19837,3 +19865,372 @@ stc_cell_(R0, C0, Tiles, Bg, V) :-
     ->  I is RM - 1, J is CM - 1, nth0(I, Tile, TRow), nth0(J, TRow, V)
 % Every cell outside the tiles carries the background color.
     ;   V = Bg ).
+
+% ---------------------------------------------------------------------------
+% DEMO TRANSFER (WP-351, Layer 326)
+% demo_transfer: the scene grid holds four square ring boxes that share one
+% frame color and one side length.  One box interior is empty (the answer
+% slot), two box interiors share the same nonzero color set and form a
+% worked demonstration (before and after of a transformation), and the
+% fourth box interior is the question.  The demonstrated transformation is
+% identified from a small library (complement, connect, ripple) by checking
+% it against the demo pair in both directions, preferring the direction
+% whose source box has a nonzero-cell count closest to the question box.
+% The learned transformation applied to the question interior is the output.
+% Reference: ARC-AGI-2 task 4c7dc4dd -- in-grid worked example transfer.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(demo_transfer): learn the demo transformation, apply it.
+arc2_transform(demo_transfer, Grid, Out) :-
+% Locate the four ring-box interiors of the scene.
+    dt_boxes_(Grid, Ints),
+% Split the interiors into the demo pair and the question box.
+    dt_classify_(Ints, B1, B2, Q),
+% Learn the demonstrated operation and its direction.
+    dt_learn_(B1, B2, Q, Op),
+% Apply the learned operation to the question interior.
+    dt_apply_(Op, Q, Out),
+% Commit to the first successful reading of the scene.
+    !.
+
+% dt_boxes_(+Grid, -Ints): interiors of the four same-key ring boxes.
+dt_boxes_(Grid, Ints) :-
+% Measure the grid height.
+    length(Grid, H),
+% Fetch the first grid row.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Collect every candidate square ring in the grid.
+    findall(box(F, S, R, C), dt_ring_(Grid, H, W, F, S, R, C), Rings),
+% Collect the color-size key of every candidate ring.
+    findall(F1-S1, member(box(F1, S1, _, _), Rings), Keys0),
+% Deduplicate the keys.
+    sort(Keys0, Keys),
+% Choose a key shared by exactly four rings.
+    member(FK-SK, Keys),
+% Gather the rings carrying the chosen key.
+    include(dt_key_ring_(FK, SK), Rings, Group),
+% Exactly four rings must share the key.
+    length(Group, 4),
+% Extract the interior grid of each ring in the group.
+    findall(Int,
+% Walk every ring of the group.
+            ( member(box(_, S2, R2, C2), Group),
+% Cut the interior out of the scene.
+              dt_interior_(Grid, S2, R2, C2, Int) ),
+% Bind the four interiors.
+            Ints).
+
+% dt_key_ring_(+F, +S, +Box): the box carries frame color F and side S.
+dt_key_ring_(F, S, box(F2, S2, _, _)) :-
+% The frame colors must match.
+    F2 == F,
+% The ring sides must match.
+    S2 == S.
+
+% dt_ring_(+Grid, +H, +W, -F, -S, -R, -C): one candidate square ring box.
+dt_ring_(Grid, H, W, F, S, R, C) :-
+% Try each plausible ring side length.
+    between(5, 9, S),
+% Compute the last top row that still fits the ring.
+    MaxR is H - S,
+% Try each top row.
+    between(0, MaxR, R),
+% Compute the last left column that still fits the ring.
+    MaxC is W - S,
+% Try each left column.
+    between(0, MaxC, C),
+% Read the frame color at the top-left ring corner.
+    arc2_cell_(Grid, R, C, F),
+% The frame color must be nonzero.
+    F =\= 0,
+% Compute the bottom row of the ring.
+    R2 is R + S - 1,
+% Compute the right column of the ring.
+    C2 is C + S - 1,
+% The whole top edge must carry the frame color.
+    forall(between(C, C2, J1), dt_cell_is_(Grid, R, J1, F)),
+% The whole bottom edge must carry the frame color.
+    forall(between(C, C2, J2), dt_cell_is_(Grid, R2, J2, F)),
+% The whole left edge must carry the frame color.
+    forall(between(R, R2, I1), dt_cell_is_(Grid, I1, C, F)),
+% The whole right edge must carry the frame color.
+    forall(between(R, R2, I2), dt_cell_is_(Grid, I2, C2, F)),
+% Extract the ring interior.
+    dt_interior_(Grid, S, R, C, Int),
+% Collect the distinct nonzero interior colors.
+    dt_nonzero_colors_(Int, Cs),
+% Count the distinct nonzero interior colors.
+    length(Cs, NC),
+% A box interior holds at most two mark colors.
+    NC =< 2,
+% Count the zero cells of the interior.
+    dt_zero_count_(Int, NZ),
+% A box interior rests on a zero background.
+    NZ >= 4.
+
+% dt_cell_is_(+Grid, +R, +C, +F): cell (R,C) carries color F.
+dt_cell_is_(Grid, R, C, F) :-
+% Read the cell value.
+    arc2_cell_(Grid, R, C, V),
+% The value must equal the frame color.
+    V =:= F.
+
+% dt_interior_(+Grid, +S, +R, +C, -Int): interior grid of a ring box.
+dt_interior_(Grid, S, R, C, Int) :-
+% First interior row index.
+    R1 is R + 1,
+% Last interior row index.
+    RE is R + S - 2,
+% First interior column index.
+    C1 is C + 1,
+% Last interior column index.
+    CE is C + S - 2,
+% Build the interior row list.
+    findall(IRow,
+% Walk every interior row index.
+            ( between(R1, RE, I),
+% Fetch the scene row.
+              nth0(I, Grid, Row),
+% Slice the interior columns out of the row.
+              findall(V, ( between(C1, CE, J), nth0(J, Row, V) ), IRow) ),
+% Bind the interior grid.
+            Int).
+
+% dt_nonzero_colors_(+G, -Cs): sorted distinct nonzero colors of grid G.
+dt_nonzero_colors_(G, Cs) :-
+% Collect every nonzero cell value.
+    findall(V, ( member(Row, G), member(V, Row), V =\= 0 ), Vs),
+% Sort and deduplicate the values.
+    sort(Vs, Cs).
+
+% dt_zero_count_(+G, -N): number of zero cells in grid G.
+dt_zero_count_(G, N) :-
+% Collect a token for every zero cell.
+    findall(z, ( member(Row, G), member(V, Row), V =:= 0 ), Zs),
+% Count the zero cells.
+    length(Zs, N).
+
+% dt_count_(+G, -N): number of nonzero cells in grid G.
+dt_count_(G, N) :-
+% Collect a token for every nonzero cell.
+    findall(z, ( member(Row, G), member(V, Row), V =\= 0 ), Vs),
+% Count the nonzero cells.
+    length(Vs, N).
+
+% dt_all_zero_(+G): every cell of grid G is zero.
+dt_all_zero_(G) :-
+% Walk every row of the grid.
+    forall(member(Row, G),
+% Every cell of the row must be zero.
+           forall(member(V, Row), V =:= 0)).
+
+% dt_classify_(+Ints, -B1, -B2, -Q): split into demo pair and question.
+dt_classify_(Ints, B1, B2, Q) :-
+% Pick the empty answer-slot box.
+    select(E, Ints, Rest),
+% The answer slot is entirely zero.
+    dt_all_zero_(E),
+% Pick the question box among the remaining three.
+    select(Q, Rest, [B1, B2]),
+% Read the demo color set from the first demo box.
+    dt_nonzero_colors_(B1, Cs),
+% The demo boxes must not be empty.
+    Cs \== [],
+% Read the color set of the second demo box.
+    dt_nonzero_colors_(B2, Cs2),
+% The two demo boxes share one color set.
+    Cs2 == Cs,
+% Read the question color set.
+    dt_nonzero_colors_(Q, CsQ),
+% The question box must not be empty.
+    CsQ \== [],
+% The question color set differs from the demo color set.
+    CsQ \== Cs.
+
+% dt_learn_(+B1, +B2, +Q, -Op): learn the demonstrated operation.
+dt_learn_(B1, B2, Q, Op) :-
+% Count the nonzero cells of the question box.
+    dt_count_(Q, QN),
+% Collect every operation matching the demo in either direction.
+    findall(D-Op0,
+% Try both demo directions.
+            ( member(X-Y, [B1-B2, B2-B1]),
+% The operation must map the source box onto the target box.
+              dt_op_(Op0, X, Y),
+% Count the nonzero cells of the source box.
+              dt_count_(X, XN),
+% Distance between the source and question cell counts.
+              D is abs(XN - QN) ),
+% Bind the candidate list.
+            Cands),
+% Prefer the direction whose source resembles the question.
+    msort(Cands, [_-Op|_]).
+
+% dt_op_(-Op, +X, +Y): complement maps demo box X onto demo box Y.
+dt_op_(complement, X, Y) :-
+% Complement must reproduce the demo target.
+    dt_apply_(complement, X, Y2),
+% The reproduction must equal the target exactly.
+    Y2 == Y.
+% dt_op_(-Op, +X, +Y): connect maps demo box X onto demo box Y.
+dt_op_(connect(Corner), X, Y) :-
+% Read the source mark colors.
+    dt_nonzero_colors_(X, Cs),
+% Try each source mark color as the corner marker.
+    member(Corner, Cs),
+% Connect must reproduce the demo target.
+    dt_apply_(connect(Corner), X, Y2),
+% The reproduction must equal the target exactly.
+    Y2 == Y.
+% dt_op_(-Op, +X, +Y): ripple maps demo box X onto demo box Y.
+dt_op_(ripple, X, Y) :-
+% Ripple must reproduce the demo target.
+    dt_apply_(ripple, X, Y2),
+% The reproduction must equal the target exactly.
+    Y2 == Y.
+
+% dt_apply_(complement): swap zero and the single mark color.
+dt_apply_(complement, G, Out) :-
+% The grid must hold exactly one nonzero color.
+    dt_nonzero_colors_(G, [C]),
+% Rebuild the grid with zero and the mark color swapped.
+    findall(ORow,
+% Walk every row of the grid.
+            ( member(Row, G),
+% Swap every cell of the row.
+              findall(V2, ( member(V, Row), dt_swap_(C, V, V2) ), ORow) ),
+% Bind the swapped grid.
+            Out).
+% dt_apply_(connect(Corner)): fill straight zero gaps between marks.
+dt_apply_(connect(Corner), G, Out) :-
+% Read the mark colors of the grid.
+    dt_nonzero_colors_(G, Cs),
+% Exactly two mark colors are required.
+    Cs = [_, _],
+% The corner color must be one of the marks.
+    memberchk(Corner, Cs),
+% The other mark color becomes the fill color.
+    selectchk(Corner, Cs, [Fill]),
+% Collect the horizontal gap cells.
+    findall(RC1, dt_gap_cell_(G, RC1), Fs1),
+% Transpose the grid to reuse the row scan on columns.
+    arc2_transform(transpose, G, T),
+% Collect the vertical gap cells with coordinates swapped back.
+    findall(RG-CG, dt_gap_cell_(T, CG-RG), Fs2),
+% Merge both gap cell lists.
+    append(Fs1, Fs2, Fs),
+% Rebuild the grid with the gaps filled.
+    findall(ORow,
+% Walk every row with its index.
+            ( nth0(R, G, Row),
+% Rebuild the row cell by cell.
+              findall(V2,
+% Walk every cell of the row with its column.
+                      ( nth0(C, Row, V),
+% Keep marks, paint gap cells, and keep the rest zero.
+                        dt_fill_cell_(V, R-C, Fs, Fill, V2) ),
+% Bind the rebuilt row.
+                      ORow) ),
+% Bind the rebuilt grid.
+            Out).
+% dt_apply_(ripple): push the radial pattern outward periodically.
+dt_apply_(ripple, G, Out) :-
+% Measure the grid side.
+    length(G, S),
+% The side must be odd so a center cell exists.
+    1 =:= S mod 2,
+% Compute the center coordinate.
+    M is (S - 1) // 2,
+% Compute the largest Manhattan distance from the center.
+    Dmax is S - 1,
+% Read the radial color profile of the grid.
+    findall(P, ( between(0, Dmax, D1), dt_ring_val_(G, M, D1, P) ), Prof),
+% The profile must be uniform at every distance.
+    length(Prof, S),
+% Split the profile into leading marks and trailing zeros.
+    append(Lead, Rest, Prof),
+% The leading section holds only marks.
+    forall(member(L, Lead), L =\= 0),
+% The trailing section holds only zeros.
+    forall(member(Z, Rest), Z =:= 0),
+% Measure the pattern extent.
+    length(Lead, K),
+% The pattern must exist.
+    K >= 1,
+% The pattern must have room to move outward.
+    Rest = [_|_],
+% Build the moved and repeated profile.
+    findall(Q,
+% Walk every distance.
+            ( between(0, Dmax, D2),
+% Inner distances go blank and outer ones repeat the pattern.
+              dt_ripple_val_(D2, K, Lead, Q) ),
+% Bind the new profile.
+            NProf),
+% Render the new profile as a radial grid.
+    findall(ORow,
+% Walk every output row index.
+            ( between(0, Dmax, I),
+% Build the output row cell by cell.
+              findall(QV,
+% Walk every output column index.
+                      ( between(0, Dmax, J),
+% Compute the cell distance from the center.
+                        D3 is abs(I - M) + abs(J - M),
+% Read the profile color at that distance.
+                        nth0(D3, NProf, QV) ),
+% Bind the output row.
+                      ORow) ),
+% Bind the output grid.
+            Out).
+
+% dt_swap_(+C, +V, -V2): swap zero with the mark color C.
+dt_swap_(C, V, V2) :-
+% Zero cells take the mark color and mark cells become zero.
+    ( V =:= 0 -> V2 = C ; V2 = 0 ).
+
+% dt_fill_cell_(+V, +RC, +Fs, +Fill, -V2): paint one connect cell.
+dt_fill_cell_(V, RC, Fs, Fill, V2) :-
+% Marks stay, gap cells take the fill color, and others stay zero.
+    ( V =\= 0 -> V2 = V ; memberchk(RC, Fs) -> V2 = Fill ; V2 = 0 ).
+
+% dt_gap_cell_(+G, -RC): zero cell strictly between two row marks.
+dt_gap_cell_(G, R-C) :-
+% Walk every row with its index.
+    nth0(R, G, Row),
+% Collect the mark columns of the row in order.
+    findall(J, ( nth0(J, Row, V), V =\= 0 ), Js),
+% Pick two consecutive marks of the row.
+    append(_, [A, B|_], Js),
+% The marks must leave a gap of zeros between them.
+    B - A >= 2,
+% Compute the first gap column.
+    C0 is A + 1,
+% Compute the last gap column.
+    C1 is B - 1,
+% Enumerate the gap columns.
+    between(C0, C1, C).
+
+% dt_ring_val_(+G, +M, +D, -P): uniform color at Manhattan distance D.
+dt_ring_val_(G, M, D, P) :-
+% Collect every cell value at distance D from the center.
+    findall(V,
+% Walk every row with its index.
+            ( nth0(I, G, Row),
+% Walk every cell of the row with its column.
+              nth0(J, Row, V),
+% Keep cells at the requested distance.
+              abs(I - M) + abs(J - M) =:= D ),
+% Bind the ring values.
+            Vs),
+% The ring must not be empty.
+    Vs = [P|_],
+% Every ring cell must carry the same color.
+    forall(member(V2, Vs), V2 =:= P).
+
+% dt_ripple_val_(+D, +K, +Lead, -Q): profile color after the move.
+dt_ripple_val_(D, K, Lead, Q) :-
+% Inner distances go blank and outer ones repeat the moved pattern.
+    ( D < K -> Q = 0 ; D2 is (D - K) mod K, nth0(D2, Lead, Q) ).
