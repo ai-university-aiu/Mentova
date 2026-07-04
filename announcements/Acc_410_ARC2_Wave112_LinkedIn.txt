@@ -1,0 +1,45 @@
+Accomplishment 410: ARC-AGI-2 Wave 112 - Anchor Jigsaw: The L-Tromino Bracket, Translation-Only Tiling, and the Coherence Law
+
+PrologAI solves ARC-AGI-2 task 446ef5d2 with a new glass-box rule
+called anchor_jigsaw (WP-370, Layer 345), raising the benchmark
+score from 108/120 = 90.00% to 109/120 = 90.83%.
+
+Each input of this task scatters ragged colored fragments across
+the grid - up to ten pieces, some not even rectangular - plus a
+three-cell L-tromino marker drawn in a color that appears nowhere
+else. The marker is a corner bracket: its three cells fill a
+two-by-two box except for one missing cell, and that cupped cell
+is a triple command. It says WHERE the finished picture stands,
+WHICH of its corners touches the spot, and WHICH piece never
+moves - because the fragments are jigsaw pieces that tile, by
+translation alone, a rectangle whose area equals their total cell
+count, pinned by the piece that contains the cupped cell and
+ringed by a uniform border in the color found right there.
+
+The delicate part is that an airtight-looking exact-cover tiling
+is still ambiguous. With only the uniform-border constraint the
+solver finds TWO tilings of the 22x10 test rectangle - and
+prefers the false one, whose color frames are torn into separated
+clusters. The fix is the coherence law: every non-border color of
+the finished picture must form exactly one connected component.
+That single demand rejects the incoherent assembly and accepts
+the true picture - three clean nested rings stacked in a column -
+and it holds silently on both training pairs as well.
+
+The wave's lesson: the human jigsaw instinct that a picture's
+frames must not fall apart is a formal constraint, one connected
+component per color, and it is exactly the constraint the puzzle
+demands. Three cells of marker suffice to command position,
+orientation, and anchor at once.
+
+The complete rule was written in plain English covering every
+grid before any code, the placement law was verified by
+programmatic diff after a one-row eyeballing slip nearly
+discarded it, a Python prototype confirmed the algorithm and
+caught the ambiguous-tiling trap before any Prolog existed, and
+the integrated Prolog rule passed the single-task test and the
+full regression on its first compile. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
