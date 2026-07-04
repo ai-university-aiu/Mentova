@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 103 complete: 100/120 = 83.33%.
+Last updated: 2026-07-04. Wave 104 complete: 101/120 = 84.17%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -225,6 +225,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  |  98 / 120  | 81.67%  | Wave 101: legend_snake two large regions of two dominant colors meet along a jagged diagonal boundary; a legend strip of two-by-two blocks near the top-left corner, separated by single background columns, spells out a repeating color pattern read left to right, and a lone two-by-two block elsewhere names the turn color; single marker cells of the pattern's first color sit on the left edge inside one region and each shoots a snake path eastward through its own region, painting the legend pattern cyclically with the marker as position zero; whenever the next cell leaves the region that blocking cell is painted the turn color and the snake pivots from east to north or from north to east, blocking cells consume no pattern position, a second consecutive block ends the path without a second mark, the path ends silently at the grid edge, and the legend strip and the turn block are erased to the region color that surrounds them - the pivot bookkeeping is the discriminating observation, because the turn mark spends no pattern position and a blocked pivot must end the path quietly, which is exactly how the second training snake stops dead against the boundary after a single mark
 2026-07-04  |  99 / 120  | 82.50%  | Wave 102: ray_scatter the scene holds one connected blob of a single color on a uniform background, plus one or two lone marker cells sitting on the grid border; each marker fires a ray into the grid along its own row or column, reaching exactly the farthest blob cell on that line, painting the background cells along the way in the marker color while blob cells on the line keep their color and stay in place; the remaining blob cells split into side pieces - the four quadrants around the crossing when two rays are present, or the two sides of the line when only one ray fires - and every piece translates rigidly so its bounding box lands flush in a grid corner, moving away from each ray across the line and toward the marker's own edge along a single ray; a piece whose destination corner touches no marker edge is deleted from the scene - the deleted quadrant is the discriminating observation, because in the two-ray training pair the bottom-left piece simply vanishes, and only the corner-touches-a-marker-edge test explains why the three other pieces survive while that one is swallowed
 2026-07-04  | 100 / 120  | 83.33%  | Wave 103: tower_donate the scene holds towers of three-by-five diamond glyphs stacked upward from the bottom of the grid, one background row between glyphs and every glyph of a tower sharing one color, while the bottom grid row carries five-wide marker bars aligned exactly under specific towers - color 2 marks a donor tower and color 3 marks a receiver tower; every donor tower keeps its height but is repainted gray with color 5, the donated total is the sum of all donor tower heights, every receiver tower grows by that many extra glyphs stacked on top in its own color with centers climbing four rows per glyph, unmarked towers stay untouched, and all marker bars are erased to background - the donated-sum bookkeeping is the discriminating observation, because the test grid carries two donor bars whose one-glyph towers together grow the receiver by two glyphs, while each training grid carries a single donor whose height alone sets the growth
+2026-07-04  | 101 / 120  | 84.17%  | Wave 104: box_tally the scene holds hollow rectangular boxes, each drawn as a one-cell-thick frame of its own color with a pure background interior, sharing the grid with small scattered shapes of assorted colors; every non-background color splits into 4-connected components, a component that is exactly the border of its own bounding box of at least three by three is a box and every other component is scatter; the output erases everything to background, redraws each box frame in place, and prints tally dots of the box color on the box's middle interior row, one dot per scatter component of that same color, right-aligned starting two columns left of the right frame edge and spaced two cells apart, while scatter colors owning no box simply vanish - counting components rather than cells is the discriminating observation, because a box color's scatter pieces range from dominoes to two-by-three blocks with wildly different cell totals, yet the dot count always equals the number of separate pieces
 
 
 COMPLETE SCORE PROGRESSION
@@ -1245,6 +1246,60 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 104 - 2026-07-04 - Score: 101/120 = 84.17%
+
+Date: 2026-07-04
+
+Confirmed score: 101 / 120 = 84.17%
+
+Rules added in this wave:
+  box_tally (WP-362, Layer 337)
+
+Task solved: 8f215267 (3 training pairs + 1 test case; grids
+  23 columns wide and 20 to 27 rows tall; the output always
+  keeps the input size).
+
+Algorithm: hollow boxes tally their scattered siblings.
+  Stage 1: read the background as the most frequent color and
+  split every non-background color into 4-connected components.
+  Stage 2: classify each component - a component whose cells are
+  exactly the border of its own bounding box, at least three rows
+  and three columns in span, is a hollow box; every other
+  component is a scatter shape.
+  Stage 3: start from a blank background canvas and redraw every
+  box frame in place, leaving its interior clean.
+  Stage 4: for each box, count the scatter components of the
+  box's own color and print that many tally dots of that color
+  on the box's middle interior row, right-aligned starting two
+  columns left of the right frame edge and spaced two cells
+  apart; a box with zero scatter siblings stays empty.
+  Stage 5: scatter shapes whose color owns no box are simply
+  erased with everything else.
+
+Bugs fixed: none. The rule passed the single-task test and the
+  full regression on the first compile.
+
+Lessons learned: the task had been shelved for seven waves under
+  a stale "instruction patch drives stripe count" reading; a
+  fresh grid dump dissolved it in minutes. The dots are not
+  stripes and there is no lookup - each framed box is simply a
+  counter, and the number it displays is the count of separate
+  same-colored pieces scattered elsewhere in the grid. Counting
+  components rather than cells is the discriminating observation:
+  the color-8 scatter in the first training pair totals ten cells
+  in four pieces of four different shapes, and the box prints
+  exactly four dots. Distractor colors with no box (color 3 in
+  training pair one, colors 5 and 9 in the test) confirm the
+  erase-everything baseline. The old lesson holds: do not trust
+  a prior wave's surface reading - re-dump the data and count
+  everything before theorizing.
+
+Accomplishment: Acc_402.  Paper: Acc_402_ARC2_Wave104_BoxTally.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5586,6 +5641,7 @@ de809cff  - Wave 99 - hole_beacon        - two rectilinear regions on zero backg
 195c6913  - Wave 101 - legend_snake      - two-region diagonal scene; a top-left legend strip of two-by-two blocks spells a repeating color pattern, left-edge markers shoot eastward snakes painted with the pattern that pivot north then east along the region boundary, each blocking cell painted the lone block's turn color; legend and turn block erased
 4a21e3da  - Wave 102 - ray_scatter       - border markers fire rays to the farthest blob cell on their line, painting background marker-colored; on-line blob cells stay, the rest split into quadrant or side pieces that ride rigid translations flush into the grid corners, and a piece bound for a corner touching no marker edge is deleted
 9aaea919  - Wave 103 - tower_donate      - towers of three-by-five diamond glyphs with five-wide bottom-row marker bars; color-2 donor towers keep their height but turn gray 5, and each color-3 receiver tower grows by the summed donor heights, new glyphs stacked on top in its own color; marker bars erased
+8f215267  - Wave 104 - box_tally         - hollow one-cell-thick frames share the grid with scattered shapes; output erases scatter, redraws each frame, and prints one dot per same-colored scatter component on the middle interior row, right-aligned two columns inside the right edge and spaced two apart
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
@@ -6059,4 +6115,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 102: Ray-scatter - the scene holds one conne
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 103: Tower-donate - the scene holds towers of three-by-five diamond glyphs stacked upward from the bottom of the grid, one background row between glyphs and every glyph of a tower sharing one color, while the bottom grid row carries five-wide marker bars aligned exactly under specific towers - color 2 marks a donor tower and color 3 marks a receiver tower; every donor tower keeps its height but is repainted gray with color 5, the donated total is the sum of all donor tower heights, every receiver tower grows by that many extra glyphs stacked on top in its own color with centers climbing four rows per glyph, unmarked towers stay untouched, and all marker bars are erased to background; the donated-sum bookkeeping is the discriminating observation of the wave, because the three training growths (+2, +1, +3) equal the single donor heights (2, 1, 3) pair by pair, and the test grid carries two donor bars whose one-glyph towers together grow the receiver by exactly two glyphs, so only the summed-donation reading covers all four grids.
   Score: 100/120 = 83.33%. Task 9aaea919 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 104: Box-tally - the scene holds hollow rectangular boxes, each drawn as a one-cell-thick frame of its own color with a pure background interior, sharing the grid with small scattered shapes of assorted colors; every non-background color splits into 4-connected components, a component that is exactly the border of its own bounding box of at least three rows and three columns is a box, and every other component is a scatter shape; the output erases everything to background, redraws each box frame in place, and prints tally dots of the box color on the box's middle interior row, one dot per scatter component of that same color, right-aligned starting two columns left of the right frame edge and spaced two cells apart, while scatter colors owning no box simply vanish; counting components rather than cells is the discriminating observation of the wave, because the color-8 scatter in the first training pair totals ten cells spread over four pieces of four different shapes and the box prints exactly four dots, while the distractor colors with no box confirm the erase-everything baseline.
+  Score: 101/120 = 84.17%. Task 8f215267 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
