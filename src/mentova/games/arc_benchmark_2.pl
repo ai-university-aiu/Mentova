@@ -1309,6 +1309,42 @@ arc2_induce_rule(TrainingPairs, legend_snake) :-
 % Each training pair must transform correctly under legend_snake.
            arc2_transform(legend_snake, In, Out)).
 
+% ray_scatter: early dispatch before generic clause (WP-360, Layer 335).
+% Enumerate ray_scatter as a known rule name.
+arc2_named_rule(ray_scatter).
+% arc2_induce_rule(ray_scatter): border-marker pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, ray_scatter) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Read the scene colors, the border markers, and the blob cells.
+    rs_scene_(First, _, _, _, Markers, BlobCells),
+% At least one marker cell must be present.
+    Markers = [_|_],
+% The blob must contain at least one cell.
+    BlobCells = [_|_],
+% Every marker must sit on the grid border.
+    forall(member(MR-MC, Markers), rs_on_border_(MR, MC, H, W)),
+% Convert each marker into a ray descriptor.
+    rs_rays_(Markers, H, W, Rays),
+% Every ray line must cross at least one blob cell.
+    forall(member(Ray, Rays), rs_ray_far_(Ray, BlobCells, _)),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under ray_scatter.
+           arc2_transform(ray_scatter, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -22246,3 +22282,322 @@ ls_step_(Grid, Rc, Pat, L, T, R, C, Pos, DR, DC, R2, C2, _, G0, G) :-
 ls_turn_(0, 1, -1, 0).
 % ls_turn_/4 second case: north pivots to east.
 ls_turn_(-1, 0, 0, 1).
+
+% ---------------------------------------------------------------------------
+% RAY SCATTER (WP-360, Layer 335)
+% ray_scatter: a single blob of one color sits mid-grid, and one or two
+% lone marker cells sit on the grid border.  Each marker fires a ray into
+% the grid along its row or column, reaching the farthest blob cell on
+% that line; background cells along the ray are painted the marker color
+% while blob cells on the line keep the blob color and stay in place.
+% The remaining blob cells split into side pieces: with two rays the four
+% quadrants around the crossing, with one ray the two sides of the line.
+% Each piece translates rigidly so its bounding box lands flush in its
+% destination corner: across a ray it moves away from the line to its own
+% side wall, and along a single ray it moves toward the marker's edge.  A
+% piece whose destination corner touches no marker edge is deleted.
+% Reference: ARC-AGI-2 task 4a21e3da -- border rays blast a blob apart.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(ray_scatter): fire border rays and scatter blob pieces.
+arc2_transform(ray_scatter, Grid, Out) :-
+% Read the scene colors, the border markers, and the blob cells.
+    rs_scene_(Grid, Bg, Blob, Mk, Markers, BlobCells),
+% Measure the grid height.
+    length(Grid, H),
+% Take the first grid row.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Build a blank background canvas of the same size.
+    rs_blank_(H, W, Bg, Canvas0),
+% Keep every marker cell at its original border position.
+    foldl(rs_put_(Mk), Markers, Canvas0, Canvas1),
+% Convert each marker into a ray descriptor.
+    rs_rays_(Markers, H, W, Rays),
+% At least one ray must be present for the rule to apply.
+    Rays = [_|_],
+% Draw every ray onto the canvas.
+    foldl(rs_draw_ray_(BlobCells, Blob, Mk), Rays, Canvas1, Canvas2),
+% Collect the blob cells lying on any ray line.
+    include(rs_on_ray_(Rays), BlobCells, OnRay),
+% The remaining blob cells form the movable pieces.
+    subtract(BlobCells, OnRay, PieceCells),
+% Group the movable cells into corner-bound pieces.
+    rs_groups_(PieceCells, Rays, Groups),
+% Collect the border edges that hold a marker.
+    rs_marker_edges_(Markers, H, W, Edges),
+% Translate every surviving piece flush into its corner.
+    foldl(rs_place_(H, W, Blob, Edges), Groups, Canvas2, Out).
+
+% rs_scene_(+Grid, -Bg, -Blob, -Mk, -Markers, -BlobCells): read the scene.
+rs_scene_(Grid, Bg, Blob, Mk, Markers, BlobCells) :-
+% Flatten the grid into a single cell list.
+    append(Grid, Cells),
+% Order the cells so equal colors become adjacent.
+    msort(Cells, Sorted),
+% Compress the ordered cells into color-count pairs.
+    clumped(Sorted, Counted),
+% Re-key each pair by its count for frequency ordering.
+    findall(N-V, member(V-N, Counted), ByCount),
+% Exactly three colors must rank from background down to marker.
+    sort(0, @>=, ByCount, [_-Bg, _-Blob, MkN-Mk]),
+% The marker color appears at most twice.
+    MkN =< 2,
+% Collect every marker cell position.
+    findall(R-C, (nth0(R, Grid, MRow), nth0(C, MRow, Mk)), Markers),
+% Collect every blob cell position.
+    findall(R-C, (nth0(R, Grid, BRow), nth0(C, BRow, Blob)), BlobCells).
+
+% rs_on_border_(+R, +C, +H, +W): the cell lies on the grid border.
+rs_on_border_(R, C, H, W) :-
+% Accept a cell on the top, bottom, left, or right border line.
+    (   R =:= 0
+% Otherwise check the bottom border row.
+    ;   R =:= H - 1
+% Otherwise check the left border column.
+    ;   C =:= 0
+% Otherwise check the right border column.
+    ;   C =:= W - 1
+% Close the border membership disjunction.
+    ), !.
+
+% rs_blank_(+H, +W, +Bg, -Canvas): build a background-only canvas.
+rs_blank_(H, W, Bg, Canvas) :-
+% Allocate the requested number of rows.
+    length(Canvas, H),
+% Fill each allocated row with background cells.
+    maplist([CRow]>>(length(CRow, W), maplist(=(Bg), CRow)), Canvas).
+
+% rs_put_(+V, +Cell, +G0, -G): paint one cell with color V.
+rs_put_(V, R-C, G0, G) :-
+% Write the color into the canvas at the cell position.
+    arc2_set_cell_(G0, R, C, V, G).
+
+% rs_rays_(+Markers, +H, +W, -Rays): one ray descriptor per marker.
+rs_rays_(Markers, H, W, Rays) :-
+% Convert each border marker into its ray term.
+    maplist(rs_ray_(H, W), Markers, Rays).
+
+% rs_ray_(+H, +W, +Marker, -Ray): top markers fire a downward column ray.
+rs_ray_(_, _, MR-MC, ray(v, MC, 1, MR)) :-
+% A marker on the top row fires downward.
+    MR =:= 0, !.
+% rs_ray_/4 second case: bottom markers fire an upward column ray.
+rs_ray_(H, _, MR-MC, ray(v, MC, -1, MR)) :-
+% A marker on the bottom row fires upward.
+    MR =:= H - 1, !.
+% rs_ray_/4 third case: left markers fire a rightward row ray.
+rs_ray_(_, _, MR-MC, ray(h, MR, 1, MC)) :-
+% A marker on the left column fires rightward.
+    MC =:= 0, !.
+% rs_ray_/4 fourth case: right markers fire a leftward row ray.
+rs_ray_(_, W, MR-MC, ray(h, MR, -1, MC)) :-
+% A marker on the right column fires leftward.
+    MC =:= W - 1.
+
+% rs_ray_far_(+Ray, +BlobCells, -Far): farthest blob cell on the ray line.
+rs_ray_far_(ray(v, Col, Dir, _), BlobCells, Far) :-
+% Collect the rows of every blob cell in the ray column.
+    findall(R, member(R-Col, BlobCells), Rs),
+% The ray column must cross the blob at least once.
+    Rs = [_|_],
+% A downward ray reaches the lowest crossing, an upward ray the highest.
+    (   Dir =:= 1 -> max_list(Rs, Far) ; min_list(Rs, Far)   ).
+% rs_ray_far_/3 second case: horizontal rays scan a row.
+rs_ray_far_(ray(h, Row, Dir, _), BlobCells, Far) :-
+% Collect the columns of every blob cell in the ray row.
+    findall(C, member(Row-C, BlobCells), Cs),
+% The ray row must cross the blob at least once.
+    Cs = [_|_],
+% A rightward ray reaches the rightmost crossing, a leftward the leftmost.
+    (   Dir =:= 1 -> max_list(Cs, Far) ; min_list(Cs, Far)   ).
+
+% rs_draw_ray_(+BlobCells, +Blob, +Mk, +Ray, +G0, -G): draw one ray.
+rs_draw_ray_(BlobCells, Blob, Mk, Ray, G0, G) :-
+% Find where the ray stops inside the blob.
+    rs_ray_far_(Ray, BlobCells, Far),
+% Enumerate every line position between marker and stop.
+    rs_ray_span_(Ray, Far, Positions),
+% Paint each position with the blob or the marker color.
+    foldl(rs_ray_cell_(BlobCells, Blob, Mk, Ray), Positions, G0, G).
+
+% rs_ray_span_(+Ray, +Far, -Positions): positions swept by a forward ray.
+rs_ray_span_(ray(_, _, 1, MPos), Far, Positions) :-
+% Start one step past the marker position.
+    S is MPos + 1,
+% Enumerate the positions up to the stopping point.
+    numlist(S, Far, Positions).
+% rs_ray_span_/3 second case: positions swept by a backward ray.
+rs_ray_span_(ray(_, _, -1, MPos), Far, Positions) :-
+% End one step past the marker position.
+    E is MPos - 1,
+% Enumerate the positions down to the stopping point.
+    numlist(Far, E, Positions).
+
+% rs_ray_cell_(+BlobCells, +Blob, +Mk, +Ray, +Pos, +G0, -G): paint one cell.
+rs_ray_cell_(BlobCells, Blob, Mk, ray(v, Col, _, _), R, G0, G) :-
+% Blob cells on the line stay blob colored, background turns marker colored.
+    (   memberchk(R-Col, BlobCells) -> V = Blob ; V = Mk   ),
+% Write the chosen color into the vertical ray cell.
+    arc2_set_cell_(G0, R, Col, V, G).
+% rs_ray_cell_/7 second case: horizontal ray cells sweep a row.
+rs_ray_cell_(BlobCells, Blob, Mk, ray(h, Row, _, _), C, G0, G) :-
+% Blob cells on the line stay blob colored, background turns marker colored.
+    (   memberchk(Row-C, BlobCells) -> V = Blob ; V = Mk   ),
+% Write the chosen color into the horizontal ray cell.
+    arc2_set_cell_(G0, Row, C, V, G).
+
+% rs_on_ray_(+Rays, +Cell): the blob cell lies on some ray line.
+rs_on_ray_(Rays, R-C) :-
+% Match the cell column against a vertical ray or its row against a
+% horizontal ray.
+    (   memberchk(ray(v, C, _, _), Rays) -> true
+% Otherwise check the horizontal ray line.
+    ;   memberchk(ray(h, R, _, _), Rays)
+% Close the ray membership disjunction.
+    ).
+
+% rs_groups_(+PieceCells, +Rays, -Groups): corner-keyed piece groups.
+rs_groups_(PieceCells, Rays, Groups) :-
+% Collect one group term per corner key that owns at least one cell.
+    findall(VD-HD-GCells,
+% Enumerate the vertical corner keys.
+            (   member(VD, [u, d]),
+% Enumerate the horizontal corner keys.
+                member(HD, [l, r]),
+% Collect the movable cells keyed to this corner.
+                findall(Cell,
+% Each movable cell must carry the current corner key.
+                        (   member(Cell, PieceCells),
+% Compute the corner key of the candidate cell.
+                            rs_key_(Rays, Cell, VD, HD)   ),
+% Bind the collected cells of this corner.
+                        GCells),
+% Keep only corners that own at least one cell.
+                GCells = [_|_]   ),
+% Bind the collected corner groups.
+            Groups).
+
+% rs_key_(+Rays, +Cell, -VD, -HD): corner key of one movable cell.
+rs_key_(Rays, R-C, VD, HD) :-
+% Determine the vertical half from the rays.
+    rs_vside_(Rays, R, VD),
+% Determine the horizontal half from the rays.
+    rs_hside_(Rays, C, HD).
+
+% rs_vside_(+Rays, +R, -VD): vertical half of a movable cell.
+rs_vside_(Rays, R, VD) :-
+% A horizontal ray splits the grid into an upper and a lower half.
+    (   memberchk(ray(h, HRow, _, _), Rays)
+% Cells above the ray row move up and cells below move down.
+    ->  (   R < HRow -> VD = u ; VD = d   )
+% Without a horizontal ray the vertical marker edge decides.
+    ;   memberchk(ray(v, _, Dir, _), Rays),
+% A top marker pulls pieces up and a bottom marker pulls them down.
+        (   Dir =:= 1 -> VD = u ; VD = d   )
+% Close the vertical half disjunction.
+    ).
+
+% rs_hside_(+Rays, +C, -HD): horizontal half of a movable cell.
+rs_hside_(Rays, C, HD) :-
+% A vertical ray splits the grid into a left and a right half.
+    (   memberchk(ray(v, VCol, _, _), Rays)
+% Cells left of the ray column move left and cells right move right.
+    ->  (   C < VCol -> HD = l ; HD = r   )
+% Without a vertical ray the horizontal marker edge decides.
+    ;   memberchk(ray(h, _, Dir, _), Rays),
+% A left marker pulls pieces left and a right marker pulls them right.
+        (   Dir =:= 1 -> HD = l ; HD = r   )
+% Close the horizontal half disjunction.
+    ).
+
+% rs_marker_edges_(+Markers, +H, +W, -Edges): border edges holding markers.
+rs_marker_edges_(Markers, H, W, Edges) :-
+% Collect every edge name touched by a marker.
+    findall(E,
+% Enumerate each marker cell.
+            (   member(MR-MC, Markers),
+% Name the border edge under the marker.
+                rs_edge_(MR, MC, H, W, E)   ),
+% Bind the collected edge names.
+            Es),
+% Deduplicate the collected edge names.
+    sort(Es, Edges).
+
+% rs_edge_(+R, +C, +H, +W, -E): name a border edge under a cell.
+rs_edge_(0, _, _, _, top).
+% rs_edge_/5 second case: the bottom border row.
+rs_edge_(R, _, H, _, bottom) :-
+% The cell must sit on the last row.
+    R =:= H - 1.
+% rs_edge_/5 third case: the left border column.
+rs_edge_(_, 0, _, _, left).
+% rs_edge_/5 fourth case: the right border column.
+rs_edge_(_, C, _, W, right) :-
+% The cell must sit on the last column.
+    C =:= W - 1.
+
+% rs_place_(+H, +W, +Blob, +Edges, +Group, +G0, -G): move one piece.
+rs_place_(H, W, Blob, Edges, VD-HD-GCells, G0, G) :-
+% Name the two border edges meeting at the destination corner.
+    rs_corner_edges_(VD, HD, E1, E2),
+% A piece survives only when its corner touches a marker edge.
+    (   (   memberchk(E1, Edges) -> true ; memberchk(E2, Edges)   )
+% Compute the rigid translation that lands the piece in the corner.
+    ->  rs_offsets_(H, W, VD, HD, GCells, DR, DC),
+% Paint every translated piece cell onto the canvas.
+        foldl(rs_shift_put_(Blob, DR, DC), GCells, G0, G)
+% A piece bound for an unmarked corner is deleted.
+    ;   G = G0
+% Close the piece survival conditional.
+    ).
+
+% rs_corner_edges_(+VD, +HD, -E1, -E2): edges of the up-left corner.
+rs_corner_edges_(u, l, top, left).
+% rs_corner_edges_/4 second case: edges of the up-right corner.
+rs_corner_edges_(u, r, top, right).
+% rs_corner_edges_/4 third case: edges of the down-left corner.
+rs_corner_edges_(d, l, bottom, left).
+% rs_corner_edges_/4 fourth case: edges of the down-right corner.
+rs_corner_edges_(d, r, bottom, right).
+
+% rs_offsets_(+H, +W, +VD, +HD, +Cells, -DR, -DC): corner-flush shift.
+rs_offsets_(H, W, VD, HD, Cells, DR, DC) :-
+% Collect the row of every piece cell.
+    findall(R, member(R-_, Cells), Rs),
+% Collect the column of every piece cell.
+    findall(C, member(_-C, Cells), Cs),
+% An upward piece lands flush on the top wall.
+    (   VD = u
+% Find the topmost row of the piece bounding box.
+    ->  min_list(Rs, MinR),
+% Shift the topmost row onto row zero.
+        DR is -MinR
+% A downward piece lands flush on the bottom wall.
+    ;   max_list(Rs, MaxR),
+% Shift the bottommost row onto the last row.
+        DR is H - 1 - MaxR
+% Close the vertical shift conditional.
+    ),
+% A leftward piece lands flush on the left wall.
+    (   HD = l
+% Find the leftmost column of the piece bounding box.
+    ->  min_list(Cs, MinC),
+% Shift the leftmost column onto column zero.
+        DC is -MinC
+% A rightward piece lands flush on the right wall.
+    ;   max_list(Cs, MaxC),
+% Shift the rightmost column onto the last column.
+        DC is W - 1 - MaxC
+% Close the horizontal shift conditional.
+    ).
+
+% rs_shift_put_(+Blob, +DR, +DC, +Cell, +G0, -G): paint a shifted cell.
+rs_shift_put_(Blob, DR, DC, R-C, G0, G) :-
+% Compute the translated row of the piece cell.
+    R2 is R + DR,
+% Compute the translated column of the piece cell.
+    C2 is C + DC,
+% Paint the blob color at the translated position.
+    arc2_set_cell_(G0, R2, C2, Blob, G).
