@@ -1,0 +1,42 @@
+Accomplishment 400: ARC-AGI-2 Wave 102 - Ray Scatter: Border Rays Blasting a Blob into the Corners
+
+PrologAI solves ARC-AGI-2 task 4a21e3da with a new glass-box rule
+called ray_scatter (WP-360, Layer 335), raising the benchmark
+score from 98/120 = 81.67% to 99/120 = 82.50%.
+
+Each input of this task shows one connected blob of a single color
+floating near the middle of the grid, and one or two lone marker
+dots resting on the border. In the output the blob has been blasted
+apart. Every marker fires a ray straight into the grid along its
+own row or column, reaching exactly as far as the farthest blob
+cell on that line; the background along the ray takes the marker
+color, and the blob cells the ray passes through stay welded in
+place. Everything else flies: the blob's side pieces translate
+rigidly into the corners of the grid, each landing flush against
+two walls with its shape preserved cell for cell.
+
+The geometry has two twists. Across a ray, a piece flees the line
+to the wall on its own side - but along a single ray, both pieces
+fly toward the marker's end of the grid, not away from it. And in
+the two-ray training pair, one piece simply vanishes: the markers
+sit on the top and right edges, and while the top-left, top-right,
+and bottom-right pieces land in corners touching a marked edge,
+the bottom-left corner touches neither - so its piece is swallowed
+whole. That deletion test is the observation that cracks the task.
+
+The hand trace earned its keep this wave. A first reading of the
+second training pair invented a phantom missing cell, which bred
+three wrong deletion hypotheses before a careful re-print of the
+expected output showed the piece intact all along. The final rule
+needs no cell-level deletions at all - just rays, anchored line
+cells, rigid corner translations, and the one whole-piece rule.
+
+The complete rule was written in plain English covering every grid
+before any code, confirmed by a full cell-level diff and a Python
+prototype reproducing all four grids exactly, and the integrated
+Prolog rule passed the single-task test and the full regression on
+its first compile. Pure induction. No pretraining. Every rule is
+named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
