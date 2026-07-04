@@ -1,0 +1,51 @@
+Accomplishment 413: ARC-AGI-2 Wave 115 - Pinwheel Spiral: Four Clockwise Arms From One Plus Seed
+
+PrologAI solves ARC-AGI-2 task da515329 with a new glass-box rule,
+pinwheel_spiral (WP-373, Layer 348), raising the benchmark score
+from 111/120 = 92.50% to 112/120 = 93.33%.
+
+The input shows almost nothing: a single small plus sign of one
+color, floating on an empty background. The output is a dense,
+whole-grid spiral in that same color. The whole task is the
+question - how does the tiny seed become the huge spiral?
+
+Read the plus as a machine. It is a pinwheel hub with an empty
+center and four equal arms. Each arm is the starting tail of a
+square spiral that winds outward, always turning clockwise. The
+four spirals are ninety-degree rotations of one another, so their
+walls mesh like the teeth of four gears and leave exactly a
+one-cell gap everywhere - a period-two pinwheel that fills the
+whole board.
+
+Everything hinges on one hidden number: the arm length L, the
+distance from the center to a tip. Three lengths follow from it -
+the outward run max(1, L-1), a sideways jog max(0, L-2), and a
+trailing run max(2, L) - while the leading run of each spiral
+layer grows by four, giving 2, 6, 10, 14, and so on. Each arm is a
+turtle that walks out to its tip, turns clockwise, and repeats
+those layered runs until it leaves the grid.
+
+The discriminator is subtle and beautiful. Because the jog
+max(0, L-2) is zero when L is 1 or 2, the two smaller training
+pairs have perfectly straight spiral sides and look like an
+ordinary spiral - a naive model of runs 1, 4, 8, 12 reproduces
+them and hides the real law. Only the L = 3 training pair reveals
+that the spiral sides are stepped, carrying a one-cell jog and a
+trailing run that grows with L. The unified turtle is the single
+law that reproduces all three training pairs AND the held-out
+test, whose plus has arm length 4 and whose spiral sides jog by
+two.
+
+Clipping is free: the four turtles record every cell they visit,
+including cells off the edge, and the renderer simply paints the
+in-grid ones. No existing predicate was touched; a full 120-task
+regression shows net plus one with zero regression.
+
+The lesson: a whole complex figure can be the deterministic
+unfolding of one seed under one parameter, and the parameter can
+stay invisible in the easy examples until a single harder example
+forces it into the open. Pure induction. No pretraining. Every
+rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
