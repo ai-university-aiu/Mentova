@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 104 complete: 101/120 = 84.17%.
+Last updated: 2026-07-04. Wave 105 complete: 102/120 = 85.00%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -226,6 +226,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  |  99 / 120  | 82.50%  | Wave 102: ray_scatter the scene holds one connected blob of a single color on a uniform background, plus one or two lone marker cells sitting on the grid border; each marker fires a ray into the grid along its own row or column, reaching exactly the farthest blob cell on that line, painting the background cells along the way in the marker color while blob cells on the line keep their color and stay in place; the remaining blob cells split into side pieces - the four quadrants around the crossing when two rays are present, or the two sides of the line when only one ray fires - and every piece translates rigidly so its bounding box lands flush in a grid corner, moving away from each ray across the line and toward the marker's own edge along a single ray; a piece whose destination corner touches no marker edge is deleted from the scene - the deleted quadrant is the discriminating observation, because in the two-ray training pair the bottom-left piece simply vanishes, and only the corner-touches-a-marker-edge test explains why the three other pieces survive while that one is swallowed
 2026-07-04  | 100 / 120  | 83.33%  | Wave 103: tower_donate the scene holds towers of three-by-five diamond glyphs stacked upward from the bottom of the grid, one background row between glyphs and every glyph of a tower sharing one color, while the bottom grid row carries five-wide marker bars aligned exactly under specific towers - color 2 marks a donor tower and color 3 marks a receiver tower; every donor tower keeps its height but is repainted gray with color 5, the donated total is the sum of all donor tower heights, every receiver tower grows by that many extra glyphs stacked on top in its own color with centers climbing four rows per glyph, unmarked towers stay untouched, and all marker bars are erased to background - the donated-sum bookkeeping is the discriminating observation, because the test grid carries two donor bars whose one-glyph towers together grow the receiver by two glyphs, while each training grid carries a single donor whose height alone sets the growth
 2026-07-04  | 101 / 120  | 84.17%  | Wave 104: box_tally the scene holds hollow rectangular boxes, each drawn as a one-cell-thick frame of its own color with a pure background interior, sharing the grid with small scattered shapes of assorted colors; every non-background color splits into 4-connected components, a component that is exactly the border of its own bounding box of at least three by three is a box and every other component is scatter; the output erases everything to background, redraws each box frame in place, and prints tally dots of the box color on the box's middle interior row, one dot per scatter component of that same color, right-aligned starting two columns left of the right frame edge and spaced two cells apart, while scatter colors owning no box simply vanish - counting components rather than cells is the discriminating observation, because a box color's scatter pieces range from dominoes to two-by-three blocks with wildly different cell totals, yet the dot count always equals the number of separate pieces
+2026-07-04  | 102 / 120  | 85.00%  | Wave 105: dot_crawler the scene holds one multi-cell crawler shape of a single color plus a field of single-cell dots of the same color, and full-height single-color separator columns may split the grid into panels showing earlier snapshots of the same crawl; in the leftmost panel the crawler's nose is the shape cell sitting alone on one edge of the shape's bounding box, the nose fires along its outward direction to the nearest dot in line, and from there the crawl greedily hops to the nearest remaining dot sharing a row or column until every dot is consumed; the output is a single background panel holding only the crawler, docked with its nose exactly on the final dot and its body rotated by the quarter turn that points the nose along the direction of the last chain leg - the full-consumption test on the nose candidates is the discriminating observation, because a shape can present two lone edge cells and only the true nose threads a chain through every dot, and when both candidates thread a full chain in opposite directions the second panel breaks the tie, since the true first stop is already consumed or covered there while the false one still sits free
 
 
 COMPLETE SCORE PROGRESSION
@@ -1246,6 +1247,70 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 105 - 2026-07-04 - Score: 102/120 = 85.00%
+
+Date: 2026-07-04
+
+Confirmed score: 102 / 120 = 85.00%
+
+Rules added in this wave:
+  dot_crawler (WP-363, Layer 338)
+
+Task solved: 5545f144 (3 training pairs + 1 test case; training
+  inputs 10x26, 8x27, and 12x25 split into equal panels by
+  full-height separator columns; the test input is a single
+  15x15 panel; the output always keeps one panel's size).
+
+Algorithm: a crawler shape walks an orthogonal dot chain.
+  Stage 1: read the background as the most frequent color and
+  split the grid into panels at full-height columns of a single
+  non-background color; the leftmost panel carries the scene to
+  solve, and its dimensions fix the output size.
+  Stage 2: group the panel's foreground cells - all of one
+  color - into 8-connected components; the largest component is
+  the crawler shape and every single-cell component is a dot.
+  Stage 3: find the nose - a shape cell that sits alone on the
+  top, bottom, left, or right edge of the shape's bounding box,
+  pointing outward; fire a ray from each candidate nose along
+  its direction to the nearest dot in line, then greedily hop
+  to the nearest remaining dot sharing a row or column until no
+  dot is left; only a candidate that consumes every dot is
+  valid.
+  Stage 4: if two candidates both consume every dot (the chain
+  read forward and backward), consult the second panel: the true
+  first stop is already consumed or covered by the shape there,
+  while the false first stop still sits free as a dot.
+  Stage 5: dock the crawler on the final dot of the chain -
+  rotate the shape's nose-relative offsets by the clockwise
+  quarter turns that carry the nose heading onto the direction
+  of the last chain leg, place the nose exactly on the final
+  dot, and paint the result on a blank background panel.
+
+Bugs fixed: none. A Python prototype confirmed all four grids
+  before any Prolog was written, and the rule passed the
+  single-task test and the full regression on the first compile.
+
+Lessons learned: the task had been shelved since Wave 90 under
+  a wrong panel-overlay reading. The panels are not layers to
+  combine - they are TIME, successive snapshots of one crawl,
+  and the test drops the separators entirely to show a single
+  frame. The key that opened the task was accounting for every
+  dot: the dots are not noise but a route whose consecutive
+  stops always share a row or column, and the shape's protruding
+  nose cell rides exactly on top of each visited dot, so the
+  final frame is fully determined by the chain's last leg. When
+  single-cell markers accompany one moving shape, check whether
+  the markers form an orthogonal chain from the shape's tip
+  before treating them as decorations. The snapshot panels also
+  double as disambiguators: any mid-crawl frame separates a
+  path start from a path end read in reverse.
+
+Accomplishment: Acc_403.  Paper: Acc_403_ARC2_Wave105_DotCrawler.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5606,6 +5671,7 @@ ALL SOLVED TASKS
 45a5af55  - Wave 6  - band_wrap           - concentric rectangular rings from row-color bands
 4c3d4a41  - Wave 7  - staircase_lift      - staircase heights reposition right-half color bars
 53fb4810  - Wave 27 - stream_extend       - A-marker blobs; adjacent seed chains extended periodically to grid boundary
+5545f144  - Wave 105 - dot_crawler        - one crawler shape with a lone protruding nose cell plus single-cell dots forming an orthogonal chain; panels are crawl snapshots; output docks the crawler nose-first on the final dot, rotated along the last chain leg
 6e453dd6  - Wave 28 - slide_open          - 0-cell components slid right to 5-divider; open rows filled right with 2
 7491f3cf  - Wave 9  - panel_overlay       - s1-seeded flood-fill splits s2/s3 into panel 4
 7b5033c1  - Wave 2  - chain_strip          - connected-blob chain traversal strip
@@ -6119,4 +6185,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 103: Tower-donate - the scene holds towers o
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 104: Box-tally - the scene holds hollow rectangular boxes, each drawn as a one-cell-thick frame of its own color with a pure background interior, sharing the grid with small scattered shapes of assorted colors; every non-background color splits into 4-connected components, a component that is exactly the border of its own bounding box of at least three rows and three columns is a box, and every other component is a scatter shape; the output erases everything to background, redraws each box frame in place, and prints tally dots of the box color on the box's middle interior row, one dot per scatter component of that same color, right-aligned starting two columns left of the right frame edge and spaced two cells apart, while scatter colors owning no box simply vanish; counting components rather than cells is the discriminating observation of the wave, because the color-8 scatter in the first training pair totals ten cells spread over four pieces of four different shapes and the box prints exactly four dots, while the distractor colors with no box confirm the erase-everything baseline.
   Score: 101/120 = 84.17%. Task 8f215267 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 105: Dot-crawler - the scene holds one multi-cell crawler shape of a single color plus a field of single-cell dots of the same color, and full-height single-color separator columns may split the grid into panels showing successive snapshots of one crawl, with the leftmost panel carrying the scene to solve and fixing the output size; the crawler's nose is a shape cell sitting alone on one edge of the shape's bounding box, the nose fires along its outward direction to the nearest dot in line, and the crawl then greedily hops to the nearest remaining dot sharing a row or column until every dot is consumed, a test that only the true nose passes; when the chain reads validly in both directions the second panel breaks the tie, because the true first stop is already consumed or covered by the shape there while the false first stop still sits free; the output is a single background panel holding only the crawler, docked with its nose exactly on the final dot and its body offsets rotated by the clockwise quarter turns that carry the nose heading onto the direction of the last chain leg; the full-consumption nose test is the discriminating observation of the wave, because the second training grid presents two lone edge cells whose chains are exact reverses of each other, and only the snapshot panels reveal which end of the route the crawler actually walks.
+  Score: 102/120 = 85.00%. Task 5545f144 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.

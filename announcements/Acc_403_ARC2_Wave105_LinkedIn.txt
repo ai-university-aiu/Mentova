@@ -1,0 +1,39 @@
+Accomplishment 403: ARC-AGI-2 Wave 105 - Dot Crawler: A Shape Walking an Orthogonal Chain of Dots
+
+PrologAI solves ARC-AGI-2 task 5545f144 with a new glass-box rule
+called dot_crawler (WP-363, Layer 338), raising the benchmark score
+from 101/120 = 84.17% to 102/120 = 85.00%.
+
+Each input of this task shows a small shape with a single
+protruding nose cell, plus a sprinkling of lone dots of the same
+color. The training grids are split by separator columns into
+panels - and the panels are not layers to be combined. They are
+TIME: successive snapshots of one crawl. The dots are a route
+whose consecutive stops always share a row or a column, the
+crawler's nose rides exactly on top of each visited dot, and
+visited dots vanish from later panels. The test grid drops the
+separators entirely and shows a single frame.
+
+The output is the final frame: a clean panel holding only the
+crawler, docked nose-first on the last dot of the route, its body
+rotated by the quarter turn that points the nose along the
+direction of the final leg.
+
+The quiet trap is that a route can be read from either end. In the
+second training grid the shape presents two candidate noses, and
+both thread complete chains through all four dots - exact reverses
+of each other. Only the snapshot panels reveal which end the
+crawler actually walks: in the second panel the true first stop is
+already covered by the shape, while the false one still sits free.
+The task had been shelved since Wave 90 under a wrong panel-overlay
+reading; accounting for every single dot dissolved it.
+
+The complete rule was written in plain English covering every grid
+before any code, every chain was walked stop by stop by hand, a
+Python prototype confirmed all four grids, and the integrated
+Prolog rule passed the single-task test and the full regression on
+its first compile. Pure induction. No pretraining. Every rule is
+named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
