@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 94 complete: 91/120 = 75.83%.
+Last updated: 2026-07-04. Wave 95 complete: 92/120 = 76.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -216,6 +216,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  89 / 120  | 74.17%  | Wave 92: stencil_carve solid five-by-five monochrome square blocks stand in a regular grid arrangement with one-cell background gaps, each block a distinct color, while small three-by-three sketch motifs of various colors lie elsewhere in the scene; for each block color the bounding box of its cells outside the blocks is exactly three by three, and sketch colors without a block are decoys that are ignored; the output keeps the block arrangement on a fresh background canvas of height six times the block rows plus one and width six times the block columns plus one, and carves each block's central three-by-three region with its same-colored sketch - wherever the sketch shows the block color the cell turns background, and wherever the sketch shows background the cell keeps the block color
 2026-07-03  |  90 / 120  | 75.00%  | Wave 93: demo_transfer the scene holds four square ring boxes sharing one frame color and one side length, each interior resting on a zero background with sparse colored marks; one interior is entirely empty (the answer slot), two interiors share the same nonzero color set and form a worked demonstration - the before and after of a transformation - and the fourth interior is the question; the transformation is identified from a small library by checking the demo pair in both directions (complement swaps zero with the single mark color, connect fills straight zero gaps between collinear marks with the non-corner mark color, ripple pushes a Manhattan-radial pattern outward by its own extent and repeats it periodically), preferring the direction whose source box has a nonzero-cell count closest to the question box; the output is the learned transformation applied to the question interior with its own colors - the training pairs teach connect and complement while the test grid demands ripple, so the transformation must be read off the scene at answer time, not memorized from the training pairs
 2026-07-03  |  91 / 120  | 75.83%  | Wave 94: seam_weld the scene holds several multi-color pieces on a uniform background, and the pieces carry duplicated connector stubs - a same-color cell cluster drawn identically on two pieces, such as a five-cell column, a checkerboard corner, a three-cell bar, or a lone pair of marker cells; the pieces are welded into one assembly by superimposing matching stubs exactly: the largest piece seeds the canvas, and each remaining piece is placed so that every bounding-box cell landing on already-written canvas content agrees exactly, background included, and so that at least one whole same-color component of the piece coincides with a whole same-color component of the canvas; among valid placements the one welding the most non-background cells wins, and the output is the union bounding box of the welded assembly - plain greedy overlap welding picks spurious placements where a big component brushes another piece, so the whole-stub-onto-whole-stub condition is what makes the assembly unique
+2026-07-04  |  92 / 120  | 76.67%  | Wave 95: short_circuit the scene draws a wiring network on a uniform background using three foreground colors - a terminal color forming exactly two blocks, a marker color forming small junction blocks, and a body color forming the wire segments between them; every eight-connected same-color component is a node of a graph whose edges join eight-adjacent components, and the rule finds the path with the fewest nodes between the two terminal blocks and recolors every intermediate node on that path, body cells to 5 and marker cells to 3, while the terminals, the dead-end branches, and the longer alternative routes stay unchanged - the terminal color is recognized as the foreground color with the fewest cells, and the fewest-node graph search is what picks the correct route through a network whose junction blocks carry three or more attached segments
 
 
 COMPLETE SCORE PROGRESSION
@@ -1236,6 +1237,66 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 95 - 2026-07-04 - Score: 92/120 = 76.67%
+
+Date: 2026-07-04
+
+Confirmed score: 92 / 120 = 76.67%
+
+Rules added in this wave:
+  short_circuit (WP-353, Layer 328)
+
+Task solved: 7b0280bc (3 training pairs + 1 test case; grids
+  18x18, 15x15, and 20x20 in training and 30x30 in the test; the
+  output always keeps the input size and recolors only the cells
+  on one route through the scene).
+
+Algorithm: fewest-node route recoloring through a wiring network.
+  Stage 1: take the most common color as the background and rank
+  the exactly three foreground colors by ascending cell count: the
+  rarest is the terminal color, the middle one is the marker
+  color, and the most frequent is the wire body color.
+  Stage 2: group all foreground cells into whole same-color
+  components under eight-way adjacency; the terminal color must
+  form exactly two components - the two terminals of the circuit.
+  Stage 3: build a graph whose nodes are the components and whose
+  edges join two components holding any pair of eight-adjacent
+  cells.
+  Stage 4: run a breadth-first search from one terminal to the
+  other, yielding the route with the fewest nodes.
+  Stage 5: recolor every intermediate node of that route - body
+  components turn 5 and marker components turn 3 - and leave the
+  terminals, the dead-end branches, and every longer alternative
+  route untouched.
+
+Bugs fixed: none. The rule was hand-derived from full grid dumps
+  of all three training pairs, prototyped in Python, and the
+  prototype passed all three training pairs and the test grid on
+  the first run; the Prolog port then passed the single-task test
+  and the full regression on the first compile.
+
+Lessons learned: the network is a genuine graph, not a pair of
+  disjoint routes - junction blocks carry three or more attached
+  segments (in the test grid one marker block serves both the
+  shortest route and a long alternative), and dead-end spurs hang
+  off the terminals themselves, so route selection must be a
+  graph search rather than a component split. Counting nodes is
+  the right metric: the recolored route in every pair is the
+  unique fewest-node path between the two terminals, and no
+  cell-count or Euclidean tie-break was needed. Recognizing roles
+  by cell count generalizes across pairs whose colors permute
+  freely: the same color serves as wire body in one pair and as
+  junction marker in another, so identities must be derived per
+  grid, never memorized. The component machinery of Wave 94
+  (whole same-color parts under eight-way adjacency) was reused
+  verbatim, confirming the value of small reusable helpers.
+
+Accomplishment: Acc_393.  Paper: Acc_393_ARC2_Wave95_ShortCircuit.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5022,6 +5083,7 @@ d8e07eb2  - Wave 91 - catalog_query      - a fixed four-by-four catalog of three
 58f5dbd5  - Wave 92 - stencil_carve      - solid five-by-five blocks in a regular grid arrangement pair with three-by-three sketch motifs of the same color elsewhere in the scene; the output keeps the arrangement on a fresh background canvas and carves each block's central three-by-three region with the negative of its sketch, sketch-colored cells punching background holes
 4c7dc4dd  - Wave 93 - demo_transfer      - four square ring boxes share one frame color and side length; the empty interior marks the answer slot, the two interiors sharing a color set demonstrate a transformation, and the learned operation (complement, connect, or ripple) is applied to the question interior with its own colors
 4e34c42c  - Wave 94 - seam_weld          - multi-color pieces carry duplicated connector stubs drawn identically on two pieces; the largest piece seeds the canvas and every other piece is welded on so that all landed cells agree exactly and a whole same-color stub of the piece covers a whole same-color stub of the canvas, the union bounding box forming the output
+7b0280bc  - Wave 95 - short_circuit      - a wiring network of wire segments and junction blocks connects two terminal blocks of the rarest foreground color; every eight-connected same-color component is a graph node, edges join eight-adjacent components, and the fewest-node route between the terminals is recolored - body cells to 5 and marker cells to 3 - leaving terminals, dead ends, and longer routes unchanged
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -5430,3 +5492,7 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 93: Demo-transfer - the scene holds four squ
 Dison, D. R. (2026). ARC-AGI-2 Wave 94: Seam-weld - the scene holds several multi-color pieces on a uniform background, and the pieces carry duplicated connector stubs - a same-color cell cluster drawn identically on two pieces, such as a five-cell column, a checkerboard corner, a three-cell bar, or a lone pair of marker cells; the pieces are welded into one assembly by superimposing matching stubs exactly: the largest piece seeds the canvas with its entire bounding box written background included, and each remaining piece is placed so that every bounding-box cell landing on already-written canvas content agrees exactly and at least one whole same-color component of the piece lands entirely on written cells and coincides exactly with one whole same-color component of the canvas; among valid placements the earliest one welding the strictly most non-background cells wins, and the output is the union bounding box of the welded assembly with the background elsewhere; component totality is the discriminating observation of the wave, because plain greedy overlap welding picks spurious placements where a large component of one piece brushes another piece with a few accidentally agreeing cells, while the correct weld always superimposes a complete stub onto a complete stub - and the smallest legitimate weld in the task joins just two marker cells, so no overlap-size threshold can replace the totality condition; the welding also subsumes the key-piece pattern, since the small piece duplicating one end of a larger piece simply welds on top of that end and adds nothing to the union bounding box.
   Score: 91/120 = 75.83%. Task 4e34c42c solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 95: Short-circuit - the scene draws a wiring network on a uniform background using exactly three foreground colors: a terminal color forming exactly two blocks, a marker color forming small junction blocks, and a body color forming the wire segments between them; the roles are recognized per grid by cell count alone, the rarest color being the terminals, because the same color serves as wire body in one pair and as junction marker in another; every eight-connected same-color component is a node of a graph whose edges join components holding any pair of eight-adjacent cells, and a breadth-first search finds the route with the fewest nodes between the two terminal blocks; every intermediate node on that route is recolored, body components to 5 and marker components to 3, while the terminals, the dead-end spurs, and every longer alternative route stay untouched; the graph reading is the discriminating observation of the wave, because the network is not a pair of disjoint routes - junction blocks carry three or more attached segments and one marker block in the test grid serves both the shortest route and a long alternative - so route selection must be a genuine fewest-node graph search rather than a component split.
+  Score: 92/120 = 76.67%. Task 7b0280bc solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.

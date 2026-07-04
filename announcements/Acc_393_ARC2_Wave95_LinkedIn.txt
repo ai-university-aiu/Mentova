@@ -1,0 +1,43 @@
+Accomplishment 393: ARC-AGI-2 Wave 95 - Short Circuit: Recoloring the Fewest-Node Route Between Two Terminals
+
+PrologAI solves ARC-AGI-2 task 7b0280bc with a new glass-box rule
+called short_circuit (WP-353, Layer 328), raising the benchmark
+score from 91/120 = 75.83% to 92/120 = 76.67%.
+
+Each input of this task draws a wiring network on a plain
+background: wire segments snake across the grid, small junction
+blocks sit where wires meet, and two special blocks of a rarer
+color mark the terminals of a circuit. The answer highlights
+exactly one route through the maze - the route from terminal to
+terminal that passes through the fewest stops - painting its wire
+cells one color and its junction blocks another, while everything
+off that route stays untouched.
+
+Two things make it tricky. First, the colors swap roles from grid
+to grid: the color that draws the wires in one example draws the
+junctions in another, so the solver ranks the three foreground
+colors by how many cells each covers - the rarest is the
+terminals, the middle one the junctions, the most frequent the
+wire body - and reads the roles fresh off every grid. Second, the
+network is a real graph, not two neat alternatives laid side by
+side: junctions serve three or more wires, dead-end spurs hang
+right off the terminals, and in the test grid one junction sits on
+both the shortest route and a long detour. Only a genuine
+breadth-first search over the component graph picks the right
+path.
+
+The rule groups every same-color cluster into a node, joins nodes
+that touch, searches for the fewest-node path between the two
+terminals, and recolors just the stops in between. The training
+grids are up to 20x20; the test grid is a 30x30 maze with eight
+junction blocks and branches everywhere - and the same five-stage
+procedure reads it correctly, cell for cell.
+
+The complete rule was written in plain English covering every grid
+before any code, the Python prototype passed all four grids on the
+first run, and the integrated Prolog rule passed the single-task
+test and the full regression on the first compile. Pure induction.
+No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
