@@ -1555,6 +1555,38 @@ arc2_induce_rule(TrainingPairs, ray_merge) :-
 % Allow at most one pair with a small extra-paint-only deviation.
     CostSum =< 1.
 
+% cavity_paint: early dispatch before generic clause (WP-366, Layer 341).
+% Enumerate cavity_paint as a known rule name.
+arc2_named_rule(cavity_paint).
+% arc2_induce_rule(cavity_paint): two-shape pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, cavity_paint) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% Measure the first output height.
+    length(FirstOut, OH),
+% The output must be strictly shorter than the input.
+    OH < H,
+% Take the first input row.
+    First = [FRow|_],
+% Measure the first input width.
+    length(FRow, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% Measure the first output width.
+    length(ORow, OW),
+% The output must be strictly narrower than the input.
+    OW < W,
+% Identify the background of the first input.
+    arc2_bg_color_(First, Bg),
+% The first input must split into a mono mask and a multi-color template.
+    cvp_split_(First, Bg, _Mask, _MaskColor, _Templ),
+% Verify every training pair under the cavity_paint transform.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must reproduce its output exactly.
+           arc2_transform(cavity_paint, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -24402,3 +24434,249 @@ rm_extra_only_(In, Out, Computed, N) :-
            ( arc2_cell_(In, R, C, VI), arc2_cell_(Out, R, C, VI) )),
 % Count the deviating cells.
     length(Diffs, N).
+
+% ---------------------------------------------------------------------------
+% cavity_paint: the input holds exactly two foreground shapes — a monochrome
+% hollow silhouette (the mask) and a multi-color template that redraws the
+% same figure with its cavities painted.  The output crops to the mask
+% bounding box, keeps every mask cell in the mask color, paints each enclosed
+% background cavity with the color of the template region whose normalized
+% centroid lies nearest, and leaves open background cells as background
+% (WP-366, Layer 341).
+% ---------------------------------------------------------------------------
+
+% arc2_transform(cavity_paint): crop the mask and dye its cavities.
+arc2_transform(cavity_paint, Grid, Out) :-
+% Identify the background as the most frequent color.
+    arc2_bg_color_(Grid, Bg),
+% Split the foreground into the mono mask and the multi-color template.
+    cvp_split_(Grid, Bg, MaskCells, MaskColor, TemplCells),
+% Measure the mask bounding box.
+    cvp_bbox_(MaskCells, MR0, MC0, MR1, MC1),
+% Compute the output height from the mask bounding box.
+    H is MR1 - MR0 + 1,
+% Compute the output width from the mask bounding box.
+    W is MC1 - MC0 + 1,
+% Translate every mask cell into bounding-box local coordinates.
+    findall(LR-LC, ( member(R-C, MaskCells), LR is R - MR0, LC is C - MC0 ), MaskLocal0),
+% Sort the local mask cells for fast membership tests.
+    sort(MaskLocal0, MaskLocal),
+% Collect the enclosed cavities of the mask as 4-connected regions.
+    cvp_hole_comps_(MaskLocal, H, W, HoleComps),
+% Gather the colored regions of the template.
+    cvp_templ_regions_(Grid, TemplCells, MaskColor, Regions),
+% At least one colored template region must exist.
+    Regions = [_|_],
+% Measure the template bounding box.
+    cvp_bbox_(TemplCells, TR0, TC0, TR1, TC1),
+% Dye every cavity with its nearest template region color.
+    maplist(cvp_dye_(H, W, TR0, TC0, TR1, TC1, Regions), HoleComps, Paints0),
+% Flatten the per-cavity paint lists into one list.
+    append(Paints0, Paints),
+% Render the output grid from mask, paint, and background.
+    cvp_render_(H, W, MaskLocal, MaskColor, Paints, Bg, Out).
+
+% cvp_fg_cells_(+Grid, +Bg, -Cells): collect all non-background coordinates.
+cvp_fg_cells_(Grid, Bg, Cells) :-
+% Enumerate every cell whose color differs from the background.
+    findall(R-C, ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= Bg ), Cells).
+
+% cvp_neigh_(+Conn, +Cell, -Neighbor): enumerate the neighbors of a cell.
+cvp_neigh_(Conn, R-C, NR-NC) :-
+% Choose the offset set for the requested connectivity.
+    (   Conn =:= 4
+% Four-connectivity uses the orthogonal offsets only.
+    ->  member(DR-DC, [(-1)-0, 1-0, 0-(-1), 0-1])
+% Eight-connectivity adds the diagonal offsets.
+    ;   member(DR-DC, [(-1)-(-1), (-1)-0, (-1)-1, 0-(-1), 0-1, 1-(-1), 1-0, 1-1])
+    ),
+% Apply the row offset.
+    NR is R + DR,
+% Apply the column offset.
+    NC is C + DC.
+
+% cvp_comps_(+Conn, +Cells, -Comps): split a cell set into components.
+cvp_comps_(_Conn, [], []).
+% Grow one component from the first remaining seed cell.
+cvp_comps_(Conn, [Seed|Rest], [Comp|Comps]) :-
+% Flood outward from the seed across the cell set.
+    cvp_flood_(Conn, [Seed], [Seed|Rest], [Seed], Comp),
+% Remove the finished component from the remaining cells.
+    subtract(Rest, Comp, Remaining),
+% Continue splitting the remaining cells.
+    cvp_comps_(Conn, Remaining, Comps).
+
+% cvp_flood_(+Conn, +Frontier, +All, +Seen, -Comp): breadth-first flood fill.
+cvp_flood_(_Conn, [], _All, Seen, Comp) :-
+% Sort the visited cells into the finished component.
+    sort(Seen, Comp).
+% Expand the first frontier cell.
+cvp_flood_(Conn, [Cell|Frontier], All, Seen, Comp) :-
+% Collect the unvisited in-set neighbors of the cell.
+    findall(N, ( cvp_neigh_(Conn, Cell, N), memberchk(N, All), \+ memberchk(N, Seen) ), News0),
+% Deduplicate the newly found neighbors.
+    sort(News0, News),
+% Mark the new neighbors as visited.
+    append(News, Seen, Seen1),
+% Queue the new neighbors behind the current frontier.
+    append(Frontier, News, Frontier1),
+% Continue flooding from the extended frontier.
+    cvp_flood_(Conn, Frontier1, All, Seen1, Comp).
+
+% cvp_split_(+Grid, +Bg, -Mask, -MaskColor, -Templ): find mask and template.
+cvp_split_(Grid, Bg, Mask, MaskColor, Templ) :-
+% Collect every foreground cell.
+    cvp_fg_cells_(Grid, Bg, Cells),
+% Group the foreground into 8-connected shapes.
+    cvp_comps_(8, Cells, Comps),
+% Exactly two shapes must exist.
+    Comps = [ShapeA, ShapeB],
+% List the distinct colors of the first shape.
+    cvp_colors_(Grid, ShapeA, ColorsA),
+% List the distinct colors of the second shape.
+    cvp_colors_(Grid, ShapeB, ColorsB),
+% The monochrome shape is the mask; the multi-color shape is the template.
+    (   ColorsA = [MaskColor], ColorsB = [_, _|_]
+% Assign the first shape as mask and the second as template.
+    ->  Mask = ShapeA, Templ = ShapeB
+% Otherwise the roles must be reversed.
+    ;   ColorsB = [MaskColor], ColorsA = [_, _|_],
+% Assign the second shape as mask and the first as template.
+        Mask = ShapeB, Templ = ShapeA
+    ).
+
+% cvp_colors_(+Grid, +Cells, -Colors): distinct colors of a cell set.
+cvp_colors_(Grid, Cells, Colors) :-
+% Read the color of every cell in the set.
+    findall(V, ( member(R-C, Cells), arc2_cell_(Grid, R, C, V) ), Vs),
+% Deduplicate into the sorted distinct color list.
+    sort(Vs, Colors).
+
+% cvp_bbox_(+Cells, -R0, -C0, -R1, -C1): bounding box of a cell set.
+cvp_bbox_(Cells, R0, C0, R1, C1) :-
+% Collect the row coordinates.
+    findall(R, member(R-_, Cells), Rs),
+% Collect the column coordinates.
+    findall(C, member(_-C, Cells), Cs),
+% The top edge is the minimum row.
+    min_list(Rs, R0),
+% The bottom edge is the maximum row.
+    max_list(Rs, R1),
+% The left edge is the minimum column.
+    min_list(Cs, C0),
+% The right edge is the maximum column.
+    max_list(Cs, C1).
+
+% cvp_hole_comps_(+MaskLocal, +H, +W, -HoleComps): enclosed cavity regions.
+cvp_hole_comps_(MaskLocal, H, W, HoleComps) :-
+% Precompute the row index bound.
+    H1 is H - 1,
+% Precompute the column index bound.
+    W1 is W - 1,
+% Collect every background cell inside the bounding box.
+    findall(R-C, ( between(0, H1, R), between(0, W1, C), \+ memberchk(R-C, MaskLocal) ), BgCells),
+% Keep the background cells that sit on the bounding-box border.
+    include(cvp_on_border_(H1, W1), BgCells, Border),
+% Flood the open outside region from the border cells.
+    cvp_flood_(4, Border, BgCells, Border, Outside),
+% The cavities are the background cells the outside flood never reached.
+    subtract(BgCells, Outside, HoleCells),
+% Group the cavity cells into 4-connected regions.
+    cvp_comps_(4, HoleCells, HoleComps).
+
+% cvp_on_border_(+H1, +W1, +Cell): the cell touches the bounding-box border.
+cvp_on_border_(H1, W1, R-C) :-
+% Any coordinate on an extreme row or column is on the border.
+    (   R =:= 0 ; R =:= H1 ; C =:= 0 ; C =:= W1 ), !.
+
+% cvp_templ_regions_(+Grid, +Cells, +MaskColor, -Regions): colored regions.
+cvp_templ_regions_(Grid, Cells, MaskColor, Regions) :-
+% Keep only the template cells that carry a cavity paint color.
+    findall(V-(R-C), ( member(R-C, Cells), arc2_cell_(Grid, R, C, V), V =\= MaskColor ), Pairs),
+% List every paint color occurrence.
+    findall(V, member(V-_, Pairs), Vs0),
+% Deduplicate the paint colors.
+    sort(Vs0, Colors),
+% Split every color's cells into 4-connected regions.
+    findall(Color-Comp,
+% Enumerate each paint color in turn.
+            ( member(Color, Colors),
+% Collect the cells of this color.
+              findall(Cell, member(Color-Cell, Pairs), ColorCells),
+% Group the color cells into 4-connected regions.
+              cvp_comps_(4, ColorCells, ColorComps),
+% Emit one region entry per component.
+              member(Comp, ColorComps) ),
+            Regions).
+
+% cvp_norm_centroid_(+Cells, +R0, +C0, +DR, +DC, -NR, -NC): unit centroid.
+cvp_norm_centroid_(Cells, R0, C0, DR, DC, NR, NC) :-
+% Count the cells of the region.
+    length(Cells, N),
+% Collect the row coordinates.
+    findall(R, member(R-_, Cells), Rs),
+% Collect the column coordinates.
+    findall(C, member(_-C, Cells), Cs),
+% Total the row coordinates.
+    sum_list(Rs, SR),
+% Total the column coordinates.
+    sum_list(Cs, SC),
+% Normalize the mean row into the unit interval.
+    NR is (SR / N - R0) / DR,
+% Normalize the mean column into the unit interval.
+    NC is (SC / N - C0) / DC.
+
+% cvp_dye_(+H, +W, +TR0, +TC0, +TR1, +TC1, +Regions, +HoleComp, -Paint):
+% color one cavity with its nearest template region color.
+cvp_dye_(H, W, TR0, TC0, TR1, TC1, Regions, HoleComp, Paint) :-
+% Guard the mask row scale against a degenerate box.
+    MDR is max(1, H - 1),
+% Guard the mask column scale against a degenerate box.
+    MDC is max(1, W - 1),
+% Guard the template row scale against a degenerate box.
+    TDR is max(1, TR1 - TR0),
+% Guard the template column scale against a degenerate box.
+    TDC is max(1, TC1 - TC0),
+% Compute the cavity's normalized centroid inside the mask box.
+    cvp_norm_centroid_(HoleComp, 0, 0, MDR, MDC, HR, HC),
+% Score every template region by squared centroid distance.
+    findall(D-Color,
+% Enumerate each colored template region.
+            ( member(Color-Cells, Regions),
+% Compute the region's normalized centroid inside the template box.
+              cvp_norm_centroid_(Cells, TR0, TC0, TDR, TDC, RR, RC),
+% Measure the squared euclidean distance between the centroids.
+              D is (HR - RR) * (HR - RR) + (HC - RC) * (HC - RC) ),
+            Scored),
+% Sort so the nearest region comes first.
+    msort(Scored, [_-Best|_]),
+% Paint every cavity cell with the winning color.
+    findall((R-C)-Best, member(R-C, HoleComp), Paint).
+
+% cvp_render_(+H, +W, +MaskLocal, +MaskColor, +Paints, +Bg, -Out): build grid.
+cvp_render_(H, W, MaskLocal, MaskColor, Paints, Bg, Out) :-
+% Precompute the row index bound.
+    H1 is H - 1,
+% Precompute the column index bound.
+    W1 is W - 1,
+% Build every output row in order.
+    findall(Row,
+% Enumerate the row indices.
+            ( between(0, H1, R),
+% Build one output row cell by cell.
+              findall(V,
+% Enumerate the column indices.
+                      ( between(0, W1, C),
+% Choose mask color, cavity paint, or background for the cell.
+                        (   memberchk(R-C, MaskLocal)
+% A mask cell keeps the mask color.
+                        ->  V = MaskColor
+% A painted cavity cell takes its assigned color.
+                        ;   memberchk((R-C)-P, Paints)
+% Bind the cell to the cavity paint color.
+                        ->  V = P
+% Everything else stays background.
+                        ;   V = Bg
+                        ) ),
+                      Row) ),
+            Out).
