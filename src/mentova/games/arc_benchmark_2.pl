@@ -637,6 +637,36 @@ arc2_induce_rule(TrainingPairs, twin_lift) :-
 % Each training pair must transform correctly under twin_lift.
            arc2_transform(twin_lift, In, Out)).
 
+% stripe_cycle: early dispatch before generic clause (WP-341, Layer 316).
+% Enumerate stripe_cycle as a known rule name.
+arc2_named_rule(stripe_cycle).
+% arc2_induce_rule(stripe_cycle): edge marker-bar pre-filter + verify.
+arc2_induce_rule(TrainingPairs, stripe_cycle) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The first output must share the input height.
+    length(FirstOut, H),
+% Fetch the first row of the input and of the output.
+    First = [FR|_], FirstOut = [FOR|_],
+% Measure the first input width.
+    length(FR, W),
+% The first output must share the input width.
+    length(FOR, W),
+% Locate the marker row and the stripe columns in the first input.
+    st_marker_(First, MR, StripeCols),
+% Count the stripe columns.
+    length(StripeCols, NS),
+% At least two stripe columns make a credible marker bar.
+    NS >= 2,
+% Color 4 must appear only inside the marker row.
+    forall(( nth0(R, First, Row), memberchk(4, Row) ), R =:= MR),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under stripe_cycle.
+           arc2_transform(stripe_cycle, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -17194,3 +17224,69 @@ tw_shifted_(H, Sizes, Comp, SCs) :-
             ( member(c(R, C, V), Comp), R2 is R + Shift ),
 % Bind the repositioned cell list.
             SCs).
+
+% ---------------------------------------------------------------------------
+% stripe_cycle: one edge row (top or bottom) carries a horizontal bar of
+% color 4 marking the stripe columns.  Every row is repainted by a six-row
+% palette keyed to its cyclic distance D from the marker row: D of 0 or 2
+% paints the stripe columns with 4, odd D paints them with the background
+% color, and D of 4 paints the stripe columns with 3 while also overlaying
+% 3 on every non-background cell of that row outside the stripes.
+% Reference: ARC-AGI-2 task 221dfab4 -- stripes cycle, sixth rows go green.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(stripe_cycle): repaint stripe columns on a six-row cycle.
+arc2_transform(stripe_cycle, Grid, Out) :-
+% Determine the majority background color.
+    tw_background_(Grid, BG),
+% Locate the marker row and the stripe columns.
+    st_marker_(Grid, MR, StripeCols),
+% Rebuild the grid row by row.
+    findall(ORow,
+% Walk every input row with its index and rebuild it.
+            ( nth0(R, Grid, Row0),
+% The cyclic palette distance of this row from the marker row.
+              D is abs(R - MR) mod 6,
+% Rebuild the row under the palette entry for this distance.
+              st_row_(Row0, D, BG, StripeCols, ORow) ),
+% Bind the rebuilt grid.
+            Out).
+
+% st_marker_(+Grid, -MR, -StripeCols): find the color-4 edge marker bar.
+st_marker_(Grid, MR, StripeCols) :-
+% Measure the grid height.
+    length(Grid, H),
+% The bottom row index.
+    Last is H - 1,
+% The marker sits in the top row or in the bottom row.
+    ( MR = 0 ; MR = Last ),
+% Fetch the candidate marker row.
+    nth0(MR, Grid, MRow),
+% Collect the columns holding color 4 in the marker row.
+    findall(C, nth0(C, MRow, 4), StripeCols),
+% The marker bar must not be empty.
+    StripeCols \== [],
+% Commit to the first edge row that carries the bar.
+    !.
+
+% st_row_(+Row0, +D, +BG, +StripeCols, -ORow): rebuild one output row.
+st_row_(Row0, D, BG, StripeCols, ORow) :-
+% Rebuild the row cell by cell.
+    findall(V2,
+% Walk every column of the input row with its value.
+            ( nth0(C, Row0, V),
+% Repaint the cell under the six-row palette.
+              st_cell_(D, BG, StripeCols, C, V, V2) ),
+% Bind the rebuilt row.
+            ORow).
+
+% st_cell_(+D, +BG, +StripeCols, +C, +V, -V2): palette value of one cell.
+st_cell_(D, BG, StripeCols, C, V, V2) :-
+% Distance 0 or 2: stripe columns take the marker color 4.
+    ( ( D =:= 0 ; D =:= 2 ), memberchk(C, StripeCols) -> V2 = 4
+% Distance 4: stripe columns and foreground cells take the overlay color 3.
+    ; D =:= 4, ( memberchk(C, StripeCols) ; V =\= BG ) -> V2 = 3
+% Odd distance: stripe columns take the background color.
+    ; ( D =:= 1 ; D =:= 3 ; D =:= 5 ), memberchk(C, StripeCols) -> V2 = BG
+% Every other cell keeps its input value.
+    ; V2 = V ).

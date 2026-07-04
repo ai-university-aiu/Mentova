@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 82 complete: 79/120 = 65.83%.
+Last updated: 2026-07-03. Wave 83 complete: 80/120 = 66.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -204,6 +204,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  77 / 120  | 64.17%  | Wave 80: ring_dock five-by-five ring objects (one-cell border around a solid three-by-three interior) float in the grid; rings with one border color slide left and rings with the other border color slide right, each keeping its rows; same-side rings pack against the edge in order of edge distance, blocked by the edge or an already-parked same-side ring, while opposite-side rings pass each other freely
 2026-07-03  |  78 / 120  | 65.00%  | Wave 81: wire_relay wires of color 8 with color-5 crossing marks and color-9 blocks each connect an up-or-left tip to a down-or-right tip; a colored figure sitting two cells beyond one tip names the wire color; the output draws a four-cell diamond outline two cells beyond the up-or-left tip and a five-cell diagonal X two cells beyond the down-or-right tip of every wire, both in the wire color, erasing the input figures while keeping the wire structure; tracing goes straight at crossings and crosses blocks straight ahead when possible, otherwise leaving at the block's only other wire exit
 2026-07-03  |  79 / 120  | 65.83%  | Wave 82: twin_lift small shapes scattered on a uniform majority-color background; every 8-connected shape whose cell count matches the cell count of at least one other shape floats straight up flush to the top edge, and every shape with a unique cell count sinks straight down flush to the bottom edge; columns, forms, and colors preserved; the direction decision is per shape, not per color - the test grid holds two same-colored shapes moving in opposite directions
+2026-07-03  |  80 / 120  | 66.67%  | Wave 83: stripe_cycle one edge row (top or bottom) carries a horizontal color-4 bar marking the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance D from the marker row - D of 0 or 2 paints the stripe columns with 4, odd D paints them with the background color, and D of 4 paints the stripe columns with 3 while overlaying 3 on every non-background cell of that row outside the stripes; the test grid moves the marker from the bottom row to the top row, so the palette must be anchored at the marker, not at row zero
 
 
 COMPLETE SCORE PROGRESSION
@@ -1224,6 +1225,61 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 83 - 2026-07-03 - Score: 80/120 = 66.67%
+
+Date: 2026-07-03
+
+Confirmed score: 80 / 120 = 66.67%
+
+Rules added in this wave:
+  stripe_cycle (WP-341, Layer 316)
+
+Task solved: 221dfab4 (2 training pairs + 1 test case; grids 29x22
+  in both training pairs and 25x25 in test; one edge row of the grid
+  carries a horizontal bar of color 4 - the bottom row in both
+  training inputs but the top row in the test input - and the bar's
+  columns are the stripe columns; the output repaints every row by a
+  palette that repeats every six rows, anchored at the marker bar,
+  while scattered one-color shapes fill the rest of the grid over a
+  majority background - background 1 with color-8 shapes in the first
+  training pair, background 8 with color-2 shapes in the second, and
+  background 8 with color-6 shapes in the test).
+
+Algorithm: six-row palette cycle anchored at an edge marker bar.
+  Stage 1: the background is the most frequent color. Stage 2: the
+  marker row is whichever of the top row and the bottom row holds
+  cells of color 4, and those cells' columns are the stripe columns.
+  Stage 3: every row is rebuilt under the palette entry for its
+  cyclic distance D, the absolute row difference from the marker row
+  modulo six. D of 0 or 2 paints the stripe columns with the marker
+  color 4 and leaves every other cell unchanged. Odd D (1, 3, or 5)
+  paints the stripe columns with the background color and leaves
+  every other cell unchanged. D of 4 paints the stripe columns with
+  the overlay color 3 and also overlays 3 on every non-background
+  cell of the row outside the stripes. Stage 4: rows are reassembled
+  in place; nothing else moves.
+
+Bugs fixed: none. The rule passed the single-task test and the full
+  regression on the first compile.
+
+Lessons learned: the decisive check was the palette anchor. Both
+  training grids put the marker bar in the bottom row at row 28, and
+  28 mod 6 equals 4, so a palette anchored at row zero reproduces
+  both training outputs perfectly and still fails the test - the
+  test grid moves the bar to the top row, where a row-zero anchor
+  would paint the bar itself green. Anchoring the cycle at the
+  marker row survives both placements. When two anchor readings tie
+  on the training pairs, the test input often discriminates; reading
+  all three inputs before coding avoided a wasted wave. Full
+  regression of all 79 locally verified tasks (78 prior plus
+  221dfab4) still induces and passes.
+
+Accomplishment: Acc_381.  Paper: Acc_381_ARC2_Wave83_StripeCycle.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4215,6 +4271,7 @@ cbebaa4b  - Wave 78 - gadget_assembly    - gadget pieces with color-2 connector 
 b5ca7ac4  - Wave 80 - ring_dock          - five-by-five rings with a one-cell border around a solid three-by-three interior slide sideways into parking lanes, one border color to the left edge and the other to the right, packing against already-parked same-side rings while opposite-side rings pass freely
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
+221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4575,4 +4632,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 81: Wire-relay - the grid holds a maze of co
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 82: Twin-lift - the grid scatters four to six small shapes over a uniform majority-color background, the backgrounds differing across grids (0, 5, and 1); every 8-connected shape whose cell count matches the cell count of at least one other shape floats straight up until flush with the top edge, and every shape whose cell count is unique among all shapes sinks straight down until flush with the bottom edge, each shape keeping its columns, its form, and its colors; components are color-agnostic, so a two-color shape moves as one unit while two same-colored shapes move independently - and the test grid indeed holds two color-3 shapes moving in opposite directions, the observation that falsifies every per-color dominance reading of the task and forces the per-shape twin-size census that fits all fifteen shapes across both training grids and the test grid.
   Score: 79/120 = 65.83%. Task 62593bfd solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 83: Stripe-cycle - one edge row of the grid carries a horizontal bar of color 4 whose columns are the stripe columns, the bottom row in both training inputs but the top row in the test input; every row of the output is repainted by a six-row palette keyed to its cyclic distance D from the marker row: D of 0 or 2 paints the stripe columns with the marker color 4, odd D paints them with the majority background color, and D of 4 paints the stripe columns with the overlay color 3 while also overlaying 3 on every non-background cell of that row outside the stripes; both training grids put the bar at row 28, and 28 mod 6 equals 4, so a palette anchored at row zero reproduces both training outputs perfectly yet fails the test where the bar moves to the top row - the anchor must be the marker itself, the discriminating observation of the wave.
+  Score: 80/120 = 66.67%. Task 221dfab4 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

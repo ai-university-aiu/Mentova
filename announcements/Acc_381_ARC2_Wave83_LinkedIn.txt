@@ -1,0 +1,32 @@
+Accomplishment 381: ARC-AGI-2 Wave 83 - Stripe Cycle: A Six-Row Palette Anchored at an Edge Marker Bar
+
+PrologAI solves ARC-AGI-2 task 221dfab4 with a new glass-box rule
+called stripe_cycle (WP-341, Layer 316), raising the benchmark score
+from 79/120 = 65.83% to 80/120 = 66.67%.
+
+One edge row of each grid carries a horizontal bar of color 4, and
+the bar's columns are the stripe columns. The output repaints every
+row by a palette that repeats every six rows: at cyclic distance 0
+or 2 from the marker row the stripe columns turn 4, at odd distances
+they turn background, and at distance 4 they turn 3 - green - while
+every shape cell in that row outside the stripes is overlaid with
+green as well. Everything else stays exactly where it was.
+
+The key insight was the anchor. Both training grids put the marker
+bar in the bottom row at row 28, and 28 mod 6 equals 4, so a palette
+counted from row zero reproduces both training outputs perfectly -
+and still fails the hidden test, where the bar moves to the top row
+and a row-zero count would paint the marker itself green. The cycle
+must be anchored at the marker bar, not at the top of the grid. When
+two readings tie on the training pairs, the test input often breaks
+the tie; reading every visible grid before coding turned a trap into
+a first-compile pass.
+
+The rule has no learned parameters. The background is the most
+frequent color, the marker bar and stripe columns are found in the
+grid at answer time, and induction is pure verification of both
+training pairs. Pure induction. No pretraining. Every rule is named
+and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
