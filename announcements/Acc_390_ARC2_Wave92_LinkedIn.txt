@@ -1,0 +1,38 @@
+Accomplishment 390: ARC-AGI-2 Wave 92 - Stencil Carve: Punching Sketch Negatives into Solid Blocks
+
+PrologAI solves ARC-AGI-2 task 58f5dbd5 with a new glass-box rule
+called stencil_carve (WP-350, Layer 325), raising the benchmark
+score from 88/120 = 73.33% to 89/120 = 74.17%.
+
+Every input of this task shows two things: a set of solid
+five-by-five colored blocks standing in a neat grid arrangement,
+and a scatter of small three-by-three sketch motifs elsewhere in
+the scene. Each block color has exactly one matching sketch, and
+sketch colors without a block are decoys to be ignored. The answer
+keeps the block arrangement on a fresh background canvas and
+carves each block's center with its sketch - but inverted. A
+sketch cell of the block color punches a background hole into the
+solid block, and a sketch background cell leaves the block color
+standing. The sketch is a stencil, and its colored cells are the
+holes.
+
+The key insight is the carving inversion: the block interior is
+the negative of the sketch, not a copy. A second insight is that
+the output shape follows the arrangement, not a fixed frame - the
+four grids exercise one column of three blocks, one row of three,
+a two-by-two arrangement, and a three-by-two arrangement, and the
+output canvas resizes to match. The sketches may even fall apart
+into disconnected pieces inside their three-by-three bounding
+boxes, so the rule collects all same-colored cells outside the
+blocks instead of chasing connected components.
+
+The rule has no learned parameters. The background, the blocks,
+the arrangement, and the sketches are all read off the input grid
+at answer time, and induction is pure verification of all three
+training pairs. The prototype passed every grid on the first run
+and the integrated rule passed the full regression on the first
+compile. Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
