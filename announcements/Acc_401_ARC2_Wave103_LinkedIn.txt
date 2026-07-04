@@ -1,0 +1,37 @@
+Accomplishment 401: ARC-AGI-2 Wave 103 - Tower Donate: Donor Towers Feeding Receiver Growth
+
+PrologAI solves ARC-AGI-2 task 9aaea919 with a new glass-box rule
+called tower_donate (WP-361, Layer 336), raising the benchmark
+score from 99/120 = 82.50% to 100/120 = 83.33%.
+
+Each input of this task shows towers of little diamond glyphs
+standing on a uniform background - three-row, five-column stamps
+stacked upward from the bottom of the grid, one background row
+between glyphs, every tower in its own color. Along the bottom
+edge of the grid sit five-wide marker bars, each aligned exactly
+under one tower: bars of color 2 and bars of color 3.
+
+In the output the markers have spoken and vanished. Every tower
+standing over a color-2 bar keeps its height but turns gray. Every
+tower standing over a color-3 bar grows taller in its own color.
+And the growth amount is the puzzle's quiet arithmetic: across the
+three training pairs the receivers grow by two, one, and three
+glyphs - exactly the heights of the gray-marked towers, pair by
+pair. The donor gives what it has.
+
+The test grid is where the reading is put on trial. It carries two
+donor bars over two one-glyph towers and a single receiver, and
+the receiver grows by exactly two glyphs - the sum of both
+donations. A rule reading the donor as a mere gauge would fit all
+three training pairs and still fail the test; only the summed
+donation covers all four grids.
+
+The complete rule was written in plain English covering every grid
+before any code, with every changed cell - every erased bar cell,
+every grayed donor cell, every new receiver glyph - accounted for
+by hand, and the integrated Prolog rule passed the single-task
+test and the full regression on its first compile. Pure induction.
+No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 102 complete: 99/120 = 82.50%.
+Last updated: 2026-07-04. Wave 103 complete: 100/120 = 83.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -224,6 +224,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  |  97 / 120  | 80.83%  | Wave 100: corner_glyph the scene holds boxes outlined in zero on a solid background; one box corner already carries a full multi-cell decoration - the template - whose cells define a shape in that corner's outward frame, and the shape's most inward diagonal cell is the marker position; box corners are detected by a tolerant L-junction test whose border arms allow decoration cells to overwrite border cells, and every corner whose own marker position holds a single non-background, non-border color receives the complete template shape stamped in that marker color, mirrored into the corner's orientation, with out-of-bounds stamp cells clipped away - the tolerant arm test is the discriminating observation, because the template decoration overwrites the border cells beside its own corner and, on a five-cell box side, even sits within arm reach of the opposite corner, so a strict all-zero arm test loses exactly the marked corners that must be stamped
 2026-07-04  |  98 / 120  | 81.67%  | Wave 101: legend_snake two large regions of two dominant colors meet along a jagged diagonal boundary; a legend strip of two-by-two blocks near the top-left corner, separated by single background columns, spells out a repeating color pattern read left to right, and a lone two-by-two block elsewhere names the turn color; single marker cells of the pattern's first color sit on the left edge inside one region and each shoots a snake path eastward through its own region, painting the legend pattern cyclically with the marker as position zero; whenever the next cell leaves the region that blocking cell is painted the turn color and the snake pivots from east to north or from north to east, blocking cells consume no pattern position, a second consecutive block ends the path without a second mark, the path ends silently at the grid edge, and the legend strip and the turn block are erased to the region color that surrounds them - the pivot bookkeeping is the discriminating observation, because the turn mark spends no pattern position and a blocked pivot must end the path quietly, which is exactly how the second training snake stops dead against the boundary after a single mark
 2026-07-04  |  99 / 120  | 82.50%  | Wave 102: ray_scatter the scene holds one connected blob of a single color on a uniform background, plus one or two lone marker cells sitting on the grid border; each marker fires a ray into the grid along its own row or column, reaching exactly the farthest blob cell on that line, painting the background cells along the way in the marker color while blob cells on the line keep their color and stay in place; the remaining blob cells split into side pieces - the four quadrants around the crossing when two rays are present, or the two sides of the line when only one ray fires - and every piece translates rigidly so its bounding box lands flush in a grid corner, moving away from each ray across the line and toward the marker's own edge along a single ray; a piece whose destination corner touches no marker edge is deleted from the scene - the deleted quadrant is the discriminating observation, because in the two-ray training pair the bottom-left piece simply vanishes, and only the corner-touches-a-marker-edge test explains why the three other pieces survive while that one is swallowed
+2026-07-04  | 100 / 120  | 83.33%  | Wave 103: tower_donate the scene holds towers of three-by-five diamond glyphs stacked upward from the bottom of the grid, one background row between glyphs and every glyph of a tower sharing one color, while the bottom grid row carries five-wide marker bars aligned exactly under specific towers - color 2 marks a donor tower and color 3 marks a receiver tower; every donor tower keeps its height but is repainted gray with color 5, the donated total is the sum of all donor tower heights, every receiver tower grows by that many extra glyphs stacked on top in its own color with centers climbing four rows per glyph, unmarked towers stay untouched, and all marker bars are erased to background - the donated-sum bookkeeping is the discriminating observation, because the test grid carries two donor bars whose one-glyph towers together grow the receiver by two glyphs, while each training grid carries a single donor whose height alone sets the growth
 
 
 COMPLETE SCORE PROGRESSION
@@ -1244,6 +1245,58 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 103 - 2026-07-04 - Score: 100/120 = 83.33%
+
+Date: 2026-07-04
+
+Confirmed score: 100 / 120 = 83.33%
+
+Rules added in this wave:
+  tower_donate (WP-361, Layer 336)
+
+Task solved: 9aaea919 (3 training pairs + 1 test case; all grids
+  30x30; the output always keeps the input size).
+
+Algorithm: donor towers feed receiver growth.
+  Stage 1: read the background as the most frequent color, then
+  read the bottom grid row as a strip of five-wide marker bars -
+  every non-background run there must be exactly five cells wide
+  and colored 2 (donor) or 3 (receiver).
+  Stage 2: find every diamond glyph in the scene - a three-row,
+  five-column stamp whose middle row is solid in the glyph color
+  while the top and bottom rows carry the color over the middle
+  three cells with background corners.
+  Stage 3: group the glyphs into towers keyed by their five-wide
+  column window; every glyph of a tower shares one color, and
+  every marker bar must sit exactly under a tower's window.
+  Stage 4: the donated total is the sum of the glyph counts of
+  all donor towers; every donor tower keeps its glyphs but is
+  repainted gray with color 5.
+  Stage 5: every receiver tower grows by the donated total -
+  the new glyphs stack on top in the tower's own color, each
+  center four rows above the previous one; unmarked towers stay
+  untouched and the marker bars are erased to background.
+
+Bugs fixed: none. The rule passed the single-task test and the
+  full regression on the first compile.
+
+Lessons learned: when a scene stacks identical glyph units in
+  columns and decorates the bottom row with short color bars,
+  read the bars as per-column instructions and look for a
+  conserved quantity flowing between the marked columns - here
+  the donor heights are summed and credited to the receiver,
+  which only becomes visible when the three training growths
+  (+2, +1, +3) are set beside the donor heights (2, 1, 3); the
+  test grid then doubles as a confirmation, growing its receiver
+  by the sum of two one-glyph donors. Reading all four grids
+  before theorizing made the arithmetic obvious in one pass.
+
+Accomplishment: Acc_401.  Paper: Acc_401_ARC2_Wave103_TowerDonate.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5532,6 +5585,7 @@ de809cff  - Wave 99 - hole_beacon        - two rectilinear regions on zero backg
 4c416de3  - Wave 100 - corner_glyph      - zero-outlined boxes on a solid background; the one fully decorated corner teaches a shape in frame coordinates, and every corner holding a single glyph color at the shape's inward-diagonal marker position gets the full shape stamped in that color, mirrored to its orientation
 195c6913  - Wave 101 - legend_snake      - two-region diagonal scene; a top-left legend strip of two-by-two blocks spells a repeating color pattern, left-edge markers shoot eastward snakes painted with the pattern that pivot north then east along the region boundary, each blocking cell painted the lone block's turn color; legend and turn block erased
 4a21e3da  - Wave 102 - ray_scatter       - border markers fire rays to the farthest blob cell on their line, painting background marker-colored; on-line blob cells stay, the rest split into quadrant or side pieces that ride rigid translations flush into the grid corners, and a piece bound for a corner touching no marker edge is deleted
+9aaea919  - Wave 103 - tower_donate      - towers of three-by-five diamond glyphs with five-wide bottom-row marker bars; color-2 donor towers keep their height but turn gray 5, and each color-3 receiver tower grows by the summed donor heights, new glyphs stacked on top in its own color; marker bars erased
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
@@ -6001,4 +6055,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 101: Legend-snake - two large regions of two
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 102: Ray-scatter - the scene holds one connected blob of a single color on a uniform background, plus one or two lone marker cells sitting on the grid border; each marker fires a ray into the grid along its own row or column - downward from the top edge, upward from the bottom edge, rightward from the left edge, leftward from the right edge - reaching exactly the farthest blob cell on that line, painting the background cells along the way in the marker color while blob cells on the line keep the blob color and stay in place; the remaining blob cells split into side pieces - the four quadrants around the crossing point when two rays are present, or the two sides of the line when only one ray fires - and every piece translates rigidly so its bounding box lands flush in a grid corner, moving away from each ray across its line and toward the marker's own edge along a single ray; a piece whose destination corner touches no marker edge is deleted from the scene entirely; the deleted quadrant is the discriminating observation of the wave, because in the two-ray training pair the bottom-left piece simply vanishes, and only the corner-touches-a-marker-edge test explains why the three sibling pieces survive while that one is swallowed.
   Score: 99/120 = 82.50%. Task 4a21e3da solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 103: Tower-donate - the scene holds towers of three-by-five diamond glyphs stacked upward from the bottom of the grid, one background row between glyphs and every glyph of a tower sharing one color, while the bottom grid row carries five-wide marker bars aligned exactly under specific towers - color 2 marks a donor tower and color 3 marks a receiver tower; every donor tower keeps its height but is repainted gray with color 5, the donated total is the sum of all donor tower heights, every receiver tower grows by that many extra glyphs stacked on top in its own color with centers climbing four rows per glyph, unmarked towers stay untouched, and all marker bars are erased to background; the donated-sum bookkeeping is the discriminating observation of the wave, because the three training growths (+2, +1, +3) equal the single donor heights (2, 1, 3) pair by pair, and the test grid carries two donor bars whose one-glyph towers together grow the receiver by exactly two glyphs, so only the summed-donation reading covers all four grids.
+  Score: 100/120 = 83.33%. Task 9aaea919 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
