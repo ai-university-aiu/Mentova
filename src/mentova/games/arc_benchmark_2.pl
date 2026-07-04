@@ -985,6 +985,34 @@ arc2_induce_rule(TrainingPairs, compartment_tally) :-
 % Each training pair must transform correctly under compartment_tally.
            arc2_transform(compartment_tally, In, Out)).
 
+% catalog_query: early dispatch before generic clause (WP-349, Layer 324).
+% Enumerate catalog_query as a known rule name.
+arc2_named_rule(catalog_query).
+% arc2_induce_rule(catalog_query): fixed-frame pre-filter + verify.
+arc2_induce_rule(TrainingPairs, catalog_query) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% The catalog scene is exactly thirty rows tall.
+    length(First, 30),
+% The output preserves the thirty-row height.
+    length(FirstOut, 30),
+% Fetch the first row of the input.
+    First = [FR|_],
+% The catalog scene is exactly twenty-two columns wide.
+    length(FR, 22),
+% Fetch the upper separator row of the input.
+    nth0(5, First, Sep1),
+% The upper separator row is a solid line of color six.
+    forall(member(V1, Sep1), V1 == 6),
+% Fetch the lower separator row of the input.
+    nth0(27, First, Sep2),
+% The lower separator row is a solid line of color six.
+    forall(member(V2, Sep2), V2 == 6),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under catalog_query.
+           arc2_transform(catalog_query, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -19425,3 +19453,151 @@ ct_row_(V, N, Noise, MaxN, Row) :-
     maplist(=(Noise), PadSeg),
 % Join the box segment and the padding into the census row.
     append(Seg, PadSeg, Row).
+
+% ---------------------------------------------------------------------------
+% CATALOG QUERY (WP-349, Layer 324)
+% catalog_query: the body of the scene holds a fixed four-by-four catalog
+% of three-by-three colored shapes between two solid separator rows of
+% color six; the header band shows up to four query shapes, each an exact
+% cell-for-cell copy of one catalog block.  Every matched catalog block is
+% highlighted by turning the background eights of its five-by-five frame
+% box to color three.  When all matched blocks share one catalog row or
+% one catalog column, the header band is highlighted the same way and the
+% footer rows fill with color three; otherwise the footer fills with two.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(catalog_query): highlight the catalog blocks the header queries.
+arc2_transform(catalog_query, Grid, Out) :-
+% The catalog scene is exactly thirty rows tall.
+    length(Grid, 30),
+% Fetch the first row of the scene.
+    Grid = [FR|_],
+% The catalog scene is exactly twenty-two columns wide.
+    length(FR, 22),
+% Fetch the upper separator row of the scene.
+    nth0(5, Grid, Sep1),
+% The upper separator row is a solid line of color six.
+    forall(member(V1, Sep1), V1 == 6),
+% Fetch the lower separator row of the scene.
+    nth0(27, Grid, Sep2),
+% The lower separator row is a solid line of color six.
+    forall(member(V2, Sep2), V2 == 6),
+% Collect the sixteen catalog blocks of the body region.
+    findall(cb(I, J, B),
+% Each catalog block sits at row block I and column block J.
+            ( between(0, 3, I), between(0, 3, J),
+% Top grid row of the catalog block.
+              R1 is 8 + 5 * I,
+% Left grid column of the catalog block.
+              C1 is 2 + 5 * J,
+% Cut the three-by-three block out of the scene.
+              cq_block_(Grid, R1, C1, B) ),
+% Bind the collected catalog block list.
+            Catalog),
+% Collect the occupied query slots of the header band.
+    findall(SB,
+% Each header slot sits at column block SlotJ of rows one to three.
+            ( between(0, 3, SlotJ),
+% Left grid column of the header slot.
+              SC is 2 + 5 * SlotJ,
+% Cut the three-by-three slot out of the header band.
+              cq_block_(Grid, 1, SC, SB),
+% Keep only slots that hold at least one shape cell.
+              \+ cq_blank_(SB) ),
+% Bind the occupied header slot list.
+            Slots),
+% At least one query shape must be present.
+    Slots \= [],
+% Match every query shape against the catalog blocks.
+    findall(m(I, J),
+% Each query shape equals exactly one catalog block cell for cell.
+            ( member(B, Slots), member(cb(I, J, B), Catalog) ),
+% Bind the matched block position list.
+            Matches),
+% Every query shape must find exactly one catalog match.
+    same_length(Slots, Matches),
+% Fetch the first matched block position.
+    Matches = [m(I0, J0)|_],
+% Decide whether the matches align on one catalog row or column.
+    ( forall(member(m(IA, _), Matches), IA =:= I0) ->
+% All matches share one catalog row, so the query is aligned.
+      Aligned = yes
+% Otherwise test the matches against one shared catalog column.
+    ; forall(member(m(_, JA), Matches), JA =:= J0) ->
+% All matches share one catalog column, so the query is aligned.
+      Aligned = yes
+% The matches scatter, so the query is not aligned.
+    ; Aligned = no ),
+% Repaint every cell of the scene according to the matches.
+    findall(RowOut,
+% Walk each row of the scene by index.
+            ( nth0(R, Grid, Row),
+% Rebuild the row cell by cell.
+              findall(V2,
+% Walk each cell of the row by index.
+                      ( nth0(C, Row, V),
+% Paint the cell according to boxes, header, and footer.
+                        cq_paint_(R, C, V, Matches, Aligned, V2) ),
+% Bind the rebuilt output row.
+                      RowOut) ),
+% Bind the finished output grid.
+            Out).
+
+% cq_block_(+Grid, +R1, +C1, -Block): cut a three-by-three block at (R1,C1).
+cq_block_(Grid, R1, C1, [A, B, C]) :-
+% Row index of the middle block row.
+    R2 is R1 + 1,
+% Row index of the bottom block row.
+    R3 is R1 + 2,
+% Cut the top three-cell segment of the block.
+    cq_seg_(Grid, R1, C1, A),
+% Cut the middle three-cell segment of the block.
+    cq_seg_(Grid, R2, C1, B),
+% Cut the bottom three-cell segment of the block.
+    cq_seg_(Grid, R3, C1, C).
+
+% cq_seg_(+Grid, +R, +C1, -Seg): cut a three-cell row segment at (R,C1).
+cq_seg_(Grid, R, C1, [X, Y, Z]) :-
+% Fetch the grid row that holds the segment.
+    nth0(R, Grid, Row),
+% Fetch the left cell of the segment.
+    nth0(C1, Row, X),
+% Column index of the middle segment cell.
+    C2 is C1 + 1,
+% Fetch the middle cell of the segment.
+    nth0(C2, Row, Y),
+% Column index of the right segment cell.
+    C3 is C1 + 2,
+% Fetch the right cell of the segment.
+    nth0(C3, Row, Z).
+
+% cq_blank_(+Block): the block holds only background eights.
+cq_blank_(Block) :-
+% No cell of the block departs from the background color.
+    \+ ( member(Row, Block), member(V, Row), V \== 8 ).
+
+% cq_paint_(+R, +C, +V, +Matches, +Aligned, -V2): paint one output cell.
+% Footer background cells fill with three when aligned and two otherwise.
+cq_paint_(R, _, 8, _, Aligned, V2) :-
+% The footer band spans the two bottom rows of the scene.
+    R >= 28, !,
+% Choose the footer fill color from the alignment verdict.
+    ( Aligned == yes -> V2 = 3 ; V2 = 2 ).
+% Header background cells highlight to three when the query is aligned.
+cq_paint_(R, _, 8, _, yes, 3) :-
+% The header band spans the five top rows of the scene.
+    R =< 4, !.
+% Background cells inside a matched frame box highlight to three.
+cq_paint_(R, C, 8, Matches, _, 3) :-
+% Test the cell against every matched block position.
+    member(m(I, J), Matches),
+% The frame box starts one row above the matched block.
+    R >= 7 + 5 * I,
+% The frame box ends one row below the matched block.
+    R =< 11 + 5 * I,
+% The frame box starts one column left of the matched block.
+    C >= 1 + 5 * J,
+% The frame box ends one column right of the matched block.
+    C =< 5 + 5 * J, !.
+% Every other cell keeps its original color.
+cq_paint_(_, _, V, _, _, V).

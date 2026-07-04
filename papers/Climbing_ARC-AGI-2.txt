@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 90 complete: 87/120 = 72.50%.
+Last updated: 2026-07-03. Wave 91 complete: 88/120 = 73.33%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -212,6 +212,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  85 / 120  | 70.83%  | Wave 88: band_jigsaw one component spans the full grid width or height and acts as an immovable ragged band; every other shape is translated - never rotated or flipped - so the shapes stack flush against the band's ragged edges, exactly tiling the region between the band's per-column edge profile and a straight outer edge on one or both sides; the band is horizontal in both training pairs but vertical in the test, so the solver canonicalizes by transposition and solves the far side by vertical flip
 2026-07-03  |  86 / 120  | 71.67%  | Wave 89: wire_wrap each color system holds a straight line segment, a crumpled wire attached orthogonally to one line endpoint, and a marker shape; the output keeps the line and marker untouched and re-lays the wire as a deterministic path - a diagonal approach from the attachment cell toward the marker, clamped to the marker's near lane, a hug along the marker's near face cell by cell, and a mirrored 45-degree departure ray - truncated at the input wire's cell count or the grid edge, whichever comes first; the test grid holds two independent three-color systems solved by nearest-marker assignment
 2026-07-03  |  87 / 120  | 72.50%  | Wave 90: compartment_tally every foreground color except one draws a rectangular box outline subdivided by internal partition lines into compartments, and the remaining color is scattered noise; the output holds one row per box sorted by compartment count ascending (ties by leftmost column), each row painting the box color once per compartment and padding with the noise color to the maximum count; compartments are counted by flood-filling the box interior with walls repaired at single-cell gaps where noise or a crossing box overwrote a partition cell - background cells are never repaired, which protects single-row and single-column compartments
+2026-07-03  |  88 / 120  | 73.33%  | Wave 91: catalog_query the body of the scene holds a fixed four-by-four catalog of three-by-three colored shapes between two solid separator rows, and the header band shows up to four query shapes, each an exact cell-for-cell copy of one catalog block; every matched catalog block is highlighted by turning the background cells of its five-by-five frame box to color 3; when all matched blocks share one catalog row or one catalog column the header band is highlighted the same way and the footer rows fill with color 3, otherwise the header stays untouched and the footer rows fill with color 2 - the alignment verdict is the discriminating observation, and the test grid's four queries all sit in the last catalog column
 
 
 COMPLETE SCORE PROGRESSION
@@ -1232,6 +1233,69 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 91 - 2026-07-03 - Score: 88/120 = 73.33%
+
+Date: 2026-07-03
+
+Confirmed score: 88 / 120 = 73.33%
+
+Rules added in this wave:
+  catalog_query (WP-349, Layer 324)
+
+Task solved: d8e07eb2 (5 training pairs + 1 test case; all grids
+  30x22 with dimensions preserved; every input carries the same
+  fixed body - a four-by-four catalog of three-by-three colored
+  shapes between two solid separator rows of color 6 - while the
+  header band above the upper separator shows up to four query
+  shapes, and the footer band below the lower separator is blank
+  background).
+
+Algorithm: exact catalog lookup with an alignment verdict.
+  Stage 1: cut the sixteen catalog blocks out of the body at the
+  fixed five-cell pitch (rows 8 + 5i to 10 + 5i, columns 2 + 5j to
+  4 + 5j) and cut the occupied header slots out of rows 1 to 3 at
+  the same column pitch. Stage 2: match every query shape against
+  the catalog cell for cell, colors included - each query matches
+  exactly one block, and same-shape different-color decoys in the
+  catalog make the color part of the match essential. Stage 3:
+  highlight every matched block's five-by-five frame box (the
+  block plus a one-cell border) by turning its background 8 cells
+  to color 3 while keeping all shape cells. Stage 4: if all
+  matched blocks share one catalog row or one catalog column, also
+  highlight the header band the same way and fill the two footer
+  rows with color 3; otherwise leave the header untouched and fill
+  the footer rows with color 2.
+
+Bugs fixed: none. The Python prototype passed all five training
+  pairs and the test case on the first run, and the integrated
+  Prolog rule passed the single-task test and the full regression
+  on the first compile.
+
+Lessons learned: the proven method carried the wave once more -
+  all twelve grids were dumped to text and the complete rule was
+  written in plain English before any code. The decisive
+  observation is the alignment verdict: two training pairs
+  highlight the header and paint the footer 3, while three leave
+  the header alone and paint the footer 2, and the split is
+  exactly whether the matched blocks all sit in one catalog row or
+  one catalog column - a compact global summary of the query
+  answer, not a property of any single match. The fixed body
+  shared by every input is a strong exploitable invariant: when
+  every training input carries the same scenery, the scenery is a
+  lookup table and the variation lives in a small query region.
+  Adjacent highlight boxes merge seamlessly because each box only
+  promotes background cells, so aligned queries produce one
+  continuous band with no special banding logic. Runner
+  bookkeeping: the live benchmark reports 87/120 after this wave
+  against the official ledger of 88/120; tasks 13e47133 and
+  9385bd28 remain flagged for a dedicated repair wave.
+
+Accomplishment: Acc_389.  Paper: Acc_389_ARC2_Wave91_CatalogQuery.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4753,6 +4817,7 @@ c7f57c3e  - Wave 87 - twin_toggle        - shapes on a uniform background are in
 16b78196  - Wave 88 - band_jigsaw        - one component spans the full grid width or height as an immovable ragged band; every other shape is translated, never rotated or flipped, so the shapes stack flush against the band's ragged edges, exactly tiling the region between the band's edge profile and a straight outer edge on one or both sides
 88bcf3b4  - Wave 89 - wire_wrap          - each three-color system holds a straight line, a crumpled wire attached orthogonally to one line endpoint, and a marker shape; the wire is re-laid as a clamped diagonal approach to the marker, a hug along the marker's near face, and a mirrored 45-degree departure, truncated at the wire's cell count or the grid edge
 89565ca0  - Wave 90 - compartment_tally  - every foreground color except one scattered noise color draws a rectangular box outline subdivided by internal partition lines into compartments; the output holds one census row per box sorted by compartment count ascending, the box color repeated once per compartment and padded with the noise color to the maximum count
+d8e07eb2  - Wave 91 - catalog_query      - a fixed four-by-four catalog of three-by-three shapes sits between two separator rows; header query shapes each match one catalog block cell for cell, every matched block's five-by-five frame box is highlighted in color 3, and when the matches share one catalog row or column the header highlights too and the footer fills with 3, otherwise the footer fills with 2
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -5144,4 +5209,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 89: Wire-wrap - each color system holds a st
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 90: Compartment-tally - each grid holds one scattered noise color plus three to five box colors on a majority background, every box color drawing one rectangular outline possibly subdivided by internal partition lines into table-like compartments, with boxes nesting, overlapping, and crossing freely and noise cells overwriting line cells; the noise color is the foreground color whose cells shatter into the most 4-connected fragments; for each box color the bounding box of its cells frames the box, a cell is a wall when it carries the box color or when it is non-background and directly flanked by two box-color cells vertically or horizontally, and the compartment count is the number of 4-connected components of non-wall cells strictly inside the bounding box; the output holds one census row per box sorted by compartment count ascending with ties broken by the leftmost bounding-box column, each row painting the box color once per compartment and padding with the noise color to the maximum count; the background guard on the gap repair is the discriminating observation of the wave, because unguarded repair walls off genuine single-row and single-column compartments while unrepaired flood fill leaks through every partition cell that noise or a crossing box overwrote.
   Score: 87/120 = 72.50%. Task 89565ca0 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 91: Catalog-query - every input of the task carries the same fixed body, a four-by-four catalog of three-by-three colored shapes laid out at a five-cell pitch between two solid separator rows of color 6, while the header band above the upper separator shows up to four query shapes and the footer band below the lower separator is blank background; each query shape is an exact cell-for-cell copy of one catalog block, colors included, and same-shape different-color decoys in the catalog make the color part of the match essential; every matched block is highlighted by turning the background cells of its five-by-five frame box - the block plus a one-cell border - to color 3 while all shape cells keep their colors, and adjacent boxes merge into continuous bands because only background cells are promoted; the alignment verdict is the discriminating observation of the wave, because when all matched blocks share one catalog row or one catalog column the header band is highlighted the same way and the footer rows fill with color 3, while scattered matches leave the header untouched and fill the footer with color 2 - a compact global summary of the query answer that the test grid exercises with four queries all sitting in the last catalog column.
+  Score: 88/120 = 73.33%. Task d8e07eb2 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

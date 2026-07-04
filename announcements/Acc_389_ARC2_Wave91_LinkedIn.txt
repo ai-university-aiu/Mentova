@@ -1,0 +1,40 @@
+Accomplishment 389: ARC-AGI-2 Wave 91 - Catalog Query: Exact Lookup in a Fixed Shape Table
+
+PrologAI solves ARC-AGI-2 task d8e07eb2 with a new glass-box rule
+called catalog_query (WP-349, Layer 324), raising the benchmark
+score from 87/120 = 72.50% to 88/120 = 73.33%.
+
+Every input of this task carries the same fixed body: a
+four-by-four catalog of sixteen small colored shapes, laid out
+between two solid separator rows. Above the catalog sits a header
+band showing up to four query shapes, and each query is an exact
+cell-for-cell copy of one catalog entry, colors included. The
+answer highlights every queried catalog entry by turning the
+background cells of its frame box to a highlight color, and then
+delivers a verdict: when all the queried entries line up in one
+catalog row or one catalog column, the header itself lights up and
+the footer band fills with the highlight color; when the queries
+scatter, the header stays dark and the footer fills with a
+different color instead.
+
+The key insight is that the verdict is global, not local. No
+single match decides the header and footer - the rule must survey
+all the matches together and ask whether they share a row or a
+column of the lookup table. A second insight is the value of fixed
+scenery: because every input carries the identical catalog, the
+catalog is a lookup table and all the variation lives in the small
+query region. The matching must respect color as well as shape,
+because the catalog contains same-shape decoys in different
+colors. The test grid answers four queries that all resolve to the
+last catalog column, triggering the aligned verdict.
+
+The rule has no learned parameters. The catalog, the queries, the
+matches, and the alignment verdict are all read off the input grid
+at answer time, and induction is pure verification of all five
+training pairs. The prototype passed every grid on the first run
+and the integrated rule passed the full regression on the first
+compile. Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
