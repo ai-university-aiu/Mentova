@@ -1,0 +1,45 @@
+Accomplishment 399: ARC-AGI-2 Wave 101 - Legend Snake: Pattern-Programmed Paths Climbing a Two-Region Boundary
+
+PrologAI solves ARC-AGI-2 task 195c6913 with a new glass-box rule
+called legend_snake (WP-359, Layer 334), raising the benchmark
+score from 97/120 = 80.83% to 98/120 = 81.67%.
+
+Each input of this task shows two big regions of two colors meeting
+along a jagged diagonal boundary. Near the top-left corner sits a
+legend: a strip of small two-by-two color blocks that spells out a
+sequence - say 1, 2, 8, 3. Somewhere else sits one lone block of an
+extra color. And on the left edge, single dots of the legend's
+first color wait inside one of the regions. In the output every dot
+has fired a snake: a path marching east through its own region,
+painted with the legend sequence repeating over and over. Each time
+the snake hits the other region, the blocking cell takes the lone
+block's color and the snake turns - north, then east again at the
+next wall - climbing the diagonal boundary like a staircase. The
+legend and the lone block vanish, absorbed into the background.
+
+The rule reads everything off the grid at solve time. The two
+region colors are simply the two most frequent colors. The
+two-by-two blocks of any other color are collected; the ones
+sharing a row are the legend, the leftover names the turn color.
+Each snake starts at its dot as position zero of the cyclic
+pattern and walks, reading the untouched input for navigation while
+painting the working copy.
+
+The trick that cracks the task is the turn bookkeeping. A turn mark
+spends no position of the pattern, so the color sequence flows
+unbroken around every corner of the staircase - verified position
+by position across all six snakes of the four grids. And when a
+snake turns straight into another wall, it stops right there after
+a single mark: one training snake dies against the boundary exactly
+this way, and the rule reproduces it.
+
+The complete rule was written in plain English covering every grid
+before any code, and a full cell-level diff accounted for every
+painted path cell, every turn mark, and every erased legend cell by
+hand - down to the pattern position of each painted cell. The
+integrated rule passed the single-task test and the full regression
+with one trivial fix. Pure induction. No pretraining. Every rule is
+named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

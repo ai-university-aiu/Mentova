@@ -1277,6 +1277,38 @@ arc2_induce_rule(TrainingPairs, corner_glyph) :-
 % Each training pair must transform correctly under corner_glyph.
            arc2_transform(corner_glyph, In, Out)).
 
+% legend_snake: early dispatch before generic clause (WP-359, Layer 334).
+% Enumerate legend_snake as a known rule name.
+arc2_named_rule(legend_snake).
+% arc2_induce_rule(legend_snake): legend-strip pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, legend_snake) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Identify the two dominant region colors of the first input.
+    ls_region_colors_(First, A, B),
+% Collect every two-by-two block of a non-region color.
+    ls_blocks_(First, A, B, Blocks),
+% A legend strip and a lone turn block must both be present.
+    ls_legend_(Blocks, Pattern, _, _),
+% At least one edge marker must launch a snake path.
+    ls_markers_(First, Pattern, [_|_]),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under legend_snake.
+           arc2_transform(legend_snake, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -22013,3 +22045,204 @@ cg_stamp_(Shape, corner(R, C, U, V, X), Grid0, Grid) :-
             Cells),
 % Paint the marker color over every in-bounds stamp cell.
     foldl(hb_paint_(X), Cells, Grid0, Grid).
+
+% ---------------------------------------------------------------------------
+% LEGEND SNAKE (WP-359, Layer 334)
+% legend_snake: two large regions of two dominant colors meet along a
+% jagged diagonal boundary.  A legend strip of two-by-two blocks near the
+% top-left corner, separated by single background columns, spells out a
+% repeating color pattern read left to right, and a lone two-by-two block
+% elsewhere names the turn color.  Single marker cells of the pattern's
+% first color sit on the left edge inside one region; each shoots a snake
+% path eastward through its own region, painting the legend pattern
+% cyclically with the marker as position zero.  Whenever the next cell
+% leaves the region, that blocking cell is painted the turn color and the
+% snake turns from east to north or from north to east; blocking cells
+% consume no pattern position; a second consecutive block ends the path
+% without a second turn mark, and the path also ends silently at the grid
+% edge.  The legend strip and the lone turn block are erased to the region
+% color that surrounds them.
+% Reference: ARC-AGI-2 task 195c6913 -- legend-striped snakes climb stairs.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(legend_snake): erase legend, walk snake paths from markers.
+arc2_transform(legend_snake, Grid, Out) :-
+% Identify the two dominant region colors of the grid.
+    ls_region_colors_(Grid, A, B),
+% Collect every two-by-two block of a non-region color.
+    ls_blocks_(Grid, A, B, Blocks),
+% Split the blocks into the legend pattern and the lone turn block.
+    ls_legend_(Blocks, Pattern, LegendBlocks, TurnBlock),
+% Extract the turn color from the lone turn block.
+    TurnBlock = block(_, _, T),
+% Collect every left-edge marker row launching a snake path.
+    ls_markers_(Grid, Pattern, Markers),
+% At least one marker must be present for the rule to apply.
+    Markers \= [],
+% Erase the legend strip and the turn block to their region color.
+    foldl(ls_erase_(Grid, A, B), [TurnBlock|LegendBlocks], Grid, Erased),
+% Measure the pattern length for cyclic indexing.
+    length(Pattern, L),
+% Walk every marker's snake path over the erased grid.
+    foldl(ls_path_(Grid, Pattern, L, T), Markers, Erased, Out).
+
+% ls_region_colors_(+Grid, -A, -B): the two most frequent colors.
+ls_region_colors_(Grid, A, B) :-
+% Flatten the grid into a single cell list.
+    append(Grid, Cells),
+% Order the cells so equal colors become adjacent.
+    msort(Cells, Sorted),
+% Compress the ordered cells into color-count pairs.
+    clumped(Sorted, Counted),
+% Re-key each pair by its count for frequency ordering.
+    findall(N-V, member(V-N, Counted), ByCount),
+% Order the pairs from most frequent to least frequent.
+    sort(0, @>=, ByCount, [_-A, _-B|_]).
+
+% ls_blocks_(+Grid, +A, +B, -Blocks): two-by-two blocks of special colors.
+ls_blocks_(Grid, A, B, Blocks) :-
+% Collect every block descriptor found in the grid.
+    findall(block(R, C, V),
+% Enumerate each grid row with its index.
+            (nth0(R, Grid, GRow),
+% Enumerate each row cell as a candidate top-left block corner.
+             nth0(C, GRow, V),
+% The block color must not be either region color.
+             V =\= A,
+% The block color must not be the second region color.
+             V =\= B,
+% The row below the corner completes the block vertically.
+             R1 is R + 1,
+% The column right of the corner completes the block horizontally.
+             C1 is C + 1,
+% The cell right of the corner must repeat the block color.
+             arc2_cell_(Grid, R, C1, V),
+% The cell below the corner must repeat the block color.
+             arc2_cell_(Grid, R1, C, V),
+% The diagonal cell must repeat the block color.
+             arc2_cell_(Grid, R1, C1, V)),
+% Bind the collected block descriptors.
+            Blocks).
+
+% ls_legend_(+Blocks, -Pattern, -LegendBlocks, -TurnBlock): split the blocks.
+ls_legend_(Blocks, Pattern, LegendBlocks, TurnBlock) :-
+% Choose a candidate top row shared by the legend blocks.
+    member(block(R, _, _), Blocks),
+% Gather every block whose top row matches the candidate.
+    include(ls_at_row_(R), Blocks, AtRow),
+% A legend strip holds at least two blocks on one row pair.
+    AtRow = [_, _|_],
+% Exactly one block must remain outside the legend strip.
+    exclude(ls_at_row_(R), Blocks, [TurnBlock]),
+% Order the legend blocks from left to right.
+    sort(2, @<, AtRow, LegendBlocks),
+% Read the legend colors left to right as the repeating pattern.
+    findall(V, member(block(_, _, V), LegendBlocks), Pattern),
+% Commit to the first successful legend split.
+    !.
+
+% ls_at_row_(+R, +Block): the block's top row equals R.
+ls_at_row_(R, block(R, _, _)).
+
+% ls_markers_(+Grid, +Pattern, -Markers): left-edge snake launch rows.
+ls_markers_(Grid, [P0|_], Markers) :-
+% Collect every row whose left-edge cell carries the pattern head color.
+    findall(R,
+% Enumerate each grid row with its index.
+            (nth0(R, Grid, [Head|[Side|_]]),
+% The left-edge cell must carry the pattern head color.
+             Head =:= P0,
+% The cell beside the marker must differ from the marker color.
+             Side =\= P0),
+% Bind the collected marker rows.
+            Markers).
+
+% ls_erase_(+Grid, +A, +B, +Block, +G0, -G): erase one block to region color.
+ls_erase_(Grid, A, B, block(R, C, _), G0, G) :-
+% Find the region color surrounding the block.
+    ls_fill_color_(Grid, A, B, R, C, Fill),
+% The row below the corner completes the block vertically.
+    R1 is R + 1,
+% The column right of the corner completes the block horizontally.
+    C1 is C + 1,
+% Paint all four block cells with the surrounding region color.
+    foldl(hb_paint_(Fill), [R-C, R-C1, R1-C, R1-C1], G0, G).
+
+% ls_fill_color_(+Grid, +A, +B, +R, +C, -Fill): region color around a block.
+ls_fill_color_(Grid, A, B, R, C, Fill) :-
+% The row above the block's top-left corner.
+    RU is R - 1,
+% The row below the block's bottom row.
+    RD is R + 2,
+% The column left of the block's top-left corner.
+    CL is C - 1,
+% The column right of the block's right column.
+    CR is C + 2,
+% Probe the four cells orthogonally adjacent to the block corners.
+    member(PR-PC, [R-CL, RU-C, R-CR, RD-C]),
+% Read the probed neighbor cell if it is in bounds.
+    arc2_cell_(Grid, PR, PC, Fill),
+% The fill color must be one of the two region colors.
+    (Fill =:= A ; Fill =:= B),
+% Commit to the first region-colored neighbor found.
+    !.
+
+% ls_path_(+Grid, +Pattern, +L, +T, +R, +G0, -G): walk one marker's snake.
+ls_path_(Grid, Pattern, L, T, R, G0, G) :-
+% The marker's region color is the color beside it on the left edge.
+    arc2_cell_(Grid, R, 1, Rc),
+% Walk the snake east from the marker at pattern position one.
+    ls_walk_(Grid, Rc, Pattern, L, T, R, 0, 1, 0, 1, G0, G).
+
+% ls_walk_(+Grid, +Rc, +Pat, +L, +T, +R, +C, +Pos, +DR, +DC, +G0, -G).
+ls_walk_(Grid, Rc, Pat, L, T, R, C, Pos, DR, DC, G0, G) :-
+% Compute the row of the next cell along the current direction.
+    R2 is R + DR,
+% Compute the column of the next cell along the current direction.
+    C2 is C + DC,
+% Distinguish in-bounds continuation from a silent edge stop.
+    (   arc2_cell_(Grid, R2, C2, V)
+% Handle the in-bounds next cell by region membership.
+    ->  ls_step_(Grid, Rc, Pat, L, T, R, C, Pos, DR, DC, R2, C2, V, G0, G)
+% The path ends silently at the grid edge.
+    ;   G = G0
+    ).
+
+% ls_step_(...): paint one region cell or turn at a blocking cell.
+ls_step_(Grid, Rc, Pat, L, T, _, _, Pos, DR, DC, R2, C2, V, G0, G) :-
+% The next cell belongs to the snake's own region.
+    V =:= Rc,
+% Commit to the region-cell branch.
+    !,
+% Reduce the pattern position cyclically.
+    I is Pos mod L,
+% Read the pattern color for this position.
+    nth0(I, Pat, Color),
+% Paint the region cell with the pattern color.
+    arc2_set_cell_(G0, R2, C2, Color, G1),
+% Advance the pattern position for the next cell.
+    Pos2 is Pos + 1,
+% Continue walking in the same direction from the painted cell.
+    ls_walk_(Grid, Rc, Pat, L, T, R2, C2, Pos2, DR, DC, G1, G).
+% ls_step_/15 blocking case: mark the turn and pivot the direction.
+ls_step_(Grid, Rc, Pat, L, T, R, C, Pos, DR, DC, R2, C2, _, G0, G) :-
+% Paint the blocking cell with the turn color.
+    arc2_set_cell_(G0, R2, C2, T, G1),
+% Pivot the direction from east to north or from north to east.
+    ls_turn_(DR, DC, DR2, DC2),
+% Compute the row of the first cell along the pivoted direction.
+    R3 is R + DR2,
+% Compute the column of the first cell along the pivoted direction.
+    C3 is C + DC2,
+% A second consecutive block ends the path without another mark.
+    (   arc2_cell_(Grid, R3, C3, Rc)
+% Continue walking in the pivoted direction from the last path cell.
+    ->  ls_walk_(Grid, Rc, Pat, L, T, R, C, Pos, DR2, DC2, G1, G)
+% The path ends after the single turn mark.
+    ;   G = G1
+    ).
+
+% ls_turn_(+DR, +DC, -DR2, -DC2): east pivots to north.
+ls_turn_(0, 1, -1, 0).
+% ls_turn_/4 second case: north pivots to east.
+ls_turn_(-1, 0, 0, 1).

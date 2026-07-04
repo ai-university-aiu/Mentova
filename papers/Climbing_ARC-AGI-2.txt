@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 100 complete: 97/120 = 80.83%.
+Last updated: 2026-07-04. Wave 101 complete: 98/120 = 81.67%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -222,6 +222,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  |  95 / 120  | 79.17%  | Wave 98: twin_beam the grid is a ladder - even rows carry a colored horizontal bar plus optional pipe decorations to the right, odd rows are 7-filled separator corridors, and every row opens with a 6 lamp in column zero; a separator fires when the bars directly above and below share one color, and its lamp leaves column zero and travels as a beam heading right through the 7 corridors; leaving the grid the beam rests on its last cell, and hitting an obstacle it checks the two perpendicular cells - with exactly one open it turns there, except that a turn to heading left is refused while the current row still holds its own lamp, and with zero or two open cells it rests where it stands; each rest cell is painted 6 - the lamp guard on left turns is the discriminating observation, because the third training pair's beam rests beside an open leftward corridor whose row keeps its lamp while the test grid's beam turns left along a fired row whose lamp has departed
 2026-07-04  |  96 / 120  | 80.00%  | Wave 99: hole_beacon the grid holds two large rectilinear regions of two distinct colors on a zero background, disturbed by single-cell noise - background holes inside the regions, wrong-colored cells inside the regions, and colored strays scattered over the background; every cell is labeled region A, region B, or background by a majority vote over the eight cells of its orthogonal cross neighborhood at distances one and two, ties broken by the cell's own color, and a second vote pass runs over the first pass's labels so already-silenced strays cannot distort the vote; strays labeled background are erased, wrong-colored cells are repaired to their region color, and every background hole inside a region becomes a beacon - a three-by-three stamp whose ring takes the rival region's color and whose center is painted 8, centers painted after all rings and stamps clipped at the grid edges - the second vote pass is the discriminating observation, because two stray cells sitting two steps from a background hole near the region border tip a single raw-color vote into stamping a spurious beacon, while after one relabeling pass the strays already carry background labels and stay silent
 2026-07-04  |  97 / 120  | 80.83%  | Wave 100: corner_glyph the scene holds boxes outlined in zero on a solid background; one box corner already carries a full multi-cell decoration - the template - whose cells define a shape in that corner's outward frame, and the shape's most inward diagonal cell is the marker position; box corners are detected by a tolerant L-junction test whose border arms allow decoration cells to overwrite border cells, and every corner whose own marker position holds a single non-background, non-border color receives the complete template shape stamped in that marker color, mirrored into the corner's orientation, with out-of-bounds stamp cells clipped away - the tolerant arm test is the discriminating observation, because the template decoration overwrites the border cells beside its own corner and, on a five-cell box side, even sits within arm reach of the opposite corner, so a strict all-zero arm test loses exactly the marked corners that must be stamped
+2026-07-04  |  98 / 120  | 81.67%  | Wave 101: legend_snake two large regions of two dominant colors meet along a jagged diagonal boundary; a legend strip of two-by-two blocks near the top-left corner, separated by single background columns, spells out a repeating color pattern read left to right, and a lone two-by-two block elsewhere names the turn color; single marker cells of the pattern's first color sit on the left edge inside one region and each shoots a snake path eastward through its own region, painting the legend pattern cyclically with the marker as position zero; whenever the next cell leaves the region that blocking cell is painted the turn color and the snake pivots from east to north or from north to east, blocking cells consume no pattern position, a second consecutive block ends the path without a second mark, the path ends silently at the grid edge, and the legend strip and the turn block are erased to the region color that surrounds them - the pivot bookkeeping is the discriminating observation, because the turn mark spends no pattern position and a blocked pivot must end the path quietly, which is exactly how the second training snake stops dead against the boundary after a single mark
 
 
 COMPLETE SCORE PROGRESSION
@@ -1242,6 +1243,68 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 101 - 2026-07-04 - Score: 98/120 = 81.67%
+
+Date: 2026-07-04
+
+Confirmed score: 98 / 120 = 81.67%
+
+Rules added in this wave:
+  legend_snake (WP-359, Layer 334)
+
+Task solved: 195c6913 (3 training pairs + 1 test case; grids
+  from 20x20 to 30x30; the output always keeps the input size).
+
+Algorithm: legend-programmed snake paths over a two-region scene.
+  Stage 1: read the two region colors as the two most frequent
+  colors of the grid; the regions meet along a jagged diagonal
+  boundary and may carry stray cells of each other's color.
+  Stage 2: collect every two-by-two block of a non-region color;
+  the blocks sharing one top row form the legend strip near the
+  top-left corner, read left to right as the repeating color
+  pattern, and the single remaining block names the turn color.
+  Stage 3: collect the markers - left-edge cells carrying the
+  pattern's first color - and read each marker's region color
+  from the cell directly beside it.
+  Stage 4: erase the legend strip and the lone turn block to the
+  region color found next to them.
+  Stage 5: walk each marker's snake eastward through its own
+  region, painting the pattern cyclically with the marker cell
+  as position zero; a cell outside the region blocks the snake,
+  is painted the turn color, and pivots the heading from east to
+  north or from north to east, spending no pattern position; the
+  walk then resumes from the last path cell, a blocked pivot
+  ends the path without a second mark, and walking off the grid
+  edge ends the path silently.
+
+Bugs fixed: one integration-stage instantiation bug. The block
+  and marker collectors first enumerated cells through the
+  bounds-checked cell accessor, whose leading arithmetic guards
+  demand ground indices; switching both collectors to direct
+  indexed row enumeration fixed the error, and the rule then
+  passed the single-task test and the full regression on the
+  first corrected compile.
+
+Lessons learned: when a path both paints the scene and reads the
+  scene, split the two roles cleanly - the snake reads region
+  membership from the untouched input grid while painting onto
+  the working copy, so painted pattern cells can never block a
+  later snake. The turn bookkeeping carries the whole task: the
+  blocking cell takes the turn color but consumes no pattern
+  position, so the cyclic pattern flows unbroken around every
+  corner of the staircase, and the second training snake proves
+  that a blocked pivot must stop the path quietly instead of
+  spending another mark. The legend strip is the program and
+  the grid is the machine: reading the strip left to right as a
+  cyclic program executed by edge-launched walkers turned a
+  daunting scene into thirty lines of walking code.
+
+Accomplishment: Acc_399.  Paper: Acc_399_ARC2_Wave101_LegendSnake.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5403,6 +5466,7 @@ e3721c99  - Wave 65 - hole_color         - legend templates enclose N holes; gre
 9bbf930d  - Wave 98 - twin_beam          - ladder of bar rows with column-zero 6 lamps; separators between twin same-colored bars fire their lamps as rightward beams through the 7 corridors; a beam turns at an obstacle onto its unique open side, refuses a left turn while the row keeps its own lamp, rests at boundaries and two-way junctions, and paints a 6 where it rests
 de809cff  - Wave 99 - hole_beacon        - two rectilinear regions on zero background denoised by a two-pass cross-neighborhood majority vote; strays erased, wrong-colored cells repaired, and every background hole inside a region stamped as a 3x3 beacon with a rival-colored ring and an 8 center
 4c416de3  - Wave 100 - corner_glyph      - zero-outlined boxes on a solid background; the one fully decorated corner teaches a shape in frame coordinates, and every corner holding a single glyph color at the shape's inward-diagonal marker position gets the full shape stamped in that color, mirrored to its orientation
+195c6913  - Wave 101 - legend_snake      - two-region diagonal scene; a top-left legend strip of two-by-two blocks spells a repeating color pattern, left-edge markers shoot eastward snakes painted with the pattern that pivot north then east along the region boundary, each blocking cell painted the lone block's turn color; legend and turn block erased
 0934a4d8  - Wave 67 - mirror_patch       - hidden patch behind solid 8-block recovered via detected H/V mirror axes; fixpoint healing; transpose fallback
 7666fa5d  - Wave 68 - diag_corridor      - anti-diagonal bank chains bound corridors; cells between chain line sums with r-c in overlapping cross ranges flooded with 2
 fc7cae8d  - Wave 69 - frame_compass      - two border-colored frame lines hug the interior crop; each points its crop edge at the same-colored border side; unique D4 transform applied
@@ -5864,4 +5928,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 99: Hole-beacon - the grid holds two large r
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 100: Corner-glyph - the scene holds boxes outlined in the zero border color on a solid background; one box corner already carries a full multi-cell decoration, the template, whose cells define a shape expressed in that corner's outward frame (p = dr times u, q = dc times v), and the shape's most inward cell on its own diagonal is the marker position; every box corner is detected together with its orientation by a tolerant L-junction test whose two inward border arms may carry decoration cells anywhere but never background cells and must keep at least two zero border cells each, while the outward neighbors carry no border and the inward diagonal cell is interior; every corner whose own marker position holds a single non-background, non-zero color then receives the complete template shape stamped in that marker color, transformed through its own frame so the shape mirrors correctly at all four corner types, with out-of-bounds stamp cells clipped away and template corners repainting themselves unchanged; the tolerant arm test is the discriminating observation of the wave, because the template decoration overwrites the border cells beside its own corner and, on a five-cell box side, even sits within arm reach of the opposite corner, so a strict all-zero arm test loses exactly the marked corners that must be stamped.
   Score: 97/120 = 80.83%. Task 4c416de3 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 101: Legend-snake - two large regions of two dominant colors meet along a jagged diagonal boundary; a legend strip of two-by-two blocks near the top-left corner, separated by single background columns, spells out a repeating color pattern read left to right, and a lone two-by-two block elsewhere names the turn color; single marker cells of the pattern's first color sit on the left edge inside one region, and each shoots a snake path eastward through its own region, painting the legend pattern cyclically with the marker cell as position zero; whenever the next cell leaves the region, that blocking cell is painted the turn color and the snake pivots from east to north or from north to east, resuming from the last path cell, with blocking cells consuming no pattern position; a second consecutive block ends the path without a second turn mark, the path also ends silently at the grid edge, and the legend strip and the lone turn block are erased to the region color that surrounds them; the pivot bookkeeping is the discriminating observation of the wave, because the turn mark spends no pattern position, so the cyclic pattern flows unbroken around every corner of the staircase, and the second training snake stops dead against the boundary after a single mark, proving that a blocked pivot ends the path quietly.
+  Score: 98/120 = 81.67%. Task 195c6913 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
