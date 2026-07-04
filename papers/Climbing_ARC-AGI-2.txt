@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 89 complete: 86/120 = 71.67%.
+Last updated: 2026-07-03. Wave 90 complete: 87/120 = 72.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -211,6 +211,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  84 / 120  | 70.00%  | Wave 87: twin_toggle shapes scattered on a uniform background are integer-scaled copies of exactly two variant templates that share an identical body of same-colored cells under a best-overlap alignment; every shape is redrawn as the other variant at its own scale, positioned so the shared body cells stay exactly where they were - stem-and-base colors toggle, and side decorations jump from below one shape to above its twin
 2026-07-03  |  85 / 120  | 70.83%  | Wave 88: band_jigsaw one component spans the full grid width or height and acts as an immovable ragged band; every other shape is translated - never rotated or flipped - so the shapes stack flush against the band's ragged edges, exactly tiling the region between the band's per-column edge profile and a straight outer edge on one or both sides; the band is horizontal in both training pairs but vertical in the test, so the solver canonicalizes by transposition and solves the far side by vertical flip
 2026-07-03  |  86 / 120  | 71.67%  | Wave 89: wire_wrap each color system holds a straight line segment, a crumpled wire attached orthogonally to one line endpoint, and a marker shape; the output keeps the line and marker untouched and re-lays the wire as a deterministic path - a diagonal approach from the attachment cell toward the marker, clamped to the marker's near lane, a hug along the marker's near face cell by cell, and a mirrored 45-degree departure ray - truncated at the input wire's cell count or the grid edge, whichever comes first; the test grid holds two independent three-color systems solved by nearest-marker assignment
+2026-07-03  |  87 / 120  | 72.50%  | Wave 90: compartment_tally every foreground color except one draws a rectangular box outline subdivided by internal partition lines into compartments, and the remaining color is scattered noise; the output holds one row per box sorted by compartment count ascending (ties by leftmost column), each row painting the box color once per compartment and padding with the noise color to the maximum count; compartments are counted by flood-filling the box interior with walls repaired at single-cell gaps where noise or a crossing box overwrote a partition cell - background cells are never repaired, which protects single-row and single-column compartments
 
 
 COMPLETE SCORE PROGRESSION
@@ -1231,6 +1232,76 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 90 - 2026-07-03 - Score: 87/120 = 72.50%
+
+Date: 2026-07-03
+
+Confirmed score: 87 / 120 = 72.50%
+
+Rules added in this wave:
+  compartment_tally (WP-348, Layer 323)
+
+Task solved: 89565ca0 (3 training pairs + 1 test case; inputs from
+  22x20 up to 30x28, outputs tiny census grids from 3x4 up to 5x6;
+  each input holds one scattered noise color plus three to five box
+  colors, each drawing one rectangular outline possibly subdivided
+  by internal partition lines into table-like compartments; boxes
+  nest, overlap, and cross each other, and noise cells overwrite
+  box-line cells; the output is a census - one row per box, the box
+  color repeated once per compartment, padded with the noise color).
+
+Algorithm: compartment census by repaired flood fill.
+  Stage 1: the majority color is the background; among the
+  foreground colors, the one whose cells shatter into the most
+  4-connected fragments is the scattered noise color; every other
+  color is a box color. Stage 2: for each box color C, the
+  bounding box of all C cells frames the box; a cell is a wall
+  when it carries C itself, or when it is non-background and both
+  its vertical neighbors or both its horizontal neighbors carry C -
+  this single-cell repair restores partition cells overwritten by
+  noise or by another box's crossing line, while the background
+  guard keeps genuine single-row and single-column compartments
+  open; the compartment count N is the number of 4-connected
+  components of non-wall cells strictly inside the bounding box.
+  Stage 3: the boxes sort by N ascending with ties broken by the
+  leftmost bounding-box column; the output paints one row per box -
+  the box color repeated N times, padded with the noise color to
+  the maximum count.
+
+Bugs fixed: two prototype iterations. The naive flood fill (walls
+  = box color only) leaked through partition gaps where noise or a
+  crossing box overwrote a line cell; adding the two-neighbor
+  repair fixed the leaks but walled off genuine single-row and
+  single-column compartments whose interior cells are flanked by
+  two parallel lines; guarding the repair to non-background cells
+  fixed both failure modes at once, and the integrated Prolog rule
+  passed the single-task test and the full regression on the first
+  compile.
+
+Lessons learned: the proven method carried the wave again - all
+  eight grids were dumped to text and the complete rule was written
+  in plain English before any code. The decisive observation is
+  that the compartment count is structural, not decorative: the
+  first reading (marks inside compartments) fell apart, while
+  counting flood-fill regions inside each box explained every row
+  of every output, including the pair-3 box whose bottom section
+  first looked like stray content but is really a third compartment
+  below an internal partition. Boxes overlap and cross freely in
+  this family, so per-color analysis with gap repair is essential;
+  the background guard on the repair is the difference between
+  counting a compartment and erasing it. The census output family
+  (tiny output, one row per object, count-coded row content) is a
+  recurring ARC-AGI-2 pattern worth checking early: output height
+  plus one equaling the distinct foreground color count is a cheap,
+  sharp pre-filter. Full regression of all 86 locally verified
+  tasks (85 prior plus 89565ca0) still induces and passes.
+
+Accomplishment: Acc_388.  Paper: Acc_388_ARC2_Wave90_CompartmentTally.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4681,6 +4752,7 @@ a6f40cea  - Wave 86 - xray_frame         - a large rectangular frame with a unif
 c7f57c3e  - Wave 87 - twin_toggle        - shapes on a uniform background are integer-scaled copies of exactly two variant templates sharing an identical aligned body; every shape is redrawn as the other variant at its own scale, positioned so the shared body cells stay exactly where they were
 16b78196  - Wave 88 - band_jigsaw        - one component spans the full grid width or height as an immovable ragged band; every other shape is translated, never rotated or flipped, so the shapes stack flush against the band's ragged edges, exactly tiling the region between the band's edge profile and a straight outer edge on one or both sides
 88bcf3b4  - Wave 89 - wire_wrap          - each three-color system holds a straight line, a crumpled wire attached orthogonally to one line endpoint, and a marker shape; the wire is re-laid as a clamped diagonal approach to the marker, a hug along the marker's near face, and a mirrored 45-degree departure, truncated at the wire's cell count or the grid edge
+89565ca0  - Wave 90 - compartment_tally  - every foreground color except one scattered noise color draws a rectangular box outline subdivided by internal partition lines into compartments; the output holds one census row per box sorted by compartment count ascending, the box color repeated once per compartment and padded with the noise color to the maximum count
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -5068,4 +5140,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 88: Band-jigsaw - each grid holds one compon
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 89: Wire-wrap - each color system holds a straight orthogonal line segment, a crumpled wire attached orthogonally to one endpoint of the line, and a marker shape; the majority color is the background, every remaining color forms exactly one 8-connected component, lines pair with wires by endpoint attachment, and each system takes the marker nearest to its attachment endpoint; the output keeps lines and markers untouched and re-lays every wire as a deterministic four-phase path: a diagonal approach whose per-axis signs come from the marker centroid minus the endpoint (ties broken by the input wire's side), clamped so neither axis passes the lane one cell outside the marker's bounding box, until 8-adjacent to the marker; a hug along the marker's near face laying one cell beyond each marker row's or column's near edge from the contact side to the far side; a mirrored 45-degree departure ray with the lateral component reversed; and truncation at the first off-grid cell and at the input wire's exact cell count; the non-conservation of wire length is the discriminating observation of the wave, because two training pairs lose wire cells at the grid edge, falsifying every rigid-transform and length-preserving reading, while the face-based hug handles zigzag and staircase markers with no special cases and nearest-marker assignment solves the test's two independent systems.
   Score: 86/120 = 71.67%. Task 88bcf3b4 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 90: Compartment-tally - each grid holds one scattered noise color plus three to five box colors on a majority background, every box color drawing one rectangular outline possibly subdivided by internal partition lines into table-like compartments, with boxes nesting, overlapping, and crossing freely and noise cells overwriting line cells; the noise color is the foreground color whose cells shatter into the most 4-connected fragments; for each box color the bounding box of its cells frames the box, a cell is a wall when it carries the box color or when it is non-background and directly flanked by two box-color cells vertically or horizontally, and the compartment count is the number of 4-connected components of non-wall cells strictly inside the bounding box; the output holds one census row per box sorted by compartment count ascending with ties broken by the leftmost bounding-box column, each row painting the box color once per compartment and padding with the noise color to the maximum count; the background guard on the gap repair is the discriminating observation of the wave, because unguarded repair walls off genuine single-row and single-column compartments while unrepaired flood fill leaks through every partition cell that noise or a crossing box overwrote.
+  Score: 87/120 = 72.50%. Task 89565ca0 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.

@@ -1,0 +1,103 @@
+Acc_388: ARC-AGI-2 Wave 90 - Compartment Tally: A Census of Subdivided Boxes
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 90 of the ARC-AGI-2 benchmark climb: task 89565ca0 solved using
+the compartment_tally rule (WP-348, Layer 323). Score advances from
+86/120 = 71.67% to 87/120 = 72.50%.
+
+TASK DESCRIPTION
+
+Task 89565ca0 presents three training pairs and one test case.
+Inputs range from 22x20 up to 30x28; outputs are tiny census grids
+from 3x4 up to 5x6. Each input holds one scattered noise color plus
+three to five box colors on a majority background. Every box color
+draws exactly one rectangular outline, possibly subdivided by
+internal partition lines - full or partial - into table-like
+compartments, one to six per box. The boxes nest inside each other,
+overlap, and cross each other's lines, and the scattered noise
+cells land everywhere, including on top of box-line cells. The
+output is a census: one row per box, sorted by compartment count
+ascending, each row painting the box color once per compartment and
+padding with the noise color out to the maximum count.
+
+RULE: compartment_tally
+
+The glass-box rule is a three-stage procedure whose parameters are
+all read off the input grid at solve time:
+
+1. ROLE DISCOVERY (tw_background_/2, ww_groups_/2, ct_comps_/2)
+   The majority color is the background. Every foreground color's
+   cells are grouped, and the color whose cells shatter into the
+   most 4-connected fragments is the scattered noise color - noise
+   cells are mostly isolated singletons, while box outlines cohere
+   into a few large fragments. Every other foreground color is a
+   box color.
+
+2. REPAIRED FLOOD FILL (ct_box_/5, ct_wall_/5, ct_comps_/2)
+   For each box color C, the bounding box of all C cells frames the
+   box. A cell is a wall when it carries C itself, or when it is
+   non-background and both its vertical neighbors or both its
+   horizontal neighbors carry C. This single-cell repair restores
+   partition cells that noise or another box's crossing line
+   overwrote, while the background guard keeps genuine single-row
+   and single-column compartments open - a background cell flanked
+   by two parallel partition lines is a compartment interior, not a
+   gap. The compartment count N is the number of 4-connected
+   components of non-wall cells strictly inside the bounding box.
+   Nested and crossing boxes need no special handling: their cells
+   are not walls for C, so flood fill passes straight through them.
+
+3. CENSUS EMISSION (ct_row_/5)
+   The boxes sort by compartment count ascending, with ties broken
+   by the leftmost bounding-box column. The output holds one row
+   per box: the box color repeated N times, padded with the noise
+   color to the maximum compartment count.
+
+KEY INSIGHT
+
+The compartment count is structural, not decorative. The first
+reading of the grids - marks placed inside compartments - fell
+apart immediately, while counting flood-fill regions inside each
+box explained every row of every output, including a training box
+whose bottom section first looked like stray content but is really
+a third compartment below an internal partition line. The decisive
+engineering step is the guarded gap repair: unrepaired flood fill
+leaks through every partition cell that noise or a crossing box
+overwrote, and unguarded repair walls off genuine single-row and
+single-column compartments whose interiors are flanked by two
+parallel lines. Guarding the repair to non-background cells fixes
+both failure modes at once.
+
+INDUCTION AND VERIFICATION
+
+The rule has no learned parameters. The background, the noise
+color, the boxes, the walls, the repairs, and the compartment
+counts are all read off the input grid at answer time. Induction is
+pure verification: a cheap pre-filter (output strictly smaller than
+the input in both dimensions, two to nine rows and columns, and the
+distinct foreground color count equal to the output height plus
+one) followed by transformation of every training pair. The
+integrated rule passed the single-task test and the full regression
+of all 86 locally verified tasks on the first compile.
+
+IMPLEMENTATION
+
+Predicates added to arc_benchmark_2.pl (WP-348, Layer 323):
+arc2_transform(compartment_tally)/3, ct_box_/5, ct_wall_/5,
+ct_wall_x_/6, ct_comps_/2, ct_comps_s_/2, ct_grow_/3, ct_row_/5,
+plus the early-dispatch arc2_induce_rule/2 clause and the
+arc2_named_rule(compartment_tally) registration. Every code line
+carries an ERC comment. Existing helpers tw_background_/2,
+ww_groups_/2, ww_ends_/3, and arc2_cell_/4 are reused.
+
+SCORE
+
+ARC-AGI-2: 87/120 = 72.50%. Task 89565ca0 solved on the first
+integrated compile. Pure induction. No pretraining. Every rule is
+named and glass-box. No human in the development loop.
