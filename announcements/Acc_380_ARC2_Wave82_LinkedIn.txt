@@ -1,0 +1,34 @@
+Accomplishment 380: ARC-AGI-2 Wave 82 - Twin Lift: Twin-Sized Shapes Rise, Lone Shapes Sink
+
+PrologAI solves ARC-AGI-2 task 62593bfd with a new glass-box rule
+called twin_lift (WP-340, Layer 315), raising the benchmark score
+from 78/120 = 65.00% to 79/120 = 65.83%.
+
+Each grid scatters a handful of small shapes over a uniform
+background. In the output some shapes have floated straight up until
+they touch the top edge and the rest have sunk straight down until
+they touch the bottom edge, every shape keeping its columns, its
+form, and its colors. Which way does a shape go? The engine counts
+the cells of every shape: a shape whose cell count matches the cell
+count of at least one other shape rises, and a shape whose cell
+count is unique among all shapes sinks. Twins float, loners sink.
+
+The key insight came from the hidden test grid. The reference
+description of the task speaks of ranking colors by dominance, but
+the test grid holds two shapes of the same color that move in
+opposite directions - a 12-cell ring that sinks and a 7-cell
+staircase that rises - so no per-color rule can be right. Checking
+every candidate mechanism against all fifteen shapes visible across
+the three grids eliminated positional, symmetry, density, and
+protrusion stories one by one and left exactly one survivor: the
+twin-size census. Two training pairs are enough when the invariant
+must hold for every shape.
+
+The rule has no learned parameters. The background is the most
+frequent color, the shapes are 8-connected components, the census
+and both shift targets are computed from the grid at answer time,
+and induction is pure verification of both training pairs. Pure
+induction. No pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

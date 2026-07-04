@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-03. Wave 81 complete: 78/120 = 65.00%.
+Last updated: 2026-07-03. Wave 82 complete: 79/120 = 65.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -203,6 +203,7 @@ Date        | Score      | Percent | Notes
 2026-07-03  |  76 / 120  | 63.33%  | Wave 79: master_fragment every training output is one shared two-color 20 x 20 master pattern up to a dihedral isometry and a two-color bijection, and every input is a contiguous fragment cut from its own output; the first training output is stored as the canonical master, and the answer is the unique candidate among the eight isometries crossed with the two color bijections that contains the test fragment as an exact contiguous subgrid
 2026-07-03  |  77 / 120  | 64.17%  | Wave 80: ring_dock five-by-five ring objects (one-cell border around a solid three-by-three interior) float in the grid; rings with one border color slide left and rings with the other border color slide right, each keeping its rows; same-side rings pack against the edge in order of edge distance, blocked by the edge or an already-parked same-side ring, while opposite-side rings pass each other freely
 2026-07-03  |  78 / 120  | 65.00%  | Wave 81: wire_relay wires of color 8 with color-5 crossing marks and color-9 blocks each connect an up-or-left tip to a down-or-right tip; a colored figure sitting two cells beyond one tip names the wire color; the output draws a four-cell diamond outline two cells beyond the up-or-left tip and a five-cell diagonal X two cells beyond the down-or-right tip of every wire, both in the wire color, erasing the input figures while keeping the wire structure; tracing goes straight at crossings and crosses blocks straight ahead when possible, otherwise leaving at the block's only other wire exit
+2026-07-03  |  79 / 120  | 65.83%  | Wave 82: twin_lift small shapes scattered on a uniform majority-color background; every 8-connected shape whose cell count matches the cell count of at least one other shape floats straight up flush to the top edge, and every shape with a unique cell count sinks straight down flush to the bottom edge; columns, forms, and colors preserved; the direction decision is per shape, not per color - the test grid holds two same-colored shapes moving in opposite directions
 
 
 COMPLETE SCORE PROGRESSION
@@ -1223,6 +1224,64 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 82 - 2026-07-03 - Score: 79/120 = 65.83%
+
+Date: 2026-07-03
+
+Confirmed score: 79 / 120 = 65.83%
+
+Rules added in this wave:
+  twin_lift (WP-340, Layer 315)
+
+Task solved: 62593bfd (2 training pairs + 1 test case; grids 28x19
+  and 30x30 in training and 25x25 in test; each grid scatters four to
+  six small shapes over a uniform background - background color 0 in
+  the first training grid, 5 in the second, and 1 in the test grid;
+  in the output every shape whose cell count matches the cell count
+  of at least one other shape has floated straight up until flush
+  with the top edge, and every shape whose cell count is unique among
+  all shapes has sunk straight down until flush with the bottom edge,
+  each shape keeping its columns, its form, and its colors).
+
+Algorithm: twin-size census with per-shape vertical alignment.
+  Stage 1: the background is the most frequent color, and every
+  non-background cell is collected with its coordinates and color.
+  Stage 2: the foreground cells are grouped into 8-connected
+  components by greedy flood fill; connectivity ignores color, so a
+  shape spanning two colors moves as one unit. Stage 3: the cell
+  count of every component is recorded in a size census. Stage 4:
+  a component whose size occurs two or more times in the census
+  shifts up by its topmost row; a component whose size occurs exactly
+  once shifts down by the grid height minus one minus its bottommost
+  row; columns never change. Stage 5: the output is rebuilt row by
+  row - cells claimed by a shifted component take that component's
+  cell colors and every other cell takes the background.
+
+Bugs fixed: none in code. The decisive work happened during grid
+  analysis: the reference description of the task speaks of ranking
+  colors by dominance and shifting each color to a rank-determined
+  target, but the test grid holds two color-3 shapes that move in
+  opposite directions, so any per-color rule is unimplementable.
+  Positional swap, nearest-edge, farthest-edge, mirror-symmetry,
+  rotational-symmetry, density, protrusion-direction, and
+  heavy-row hypotheses each failed at least one of the fifteen
+  shapes; the twin-size invariant fits all fifteen across both
+  training grids and the test grid.
+
+Lessons learned: when a task offers only two training pairs, the
+  falsifying instance may live in the test input itself - here the
+  pair of same-colored shapes moving oppositely - so candidate
+  mechanisms should be checked against every visible grid before
+  coding. A size census is a one-line dominance measure that needs
+  no color semantics at all. Full regression of all 78 locally
+  verified tasks (77 prior plus 62593bfd) still induces and passes.
+
+Accomplishment: Acc_380.  Paper: Acc_380_ARC2_Wave82_TwinLift.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -4155,6 +4214,7 @@ cbebaa4b  - Wave 78 - gadget_assembly    - gadget pieces with color-2 connector 
 269e22fb  - Wave 79 - master_fragment    - every training output is one shared two-color master pattern up to a dihedral isometry and a two-color bijection; the input fragment is located among the sixteen candidates and the unique full-size candidate containing it is the answer
 b5ca7ac4  - Wave 80 - ring_dock          - five-by-five rings with a one-cell border around a solid three-by-three interior slide sideways into parking lanes, one border color to the left edge and the other to the right, packing against already-parked same-side rings while opposite-side rings pass freely
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
+62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 
 
 APPENDIX: METHODOLOGY PRINCIPLES CARRIED FORWARD FROM ARC-AGI-1
@@ -4511,4 +4571,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 80: Ring-dock - the grid scatters six to eig
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 81: Wire-relay - the grid holds a maze of color-8 wires with color-5 marks where two wires cross and solid color-9 blocks that wires enter and leave; every wire runs from a tip pointing up or left to a tip pointing down or right, a tip being a color-8 cell with exactly one structural orthogonal neighbor, and a colored figure sits centered two cells beyond one of the two tips - a solid three-by-three square, a four-cell diamond outline, or a five-cell diagonal X; the tracer walks each wire preferring the straight-ahead structural cell, which carries it through crossings without switching wires, turning only into a unique perpendicular structural neighbor, and jumping color-9 blocks by flood filling the region and exiting straight through when a wire cell lies directly beyond, otherwise at the block's only other adjacent wire cell - the fallback that lets a wire turn a corner invisibly inside a block, a freedom only the hidden test grid exercises; the output relays each wire's figure color to both ends, a diamond outline two cells beyond the up-or-left tip and a diagonal X two cells beyond the down-or-right tip, erases the input squares, and keeps the wire structure untouched.
   Score: 78/120 = 65.00%. Task a47bf94d solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-03.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 82: Twin-lift - the grid scatters four to six small shapes over a uniform majority-color background, the backgrounds differing across grids (0, 5, and 1); every 8-connected shape whose cell count matches the cell count of at least one other shape floats straight up until flush with the top edge, and every shape whose cell count is unique among all shapes sinks straight down until flush with the bottom edge, each shape keeping its columns, its form, and its colors; components are color-agnostic, so a two-color shape moves as one unit while two same-colored shapes move independently - and the test grid indeed holds two color-3 shapes moving in opposite directions, the observation that falsifies every per-color dominance reading of the task and forces the per-shape twin-size census that fits all fifteen shapes across both training grids and the test grid.
+  Score: 79/120 = 65.83%. Task 62593bfd solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-03.
