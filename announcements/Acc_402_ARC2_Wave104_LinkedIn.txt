@@ -1,0 +1,39 @@
+Accomplishment 402: ARC-AGI-2 Wave 104 - Box Tally: Hollow Frames Counting Their Scattered Siblings
+
+PrologAI solves ARC-AGI-2 task 8f215267 with a new glass-box rule
+called box_tally (WP-362, Layer 337), raising the benchmark score
+from 100/120 = 83.33% to 101/120 = 84.17%.
+
+Each input of this task shows a stack of hollow rectangular boxes
+along the left side - one-cell-thick frames, each in its own color,
+each with a clean background interior - while the rest of the grid
+is sprinkled with small scattered shapes of assorted colors:
+dominoes, squares, blocks, plus signs, and diamonds.
+
+In the output the scatter is gone. Every box stands exactly where
+it stood, except for a short row of dots printed on its middle
+interior row, right-aligned and spaced two cells apart. Each box
+has answered a counting question: how many separate pieces of my
+color lie scattered out there? Four pieces, four dots. One piece,
+one dot. No pieces, no dots. Colors with no box of their own
+simply vanish.
+
+The quiet trap is what exactly gets counted. In the first training
+pair the color-8 scatter totals ten cells spread over four pieces
+of four different shapes - and the box prints exactly four dots.
+Cells, areas, and shapes all disagree; only the count of separate
+connected pieces fits every box in every grid. The task had been
+shelved for seven waves under a stale surface reading about
+instruction patches and stripe counts; a fresh dump of the actual
+grids dissolved it in minutes. There is no lookup - each framed
+box is simply a counter.
+
+The complete rule was written in plain English covering every grid
+before any code, with every scatter component counted and every
+dot position checked by hand, and the integrated Prolog rule
+passed the single-task test and the full regression on its first
+compile. Pure induction. No pretraining. Every rule is named and
+glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

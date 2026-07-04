@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-yellow?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-goldenrod?style=for-the-badge" alt="48/48 Reasoning Types">
   <img src="https://img.shields.io/badge/accomplishments-363-red?style=for-the-badge" alt="363 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-100%2F120%20%3D%2083.33%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 100/120 = 83.33%">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-101%2F120%20%3D%2084.17%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 101/120 = 84.17%">
   <img src="https://img.shields.io/badge/glass--box-yes-darkred?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **100/120 = 83.33%** — Wave 103; climbing underway |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **101/120 = 84.17%** — Wave 104; climbing underway |
 | Documented accomplishments | **344 accomplished** |
 | Scientific papers | **333 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 103 complete (100/120 = 83.33%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 104 complete (101/120 = 84.17%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -617,6 +617,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_399` | ARC-AGI-2 Wave 101 — legend_snake rule solves task 195c6913 by reading a top-left legend strip of two-by-two blocks as a repeating color pattern that left-edge marker cells paint along eastward snake paths pivoting north then east up the two-region boundary, with each blocking cell painted the lone block's turn color and the legend erased, reaching 98/120 = 81.67%. |
 | `Acc_400` | ARC-AGI-2 Wave 102 — ray_scatter rule solves task 4a21e3da by firing rays from border markers to the farthest blob cell on their line and scattering the remaining quadrant or side pieces flush into the grid corners, deleting any piece bound for a corner touching no marker edge, reaching 99/120 = 82.50%. |
 | `Acc_401` | ARC-AGI-2 Wave 103 — tower_donate rule solves task 9aaea919 by summing the heights of the gray-turning color-2 donor towers and growing each color-3 receiver tower by that many diamond glyphs stacked on top in its own color, reaching 100/120 = 83.33%. |
+| `Acc_402` | ARC-AGI-2 Wave 104 — box_tally rule solves task 8f215267 by redrawing each hollow one-cell-thick frame and printing one dot per same-colored 4-connected scatter component on its middle interior row, right-aligned and spaced two apart, reaching 101/120 = 84.17%. |
 | `Acc_361` | ARC-AGI-2 Wave 63 — col_rank_fill rule solves task 97d7923e; indicator bar length at each column's row-0 cell gives a rank; rank-R column segment (by descending filler count) has its filler cells replaced by the marker color. Score: 60/120 = 50.00%. |
 | `Acc_360` | ARC-AGI-2 Wave 62 — shape_slide rule solves task 581f7754; anchor seeds on grid edges define slide direction and target row/col; each shape's unique-color interior marker aligns to the target; floating seeds also slide to match. Score: 59/120 = 49.17%. |
 | `Acc_358` | ARC-AGI-2 Wave 60 — layout_tile rule solves task 65b59efc; grid divided by two identical major divider rows and N divider cols into template, layout, and marker row-groups; output is S x S arrangement of S x S blocks, each template recolored by its marker color. Score: 57/120 = 47.50%. |

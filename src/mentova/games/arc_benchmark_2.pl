@@ -1385,6 +1385,64 @@ arc2_induce_rule(TrainingPairs, tower_donate) :-
 % Each training pair must transform correctly under tower_donate.
            arc2_transform(tower_donate, In, Out)).
 
+% box_tally: early dispatch before generic clause (WP-362, Layer 337).
+% Enumerate box_tally as a known rule name.
+arc2_named_rule(box_tally).
+% arc2_induce_rule(box_tally): hollow-box pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, box_tally) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Determine the background as the most frequent color.
+    td_background_(First, Bg),
+% Collect every foreground cell.
+    bt_fg_cells_(First, Bg, Cells),
+% List the distinct foreground colors.
+    bt_colors_(Cells, Colors),
+% A tally scene carries at least two foreground colors.
+    Colors = [_, _|_],
+% Collect every hollow box whose interior is pure background.
+    findall(Col,
+% A qualifying box is a hollow border component with a clean interior.
+            ( member(Col, Colors),
+% Keep only this color's cell positions.
+              bt_color_pts_(Col, Cells, Pts),
+% Group the positions into 4-connected components.
+              bt_comps_(Pts, Comps),
+% Pick a component of this color.
+              member(Comp, Comps),
+% The component must be a hollow rectangle border.
+              bt_hollow_box_(Comp),
+% Compute the component's bounding box.
+              bt_bbox_(Comp, Box),
+% The box interior must be pure background.
+              bt_bg_interior_(Box, First, Bg) ),
+% Gather the qualifying box colors.
+            BoxCols),
+% At least two boxes must be present.
+    BoxCols = [_, _|_],
+% Deduplicate the box colors.
+    sort(BoxCols, DistinctCols),
+% Count the boxes.
+    length(BoxCols, NBoxes),
+% Every box must carry a distinct color.
+    length(DistinctCols, NBoxes),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under box_tally.
+           arc2_transform(box_tally, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -22910,3 +22968,203 @@ td_paint_glyph_(Col, C0, R, G0, G) :-
     arc2_set_cell_(A9, R2, C2, Col, A10),
 % Paint the right cell of the bottom arc.
     arc2_set_cell_(A10, R2, C3, Col, G).
+
+% ---------------------------------------------------------------------------
+% BOX TALLY (WP-362, Layer 337)
+% box_tally: hollow framed boxes, each of a distinct color, share the grid
+% with small scattered shapes; the output erases the scatter, redraws every
+% box in place, and prints one dot of the box color per scatter component
+% of that same color on the box's middle interior row, right-aligned two
+% columns left of the right frame edge and spaced two cells apart.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(box_tally): erase scatter, redraw boxes, print tally dots.
+arc2_transform(box_tally, Grid, Out) :-
+% Determine the background as the most frequent color.
+    td_background_(Grid, Bg),
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row to measure the width.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Build a blank background canvas of the same size.
+    bt_blank_(H, W, Bg, Canvas),
+% Collect every foreground cell as R-C-V.
+    bt_fg_cells_(Grid, Bg, Cells),
+% List the distinct foreground colors.
+    bt_colors_(Cells, Colors),
+% Analyze each color into box entries carrying scatter tallies.
+    bt_color_boxes_(Colors, Cells, Entries),
+% At least one box must be present in the scene.
+    Entries = [_|_],
+% Draw every box with its tally dots onto the canvas.
+    foldl(bt_draw_entry_, Entries, Canvas, Out).
+
+% bt_blank_(+H, +W, +Bg, -Grid): build an H-by-W grid filled with Bg.
+bt_blank_(H, W, Bg, Grid) :-
+% Allocate H rows.
+    length(Grid, H),
+% Fill each row with W copies of the background color.
+    maplist([Row]>>(length(Row, W), maplist(=(Bg), Row)), Grid).
+
+% bt_fg_cells_(+Grid, +Bg, -Cells): list every non-background cell as R-C-V.
+bt_fg_cells_(Grid, Bg, Cells) :-
+% Enumerate every cell whose color differs from the background.
+    findall(R-C-V,
+% A qualifying cell pairs its position with its foreground color.
+            ( nth0(R, Grid, Row), nth0(C, Row, V), V \== Bg ),
+% Gather the qualifying cells.
+            Cells).
+
+% bt_colors_(+Cells, -Colors): distinct foreground colors in the cell list.
+bt_colors_(Cells, Colors) :-
+% Project each cell onto its color value.
+    findall(V, member(_-_-V, Cells), Vs),
+% Deduplicate the color values.
+    sort(Vs, Colors).
+
+% bt_color_pts_(+Col, +Cells, -Pts): positions of one color's cells.
+bt_color_pts_(Col, Cells, Pts) :-
+% Keep the positions whose cell carries the requested color.
+    findall(R-C, member(R-C-Col, Cells), Pts).
+
+% bt_comps_(+Pts, -Comps): group points into 4-connected components.
+bt_comps_([], []).
+% Grow a component from the first point, then recurse on the rest.
+bt_comps_([P|Rest], [Comp|More]) :-
+% Expand the seed point into its full component.
+    bt_grow_([P], Rest, [P], Comp),
+% Remove the component's points from the remaining pool.
+    subtract(Rest, Comp, Left),
+% Group the points that are still unassigned.
+    bt_comps_(Left, More).
+
+% bt_grow_(+Frontier, +Pool, +Acc, -Comp): flood-fill over 4-neighbors.
+bt_grow_([], _, Acc, Comp) :-
+% The finished component is the sorted accumulator.
+    sort(Acc, Comp).
+% Expand one frontier point into its unvisited orthogonal neighbors.
+bt_grow_([R-C|Fr], Pool, Acc, Comp) :-
+% Enumerate pool points orthogonally adjacent to the frontier point.
+    findall(NR-NC,
+% A neighbor differs by exactly one step along exactly one axis.
+            ( member(NR-NC, Pool),
+% Skip points that are already part of the component.
+              \+ member(NR-NC, Acc),
+% Require unit Manhattan distance from the frontier point.
+              abs(NR - R) + abs(NC - C) =:= 1 ),
+% Gather the newly reached points.
+            News),
+% Deduplicate the newly reached points.
+    sort(News, NewsS),
+% Push the new points onto the frontier.
+    append(Fr, NewsS, Fr2),
+% Record the new points as visited.
+    append(Acc, NewsS, Acc2),
+% Continue flooding from the extended frontier.
+    bt_grow_(Fr2, Pool, Acc2, Comp).
+
+% bt_bbox_(+Comp, -Box): bounding box of a point list.
+bt_bbox_(Comp, box(R0, R1, C0, C1)) :-
+% Project the points onto their rows.
+    findall(R, member(R-_, Comp), Rs),
+% Project the points onto their columns.
+    findall(C, member(_-C, Comp), Cs),
+% The top edge is the smallest row.
+    min_list(Rs, R0),
+% The bottom edge is the largest row.
+    max_list(Rs, R1),
+% The left edge is the smallest column.
+    min_list(Cs, C0),
+% The right edge is the largest column.
+    max_list(Cs, C1).
+
+% bt_border_(+Box, -Border): sorted border positions of a box.
+bt_border_(box(R0, R1, C0, C1), Border) :-
+% Enumerate the bounding-box positions that touch an edge.
+    findall(R-C,
+% A border position lies inside the box on at least one edge line.
+            ( between(R0, R1, R), between(C0, C1, C),
+% The position must sit on the top, bottom, left, or right edge.
+              ( R =:= R0 ; R =:= R1 ; C =:= C0 ; C =:= C1 ) ),
+% Gather the border positions.
+            Cells),
+% Order the border positions canonically.
+    sort(Cells, Border).
+
+% bt_hollow_box_(+Comp): the component is exactly a hollow rectangle border.
+bt_hollow_box_(Comp) :-
+% Compute the component's bounding box.
+    bt_bbox_(Comp, box(R0, R1, C0, C1)),
+% The box must span at least three rows.
+    R1 >= R0 + 2,
+% The box must span at least three columns.
+    C1 >= C0 + 2,
+% Enumerate the bounding-box border positions.
+    bt_border_(box(R0, R1, C0, C1), Border),
+% The component must equal the border exactly.
+    Comp == Border.
+
+% bt_bg_interior_(+Box, +Grid, +Bg): every interior cell is background.
+bt_bg_interior_(box(R0, R1, C0, C1), Grid, Bg) :-
+% The interior starts one row below the top edge.
+    RA is R0 + 1,
+% The interior ends one row above the bottom edge.
+    RB is R1 - 1,
+% The interior starts one column right of the left edge.
+    CA is C0 + 1,
+% The interior ends one column left of the right edge.
+    CB is C1 - 1,
+% Every interior position must hold the background color.
+    forall(( between(RA, RB, R), between(CA, CB, C) ),
+% Check the cell at the interior position.
+           arc2_cell_(Grid, R, C, Bg)).
+
+% bt_color_boxes_(+Colors, +Cells, -Entries): box entries per color.
+bt_color_boxes_([], _, []).
+% Analyze the first color, then recurse over the remaining colors.
+bt_color_boxes_([Col|Cols], Cells, Entries) :-
+% Keep only this color's cell positions.
+    bt_color_pts_(Col, Cells, Pts),
+% Group the positions into 4-connected components.
+    bt_comps_(Pts, Comps),
+% Keep the components that form hollow rectangle borders.
+    include(bt_hollow_box_, Comps, BoxComps),
+% Keep the components that are scattered shapes.
+    exclude(bt_hollow_box_, Comps, Scatter),
+% Count the scatter components for the tally.
+    length(Scatter, N),
+% Build one entry per box carrying the color and the tally.
+    findall(entry(Col, Box, N),
+% Each box component contributes its bounding box.
+            ( member(BC, BoxComps), bt_bbox_(BC, Box) ),
+% Gather this color's entries.
+            These),
+% Analyze the remaining colors.
+    bt_color_boxes_(Cols, Cells, Rest),
+% Combine this color's entries with the rest.
+    append(These, Rest, Entries).
+
+% bt_draw_entry_(+Entry, +GridIn, -GridOut): paint one box and its dots.
+bt_draw_entry_(entry(Col, Box, N), GridIn, GridOut) :-
+% Paint the hollow frame.
+    bt_draw_frame_(Box, Col, GridIn, G1),
+% Print the tally dots on the middle interior row.
+    bt_draw_dots_(Box, Col, N, G1, GridOut).
+
+% bt_draw_frame_(+Box, +Col, +GridIn, -GridOut): paint the border cells.
+bt_draw_frame_(Box, Col, GridIn, GridOut) :-
+% Enumerate the border positions.
+    bt_border_(Box, Border),
+% Paint each border cell with the box color.
+    foldl([R-C, GA, GB]>>arc2_set_cell_(GA, R, C, Col, GB), Border, GridIn, GridOut).
+
+% bt_draw_dots_(+Box, +Col, +N, +GridIn, -GridOut): right-aligned tally dots.
+bt_draw_dots_(box(R0, R1, _, C1), Col, N, GridIn, GridOut) :-
+% The dots sit on the middle interior row.
+    Mid is (R0 + R1) // 2,
+% Enumerate one dot column per scatter component, spaced two apart.
+    findall(DC, ( between(1, N, K), DC is C1 - 2 * K ), DCs),
+% Paint each dot with the box color.
+    foldl([DC, GA, GB]>>arc2_set_cell_(GA, Mid, DC, Col, GB), DCs, GridIn, GridOut).
