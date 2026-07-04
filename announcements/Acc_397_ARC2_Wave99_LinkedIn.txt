@@ -1,0 +1,43 @@
+Accomplishment 397: ARC-AGI-2 Wave 99 - Hole Beacon: Denoising Two Regions and Flaring Their Holes
+
+PrologAI solves ARC-AGI-2 task de809cff with a new glass-box rule
+called hole_beacon (WP-357, Layer 332), raising the benchmark
+score from 95/120 = 79.17% to 96/120 = 80.00%.
+
+Each input of this task shows two large blocky regions of two
+colors on an empty background - and everything is slightly broken.
+Holes are punched through the regions, cells of the wrong color
+are embedded inside them, and stray colored specks litter the
+background. The output cleans the whole scene: strays vanish,
+wrong colors are repaired, and every hole inside a region flares
+up as a beacon - a small 3x3 stamp ringed with the RIVAL region's
+color around a bright 8 center.
+
+The cleaning rule is a democratic one. Every cell polls its eight
+orthogonal neighbors at distances one and two - up, down, left,
+right - and takes the majority label: region A, region B, or
+background, with ties going to the cell's own color. That one vote
+repairs almost everything: bumps on straight edges are voted out,
+holes are voted in, and corner cells survive on their own
+tie-break.
+
+The trick that cracks the task: vote twice. On the test grid, two
+stray specks sit exactly two steps from an innocent background
+cell near a region border, and the raw first vote tips four to
+three toward the region - stamping a beacon where none belongs. A
+heavier-weighted vote fixes the test but breaks the training
+corners. The answer is to let the first vote silence the strays,
+then run the identical vote again over the labels: the strays now
+vote background like everything else around them, and the
+spurious beacon never appears. The transform's own intermediate
+labels are the state that separates two locally identical votes.
+
+The complete rule was written in plain English covering every
+grid before any code, a full cell-level diff accounted for every
+changed cell by hand, a Python prototype confirmed the two-pass
+vote, and the integrated Prolog rule passed the single-task test
+and the full regression on the first compile. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

@@ -1209,6 +1209,40 @@ arc2_induce_rule(TrainingPairs, twin_beam) :-
 % Each training pair must transform correctly under twin_beam.
            arc2_transform(twin_beam, In, Out)).
 
+% hole_beacon: early dispatch before generic clause (WP-357, Layer 332).
+% Enumerate hole_beacon as a known rule name.
+arc2_named_rule(hole_beacon).
+% arc2_induce_rule(hole_beacon): two-region palette pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, hole_beacon) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the first input row.
+    First = [Row|_],
+% Measure the first input width.
+    length(Row, W),
+% Take the first output row.
+    FirstOut = [ORow|_],
+% The output must keep the input width.
+    length(ORow, W),
+% Flatten the first input for palette analysis.
+    append(First, AllCells),
+% The input palette must be exactly background plus two region colors.
+    sort(AllCells, [0, _, _]),
+% Flatten the first output for palette analysis.
+    append(FirstOut, OutCells),
+% Collect the distinct colors of the first output.
+    sort(OutCells, OutPalette),
+% The output must contain beacon centers painted 8.
+    memberchk(8, OutPalette),
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under hole_beacon.
+           arc2_transform(hole_beacon, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -21572,3 +21606,183 @@ tb_guarded_(Work, Pr, Qc) :-
     Qc =:= -1,
 % The guard holds while column zero of the current row still shows a 6.
     arc2_cell_(Work, Pr, 0, 6).
+
+% ---------------------------------------------------------------------------
+% HOLE BEACON (WP-357, Layer 332)
+% hole_beacon: the grid holds two large rectilinear regions of two distinct
+% colors on a zero background, disturbed by single-cell noise — background
+% holes inside the regions, wrong-colored cells inside the regions, and
+% colored strays scattered over the background.  Every cell is labeled as
+% region A, region B, or background by a majority vote over the eight cells
+% of its orthogonal cross neighborhood (distances one and two up, down,
+% left, and right), with ties broken by the cell's own input color; a
+% second vote pass runs over the first pass's labels so already-silenced
+% strays cannot distort the vote.  Strays labeled background are erased,
+% wrong-colored cells are repaired to their region color, and every
+% background hole inside a region becomes a beacon: a 3x3 stamp whose ring
+% takes the rival region's color and whose center is painted 8, with all
+% centers painted after all rings and stamps clipped at the grid edges.
+% Reference: ARC-AGI-2 task de809cff -- region holes flare as rival rings.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(hole_beacon): denoise two regions and stamp hole beacons.
+arc2_transform(hole_beacon, Grid, Out) :-
+% Identify the two region colors from the grid palette.
+    hb_colors_(Grid, A, B),
+% First labeling pass: vote on the raw input colors.
+    hb_label_pass_(Grid, Grid, A, B, Lab1),
+% Second labeling pass: vote on the first pass's labels.
+    hb_label_pass_(Grid, Lab1, A, B, Lab2),
+% Collect every beacon center: a background hole labeled as a region.
+    hb_centers_(Grid, Lab2, Centers),
+% At least one beacon must exist for the rule to be meaningful.
+    Centers \= [],
+% Stamp the rival-colored ring of every beacon onto the label grid.
+    foldl(hb_ring_(A, B), Centers, Lab2, Ringed),
+% Paint every beacon center 8 after all rings are stamped.
+    foldl(hb_center_, Centers, Ringed, Out).
+
+% hb_colors_(+Grid, -A, -B): the two region colors of a noisy two-region grid.
+hb_colors_(Grid, A, B) :-
+% Flatten the grid into a single cell list.
+    append(Grid, Cells),
+% The palette must be exactly background zero plus two region colors.
+    sort(Cells, [0, A, B]).
+
+% hb_label_pass_(+Grid, +Src, +A, +B, -Lab): one cross-vote labeling pass.
+hb_label_pass_(Grid, Src, A, B, Lab) :-
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% The highest row index of the grid.
+    HM is H - 1,
+% The highest column index of the grid.
+    WM is W - 1,
+% Build the label grid row by row.
+    findall(LabRow,
+% Enumerate every row index.
+            (between(0, HM, R),
+% Build one label row cell by cell.
+             findall(L,
+% Enumerate every column index.
+                     (between(0, WM, C),
+% Label the cell by its cross-neighborhood vote.
+                      hb_vote_(Grid, Src, A, B, R, C, L)),
+% Bind the finished label row.
+                     LabRow)),
+% Bind the finished label grid.
+            Lab).
+
+% hb_probe_(-DR, -DC): the eight cross-neighborhood vote offsets.
+% Two steps up.
+hb_probe_(-2, 0).
+% One step up.
+hb_probe_(-1, 0).
+% One step down.
+hb_probe_(1, 0).
+% Two steps down.
+hb_probe_(2, 0).
+% Two steps left.
+hb_probe_(0, -2).
+% One step left.
+hb_probe_(0, -1).
+% One step right.
+hb_probe_(0, 1).
+% Two steps right.
+hb_probe_(0, 2).
+
+% hb_vote_(+Grid, +Src, +A, +B, +R, +C, -L): majority label of one cell.
+hb_vote_(Grid, Src, A, B, R, C, L) :-
+% Collect the source values of all in-bounds cross-neighborhood cells.
+    findall(V,
+% Probe each of the eight cross offsets.
+            (hb_probe_(DR, DC),
+% Compute the probed row.
+             RR is R + DR,
+% Compute the probed column.
+             CC is C + DC,
+% Read the probed cell; out-of-bounds probes contribute no vote.
+             arc2_cell_(Src, RR, CC, V)),
+% Bind the collected vote values.
+            Vs),
+% Count the votes for region color A.
+    aggregate_all(count, member(A, Vs), NA),
+% Count the votes for region color B.
+    aggregate_all(count, member(B, Vs), NB),
+% Count the votes for the background.
+    aggregate_all(count, member(0, Vs), N0),
+% The winning vote count.
+    Best is max(NA, max(NB, N0)),
+% Collect every class that reaches the winning vote count.
+    findall(K, (member(K-N, [A-NA, B-NB, 0-N0]), N =:= Best), Winners),
+% A unique winner labels the cell directly; ties defer to the own color.
+    (   Winners = [L]
+% The unique winner is the label.
+    ->  true
+% On a tie read the cell's own input color.
+    ;   arc2_cell_(Grid, R, C, Own),
+% Keep the own color when it is among the tied leaders, else background.
+        (memberchk(Own, Winners) -> L = Own ; L = 0)
+    ).
+
+% hb_centers_(+Grid, +Lab, -Centers): background holes labeled as regions.
+hb_centers_(Grid, Lab, Centers) :-
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row of the grid.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% The highest row index of the grid.
+    HM is H - 1,
+% The highest column index of the grid.
+    WM is W - 1,
+% Collect every cell that is a background hole inside a region.
+    findall(R-C-L,
+% Enumerate every row index.
+            (between(0, HM, R),
+% Enumerate every column index.
+             between(0, WM, C),
+% The input cell must be background zero.
+             arc2_cell_(Grid, R, C, 0),
+% Read the cell's final label.
+             arc2_cell_(Lab, R, C, L),
+% The label must name a region, not the background.
+             L =\= 0),
+% Bind the collected beacon centers.
+            Centers).
+
+% hb_ring_(+A, +B, +Center, +Grid0, -Grid): stamp one rival-colored ring.
+hb_ring_(A, B, R-C-L, Grid0, Grid) :-
+% The ring takes the color of the rival region.
+    (L =:= A -> Other = B ; Other = A),
+% Top row of the 3x3 stamp.
+    R0 is R - 1,
+% Bottom row of the 3x3 stamp.
+    R2 is R + 1,
+% Left column of the 3x3 stamp.
+    C0 is C - 1,
+% Right column of the 3x3 stamp.
+    C2 is C + 1,
+% Collect every cell of the 3x3 stamp area.
+    findall(RR-CC, (between(R0, R2, RR), between(C0, C2, CC)), Cells),
+% Paint the rival color over every in-bounds stamp cell.
+    foldl(hb_paint_(Other), Cells, Grid0, Grid).
+
+% hb_paint_(+V, +Cell, +Grid0, -Grid): paint one in-bounds cell with V.
+hb_paint_(V, RR-CC, Grid0, Grid) :-
+% Only in-bounds cells are painted; the stamp clips at the grid edges.
+    (   arc2_cell_(Grid0, RR, CC, _)
+% Replace the in-bounds cell with the paint color.
+    ->  arc2_set_cell_(Grid0, RR, CC, V, Grid)
+% Leave the grid unchanged for out-of-bounds cells.
+    ;   Grid = Grid0
+    ).
+
+% hb_center_(+Center, +Grid0, -Grid): paint one beacon center with an 8.
+hb_center_(R-C-_, Grid0, Grid) :-
+% The beacon center is always in bounds and is painted 8.
+    arc2_set_cell_(Grid0, R, C, 8, Grid).
