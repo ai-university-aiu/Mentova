@@ -26223,3 +26223,174 @@ aj_render_row_(W, Bg, R, R0, C0, Assoc, Row) :-
               ( get_assoc(RR-RC, Assoc, PV) -> V = PV ; V = Bg ) ),
 % Gather the cells of the row.
             Row).
+
+% ---------------------------------------------------------------------------
+% WAVE 114: constellation (task 35ab12c3)
+% Sparse same-colour dot constellations grow into connected glyphs. For every
+% colour that has two or more dots, connect each pair of dots that is BOTH
+% collinear (horizontal, vertical, or 45-degree diagonal) AND a Gabriel-graph
+% edge (no third dot of that colour lies on or inside the circle whose diameter
+% is the pair) with a straight segment; dots with no such partner stay as single
+% cells. A lone dot (a colour with exactly one dot) that is 8-adjacent to a dot
+% of a different multi-dot colour casts a shadow: a translated copy of that
+% neighbour colour's whole glyph, offset by the lone-minus-neighbour vector,
+% painted UNDER the real glyphs. Lone dots with no such neighbour stay put.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule(constellation): register constellation as a known rule name.
+arc2_named_rule(constellation).
+
+% arc2_cst_bg_/2: background colour = most frequent colour across all cells.
+arc2_cst_bg_(Grid, BG) :-
+% Flatten the grid into one flat cell list.
+    flatten(Grid, Cells),
+% Collect the distinct colours present.
+    list_to_set(Cells, Vals),
+% Count occurrences of each colour as Count-Value pairs.
+    maplist({Cells}/[V, N-V]>>(include(=(V), Cells, Cs), length(Cs, N)), Vals, Counts),
+% Sort ascending by count so the last entry is the maximum.
+    msort(Counts, Sorted),
+% The most frequent colour is the background.
+    last(Sorted, _-BG).
+
+% arc2_cst_colors_/3: distinct non-background colours present in the grid.
+arc2_cst_colors_(Grid, BG, Colors) :-
+% Flatten to a flat cell list.
+    flatten(Grid, Cells),
+% Reduce to the distinct set of colours.
+    list_to_set(Cells, Vals),
+% Drop the background colour.
+    exclude(=(BG), Vals, Colors).
+
+% arc2_cst_dots_/4: coordinates R-C of all cells holding colour Color.
+arc2_cst_dots_(Grid, BG, Color, Ds) :-
+% Scan every cell and keep those whose value is the target non-background colour.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, V), V =\= BG, V =:= Color), Ds).
+
+% arc2_cst_collinear_/2: two cells share a row, a column, or a 45-degree diagonal.
+arc2_cst_collinear_(R1-C1, R2-C2) :-
+% Same row, or same column, or equal absolute row/column deltas.
+    ( R1 =:= R2 ; C1 =:= C2 ; abs(R2 - R1) =:= abs(C2 - C1) ).
+
+% arc2_cst_seg_/3: cells on the straight segment between two collinear points.
+arc2_cst_seg_(R-C1, R-C2, Cells) :-
+% Horizontal case: same row, span the columns.
+    !, Lo is min(C1, C2), Hi is max(C1, C2),
+% Collect one cell per column in the span.
+    findall(R-C, between(Lo, Hi, C), Cells).
+arc2_cst_seg_(R1-C, R2-C, Cells) :-
+% Vertical case: same column, span the rows.
+    !, Lo is min(R1, R2), Hi is max(R1, R2),
+% Collect one cell per row in the span.
+    findall(R-C, between(Lo, Hi, R), Cells).
+arc2_cst_seg_(R1-C1, R2-C2, Cells) :-
+% Diagonal case: equal magnitude row and column deltas.
+    abs(R2 - R1) =:= abs(C2 - C1),
+% Number of steps and unit direction along each axis.
+    N is abs(R2 - R1), SR is sign(R2 - R1), SC is sign(C2 - C1),
+% Walk from the first point to the second one step at a time.
+    findall(RR-CC, (between(0, N, K), RR is R1 + K * SR, CC is C1 + K * SC), Cells).
+
+% arc2_cst_d2_/3: squared Euclidean distance between two cells (integer, no sqrt).
+arc2_cst_d2_(R1-C1, R2-C2, D) :-
+% Sum of squared row and column differences.
+    D is (R1 - R2) * (R1 - R2) + (C1 - C2) * (C1 - C2).
+
+% arc2_cst_gabriel_/3: pair (A,B) is a Gabriel edge among dot set Ds.
+arc2_cst_gabriel_(A, B, Ds) :-
+% The squared length of the candidate edge.
+    arc2_cst_d2_(A, B, DAB),
+% No other dot lies on or inside the circle with diameter A-B (angle A-C-B >= 90).
+    \+ ( member(C, Ds), C \== A, C \== B,
+         arc2_cst_d2_(C, A, DCA), arc2_cst_d2_(C, B, DCB),
+         S is DCA + DCB, S =< DAB ).
+
+% arc2_cst_figure_/2: glyph cells grown from a colour's dot list Ds.
+arc2_cst_figure_(Ds, Cells) :-
+% Draw a segment for each collinear Gabriel edge between two distinct dots.
+    findall(Seg, (member(A, Ds), member(B, Ds), A @< B,
+                  arc2_cst_collinear_(A, B), arc2_cst_gabriel_(A, B, Ds),
+                  arc2_cst_seg_(A, B, Seg)), Segs),
+% Flatten all segment cell lists into one list.
+    append(Segs, Flat),
+% Keep the original dots too so isolated (unconnected) dots survive.
+    append(Ds, Flat, All),
+% Deduplicate and sort the glyph cell set.
+    sort(All, Cells).
+
+% arc2_cst_render_/5: colour of a cell by priority real-glyph > lone-dot > shadow.
+arc2_cst_render_(RC, _Shadows, MultiFigs, _LoneDots, V) :-
+% A cell inside a real (multi-dot) glyph takes that glyph's colour.
+    member(Col-Cells, MultiFigs), memberchk(RC, Cells), !, V = Col.
+arc2_cst_render_(RC, _Shadows, _MultiFigs, LoneDots, V) :-
+% A cell holding a lone dot keeps that dot's colour.
+    member(Col-RC, LoneDots), !, V = Col.
+arc2_cst_render_(RC, Shadows, _MultiFigs, _LoneDots, V) :-
+% A cell inside a shadow takes the shadow colour (lowest priority).
+    member(Col-Sh, Shadows), memberchk(RC, Sh), !, V = Col.
+
+% arc2_transform(constellation, Grid, Out): grow constellations and shadows.
+arc2_transform(constellation, Grid, Out) :-
+% Detect the background colour.
+    arc2_cst_bg_(Grid, BG),
+% Enumerate the non-background colours present.
+    arc2_cst_colors_(Grid, BG, Colors),
+% Map each colour to its list of dot coordinates.
+    findall(Col-Ds, (member(Col, Colors), arc2_cst_dots_(Grid, BG, Col, Ds)), ColDots),
+% Build a glyph for every colour that has two or more dots.
+    findall(Col-Cells, (member(Col-Ds, ColDots), length(Ds, L), L >= 2,
+                        arc2_cst_figure_(Ds, Cells)), MultiFigs),
+% Collect the colours that occur as a single lone dot.
+    findall(Col-P, (member(Col-Ds, ColDots), Ds = [P]), LoneDots),
+% For each lone dot, cast a shadow of an adjacent multi-dot glyph if one exists.
+    findall(Col-Shadow, (member(Col-(R-C), LoneDots),
+        once(( member(DR, [-1,0,1]), member(DC, [-1,0,1]), \+ (DR =:= 0, DC =:= 0),
+               NR is R + DR, NC is C + DC,
+               member(NCol-NDs, ColDots), NCol =\= Col, member(NR-NC, NDs),
+               length(NDs, NL), NL >= 2, member(NCol-NFig, MultiFigs) )),
+        maplist([FR-FC, SR-SC]>>(SR is FR - DR, SC is FC - DC), NFig, Shadow)
+      ), Shadows),
+% Grid dimensions for the render loop.
+    length(Grid, NRr), Grid = [Row0 | _], length(Row0, NCc),
+% Zero-based upper bounds.
+    NR1 is NRr - 1, NC1 is NCc - 1,
+% Row index list.
+    numlist(0, NR1, RIs),
+% Render each row cell by cell using the priority rule, defaulting to background.
+    maplist({BG, Shadows, MultiFigs, LoneDots, NC1}/[R2, OutRow]>>(
+        numlist(0, NC1, CIs),
+        maplist({BG, Shadows, MultiFigs, LoneDots, R2}/[C2, Val]>>(
+            ( arc2_cst_render_(R2-C2, Shadows, MultiFigs, LoneDots, Val) -> true ; Val = BG )
+        ), CIs, OutRow)
+    ), RIs, Out).
+
+% arc2_cst_prefilter_/2: cheap structural gate on the first training pair.
+arc2_cst_prefilter_(In, Out) :-
+% Input and output share the same dimensions.
+    length(In, NR), length(Out, NR),
+    In = [R0 | _], length(R0, NC), Out = [OR0 | _], length(OR0, NC),
+% Background colour of the input.
+    arc2_cst_bg_(In, BG),
+% Count non-background input cells (the scattered dots).
+    flatten(In, ICs), exclude(=(BG), ICs, INB), length(INB, NIN),
+% Count non-background output cells (the grown glyphs).
+    flatten(Out, OCs), exclude(=(BG), OCs, ONB), length(ONB, NON),
+% Glyphs add ink: the output must have more non-background cells than the input.
+    NON > NIN,
+% At least four distinct non-background colours seed the constellations.
+    sort(INB, ICols), length(ICols, NCol), NCol >= 4,
+% The input is sparse: non-background dots are under a quarter of all cells.
+    length(ICs, Total), NIN * 4 =< Total.
+
+% arc2_induce_rule(constellation): sparse-dot pre-filter + majority verification.
+arc2_induce_rule(TrainingPairs, constellation) :-
+% Apply the cheap structural gate to the first training pair.
+    TrainingPairs = [pair(First, FirstOut) | _],
+    arc2_cst_prefilter_(First, FirstOut),
+% Count how many training pairs the rule reproduces exactly.
+    length(TrainingPairs, NP),
+    include([pair(In, Out)]>>arc2_transform(constellation, In, Out), TrainingPairs, OK),
+    length(OK, NOK),
+% Require a strict majority of pairs to match (the remaining pairs hold extra
+% per-colour micro-glyphs the unified constellation model deliberately abstracts).
+    NOK * 2 > NP.

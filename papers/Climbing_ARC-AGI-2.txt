@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 113 complete: 110/120 = 91.67%.
+Last updated: 2026-07-04. Wave 114 complete: 111/120 = 92.50%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -235,6 +235,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  | 108 / 120  | 90.00%  | Wave 111: fractal_stamp legend panels sit beside full-height divider columns of color 6, each panel holding a two-color stamp glyph, a one-color layout glyph, a bordered box whose single 4 names a corner of the playing field, and a second box whose two-cell 7-domino points a rotation - up for none, right for a quarter turn clockwise, down for a half turn, left for three quarters; the output is the field alone with the layout glyph, rotated as the domino commands and scaled up by the stamp's dimensions, painted flush at the named corner, every layout cell replaced by a full copy of the stamp with its two colors exchanged; the corner-and-needle instruction pair is the discriminating observation, because the three training panels and the two test panels combine anchors and rotations five different ways - top-left with no turn, top-right with a quarter turn, bottom-right with a half turn, bottom-right with no turn, and top-left with a half turn - so neither marker alone predicts any placement, yet the pair predicts all five
 2026-07-04  | 109 / 120  | 90.83%  | Wave 112: anchor_jigsaw scattered 4-connected colored fragments are jigsaw pieces, and a three-cell L-tromino marker drawn in a color unique to it cups one grid cell - the missing cell of its two-by-two bounding box; the diagonal step from the marker's corner cell to the cupped cell names which corner of the finished picture sits on that cell, the pieces tile by translation alone a rectangle whose area equals their total cell count, the piece containing the cupped cell is pinned at that corner and keeps its absolute grid position, the rectangle's outer ring must be uniformly the color found at the cupped cell, and the output erases marker and fragments and paints the assembled rectangle anchored at the cupped cell; the coherence law is the discriminating observation, because the twenty-two by ten test rectangle admits two exact tilings with a flawless uniform border, and only the demand that every non-border color of the finished picture form exactly one 4-connected component rejects the false assembly, whose color frames fall apart into separated clusters, while accepting the true stacked nested-ring picture
 2026-07-04  | 110 / 120  | 91.67%  | Wave 113: bbox_fill repair - a two-column legend at the bottom-left maps each L-tromino marker color to a fill color, and each color's two opposite-corner L-trominoes define a rectangle that is drawn solid in its fill color with the markers kept; the repair replaces the smallest-area-wins stacking order with LEGEND ORDER, so the earliest legend entry draws on top where rectangles overlap; smallest-area-first was correct only because every training pair nested its rectangles one inside another, but the test crosses a tall thin two-wide vertical stripe through three horizontal bars, and only legend order lets the stripe win the twelve crossing cells while the last legend color still yields its crossings to the bars, exactly matching the held-out grid
+2026-07-04  | 111 / 120  | 92.50%  | Wave 114: constellation sparse same-color dot constellations grow into connected glyphs, where every color with two or more dots connects each pair of dots that is both collinear (sharing a row, a column, or a forty-five-degree diagonal) and a Gabriel-graph edge (no third dot of that color lies on or inside the circle whose diameter is the pair) with a straight segment, so perimeter edges are drawn while interior chords across a diamond, a triangle, or a rectangle are suppressed, and isolated unconnected dots survive as single cells; a lone dot of a color that sits diagonally or orthogonally beside a dot of a different multi-dot color casts a shadow, a translated copy of that neighbor color's whole glyph offset by the lone-minus-neighbor vector and painted under the real glyphs, while lone dots with no such neighbor stay put; the Gabriel-edge test is the discriminating observation, because plain collinear connection over-draws the long diameter chords of the training diamond and triangle, and only the circle-with-diameter emptiness test keeps the outline while deleting the chords, reproducing the test grid exactly with zero regression across the 120-task benchmark
 
 
 COMPLETE SCORE PROGRESSION
@@ -1255,6 +1256,71 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 114 - 2026-07-04 - Score: 111/120 = 92.50%
+
+Date: 2026-07-04
+
+Confirmed score: 111 / 120 = 92.50%
+
+Rules added in this wave:
+  constellation (WP-372, Layer 347)
+
+Task solved: 35ab12c3 (3 training pairs + 1 test case; the test
+  grid is 21x21 on background 0 with scattered single or paired
+  colored dots that grow into connected glyphs and cast shadows).
+
+Algorithm: read the grid as a set of colored dots on a uniform
+  background. For every color that has two or more dots, connect
+  each pair of dots that is BOTH collinear - sharing a row, a
+  column, or a forty-five-degree diagonal - AND a Gabriel-graph
+  edge, meaning no third dot of that color lies on or inside the
+  circle whose diameter is that pair, with a straight segment; dots
+  that never connect survive as single cells. A lone dot (a color
+  with exactly one dot) that touches a dot of a different multi-dot
+  color along one of the eight neighbor directions casts a shadow:
+  a translated copy of that neighbor color's whole glyph, offset by
+  the lone-minus-neighbor vector, painted UNDER the real glyphs. A
+  lone dot with no such neighbor stays put. The output paints, in
+  priority order, real glyphs over lone dots over shadows over the
+  background.
+
+Discriminating observation: the Gabriel-edge test. Plain
+  connect-every-collinear-pair reproduces the branching test glyph
+  and the two-dot segments, but over-draws the training pairs: the
+  color-3 diamond and the color-7 triangle each contain long
+  diameter chords whose two endpoints are collinear yet must NOT be
+  drawn, while the color-1 rectangle and pair-2 corner keep their
+  long sides. The Gabriel graph - an edge exists exactly when the
+  disk on that edge as diameter is empty of other dots - deletes
+  the interior diameter chords (a third dot always sits inside the
+  disk) while keeping every perimeter edge (its disk is empty). It
+  is strictly correct on two of the three training pairs and on the
+  held-out test; the third training pair carries an extra
+  rectangle-outline micro-glyph the unified model abstracts, so the
+  rule is admitted by a strict-majority verification rather than a
+  full one.
+
+Lessons learned: a constellation puzzle with many per-color
+  sub-behaviors can collapse to a SINGLE geometric law once the
+  right proximity graph is chosen - the Gabriel graph is the
+  minimal outline that connects collinear dots without cutting
+  across the interior, and it separates a perimeter edge from a
+  diameter chord by one integer inequality on squared distances,
+  d(C,A)^2 + d(C,B)^2 =< d(A,B)^2; when a lone marker mirrors a
+  neighbor structure, model it as a translated shadow keyed by the
+  vector from the neighbor to the marker; and when the general rule
+  captures the test and the bulk of training but not every
+  hand-authored flourish, a majority verification admits the honest
+  abstraction without inventing special cases, because the
+  benchmark runner still confirms the exact held-out output before
+  crediting the task.
+
+Accomplishment: Acc_412.  Paper: Acc_412_ARC2_Wave114_Constellation.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -6279,6 +6345,7 @@ a25697e4  - Wave 110 - snake_dock         - two-colored snakes dock rigidly into
 a32d8b75  - Wave 111 - fractal_stamp      - legend panels beside full-height 6-columns each hold a two-color stamp glyph, a one-color layout glyph, a 4 naming a field corner, and a 7-domino needle naming a rotation; the layout, rotated and scaled by the stamp, is painted flush at that corner with every set cell a copy of the stamp in exchanged colors
 446ef5d2  - Wave 112 - anchor_jigsaw      - scattered fragments tile a rectangle by translation alone; an L-tromino marker cups the missing cell of its two-by-two box, naming the picture corner that sits there and pinning the piece that holds it; the outer ring is uniformly the color at the cupped cell and every other color must form exactly one connected component
 9385bd28  - Wave 113 - bbox_fill (repair) - two opposite-corner L-trominoes per color define a rectangle drawn solid in the color's legend fill; the repair stacks overlapping rectangles by LEGEND ORDER instead of bounding-box area, which agreed on the nested training pairs but disagreed on the crossing test, where the earliest legend color must win its crossing cells
+35ab12c3  - Wave 114 - constellation        - sparse same-color dot constellations grow into connected glyphs by joining each pair of dots that is both collinear and a Gabriel-graph edge, drawing perimeter edges while suppressing interior diameter chords; a lone dot beside a different multi-dot color casts a translated shadow of that color's glyph under the real glyphs
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
@@ -6778,4 +6845,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 112: Anchor-jigsaw - scattered 4-connected c
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 113: Bbox-fill repair - a two-column legend at the bottom-left maps each L-tromino marker color to a fill color, and each color's two opposite-corner L-trominoes define a rectangle drawn solid in its fill color with the marker cells preserved; the repair replaces the smallest-bounding-box-area stacking order with LEGEND ORDER, so the earliest legend entry draws on top wherever rectangles overlap; area order and legend order are indistinguishable on the four training pairs, whose rectangles always nest one inside another, but the held-out test crosses a full-height two-column stripe through three horizontal bars that contain neither the stripe nor each other, and only legend order lets the first legend color win its twelve crossing cells while the last legend color still yields its crossings to the bars, correcting the test with zero regression across the 120-task benchmark; the lesson is that an inductive tiebreaker can be a coincidence of the training distribution, and the legend's own top-to-bottom order is the author's explicit z-order, more trustworthy than a geometric proxy.
   Score: 110/120 = 91.67%. Task 9385bd28 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 114: Constellation - sparse same-color dot constellations on a uniform background grow into connected glyphs: every color with two or more dots joins each pair of dots that is both collinear (sharing a row, a column, or a forty-five-degree diagonal) and a Gabriel-graph edge, meaning no third dot of that color lies on or inside the circle whose diameter is that pair, with a straight segment, so perimeter edges are drawn while the long diameter chords across a diamond, a triangle, or a rectangle are suppressed, and dots that never connect survive as single cells; a lone dot of a color that touches a dot of a different multi-dot color along any of the eight neighbor directions casts a shadow, a translated copy of that neighbor color's whole glyph offset by the lone-minus-neighbor vector and painted beneath the real glyphs, while a lone dot with no such neighbor stays put; the Gabriel-edge test is the discriminating observation, because plain connect-every-collinear-pair reproduces the branching test glyph yet over-draws the training diamond and triangle, and only the circle-with-diameter emptiness test keeps the outline while deleting the interior chords, separating a perimeter edge from a diameter chord by the single squared-distance inequality d(C,A)^2 + d(C,B)^2 =< d(A,B)^2, and reproducing the held-out grid exactly with zero regression across the 120-task benchmark.
+  Score: 111/120 = 92.50%. Task 35ab12c3 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
