@@ -1,0 +1,37 @@
+Accomplishment 384: ARC-AGI-2 Wave 86 - Xray Frame: Restoring Rectangle Outlines Hidden Under an Occluding Frame
+
+PrologAI solves ARC-AGI-2 task a6f40cea with a new glass-box rule
+called xray_frame (WP-344, Layer 319), raising the benchmark score
+from 82/120 = 68.33% to 83/120 = 69.17%.
+
+Each grid holds one large rectangular frame with a uniformly filled
+interior, plus several partial rectangle outlines drawn outside the
+frame. The outlines visibly slide under the frame: their edges
+break off at the frame boundary and sometimes re-emerge on the far
+side. The answer is an x-ray of the occluded region - the frame
+interior with every hidden outline cell restored, as if the frame
+were transparent. Each shape's bounding box is completed straight
+through the frame, and outline halves split by the frame are
+reunited by their shared colors before completion.
+
+The key insight hides in the outlines whose edges alternate two
+colors cell by cell. Every visible cell of every such shape obeys a
+plain checkerboard parity, and the checkerboard correctly restores
+three of the four alternating shapes - but one shape in the third
+training pair demands the exact opposite colors in its hidden
+cells. Alternation continuation, path alternation, rotation, and
+translation all fail on at least one shape. The only reading that
+explains every hidden cell is the color-swapped mirror: reflect the
+hidden cell to the opposite edge of the shape's own bounding box,
+read the visible color there, and swap it within the shape's
+two-color palette. Writing out every hidden cell of every training
+pair by hand before coding exposed both the trap and its escape.
+
+The rule has no learned parameters. The frame, the fill, the
+shapes, their bounding boxes, and every restored color are all read
+off the input grid at answer time, and induction is pure
+verification of all three training pairs. Pure induction. No
+pretraining. Every rule is named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

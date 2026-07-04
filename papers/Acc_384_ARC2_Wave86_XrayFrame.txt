@@ -1,0 +1,115 @@
+Acc_384: ARC-AGI-2 Wave 86 - Xray Frame: Restoring Rectangle Outlines Hidden Under an Occluding Frame
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-03
+
+ACCOMPLISHMENT
+
+Wave 86 of the ARC-AGI-2 benchmark climb: task a6f40cea solved using
+the xray_frame rule (WP-344, Layer 319). Score advances from
+82/120 = 68.33% to 83/120 = 69.17%.
+
+TASK DESCRIPTION
+
+Task a6f40cea presents three training pairs and one test case. The
+inputs are 20x20, 30x30, 22x22, and 24x24 grids and the outputs are
+small crops: 4x7, 13x14, 7x8, and 8x10. Each input holds one large
+rectangular frame of a single color whose interior is uniformly
+filled - with the background color in two grids and with a distinct
+fill color in the others - plus several partial rectangle outlines
+drawn outside the frame. The outlines visibly slide under the
+frame: their edges break off at the frame boundary and, in one
+grid, re-emerge on the far side. Two grids include outlines whose
+edges alternate two colors cell by cell. The output is the frame
+interior with every hidden outline cell restored, as if the frame
+were transparent - an x-ray of the occluded region.
+
+RULE: xray_frame
+
+The glass-box rule is a five-stage procedure whose parameters are
+all read off the input grid at solve time:
+
+1. FRAME DETECTION (xr_frame_/6, xr_ring_/7)
+   The majority color is the background. Candidate frames are
+   single-color 8-connected components whose cells form exactly the
+   perimeter of their bounding box (at least 3x3) and whose bounding
+   box interior is uniformly one color. The largest candidate by
+   bounding-box area is the occluding frame; smaller perfect boxes
+   elsewhere in the grid remain ordinary shapes.
+
+2. SHAPE COLLECTION (xr_shapes_/7, tw_components_/2)
+   Every non-background cell strictly outside the frame's bounding
+   box is a visible shape cell. The cells group into 8-connected
+   components, and components sharing an identical color set merge
+   into one shape - this reunites outline halves that the frame
+   split apart, such as a long rectangle entering the frame at the
+   top and leaving at the bottom.
+
+3. OUTLINE COMPLETION (xr_hidden_/9)
+   Each shape's bounding box is completed through the frame as if
+   the frame were transparent: every perimeter cell of the shape's
+   bounding box that falls strictly inside the frame interior is a
+   hidden cell to restore.
+
+4. COLOR RESTORATION (xr_restore_/13, xr_visible_/9, xr_swap_/3)
+   A single-color shape restores its own color. A two-color
+   alternating shape restores the color-swapped value of a mirror
+   source inside its own bounding box: the hidden cell reflects to
+   the opposite edge (vertical mirror first, horizontal mirror as
+   fallback), the visible color there is read, and the value is
+   swapped within the shape's two-color palette.
+
+5. ASSEMBLY (xr_out_cell_/5)
+   The output is the frame interior cropped from the input with the
+   restored cells overlaid on the uniform fill.
+
+INDUCTION
+
+The induce clause dispatches early, directly after dial_rotor. Its
+pre-filter requires the first training output to be strictly
+shorter and strictly narrower than its input, requires a frame with
+a uniform interior in the first input, and requires the output
+dimensions to equal the frame interior dimensions. The clause then
+verifies every training pair with a forall over the transform, so
+induction is pure verification.
+
+KEY INSIGHT
+
+The two-color alternating outlines are a trap for every
+positional-parity reading. Every visible cell of every two-color
+shape in all four grids is consistent with a plain (row + column)
+checkerboard, and the checkerboard correctly restores three of the
+four two-color shapes - but the 9/8 shape in the third training
+pair demands the exact anti-checkerboard in its hidden cells.
+Plain alternation continuation, perimeter-path alternation,
+border-skipping alternation, 180-degree rotation, and periodic
+translation all fail on at least one shape. The only completion
+that explains every hidden cell of every two-color shape is the
+color-swapped mirror: reflect the hidden cell to the opposite edge
+of the shape's own bounding box, read the visible color there, and
+swap it within the shape's palette. Writing out every hidden cell
+of every training pair by hand before coding exposed both the
+contradiction and its resolution.
+
+VERIFICATION
+
+All three training pairs and the test case pass in SWI-Prolog under
+arc2_induce_rule/2 followed by arc2_transform/3. A full regression
+of all 82 locally verified tasks (81 prior plus a6f40cea) still
+induces and passes with zero regressions. Implementation: nine
+xr_* helper predicates and the xray_frame transform at the end of
+arc_benchmark_2.pl, with one explanatory comment above every code
+line. The rule passed the single-task test and the full regression
+on the first compile.
+
+METHODOLOGY
+
+Pure induction from training examples only. No pretraining on the
+ARC-AGI-2 corpus. Named glass-box rules for every solved task.
+
+SPARC documentation: Mentova Specification v315, Pseudocode v307,
+Architecture v308, Refinement v367, Completion v373; PrologAI
+Specification v312, Pseudocode v304, Architecture v305, Refinement
+v364, Completion v370. Tutorial chapter Ch304 added.
