@@ -1,0 +1,39 @@
+Accomplishment 404: ARC-AGI-2 Wave 106 - Staple Gravity: Settling a Scaffold of Interlocked Pieces
+
+PrologAI solves ARC-AGI-2 task b6f77b65 with a new glass-box rule
+called staple_gravity (WP-364, Layer 339), raising the benchmark
+score from 102/120 = 85.00% to 103/120 = 85.83%.
+
+Each input of this task shows a corner cell naming a color, plus a
+standing scaffold of colored pieces: vertical poles, horizontal
+bars, and single wedged cells. Delete the named pieces and the
+survivors settle under gravity - each rigid piece falling straight
+down until something holds it again. When no piece carries the
+named color, nothing happens at all.
+
+The trap is that the scaffold hides its own geometry. This task
+had been shelved twice under wrong readings - first as a template
+dictionary, then as gravity with unexplained hidden shapes. The
+insight that opened it is that the scene is a STATICS problem: the
+input is stable, so every piece must already have a reason not to
+fall. Listing those reasons reveals the mechanics. Bars hang
+pinched between two poles and drop the moment one side vanishes.
+Poles stand impaled one cell deep inside the bars they rest on -
+which is why one piece shows seven cells in an input and eight in
+its output: the eighth was hidden inside the bar all along. A
+piece that appears to flip upside down between input and output
+dissolves into a pole plus a separate one-cell piece wedged
+against it. And because support is computed as a fixpoint growing
+up from the floor, a falling piece can catch nothing on the way
+down - pieces land in exactly the order the training pairs show.
+
+The complete rule was written in plain English covering every grid
+before any code, every fall distance in all four settling pairs
+was derived by hand from the support rules, a Python prototype
+confirmed all six grids on its first run, and the integrated
+Prolog rule passed the single-task test and the full regression on
+its first compile. Pure induction. No pretraining. Every rule is
+named and glass-box.
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/

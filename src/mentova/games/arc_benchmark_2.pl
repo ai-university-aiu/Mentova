@@ -1491,6 +1491,36 @@ arc2_induce_rule(TrainingPairs, dot_crawler) :-
 % Each training pair must transform correctly under dot_crawler.
            arc2_transform(dot_crawler, In, Out)).
 
+% staple_gravity: early dispatch before generic clause (WP-364, Layer 339).
+% Enumerate staple_gravity as a known rule name.
+arc2_named_rule(staple_gravity).
+% arc2_induce_rule(staple_gravity): corner-indicator pre-filter + verify all pairs.
+arc2_induce_rule(TrainingPairs, staple_gravity) :-
+% Fast filter: inspect the first training pair.
+    TrainingPairs = [pair(First, FirstOut)|_],
+% Measure the first input height.
+    length(First, H),
+% The output must keep the input height.
+    length(FirstOut, H),
+% Take the top two input rows.
+    First = [Row0, Row1 | _],
+% The corner cell must carry a foreground indicator color.
+    Row0 = [K | Row0Rest],
+% The indicator must be nonzero.
+    K =\= 0,
+% The rest of the top row must be background.
+    forall(member(V0, Row0Rest), V0 =:= 0),
+% The second row must be all background.
+    forall(member(V1, Row1), V1 =:= 0),
+% Take the first output row.
+    FirstOut = [ORow0 | _],
+% The output must keep the same indicator corner.
+    ORow0 = [K | _],
+% Verify every training pair produces the correct output.
+    forall(member(pair(In, Out), TrainingPairs),
+% Each training pair must transform correctly under staple_gravity.
+           arc2_transform(staple_gravity, In, Out)).
+
 % ---------------------------------------------------------------------------
 % CELL ACCESS
 % arc2_cell_/4: get color at (R,C); fails if out of bounds.
@@ -23554,3 +23584,339 @@ dc_rot_offs_(K, Offs, Rotated) :-
     K1 is K - 1,
 % Apply the remaining turns.
     dc_rot_offs_(K1, Offs1, Rotated).
+
+% ---------------------------------------------------------------------------
+% STAPLE GRAVITY (WP-364, Layer 339)
+% staple_gravity: the corner cell (0,0) names a piece color to delete from a
+% scaffold of interlocked poles and bars; poles are maximal vertical runs of
+% at least two cells, bars are the leftover horizontal runs, a bar welds to
+% a pole only when it touches the pole's bottom cell, and a pole standing on
+% a bar extends one hidden cell into it; after the deletion every piece
+% falls one row per tick until it is supported by the floor, by a cell of a
+% supported piece directly below one of its cells, by a cell shared with a
+% supported piece, or by a horizontal segment pinched between two supported
+% pieces; bars are drawn over coincident pole cells when rendering.
+% ---------------------------------------------------------------------------
+
+% arc2_transform(staple_gravity): delete the named piece and settle the rest.
+arc2_transform(staple_gravity, Grid, Out) :-
+% Read the indicator color in the top-left corner.
+    arc2_cell_(Grid, 0, 0, K),
+% The indicator must be a foreground color.
+    K =\= 0,
+% Measure the grid height.
+    length(Grid, H),
+% Take the first row.
+    Grid = [Row0|_],
+% Measure the grid width.
+    length(Row0, W),
+% Collect every foreground cell except the indicator corner.
+    sg_cells_(Grid, Cells),
+% Group the cells into same-color 4-connected components.
+    sg_comps_(Cells, Comps),
+% Decompose every component into pole, bar, and welded L pieces.
+    findall(P, ( member(Col-Pts, Comps), sg_decompose_(Col, Pts, Ps), member(P, Ps) ), Pieces0),
+% Extend each pole one hidden cell into a bar directly beneath its bottom.
+    sg_impale_(Pieces0, Pieces),
+% Keep only the pieces that do not carry the indicator color.
+    exclude([sg(C0, _, _)]>>(C0 =:= K), Pieces, Kept),
+% Branch on whether any piece was deleted.
+    (   length(Pieces, NAll),
+% Count the surviving pieces.
+        length(Kept, NAll)
+% Without a matching piece the scene stays untouched.
+    ->  Out = Grid
+% Otherwise settle the survivors under gravity and redraw the scene.
+    ;   MaxR is H - 1,
+% Let every unsupported piece fall until the scaffold is stable.
+        sg_settle_(Kept, MaxR, 200, Settled),
+% Render the settled pieces onto a fresh background.
+        sg_render_(Settled, H, W, K, Out)
+    ).
+
+% sg_cells_(+Grid, -Cells): every foreground cell except the (0,0) indicator.
+sg_cells_(Grid, Cells) :-
+% Enumerate each nonzero cell with its coordinates and color.
+    findall(R-C-V, ( nth0(R, Grid, Row), nth0(C, Row, V), V =\= 0, \+ (R =:= 0, C =:= 0) ), Cells).
+
+% sg_comps_(+Cells, -Comps): same-color 4-connected components as Color-Pts.
+sg_comps_([], []).
+% Grow a component from the first unassigned cell, then recurse on the rest.
+sg_comps_([R-C-V | Rest], [V-Pts | Comps]) :-
+% Flood outward from the seed cell over same-color 4-neighbours.
+    sg_flood_([R-C], V, Rest, [R-C], Pts, Left),
+% Continue with the cells not absorbed into this component.
+    sg_comps_(Left, Comps).
+
+% sg_flood_(+Queue, +V, +Pool, +Acc, -Pts, -Left): same-color BFS flood.
+sg_flood_([], _, Pool, Acc, Pts, Pool) :-
+% Sort the accumulated cells into canonical order.
+    msort(Acc, Pts).
+% Expand the queue head across its 4-neighbours in the pool.
+sg_flood_([R-C | Q], V, Pool, Acc, Pts, Left) :-
+% Collect the unvisited same-color 4-neighbours of the head cell.
+    findall(NR-NC, ( member(DR-DC, [1-0, -1-0, 0-1, 0-(-1)]), NR is R + DR, NC is C + DC, memberchk(NR-NC-V, Pool) ), New0),
+% Deduplicate the newly found cells.
+    sort(New0, New),
+% Remove the new cells from the pool.
+    sg_take_(New, Pool, Pool2),
+% Queue the new cells for expansion.
+    append(Q, New, Q2),
+% Accumulate the new cells into the component.
+    append(New, Acc, Acc2),
+% Continue the flood with the updated state.
+    sg_flood_(Q2, V, Pool2, Acc2, Pts, Left).
+
+% sg_take_(+Pts, +Pool, -Rest): remove the taken points from the pool.
+sg_take_([], Pool, Pool).
+% Remove one taken point and recurse on the remainder.
+sg_take_([RC | T], Pool, Rest) :-
+% Delete the pool entry for this point.
+    selectchk(RC-_, Pool, Pool1),
+% Continue with the remaining points.
+    sg_take_(T, Pool1, Rest).
+
+% sg_decompose_(+Col, +Pts, -Pieces): split a component into rigid pieces.
+sg_decompose_(Col, Pts, Pieces) :-
+% Extract the maximal vertical runs of at least two cells.
+    sg_vruns_(Pts, VRuns, Leftover),
+% Group the leftover cells into maximal horizontal runs.
+    sg_hsplit_(Leftover, HRuns),
+% Wrap each vertical run as a bare pole piece.
+    findall(sg(Col, V, []), member(V, VRuns), Poles),
+% Weld each foot bar onto the pole whose bottom cell it touches.
+    sg_weld_(HRuns, Poles, Col, Pieces).
+
+% sg_vruns_(+Pts, -VRuns, -Leftover): maximal vertical runs and leftovers.
+sg_vruns_(Pts, VRuns, Leftover) :-
+% Reorder the cells column-major for vertical grouping.
+    findall(C-R, member(R-C, Pts), CRs0),
+% Sort the column-major cells.
+    msort(CRs0, CRs),
+% Split the cells into maximal vertical runs.
+    sg_vsplit_(CRs, Runs),
+% Keep the runs of at least two cells as poles.
+    include([Run]>>(Run = [_, _ | _]), Runs, VRuns),
+% Runs of a single cell fall back to the horizontal pass.
+    exclude([Run]>>(Run = [_, _ | _]), Runs, Singles),
+% Flatten the single-cell runs back to points.
+    findall(RC, member([RC], Singles), Left0),
+% Sort the leftovers row-major for horizontal grouping.
+    msort(Left0, Leftover).
+
+% sg_vsplit_(+CRs, -Runs): split column-major cells into vertical runs.
+sg_vsplit_([], []).
+% Start a run at the first cell and extend it downward.
+sg_vsplit_([C-R | T], [Run | Runs]) :-
+% Extend the run over consecutive rows in the same column.
+    sg_vext_(C, R, T, RunRs, Rest),
+% Materialize the run as row-column cells.
+    findall(RR-C, member(RR, [R | RunRs]), Run),
+% Split the remaining cells.
+    sg_vsplit_(Rest, Runs).
+
+% sg_vext_(+C, +R, +CRs, -Rs, -Rest): extend a vertical run cell by cell.
+sg_vext_(C, R, [C-R1 | T], [R1 | Rs], Rest) :-
+% The next cell must sit directly below in the same column.
+    R1 =:= R + 1, !,
+% Continue extending from the new cell.
+    sg_vext_(C, R1, T, Rs, Rest).
+% Otherwise the run ends here.
+sg_vext_(_, _, Rest, [], Rest).
+
+% sg_hsplit_(+Pts, -Runs): split row-major cells into horizontal runs.
+sg_hsplit_([], []).
+% Start a run at the first cell and extend it rightward.
+sg_hsplit_([R-C | T], [Run | Runs]) :-
+% Extend the run over consecutive columns in the same row.
+    sg_hext_(R, C, T, RunCs, Rest),
+% Materialize the run as row-column cells.
+    findall(R-CC, member(CC, [C | RunCs]), Run),
+% Split the remaining cells.
+    sg_hsplit_(Rest, Runs).
+
+% sg_hext_(+R, +C, +Pts, -Cs, -Rest): extend a horizontal run cell by cell.
+sg_hext_(R, C, [R-C1 | T], [C1 | Cs], Rest) :-
+% The next cell must sit directly rightward in the same row.
+    C1 =:= C + 1, !,
+% Continue extending from the new cell.
+    sg_hext_(R, C1, T, Cs, Rest).
+% Otherwise the run ends here.
+sg_hext_(_, _, Rest, [], Rest).
+
+% sg_weld_(+HRuns, +Poles, +Col, -Pieces): weld foot bars onto pole bottoms.
+sg_weld_([], Poles, _, Poles).
+% Attach or emit the next horizontal run.
+sg_weld_([HRun | Hs], Poles, Col, Pieces) :-
+% Look for a pole whose bottom cell touches an end of this bar.
+    (   select(sg(Col, V, F), Poles, RestPoles),
+% The bar must sit beside the pole's bottom cell.
+        sg_foot_(HRun, V)
+% Weld the bar onto that pole as its foot.
+    ->  append(F, HRun, F2),
+% Continue with the enlarged pole.
+        sg_weld_(Hs, [sg(Col, V, F2) | RestPoles], Col, Pieces)
+% Otherwise the bar stands alone as its own piece.
+    ;   sg_weld_(Hs, Poles, Col, Pieces0),
+% Emit the free bar piece.
+        Pieces = [sg(Col, [], HRun) | Pieces0]
+    ).
+
+% sg_foot_(+HRun, +V): the bar's end cell flanks the pole's bottom cell.
+sg_foot_(HRun, V) :-
+% Read the pole's bottom cell.
+    last(V, BR-BC),
+% Read the bar's leftmost cell.
+    HRun = [R-Cmin | _],
+% Read the bar's rightmost cell.
+    last(HRun, R-Cmax),
+% The bar must share the bottom cell's row.
+    BR =:= R,
+% The bottom cell must flank one end of the bar.
+    ( BC =:= Cmin - 1 ; BC =:= Cmax + 1 ).
+
+% sg_impale_(+Pieces0, -Pieces): extend pole bottoms into bars beneath them.
+sg_impale_(Pieces0, Pieces) :-
+% Collect every bar cell together with its owner index.
+    findall(RC-I, ( nth1(I, Pieces0, sg(_, _, Hs)), member(RC, Hs) ), BarCells),
+% Extend each piece independently against the fixed bar-cell table.
+    findall(P, ( nth1(I, Pieces0, P0), sg_impale_one_(P0, I, BarCells, P) ), Pieces).
+
+% sg_impale_one_(+P0, +I, +BarCells, -P): add hidden pole-bottom cells.
+sg_impale_one_(sg(Col, V, Hs), I, BarCells, sg(Col, V2, Hs)) :-
+% Find the below-neighbour of each column bottom inside a foreign bar.
+    findall(R1-C, ( member(R-C, V), R1 is R + 1, \+ memberchk(R1-C, V), member((R1-C)-J, BarCells), J =\= I ), Ext0),
+% Deduplicate the hidden cells.
+    sort(Ext0, Ext),
+% Append the hidden cells to the vertical cell set.
+    append(V, Ext, V1),
+% Restore canonical cell order.
+    msort(V1, V2).
+
+% sg_settle_(+Pieces, +MaxR, +Fuel, -Settled): tick gravity to a fixpoint.
+sg_settle_(Pieces, MaxR, Fuel, Settled) :-
+% The tick budget must not be exhausted.
+    Fuel > 0,
+% Compute the supported-piece index set as a least fixpoint.
+    sg_support_fix_(Pieces, MaxR, [], Supp),
+% Count the pieces.
+    length(Pieces, N),
+% Count the supported pieces.
+    length(Supp, NS),
+% Branch on whether every piece is supported.
+    (   NS =:= N
+% A fully supported scaffold is settled.
+    ->  Settled = Pieces
+% Otherwise drop every unsupported piece one row and tick again.
+    ;   findall(P, ( nth1(I, Pieces, P0), sg_drop_(P0, I, Supp, MaxR, P) ), Dropped),
+% Every piece must survive the drop inside the grid.
+        length(Dropped, N),
+% Reduce the tick budget.
+        Fuel1 is Fuel - 1,
+% Recurse until the scaffold stabilizes.
+        sg_settle_(Dropped, MaxR, Fuel1, Settled)
+    ).
+
+% sg_drop_(+P, +I, +Supp, +MaxR, -P2): move an unsupported piece down one row.
+sg_drop_(P, I, Supp, _, P) :-
+% Supported pieces stay in place.
+    memberchk(I, Supp), !.
+% Unsupported pieces shift down one row.
+sg_drop_(sg(Col, V, Hs), _, _, MaxR, sg(Col, V2, H2)) :-
+% Shift every vertical cell down one row.
+    findall(R1-C, ( member(R-C, V), R1 is R + 1 ), V2),
+% Shift every horizontal cell down one row.
+    findall(R1-C, ( member(R-C, Hs), R1 is R + 1 ), H2),
+% No vertical cell may leave the grid.
+    forall(member(R2-_, V2), R2 =< MaxR),
+% No horizontal cell may leave the grid.
+    forall(member(R3-_, H2), R3 =< MaxR).
+
+% sg_support_fix_(+Pieces, +MaxR, +Supp0, -Supp): grow support to fixpoint.
+sg_support_fix_(Pieces, MaxR, Supp0, Supp) :-
+% Look for a not-yet-supported piece justified by the current set.
+    (   nth1(I, Pieces, P),
+% The piece must not be supported already.
+        \+ memberchk(I, Supp0),
+% The piece must satisfy one of the four support conditions.
+        sg_supported_(P, I, Pieces, MaxR, Supp0)
+% Add the newly supported piece and iterate.
+    ->  sg_support_fix_(Pieces, MaxR, [I | Supp0], Supp)
+% No further piece qualifies; the fixpoint is reached.
+    ;   Supp = Supp0
+    ).
+
+% sg_supported_(+P, +I, +Pieces, +MaxR, +Supp): the four support conditions.
+sg_supported_(sg(_, V, Hs), I, Pieces, MaxR, Supp) :-
+% Gather every cell of the piece.
+    append(V, Hs, Cs),
+% Test the support conditions in turn.
+    (   member(R-_, Cs), R =:= MaxR
+% A floor-touching piece is supported.
+    ->  true
+% Otherwise look for a supported piece directly below one of the cells.
+    ;   member(R-C, Cs), R1 is R + 1, sg_occ_(R1-C, I, Pieces, Supp)
+% A piece resting on a supported piece is supported.
+    ->  true
+% Otherwise look for a cell shared with a supported piece.
+    ;   member(RC, Cs), sg_occ_(RC, I, Pieces, Supp)
+% A piece impaled on a supported piece is supported.
+    ->  true
+% Otherwise look for a horizontal segment pinched at both ends.
+    ;   sg_pinched_(Cs, I, Pieces, Supp)
+    ).
+
+% sg_occ_(+RC, +I, +Pieces, +Supp): cell occupied by a supported other piece.
+sg_occ_(RC, I, Pieces, Supp) :-
+% Enumerate the supported piece indices.
+    member(J, Supp),
+% The supporter must differ from the supported piece.
+    J =\= I,
+% Fetch the supporter's cells.
+    nth1(J, Pieces, sg(_, V, Hs)),
+% The cell must belong to the supporter.
+    ( memberchk(RC, V) -> true ; memberchk(RC, Hs) ).
+
+% sg_pinched_(+Cs, +I, +Pieces, +Supp): a horizontal segment held at both ends.
+sg_pinched_(Cs, I, Pieces, Supp) :-
+% Enumerate candidate left ends of maximal horizontal segments.
+    member(R-C, Cs),
+% Compute the column left of the candidate.
+    CL is C - 1,
+% The candidate must start its segment.
+    \+ memberchk(R-CL, Cs),
+% Walk to the rightmost column of the segment.
+    sg_segend_(Cs, R, C, CE),
+% Compute the column right of the segment.
+    CR is CE + 1,
+% The left flank must belong to a supported other piece.
+    sg_occ_(R-CL, I, Pieces, Supp),
+% The right flank must belong to a supported other piece.
+    sg_occ_(R-CR, I, Pieces, Supp), !.
+
+% sg_segend_(+Cs, +R, +C, -CE): rightmost column of a horizontal segment.
+sg_segend_(Cs, R, C, CE) :-
+% Compute the next column to the right.
+    C1 is C + 1,
+% Branch on whether the segment continues.
+    (   memberchk(R-C1, Cs)
+% Keep walking rightward.
+    ->  sg_segend_(Cs, R, C1, CE)
+% The segment ends at the current column.
+    ;   CE = C
+    ).
+
+% sg_render_(+Pieces, +H, +W, +K, -Out): draw the scaffold, bars in front.
+sg_render_(Pieces, H, W, K, Out) :-
+% Build an all-background grid of the required size.
+    findall(R0, ( between(1, H, _), length(R0, W), maplist(=(0), R0) ), Grid0),
+% Restore the indicator corner cell.
+    arc2_set_cell_(Grid0, 0, 0, K, G1),
+% Collect every vertical cell with its color.
+    findall(RC-Col, ( member(sg(Col, V, _), Pieces), member(RC, V) ), VCells),
+% Paint the vertical cells first so bars can cover them.
+    foldl([(R-C)-Cv, GA, GB]>>arc2_set_cell_(GA, R, C, Cv, GB), VCells, G1, G2),
+% Collect every horizontal cell with its color.
+    findall(RC2-Col2, ( member(sg(Col2, _, Hs), Pieces), member(RC2, Hs) ), HCells),
+% Paint the horizontal cells last so they sit in front.
+    foldl([(R-C)-Ch, GA, GB]>>arc2_set_cell_(GA, R, C, Ch, GB), HCells, G2, Out).

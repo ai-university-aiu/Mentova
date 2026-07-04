@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 STATUS: ACTIVE. Climbing in progress.
-Last updated: 2026-07-04. Wave 105 complete: 102/120 = 85.00%.
+Last updated: 2026-07-04. Wave 106 complete: 103/120 = 85.83%.
 
 CRITICAL DISCLOSURE: NO HUMAN IN THE LOOP
 
@@ -227,6 +227,7 @@ Date        | Score      | Percent | Notes
 2026-07-04  | 100 / 120  | 83.33%  | Wave 103: tower_donate the scene holds towers of three-by-five diamond glyphs stacked upward from the bottom of the grid, one background row between glyphs and every glyph of a tower sharing one color, while the bottom grid row carries five-wide marker bars aligned exactly under specific towers - color 2 marks a donor tower and color 3 marks a receiver tower; every donor tower keeps its height but is repainted gray with color 5, the donated total is the sum of all donor tower heights, every receiver tower grows by that many extra glyphs stacked on top in its own color with centers climbing four rows per glyph, unmarked towers stay untouched, and all marker bars are erased to background - the donated-sum bookkeeping is the discriminating observation, because the test grid carries two donor bars whose one-glyph towers together grow the receiver by two glyphs, while each training grid carries a single donor whose height alone sets the growth
 2026-07-04  | 101 / 120  | 84.17%  | Wave 104: box_tally the scene holds hollow rectangular boxes, each drawn as a one-cell-thick frame of its own color with a pure background interior, sharing the grid with small scattered shapes of assorted colors; every non-background color splits into 4-connected components, a component that is exactly the border of its own bounding box of at least three by three is a box and every other component is scatter; the output erases everything to background, redraws each box frame in place, and prints tally dots of the box color on the box's middle interior row, one dot per scatter component of that same color, right-aligned starting two columns left of the right frame edge and spaced two cells apart, while scatter colors owning no box simply vanish - counting components rather than cells is the discriminating observation, because a box color's scatter pieces range from dominoes to two-by-three blocks with wildly different cell totals, yet the dot count always equals the number of separate pieces
 2026-07-04  | 102 / 120  | 85.00%  | Wave 105: dot_crawler the scene holds one multi-cell crawler shape of a single color plus a field of single-cell dots of the same color, and full-height single-color separator columns may split the grid into panels showing earlier snapshots of the same crawl; in the leftmost panel the crawler's nose is the shape cell sitting alone on one edge of the shape's bounding box, the nose fires along its outward direction to the nearest dot in line, and from there the crawl greedily hops to the nearest remaining dot sharing a row or column until every dot is consumed; the output is a single background panel holding only the crawler, docked with its nose exactly on the final dot and its body rotated by the quarter turn that points the nose along the direction of the last chain leg - the full-consumption test on the nose candidates is the discriminating observation, because a shape can present two lone edge cells and only the true nose threads a chain through every dot, and when both candidates thread a full chain in opposite directions the second panel breaks the tie, since the true first stop is already consumed or covered there while the false one still sits free
+2026-07-04  | 103 / 120  | 85.83%  | Wave 106: staple_gravity the corner cell at row zero column zero names a piece color to delete from a standing scaffold of colored pieces; every same-color 4-connected component splits into rigid pieces - maximal vertical runs of at least two cells are poles, the leftover horizontal runs are bars, a bar welds onto a pole only when it touches the pole's bottom cell, and a pole standing on a bar hides one extra cell inside the bar; after the deletion every piece falls one row per tick until it is supported by the floor, by a supported piece directly below one of its cells, by a cell shared with a supported piece, or by a horizontal segment pinched between two supported neighbors, and the settled scene is redrawn with bars in front of coincident pole cells - the hidden impaled cell is the discriminating observation, because the second training input shows seven cells of the color-2 piece while its settled output shows eight, so the pole's bottom cell must already live inside the bar it stands on before gravity is applied
 
 
 COMPLETE SCORE PROGRESSION
@@ -1247,6 +1248,77 @@ Lessons learned: the two hint systems outside the frame must be
   9385bd28 remain flagged for a dedicated repair wave.
 
 Accomplishment: Acc_373.  Paper: Acc_373_ARC2_Wave75_GlyphSwap.txt.
+
+Mentova PR: (see PR created this wave)
+PrologAI PR: (see PR created this wave)
+
+
+ATTEMPT 106 - 2026-07-04 - Score: 103/120 = 85.83%
+
+Date: 2026-07-04
+
+Confirmed score: 103 / 120 = 85.83%
+
+Rules added in this wave:
+  staple_gravity (WP-364, Layer 339)
+
+Task solved: b6f77b65 (5 training pairs + 1 test case; every grid
+  12x12; two distinct training inputs reused under different
+  corner indicators, including one indicator naming a color with
+  no piece so the scene stays untouched).
+
+Algorithm: delete the named piece and settle a scaffold of
+  interlocked rigid pieces under gravity.
+  Stage 1: read the indicator color in the top-left corner cell;
+  collect every other foreground cell and group the cells into
+  same-color 4-connected components.
+  Stage 2: decompose each component into rigid pieces - maximal
+  vertical runs of at least two cells are poles, the leftover
+  cells form maximal horizontal runs that stand as bars, and a
+  bar welds onto a pole as its foot only when one of its ends
+  touches the pole's bottom cell; a bar beside a pole's top cell
+  stays a separate piece.
+  Stage 3: impale - a pole whose bottom cell sits directly above
+  a cell of a foreign bar extends one hidden cell into the bar,
+  so the two pieces share that cell with the bar drawn in front.
+  Stage 4: delete every piece carrying the indicator color; if
+  no piece matches, the output is the unchanged input.
+  Stage 5: settle - compute the supported pieces as a least
+  fixpoint of four conditions: a cell on the bottom grid row, a
+  cell of a supported piece directly below one of the piece's
+  cells, a cell shared with a supported piece, or a horizontal
+  segment whose two outside flanks both belong to supported
+  pieces; every unsupported piece falls one row per tick, and
+  the ticks repeat until the whole scaffold is supported.
+  Stage 6: redraw - paint all vertical cells first and all
+  horizontal cells after, so bars sit in front of the pole
+  bottoms impaled inside them, and keep the corner indicator.
+
+Bugs fixed: none. A Python prototype confirmed all five training
+  pairs and the test pair before any Prolog was written, and the
+  rule passed the single-task test and the full regression on
+  the first compile.
+
+Lessons learned: the wave-90-era reading called this task a
+  template dictionary and the Wave 105 survey re-classified it
+  as gravity with hidden geometry; both readings missed that the
+  scene is a STATICS problem, not just a falling-blocks problem.
+  The input is a stable scaffold in which every piece already
+  has a reason not to fall, and listing those reasons is what
+  reveals the mechanics: bars hang pinched between two poles,
+  poles stand impaled one cell deep inside bars, and single
+  cells wedge between neighbors. The apparent shape paradox - a
+  piece whose visible cells vertically mirror between input and
+  output - dissolves once a lone corner cell is parsed as a
+  separate one-cell piece jammed beside a pole instead of as a
+  rigid arm of it. Cell counts changing between input and output
+  are the fingerprint of coincident cells, and the fixpoint
+  support rule (a falling piece cannot support anything) is what
+  keeps a bar from catching on a neighbor that is itself still
+  mid-fall. When pieces seem to flip, split them; when counts
+  seem to change, look for two pieces sharing one cell.
+
+Accomplishment: Acc_404.  Paper: Acc_404_ARC2_Wave106_StapleGravity.txt.
 
 Mentova PR: (see PR created this wave)
 PrologAI PR: (see PR created this wave)
@@ -5722,6 +5794,7 @@ f560132c  - Wave 77 - palette_jigsaw     - four scattered pieces, one key piece 
 cbebaa4b  - Wave 78 - gadget_assembly    - gadget pieces with color-2 connector studs slide together by translation until every stud coincides with its opposite-facing partner; the connection graph's center piece keeps its input position and the assembled machine is drawn around it
 269e22fb  - Wave 79 - master_fragment    - every training output is one shared two-color master pattern up to a dihedral isometry and a two-color bijection; the input fragment is located among the sixteen candidates and the unique full-size candidate containing it is the answer
 b5ca7ac4  - Wave 80 - ring_dock          - five-by-five rings with a one-cell border around a solid three-by-three interior slide sideways into parking lanes, one border color to the left edge and the other to the right, packing against already-parked same-side rings while opposite-side rings pass freely
+b6f77b65  - Wave 106 - staple_gravity    - the corner cell names a piece color to delete from a scaffold of poles, bars, welded feet, and impaled hidden cells; the survivors fall one row per tick until floor contact, resting contact, a shared cell, or a two-sided pinch supports them
 a47bf94d  - Wave 81 - wire_relay         - color-8 wires with color-5 crossing marks and color-9 blocks relay a figure color from tip to tip; a diamond outline is drawn beyond every up-or-left tip and a diagonal X beyond every down-or-right tip in the wire color; tracing prefers straight and jumps blocks to their only other exit
 62593bfd  - Wave 82 - twin_lift          - small shapes on a uniform majority-color background; every 8-connected shape whose cell count matches another shape's count floats flush to the top edge and every unique-count shape sinks flush to the bottom edge, columns, forms, and colors preserved
 221dfab4  - Wave 83 - stripe_cycle       - a horizontal color-4 bar in the top or bottom row marks the stripe columns; every row is repainted by a six-row palette keyed to its cyclic distance from the marker row: 0 or 2 paints the stripes 4, odd distances paint them background, and 4 paints them 3 while overlaying 3 on every non-background cell of the row
@@ -6189,4 +6262,8 @@ Dison, D. R. (2026). ARC-AGI-2 Wave 104: Box-tally - the scene holds hollow rect
 
 Dison, D. R. (2026). ARC-AGI-2 Wave 105: Dot-crawler - the scene holds one multi-cell crawler shape of a single color plus a field of single-cell dots of the same color, and full-height single-color separator columns may split the grid into panels showing successive snapshots of one crawl, with the leftmost panel carrying the scene to solve and fixing the output size; the crawler's nose is a shape cell sitting alone on one edge of the shape's bounding box, the nose fires along its outward direction to the nearest dot in line, and the crawl then greedily hops to the nearest remaining dot sharing a row or column until every dot is consumed, a test that only the true nose passes; when the chain reads validly in both directions the second panel breaks the tie, because the true first stop is already consumed or covered by the shape there while the false first stop still sits free; the output is a single background panel holding only the crawler, docked with its nose exactly on the final dot and its body offsets rotated by the clockwise quarter turns that carry the nose heading onto the direction of the last chain leg; the full-consumption nose test is the discriminating observation of the wave, because the second training grid presents two lone edge cells whose chains are exact reverses of each other, and only the snapshot panels reveal which end of the route the crawler actually walks.
   Score: 102/120 = 85.00%. Task 5545f144 solved.
+  Mentova repository, arc_benchmark_2.pl, 2026-07-04.
+
+Dison, D. R. (2026). ARC-AGI-2 Wave 106: Staple-gravity - the corner cell at row zero column zero names a piece color to delete from a standing scaffold of colored pieces; every same-color 4-connected component splits into rigid pieces, with maximal vertical runs of at least two cells as poles, the leftover horizontal runs as bars, a bar welding onto a pole only when one of its ends touches the pole's bottom cell, and a pole standing on a bar extending one hidden cell into the bar so the two pieces share that cell; after the deletion every piece falls one row per tick until it is supported by the floor, by a cell of a supported piece directly below one of its cells, by a cell shared with a supported piece, or by a horizontal segment whose two outside flanks both belong to supported pieces, with support computed as a least fixpoint so a falling piece can support nothing; the settled scene is redrawn with horizontal cells painted after vertical cells so bars sit in front of the pole bottoms impaled inside them; the hidden impaled cell is the discriminating observation of the wave, because the second training input shows seven cells of the color-2 piece while its settled output shows eight, so the pole's bottom cell must already live inside the bar it stands on before gravity is ever applied.
+  Score: 103/120 = 85.83%. Task b6f77b65 solved.
   Mentova repository, arc_benchmark_2.pl, 2026-07-04.
