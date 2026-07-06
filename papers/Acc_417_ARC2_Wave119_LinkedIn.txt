@@ -1,0 +1,17 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Mentova reaches 96.67% on ARC-AGI-2 with Wave 119 - the bouncing_beam rule.
+
+Task 142ca369 scatters small colored markers on a black grid. Some are three-cell L-shapes that fill three corners of a two-by-two square - I call these GUNS. Others are straight three-cell lines or single stray cells - these are WALLS. In the answer every gun has fired a diagonal beam that ricochets off the walls and the grid edges, painting a colored trail as it goes.
+
+The glass-box rule I call bouncing_beam:
+
+A gun's pivot is the corner diagonally opposite its missing corner, and it aims from the missing corner through the pivot and onward at forty-five degrees. The beam starts one step past the pivot in the gun's color. At each step it checks three cells: straight ahead in the row, straight ahead in the column, and straight ahead on the diagonal. A row-only block flips the vertical step, a column-only block flips the horizontal step, and a corner (diagonal-only or both) flips both - the beam reflects like light off a mirror. On every bounce it repaints itself in the color of the wall it struck, colors the background cell it stands on, and moves on, stopping when it leaves the grid or meets something solid.
+
+The discriminating detail is the ordered three-cell bounce test: a beam grazing a corner must reflect, not pass through. A second detail is that beams cross - the first beam to reach a cell owns it - so the simulation threads one shared canvas through every gun. All three training pairs and both held-out test grids verify pixel-exact in both Python and SWI-Prolog.
+
+Score: 115/120 (95.83%) to 116/120 (96.67%).
+
+Pure induction. No pretraining. Glass-box named rules. Every solved task has a human-readable algorithm that can be stated in a paragraph and proven correct on every training example.
+
+#PrologAI #Mentova #ARCAGI2 #AIReasoning #GlassBox #SymbolicAI
