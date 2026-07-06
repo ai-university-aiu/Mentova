@@ -7,7 +7,9 @@ Type=simple
 WorkingDirectory=/home/ccaitwo/Mentova
 ExecStart=/usr/bin/bash /home/ccaitwo/Mentova/bin/mentova_chat_start.sh 8088
 Restart=always
-RestartSec=5
+RestartSec=8
+TimeoutStopSec=15
+KillMode=mixed
 StandardOutput=journal
 StandardError=journal
 
