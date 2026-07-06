@@ -68,14 +68,15 @@ var MentovaChat = (function () {
     })
     .then(function (res) { return res.json(); })
     .then(function (data) {
-      // Display Mentova's reply with tone and focus cues.
+      // Display Mentova's reply with emotional and linguistic prosody cues.
       appendMessage(
         'Mentova',
         data.reply,
         'mentova',
         data.justification,
         data.focus_word,
-        data.tone
+        data.emotional_prosody,
+        data.linguistic_prosody
       );
     })
     .catch(function () {
@@ -89,7 +90,7 @@ var MentovaChat = (function () {
   // ------------------------------------------------------------------
 
   // appendMessage builds and inserts a message element.
-  function appendMessage(speaker, text, role, justification, focusWord, tone) {
+  function appendMessage(speaker, text, role, justification, focusWord, tone, linguisticProsody) {
     // Get the chat history container.
     var history = document.getElementById('mc-history');
     if (!history) return;
@@ -131,6 +132,29 @@ var MentovaChat = (function () {
       toneBadge.className = 'mc-tone mc-tone--' + tone;
       toneBadge.textContent = tone;
       bubble.appendChild(toneBadge);
+    }
+
+    // Add linguistic prosody annotation for Mentova messages.
+    if (role === 'mentova' && linguisticProsody) {
+      var lpParts = [];
+      if (linguisticProsody.speech_act && linguisticProsody.speech_act !== 'statement') {
+        lpParts.push(linguisticProsody.speech_act);
+      }
+      if (linguisticProsody.certainty && linguisticProsody.certainty !== 'neutral') {
+        lpParts.push(linguisticProsody.certainty);
+      }
+      if (linguisticProsody.politeness && linguisticProsody.politeness !== 'neutral') {
+        lpParts.push(linguisticProsody.politeness);
+      }
+      if (linguisticProsody.inarticulate && linguisticProsody.inarticulate !== 'none') {
+        lpParts.push('hesitant');
+      }
+      if (lpParts.length > 0) {
+        var lpBadge = document.createElement('span');
+        lpBadge.className = 'mc-lp-badge';
+        lpBadge.textContent = lpParts.join(' · ');
+        bubble.appendChild(lpBadge);
+      }
     }
 
     // Add a Why? link if there is a justification or for Mentova messages.
