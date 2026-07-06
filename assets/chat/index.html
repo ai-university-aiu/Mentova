@@ -4,15 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat with Mentova</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap">
   <link rel="stylesheet" href="/assets/chat/chat.css">
+  <script>
+    // Apply saved theme before first paint to avoid flash.
+    (function () {
+      var t = localStorage.getItem('mc_theme');
+      if (t === 'light' || t === 'dark') {
+        document.documentElement.setAttribute('data-theme', t);
+      }
+    }());
+  </script>
 </head>
 <body>
   <header class="mc-header">
-    <h1>Chat with Mentova</h1>
-    <p class="mc-notice">
-      This is a learning machine.
-      This conversation is recorded.
-    </p>
+    <div class="mc-header-inner">
+      <div class="mc-header-title">
+        <h1>Chat with Mentova</h1>
+        <p class="mc-notice">This is a learning machine. This conversation is recorded.</p>
+      </div>
+      <div class="mc-theme-toggle" role="group" aria-label="Theme">
+        <button class="mc-theme-btn" data-theme-val="light"  aria-label="Light mode">Light</button>
+        <button class="mc-theme-btn" data-theme-val="system" aria-label="System default">System</button>
+        <button class="mc-theme-btn" data-theme-val="dark"   aria-label="Dark mode">Dark</button>
+      </div>
+    </div>
   </header>
 
   <main class="mc-main">
@@ -36,7 +54,6 @@
 
   <script src="/assets/chat/chat.js"></script>
   <script>
-    // Initialise the chat on the public tier.
     MentovaChat.init({ tier: 'public' });
   </script>
 </body>

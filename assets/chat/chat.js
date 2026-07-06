@@ -25,6 +25,36 @@ var MentovaChat = (function () {
   var showLinguisticProsody = true;
 
   // ------------------------------------------------------------------
+  // Theme management
+  // ------------------------------------------------------------------
+
+  // initTheme reads localStorage and marks the active button.
+  function initTheme() {
+    var saved = localStorage.getItem('mc_theme') || 'system';
+    applyTheme(saved, false);
+  }
+
+  // setTheme is called when the user clicks a theme button.
+  function setTheme(val) {
+    localStorage.setItem('mc_theme', val);
+    applyTheme(val, true);
+  }
+
+  // applyTheme sets data-theme on <html> and highlights the active button.
+  function applyTheme(val, save) {
+    var html = document.documentElement;
+    if (val === 'light' || val === 'dark') {
+      html.setAttribute('data-theme', val);
+    } else {
+      html.removeAttribute('data-theme');
+    }
+    // Mark the matching button as active.
+    document.querySelectorAll('.mc-theme-btn').forEach(function (btn) {
+      btn.classList.toggle('mc-theme-active', btn.getAttribute('data-theme-val') === val);
+    });
+  }
+
+  // ------------------------------------------------------------------
   // init — entry point called by the page
   // ------------------------------------------------------------------
 
@@ -32,6 +62,14 @@ var MentovaChat = (function () {
   function init(options) {
     // Store the tier from the options object.
     tier = (options && options.tier) || 'public';
+
+    // Initialise theme from localStorage and wire the toggle buttons.
+    initTheme();
+    document.querySelectorAll('.mc-theme-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setTheme(btn.getAttribute('data-theme-val'));
+      });
+    });
 
     // Wire up the chat form send button.
     var form = document.getElementById('mc-form');
@@ -568,6 +606,7 @@ var MentovaChat = (function () {
   return {
     init: init,
     sendMessage: sendMessage,
+    setTheme: setTheme,
     mentorLogin: mentorLogin,
     mentorLogout: mentorLogout,
     mentorTeach: mentorTeach,
