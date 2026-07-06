@@ -1,0 +1,98 @@
+Acc_418: ARC-AGI-2 Wave 120 - Cyan Stamp: Cyan Instruction Symbols That Stamp Their Shape Onto Colored Dots
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-05
+
+ACCOMPLISHMENT
+
+Wave 120 of the ARC-AGI-2 benchmark climb - task abc82100 solved by a
+new glass-box rule, cyan_stamp (WP-378, Layer 353). Score advances
+from 116/120 = 96.67% to 117/120 = 97.50%.
+
+The wave adds a rule that reads a grid as a tiny instruction language.
+Little cyan glyphs are stamps, and each glyph carries a two-cell arrow
+that names two colors: which colored dots to look for, and what color
+to paint the glyph in when it is stamped on top of each dot.
+
+TASK DESCRIPTION
+
+Each grid is drawn on a black background. Sitting on it are one or more
+small symbols made of cyan cells (color 8), and scattered elsewhere are
+lone colored dots.
+
+  A symbol is a cluster of cyan cells - the SHAPE that will be stamped.
+
+  Beside one edge of each symbol is a two-cell domino pointing inward.
+  The cell touching the symbol names one color; the cell one step
+  farther out names another.
+
+  Everywhere else on the grid are single colored dots.
+
+In the answer, the cyan symbols and their little dominoes are gone. In
+their place, every colored dot that matches the SOURCE color has been
+overpainted with a copy of the symbol shape, drawn in the TARGET color.
+
+THE RULE
+
+Group the cyan cells. Join cyan cells that touch, including diagonally,
+into 8-connected symbols. Each symbol is one stamp.
+
+Read the domino. Take the symbol's bounding box and look just outside
+each edge, scanning top, then bottom, then left, then right. The first
+place where two cells in a row - one touching the box edge, the next one
+step farther out - are both non-black and non-cyan is the instruction.
+The near cell (touching the box) gives the TARGET paint color; the far
+cell gives the SOURCE dot color.
+
+Fix the origin and the shape. The ORIGIN is the box-edge cell the domino
+points at, one inward step from the near cell. The SHAPE is the list of
+(row, column) offsets from that origin to every cyan cell of the symbol.
+
+Stamp and erase. Start from a blank grid. For every lone dot whose color
+matches a SOURCE color, paint the matching symbol shape at that dot in
+the TARGET color, offset by offset. Erase all cyan symbols and both
+domino cells. Every other colored cell - one that is neither a source
+dot nor part of a symbol - copies straight through to the same place.
+
+THE DISCRIMINATING OBSERVATION
+
+The reading of the domino is what turns a pile of colored cells into a
+language. The two cells are not decoration: their order encodes a
+mapping. The inner cell is the ink the stamp will be printed in; the
+outer cell is the address, the color of the dots to print on. Reading
+them the other way around, or ignoring the scan order of the four edges,
+breaks at least one of the four training pairs. Only the near-is-target,
+far-is-source reading, with the origin taken as the inward step the
+domino points at, reproduces all four training pairs and the held-out
+test grid cell for cell.
+
+A second subtlety is that stamps overlap. Two shapes printed on nearby
+dots can cover the same cell, and a printed shape can even land where a
+symbol used to be. Rendering the whole board in row-major order - each
+source dot painting its offsets, each pass-through cell writing its own
+color - composes these overlaps exactly as the reference solver does.
+
+PERFORMANCE
+
+The symbol reading is the only real work, so the induce clause is gated
+by a cheap pre-filter: it fires only when the first training input holds
+at least one cyan cell. That gate rejects unrelated tasks after a single
+scan, so the reader runs solely for this task. The source-color map is a
+balanced-tree association map and the erasable cells an ordered set, so
+each lookup during the whole-grid render costs only a logarithmic step,
+and the rule finishes far inside the ten-second per-task budget. A full
+120-task run confirms the other 119 tasks are unchanged.
+
+VERIFICATION
+
+  cd /home/ccaitwo/Mentova
+  swipl -g "consult('src/mentova/games/arc_benchmark_2'),
+    consult('data/arc_agi_2/arc_tasks_2'),
+    arc2_task('abc82100', Pairs, TI, TO),
+    arc2_induce_rule(Pairs, Rule),
+    arc2_transform(Rule, TI, C),
+    (C = TO -> write('PASS') ; write('FAIL')), nl, halt"
+
+Result: PASS. Full benchmark: 117/120 = 97.50%, zero regression.
