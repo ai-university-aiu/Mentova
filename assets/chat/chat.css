@@ -19,6 +19,9 @@ body {
   flex-direction: column;
 }
 
+/* Hide an element while keeping it in the DOM */
+.mc-hidden { display: none !important; }
+
 /* Screen-reader-only utility */
 .mc-sr-only {
   position: absolute;
@@ -101,6 +104,17 @@ body {
 .mc-bubble--mentova {
   background: #f0f4e8;
   align-self: flex-start;
+}
+
+/* System / slash-command output */
+.mc-bubble--system {
+  background: #f1f5f9;
+  border-left: 3px solid #64748b;
+  color: #334155;
+  font-size: 0.85rem;
+  font-family: 'Courier New', Courier, monospace;
+  align-self: stretch;
+  max-width: 100%;
 }
 
 .mc-speaker {

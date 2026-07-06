@@ -20,6 +20,10 @@ var MentovaChat = (function () {
   // token holds the mentor session token after sign-in.
   var token = sessionStorage.getItem('mc_token') || '';
 
+  // Prosody visibility flags — toggled by slash commands.
+  var showEmotionalProsody  = true;
+  var showLinguisticProsody = true;
+
   // ------------------------------------------------------------------
   // init — entry point called by the page
   // ------------------------------------------------------------------
@@ -54,6 +58,12 @@ var MentovaChat = (function () {
 
   // sendMessage(text) sends a public chat message to the server.
   function sendMessage(text) {
+    // Intercept slash commands before sending to the server.
+    if (text.charAt(0) === '/') {
+      handleSlashCommand(text);
+      return;
+    }
+
     // Display the visitor's message in the chat history immediately.
     appendMessage('You', text, 'person', '', '', '');
 
@@ -83,6 +93,87 @@ var MentovaChat = (function () {
       // Display a system error message.
       appendMessage('Mentova', 'Something on my side is not working right now. Please try again shortly.', 'mentova', '', '', 'neutral');
     });
+  }
+
+  // ------------------------------------------------------------------
+  // handleSlashCommand — intercept and execute / commands
+  // ------------------------------------------------------------------
+
+  // SLASH COMMANDS
+  // /help                     — list all available slash commands
+  // /emotional_prosody show   — show the emotional prosody badge on replies
+  // /emotional_prosody hide   — hide the emotional prosody badge on replies
+  // /linguistic_prosody show  — show the linguistic prosody badge on replies
+  // /linguistic_prosody hide  — hide the linguistic prosody badge on replies
+
+  var SLASH_HELP =
+    '/help\n' +
+    '  List all slash commands.\n\n' +
+    '/emotional_prosody show\n' +
+    '  Show the emotional prosody badge on each Mentova reply.\n\n' +
+    '/emotional_prosody hide\n' +
+    '  Hide the emotional prosody badge on each Mentova reply.\n\n' +
+    '/linguistic_prosody show\n' +
+    '  Show the linguistic prosody badge (speech act, certainty, politeness, hesitancy).\n\n' +
+    '/linguistic_prosody hide\n' +
+    '  Hide the linguistic prosody badge.';
+
+  // handleSlashCommand(text) parses and executes a slash command.
+  function handleSlashCommand(text) {
+    // Normalise and split into tokens.
+    var parts = text.trim().toLowerCase().replace(/^\//, '').split(/\s+/);
+    var cmd  = parts[0];
+    var arg  = parts[1] || '';
+
+    if (cmd === 'help') {
+      appendSystemMessage(SLASH_HELP);
+
+    } else if (cmd === 'emotional_prosody' && arg === 'show') {
+      showEmotionalProsody = true;
+      // Reveal any badges already in the history.
+      document.querySelectorAll('#mc-history .mc-tone').forEach(function (b) {
+        b.classList.remove('mc-hidden');
+      });
+      appendSystemMessage('Emotional prosody badges are now visible.');
+
+    } else if (cmd === 'emotional_prosody' && arg === 'hide') {
+      showEmotionalProsody = false;
+      // Hide any badges already in the history.
+      document.querySelectorAll('#mc-history .mc-tone').forEach(function (b) {
+        b.classList.add('mc-hidden');
+      });
+      appendSystemMessage('Emotional prosody badges are now hidden.');
+
+    } else if (cmd === 'linguistic_prosody' && arg === 'show') {
+      showLinguisticProsody = true;
+      document.querySelectorAll('#mc-history .mc-lp-badge').forEach(function (b) {
+        b.classList.remove('mc-hidden');
+      });
+      appendSystemMessage('Linguistic prosody badges are now visible.');
+
+    } else if (cmd === 'linguistic_prosody' && arg === 'hide') {
+      showLinguisticProsody = false;
+      document.querySelectorAll('#mc-history .mc-lp-badge').forEach(function (b) {
+        b.classList.add('mc-hidden');
+      });
+      appendSystemMessage('Linguistic prosody badges are now hidden.');
+
+    } else {
+      appendSystemMessage('Unknown command: /' + parts.join(' ') + '\nType /help for a list of commands.');
+    }
+  }
+
+  // appendSystemMessage(text) adds a system notice to the chat history.
+  function appendSystemMessage(text) {
+    var history = document.getElementById('mc-history');
+    if (!history) return;
+    var box = document.createElement('div');
+    box.className = 'mc-bubble mc-bubble--system';
+    // Preserve newlines in multi-line help text.
+    box.style.whiteSpace = 'pre-wrap';
+    box.textContent = text;
+    history.appendChild(box);
+    history.scrollTop = history.scrollHeight;
   }
 
   // ------------------------------------------------------------------
@@ -126,10 +217,11 @@ var MentovaChat = (function () {
     }
     bubble.appendChild(msg);
 
-    // Add a tone indicator badge if the tone is not neutral.
+    // Add an emotional prosody badge if the state is not neutral.
     if (tone && tone !== 'neutral' && tone !== '') {
       var toneBadge = document.createElement('span');
       toneBadge.className = 'mc-tone mc-tone--' + tone;
+      if (!showEmotionalProsody) { toneBadge.classList.add('mc-hidden'); }
       toneBadge.textContent = tone;
       bubble.appendChild(toneBadge);
     }
@@ -152,6 +244,7 @@ var MentovaChat = (function () {
       if (lpParts.length > 0) {
         var lpBadge = document.createElement('span');
         lpBadge.className = 'mc-lp-badge';
+        if (!showLinguisticProsody) { lpBadge.classList.add('mc-hidden'); }
         lpBadge.textContent = lpParts.join(' · ');
         bubble.appendChild(lpBadge);
       }
