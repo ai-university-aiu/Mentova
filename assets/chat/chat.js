@@ -288,8 +288,8 @@ var MentovaChat = (function () {
       }
     }
 
-    // Add a Why? link if there is a justification or for Mentova messages.
-    if (role === 'mentova') {
+    // Add a Why? button only when the server returned an actual justification.
+    if (role === 'mentova' && justification) {
       var whyLink = document.createElement('button');
       whyLink.className = 'mc-why-btn';
       whyLink.textContent = 'Why?';
