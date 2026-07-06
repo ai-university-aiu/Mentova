@@ -1,0 +1,64 @@
+MENTOVA CHAT - DOCUMENT 4 - REFINEMENT - VERSION 1
+
+
+Purpose.
+
+
+This document records how the feature is tested, fixed, and improved over time.
+
+
+It is updated whenever the code changes, and it is expected to grow as work proceeds.
+
+
+Testing approach.
+
+
+Automated tests run on every change.  They cover the seven acceptance conversations from Appendix I of the master plan and the honesty checks below.
+
+
+A change is not finished until these tests pass and the six living documents are current.
+
+
+Honesty checks.
+
+
+The honest ignorance wording "I have not learned that yet, so I do not want to guess." is returned whenever mc_execute_query/3 fails to find a grounded answer in the knowledge base.
+
+
+The partial-knowledge wording "Here is what I know: [known]." is used by mc_format_what_is_reply when some but not all facts about a subject are present.
+
+
+The no-justification wording "I cannot show you a reason for that, so I should not claim it." is returned by mc_explain/2 when no justification chain can be built.
+
+
+The system-error wording "Something on my side is not working right now. Please try again shortly." is returned by the JavaScript catch handler in sendMessage when the server call fails.
+
+
+Child-safety check.
+
+
+mc_is_unsafe/1 lower-cases the incoming message and checks for any keyword from the mc_unsafe_keywords/1 list before any knowledge query is attempted.  The safety decline reply is logged and returned without touching the knowledge base.
+
+
+Performance.
+
+
+The in-memory Prolog working set answers queries from small_world directly.  The library(persistency) flat file handles chat log and queue writes asynchronously within the same Prolog process.  A read cache or PostgreSQL backend is added when public traffic grows.
+
+
+Security refinements.
+
+
+Passwords are hashed with SHA-256 and a per-account UUID salt via mc_hash_password/3 in chat_db.pl.  Session tokens are UUID values whose SHA-256 hashes are stored, so a stolen database file does not reveal live tokens.  Sessions expire after eight hours.  mc_verify_session/2 checks both the hash match and the expiry timestamp on every authenticated request.
+
+
+Improvement log.
+
+
+Acc_423 (2026-07-06): Initial implementation delivered.  mentova_chat.pl, chat_db.pl, index.html, mentor.html, chat.js, chat.css, setup.sql, mentova_chat_start.sh, mentova-chat-docs/ all created.  All six MCD files at version 1.
+
+
+Governing sources.
+
+
+This document follows Appendix I for tests and honesty, Appendix C Section C.3 for the sanity checks, and Appendix L for security.

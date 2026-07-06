@@ -1,0 +1,142 @@
+MENTOVA CHAT - DOCUMENT 2 - PSEUDOCODE - VERSION 1
+
+
+Purpose.
+
+
+This document describes the main loops of the chat feature in plain, step-by-step form, not in any one programming language.
+
+
+It is updated whenever the code changes.
+
+
+Starting the server.
+
+
+1. Connect to the persistence layer (library(persistency) flat file for this milestone; PostgreSQL for production).
+
+
+2. Load the Prolog mind and its packs via mentova.pl.
+
+
+3. Attach the persistence file under the configured data directory, creating it if absent.
+
+
+4. Start the web server listening on the configured port using library(http/thread_httpd).
+
+
+Handling a visitor message on the public tier.
+
+
+1. Receive the typed message and session identifier from the browser as JSON at POST /api/chat.
+
+
+2. Write the message to the chat log with time, session, tier (public), and speaker (person).
+
+
+3. Check the message against the child-safety keyword list from Appendix K of the master plan, and if any unsafe keyword is found, reply with a kind, age-appropriate decline and stop.
+
+
+4. Read the message for all-caps words as focus prosody, and for punctuation and emoji as emotional prosody.
+
+
+5. Parse the message for known natural-language patterns: is_a, what_is, capable_of, what_can, causes, properties_of.
+
+
+6. Query the small_world knowledge base for a grounded answer.
+
+
+7. If a grounded answer exists, form the reply text, attach the focus cue and tone, and send the JSON response.
+
+
+8. If no grounded answer exists, send the honest ignorance wording and do not invent anything.
+
+
+9. Write Mentova's reply to the chat log.
+
+
+Answering a why question.
+
+
+1. Receive the query string at GET /api/why.
+
+
+2. Parse the query using the same natural-language patterns as the chat handler.
+
+
+3. Attempt to build a chain of is_a links or to name the knowledge base fact that grounds the answer.
+
+
+4. If a justification chain exists, return it as the explanation.
+
+
+5. If no justification can be found, return: "I cannot show you a reason for that, so I should not claim it."
+
+
+Handling a mentor sign-in.
+
+
+1. Receive username and password as JSON at POST /api/mentor/login.
+
+
+2. Look up the mentor account, hash the supplied password with the stored salt, and compare hashes.
+
+
+3. If they match, generate a UUID session token, hash it, and store the session with an expiry eight hours hence.
+
+
+4. Return the raw token to the browser, which stores it in sessionStorage.
+
+
+5. Record the login in the audit log.
+
+
+Handling a mentor teaching on the mentor tier.
+
+
+1. Receive the token, proposed fact, and session identifier at POST /api/mentor/teach.
+
+
+2. Verify the session token is valid and not expired or revoked.
+
+
+3. Write the proposed fact to the Review Queue with the mentor identifier, session, and timestamp.
+
+
+4. Record the proposal in the Audit Log.
+
+
+5. Return the queue entry identifier to the browser.
+
+
+Approving a queued proposal.
+
+
+1. Receive the token and queue identifier at POST /api/mentor/approve.
+
+
+2. Verify the session token is valid.
+
+
+3. Find the pending proposal in the review queue.
+
+
+4. Assert the fact into the Prolog database.
+
+
+5. Mark the queue entry as approved with the approver identifier and timestamp.
+
+
+6. Record the approval in the Audit Log.
+
+
+Governing sources.
+
+
+This document follows Appendix I for the acceptance behavior, Appendix J for where facts and logs are written, and Appendix L for the sign-in checks.
+
+
+Implementation status as of Acc_423 (2026-07-06).
+
+
+All pseudocode steps above correspond directly to predicates in mentova_chat.pl and chat_db.pl.

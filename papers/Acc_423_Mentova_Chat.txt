@@ -1,0 +1,144 @@
+Acc_423: Mentova Web Chat - The First Public Interface to a Glass-Box Synthetic Mind
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-06
+
+
+ABSTRACT
+
+This paper describes the delivery of Acc_423, the text-only web chat milestone for Mentova, a synthetic mind built entirely in SWI-Prolog on the PrologAI platform.
+
+For the first time, any person with a web browser can hold a typed conversation with Mentova, ask it to justify every answer it gives, watch it honestly admit when it does not know something, and see its knowledge grow through a review-gated teaching path.
+
+Every word Mentova says traces back through a chain of named facts to simpler, grounded words in the small_world knowledge base.
+
+No answer is invented, guessed, or borrowed from text statistics.
+
+
+WHAT WAS BUILT
+
+Six source files and a documentation folder were created in the Mentova repository.
+
+The main HTTP server, src/mentova/mentova_chat.pl, starts on any port, serves the chat pages, and handles nine URL endpoints including the public chat, the justification query, mentor authentication, mentor teaching, and approval.
+
+The persistence layer, src/mentova/chat_db.pl, uses library(persistency) to store chat logs, mentor accounts, sessions, the review queue, and an audit trail in a durable flat file that survives server restarts.
+
+A PostgreSQL schema, sql/setup.sql, mirrors the same logical structure for production deployment when volume requires it.
+
+Two HTML pages, assets/chat/index.html and assets/chat/mentor.html, provide the public visitor interface and the signed-in mentor interface.
+
+A JavaScript file, assets/chat/chat.js, handles all browser-side behavior including sending messages, showing replies, displaying justifications, mentor sign-in and sign-out, fact proposal, and review queue management.
+
+A CSS file, assets/chat/chat.css, gives the interface a clean, readable, mobile-friendly appearance with visually distinct message bubbles, small-caps focus-word highlighting, tone badges, and an expandable justification panel.
+
+A shell script, bin/mentova_chat_start.sh, starts the server with a single command.
+
+A documentation folder, mentova-chat-docs/, holds six living documents that describe the specification, pseudocode, architecture, testing, completion status, and a demonstration walkthrough.
+
+
+HOW IT WORKS
+
+When a visitor types a message, the server checks it against a keyword safety list to keep the interface age-appropriate for children.
+
+If the message is safe, the server detects any all-caps word as a focus prosody cue and maps it to a small-caps highlight in the reply.
+
+The server also reads punctuation and emoji to detect the emotional tone, displayed as a small badge.
+
+The message is then parsed by a set of natural-language patterns that map common question forms such as "Is a dog a mammal?" and "What can a bird do?" onto structured query terms.
+
+Those query terms are evaluated against the small_world knowledge base using is_a, capable_of, has_property, causes, and at_location predicates.
+
+If a grounded answer is found, it is returned with a justification that traces the reasoning chain.
+
+If no grounded answer is found, Mentova replies: "I have not learned that yet, so I do not want to guess."
+
+Every message on both the public and mentor tiers is logged with its session identifier, tier, speaker, and timestamp.
+
+
+THE TWO-TIER DESIGN
+
+The public tier at / is read-only.
+
+Any visitor may chat and ask for justifications, but no visitor can change what Mentova knows.
+
+The mentor tier at /mentor requires a username and password.
+
+After sign-in, a mentor may propose a Prolog fact such as is_a(robin, bird) using the Teach panel.
+
+The proposed fact enters the Review Queue immediately but does not enter the knowledge base.
+
+Only when another signed-in mentor approves it does the fact reach the Lattice.
+
+Every step of this path, from proposal to approval, is written to the Audit Log.
+
+This design ensures that Mentova's knowledge grows deliberately and traceably, never by accident or by a single unreviewed claim.
+
+
+GLASS-BOX JUSTIFICATION
+
+The glass-box property means that every answer Mentova gives can be traced to named facts, not to opaque statistical weights.
+
+When a visitor clicks the "Why?" link next to a Mentova reply, the browser calls GET /api/why, which returns the chain of reasoning that produced the answer.
+
+For a direct fact, the justification names the knowledge base entry.
+
+For a chain of is_a links, the justification shows the full path, for example: dog - mammal - animal.
+
+If no justification can be produced, Mentova says: "I cannot show you a reason for that, so I should not claim it."
+
+This commitment to honest ignorance and traceable reasoning is the heart of the Mentova project.
+
+
+WHY THIS MATTERS
+
+Every other conversational system in wide use today answers from statistical patterns over text.
+
+Those systems can sound fluent while producing answers that are false, that contradict themselves, and that have no traceable grounding in anything real.
+
+Mentova is different in kind, not just in degree.
+
+Every claim traces to a named fact.
+
+Every justification is visible.
+
+Every gap in knowledge is announced rather than papered over.
+
+The web chat makes this difference accessible to any person who can open a browser, for the first time, through a simple, clean, conversational interface.
+
+
+TECHNICAL NOTES
+
+The server uses library(http/thread_httpd) for multi-threaded HTTP service, library(http/http_dispatch) for URL routing, and library(http/http_json) for JSON body parsing and writing.
+
+Session tokens are UUID values whose SHA-256 hashes are stored, so a stolen database file does not reveal live sessions.
+
+Passwords are hashed with SHA-256 and a per-account random salt.
+
+Sessions expire after eight hours.
+
+The persistence flat file is created automatically in the data/chat_db directory on first run.
+
+
+COMPLETION
+
+All items in the definition of done from Appendix I of the master plan are met by this implementation.
+
+The six living documents in mentova-chat-docs/ are at version 1 and describe the specification, pseudocode, architecture, refinement, completion status, and a demonstration walkthrough in full.
+
+SPARC documentation has been updated: Specification v354, Pseudocode v346, Architecture v347, Refinement v406, Completion v412.
+
+
+COPYRIGHT
+
+Copyright 2026 D. R. Dison.
+
+All rights reserved.
+
+The code, documentation, papers, and announcements associated with the Mentova and PrologAI projects are the intellectual property of D. R. Dison, Founder of AIU (Artificial Intelligence University), Creator and Owner of PrologAI and Mentova.
+
+Free for non-commercial use with required attribution.
+
+Commercial use requires a negotiated license.
+
+Contact: ai.university.aiu@gmail.com

@@ -1,0 +1,77 @@
+MENTOVA CHAT - DOCUMENT 6 - DEMONSTRATION - VERSION 1
+
+
+Purpose.
+
+
+This document gives a short walkthrough that shows the feature working, suitable for showing to another person.
+
+
+It is updated whenever the code changes.
+
+
+Before the demonstration.
+
+
+Start the server: bash bin/mentova_chat_start.sh 8080
+Open http://localhost:8080 in a browser.
+Confirm the public chat page loads with the notice "This is a learning machine. This conversation is recorded."
+
+
+The walkthrough.
+
+
+Step 1.  Open the chat page as a public visitor.
+Show the plain notice that this is a learning machine and that the chat is recorded.
+
+
+Step 2.  Type: "Is a dog a mammal?"
+Mentova replies: "Yes, dog is a mammal."
+The Why? link appears next to the reply.
+
+
+Step 3.  Click Why?
+The justification panel opens: "I know this directly: is_a(dog, mammal) is in my knowledge base."
+This is the glass-box property: every answer traces back to a named fact, not a statistical guess.
+
+
+Step 4.  Type: "Is a rock a bird?"
+Mentova replies: "I have not learned whether rock is a bird yet, so I do not want to guess."
+No answer is invented.  This is the honest-ignorance property.
+
+
+Step 5.  Type: "What is a dog?"
+Mentova replies with all known facts: "Here is what I know about dog: dog is a mammal; dog has property fur; dog can bark; ..."
+Each fact traces to a named small_world entry.
+
+
+Step 6.  Type: "I really LOVE dogs!"
+The word LOVE appears in small-caps in the reply context, showing focus prosody detection.
+An excited tone badge appears because of the exclamation mark, showing emotional prosody detection.
+
+
+Step 7.  Open http://localhost:8080/mentor in a browser.
+Enter the mentor username and password and click Sign in.
+The workspace appears with the chat panel, Teach panel, and Review Queue.
+Type "is_a(robin, bird)" in the Teach field and click Propose.
+The status reads "Proposed (Queue ID 1). Awaiting approval before entering the knowledge base."
+The Review Queue shows the entry with an Approve button.
+Click Approve.
+The entry disappears from the queue.
+Now typing "Is a robin a bird?" in the chat returns "Yes, robin is a bird." - the fact has entered the knowledge base.
+
+
+Step 8.  Open the data/chat_db/mentova_chat.db file (or query via the Prolog top level).
+Show that every message from all sessions was recorded with its time, session, tier, and speaker.
+
+
+What the demonstration proves.
+
+
+It proves the heart of the project: that Mentova grounds its words, justifies its answers, admits ignorance honestly, reads written emphasis and tone, teaches only through review-gated acquisition, and records everything.
+
+
+Governing sources.
+
+
+This document follows the acceptance conversations in Appendix I and the setup manual in Appendix G of the master plan.

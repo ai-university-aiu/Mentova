@@ -1,0 +1,382 @@
+/* chat.css — Mentova Chat Styles
+   Clean, minimal, readable.
+   Mobile-friendly via flex layout.
+*/
+
+/* Global reset and font */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  background: #f8f7f4;
+  color: #1a1a1a;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Screen-reader-only utility */
+.mc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------
+   Header
+   ------------------------------------------------------------------ */
+
+.mc-header {
+  background: #1a3a5c;
+  color: #fff;
+  padding: 1rem 1.5rem;
+}
+
+.mc-header h1 {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.mc-notice {
+  font-size: 0.8rem;
+  color: #b0c4de;
+}
+
+/* ------------------------------------------------------------------
+   Main chat area
+   ------------------------------------------------------------------ */
+
+.mc-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.mc-history {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #d0ccc4;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0.75rem;
+  min-height: 300px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------------------
+   Message bubbles
+   ------------------------------------------------------------------ */
+
+.mc-bubble {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  max-width: 90%;
+  line-height: 1.5;
+}
+
+.mc-bubble--person {
+  background: #e8f0fe;
+  align-self: flex-end;
+}
+
+.mc-bubble--mentova {
+  background: #f0f4e8;
+  align-self: flex-start;
+}
+
+.mc-speaker {
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: #555;
+  white-space: nowrap;
+}
+
+.mc-text {
+  font-size: 1rem;
+}
+
+/* Focus word shown in small-caps */
+.mc-focus {
+  font-variant: small-caps;
+  font-weight: bold;
+  color: #1a3a5c;
+}
+
+/* Tone indicator badge */
+.mc-tone {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  margin-left: 0.4rem;
+  opacity: 0.75;
+  color: #fff;
+}
+
+.mc-tone--excited  { background: #d4720e; }
+.mc-tone--curious  { background: #2e6fa3; }
+.mc-tone--happy    { background: #2e883a; }
+.mc-tone--sad      { background: #6d4c8a; }
+
+/* Why? button */
+.mc-why-btn {
+  font-size: 0.75rem;
+  color: #1a3a5c;
+  background: none;
+  border: 1px solid #1a3a5c;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.mc-why-btn:hover {
+  background: #1a3a5c;
+  color: #fff;
+}
+
+/* Justification panel */
+.mc-just-panel {
+  width: 100%;
+  flex-basis: 100%;
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: #fffbeb;
+  border-left: 3px solid #c9a227;
+  font-size: 0.85rem;
+  color: #444;
+  border-radius: 0 4px 4px 0;
+}
+
+/* ------------------------------------------------------------------
+   Input row
+   ------------------------------------------------------------------ */
+
+.mc-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mc-input {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.mc-input:focus {
+  outline: 2px solid #1a3a5c;
+  border-color: #1a3a5c;
+}
+
+.mc-send-btn {
+  padding: 0.55rem 1.1rem;
+  background: #1a3a5c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.mc-send-btn:hover {
+  background: #2a5c8a;
+}
+
+/* ------------------------------------------------------------------
+   Sign-in panel
+   ------------------------------------------------------------------ */
+
+.mc-signin-panel {
+  max-width: 400px;
+  margin: 2rem auto;
+  background: #fff;
+  border: 1px solid #d0ccc4;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.mc-signin-panel h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.mc-signin-panel label {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.mc-error {
+  color: #b00;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* ------------------------------------------------------------------
+   Mentor workspace
+   ------------------------------------------------------------------ */
+
+.mc-workspace {
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #e8f0fe;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+}
+
+.mc-btn-secondary {
+  padding: 0.3rem 0.8rem;
+  background: #fff;
+  border: 1px solid #1a3a5c;
+  color: #1a3a5c;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.mc-btn-secondary:hover {
+  background: #e8f0fe;
+}
+
+/* ------------------------------------------------------------------
+   Teach panel
+   ------------------------------------------------------------------ */
+
+.mc-teach-panel {
+  max-width: 760px;
+  width: 100%;
+  margin: 1rem auto 0;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #d0ccc4;
+  border-radius: 6px;
+}
+
+.mc-teach-panel h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.4rem;
+}
+
+.mc-teach-hint {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.6rem;
+}
+
+.mc-status {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.mc-status--ok  { color: #2e883a; }
+.mc-status--err { color: #b00; }
+
+/* ------------------------------------------------------------------
+   Review queue panel
+   ------------------------------------------------------------------ */
+
+.mc-queue-panel {
+  max-width: 760px;
+  width: 100%;
+  margin: 1rem auto 1rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #d0ccc4;
+  border-radius: 6px;
+}
+
+.mc-queue-panel h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.mc-queue-list {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mc-queue-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #f8f7f4;
+  border: 1px solid #d0ccc4;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.mc-queue-fact {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.mc-btn-approve {
+  padding: 0.25rem 0.7rem;
+  background: #2e883a;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.mc-btn-approve:hover {
+  background: #1e6828;
+}
+
+/* ------------------------------------------------------------------
+   Responsive adjustments
+   ------------------------------------------------------------------ */
+
+@media (max-width: 600px) {
+  .mc-header h1 {
+    font-size: 1.1rem;
+  }
+
+  .mc-main {
+    padding: 0.5rem;
+  }
+
+  .mc-history {
+    max-height: 50vh;
+  }
+
+  .mc-bubble {
+    max-width: 100%;
+  }
+}
