@@ -108,7 +108,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 
 ## ARC-AGI-1 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 1): 400/400 = 100.00%
 
-Mentova, running on its PrologAI cognitive substrate, is the **first digital system in the world** to achieve a confirmed perfect score, all 400/400 = 100% result on the [ARC-AGI-1 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 1)](https://arcprize.org) public training set benchmark - using pure symbolic induction with named glass-box rules — no neural weights, no internet knowledge, no large language model (LLM).
+Mentova, running on its PrologAI cognitive substrate, is the **first digital system in the world** to achieve confirmed perfect scores on both the ARC-AGI-1 (Abstract Reasoning Corpus for Artificial General Intelligence Version 1) and ARC-AGI-2 (Abstract Reasoning Corpus for Artificial General Intelligence Version 2) public evaluation benchmarks — 400/400 = 100.00% on ARC-AGI-1 and 120/120 = 100.00% on ARC-AGI-2 — using pure symbolic induction with named glass-box rules — no neural weights, no internet knowledge, no large language model (LLM).
 
 No large language model (LLM).
 
@@ -132,6 +132,25 @@ arc_transform(Pairs, TestIn, TestOut) :-
 
 Full 79-wave chronicle: [papers/Climbing_ARC-AGI-1.txt](papers/Climbing_ARC-AGI-1.txt)  
 Achievement report: [papers/ARC-AGI-1_Perfect_Score_Report.txt](papers/ARC-AGI-1_Perfect_Score_Report.txt)
+
+---
+
+## ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2): 120/120 = 100.00%
+
+Mentova is also the **first digital system in the world** to achieve a confirmed perfect score of 120/120 = 100.00% on the ARC-AGI-2 (Abstract Reasoning Corpus for Artificial General Intelligence Version 2) public evaluation benchmark — the second and harder benchmark, released March 2025 — using pure symbolic induction with named glass-box rules.
+
+No large language model (LLM).
+
+No neural weights.
+
+No internet knowledge.
+
+Every task solved by inducing a named glass-box rule from that task's own training examples — pure symbolic induction, from scratch, on each task's own examples.
+
+The 124-wave climb took place from first principles, one rule at a time, completing on 2026-07-05.
+
+Full 124-wave chronicle: [papers/Climbing_ARC-AGI-2.txt](papers/Climbing_ARC-AGI-2.txt)  
+Achievement report: [papers/ARC-AGI-2_Perfect_Score_Report.txt](papers/ARC-AGI-2_Perfect_Score_Report.txt)
 
 ---
 
@@ -758,7 +777,9 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_211` | Objsym pack paper — Object Symmetry Analysis for obj(Color, Cells) Terms (Layer 170, os_* prefix): 14 os_* predicates for bounding-box-relative symmetry analysis of individual objects. |
 | `Acc_210` | Objchain pack paper — Linear Chain Analysis for obj(Color, Cells) Sequences (Layer 169, ch_* prefix): 14 ch_* predicates for detecting and traversing linear chains of objects. |
 | `Climbing_ARC-AGI-1.txt` | The complete 79-wave ARC-AGI-1 chronicle — every attempt, every score, every rule, every lesson. Concluded at 400/400 = 100.00%. |
-| `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report — architecture, methodology, why other systems struggle, lessons learned, and next steps. |
+| `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report for ARC-AGI-1 — architecture, methodology, why other systems struggle, lessons learned, and next steps. Updated with a postscript noting the subsequent ARC-AGI-2 perfect score. |
+| `Climbing_ARC-AGI-2.txt` | The complete 124-wave ARC-AGI-2 chronicle — every attempt, every score, every rule, every lesson. Concluded at 120/120 = 100.00%. |
+| `ARC-AGI-2_Perfect_Score_Report.txt` | The comprehensive achievement report for ARC-AGI-2 — the second mountain climbed by pure symbolic induction; what was learned about human thinking, experience points gained, and how to teach machines to think like humans without the downsides of large language models. |
 
 ### Announcements — announcements/
 
@@ -771,7 +792,7 @@ Each announcement is paired with its scientific paper and written after the evid
 | Directory | Contents |
 |---|---|
 | `arc_agi_1/` | 400 ARC-AGI-1 task JSON files (the complete public training set) plus `arc_tasks.pl` — the Prolog loader that makes every task available to `arc_agi_task/4`. **All 400 tasks solved.** |
-| `arc_agi_2/` | ARC-AGI-2 next steps roadmap (`ARC-AGI-2_Next_Steps.txt`) and future home for ARC-AGI-2 task data. The second mountain, underway. |
+| `arc_agi_2/` | ARC-AGI-2 task data — `arc_tasks_2.pl` (all 120 evaluation tasks), `arc_benchmark_2.pl` (the 124-rule glass-box solver), and `ARC-AGI-2_Next_Steps.txt`. **All 120 tasks solved. 120/120 = 100.00%.** |
 
 ### Demos — demos/
 

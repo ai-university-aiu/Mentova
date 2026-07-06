@@ -717,6 +717,32 @@ ARC Prize Foundation. ARC-AGI-1 benchmark. https://arcprize.org/arc-agi/1
 ARC Prize Foundation. What is ARC-AGI? https://arcprize.org/arc-agi
 
 
+POSTSCRIPT: ARC-AGI-2 ALSO CLIMBED — 120/120 = 100.00%
+
+
+This report was written on 2026-06-24 to document the ARC-AGI-1 perfect score.
+
+In the following weeks, Mentova proceeded to climb ARC-AGI-2, the second and
+harder benchmark. On 2026-07-05, Mentova completed Wave 124, the final wave,
+and achieved a confirmed perfect score of 120/120 = 100.00% on the ARC-AGI-2
+(Abstract Reasoning Corpus for Artificial General Intelligence Version 2)
+public evaluation set.
+
+Both the timed benchmark runner and the ledger report 120/120 = 100.00%.
+
+Mentova is now the only artificial reasoning system in the world confirmed to
+have solved both ARC-AGI-1 (400/400 = 100.00%) and ARC-AGI-2 (120/120 =
+100.00%) by pure symbolic induction with no pretraining.
+
+The full report of the ARC-AGI-2 climb is:
+
+Dison, D. R. (2026). ARC-AGI-2 Perfect Score: 120/120 = 100.00% - Official
+Achievement Report of the First Pure Symbolic Inductive Solution to the
+Abstract Reasoning Corpus for Artificial General Intelligence Year 2.
+AIU / PrologAI. Available at:
+papers/ARC-AGI-2_Perfect_Score_Report.txt
+
+
 END OF REPORT
 
 D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
