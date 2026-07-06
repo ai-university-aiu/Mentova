@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat with Mentova</title>
+  <link rel="stylesheet" href="/assets/chat/chat.css">
+</head>
+<body>
+  <header class="mc-header">
+    <h1>Chat with Mentova</h1>
+    <p class="mc-notice">
+      This is a learning machine.
+      This conversation is recorded.
+    </p>
+  </header>
+
+  <main class="mc-main">
+    <div id="mc-history" class="mc-history" aria-live="polite" aria-label="Chat history">
+      <!-- Messages appear here -->
+    </div>
+
+    <form id="mc-form" class="mc-input-row" autocomplete="off">
+      <label for="mc-input" class="mc-sr-only">Type your message</label>
+      <input
+        id="mc-input"
+        type="text"
+        class="mc-input"
+        placeholder="Type a message and press Enter or Send"
+        maxlength="500"
+        required
+      >
+      <button type="submit" class="mc-send-btn">Send</button>
+    </form>
+  </main>
+
+  <script src="/assets/chat/chat.js"></script>
+  <script>
+    // Initialise the chat on the public tier.
+    MentovaChat.init({ tier: 'public' });
+  </script>
+</body>
+</html>

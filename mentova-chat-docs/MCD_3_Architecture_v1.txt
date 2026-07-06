@@ -1,0 +1,82 @@
+MENTOVA CHAT - DOCUMENT 3 - ARCHITECTURE - VERSION 1
+
+
+Purpose.
+
+
+This document describes the parts of the chat feature and how they fit together.
+
+
+It is updated whenever the code changes.
+
+
+The parts.
+
+
+The mind, written in SWI-Prolog, which grounds words and produces justified answers.  Entry point: src/mentova/mentova.pl.  Knowledge source: knowledge/small_world.pl.
+
+
+The Lattice persistence layer, stored in a library(persistency) flat file for this milestone and in PostgreSQL for production.  See sql/setup.sql for the canonical schema.  Entry point: src/mentova/chat_db.pl.
+
+
+The web server, which hands out the chat page and relays messages between the browser and the mind.  Entry point: src/mentova/mentova_chat.pl.  Uses library(http/thread_httpd) and library(http/http_dispatch).
+
+
+The client, meaning the chat pages in an ordinary web browser.  Public tier: assets/chat/index.html.  Mentor tier: assets/chat/mentor.html.  Shared logic: assets/chat/chat.js.  Shared style: assets/chat/chat.css.
+
+
+A separate speech service, deferred to a later milestone, which will run the audio tools apart from the mind so a crash cannot take the mind down.
+
+
+How a message flows.
+
+
+A browser sends a typed message to POST /api/chat.  The web server receives it, calls mc_log_message to write it to the chat log, calls mc_is_unsafe to check for unsafe content, calls mc_detect_focus and mc_detect_tone for prosody, calls mc_build_reply which calls mc_parse_query and mc_execute_query against small_world, and returns the reply JSON to the browser.  The chat log receives Mentova's reply as well.
+
+
+The two tiers.
+
+
+The public tier at / and assets/chat/index.html is read-only and cannot change the Lattice.
+
+
+The mentor tier at /mentor and assets/chat/mentor.html, after sign-in via POST /api/mentor/login, can propose teachings via POST /api/mentor/teach that pass through the review queue before entering the Lattice via POST /api/mentor/approve.
+
+
+URL routes.
+
+
+GET  /                    — public chat page (index.html)
+GET  /mentor              — mentor chat page (mentor.html)
+GET  /assets/...          — static assets
+POST /api/chat            — public chat endpoint
+GET  /api/why             — justification endpoint
+POST /api/mentor/login    — sign in
+POST /api/mentor/logout   — sign out
+POST /api/mentor/teach    — propose a fact
+POST /api/mentor/approve  — approve a queued proposal
+GET  /api/mentor/queue    — list pending proposals
+
+
+Data.
+
+
+All knowledge and all logs live in the tables defined in Appendix J of the master plan: node_fact, chat_log, mentor_account, mentor_session, review_queue, audit_log, and a schema_version stamp.  For this milestone the same logical schema is reflected in the library(persistency) flat file via the persistent/1 declarations in chat_db.pl.
+
+
+Durability.
+
+
+The flat-file persistence layer survives server restarts.  For production, PostgreSQL with backups turned on provides full durability; the schema is in sql/setup.sql.
+
+
+Governing sources.
+
+
+This document follows Appendix C for the data store choice, Appendix F for the separate speech service decision, and Appendix J for the exact tables.
+
+
+Implementation status as of Acc_423 (2026-07-06).
+
+
+All parts listed above are delivered and present in the repository.

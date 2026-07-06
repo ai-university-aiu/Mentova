@@ -1,0 +1,67 @@
+MENTOVA CHAT - DOCUMENT 5 - COMPLETION - VERSION 1
+
+
+Purpose.
+
+
+This document records what "done" means for the feature and how far along it is.
+
+
+It is updated whenever the code changes.
+
+
+Definition of done.
+
+
+The milestone is done when every item on the checklist in Appendix I of the master plan is true, when all seven acceptance conversations pass, and when the honest wordings are in place.
+
+
+Checklist.
+
+
+A visitor can open the chat page and chat with Mentova.  Status: DONE.  File: assets/chat/index.html.
+
+
+A visitor can ask "why?" and see a glass-box justification.  Status: DONE.  Endpoint: GET /api/why.  Handler: mc_handle_why/1 in mentova_chat.pl.
+
+
+When Mentova does not know it says so honestly and never invents an answer.  Status: DONE.  Wording enforced in mc_execute_query/3.
+
+
+Focus prosody (all-caps words) shown as small-caps.  Status: DONE.  mc_detect_focus/2 in mentova_chat.pl; .mc-focus CSS class in chat.css.
+
+
+Emotional prosody (exclamation, question, emoji) detected and shown as a tone badge.  Status: DONE.  mc_detect_tone/2 in mentova_chat.pl; .mc-tone CSS classes in chat.css.
+
+
+A mentor can sign in, propose a fact through the review queue, and approve it.  Status: DONE.  Endpoints: POST /api/mentor/login, /teach, /approve.  Files: mentor.html, chat.js.
+
+
+Every chat on both tiers is logged in full.  Status: DONE.  mc_log_message/4 in chat_db.pl called by mc_handle_chat/1.
+
+
+Child-safety rules enforced on public chat.  Status: DONE.  mc_is_unsafe/1 in mentova_chat.pl.
+
+
+Setup and deployment.
+
+
+The server is started by running bin/mentova_chat_start.sh, which calls swipl with mentova_chat.pl and mc_db_init and mc_start_server as goals.
+
+
+The library(persistency) flat file is created automatically in the data directory on first run.
+
+
+For production deployment, run sql/setup.sql against a PostgreSQL database, then configure the Prolog server to use that database.
+
+
+Current status.
+
+
+Acc_423 (2026-07-06): All checklist items above are DONE.  The text-only web chat milestone is complete as of this accomplishment.
+
+
+Governing sources.
+
+
+This document follows Appendix I for the definition of done and Appendix G for setup.

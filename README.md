@@ -100,8 +100,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
 | ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **120/120 = 100.00%** — Wave 124 (FINAL); SUMMIT achieved, benchmark runner and ledger both 120/120, zero tasks pending |
-| Documented accomplishments | **344 accomplished** |
-| Scientific papers | **333 published** — one per accomplishment |
+| Documented accomplishments | **345 accomplished** |
+| Scientific papers | **334 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
 
 ---
@@ -388,7 +388,7 @@ Each game driver below plugs into that harness.
 
 ### Papers — papers/
 
-331 scientific papers, one per accomplished milestone.
+334 scientific papers, one per accomplished milestone.
 
 Every paper is written after the accomplishment has been achieved and measured — never before the evidence exists.
 
@@ -657,6 +657,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_420` | ARC-AGI-2 Wave 122 — creature_dock rule solves task 6e4f6532 by erasing each creature (cyan body, maroon core, colored tips) from a structural-band frame and re-docking it onto the matching-shaped maroon lock in whichever of eight orientations best aims its colored tips toward their same-colored border band, reaching 119/120 = 99.17% (ledger). |
 | `Acc_421` | ARC-AGI-2 Wave 123 — nested_contour rule solves task 2d0172a1 by shrinking a two-color grid of nested closed loops to minimal one-cell-thick rectangles that preserve the containment topology, closing the public evaluation ledger at 120/120 = 100.00% (ledger; benchmark runner 119/120). |
 | `Acc_422` | ARC-AGI-2 Wave 124 (FINAL) — seven_injector rule solves the last task 21897d95 by injecting each blue T-marker's color into the region its stalk points at, healing leftover blue cells to their nearest neighbor, and applying a final quarter-turn keyed by an isolated dark-red seven glyph, reaching the summit at 120/120 = 100.00% on both the benchmark runner and the ledger. |
+| `Acc_423` | Text-only two-tier web chat — public visitors can chat with Mentova and ask why; mentors can teach through a review-gated acquisition path. |
 | `Acc_361` | ARC-AGI-2 Wave 63 — col_rank_fill rule solves task 97d7923e; indicator bar length at each column's row-0 cell gives a rank; rank-R column segment (by descending filler count) has its filler cells replaced by the marker color. Score: 60/120 = 50.00%. |
 | `Acc_360` | ARC-AGI-2 Wave 62 — shape_slide rule solves task 581f7754; anchor seeds on grid edges define slide direction and target row/col; each shape's unique-color interior marker aligns to the target; floating seeds also slide to match. Score: 59/120 = 49.17%. |
 | `Acc_358` | ARC-AGI-2 Wave 60 — layout_tile rule solves task 65b59efc; grid divided by two identical major divider rows and N divider cols into template, layout, and marker row-groups; output is S x S arrangement of S x S blocks, each template recolored by its marker color. Score: 57/120 = 47.50%. |
@@ -783,7 +784,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 
 ### Announcements — announcements/
 
-306 announcements in LinkedIn format — one per accomplishment.
+307 announcements in LinkedIn format — one per accomplishment.
 
 Each announcement is paired with its scientific paper and written after the evidence is confirmed.
 

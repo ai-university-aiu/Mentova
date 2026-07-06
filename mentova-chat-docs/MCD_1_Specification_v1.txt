@@ -1,0 +1,73 @@
+MENTOVA CHAT - DOCUMENT 1 - SPECIFICATION - VERSION 1
+
+
+Purpose.
+
+
+This document states what the Mentova text-only web chat must do.
+
+
+It is the first of six living documents, and it is updated whenever the code changes.
+
+
+Scope.
+
+
+In scope is the typed, two-tier web chat: a read-only public visitor tier and a signed-in mentor tier that can teach through review.
+
+
+Out of scope for this milestone is all audio, meaning the microphone, the loudspeaker, the spoken voice, and speech recognition, which are deferred by Appendix F of the master plan.
+
+
+What the feature must do.
+
+
+A visitor can open the chat page in a browser and hold a typed conversation with Mentova.
+
+
+Every word Mentova uses is grounded through the Lattice to simpler grounded words or to perception, never to text statistics.
+
+
+A visitor can ask "why?" about any answer and receive a glass-box justification that unfolds to grounded words with no dead ends.
+
+
+When Mentova does not know, it says so honestly and never invents an answer.
+
+
+Focus prosody is shown as a written cue, such as italics or small capitals on the emphasized word.
+
+
+Emotional Prosody is shown as an honest written tone cue, and is read from the visitor's word choice, punctuation, and emoji.
+
+
+A mentor can sign in and propose a fact or correction, which enters the Review Queue and only reaches the Lattice once approved, with every step written to the Audit Log.
+
+
+Every chat on both tiers is logged in full.
+
+
+The child-safety and content rules are enforced on both what visitors see and what Mentova says.
+
+
+How we know it is done.
+
+
+The feature is done when the definition of done and the acceptance conversations in Appendix I of the master plan all pass.
+
+
+Governing sources.
+
+
+This document follows the master plan, currently at Version 15 or later, especially Appendix F for scope, Appendix I for done, Appendix H for logging, and Appendix K for child-safety.
+
+
+Implementation status as of Acc_423 (2026-07-06).
+
+
+Code delivered: src/mentova/mentova_chat.pl, src/mentova/chat_db.pl, assets/chat/index.html, assets/chat/mentor.html, assets/chat/chat.js, assets/chat/chat.css, sql/setup.sql, bin/mentova_chat_start.sh.
+
+
+Persistence: library(persistency) flat file; PostgreSQL schema in sql/setup.sql for future production deployment.
+
+
+All eight specification items above are addressed by the delivered code.

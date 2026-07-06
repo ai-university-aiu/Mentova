@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mentova — Mentor Panel</title>
+  <link rel="stylesheet" href="/assets/chat/chat.css">
+</head>
+<body>
+  <header class="mc-header">
+    <h1>Mentova — Mentor Panel</h1>
+    <p class="mc-notice">
+      Signed-in mentors may chat with Mentova and propose facts for review.
+    </p>
+  </header>
+
+  <!-- Sign-in panel — shown when not signed in -->
+  <section id="mc-signin-panel" class="mc-signin-panel">
+    <h2>Sign in</h2>
+    <form id="mc-signin-form" autocomplete="off">
+      <label for="mc-username">Username</label>
+      <input id="mc-username" type="text" class="mc-input" required maxlength="80">
+
+      <label for="mc-password">Password</label>
+      <input id="mc-password" type="password" class="mc-input" required maxlength="200">
+
+      <button type="submit" class="mc-send-btn">Sign in</button>
+      <p id="mc-signin-error" class="mc-error" hidden></p>
+    </form>
+  </section>
+
+  <!-- Mentor workspace — shown after sign-in -->
+  <section id="mc-workspace" class="mc-workspace" hidden>
+
+    <div class="mc-toolbar">
+      <span id="mc-signed-in-as"></span>
+      <button id="mc-signout-btn" class="mc-btn-secondary">Sign out</button>
+    </div>
+
+    <main class="mc-main">
+      <div id="mc-history" class="mc-history" aria-live="polite" aria-label="Chat history">
+        <!-- Messages appear here -->
+      </div>
+
+      <form id="mc-form" class="mc-input-row" autocomplete="off">
+        <label for="mc-input" class="mc-sr-only">Type your message</label>
+        <input
+          id="mc-input"
+          type="text"
+          class="mc-input"
+          placeholder="Chat with Mentova"
+          maxlength="500"
+          required
+        >
+        <button type="submit" class="mc-send-btn">Send</button>
+      </form>
+    </main>
+
+    <!-- Teach panel -->
+    <section class="mc-teach-panel">
+      <h2>Teach Mentova</h2>
+      <p class="mc-teach-hint">
+        Enter a Prolog fact such as <code>is_a(robin, bird)</code>.
+        It will enter the Review Queue and only reach the knowledge base once approved.
+      </p>
+      <form id="mc-teach-form" autocomplete="off">
+        <label for="mc-teach-input" class="mc-sr-only">Fact to teach</label>
+        <input
+          id="mc-teach-input"
+          type="text"
+          class="mc-input"
+          placeholder="e.g. is_a(robin, bird)"
+          maxlength="300"
+          required
+        >
+        <button type="submit" class="mc-send-btn">Propose</button>
+      </form>
+      <p id="mc-teach-status" class="mc-status" hidden></p>
+    </section>
+
+    <!-- Review queue panel -->
+    <section class="mc-queue-panel">
+      <h2>Review Queue</h2>
+      <button id="mc-refresh-queue-btn" class="mc-btn-secondary">Refresh</button>
+      <div id="mc-queue-list" class="mc-queue-list">
+        <!-- Queue entries appear here -->
+      </div>
+    </section>
+
+  </section>
+
+  <script src="/assets/chat/chat.js"></script>
+  <script>
+    // Initialise the chat on the mentor tier.
+    MentovaChat.init({ tier: 'mentor' });
+  </script>
+</body>
+</html>

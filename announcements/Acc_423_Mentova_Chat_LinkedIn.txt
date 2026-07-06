@@ -1,0 +1,41 @@
+Acc_423: Mentova Now Has a Public Web Chat Interface
+
+Today marks a milestone I have been working toward since the beginning of the Mentova project.
+
+For the first time, any person with a web browser can open a page and hold a typed conversation with Mentova, a synthetic mind built entirely in SWI-Prolog on the PrologAI platform.
+
+Not a chatbot.
+
+Not a language model generating plausible-sounding text from statistical patterns.
+
+A glass-box mind.
+
+Every word Mentova says traces back through a chain of named facts to simpler, grounded words in its knowledge base.
+
+If Mentova knows the answer, it tells you, and it shows you exactly why.
+
+If it does not know, it says: "I have not learned that yet, so I do not want to guess."
+
+No invention.  No hallucination.  No answer without a traceable reason.
+
+The interface is clean and simple.
+
+Type a question.  Get a reply.  Click Why?.  See the reasoning.
+
+The design has two tiers.
+
+The public tier is read-only.  Any visitor can chat and ask for justifications.
+
+The mentor tier, behind a password, lets teachers propose new facts through a review queue.  A proposed fact enters the knowledge base only after a second mentor approves it.  Every step is written to an audit log.
+
+This is how a trustworthy learning machine should work: transparently, traceably, and with every gap in knowledge honestly named.
+
+Accomplishment Acc_423 is now merged.
+
+The text-only web chat milestone is complete.
+
+D. R. Dison
+Founder of AIU (Artificial Intelligence University)
+Creator and Owner of PrologAI and Mentova
+ORCID 0009-0001-9246-5758
+linkedin.com/in/d-r-dison/
