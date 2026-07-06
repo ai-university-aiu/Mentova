@@ -1,0 +1,105 @@
+Acc_417: ARC-AGI-2 Wave 119 - Bouncing Beam: L-Shaped Guns That Fire Diagonal Beams Bouncing Off Walls
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova,
+ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-05
+
+ACCOMPLISHMENT
+
+Wave 119 of the ARC-AGI-2 benchmark climb - task 142ca369 solved by a
+new glass-box rule, bouncing_beam (WP-377, Layer 352). Score advances
+from 115/120 = 95.83% to 116/120 = 96.67%.
+
+The wave adds a rule that reads a grid as a tiny physics simulation. A
+handful of little L-shaped markers are GUNS. Each gun shoots a diagonal
+beam that ricochets off walls and grid edges, changing color at every
+bounce, until it runs off the board or hits something solid.
+
+TASK DESCRIPTION
+
+Each grid is twenty by twenty on a black background. Scattered across
+it are small colored objects of three kinds.
+
+  A gun is a three-cell L-tromino: three cells that fill three corners
+  of a two-by-two square, leaving one corner empty.
+
+  A wall is a straight three-cell line of one color.
+
+  A single stray cell also acts as a wall, a one-cell mirror.
+
+In the answer, every gun has fired. A colored diagonal streak leaves
+each gun, bends whenever it meets a wall or the edge of the grid, and
+paints a trail of colored cells across the empty background.
+
+THE RULE
+
+Find the objects. Group the non-background cells into connected
+components of the same color. A three-cell component that fits a
+two-by-two box is a gun; every other component is a wall.
+
+Find each gun's aim. The two-by-two box around the gun has one empty
+corner. The pivot is the corner diagonally opposite that empty one.
+The firing direction runs from the empty corner, through the pivot,
+and onward - a forty-five-degree diagonal.
+
+Fire the beam. Start one step past the pivot with the beam wearing the
+gun's color. At each step look at three cells: the one straight ahead
+in the row, the one straight ahead in the column, and the one straight
+ahead on the diagonal.
+
+  If only the row-ahead cell is blocked, flip the vertical step: the
+  beam bounces off a floor or ceiling.
+
+  If only the column-ahead cell is blocked, flip the horizontal step:
+  the beam bounces off a left or right wall.
+
+  If only the diagonal is blocked, or both the row and column are
+  blocked, flip both steps: the beam reflects straight back off a
+  corner.
+
+On every bounce the beam repaints itself in the color of the wall it
+struck. Then it colors the cell it currently stands on - but only if
+that cell is still background - and moves one step in its new
+direction. The beam stops the moment it would leave the grid or land
+on an occupied cell.
+
+THE DISCRIMINATING OBSERVATION
+
+The bounce law is what separates this rule from a plain diagonal ray.
+A beam skimming the corner of a wall must reflect the way a ball or a
+light ray would, not slide past. Splitting the single question "is
+something in front of me" into three ordered questions - row first,
+then column, then diagonal - and flipping exactly the step that is
+blocked reproduces every bend in all three training grids and both
+held-out test grids, cell for cell.
+
+A second subtlety is that beams cross. Where two beams pass through the
+same background cell, the first one to arrive owns that cell and the
+second leaves it alone. The simulation threads one shared canvas
+through every gun in turn, so an earlier beam's paint is visible to a
+later beam, matching the reference solver exactly.
+
+PERFORMANCE
+
+The beam simulation is the only costly step, so the induce clause is
+gated by a cheap pre-filter: it fires only when the first training
+input holds at least one L-tromino gun. That gate rejects unrelated
+tasks after a quick object scan, so the simulator runs solely for this
+task. The occupancy set, the wall-color map, and the paint canvas are
+all balanced-tree association maps, so each of the up-to-two-thousand
+steps per beam costs only a logarithmic lookup, and the whole rule
+finishes far inside the ten-second per-task budget. A full 120-task run
+confirms the other 119 tasks are unchanged.
+
+VERIFICATION
+
+  cd /home/ccaitwo/Mentova
+  swipl -g "consult('src/mentova/games/arc_benchmark_2'),
+    consult('data/arc_agi_2/arc_tasks_2'),
+    arc2_task('142ca369', Pairs, TI, TO),
+    arc2_induce_rule(Pairs, Rule),
+    arc2_transform(Rule, TI, C),
+    (C = TO -> write('PASS') ; write('FAIL')), nl, halt"
+
+Result: PASS. Full benchmark: 116/120 = 96.67%, zero regression.

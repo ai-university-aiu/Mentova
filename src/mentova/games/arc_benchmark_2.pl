@@ -60,6 +60,8 @@
 :- use_module(library(apply), [maplist/2, maplist/3, maplist/4, include/3, exclude/3, foldl/4]).
 % Load pairs utilities for pairs_keys_values/3.
 :- use_module(library(pairs), [pairs_keys_values/3]).
+% Load balanced-tree association maps for occupied/wall/paint sets.
+:- use_module(library(assoc), [empty_assoc/1, put_assoc/4, get_assoc/3]).
 
 % Allow arc2_transform/3 clauses at non-consecutive positions.
 :- discontiguous arc2_transform/3.
@@ -11153,6 +11155,328 @@ se_cell_(D, Base, L, R) :-
     Half is D // 6,
 % Odd periods swap the left and right columns.
     ( 1 =:= Half mod 2 -> L = BR, R = BL ; L = BL, R = BR ).
+
+% ---------------------------------------------------------------------------
+% BOUNCING-BEAM RULE (WP-377, Layer 352)  Task 142ca369
+% Each 3-cell L-tromino (fits in a 2x2 box, one corner missing) is a "gun".
+% Its pivot is the corner diagonally opposite the missing cell; the firing
+% direction points from the missing corner through the pivot and onward.
+% A diagonal beam travels from the pivot, bouncing off "walls" (straight
+% 3-cell objects and single stray cells).  A vertical block flips the row
+% step, a horizontal block flips the column step, a diagonal-only block
+% flips both.  On each bounce the beam recolors to the wall it struck.  The
+% beam paints background cells with its current colour until it leaves the
+% grid or hits an occupied cell.
+% ---------------------------------------------------------------------------
+
+% arc2_induce_rule(bouncing_beam): a gun in the first input pre-filters, then
+% the simulator must reproduce every training output pixel-exactly.
+arc2_induce_rule(TrainingPairs, bouncing_beam) :-
+% The first training input must contain at least one L-tromino gun.
+    TrainingPairs = [pair(FirstIn, _) | _],
+% Cheap reject: bail immediately when no gun is present.
+    bb_has_gun_(FirstIn),
+% Verify the beam simulator on every training pair.
+    forall(member(pair(In, Out), TrainingPairs),
+           arc2_transform(bouncing_beam, In, Out)).
+
+% arc2_transform(bouncing_beam): classify objects and fire every gun's beam.
+arc2_transform(bouncing_beam, Grid, Out) :-
+% Grid dimensions bound the beam travel.
+    bb_dims_(Grid, H, W),
+% Find every 4-connected same-colour object.
+    bb_objects_(Grid, Objects),
+% Partition objects into guns and a wall-colour map.
+    bb_classify_(Objects, Guns, WallMap),
+% There must be at least one gun to fire.
+    Guns = [_ | _],
+% Collect every occupied cell (all object cells).
+    bb_occupied_(Objects, Occupied),
+% Fire each gun, threading a paint map through the simulations.
+    bb_fire_all_(Guns, H, W, Grid, Occupied, WallMap, PaintMap),
+% Render the output by overlaying painted cells onto the input grid.
+    bb_render_(Grid, PaintMap, Out).
+
+% bb_has_gun_/1: true if the grid contains at least one L-tromino gun.
+bb_has_gun_(Grid) :-
+% Enumerate the grid's objects.
+    bb_objects_(Grid, Objects),
+% Succeed as soon as one object is a gun.
+    member(obj(_, Cells), Objects),
+% The object must fit the 3-cell L-shape test.
+    bb_is_gun_(Cells),
+% Commit to the first gun found.
+    !.
+
+% bb_dims_/3: height and width of a rectangular grid.
+bb_dims_(Grid, H, W) :-
+% Height is the number of rows.
+    length(Grid, H),
+% Width is the length of the first row.
+    Grid = [Row | _],
+    length(Row, W).
+
+% bb_at_/4: value at (R,C) in Grid.
+bb_at_(Grid, R, C, V) :-
+% Select row R.
+    nth0(R, Grid, Row),
+% Select column C.
+    nth0(C, Row, V).
+
+% bb_inside_/4: true if (R,C) lies within an H-by-W grid.
+bb_inside_(H, W, R, C) :-
+% Row within bounds.
+    R >= 0, R < H,
+% Column within bounds.
+    C >= 0, C < W.
+
+% bb_objects_/2: partition non-zero cells into 4-connected same-colour objects.
+bb_objects_(Grid, Objects) :-
+% Collect every non-zero cell tagged with its colour.
+    findall(cell(R, C, V),
+            (nth0(R, Grid, Row), nth0(C, Row, V), V =\= 0),
+            Cells),
+% Group the cells into connected components.
+    bb_cc_(Cells, Objects).
+
+% bb_cc_/2: split a cell list into connected components (obj(Colour,Coords)).
+bb_cc_([], []).
+% Flood the first cell's component, then recurse over what remains.
+bb_cc_([Cell | Rest], [obj(V, Coords) | Objs]) :-
+% The component colour is the seed cell's colour.
+    Cell = cell(_, _, V),
+% Flood-fill the connected component from the seed.
+    bb_flood_([Cell], Rest, Comp, Remaining),
+% Reduce cell records to R-C coordinates.
+    findall(R-C, member(cell(R, C, _), Comp), Coords),
+% Continue partitioning the remaining cells.
+    bb_cc_(Remaining, Objs).
+
+% bb_flood_/4: BFS flood fill collecting a 4-connected same-colour component.
+bb_flood_([], Pool, [], Pool).
+% Expand the frontier head, pulling its neighbours out of the pool.
+bb_flood_([X | Fs], Pool, [X | Comp], Rem) :-
+% Split the pool into cells adjacent to X and the rest.
+    bb_adj_split_(X, Pool, Adj, Pool1),
+% Add the new neighbours to the frontier.
+    append(Adj, Fs, F1),
+% Continue flooding with the extended frontier and shrunken pool.
+    bb_flood_(F1, Pool1, Comp, Rem).
+
+% bb_adj_split_/4: partition Pool into cells 4-adjacent (same colour) to X.
+bb_adj_split_(_, [], [], []).
+% Classify the head cell as adjacent or not, then recurse.
+bb_adj_split_(X, [P | Ps], Adj, Rest) :-
+% Test 4-adjacency and colour equality.
+    ( bb_adj4_(X, P)
+% Adjacent same-colour cells join the Adj list.
+    -> Adj = [P | A1], Rest = R1
+% Everything else stays in the Rest list.
+    ;  Adj = A1, Rest = [P | R1] ),
+% Recurse over the remaining pool cells.
+    bb_adj_split_(X, Ps, A1, R1).
+
+% bb_adj4_/2: true if two same-colour cells are 4-connected neighbours.
+bb_adj4_(cell(R1, C1, V), cell(R2, C2, V)) :-
+% Manhattan distance of exactly one means edge-adjacent.
+    DR is abs(R1 - R2), DC is abs(C1 - C2),
+    DR + DC =:= 1.
+
+% bb_is_gun_/1: true if three cells span a 2x2 bounding box (an L-tromino).
+bb_is_gun_(Cells) :-
+% A gun has exactly three cells.
+    length(Cells, 3),
+% Gather row coordinates.
+    findall(R, member(R-_, Cells), Rs),
+% Gather column coordinates.
+    findall(C, member(_-C, Cells), Cs),
+% Row span is exactly one.
+    min_list(Rs, R0), max_list(Rs, R1), R1 - R0 =:= 1,
+% Column span is exactly one.
+    min_list(Cs, C0), max_list(Cs, C1), C1 - C0 =:= 1.
+
+% bb_gun_dir_/3: compute a gun's pivot and firing direction.
+bb_gun_dir_(Cells, PR-PC, DR-DC) :-
+% Gather coordinates to locate the bounding box.
+    findall(R, member(R-_, Cells), Rs),
+    findall(C, member(_-C, Cells), Cs),
+% Top-left corner of the 2x2 box.
+    min_list(Rs, R0), min_list(Cs, C0),
+% Bottom and right corners of the box.
+    R0b is R0 + 1, C0b is C0 + 1,
+% The four corners of the 2x2 box.
+    Square = [R0-C0, R0-C0b, R0b-C0, R0b-C0b],
+% The one corner absent from the L-shape is the missing corner.
+    findall(P, (member(P, Square), \+ memberchk(P, Cells)), Missing),
+    Missing = [MR-MC | _],
+% Pivot row is opposite the missing corner's row.
+    ( MR =:= R0b -> PR = R0 ; PR = R0b ),
+% Pivot column is opposite the missing corner's column.
+    ( MC =:= C0b -> PC = C0 ; PC = C0b ),
+% Direction points from the missing corner through the pivot.
+    DR is PR - MR, DC is PC - MC.
+
+% bb_classify_/3: split objects into guns and a wall-colour assoc map.
+bb_classify_(Objects, Guns, WallMap) :-
+% Start with an empty wall map.
+    empty_assoc(W0),
+% Fold over the objects accumulating guns and wall cells.
+    bb_classify__(Objects, [], Guns, W0, WallMap).
+
+% bb_classify__/5: worker for bb_classify_/3.
+bb_classify__([], Guns, Guns, WallMap, WallMap).
+% Dispatch each object as a gun or a wall.
+bb_classify__([obj(Color, Cells) | Rest], GAcc, Guns, Win, Wout) :-
+% Guns become gun(Colour,Pivot,Direction) records.
+    ( bb_is_gun_(Cells)
+    -> bb_gun_dir_(Cells, Pivot, Dir),
+       bb_classify__(Rest, [gun(Color, Pivot, Dir) | GAcc], Guns, Win, Wout)
+% Wall cells record their colour in the wall map.
+    ;  foldl(bb_addwall_(Color), Cells, Win, Wmid),
+       bb_classify__(Rest, GAcc, Guns, Wmid, Wout)
+    ).
+
+% bb_addwall_/4: record one wall cell's colour into the assoc map.
+bb_addwall_(Color, R-C, Win, Wout) :-
+% Map the cell coordinate to the wall colour.
+    put_assoc(R-C, Win, Color, Wout).
+
+% bb_occupied_/2: collect all object cells into an occupancy assoc set.
+bb_occupied_(Objects, Occ) :-
+% Start with an empty occupancy set.
+    empty_assoc(O0),
+% Fold every object's cells into the set.
+    foldl(bb_addocc_, Objects, O0, Occ).
+
+% bb_addocc_/3: add one object's cells to the occupancy set.
+bb_addocc_(obj(_, Cells), Oin, Oout) :-
+% Fold the object's coordinates into the set.
+    foldl(bb_addocc1_, Cells, Oin, Oout).
+
+% bb_addocc1_/3: mark one coordinate as occupied.
+bb_addocc1_(R-C, Oin, Oout) :-
+% Store a truth marker for the coordinate.
+    put_assoc(R-C, Oin, t, Oout).
+
+% bb_occ_/3: true if (R,C) is an occupied cell.
+bb_occ_(Occ, R, C) :-
+% Membership in the occupancy assoc set.
+    get_assoc(R-C, Occ, _).
+
+% bb_current_/5: current value at (R,C), preferring painted overrides.
+bb_current_(Grid, Paint, R, C, V) :-
+% A painted cell overrides the input value.
+    ( get_assoc(R-C, Paint, PV)
+    -> V = PV
+% Otherwise fall back to the input grid.
+    ;  bb_at_(Grid, R, C, V) ).
+
+% bb_fire_all_/7: fire every gun, threading a paint map through the beams.
+bb_fire_all_(Guns, H, W, Grid, Occ, Wall, PaintOut) :-
+% Start with an empty paint map.
+    empty_assoc(P0),
+% Fold each gun's beam simulation over the paint map.
+    foldl(bb_fire_gun_(H, W, Grid, Occ, Wall), Guns, P0, PaintOut).
+
+% bb_fire_gun_/7: simulate one gun's beam starting at pivot plus direction.
+bb_fire_gun_(H, W, Grid, Occ, Wall, gun(Color, PR-PC, DR-DC), Pin, Pout) :-
+% The beam's first cell is one step past the pivot.
+    R0 is PR + DR, C0 is PC + DC,
+% Simulate up to 2000 beam steps.
+    bb_beam_(2000, R0, C0, DR, DC, Color, H, W, Grid, Occ, Wall, Pin, Pout).
+
+% bb_beam_/13: simulate one bouncing beam step, updating the paint map.
+% Stop when the step budget runs out, the beam leaves the grid, or it hits
+% an occupied cell.
+bb_beam_(Steps, R, C, _DR, _DC, _BC, H, W, _Grid, Occ, _Wall, Pin, Pout) :-
+% Termination test: no budget, off-grid, or blocked by an occupied cell.
+    ( Steps =< 0 ; \+ bb_inside_(H, W, R, C) ; bb_occ_(Occ, R, C) ),
+% Commit to termination.
+    !,
+% Return the accumulated paint map unchanged.
+    Pout = Pin.
+% Otherwise take one beam step.
+bb_beam_(Steps, R, C, DR, DC, BC, H, W, Grid, Occ, Wall, Pin, Pout) :-
+% Cell directly ahead vertically.
+    RV is R + DR, CV = C,
+% Cell directly ahead horizontally.
+    RH = R, CH is C + DC,
+% Cell diagonally ahead.
+    RD is R + DR, CD is C + DC,
+% Is the vertical-ahead cell blocked?
+    bb_blocked_(H, W, Occ, RV, CV, VB),
+% Is the horizontal-ahead cell blocked?
+    bb_blocked_(H, W, Occ, RH, CH, HB),
+% Is the diagonal-ahead cell blocked?
+    bb_blocked_(H, W, Occ, RD, CD, DB),
+% Apply the bounce rules to get the new direction and colour.
+    bb_bounce_(VB, HB, DB, DR, DC, RV, CV, RH, CH, RD, CD, Wall, BC,
+               NDR, NDC, NBC),
+% Paint the current cell only if it is background.
+    ( bb_current_(Grid, Pin, R, C, 0)
+    -> put_assoc(R-C, Pin, NBC, Pmid)
+    ;  Pmid = Pin ),
+% Advance the beam using the new direction.
+    NR is R + NDR, NC is C + NDC,
+% Decrement the step budget.
+    S1 is Steps - 1,
+% Recurse for the next beam step.
+    bb_beam_(S1, NR, NC, NDR, NDC, NBC, H, W, Grid, Occ, Wall, Pmid, Pout).
+
+% bb_blocked_/6: 1 if (R,C) is inside the grid and occupied, else 0.
+bb_blocked_(H, W, Occ, R, C, B) :-
+% Only an inside, occupied cell counts as blocked.
+    ( bb_inside_(H, W, R, C), bb_occ_(Occ, R, C)
+    -> B = 1
+    ;  B = 0 ).
+
+% bb_bounce_/16: derive the post-bounce direction and beam colour.
+bb_bounce_(VB, HB, DB, DR, DC, RV, CV, RH, CH, RD, CD, Wall, BC,
+           NDR, NDC, NBC) :-
+% A bounce occurs on a vertical, horizontal, or diagonal-only block.
+    ( ( VB =:= 1 ; HB =:= 1 ; (DB =:= 1, VB =:= 0, HB =:= 0) )
+    -> ( VB =:= 1, HB =:= 0
+% Vertical-only block: flip the row step and recolor to the vertical wall.
+       -> NDR is -DR, NDC = DC, bb_wallcolor_(Wall, RV, CV, BC, NBC)
+       ; HB =:= 1, VB =:= 0
+% Horizontal-only block: flip the column step and recolor to the wall.
+       -> NDC is -DC, NDR = DR, bb_wallcolor_(Wall, RH, CH, BC, NBC)
+% Diagonal or double block: flip both steps and recolor to the source wall.
+       ;  NDR is -DR, NDC is -DC,
+          bb_source_color_(Wall, RV, CV, RH, CH, RD, CD, BC, NBC)
+       )
+% No block ahead: keep direction and colour unchanged.
+    ;  NDR = DR, NDC = DC, NBC = BC ).
+
+% bb_wallcolor_/5: recolor to the wall at (R,C) if one is recorded there.
+bb_wallcolor_(Wall, R, C, BC, NBC) :-
+% Use the recorded wall colour, else keep the current beam colour.
+    ( get_assoc(R-C, Wall, WC)
+    -> NBC = WC
+    ;  NBC = BC ).
+
+% bb_source_color_/9: pick the wall colour of the first blocking cell.
+bb_source_color_(Wall, RV, CV, RH, CH, RD, CD, BC, NBC) :-
+% Prefer the vertical wall, then the horizontal, then the diagonal.
+    ( get_assoc(RV-CV, Wall, WC)
+    -> NBC = WC
+    ; get_assoc(RH-CH, Wall, WC)
+    -> NBC = WC
+    ; get_assoc(RD-CD, Wall, WC)
+    -> NBC = WC
+% No wall recorded at any candidate: keep the current beam colour.
+    ;  NBC = BC ).
+
+% bb_render_/3: overlay painted cells onto the input grid to form the output.
+bb_render_(Grid, Paint, Out) :-
+% Rebuild every row, substituting painted cells where present.
+    findall(Row,
+            ( nth0(R, Grid, GRow),
+              findall(V,
+                      ( nth0(C, GRow, GV),
+                        ( get_assoc(R-C, Paint, PV) -> V = PV ; V = GV ) ),
+                      Row) ),
+            Out).
 
 % ---------------------------------------------------------------------------
 % TASK-TYPE-AWARE INDUCTION (CORE OF ARC-AGI-2 APPROACH)
