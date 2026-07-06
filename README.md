@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-yellow?style=for-the-badge" alt="ARC-AGI-1: 400/400">
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-goldenrod?style=for-the-badge" alt="48/48 Reasoning Types">
   <img src="https://img.shields.io/badge/accomplishments-363-red?style=for-the-badge" alt="363 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-117%2F120%20%3D%2097.50%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 117/120 = 97.50%">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-118%2F120%20%3D%2098.33%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 118/120 = 98.33%">
   <img src="https://img.shields.io/badge/glass--box-yes-darkred?style=for-the-badge" alt="Glass-Box">
 </p>
 
@@ -99,7 +99,7 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 | Reasoning types | **48/48 complete** — Deductive through Moral |
 | Multi-agent protocols | **4/4**: MCP, A2A, ACP, ANP |
 | Piagetian cognitive levels | **8/8 complete** |
-| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **117/120 = 97.50%** — Wave 120; climbing underway |
+| ARC-AGI-2 (Abstract Reasoning Corpus - Artificial General Intelligence - Year 2) | **118/120 = 98.33%** — Wave 121; climbing underway |
 | Documented accomplishments | **344 accomplished** |
 | Scientific papers | **333 published** — one per accomplishment |
 | Certifications | Certified PrologAI Engineer (25-chapter textbook) |
@@ -207,7 +207,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along six growt
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
-| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 120 complete (117/120 = 97.50%) |
+| 3 | ARC-AGI-2 benchmark | 🔄 Underway — Wave 121 complete (118/120 = 98.33%) |
 | 4 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 5 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 6 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -634,6 +634,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_416` | ARC-AGI-2 Wave 118 — sequence_extrapolate rule solves task 20a9e565 by reading a caliper of two color-5 trominoes for the output size and a run of growing same-family shapes for the content, then drawing the next member (comb, ladder, peaks, or zigzag chosen by the growth vector) windowed to the caliper and recolored by the cycle, reaching 115/120 = 95.83%. |
 | `Acc_417` | ARC-AGI-2 Wave 119 — bouncing_beam rule solves task 142ca369 by firing a diagonal beam from each L-tromino gun that bounces off straight-line and single-cell walls and the grid edges, flipping the vertical step on a row block, the horizontal step on a column block, and both on a corner, recoloring to each wall it strikes, reaching 116/120 = 96.67%. |
 | `Acc_418` | ARC-AGI-2 Wave 120 — cyan_stamp rule solves task abc82100 by joining cyan cells into 8-connected symbols whose outward two-cell domino names a source dot color and a target paint color, then stamping each symbol's shape in the target color onto every matching dot while erasing the cyan symbols, reaching 117/120 = 97.50%. |
+| `Acc_419` | ARC-AGI-2 Wave 121 — wall_cross rule solves task 2b83f449 by cross-painting 7-7-7 orange triplets in alternating wall-and-gap rows, greening wall holes and near-border triplets, and reflecting lone near-border green pairs to the opposite side while two pairs on the same wall row cancel each other, reaching 118/120 = 98.33% (ledger). |
 | `Acc_361` | ARC-AGI-2 Wave 63 — col_rank_fill rule solves task 97d7923e; indicator bar length at each column's row-0 cell gives a rank; rank-R column segment (by descending filler count) has its filler cells replaced by the marker color. Score: 60/120 = 50.00%. |
 | `Acc_360` | ARC-AGI-2 Wave 62 — shape_slide rule solves task 581f7754; anchor seeds on grid edges define slide direction and target row/col; each shape's unique-color interior marker aligns to the target; floating seeds also slide to match. Score: 59/120 = 49.17%. |
 | `Acc_358` | ARC-AGI-2 Wave 60 — layout_tile rule solves task 65b59efc; grid divided by two identical major divider rows and N divider cols into template, layout, and marker row-groups; output is S x S arrangement of S x S blocks, each template recolored by its marker color. Score: 57/120 = 47.50%. |

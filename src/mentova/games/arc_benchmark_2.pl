@@ -156,6 +156,21 @@ arc2_induce_rule(TrainingPairs, cyan_stamp) :-
 % The cyan-stamp transform must reproduce every training pair exactly.
     forall(member(pair(In, Out), TrainingPairs), arc2_transform(cyan_stamp, In, Out)).
 
+% wall_cross: early dispatch (WAVE 121, task 2b83f449). The grid is a stack of
+% wall rows (mostly colour 8) and gap rows (colour 0) carrying 7-7-7 orange
+% triplets; each triplet is cross-painted 8-6-8 with vertical 6 markers, wall
+% holes and near-border triplets spawn green (colour 3) markers, and one-sided
+% near pairs reflect to the opposite border. Cheap gate: the first training
+% input holds a horizontal 7-7-7 run and at least one colour-8 cell. (The
+% transform, helpers, and named-rule fact live at the end of this file.)
+arc2_induce_rule(TrainingPairs, wall_cross) :-
+% Cheap gate: pull the first training input off the pair list.
+    TrainingPairs = [pair(First, _) | _],
+% The first input must hold a 7-7-7 run and at least one colour-8 cell.
+    wc_has_triplet_(First),
+% The wall-cross transform must reproduce every training pair exactly.
+    forall(member(pair(In, Out), TrainingPairs), arc2_transform(wall_cross, In, Out)).
+
 % scaled_frame: early dispatch to avoid generic clause hitting slow frame_assemble.
 arc2_named_rule(scaled_frame).
 % arc2_induce_rule(scaled_frame): frame pre-filter + forall verify.
@@ -27833,3 +27848,261 @@ cs_zrow_(W, Row) :-
     length(Row, W),
 % Set every element to zero.
     maplist(=(0), Row).
+
+% ===========================================================================
+% WALL-CROSS (WAVE 121, task 2b83f449, Layer 354)
+% The grid alternates wall rows (mostly colour 8) and gap rows (colour 0
+% holding 7-7-7 orange triplets). Each triplet is cross-painted 8-6-8 with a
+% vertical colour-6 marker in the wall rows above and below; wall holes and
+% near-border triplets spawn green (colour 3) markers along the borders; a
+% one-sided near pair reflects to the opposite border one band up (and, in the
+% lower half, two bands down); the bottom wall row's corners turn green when a
+% side has no hole or a near triplet feeds that corner.
+% ===========================================================================
+
+% arc2_named_rule(wall_cross): register wall_cross as a known rule name.
+arc2_named_rule(wall_cross).
+
+% arc2_transform(wall_cross, Grid, Out): run the full wall-cross pipeline.
+arc2_transform(wall_cross, Grid, Out) :-
+% Delegate to the staged solver.
+    wc_solve_(Grid, Out).
+
+% wc_has_triplet_(+Grid): succeed once the grid holds a 7-7-7 run and a colour 8.
+wc_has_triplet_(Grid) :-
+% Require at least one row that contains a horizontal 7-7-7 run.
+    once(( member(Row, Grid), wc_has_run_(Row) )),
+% Require at least one row that contains a colour-8 cell.
+    once(( member(Row8, Grid), memberchk(8, Row8) )).
+
+% wc_has_run_(+Row): succeed when three consecutive cells are all colour 7.
+wc_has_run_([7, 7, 7 | _]) :- !.
+% Otherwise drop the head and keep scanning the tail.
+wc_has_run_([_ | T]) :-
+% Recurse on the remaining cells.
+    wc_has_run_(T).
+
+% wc_dims_(+Grid, -H, -W): height and width of a rectangular grid.
+wc_dims_(Grid, H, W) :-
+% Height is the number of rows.
+    length(Grid, H),
+% Width is the length of the first row.
+    Grid = [Row0 | _], length(Row0, W).
+
+% wc_solve_(+Grid, -Out): thread the grid through Parts A through E in order.
+wc_solve_(Grid, Out) :-
+% Read the grid dimensions.
+    wc_dims_(Grid, H, W),
+% The column centre is the half-width, kept as a float to match the reference.
+    Center is (W - 1) / 2.0,
+% Collect every horizontal 7-7-7 triplet as trip(Row, LeftCol, RightCol).
+    wc_find_trips_(Grid, Trips),
+% Part A: cross-paint every triplet and drop its vertical colour-6 markers.
+    foldl(wc_paint_cross_(H), Trips, Grid, GA),
+% Clear pre-existing border greens so they can be recomputed below.
+    wc_clear_borders_(GA, H, W, GB),
+% Parts B and E(holes): paint greens for holes in the wall rows.
+    wc_wall_holes_(Grid, GB, H, W, Center, GC),
+% Part C: paint green pairs for triplets that sit near a side wall.
+    wc_near_pairs_(Trips, H, W, GC, GD, Near),
+% Part D: reflect one-sided near pairs to the opposite border.
+    wc_reflect_all_(Near, H, W, Center, GD, GE),
+% Part E: settle the bottom wall row's two corner cells.
+    wc_bottom_edge_(Grid, Trips, H, W, Center, GE, Out).
+
+% wc_find_trips_(+Grid, -Trips): collect every horizontal 7-7-7 run.
+wc_find_trips_(Grid, Trips) :-
+% Determine the last valid row index.
+    length(Grid, H), Hm1 is H - 1,
+% Scan each row for its triplets, producing a nested list.
+    findall(RowTrips,
+        ( between(0, Hm1, R), nth0(R, Grid, Row), wc_row_trips_(Row, R, RowTrips) ),
+        Nested),
+% Flatten the per-row triplet lists into a single list.
+    append(Nested, Trips).
+
+% wc_row_trips_(+Row, +R, -Trips): triplets in one row, skipping 3 on a match.
+wc_row_trips_(Row, R, Trips) :-
+% Compute the last starting column a triplet could occupy.
+    length(Row, W), Last is W - 3,
+% Begin scanning from column zero.
+    wc_scan_(0, Last, Row, R, Trips).
+
+% wc_scan_(+C, +Last, +Row, +R, -Trips): left-to-right triplet scan.
+wc_scan_(C, Last, _, _, []) :-
+% Stop once the cursor passes the last possible start column.
+    C > Last, !.
+% Otherwise test the three cells at the cursor.
+wc_scan_(C, Last, Row, R, Trips) :-
+% Compute the two follow-on column indices.
+    C1 is C + 1, C2 is C + 2,
+% A run of three colour-7 cells records a triplet and jumps ahead by three.
+    ( nth0(C, Row, 7), nth0(C1, Row, 7), nth0(C2, Row, 7)
+    ->  Trips = [trip(R, C, C2) | T], C3 is C + 3, wc_scan_(C3, Last, Row, R, T)
+% A miss advances the cursor by one column.
+    ;   wc_scan_(C1, Last, Row, R, Trips) ).
+
+% wc_paint_cross_(+H, +Trip, +Gin, -Gout): Part A cross-paint for one triplet.
+wc_paint_cross_(H, trip(R, C0, C2), Gin, Gout) :-
+% The centre column of the triplet is one step right of the left cell.
+    CC is C0 + 1,
+% Paint the centre colour 6 and both flanks colour 8.
+    arc2_set_cell_(Gin, R, CC, 6, G1),
+    arc2_set_cell_(G1, R, C0, 8, G2),
+    arc2_set_cell_(G2, R, C2, 8, G3),
+% Drop a vertical colour-6 marker in the wall row directly above, if any.
+    Rm1 is R - 1,
+    ( Rm1 >= 0 -> arc2_set_cell_(G3, Rm1, CC, 6, G4) ; G4 = G3 ),
+% Drop a vertical colour-6 marker in the wall row directly below, if any.
+    Rp1 is R + 1,
+    ( Rp1 < H -> arc2_set_cell_(G4, Rp1, CC, 6, Gout) ; Gout = G4 ).
+
+% wc_clear_borders_(+Gin, +H, +W, -Gout): reset colour-3 border cells to 8.
+wc_clear_borders_(Gin, H, W, Gout) :-
+% Compute the last row and column indices.
+    Hm1 is H - 1, Wm1 is W - 1,
+% Enumerate every border cell (leftmost and rightmost columns of each row).
+    findall(R-C, ( between(0, Hm1, R), member(C, [0, Wm1]) ), Cells),
+% Clear each border cell that currently holds a green.
+    foldl(wc_clear_one_, Cells, Gin, Gout).
+
+% wc_clear_one_(+Cell, +Gin, -Gout): reset a single green border cell to 8.
+wc_clear_one_(R-C, Gin, Gout) :-
+% Replace a colour-3 cell with colour 8; leave anything else untouched.
+    ( arc2_cell_(Gin, R, C, 3) -> arc2_set_cell_(Gin, R, C, 8, Gout) ; Gout = Gin ).
+
+% wc_wall_holes_(+Grid, +Gin, +H, +W, +Center, -Gout): Parts B and E holes.
+wc_wall_holes_(Grid, Gin, H, W, Center, Gout) :-
+% Compute the last row and interior-column bounds.
+    Hm1 is H - 1, Wm2 is W - 2,
+% Gather every interior-wall-row hole (even rows from 2 up to, but not, H-1).
+    findall(R-C,
+        ( between(2, Hm1, R), R mod 2 =:= 0, R =\= Hm1,
+          between(1, Wm2, C), arc2_cell_(Grid, R, C, 0) ),
+        IntHoles),
+% Paint the interior-wall-row holes.
+    foldl(wc_hole_interior_(W, Center), IntHoles, Gin, GMid),
+% Handle the bottom wall row only when the last row is even.
+    ( Hm1 >= 2, Hm1 mod 2 =:= 0
+% Collect its interior holes and count all its holes across the full width.
+    ->  findall(C, ( between(1, Wm2, C), arc2_cell_(Grid, Hm1, C, 0) ), BHoles),
+        Wm1 is W - 1,
+        findall(K, ( between(0, Wm1, K), arc2_cell_(Grid, Hm1, K, 0) ), AllH),
+        length(AllH, NHoles),
+% Paint each bottom-row hole according to the total hole count.
+        foldl(wc_hole_bottom_(Hm1, Center, NHoles), BHoles, GMid, Gout)
+% A gap-row bottom leaves the grid unchanged here.
+    ;   Gout = GMid ).
+
+% wc_hole_interior_(+W, +Center, +Hole, +Gin, -Gout): Part B interior wall hole.
+wc_hole_interior_(W, Center, R-C, Gin, Gout) :-
+% Paint green on the interior-facing side of the hole.
+    ( C < Center -> IC is C + 1 ; IC is C - 1 ),
+    arc2_set_cell_(Gin, R, IC, 3, G1),
+% Measure the distances to the left and right borders.
+    Ld = C, Rd is W - 1 - C, Wm1 is W - 1,
+% Paint green on whichever border is nearer.
+    ( Ld =< Rd -> Border = 0 ; Border = Wm1 ),
+    arc2_set_cell_(G1, R, Border, 3, G2),
+% A hole within three of a side wall greens both borders.
+    ( min(Ld, Rd) =< 3
+    ->  arc2_set_cell_(G2, R, 0, 3, G3), arc2_set_cell_(G3, R, Wm1, 3, Gout)
+    ;   Gout = G2 ).
+
+% wc_hole_bottom_(+BR, +Center, +NHoles, +C, +Gin, -Gout): Part E bottom hole.
+wc_hole_bottom_(BR, Center, NHoles, C, Gin, Gout) :-
+% A lone hole is flanked by green on both sides.
+    ( NHoles =:= 1
+    ->  Cm1 is C - 1, Cp1 is C + 1,
+        arc2_set_cell_(Gin, BR, Cm1, 3, G1),
+        arc2_set_cell_(G1, BR, Cp1, 3, Gout)
+% Otherwise each hole is flanked only on its interior side.
+    ;   ( C < Center -> Ct is C + 1 ; Ct is C - 1 ),
+        arc2_set_cell_(Gin, BR, Ct, 3, Gout) ).
+
+% wc_near_pairs_(+Trips, +H, +W, +Gin, -Gout, -Near): Part C near-triplet pairs.
+wc_near_pairs_(Trips, H, W, Gin, Gout, Near) :-
+% Fold each triplet through, threading the grid and a near-pair accumulator.
+    foldl(wc_near_one_(H, W), Trips, s(Gin, []), s(Gout, Near)).
+
+% wc_near_one_(+H, +W, +Trip, +StateIn, -StateOut): one triplet's near pair.
+wc_near_one_(H, W, trip(R, C0, C1), s(Gin, Nin), s(Gout, Nout)) :-
+% The relevant wall row is the one directly below the triplet's gap row.
+    WR is R + 1, Hm1 is H - 1, Wm1 is W - 1, Wm2 is W - 2,
+% Skip triplets whose wall row is out of bounds or is the bottom row.
+    ( ( WR >= H ; WR =:= Hm1 )
+    ->  Gout = Gin, Nout = Nin
+% A triplet near the left wall greens the left pair and notes a left near.
+    ;   ( C0 =< 3
+        ->  arc2_set_cell_(Gin, WR, 0, 3, Ga1),
+            arc2_set_cell_(Ga1, WR, 1, 3, Ga2),
+            NL = [WR-left | Nin]
+        ;   Ga2 = Gin, NL = Nin ),
+% A triplet near the right wall greens the right pair and notes a right near.
+        RightDist is Wm1 - C1,
+        ( RightDist =< 3
+        ->  arc2_set_cell_(Ga2, WR, Wm1, 3, Gb1),
+            arc2_set_cell_(Gb1, WR, Wm2, 3, Gout),
+            Nout = [WR-right | NL]
+        ;   Gout = Ga2, Nout = NL ) ).
+
+% wc_reflect_all_(+Near, +H, +W, +Center, +Gin, -Gout): Part D reflections.
+wc_reflect_all_(Near, H, W, Center, Gin, Gout) :-
+% Collect the wall rows that carry near pairs, for the one-per-row test.
+    findall(WR, member(WR-_, Near), WRs),
+% Reflect each qualifying near pair, threading the grid.
+    foldl(wc_reflect_one_(WRs, H, W, Center), Near, Gin, Gout).
+
+% wc_reflect_one_(+WRs, +H, +W, +Center, +Near, +Gin, -Gout): one reflection.
+wc_reflect_one_(WRs, H, W, Center, WR-Side, Gin, Gout) :-
+% Count how many near pairs share this wall row.
+    include(=(WR), WRs, Same), length(Same, Cnt),
+% Only a pair that is alone on its wall row reflects.
+    ( Cnt =:= 1
+    ->  Up is WR - 2,
+% Reflect one band up.
+        wc_reflect_at_(Up, Side, H, W, Gin, G1),
+% If the wall row lies in the lower half, also reflect two bands down.
+        ( WR >= Center
+        ->  Down is WR + 4, wc_reflect_at_(Down, Side, H, W, G1, Gout)
+        ;   Gout = G1 )
+    ;   Gout = Gin ).
+
+% wc_reflect_at_(+TR, +Side, +H, +W, +Gin, -Gout): paint the opposite border.
+wc_reflect_at_(TR, Side, H, W, Gin, Gout) :-
+% Compute the last row and column bounds.
+    Hm1 is H - 1, Wm1 is W - 1, Wm2 is W - 2,
+% Reflections outside the interior wall rows are dropped.
+    ( ( TR =< 0 ; TR >= Hm1 )
+    ->  Gout = Gin
+% A left-side pair reflects onto the right border, and vice versa.
+    ;   ( Side == left
+        ->  arc2_set_cell_(Gin, TR, Wm1, 3, Ga), arc2_set_cell_(Ga, TR, Wm2, 3, Gout)
+        ;   arc2_set_cell_(Gin, TR, 0, 3, Ga), arc2_set_cell_(Ga, TR, 1, 3, Gout) ) ).
+
+% wc_bottom_edge_(+Grid, +Trips, +H, +W, +Center, +Gin, -Gout): Part E corners.
+wc_bottom_edge_(Grid, Trips, H, W, Center, Gin, Gout) :-
+% The bottom row index.
+    BR is H - 1, Wm1 is W - 1, BRm1 is BR - 1,
+% Corner handling applies only when the bottom row is a wall row.
+    ( BR mod 2 =:= 0
+% Does the bottom row hold any hole on the left half of the grid?
+    ->  ( once(( between(0, Wm1, Cx), arc2_cell_(Grid, BR, Cx, 0), Cx < Center ))
+        ->  HolesL = true ; HolesL = false ),
+% Does the bottom row hold any hole on the right half of the grid?
+        ( once(( between(0, Wm1, Cy), arc2_cell_(Grid, BR, Cy, 0), Cy > Center ))
+        ->  HolesR = true ; HolesR = false ),
+% Does a triplet on the gap row just above sit near the left wall?
+        ( once(( member(trip(BRm1, C0, _), Trips), C0 =< 3 ))
+        ->  TripL = true ; TripL = false ),
+% Does a triplet on the gap row just above sit near the right wall?
+        ( once(( member(trip(BRm1, _, C1), Trips), Wm1 - C1 =< 3 ))
+        ->  TripR = true ; TripR = false ),
+% Green the left corner when a near triplet feeds it or the left side has no hole.
+        ( ( TripL == true ; HolesL == false )
+        ->  arc2_set_cell_(Gin, BR, 0, 3, Ga) ; Ga = Gin ),
+% Green the right corner when a near triplet feeds it or the right side has no hole.
+        ( ( TripR == true ; HolesR == false )
+        ->  arc2_set_cell_(Ga, BR, Wm1, 3, Gout) ; Gout = Ga )
+% A gap-row bottom needs no corner handling.
+    ;   Gout = Gin ).
