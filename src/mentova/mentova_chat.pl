@@ -40,6 +40,9 @@
 % Load the small_world module for knowledge base predicates.
 :- use_module('../../knowledge/small_world').
 
+% mc_match_pattern/2 clauses are interleaved with helper predicates.
+:- discontiguous mc_match_pattern/2.
+
 % ------------------------------------------------------------------
 % URL routing table
 % ------------------------------------------------------------------
