@@ -387,6 +387,20 @@ mc_parse_query(Msg, Query) :-
     ).
 
 % mc_match_pattern/2 tries to match the lowercased message to a query term.
+
+% Match greetings: hello, hi, hey, good morning/afternoon/evening, howdy.
+mc_match_pattern(Lower, greeting) :-
+    % Check whether the message begins with or contains a greeting word.
+    (   sub_string(Lower, 0, _, _, "hello")
+    ;   sub_string(Lower, 0, _, _, "hi ")
+    ;   Lower = "hi"
+    ;   sub_string(Lower, 0, _, _, "hey")
+    ;   sub_string(Lower, 0, _, _, "good morning")
+    ;   sub_string(Lower, 0, _, _, "good afternoon")
+    ;   sub_string(Lower, 0, _, _, "good evening")
+    ;   sub_string(Lower, 0, _, _, "howdy")
+    ), !.
+
 mc_match_pattern(Lower, is_a(Subject, Object)) :-
     % Match "is X a Y?" patterns (skip article "a" or "an" between subject and object).
     sub_string(Lower, _, _, _, "is "),
@@ -570,6 +584,10 @@ mc_execute_query(properties_of(Subject), Reply, Just) :-
         format(string(Reply), "~w has these properties: ~w.", [Subject, PropList]),
         format(string(Just), "These come from my has_property facts about ~w.", [Subject])
     ).
+% Greet the visitor warmly.
+mc_execute_query(greeting, Reply, "") :-
+    Reply = "Hello! I am Mentova. You can ask me things like 'What is a canary?' or 'Can a bird fly?'".
+
 mc_execute_query(unknown, Reply, "") :-
     % The message did not match any known pattern.
     Reply = "I have not learned that yet, so I do not want to guess.".
