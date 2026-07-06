@@ -107,10 +107,14 @@ mc_handle_mentor_page(Request) :-
 
 % mc_handle_assets/1 serves static assets from the assets/ directory.
 mc_handle_assets(Request) :-
-    % Resolve the base assets directory for static file serving.
+    % Resolve the absolute assets directory.
     mc_assets_dir(AssetsDir),
-    % Delegate to the HTTP files library to serve the requested file.
-    http_reply_from_files(AssetsDir, [], Request).
+    % Extract the path after the /assets prefix.
+    memberchk(path_info(PathInfo), Request),
+    % Build the full absolute file path.
+    atom_concat(AssetsDir, PathInfo, FilePath),
+    % Serve the file; unsafe(true) allows absolute paths outside registered aliases.
+    http_reply_file(FilePath, [unsafe(true)], Request).
 
 % ------------------------------------------------------------------
 % Asset path helpers
