@@ -143,6 +143,19 @@ arc2_induce_rule(TrainingPairs, glyph_stamp) :-
 % The glyph-stamp transform must reproduce every training pair exactly.
     forall(member(pair(In, Out), TrainingPairs), arc2_transform(glyph_stamp, In, Out)).
 
+% cyan_stamp: early dispatch (WAVE 120, task abc82100). Cyan cells (colour 8) form
+% instruction symbols; each symbol's outward domino names a source dot colour and a
+% target paint colour, and the symbol shape is stamped at every loose source dot.
+% Cheap gate is "first training input holds at least one cyan cell"; the full
+% symbol/domino read then verifies every pair. (The transform, helpers, and
+% named-rule fact live at the end of this file.)
+arc2_induce_rule(TrainingPairs, cyan_stamp) :-
+% Cheap gate: the first training input must contain at least one cyan cell.
+    TrainingPairs = [pair(First, _) | _],
+    cs_has_cyan_(First),
+% The cyan-stamp transform must reproduce every training pair exactly.
+    forall(member(pair(In, Out), TrainingPairs), arc2_transform(cyan_stamp, In, Out)).
+
 % scaled_frame: early dispatch to avoid generic clause hitting slow frame_assemble.
 arc2_named_rule(scaled_frame).
 % arc2_induce_rule(scaled_frame): frame pre-filter + forall verify.
@@ -27615,3 +27628,208 @@ arc2_transform(glyph_stamp, Grid, Out) :-
 
 % (arc2_induce_rule(glyph_stamp) is defined early, near the top of the induce
 %  clause chain, so it is reached well within the per-task time budget.)
+
+% ===========================================================================
+% CYAN STAMP  (WAVE 120, WP-378, Layer 353, task abc82100)
+% Cyan cells (colour 8) are 8-connected into instruction symbols.  For each
+% symbol, a two-cell domino just outside its bounding box points inward: the
+% near cell (touching the box edge) is the TARGET colour, the far cell (one
+% step farther out) is the SOURCE colour.  The ORIGIN is the box-edge cell the
+% domino points at, and the SHAPE is the set of (dy,dx) offsets from ORIGIN to
+% each cyan cell.  Every loose SOURCE-coloured dot in the grid is then painted
+% with the symbol SHAPE in the TARGET colour; the cyan symbols and their key
+% cells are erased; all other non-zero cells pass straight through.
+% ===========================================================================
+
+% arc2_named_rule(cyan_stamp): register cyan_stamp as a known rule name.
+arc2_named_rule(cyan_stamp).
+
+% arc2_transform(cyan_stamp, Grid, Out): read cyan symbols, then stamp/erase.
+arc2_transform(cyan_stamp, Grid, Out) :-
+% Group all cyan cells into 8-connected instruction-symbol components.
+    cs_cyan_comps_(Grid, Comps),
+% Read each symbol's source dot colour, paint colour, and shape offsets.
+    cs_read_instructions_(Comps, Grid, SourceMap, InstrCells),
+% Paint every source dot, erase every symbol, pass the rest through.
+    cs_build_output_(Grid, SourceMap, InstrCells, Out).
+
+% cs_has_cyan_(+Grid): succeed once the grid holds at least one cyan cell.
+cs_has_cyan_(Grid) :-
+% Look for any row that contains a colour-8 cell.
+    once((member(Row, Grid), memberchk(8, Row))).
+
+% cs_dims_(+Grid, -H, -W): height and width of a rectangular grid.
+cs_dims_(Grid, H, W) :-
+% Height is the number of rows.
+    length(Grid, H),
+% Width is the length of the first row.
+    Grid = [Row0 | _], length(Row0, W).
+
+% cs_cyan_comps_(+Grid, -Comps): 8-connected components of the cyan cells.
+cs_cyan_comps_(Grid, Comps) :-
+% Collect every cyan cell position in row-major order.
+    findall(R-C, (nth0(R, Grid, Row), nth0(C, Row, 8)), Cyan0),
+% Turn the positions into an ordered set for fast membership tests.
+    list_to_ord_set(Cyan0, CyanSet),
+% Grow one component per remaining seed until all cyan cells are grouped.
+    cs_group_(CyanSet, CyanSet, Comps).
+
+% cs_group_(+Seeds, +All, -Comps): partition Seeds into 8-connected components.
+cs_group_([], _, []).
+% Grow the component containing the first seed, then recurse on the rest.
+cs_group_([Seed | Rest], All, [Comp | Comps]) :-
+% Flood the seed across 8-connected cyan neighbours to build one component.
+    cs_bfs_([Seed], All, [Seed], Comp),
+% Drop the component's members from the remaining seed list.
+    ord_subtract(Rest, Comp, Rest1),
+% Continue grouping the still-unassigned cyan cells.
+    cs_group_(Rest1, All, Comps).
+
+% cs_bfs_(+Queue, +All, +Visited, -Result): breadth-first 8-connected flood.
+cs_bfs_([], _, Vis, Vis).
+% Expand the head cell, enqueue its unseen cyan neighbours, and continue.
+cs_bfs_([Cell | Q], All, Vis0, Result) :-
+% Compute the eight orthogonal-plus-diagonal neighbours of the head cell.
+    cs_neighbors8_(Cell, Ns),
+% Keep only neighbours that are cyan and not yet visited.
+    include([X]>>(memberchk(X, All), \+ memberchk(X, Vis0)), Ns, New),
+% Fold the new cells into the visited ordered set.
+    list_to_ord_set(New, NewSet), ord_union(Vis0, NewSet, Vis1),
+% Enqueue the new cells for later expansion.
+    append(Q, New, Q1),
+% Recurse on the extended queue.
+    cs_bfs_(Q1, All, Vis1, Result).
+
+% cs_neighbors8_(+Cell, -Ns): the eight neighbours of a row-column cell.
+cs_neighbors8_(R-C, Ns) :-
+% Enumerate all (dr,dc) offsets except the zero offset.
+    findall(NR-NC,
+        ( member(DR, [-1, 0, 1]), member(DC, [-1, 0, 1]),
+          (DR =\= 0 ; DC =\= 0),
+          NR is R + DR, NC is C + DC ),
+        Ns).
+
+% cs_bbox_(+Comp, -Box): bounding box box(MinR,MaxR,MinC,MaxC) of a component.
+cs_bbox_(Comp, box(MinR, MaxR, MinC, MaxC)) :-
+% Gather the row indices of every cell in the component.
+    findall(R, member(R-_, Comp), Rs),
+% Gather the column indices of every cell in the component.
+    findall(C, member(_-C, Comp), Cs),
+% The vertical extent runs from the smallest to the largest row.
+    min_list(Rs, MinR), max_list(Rs, MaxR),
+% The horizontal extent runs from the smallest to the largest column.
+    min_list(Cs, MinC), max_list(Cs, MaxC).
+
+% cs_candidates_(+Box, -Cands): domino candidates just outside each box edge,
+% each cand(NearRow-NearCol, InRow-InCol) with the inward-pointing direction,
+% ordered top, bottom, left, right (matching the reference solver).
+cs_candidates_(box(MinR, MaxR, MinC, MaxC), Cands) :-
+% Top edge: near cells one row above, pointing downward.
+    MinRm1 is MinR - 1,
+    findall(cand(MinRm1-C, 1-0), between(MinC, MaxC, C), Top),
+% Bottom edge: near cells one row below, pointing upward.
+    MaxRp1 is MaxR + 1,
+    findall(cand(MaxRp1-C, (-1)-0), between(MinC, MaxC, C), Bottom),
+% Left edge: near cells one column left, pointing rightward.
+    MinCm1 is MinC - 1,
+    findall(cand(R-MinCm1, 0-1), between(MinR, MaxR, R), Left),
+% Right edge: near cells one column right, pointing leftward.
+    MaxCp1 is MaxC + 1,
+    findall(cand(R-MaxCp1, 0-(-1)), between(MinR, MaxR, R), Right),
+% Concatenate the four edge lists in the reference order.
+    append([Top, Bottom, Left, Right], Cands).
+
+% cs_read_one_(+Comp, +Grid, -Sym, -Instr): read one instruction symbol, giving
+% s(Source,Offsets,Target) and the erasable cells (cyan comp plus domino).
+cs_read_one_(Comp, Grid, s(Source, Offs, Target), Instr) :-
+% Compute the bounding box of the cyan component.
+    cs_bbox_(Comp, Box),
+% Enumerate the ordered domino candidates around the box.
+    cs_candidates_(Box, Cands),
+% Pick the first candidate whose near and far cells are both non-zero non-cyan.
+    once(( member(cand(NR-NC, IR-IC), Cands),
+           FR is NR - IR, FC is NC - IC,
+           arc2_cell_(Grid, NR, NC, TV), TV =\= 0, TV =\= 8,
+           arc2_cell_(Grid, FR, FC, SV), SV =\= 0, SV =\= 8 )),
+% The near cell colour is the paint target; the far cell colour is the source.
+    Target = TV, Source = SV,
+% The origin is the box-edge cell the domino points at (one inward step).
+    OR is NR + IR, OC is NC + IC,
+% The shape is every cyan cell expressed as an offset from the origin.
+    findall(DR-DC, (member(CR-CC, Comp), DR is CR - OR, DC is CC - OC), Offs),
+% Erasable cells: the whole cyan component plus both domino key cells.
+    append([NR-NC, FR-FC], Comp, Instr).
+
+% cs_read_instructions_(+Comps, +Grid, -SourceMap, -InstrCells): read all
+% symbols into a source-keyed assoc and a sorted set of erasable cells.
+cs_read_instructions_(Comps, Grid, SourceMap, InstrCells) :-
+% Start from an empty source map and empty erasable-cell accumulator.
+    empty_assoc(E),
+% Fold every component into the source map and erasable-cell list.
+    foldl(cs_read_acc_(Grid), Comps, m(E, []), m(SourceMap, I0)),
+% Sort the erasable cells into an ordered set for fast membership tests.
+    sort(I0, InstrCells).
+
+% cs_read_acc_(+Grid, +Comp, +Acc0, -Acc1): accumulate one component's reading.
+cs_read_acc_(Grid, Comp, m(A0, I0), m(A1, I1)) :-
+% Try to read a valid instruction symbol from this component.
+    ( cs_read_one_(Comp, Grid, s(Source, Offs, Target), Instr)
+% On success, record its source-to-(offsets,target) mapping and erasable cells.
+    ->  put_assoc(Source, A0, Offs-Target, A1),
+        append(I0, Instr, I1)
+% A component with no valid domino contributes nothing.
+    ;   A1 = A0, I1 = I0 ).
+
+% cs_build_output_(+Grid, +SourceMap, +InstrCells, -Out): render the output grid.
+cs_build_output_(Grid, SourceMap, InstrCells, Out) :-
+% Read the grid dimensions.
+    cs_dims_(Grid, H, W),
+% Compute the maximum valid row and column indices.
+    MaxR is H - 1, MaxC is W - 1,
+% Start from an all-zero canvas of the same shape.
+    cs_zero_grid_(H, W, Zero),
+% Visit every input cell in row-major order.
+    findall(cell(R, C, V),
+        (between(0, MaxR, R), between(0, MaxC, C), arc2_cell_(Grid, R, C, V)),
+        Cells),
+% Apply the stamp/erase/pass-through decision for each cell, threading the grid.
+    foldl(cs_apply_cell_(SourceMap, InstrCells, MaxR, MaxC), Cells, Zero, Out).
+
+% cs_apply_cell_(+SourceMap, +InstrCells, +MaxR, +MaxC, +Cell, +G0, -G1):
+% decide one input cell's contribution to the output canvas.
+cs_apply_cell_(SourceMap, InstrCells, MaxR, MaxC, cell(R, C, V), G0, G1) :-
+% Symbol cells, key cells, and empty or cyan cells contribute nothing.
+    ( ( memberchk(R-C, InstrCells) ; V =:= 0 ; V =:= 8 )
+    ->  G1 = G0
+% A source-coloured dot stamps its symbol shape in the target colour.
+    ;   ( get_assoc(V, SourceMap, Offs-Target)
+        ->  cs_paint_(Offs, R, C, Target, MaxR, MaxC, G0, G1)
+% Any other non-zero cell passes straight through to the same position.
+        ;   arc2_set_cell_(G0, R, C, V, G1) ) ).
+
+% cs_paint_(+Offsets, +R, +C, +Target, +MaxR, +MaxC, +G0, -G1): stamp a shape.
+cs_paint_([], _, _, _, _, _, G, G).
+% Paint each in-bounds offset cell with the target colour, then recurse.
+cs_paint_([DR-DC | T], R, C, Target, MaxR, MaxC, G0, G2) :-
+% Compute the absolute target position for this offset.
+    NR is R + DR, NC is C + DC,
+% Only paint cells that lie inside the grid.
+    ( NR >= 0, NR =< MaxR, NC >= 0, NC =< MaxC
+    ->  arc2_set_cell_(G0, NR, NC, Target, G1)
+    ;   G1 = G0 ),
+% Continue with the remaining offsets.
+    cs_paint_(T, R, C, Target, MaxR, MaxC, G1, G2).
+
+% cs_zero_grid_(+H, +W, -Grid): build an H-by-W grid filled with zeros.
+cs_zero_grid_(H, W, Grid) :-
+% Create H distinct rows.
+    length(Grid, H),
+% Fill each row with W zeros.
+    maplist(cs_zrow_(W), Grid).
+
+% cs_zrow_(+W, -Row): a fresh row of W zeros.
+cs_zrow_(W, Row) :-
+% Allocate a list of length W.
+    length(Row, W),
+% Set every element to zero.
+    maplist(=(0), Row).

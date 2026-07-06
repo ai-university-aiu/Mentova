@@ -1,0 +1,17 @@
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Mentova reaches 97.50% on ARC-AGI-2 with Wave 120 - the cyan_stamp rule.
+
+Task abc82100 draws little cyan glyphs on a black grid, with lone colored dots scattered around them. Each cyan glyph is a STAMP, and beside one edge of it sits a two-cell arrow that names two colors. In the answer the glyphs and arrows are gone, and every colored dot of the right color has been overprinted with a copy of the glyph's shape in a new color.
+
+The glass-box rule I call cyan_stamp:
+
+Join the cyan cells that touch, diagonals included, into 8-connected symbols - each is one stamp shape. Look just outside the symbol's bounding box, scanning top, bottom, left, then right, for two colored cells in a row pointing inward: the near cell (touching the box) is the TARGET paint color, the far cell is the SOURCE dot color. The origin is the box-edge cell the arrow points at, and the shape is every cyan cell as an offset from that origin. Then start blank: stamp the shape in the target color onto every dot that matches the source color, erase all cyan symbols and their arrows, and copy every other colored cell straight through.
+
+The discriminating detail is that the two-cell arrow is a mapping, not decoration: the inner cell is the ink, the outer cell is the address of the dots to print on. Read the other way, or with the edges scanned out of order, it breaks a training pair. A second detail is that stamps overlap - rendering the board in row-major order composes them exactly. All four training pairs and the held-out test grid verify pixel-exact in both Python and SWI-Prolog.
+
+Score: 116/120 (96.67%) to 117/120 (97.50%).
+
+Pure induction. No pretraining. Glass-box named rules. Every solved task has a human-readable algorithm that can be stated in a paragraph and proven correct on every training example.
+
+#PrologAI #Mentova #ARCAGI2 #AIReasoning #GlassBox #SymbolicAI
