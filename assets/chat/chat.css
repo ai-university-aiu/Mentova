@@ -3,12 +3,6 @@
 */
 
 /* ------------------------------------------------------------------
-   Google Font import
-   ------------------------------------------------------------------ */
-
-@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap');
-
-/* ------------------------------------------------------------------
    CSS custom properties — Light theme (default)
    ------------------------------------------------------------------ */
 
@@ -247,6 +241,8 @@ body {
 .mc-main {
   width: 100%;
   max-width: var(--content-max);
+  margin-left: auto;
+  margin-right: auto;
   display: flex;
   flex-direction: column;
   padding: 1rem;
@@ -507,6 +503,7 @@ body {
   width: 100%;
   max-width: var(--content-max);
   margin: 0.75rem auto 0;
+  box-sizing: border-box;
   padding: 1rem;
   background: var(--bg-panel);
   border: 1px solid var(--border-panel);
