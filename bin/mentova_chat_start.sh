@@ -5,11 +5,11 @@
 #   bash bin/mentova_chat_start.sh [PORT] [DATA_DIR]
 #
 # Defaults:
-#   PORT     = 8080
+#   PORT     = 8088
 #   DATA_DIR = <repo_root>/data/chat_db
 #
 # Example:
-#   bash bin/mentova_chat_start.sh 8080
+#   bash bin/mentova_chat_start.sh 8088
 #
 # The server serves:
 #   GET  /          — public chat page
@@ -18,7 +18,7 @@
 #   GET  /api/why   — justification endpoint
 #   POST /api/mentor/login, /logout, /teach, /approve, /queue
 
-PORT="${1:-8080}"
+PORT="${1:-8088}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DATA_DIR="${2:-${REPO_ROOT}/data/chat_db}"
