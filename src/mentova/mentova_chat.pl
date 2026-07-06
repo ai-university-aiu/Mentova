@@ -155,26 +155,33 @@ mc_handle_chat(Request) :-
     mc_log_message(SessionId, public, person, Msg),
     % Check the message for unsafe content.
     (   mc_is_unsafe(Msg)
-    ->  % Reply with the safety decline message.
+    ->  % Reply with the safety decline message; skip prosody adaptation.
         Reply = "That is not something I can talk about. If something is bothering you, please talk with a trusted adult.",
         Justification = "",
-        Tone = neutral,
+        EmotionalProsody = neutral,
+        LinguisticProsody = _{speech_act:statement, certainty:neutral, politeness:neutral, inarticulate:none},
         FocusWord = ""
-    ;   % Detect prosody cues from the message.
+    ;   % Detect emotional prosody (affective state from text cues).
+        mc_detect_emotional_prosody(Msg, EmotionalProsody),
+        % Detect linguistic prosody (speech-act type, certainty, politeness, inarticulate).
+        mc_detect_linguistic_prosody(Msg, LinguisticProsody),
+        % Detect focus word (ALL-CAPS contrastive or narrow focus).
         mc_detect_focus(Msg, FocusWord),
-        mc_detect_tone(Msg, Tone),
         % Query the Mentova mind for a grounded answer.
-        mc_build_reply(Msg, Reply, Justification)
+        mc_build_reply(Msg, Reply0, Justification),
+        % Adapt the reply to the detected prosody signals.
+        mc_adapt_reply_to_prosody(Reply0, EmotionalProsody, LinguisticProsody, Reply)
     ),
     % Log Mentova's reply.
     atom_string(ReplyAtom, Reply),
     mc_log_message(SessionId, public, mentova, ReplyAtom),
     % Send the JSON response to the browser.
     reply_json_dict(_{
-        reply:        Reply,
-        justification: Justification,
-        focus_word:   FocusWord,
-        tone:         Tone
+        reply:              Reply,
+        justification:      Justification,
+        focus_word:         FocusWord,
+        emotional_prosody:  EmotionalProsody,
+        linguistic_prosody: LinguisticProsody
     }).
 
 % ------------------------------------------------------------------
@@ -334,36 +341,229 @@ mc_is_unsafe(Msg) :-
 % Prosody detection
 % ------------------------------------------------------------------
 
-% mc_detect_focus/2 extracts an ALL-CAPS word as the focus word.
+% ------------------------------------------------------------------
+% PROSODY DETECTION
+% Two major categories: Emotional (affective) and Linguistic.
+% Reference: types_of_prosody.txt
+% ------------------------------------------------------------------
+
+% mc_detect_focus/2 — focus and accent prosody (narrow/contrastive focus).
+% An ALL-CAPS word signals contrastive or narrow focus in written text.
 mc_detect_focus(Msg, FocusWord) :-
-    % Split the message into words.
+    % Split the message into whitespace-delimited words.
     atomic_list_concat(Words, ' ', Msg),
-    % Look for a word that is all upper-case and at least 2 chars.
+    % Find the first word that is entirely upper-case and at least 2 chars.
     (   member(W, Words),
         atom_length(W, Len),
         Len >= 2,
         upcase_atom(W, W),
+        % Exclude single-letter pronouns that are always capitalised.
         \+ member(W, ['I', 'A'])
     ->  atom_string(W, FocusWord)
     ;   FocusWord = ""
     ).
 
-% mc_detect_tone/2 detects the emotional tone from the message.
-mc_detect_tone(Msg, Tone) :-
-    % Check for exclamation marks indicating excitement or emphasis.
-    (   sub_string(Msg, _, _, _, "!")
-    ->  Tone = excited
-    % Check for question marks indicating inquiry.
-    ;   sub_string(Msg, _, _, _, "?")
-    ->  Tone = curious
-    % Check for common happy emoji.
-    ;   (sub_string(Msg, _, _, _, ":)") ; sub_string(Msg, _, _, _, "😊") ; sub_string(Msg, _, _, _, "😄"))
-    ->  Tone = happy
-    % Check for sad emoji or :(.
-    ;   (sub_string(Msg, _, _, _, ":(") ; sub_string(Msg, _, _, _, "😢") ; sub_string(Msg, _, _, _, "😞"))
-    ->  Tone = sad
-    % Default to neutral tone.
-    ;   Tone = neutral
+% mc_detect_emotional_prosody/2 — affective prosody (8 states + neutral).
+% States: angry, fearful, disgusted, surprised, sad, happy, excited, curious, neutral.
+% Higher-priority states are checked first; neutral is the default.
+mc_detect_emotional_prosody(Msg, State) :-
+    % Convert to lower-case for keyword matching.
+    string_lower(Msg, L),
+    % Angry: multiple "!" marks, angry keywords, or rage emoji.
+    (   (   sub_string(L, _, _, _, "!!!")
+        ;   sub_string(L, _, _, _, " angry")
+        ;   sub_string(L, _, _, _, " furious")
+        ;   sub_string(L, _, _, _, " hate ")
+        ;   sub_string(L, _, _, _, "i hate")
+        ;   sub_string(L, _, _, _, " mad ")
+        ;   sub_string(L, _, _, _, "so mad")
+        ;   sub_string(L, _, _, _, "😡")
+        ;   sub_string(L, _, _, _, "🤬")
+        )
+    ->  State = angry
+    % Fearful: fear and worry keywords.
+    ;   (   sub_string(L, _, _, _, "scared")
+        ;   sub_string(L, _, _, _, "afraid")
+        ;   sub_string(L, _, _, _, "terrified")
+        ;   sub_string(L, _, _, _, "frightened")
+        ;   sub_string(L, _, _, _, "worried")
+        ;   sub_string(L, _, _, _, "please help")
+        ;   sub_string(L, _, _, _, "😨")
+        ;   sub_string(L, _, _, _, "😱")
+        )
+    ->  State = fearful
+    % Disgusted: disgust keywords and emoji.
+    ;   (   sub_string(L, _, _, _, "ugh")
+        ;   sub_string(L, _, _, _, "eww")
+        ;   sub_string(L, _, _, _, "gross")
+        ;   sub_string(L, _, _, _, "disgusting")
+        ;   sub_string(L, _, _, _, "horrible")
+        ;   sub_string(L, _, _, _, "🤮")
+        ;   sub_string(L, _, _, _, "🤢")
+        )
+    ->  State = disgusted
+    % Surprised: surprise keywords and emoji.
+    ;   (   sub_string(L, _, _, _, "wow")
+        ;   sub_string(L, _, _, _, "whoa")
+        ;   sub_string(L, _, _, _, "oh my")
+        ;   sub_string(L, _, _, _, "omg")
+        ;   sub_string(L, _, _, _, "no way")
+        ;   sub_string(L, _, _, _, "😮")
+        ;   sub_string(L, _, _, _, "😲")
+        )
+    ->  State = surprised
+    % Sad: sadness keywords and emoji.
+    ;   (   sub_string(L, _, _, _, "sad")
+        ;   sub_string(L, _, _, _, "miss ")
+        ;   sub_string(L, _, _, _, "lonely")
+        ;   sub_string(L, _, _, _, ":(")
+        ;   sub_string(L, _, _, _, "depressed")
+        ;   sub_string(L, _, _, _, "😢")
+        ;   sub_string(L, _, _, _, "😞")
+        ;   sub_string(L, _, _, _, "😭")
+        )
+    ->  State = sad
+    % Happy: happiness keywords and emoji.
+    ;   (   sub_string(L, _, _, _, ":)")
+        ;   sub_string(L, _, _, _, "😊")
+        ;   sub_string(L, _, _, _, "😄")
+        ;   sub_string(L, _, _, _, "happy")
+        ;   sub_string(L, _, _, _, "great!")
+        ;   sub_string(L, _, _, _, "love it")
+        ;   sub_string(L, _, _, _, "thank you")
+        ;   sub_string(L, _, _, _, "thanks!")
+        )
+    ->  State = happy
+    % Excited: single exclamation mark (without angry context already caught).
+    ;   sub_string(L, _, _, _, "!")
+    ->  State = excited
+    % Curious: question mark signals inquiry.
+    ;   sub_string(L, _, _, _, "?")
+    ->  State = curious
+    % Neutral: no detectable affective cue.
+    ;   State = neutral
+    ).
+
+% mc_detect_linguistic_prosody/2 — linguistic prosody (four features).
+% Returns a dict: speech_act, certainty, politeness, inarticulate.
+mc_detect_linguistic_prosody(Msg, LP) :-
+    % Work in lower-case for all keyword checks.
+    string_lower(Msg, L),
+    % -- Speech act type --
+    % Question: ends with "?" after trimming punctuation.
+    (   sub_string(L, _, _, _, "?")
+    ->  SA = question
+    % Command: starts with an imperative verb, or "please" then a verb.
+    ;   (   sub_string(L, 0, _, _, "tell ")
+        ;   sub_string(L, 0, _, _, "show ")
+        ;   sub_string(L, 0, _, _, "explain ")
+        ;   sub_string(L, 0, _, _, "describe ")
+        ;   sub_string(L, 0, _, _, "give ")
+        ;   sub_string(L, 0, _, _, "list ")
+        ;   sub_string(L, 0, _, _, "define ")
+        ;   sub_string(L, 0, _, _, "name ")
+        ;   sub_string(L, 0, _, _, "please tell")
+        ;   sub_string(L, 0, _, _, "please show")
+        ;   sub_string(L, 0, _, _, "please explain")
+        ;   sub_string(L, 0, _, _, "please describe")
+        ;   sub_string(L, 0, _, _, "please give")
+        ;   sub_string(L, 0, _, _, "please list")
+        ;   sub_string(L, 0, _, _, "please define")
+        ;   sub_string(L, 0, _, _, "please name")
+        )
+    ->  SA = command
+    % Statement: default.
+    ;   SA = statement
+    ),
+    % -- Certainty --
+    (   (   sub_string(L, _, _, _, "definitely")
+        ;   sub_string(L, _, _, _, "certainly")
+        ;   sub_string(L, _, _, _, "absolutely")
+        ;   sub_string(L, _, _, _, "i know")
+        ;   sub_string(L, _, _, _, "i'm sure")
+        ;   sub_string(L, _, _, _, "no doubt")
+        )
+    ->  Cert = certain
+    ;   (   sub_string(L, _, _, _, "maybe")
+        ;   sub_string(L, _, _, _, "perhaps")
+        ;   sub_string(L, _, _, _, "i think")
+        ;   sub_string(L, _, _, _, "i wonder")
+        ;   sub_string(L, _, _, _, "not sure")
+        ;   sub_string(L, _, _, _, "i'm not")
+        ;   sub_string(L, _, _, _, "could be")
+        )
+    ->  Cert = uncertain
+    ;   Cert = neutral
+    ),
+    % -- Politeness --
+    (   (   sub_string(L, _, _, _, "please")
+        ;   sub_string(L, _, _, _, "thank you")
+        ;   sub_string(L, _, _, _, "thanks")
+        ;   sub_string(L, _, _, _, "could you")
+        ;   sub_string(L, _, _, _, "would you")
+        ;   sub_string(L, _, _, _, "if you don't mind")
+        )
+    ->  Pol = polite
+    ;   Pol = neutral
+    ),
+    % -- Inarticulate prosody: filler sounds signal thinking or hesitation --
+    (   sub_string(L, _, _, _, "mm-hmm")
+    ->  Inar = mmhmm
+    ;   sub_string(L, _, _, _, "uh-huh")
+    ->  Inar = uhhuh
+    ;   (sub_string(L, 0, _, _, "hmm") ; sub_string(L, 0, _, _, "hm ") ; sub_string(L, 0, _, _, "hm."))
+    ->  Inar = hmm
+    ;   (sub_string(L, 0, _, _, "um") ; sub_string(L, 0, _, _, "um,"))
+    ->  Inar = um
+    ;   (sub_string(L, 0, _, _, "uh") ; sub_string(L, 0, _, _, "uh,"))
+    ->  Inar = uh
+    ;   Inar = none
+    ),
+    % Build the linguistic prosody dict.
+    LP = _{speech_act: SA, certainty: Cert, politeness: Pol, inarticulate: Inar}.
+
+% mc_adapt_reply_to_prosody/4 — prepend a brief prosody-aware opener.
+% The opener acknowledges the visitor's detected emotional or linguistic state.
+mc_adapt_reply_to_prosody(Reply0, EmotionalProsody, LinguisticProsody, Reply) :-
+    % Derive an opener from the emotional state.
+    mc_emotional_opener(EmotionalProsody, EOpener),
+    % Derive an opener from the linguistic state.
+    mc_linguistic_opener(LinguisticProsody, LOpener),
+    % Combine openers (emotional takes precedence if non-empty).
+    (   EOpener \= ""
+    ->  Opener = EOpener
+    ;   Opener = LOpener
+    ),
+    % Prepend the opener to the reply if it is non-empty.
+    (   Opener \= ""
+    ->  format(string(Reply), "~w ~w", [Opener, Reply0])
+    ;   Reply = Reply0
+    ).
+
+% mc_emotional_opener/2 — opener phrase for each emotional prosody state.
+mc_emotional_opener(angry,     "I can hear that this matters to you.").
+mc_emotional_opener(fearful,   "You can ask me anything here safely.").
+mc_emotional_opener(disgusted, "I understand that feeling.").
+mc_emotional_opener(surprised, "That can be surprising!").
+mc_emotional_opener(sad,       "I am sorry to hear that.").
+mc_emotional_opener(happy,     "I am glad!").
+mc_emotional_opener(excited,   "").
+mc_emotional_opener(curious,   "").
+mc_emotional_opener(neutral,   "").
+
+% mc_linguistic_opener/2 — opener phrase for linguistic prosody features.
+mc_linguistic_opener(LP, Opener) :-
+    % Inarticulate fillers signal thinking or hesitation.
+    (   get_dict(inarticulate, LP, Inar),
+        Inar \= none
+    ->  Opener = "Take your time."
+    % Uncertain certainty signals hesitation.
+    ;   get_dict(certainty, LP, uncertain)
+    ->  Opener = "That is a thoughtful question."
+    % Polite requests deserve a polite acknowledgment.
+    ;   get_dict(politeness, LP, polite)
+    ->  Opener = "Of course."
+    ;   Opener = ""
     ).
 
 % ------------------------------------------------------------------
@@ -402,8 +602,8 @@ mc_match_pattern(Lower, greeting) :-
     ), !.
 
 mc_match_pattern(Lower, is_a(Subject, Object)) :-
-    % Match "is X a Y?" patterns (skip article "a" or "an" between subject and object).
-    sub_string(Lower, _, _, _, "is "),
+    % Require "is a " or "is an " so that "That is great!" does not fire this rule.
+    (sub_string(Lower, _, _, _, "is a ") ; sub_string(Lower, _, _, _, "is an ")),
     split_string(Lower, " \t\n?.!,", " \t\n?.!,", AllWords),
     include([P]>>(P \= ""), AllWords, Words),
     % Remove leading "is" (and optionally "a" or "an" as article for subject).
