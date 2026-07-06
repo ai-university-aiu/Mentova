@@ -211,6 +211,25 @@ arc2_induce_rule(TrainingPairs, nested_contour) :-
 % The nested-contour transform must reproduce every training pair exactly.
     forall(member(pair(In, Out), TrainingPairs), arc2_transform(nested_contour, In, Out)).
 
+% seven_injector: early dispatch (WAVE 124, FINAL, task 21897d95). The board
+% holds blue (1) T-shaped injectors (a 3-cell bar plus a 1-cell stalk); the
+% stalk points to a nearby region that is repainted with the injector's colour
+% (the T centre holds that colour, or the surrounding field colour for a plain
+% blue T). A separate isolated dark-red (9) seven/mirror-seven glyph, when
+% present, marks a final quarter-turn (left seven rotates counter-clockwise,
+% mirror seven rotates clockwise). Each T is erased to its home colour, leftover
+% blue cells are healed to their nearest non-blue neighbour, the flagged regions
+% are flood-filled with their injector colours, then the whole board is rotated
+% if a seven glyph was found. Cheap gate: the first training input holds a blue
+% cell. (The transform, helpers, and named-rule fact live at the end of file.)
+arc2_induce_rule(TrainingPairs, seven_injector) :-
+% Cheap gate: pull the first training input off the pair list.
+    TrainingPairs = [pair(First, _) | _],
+% The first input must contain at least one blue (color 1) cell.
+    si_has_blue_(First),
+% The seven-injector transform must reproduce every training pair exactly.
+    forall(member(pair(In, Out), TrainingPairs), arc2_transform(seven_injector, In, Out)).
+
 % scaled_frame: early dispatch to avoid generic clause hitting slow frame_assemble.
 arc2_named_rule(scaled_frame).
 % arc2_induce_rule(scaled_frame): frame pre-filter + forall verify.
@@ -29297,3 +29316,447 @@ nc_any_iso_col(G, Bg, C) :-
     nc_dims(G, H, _), Hm1 is H-1,
 % Succeed on the first isolated cell in the column.
     between(0, Hm1, R), nc_iso(G, Bg, R, C), !.
+
+% ---------------------------------------------------------------------------
+% WP-382 Layer 357: seven_injector (Wave 124, FINAL) — task 21897d95.
+% Direct port of the verified reference solver. Blue (1) T-injectors mark
+% regions for recolouring; an isolated dark-red (9) seven glyph triggers a
+% final quarter-turn. Achieves 120/120 = 100.00% on ARC-AGI-2.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule(seven_injector): register the seven-injector transform name.
+arc2_named_rule(seven_injector).
+
+% arc2_transform(seven_injector, +Grid, -Out): apply the seven-injector solver.
+arc2_transform(seven_injector, Grid, Out) :-
+% Delegate to the main solver predicate.
+    si_solve_(Grid, Out).
+
+% si_has_blue_(+Grid): the grid contains at least one blue (color 1) cell.
+si_has_blue_(Grid) :-
+% Some row holds a blue cell.
+    member(Row, Grid),
+% That row contains the value 1.
+    memberchk(1, Row), !.
+
+% si_dims_(+Grid, -H, -W): grid height H and width W.
+si_dims_(Grid, H, W) :-
+% Height is the number of rows.
+    length(Grid, H),
+% Take the first row to measure width.
+    Grid = [R0 | _],
+% Width is the length of the first row.
+    length(R0, W).
+
+% si_inb_(+H, +W, +R, +C): cell (R,C) lies inside an H-by-W grid.
+si_inb_(H, W, R, C) :-
+% Row index within [0, H).
+    R >= 0, R < H,
+% Column index within [0, W).
+    C >= 0, C < W.
+
+% si_off_(+R, +C, +d(DR,DC), -RR-CC): apply an offset to a cell.
+si_off_(R, C, d(DR, DC), RR-CC) :-
+% Offset the row.
+    RR is R + DR,
+% Offset the column.
+    CC is C + DC.
+
+% si_grid_to_assoc_(+Grid, -Assoc): map every cell (R-C) to its value.
+si_grid_to_assoc_(Grid, Assoc) :-
+% Build key-value pairs for all cells.
+    findall(R-C-V, si_grid_cell_(Grid, R, C, V), Pairs),
+% Turn the pair list into a balanced association tree.
+    list_to_assoc(Pairs, Assoc).
+
+% si_grid_cell_(+Grid, -R, -C, -V): enumerate every cell with its value.
+si_grid_cell_(Grid, R, C, V) :-
+% Enumerate rows with their indices.
+    nth0(R, Grid, Row),
+% Enumerate columns with their indices.
+    nth0(C, Row, V).
+
+% si_ga_get_(+Assoc, +R, +C, -V): read the value stored for cell (R,C).
+si_ga_get_(Assoc, R, C, V) :-
+% Look up the R-C key.
+    get_assoc(R-C, Assoc, V).
+
+% si_assoc_to_grid_(+H, +W, +Assoc, -Grid): rebuild a grid from an assoc.
+si_assoc_to_grid_(H, W, Assoc, Grid) :-
+% Last row and column indices.
+    Hm1 is H-1, Wm1 is W-1,
+% Build each row for every row index.
+    findall(Row,
+        ( between(0, Hm1, R),
+          findall(V, ( between(0, Wm1, C), si_ga_get_(Assoc, R, C, V) ), Row) ),
+        Grid).
+
+% si_most_common_(+Seq, -Color): most frequent value, earliest first-appearance wins ties.
+si_most_common_(Seq, Color) :-
+% Empty sequences default to color 0.
+    ( Seq == [] ->
+        Color = 0
+    ;   si_distinct_(Seq, Distinct),
+        Distinct = [First | Rest],
+        si_count_(Seq, First, FC),
+        si_pick_max_(Rest, Seq, First, FC, Color)
+    ).
+
+% si_distinct_(+Seq, -Distinct): values in order of first appearance, no repeats.
+si_distinct_(Seq, Distinct) :-
+% Fold left, appending each value not yet seen.
+    foldl(si_distinct_step_, Seq, [], Rev),
+% Restore first-appearance order.
+    reverse(Rev, Distinct).
+
+% si_distinct_step_(+V, +Acc, -Acc2): add V to Acc (reversed) if not present.
+si_distinct_step_(V, Acc, Acc2) :-
+% Keep Acc unchanged when V already seen, else prepend it.
+    ( memberchk(V, Acc) -> Acc2 = Acc ; Acc2 = [V | Acc] ).
+
+% si_count_(+Seq, +V, -N): number of times V occurs in Seq.
+si_count_(Seq, V, N) :-
+% Count matching elements.
+    include(==(V), Seq, Matches),
+% N is the match count.
+    length(Matches, N).
+
+% si_pick_max_(+Distinct, +Seq, +BestV, +BestC, -Color): pick max count, ties to earliest.
+si_pick_max_([], _, BestV, _, BestV).
+% Consider the next candidate value.
+si_pick_max_([D | Ds], Seq, BestV, BestC, Color) :-
+% Count occurrences of D.
+    si_count_(Seq, D, DC),
+% Replace the best only on a strictly greater count.
+    ( DC > BestC -> NV = D, NC = DC ; NV = BestV, NC = BestC ),
+% Recurse over the remaining candidates.
+    si_pick_max_(Ds, Seq, NV, NC, Color).
+
+% si_surround_color_(+GA, +H, +W, +Cells, +Exclude, -Color): dominant border colour.
+si_surround_color_(GA, H, W, Cells, Exclude, Color) :-
+% Gather the qualifying neighbour colours in encounter order.
+    si_surround_seq_(GA, H, W, Cells, Exclude, Seq),
+% Reduce to the most common colour.
+    si_most_common_(Seq, Color).
+
+% si_surround_seq_(+GA, +H, +W, +Cells, +Exclude, -Seq): neighbour colours around Cells.
+si_surround_seq_(GA, H, W, Cells, Exclude, Seq) :-
+% For each cell, in order, collect its four orthogonal neighbour colours.
+    findall(V,
+        ( member(Y-X, Cells),
+          member(D, [d(1,0), d(-1,0), d(0,1), d(0,-1)]),
+          si_off_(Y, X, D, NY-NX),
+          si_inb_(H, W, NY, NX),
+          \+ memberchk(NY-NX, Cells),
+          si_ga_get_(GA, NY, NX, V),
+          \+ memberchk(V, Exclude) ),
+        Seq).
+
+% si_find_seven_(+GA, +H, +W, -Sev): locate the first isolated dark-red seven glyph.
+si_find_seven_(GA, H, W, Sev) :-
+% Succeed with the first glyph, otherwise report none.
+    ( si_find_seven_first_(GA, H, W, Turn, Cells) ->
+        Sev = seven(Turn, Cells)
+    ;   Sev = none ).
+
+% si_seven_shape_(?Turn, ?Offsets): the two accepted seven glyph offset sets.
+si_seven_shape_(left,  [d(0,0), d(0,1), d(0,2), d(1,2), d(2,2)]).
+% Mirror-seven turns clockwise.
+si_seven_shape_(right, [d(0,0), d(0,1), d(0,2), d(1,0), d(2,0)]).
+
+% si_find_seven_first_(+GA, +H, +W, -Turn, -Cells): first matching glyph in scan order.
+si_find_seven_first_(GA, H, W, Turn, Cells) :-
+% Last row and column indices.
+    Hm1 is H-1, Wm1 is W-1,
+% Scan rows, then columns, then the two shapes, and commit to the first hit.
+    once(( between(0, Hm1, R),
+           between(0, Wm1, C),
+           si_seven_shape_(Turn, Offs),
+           maplist(si_off_cell_(R, C), Offs, Cells),
+           si_all_dark_red_(GA, H, W, Cells),
+           si_seven_isolated_(GA, H, W, Cells) )).
+
+% si_off_cell_(+R, +C, +Off, -Cell): apply an offset producing an absolute cell.
+si_off_cell_(R, C, Off, Cell) :-
+% Offset the base cell.
+    si_off_(R, C, Off, Cell).
+
+% si_all_dark_red_(+GA, +H, +W, +Cells): every cell is in bounds and dark red (9).
+si_all_dark_red_(GA, H, W, Cells) :-
+% Each cell must be in bounds and hold value 9.
+    forall(member(Y-X, Cells),
+        ( si_inb_(H, W, Y, X), si_ga_get_(GA, Y, X, 9) )).
+
+% si_seven_isolated_(+GA, +H, +W, +Cells): no dark-red neighbour lies outside the glyph.
+si_seven_isolated_(GA, H, W, Cells) :-
+% There must be no orthogonal dark-red neighbour outside the cell set.
+    \+ ( member(Y-X, Cells),
+         member(D, [d(1,0), d(-1,0), d(0,1), d(0,-1)]),
+         si_off_(Y, X, D, NY-NX),
+         si_inb_(H, W, NY, NX),
+         \+ memberchk(NY-NX, Cells),
+         si_ga_get_(GA, NY, NX, 9) ).
+
+% si_orient_(?Name, ?Bar, ?Stalk, ?Front, ?Opp): the four T orientations.
+si_orient_(up,    [d(0,-1), d(0,0), d(0,1)], d(-1,0), d(-2,0), d(1,0)).
+% Down-pointing T: horizontal bar, stalk and front below, opposite above.
+si_orient_(down,  [d(0,-1), d(0,0), d(0,1)], d(1,0),  d(2,0),  d(-1,0)).
+% Left-pointing T: vertical bar, stalk and front to the left, opposite to the right.
+si_orient_(left,  [d(-1,0), d(0,0), d(1,0)], d(0,-1), d(0,-2), d(0,1)).
+% Right-pointing T: vertical bar, stalk and front to the right, opposite to the left.
+si_orient_(right, [d(-1,0), d(0,0), d(1,0)], d(0,1),  d(0,2),  d(0,-1)).
+
+% si_candidates_(+GA, +H, +W, -Cands): all valid T candidates in scan order.
+si_candidates_(GA, H, W, Cands) :-
+% Last row and column indices.
+    Hm1 is H-1, Wm1 is W-1,
+% Collect every candidate, iterating row, column, then orientation.
+    findall(Cand,
+        ( between(0, Hm1, R),
+          between(0, Wm1, C),
+          si_orient_(Name, Bar, Stalk, Front, Opp),
+          si_candidate_(GA, H, W, R, C, Name, Bar, Stalk, Front, Opp, Cand) ),
+        Cands).
+
+% si_candidate_(+GA,+H,+W,+R,+C,+Name,+Bar,+Stalk,+Front,+Opp,-Cand): one T candidate.
+si_candidate_(GA, H, W, R, C, Name, Bar, Stalk, Front, Opp, Cand) :-
+% Resolve the three bar cells to absolute coordinates.
+    maplist(si_off_cell_(R, C), Bar, [Bar0, Bar1, Bar2]),
+% Resolve the stalk cell.
+    si_off_(R, C, Stalk, SC),
+% The four blue-structure cells are the bar plus the stalk.
+    BlueCells = [Bar0, Bar1, Bar2, SC],
+% All four cells must be inside the grid.
+    forall(member(Y-X, BlueCells), si_inb_(H, W, Y, X)),
+% The two bar ends and the stalk must be blue (color 1).
+    si_ga_get_(GA, R, C, CV),
+% Read the bar-end and stalk values (Bar1 is the centre, not required blue).
+    Bar0 = B0Y-B0X, si_ga_get_(GA, B0Y, B0X, 1),
+% Right bar end must be blue.
+    Bar2 = B2Y-B2X, si_ga_get_(GA, B2Y, B2X, 1),
+% Stalk cell must be blue.
+    SC = SCY-SCX, si_ga_get_(GA, SCY, SCX, 1),
+% The opposite cell, if in bounds, must not be blue.
+    si_off_(R, C, Opp, OY-OX),
+% Reject when the opposite cell is present and blue.
+    \+ ( si_inb_(H, W, OY, OX), si_ga_get_(GA, OY, OX, 1) ),
+% Home exclude set: drop blue, and also the centre value when it is not blue.
+    ( CV =:= 1 -> HomeEx = [1] ; HomeEx = [1, CV] ),
+% Home colour is the dominant surrounding colour of the four cells.
+    si_surround_color_(GA, H, W, BlueCells, HomeEx, Home),
+% Classify plain versus injecting T and derive the injection colour.
+    ( CV =:= 1 ->
+        si_surround_color_(GA, H, W, BlueCells, [1], Inj), Plain = true
+    ;   ( CV =\= Home -> Inj = CV, Plain = false ; fail )
+    ),
+% Front cell one step past the stalk tip.
+    si_off_(R, C, Front, FrontCell),
+% Assemble the candidate term.
+    Cand = t(Name, R-C, BlueCells, BlueCells, FrontCell, Inj, Home, Plain).
+
+% si_select_(+Cands, -Chosen): plain T first, then greedily claim non-overlapping Ts.
+si_select_(Cands, Chosen) :-
+% Stable-partition plain candidates ahead of injecting ones.
+    include(si_is_plain_, Cands, Plains),
+% Injecting candidates keep their relative order.
+    exclude(si_is_plain_, Cands, NonPlains),
+% Concatenate the two groups (stable sort by the plain flag).
+    append(Plains, NonPlains, Sorted),
+% Greedily claim blue cells, skipping any conflicting candidate.
+    si_select_loop_(Sorted, [], Chosen).
+
+% si_is_plain_(+Cand): the candidate is a plain (all-blue) T.
+si_is_plain_(t(_, _, _, _, _, _, _, true)).
+
+% si_select_loop_(+Cands, +Claimed, -Chosen): iterate claiming disjoint T blue cells.
+si_select_loop_([], _, []).
+% Consider the next candidate against the claimed set.
+si_select_loop_([T | Ts], Claimed, Chosen) :-
+% Extract this candidate's blue cells.
+    T = t(_, _, Blue, _, _, _, _, _),
+% Skip when any blue cell was already claimed, else claim and keep.
+    ( si_any_claimed_(Blue, Claimed) ->
+        si_select_loop_(Ts, Claimed, Chosen)
+    ;   append(Blue, Claimed, Claimed2),
+        Chosen = [T | Rest],
+        si_select_loop_(Ts, Claimed2, Rest)
+    ).
+
+% si_any_claimed_(+Cells, +Claimed): some cell already appears in the claimed set.
+si_any_claimed_(Cells, Claimed) :-
+% Succeed if any cell is a member of the claimed list.
+    member(Cell, Cells),
+% The cell is already claimed.
+    memberchk(Cell, Claimed), !.
+
+% si_erase_ts_(+Ts, +CA0, -CA): overwrite each T's cells with its home colour.
+si_erase_ts_([], CA, CA).
+% Erase the head T, then recurse.
+si_erase_ts_([T | Ts], CA0, CA) :-
+% Pull the cells and the home colour.
+    T = t(_, _, _, Cells, _, _, Home, _),
+% Paint every cell of this T with the home colour.
+    si_put_cells_(Cells, Home, CA0, CA1),
+% Recurse over the remaining Ts.
+    si_erase_ts_(Ts, CA1, CA).
+
+% si_put_cells_(+Cells, +Color, +CA0, -CA): set each cell to Color in the assoc.
+si_put_cells_([], _, CA, CA).
+% Update the head cell, then recurse.
+si_put_cells_([Y-X | Cs], Color, CA0, CA) :-
+% Store Color at cell (Y,X).
+    put_assoc(Y-X, CA0, Color, CA1),
+% Recurse over the remaining cells.
+    si_put_cells_(Cs, Color, CA1, CA).
+
+% si_fix_blues_(+GA, +H, +W, +CA0, -CA): heal leftover blue cells to nearest non-blue.
+si_fix_blues_(GA, H, W, CA0, CA) :-
+% Enumerate cells in row-major order.
+    Hm1 is H-1, Wm1 is W-1,
+% Build the ordered list of all cell coordinates.
+    findall(R-C, ( between(0, Hm1, R), between(0, Wm1, C) ), Cells),
+% Thread the cleaned assoc while fixing each blue cell.
+    foldl(si_fix_one_(GA, H, W), Cells, CA0, CA).
+
+% si_fix_one_(+GA, +H, +W, +Cell, +CA0, -CA): heal one cell if it is still blue.
+si_fix_one_(GA, H, W, Y-X, CA0, CA) :-
+% Read the current cleaned value.
+    si_ga_get_(CA0, Y, X, V),
+% Heal blue cells via breadth-first search, leave others untouched.
+    ( V =:= 1 ->
+        si_fix_bfs_(GA, CA0, H, W, [Y-X], [Y-X], RV),
+        put_assoc(Y-X, CA0, RV, CA)
+    ;   CA = CA0 ).
+
+% si_fix_bfs_(+GA, +CA, +H, +W, +Queue, +Seen, -RV): first non-blue neighbour colour.
+si_fix_bfs_(_, _, _, _, [], _, 1).
+% Process the queue head, expanding to non-blue neighbours.
+si_fix_bfs_(GA, CA, H, W, [CY-CX | Rest], Seen, RV) :-
+% Compute in-bounds, unseen neighbours in fixed order.
+    findall(NY-NX,
+        ( member(D, [d(1,0), d(-1,0), d(0,1), d(0,-1)]),
+          si_off_(CY, CX, D, NY-NX),
+          si_inb_(H, W, NY, NX),
+          \+ memberchk(NY-NX, Seen) ),
+        Neigh),
+% Return the first non-blue neighbour's colour, or keep searching.
+    ( si_first_nonblue_(Neigh, CA, Found) ->
+        RV = Found
+    ;   append(Rest, Neigh, Queue2),
+        append(Seen, Neigh, Seen2),
+        si_fix_bfs_(GA, CA, H, W, Queue2, Seen2, RV) ).
+
+% si_first_nonblue_(+Cells, +CA, -Color): colour of the first non-blue cell, in order.
+si_first_nonblue_([Y-X | Cs], CA, Color) :-
+% Read the cleaned value at this neighbour.
+    si_ga_get_(CA, Y, X, V),
+% Accept a non-blue value, else continue scanning.
+    ( V =\= 1 -> Color = V ; si_first_nonblue_(Cs, CA, Color) ).
+
+% si_flood_(+CA, +H, +W, +Start, -Cells): 4-connected same-colour region from Start.
+si_flood_(CA, H, W, Start, Cells) :-
+% Read the target colour at the start cell.
+    Start = SY-SX,
+% Fetch the colour to flood.
+    si_ga_get_(CA, SY, SX, Tgt),
+% Depth-first collect all connected cells of that colour.
+    si_flood_loop_(CA, H, W, Tgt, [Start], [], Cells).
+
+% si_flood_loop_(+CA,+H,+W,+Tgt,+Stack,+Seen,-Out): iterative flood accumulation.
+si_flood_loop_(_, _, _, _, [], Seen, Seen).
+% Process the stack top.
+si_flood_loop_(CA, H, W, Tgt, [Y-X | Rest], Seen, Out) :-
+% Skip cells already visited, out of bounds, or off-colour.
+    ( ( memberchk(Y-X, Seen) ; \+ si_inb_(H, W, Y, X) ; \+ si_ga_get_(CA, Y, X, Tgt) ) ->
+        si_flood_loop_(CA, H, W, Tgt, Rest, Seen, Out)
+    ;   findall(NY-NX,
+            ( member(D, [d(1,0), d(-1,0), d(0,1), d(0,-1)]), si_off_(Y, X, D, NY-NX) ),
+            Neigh),
+        append(Neigh, Rest, Stack2),
+        si_flood_loop_(CA, H, W, Tgt, Stack2, [Y-X | Seen], Out) ).
+
+% si_regions_(+Ts, +CA, +H, +W, -Regions): flood region and colour for each T front.
+si_regions_([], _, _, _, []).
+% Build the region for the head T, then recurse.
+si_regions_([T | Ts], CA, H, W, Regions) :-
+% Extract the front cell and injection colour.
+    T = t(_, _, _, _, FY-FX, Inj, _, _),
+% Include a region only when the front cell is in bounds.
+    ( si_inb_(H, W, FY, FX) ->
+        si_flood_(CA, H, W, FY-FX, Reg),
+        Regions = [region(Reg, Inj) | Rest]
+    ;   Regions = Rest ),
+% Recurse over the remaining Ts.
+    si_regions_(Ts, CA, H, W, Rest).
+
+% si_paint_regions_(+Regions, +CA0, -CA): overwrite each region with its colour.
+si_paint_regions_([], CA, CA).
+% Paint the head region, then recurse.
+si_paint_regions_([region(Cells, Color) | Rs], CA0, CA) :-
+% Set every region cell to the injection colour.
+    si_put_cells_(Cells, Color, CA0, CA1),
+% Recurse over the remaining regions.
+    si_paint_regions_(Rs, CA1, CA).
+
+% si_rot_left_(+Grid, -Out): rotate the grid a quarter-turn counter-clockwise.
+si_rot_left_(Grid, Out) :-
+% Source dimensions.
+    si_dims_(Grid, H, W),
+% Output has W rows and H columns.
+    Wm1 is W-1, Hm1 is H-1,
+% Build each output row: Out[r][c] = Grid[c][W-1-r].
+    findall(Row,
+        ( between(0, Wm1, R),
+          findall(V,
+            ( between(0, Hm1, C), SC is W-1-R, si_grid_at_(Grid, C, SC, V) ), Row) ),
+        Out).
+
+% si_rot_right_(+Grid, -Out): rotate the grid a quarter-turn clockwise.
+si_rot_right_(Grid, Out) :-
+% Source dimensions.
+    si_dims_(Grid, H, W),
+% Output has W rows and H columns.
+    Wm1 is W-1, Hm1 is H-1,
+% Build each output row: Out[r][c] = Grid[H-1-c][r].
+    findall(Row,
+        ( between(0, Wm1, R),
+          findall(V,
+            ( between(0, Hm1, C), SR is H-1-C, si_grid_at_(Grid, SR, R, V) ), Row) ),
+        Out).
+
+% si_grid_at_(+Grid, +R, +C, -V): read cell (R,C) from a list-of-lists grid.
+si_grid_at_(Grid, R, C, V) :-
+% Index the row then the column.
+    nth0(R, Grid, Row), nth0(C, Row, V).
+
+% si_solve_(+Grid, -Out): the full seven-injector transform.
+si_solve_(Grid, Out) :-
+% Grid dimensions.
+    si_dims_(Grid, H, W),
+% Build a fast-lookup assoc of the original grid.
+    si_grid_to_assoc_(Grid, GA),
+% Enumerate all T candidates in scan order.
+    si_candidates_(GA, H, W, Cands),
+% Select a non-overlapping set of Ts, plain first.
+    si_select_(Cands, Ts),
+% Locate an isolated dark-red seven glyph, if any.
+    si_find_seven_(GA, H, W, Sev),
+% Erase every selected T to its home colour on a working copy.
+    si_erase_ts_(Ts, GA, CA1),
+% Erase the seven glyph, if present, to its surrounding colour.
+    ( Sev = seven(_, SevCells) ->
+        si_surround_color_(GA, H, W, SevCells, [9], HC),
+        si_put_cells_(SevCells, HC, CA1, CA2)
+    ;   CA2 = CA1 ),
+% Heal any leftover blue cells to their nearest non-blue neighbour.
+    si_fix_blues_(GA, H, W, CA2, CA3),
+% Compute all flood regions from the T fronts on the cleaned grid.
+    si_regions_(Ts, CA3, H, W, Regions),
+% Paint each region with its injection colour.
+    si_paint_regions_(Regions, CA3, CA4),
+% Rebuild the painted grid as a list of lists.
+    si_assoc_to_grid_(H, W, CA4, Painted),
+% Apply the final quarter-turn dictated by the seven glyph, if any.
+    ( Sev = seven(left, _)  -> si_rot_left_(Painted, Out)
+    ; Sev = seven(right, _) -> si_rot_right_(Painted, Out)
+    ; Out = Painted ).
