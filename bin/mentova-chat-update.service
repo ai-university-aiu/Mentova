@@ -1,0 +1,10 @@
+[Unit]
+Description=Mentova Chat code update check
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ccaitwo/Mentova
+ExecStart=/usr/bin/bash /home/ccaitwo/Mentova/bin/mentova-chat-update.sh
+StandardOutput=journal
+StandardError=journal
