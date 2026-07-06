@@ -171,6 +171,24 @@ arc2_induce_rule(TrainingPairs, wall_cross) :-
 % The wall-cross transform must reproduce every training pair exactly.
     forall(member(pair(In, Out), TrainingPairs), arc2_transform(wall_cross, In, Out)).
 
+% creature_dock: early dispatch (WAVE 122, task 6e4f6532). The board is a
+% coloured frame of structural bands wrapped around a background field that
+% holds creatures (touching clusters of cyan 8, a maroon 9 core, and coloured
+% tips) plus locks (isolated maroon-only patches shaped like a creature's
+% core). Each creature is erased and re-placed onto the lock whose maroon
+% shape matches, in whichever of eight orientations (four rotations by two
+% mirrors) best points its tips toward their matching border band. Cheap gate:
+% the first training input holds a cyan cell, a maroon cell, and a uniform row
+% or column. (The transform, helpers, and named-rule fact live at the end of
+% this file.)
+arc2_induce_rule(TrainingPairs, creature_dock) :-
+% Cheap gate: pull the first training input off the pair list.
+    TrainingPairs = [pair(First, _) | _],
+% The first input must hold a cyan cell, a maroon cell, and a uniform line.
+    cd_gate_(First),
+% The creature-dock transform must reproduce every training pair exactly.
+    forall(member(pair(In, Out), TrainingPairs), arc2_transform(creature_dock, In, Out)).
+
 % scaled_frame: early dispatch to avoid generic clause hitting slow frame_assemble.
 arc2_named_rule(scaled_frame).
 % arc2_induce_rule(scaled_frame): frame pre-filter + forall verify.
@@ -28106,3 +28124,494 @@ wc_bottom_edge_(Grid, Trips, H, W, Center, Gin, Gout) :-
         ->  arc2_set_cell_(Ga, BR, Wm1, 3, Gout) ; Gout = Ga )
 % A gap-row bottom needs no corner handling.
     ;   Gout = Gin ).
+
+% ===========================================================================
+% CREATURE-DOCK (WAVE 122, task 6e4f6532, Layer 355)
+% A coloured frame of structural bands (whole rows or columns of one colour)
+% surrounds a background field. Inside float creatures (touching clusters of
+% cyan 8, a maroon 9 core, and coloured tips) and locks (isolated maroon-only
+% patches shaped like some creature's core). Every creature is erased and
+% re-docked onto the lock whose maroon shape matches its core; the winning
+% orientation, out of eight (four rotations times two mirrors), is the one
+% whose coloured tips best point toward the matching-coloured border band.
+% ===========================================================================
+
+% arc2_named_rule(creature_dock): register creature_dock as a known rule name.
+arc2_named_rule(creature_dock).
+
+% arc2_transform(creature_dock, Grid, Out): run the full creature-dock pipeline.
+arc2_transform(creature_dock, Grid, Out) :-
+% Delegate to the staged solver.
+    cd_solve_(Grid, Out).
+
+% cd_gate_(+Grid): cheap pre-filter for the creature-dock family.
+cd_gate_(Grid) :-
+% Some row must contain a cyan (colour 8) cell.
+    once(( member(R8, Grid), memberchk(8, R8) )),
+% Some row must contain a maroon (colour 9) cell.
+    once(( member(R9, Grid), memberchk(9, R9) )),
+% The grid must hold at least one fully uniform row or column.
+    cd_has_uniform_line_(Grid).
+
+% cd_has_uniform_line_(+Grid): succeed if any row or column is single-coloured.
+cd_has_uniform_line_(Grid) :-
+% Grid dimensions.
+    cd_dims_(Grid, H, W), Hm1 is H - 1, Wm1 is W - 1,
+% A uniform row satisfies the test immediately, else scan for a uniform column.
+    ( ( member(Row, Grid), Row = [V | Vs], forall(member(X, Vs), X == V) )
+    ->  true
+    ;   between(0, Wm1, C),
+        arc2_cell_(Grid, 0, C, U),
+        forall(between(0, Hm1, R), arc2_cell_(Grid, R, C, U)) ).
+
+% cd_dims_(+Grid, -H, -W): grid height and width.
+cd_dims_(Grid, H, W) :-
+% Height is the number of rows.
+    length(Grid, H),
+% Width is the length of the first row.
+    Grid = [Row0 | _], length(Row0, W).
+
+% cd_solve_(+Grid, -Out): thread the grid through the whole dock pipeline.
+cd_solve_(Grid, Out) :-
+% Read the grid dimensions.
+    cd_dims_(Grid, H, W),
+% Find the structural rows and columns (uniform lines) via a fixpoint.
+    cd_structural_(Grid, H, W, SR, SC),
+% The background is the most common non-structural colour.
+    cd_bg_(Grid, H, W, SR, SC, BG),
+% Collect the coloured (non-bg) border cells inside the structural frame.
+    cd_border_cells_(Grid, H, W, SR, SC, BG, Border),
+% Collect the non-structural, non-bg foreground cells in row-major order.
+    cd_fg_cells_(Grid, H, W, SR, SC, BG, FG),
+% Split the foreground into 8-connected components.
+    cd_components_(FG, Comps),
+% Partition the components into creatures (hold an 8) and locks (all 9).
+    cd_partition_(Grid, Comps, Creatures, Locks),
+% Blank out every creature and lock cell to the background.
+    cd_erase_(Grid, Creatures, Locks, BG, Erased),
+% Re-dock each creature onto its best-scoring lock and orientation.
+    cd_place_all_(Grid, Creatures, Locks, Border, H, W, Erased, Out).
+
+% cd_structural_(+Grid, +H, +W, -SRows, -SCols): fixpoint of uniform lines.
+cd_structural_(Grid, H, W, SRows, SCols) :-
+% Seed the fixpoint with no structural rows and no structural columns.
+    cd_struct_fix_(Grid, H, W, [], [], SRows, SCols).
+
+% cd_struct_fix_(+Grid,+H,+W,+SR0,+SC0,-SR,-SC): iterate row/col passes.
+cd_struct_fix_(Grid, H, W, SR0, SC0, SR, SC) :-
+% Add every new uniform row (measured over the currently free columns).
+    cd_pass_rows_(Grid, H, W, SR0, SC0, SR1, ChR),
+% Add every new uniform column (measured over the updated free rows).
+    cd_pass_cols_(Grid, H, W, SR1, SC0, SC1, ChC),
+% Repeat while either pass grew the structural sets, else stop.
+    ( ( ChR == true ; ChC == true )
+    ->  cd_struct_fix_(Grid, H, W, SR1, SC1, SR, SC)
+    ;   SR = SR1, SC = SC1 ).
+
+% cd_pass_rows_(+Grid,+H,+W,+SRin,+SCols,-SRout,-Changed): one row pass.
+cd_pass_rows_(Grid, H, W, SRin, SCols, SRout, Changed) :-
+% Last row index.
+    Hm1 is H - 1,
+% Gather each not-yet-structural row that is uniform over the free columns.
+    findall(R,
+        ( between(0, Hm1, R), \+ member(R, SRin), cd_row_uniform_(Grid, R, W, SCols) ),
+        NewRs),
+% Append the new rows and report whether anything changed.
+    ( NewRs == [] -> SRout = SRin, Changed = false
+    ;   append(SRin, NewRs, SRout), Changed = true ).
+
+% cd_row_uniform_(+Grid,+R,+W,+SCols): row R is one colour over free columns.
+cd_row_uniform_(Grid, R, W, SCols) :-
+% Last column index.
+    Wm1 is W - 1,
+% Collect the colours in the free (non-structural) columns of this row.
+    findall(V, ( between(0, Wm1, C), \+ member(C, SCols), arc2_cell_(Grid, R, C, V) ), Vals),
+% There must be exactly one distinct colour.
+    sort(Vals, [_]).
+
+% cd_pass_cols_(+Grid,+H,+W,+SRows,+SCin,-SCout,-Changed): one column pass.
+cd_pass_cols_(Grid, H, W, SRows, SCin, SCout, Changed) :-
+% Last column index.
+    Wm1 is W - 1,
+% Gather each not-yet-structural column that is uniform over the free rows.
+    findall(C,
+        ( between(0, Wm1, C), \+ member(C, SCin), cd_col_uniform_(Grid, H, SRows, C) ),
+        NewCs),
+% Append the new columns and report whether anything changed.
+    ( NewCs == [] -> SCout = SCin, Changed = false
+    ;   append(SCin, NewCs, SCout), Changed = true ).
+
+% cd_col_uniform_(+Grid,+H,+SRows,+C): column C is one colour over free rows.
+cd_col_uniform_(Grid, H, SRows, C) :-
+% Last row index.
+    Hm1 is H - 1,
+% Collect the colours in the free (non-structural) rows of this column.
+    findall(V, ( between(0, Hm1, R), \+ member(R, SRows), arc2_cell_(Grid, R, C, V) ), Vals),
+% There must be exactly one distinct colour.
+    sort(Vals, [_]).
+
+% cd_bg_(+Grid,+H,+W,+SR,+SC,-BG): most common non-structural colour.
+cd_bg_(Grid, H, W, SR, SC, BG) :-
+% Last row and column indices.
+    Hm1 is H - 1, Wm1 is W - 1,
+% Collect every non-structural cell colour in row-major order.
+    findall(V,
+        ( between(0, Hm1, R), \+ member(R, SR),
+          between(0, Wm1, C), \+ member(C, SC),
+          arc2_cell_(Grid, R, C, V) ),
+        Vals),
+% Pick the colour with the highest count.
+    cd_most_common_(Vals, BG).
+
+% cd_most_common_(+Vals, -Best): colour of highest count, ties by first seen.
+cd_most_common_(Vals, Best) :-
+% Unique colours in first-appearance order.
+    cd_first_seen_(Vals, [], Order),
+% Pair each colour with its occurrence count.
+    cd_count_pairs_(Order, Vals, Counts),
+% Take the first colour reaching the maximum count.
+    cd_argmax_(Counts, Best).
+
+% cd_first_seen_(+Vals, +Acc, -Order): unique values in first-appearance order.
+cd_first_seen_([], Acc, Order) :-
+% Reverse the accumulator to restore first-appearance order.
+    reverse(Acc, Order).
+% Skip a value already recorded, otherwise prepend it.
+cd_first_seen_([V | T], Acc, Order) :-
+% Keep the accumulator when the value was already seen, else add it.
+    ( memberchk(V, Acc) -> cd_first_seen_(T, Acc, Order)
+    ;   cd_first_seen_(T, [V | Acc], Order) ).
+
+% cd_count_pairs_(+Order, +Vals, -Pairs): attach each colour's total count.
+cd_count_pairs_([], _, []).
+% Count occurrences of the head colour, then recurse.
+cd_count_pairs_([V | T], Vals, [V-N | R]) :-
+% Occurrences of V in the full value list.
+    include(==(V), Vals, Occ), length(Occ, N),
+% Recurse over the remaining colours.
+    cd_count_pairs_(T, Vals, R).
+
+% cd_argmax_(+Pairs, -Best): first colour attaining the maximum count.
+cd_argmax_([V0-N0 | T], Best) :-
+% Seed the scan with the first pair.
+    cd_argmax_(T, V0, N0, Best).
+% Base case: the running best colour is the answer.
+cd_argmax_([], B, _, B).
+% Adopt a strictly larger count, else keep the current best (ties stay).
+cd_argmax_([V-N | T], B0, N0, B) :-
+% Strictly greater count wins; equal or smaller keeps the earlier colour.
+    ( N > N0 -> cd_argmax_(T, V, N, B) ; cd_argmax_(T, B0, N0, B) ).
+
+% cd_border_cells_(+Grid,+H,+W,+SR,+SC,+BG,-Border): coloured frame cells.
+cd_border_cells_(Grid, H, W, SR, SC, BG, Border) :-
+% Last row and column indices.
+    Hm1 is H - 1, Wm1 is W - 1,
+% Collect every structural cell whose colour differs from the background.
+    findall(bc(R, C, V),
+        ( between(0, Hm1, R), between(0, Wm1, C),
+          ( member(R, SR) ; member(C, SC) ),
+          arc2_cell_(Grid, R, C, V), V =\= BG ),
+        Border).
+
+% cd_fg_cells_(+Grid,+H,+W,+SR,+SC,+BG,-FG): non-structural non-bg cells.
+cd_fg_cells_(Grid, H, W, SR, SC, BG, FG) :-
+% Last row and column indices.
+    Hm1 is H - 1, Wm1 is W - 1,
+% Collect every free cell whose colour differs from the background.
+    findall(R-C,
+        ( between(0, Hm1, R), \+ member(R, SR),
+          between(0, Wm1, C), \+ member(C, SC),
+          arc2_cell_(Grid, R, C, V), V =\= BG ),
+        FG).
+
+% cd_components_(+FG, -Comps): 8-connected components in row-major seed order.
+cd_components_(FG, Comps) :-
+% Build an ordered set of all foreground cells for fast membership.
+    list_to_ord_set(FG, All),
+% Walk the row-major cell list, flooding each unseen seed into a component.
+    cd_comp_loop_(FG, All, [], Comps).
+
+% cd_comp_loop_(+Seeds,+All,+Vis,-Comps): grow one component per fresh seed.
+cd_comp_loop_([], _, _, []).
+% Skip a seed already visited, otherwise flood-fill from it.
+cd_comp_loop_([Cell | Rest], All, Vis, Comps) :-
+% A visited seed contributes no new component.
+    ( ord_memberchk(Cell, Vis)
+    ->  cd_comp_loop_(Rest, All, Vis, Comps)
+% A fresh seed is flooded into a full component.
+    ;   cd_flood_([Cell], All, Vis, Vis1, [], Comp),
+        Comps = [Comp | More],
+        cd_comp_loop_(Rest, All, Vis1, More) ).
+
+% cd_flood_(+Stack,+All,+Vis,-VisOut,+CompIn,-CompOut): iterative flood fill.
+cd_flood_([], _, Vis, Vis, Comp, Comp).
+% Pop a cell; skip if already visited, else record it and push its neighbours.
+cd_flood_([Cell | Stk], All, Vis, VisOut, CompIn, CompOut) :-
+% Discard an already-visited cell.
+    ( ord_memberchk(Cell, Vis)
+    ->  cd_flood_(Stk, All, Vis, VisOut, CompIn, CompOut)
+% Mark the cell, add it to the component, and enqueue its foreground neighbours.
+    ;   ord_add_element(Vis, Cell, Vis1),
+        cd_neighbors8_(Cell, All, Ns),
+        append(Ns, Stk, Stk1),
+        cd_flood_(Stk1, All, Vis1, VisOut, [Cell | CompIn], CompOut) ).
+
+% cd_neighbors8_(+Cell,+All,-Ns): the eight-neighbourhood cells inside All.
+cd_neighbors8_(R-C, All, Ns) :-
+% Enumerate the eight surrounding offsets that also lie in the foreground set.
+    findall(NR-NC,
+        ( member(DR, [-1, 0, 1]), member(DC, [-1, 0, 1]),
+          \+ ( DR =:= 0, DC =:= 0 ),
+          NR is R + DR, NC is C + DC,
+          ord_memberchk(NR-NC, All) ),
+        Ns).
+
+% cd_partition_(+Grid,+Comps,-Creatures,-Locks): split components by colour.
+cd_partition_(_, [], [], []).
+% Classify the head component, then recurse over the rest.
+cd_partition_(Grid, [Comp | Rest], Cr, Lk) :-
+% Read the colours of the component's cells.
+    maplist(cd_colorof_(Grid), Comp, Colors),
+% A component with any cyan cell is a creature; an all-maroon one is a lock.
+    ( memberchk(8, Colors)
+    ->  Cr = [Comp | Cr1], Lk = Lk1
+    ;   ( forall(member(X, Colors), X == 9)
+        ->  Lk = [Comp | Lk1], Cr = Cr1
+        ;   Cr = Cr1, Lk = Lk1 ) ),
+% Recurse over the remaining components.
+    cd_partition_(Grid, Rest, Cr1, Lk1).
+
+% cd_colorof_(+Grid, +Cell, -Color): colour of a cell coordinate.
+cd_colorof_(Grid, R-C, Color) :-
+% Look up the grid colour at the coordinate.
+    arc2_cell_(Grid, R, C, Color).
+
+% cd_erase_(+Grid,+Creatures,+Locks,+BG,-Erased): blank creatures and locks.
+cd_erase_(Grid, Creatures, Locks, BG, Erased) :-
+% Combine creature and lock components into one list.
+    append(Creatures, Locks, AllComps),
+% Fold every component's cells to the background colour.
+    foldl(cd_erase_comp_(BG), AllComps, Grid, Erased).
+
+% cd_erase_comp_(+BG,+Comp,+Gin,-Gout): blank one component's cells.
+cd_erase_comp_(BG, Comp, Gin, Gout) :-
+% Fold each cell of the component to the background.
+    foldl(cd_erase_cell_(BG), Comp, Gin, Gout).
+
+% cd_erase_cell_(+BG,+Cell,+Gin,-Gout): set one cell to the background.
+cd_erase_cell_(BG, R-C, Gin, Gout) :-
+% Overwrite the cell with the background colour.
+    arc2_set_cell_(Gin, R, C, BG, Gout).
+
+% cd_place_all_(+Grid,+Creatures,+Locks,+Border,+H,+W,+Gin,-Gout): dock all.
+cd_place_all_(Grid, Creatures, Locks, Border, H, W, Gin, Gout) :-
+% Start docking with no locks consumed yet.
+    cd_place_loop_(Creatures, Grid, Locks, Border, H, W, [], Gin, Gout).
+
+% cd_place_loop_(+Creatures,+Grid,+Locks,+Border,+H,+W,+Used,+Gin,-Gout).
+cd_place_loop_([], _, _, _, _, _, _, G, G).
+% Dock the head creature, mark its lock used, then recurse.
+cd_place_loop_([Cr | Rest], Grid, Locks, Border, H, W, Used, Gin, Gout) :-
+% Read the creature's coloured cells from the original grid.
+    cd_creature_cells_(Grid, Cr, Cells),
+% Find the best lock and placement, else leave the grid unchanged.
+    ( cd_best_placement_(Cells, Locks, Border, Used, Li, Placed)
+    ->  cd_apply_placed_(Placed, H, W, Gin, Gmid), Used1 = [Li | Used]
+    ;   Gmid = Gin, Used1 = Used ),
+% Recurse over the remaining creatures.
+    cd_place_loop_(Rest, Grid, Locks, Border, H, W, Used1, Gmid, Gout).
+
+% cd_creature_cells_(+Grid, +Comp, -Cells): tag each cell with its colour.
+cd_creature_cells_(Grid, Comp, Cells) :-
+% Convert every coordinate into an r(R,C,Colour) term.
+    maplist(cd_cell_term_(Grid), Comp, Cells).
+
+% cd_cell_term_(+Grid, +Cell, -Term): build an r(R,C,Colour) term.
+cd_cell_term_(Grid, R-C, r(R, C, Col)) :-
+% Read the colour at the coordinate.
+    arc2_cell_(Grid, R, C, Col).
+
+% cd_best_placement_(+Cells,+Locks,+Border,+Used,-BestLi,-BestPlaced).
+cd_best_placement_(Cells, Locks, Border, Used, BestLi, BestPlaced) :-
+% Enumerate every valid candidate placement in lock/mirror/rotation order.
+    findall(cand(Score, Li, Placed),
+        cd_candidate_(Cells, Locks, Border, Used, Score, Li, Placed),
+        Cands),
+% There must be at least one candidate.
+    Cands \= [],
+% Fold to the highest score, keeping the first found on ties.
+    cd_pick_best_(Cands, cand(-1, -1, []), cand(_, BestLi, BestPlaced)).
+
+% cd_pick_best_(+Cands,+BestIn,-BestOut): retain the strictly-highest score.
+cd_pick_best_([], Best, Best).
+% Replace the running best only on a strictly greater score.
+cd_pick_best_([cand(S, L, P) | T], cand(BS, BL, BP), Out) :-
+% A strictly larger score wins; equal or smaller keeps the earlier candidate.
+    ( S > BS -> cd_pick_best_(T, cand(S, L, P), Out)
+    ;   cd_pick_best_(T, cand(BS, BL, BP), Out) ).
+
+% cd_candidate_(+Cells,+Locks,+Border,+Used,-Score,-Li,-Placed): one placement.
+cd_candidate_(Cells, Locks, Border, Used, Score, Li, Placed) :-
+% Pick an unused lock, enumerating lock indices in ascending order.
+    nth0(Li, Locks, Lock),
+% The lock must not already be consumed by an earlier creature.
+    \+ member(Li, Used),
+% Try the un-mirrored form first, then the mirrored form.
+    member(Mir, [false, true]),
+% Apply the mirror when requested.
+    ( Mir == true -> cd_mirror_(Cells, Base) ; Base = Cells ),
+% Try each of the four clockwise rotations.
+    between(0, 3, K),
+% Extract the maroon core coordinates of the base creature.
+    cd_core_coords_(Base, BaseCore),
+% Rotate those core coordinates K times.
+    cd_rot_coords_(BaseCore, K, RC),
+% Normalise the rotated core and the lock to compare their shapes.
+    cd_norm_set_(RC, NCore, _, _),
+    cd_norm_set_(Lock, NLock, MRL, MCL),
+% The rotated core shape must equal the lock shape.
+    NCore == NLock,
+% Rotate the full creature the same way.
+    cd_rot_cells_(Base, K, RCells),
+% Extract the rotated core coordinates from the full rotated creature.
+    cd_core_coords_(RCells, RCore),
+% Find the rotated core's top-left corner for the translation.
+    cd_norm_set_(RCore, _, MRR, MCC),
+% Translate so the rotated core aligns onto the lock's top-left corner.
+    TR is MRL - MRR, TC is MCL - MCC,
+    cd_translate_(RCells, TR, TC, Placed),
+% Build the placed core coordinate set.
+    cd_placed_core_(Placed, PC),
+% The placed core must overlay the lock exactly.
+    list_to_ord_set(Lock, LockSet),
+    PC == LockSet,
+% Compute the lock's centroid for tip-direction scoring.
+    cd_lock_center_(Lock, CR0, CC0),
+% Score how many tips point toward their matching border band.
+    cd_score_(Placed, Border, CR0, CC0, Score).
+
+% cd_core_coords_(+Cells, -Coords): maroon (colour 9) coordinates of a cell list.
+cd_core_coords_(Cells, Coords) :-
+% Collect the coordinates of every colour-9 cell.
+    findall(R-C, member(r(R, C, 9), Cells), Coords).
+
+% cd_rot_coords_(+Coords, +K, -Out): rotate coordinates K quarter-turns.
+cd_rot_coords_(Cs, 0, Cs) :- !.
+% Apply one clockwise step then recurse on the remaining turns.
+cd_rot_coords_(Cs, K, Out) :-
+% One turn maps (R,C) to (C,-R).
+    K > 0, K1 is K - 1,
+    maplist(cd_rot_coord_step_, Cs, Cs1),
+    cd_rot_coords_(Cs1, K1, Out).
+
+% cd_rot_coord_step_(+In, -Out): a single clockwise coordinate rotation.
+cd_rot_coord_step_(R-C, C-NR) :-
+% The new column is the negated old row.
+    NR is -R.
+
+% cd_rot_cells_(+Cells, +K, -Out): rotate coloured cells K quarter-turns.
+cd_rot_cells_(Cells, 0, Cells) :- !.
+% Apply one clockwise step then recurse on the remaining turns.
+cd_rot_cells_(Cells, K, Out) :-
+% One turn maps r(R,C,Col) to r(C,-R,Col).
+    K > 0, K1 is K - 1,
+    maplist(cd_rot_cell_step_, Cells, Cells1),
+    cd_rot_cells_(Cells1, K1, Out).
+
+% cd_rot_cell_step_(+In, -Out): a single clockwise coloured-cell rotation.
+cd_rot_cell_step_(r(R, C, Col), r(C, NR, Col)) :-
+% The new column is the negated old row.
+    NR is -R.
+
+% cd_mirror_(+Cells, -Out): flip coloured cells across the vertical axis.
+cd_mirror_(Cells, Out) :-
+% Negate every column coordinate.
+    maplist(cd_mirror_step_, Cells, Out).
+
+% cd_mirror_step_(+In, -Out): a single vertical-axis mirror.
+cd_mirror_step_(r(R, C, Col), r(R, NC, Col)) :-
+% The new column is the negated old column.
+    NC is -C.
+
+% cd_norm_set_(+Cells, -Norm, -MinR, -MinC): normalise coordinates to origin.
+cd_norm_set_(Cells, Norm, MinR, MinC) :-
+% Smallest row coordinate.
+    findall(R, member(R-_, Cells), Rs), min_list(Rs, MinR),
+% Smallest column coordinate.
+    findall(C, member(_-C, Cells), Cs), min_list(Cs, MinC),
+% Shift every coordinate so the minimum corner sits at (0,0).
+    findall(NR-NC, ( member(R-C, Cells), NR is R - MinR, NC is C - MinC ), Shifted),
+% Return the shifted coordinates as an ordered set.
+    list_to_ord_set(Shifted, Norm).
+
+% cd_translate_(+Cells, +TR, +TC, -Out): shift coloured cells by (TR,TC).
+cd_translate_(Cells, TR, TC, Out) :-
+% Add the offset to every cell coordinate.
+    maplist(cd_translate_one_(TR, TC), Cells, Out).
+
+% cd_translate_one_(+TR, +TC, +In, -Out): shift one coloured cell.
+cd_translate_one_(TR, TC, r(R, C, Col), r(NR, NC, Col)) :-
+% Offset the row and column.
+    NR is R + TR, NC is C + TC.
+
+% cd_placed_core_(+Placed, -PC): ordered set of placed maroon coordinates.
+cd_placed_core_(Placed, PC) :-
+% Collect the coordinates of every placed colour-9 cell.
+    findall(R-C, member(r(R, C, 9), Placed), Coords),
+% Return them as an ordered set.
+    list_to_ord_set(Coords, PC).
+
+% cd_lock_center_(+Lock, -CR0, -CC0): floating-point centroid of a lock.
+cd_lock_center_(Lock, CR0, CC0) :-
+% Number of lock cells.
+    length(Lock, N),
+% Mean row coordinate.
+    findall(R, member(R-_, Lock), Rs), sum_list(Rs, SumR), CR0 is SumR / N,
+% Mean column coordinate.
+    findall(C, member(_-C, Lock), Cs), sum_list(Cs, SumC), CC0 is SumC / N.
+
+% cd_score_(+Placed,+Border,+CR0,+CC0,-Score): count well-aimed tips.
+cd_score_(Placed, Border, CR0, CC0, Score) :-
+% Gather a marker for every tip that points toward its matching border.
+    findall(1,
+        ( member(r(R, C, Col), Placed),
+          Col =\= 8, Col =\= 9,
+          cd_color_dirs_(Border, Col, BC),
+          BC \= [],
+          cd_tip_ok_(BC, R, C, CR0, CC0) ),
+        Ones),
+% The score is the number of well-aimed tips.
+    length(Ones, Score).
+
+% cd_color_dirs_(+Border, +Col, -Coords): border cells of a given colour.
+cd_color_dirs_(Border, Col, Coords) :-
+% Collect the coordinates of every border cell matching the colour.
+    findall(R-C, member(bc(R, C, Col), Border), Coords).
+
+% cd_tip_ok_(+BC, +R, +C, +CR0, +CC0): tip at (R,C) aims at its border band.
+cd_tip_ok_(BC, R, C, CR0, CC0) :-
+% Distinct border rows and columns describe the band's orientation.
+    findall(BR, member(BR-_, BC), BRs), sort(BRs, URows), length(URows, NRows),
+    findall(BCc, member(_-BCc, BC), BCols), sort(BCols, UCols), length(UCols, NCols),
+% A band spanning at least as many rows as columns is vertical (a side band).
+    ( NRows >= NCols
+% Vertical band: compare the tip's column against the band's mean column.
+    ->  sum_list(BCols, SumC), length(BC, LB), MeanC is SumC / LB,
+        ( MeanC > CC0 -> Side = 1 ; Side = -1 ),
+        ( C > CC0 -> Dir = 1 ; ( C < CC0 -> Dir = -1 ; Dir = 0 ) ),
+        Dir =:= Side
+% Horizontal band: compare the tip's row against the band's mean row.
+    ;   sum_list(BRs, SumR), length(BC, LB), MeanR is SumR / LB,
+        ( MeanR > CR0 -> Side = 1 ; Side = -1 ),
+        ( R > CR0 -> Dir = 1 ; ( R < CR0 -> Dir = -1 ; Dir = 0 ) ),
+        Dir =:= Side ).
+
+% cd_apply_placed_(+Placed, +H, +W, +Gin, -Gout): paint placed cells in bounds.
+cd_apply_placed_(Placed, H, W, Gin, Gout) :-
+% Fold every placed cell into the grid, skipping out-of-bounds cells.
+    foldl(cd_apply_one_(H, W), Placed, Gin, Gout).
+
+% cd_apply_one_(+H, +W, +Cell, +Gin, -Gout): paint one placed cell if in bounds.
+cd_apply_one_(H, W, r(R, C, Col), Gin, Gout) :-
+% Write the cell only when it lies inside the grid.
+    ( R >= 0, R < H, C >= 0, C < W -> arc2_set_cell_(Gin, R, C, Col, Gout) ; Gout = Gin ).
