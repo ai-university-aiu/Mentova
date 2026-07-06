@@ -54,14 +54,20 @@
     % numlist/3 for index generation.
     numlist/3,
     % max_member/2 for finding maximum list element.
-    max_member/2
+    max_member/2,
+    % nth0/3 for zero-based indexed access (nested_contour).
+    nth0/3,
+    % max_list/2 for band-extent maxima (nested_contour).
+    max_list/2,
+    % sum_list/2 for region centroid sums (nested_contour).
+    sum_list/2
 ]).
 % Load apply utilities.
-:- use_module(library(apply), [maplist/2, maplist/3, maplist/4, include/3, exclude/3, foldl/4]).
-% Load pairs utilities for pairs_keys_values/3.
-:- use_module(library(pairs), [pairs_keys_values/3]).
+:- use_module(library(apply), [maplist/2, maplist/3, maplist/4, maplist/5, include/3, exclude/3, foldl/4, foldl/5, foldl/6]).
+% Load pairs utilities for pairs_keys_values/3 and pairs_values/2.
+:- use_module(library(pairs), [pairs_keys_values/3, pairs_values/2]).
 % Load balanced-tree association maps for occupied/wall/paint sets.
-:- use_module(library(assoc), [empty_assoc/1, put_assoc/4, get_assoc/3]).
+:- use_module(library(assoc), [empty_assoc/1, put_assoc/4, get_assoc/3, list_to_assoc/2, gen_assoc/3]).
 
 % Allow arc2_transform/3 clauses at non-consecutive positions.
 :- discontiguous arc2_transform/3.
@@ -188,6 +194,22 @@ arc2_induce_rule(TrainingPairs, creature_dock) :-
     cd_gate_(First),
 % The creature-dock transform must reproduce every training pair exactly.
     forall(member(pair(In, Out), TrainingPairs), arc2_transform(creature_dock, In, Out)).
+
+% nested_contour: early dispatch (WAVE 123, task 2d0172a1). The input is a set
+% of big nested closed loops (a single line colour drawn 8-connected, with the
+% background areas 4-connected). The output redraws the same nesting topology
+% shrunk to minimal one-cell-thick rectangles: every region becomes a thin
+% outline, the innermost region becomes a single dot, and sibling structures
+% snap to a shared row or column by aligning their innermost-dot anchors.
+% Cheap gate: every training input uses exactly two colours. (The transform,
+% helpers, and named-rule fact live at the end of this file.)
+arc2_induce_rule(TrainingPairs, nested_contour) :-
+% Cheap gate: pull the first training input off the pair list.
+    TrainingPairs = [pair(First, _) | _],
+% The first input must use exactly two distinct colours.
+    nc_gate_(First),
+% The nested-contour transform must reproduce every training pair exactly.
+    forall(member(pair(In, Out), TrainingPairs), arc2_transform(nested_contour, In, Out)).
 
 % scaled_frame: early dispatch to avoid generic clause hitting slow frame_assemble.
 arc2_named_rule(scaled_frame).
@@ -28615,3 +28637,663 @@ cd_apply_placed_(Placed, H, W, Gin, Gout) :-
 cd_apply_one_(H, W, r(R, C, Col), Gin, Gout) :-
 % Write the cell only when it lies inside the grid.
     ( R >= 0, R < H, C >= 0, C < W -> arc2_set_cell_(Gin, R, C, Col, Gout) ; Gout = Gin ).
+
+% ---------------------------------------------------------------------------
+% WAVE 123 — nested_contour (task 2d0172a1): nested-contour shrinky-dink.
+% ---------------------------------------------------------------------------
+
+% arc2_named_rule(nested_contour): register nested_contour as a known rule name.
+arc2_named_rule(nested_contour).
+
+% arc2_transform(nested_contour, Grid, Out): gate then run the shrink solver.
+arc2_transform(nested_contour, Grid, Out) :-
+% Only two-colour grids belong to this family; fail fast otherwise.
+    nc_gate_(Grid),
+% Shrink the nested-loop topology to minimal rectangles.
+    nc_solve(Grid, Out).
+
+% nc_gate_(+Grid): succeed when the grid uses exactly two distinct colours.
+nc_gate_(Grid) :-
+% Flatten every row into a single cell list.
+    append(Grid, Cells),
+% Collapse the cells to the sorted set of distinct colours.
+    sort(Cells, Colors),
+% Exactly two colours must be present.
+    Colors = [_, _].
+
+% nc_solve(+Grid, -Out): full nested-contour shrink pipeline.
+nc_solve(Grid, Out) :-
+% Build the region tree, its child map, the top-level regions, and background.
+    nc_build(Grid, Regs, Children, Top, Bg),
+% Render a single top structure directly, else arrange several with the background.
+    ( Top = [Single]
+% One top-level structure: render it to a block.
+    ->  nc_render(Regs, Children, Single, item(Blk0, _, _, _, _, _))
+% Several top structures: render each and arrange them side by side.
+    ;   maplist(nc_render(Regs, Children), Top, Items),
+% Arrange the rendered blocks with the background as filler.
+        nc_arrange(Items, Bg, item(Blk0, _, _, _, _, _)) ),
+% Pad any edge that a lone innermost dot touches.
+    nc_pad_lone_edges(Blk0, Bg, Out).
+
+% nc_dims(+Grid, -H, -W): grid height and width.
+nc_dims(Grid, H, W) :-
+% Height is the number of rows.
+    length(Grid, H),
+% Width is the length of the first row.
+    Grid = [R0 | _], length(R0, W).
+
+% nc_cell(+Grid, +R, +C, -V): value at row R, column C.
+nc_cell(Grid, R, C, V) :-
+% Select the row then the column.
+    nth0(R, Grid, Row), nth0(C, Row, V).
+
+% nc_cellmap(+Grid, +W, -Assoc): map linear index R*W+C to its colour.
+nc_cellmap(Grid, W, Assoc) :-
+% Collect an Idx-Colour pair for every cell.
+    findall(Idx-V, ( nth0(R, Grid, Row), nth0(C, Row, V), Idx is R*W+C ), Pairs),
+% Fold the pairs into a balanced association tree.
+    list_to_assoc(Pairs, Assoc).
+
+% nc_bg(+Grid, -Bg): the most frequent colour (first-seen wins ties).
+nc_bg(Grid, Bg) :-
+% Flatten the grid into a cell list.
+    append(Grid, Cells),
+% List the distinct colours in first-appearance order.
+    nc_first_order_unique(Cells, Colors),
+% Count how often each colour occurs.
+    maplist(nc_count_in(Cells), Colors, Counts),
+% Pair each count with its colour.
+    pairs_keys_values(CP, Counts, Colors),
+% Pick the colour with the greatest count.
+    nc_pick_max(CP, Bg).
+
+% nc_first_order_unique(+List, -Unique): dedup keeping first-appearance order.
+nc_first_order_unique([], []).
+% Keep the head, then drop its later duplicates before recursing.
+nc_first_order_unique([X | Xs], [X | R]) :-
+% Remove every later copy of X.
+    exclude(==(X), Xs, Xs1),
+% Recurse on the remaining tail.
+    nc_first_order_unique(Xs1, R).
+
+% nc_count_in(+Cells, +C, -N): how many cells equal colour C.
+nc_count_in(Cells, C, N) :-
+% Keep only the matching cells.
+    include(==(C), Cells, L),
+% The count is the length of that sublist.
+    length(L, N).
+
+% nc_pick_max(+CountColourPairs, -Best): colour of the strictly greatest count.
+nc_pick_max([C0-Col0 | Rest], Best) :-
+% Fold across the rest, carrying the running best count-colour pair.
+    foldl(nc_pick_max_step, Rest, C0-Col0, _-Best).
+
+% nc_pick_max_step(+Pair, +BestIn, -BestOut): keep the larger count (first wins).
+nc_pick_max_step(C-Col, BC-BCol, NC-NCol) :-
+% Replace the best only on a strictly greater count.
+    ( C > BC -> NC = C, NCol = Col ; NC = BC, NCol = BCol ).
+
+% nc_colors(+Grid, -Sorted): the sorted set of distinct colours.
+nc_colors(Grid, Sorted) :-
+% Flatten the grid to a cell list.
+    append(Grid, Cells),
+% Sort and deduplicate.
+    sort(Cells, Sorted).
+
+% nc_neighbors(+Idx, +H, +W, +Conn8, -Nbrs): in-bounds neighbour indices.
+nc_neighbors(Idx, H, W, Conn8, Nbrs) :-
+% Recover the row and column of the linear index.
+    R is Idx // W, C is Idx mod W,
+% Choose eight-way or four-way deltas.
+    ( Conn8 == true
+% Eight-connected: all diagonal and orthogonal steps.
+    ->  Deltas = [-1- -1, -1-0, -1-1, 0- -1, 0-1, 1- -1, 1-0, 1-1]
+% Four-connected: only orthogonal steps.
+    ;   Deltas = [-1-0, 1-0, 0- -1, 0-1] ),
+% Collect the in-bounds neighbour indices.
+    findall(NIdx, ( member(DR-DC, Deltas), NR is R+DR, NC is C+DC,
+                    NR >= 0, NR < H, NC >= 0, NC < W, NIdx is NR*W+NC ), Nbrs).
+
+% nc_neighbors4(+Idx, +H, +W, -Nbrs): the four orthogonal in-bounds neighbours.
+nc_neighbors4(Idx, H, W, Nbrs) :-
+% Recover row and column.
+    R is Idx // W, C is Idx mod W,
+% Collect in-bounds orthogonal neighbours.
+    findall(NIdx, ( member(DR-DC, [1-0, -1-0, 0-1, 0- -1]),
+                    NR is R+DR, NC is C+DC, NR >= 0, NR < H, NC >= 0, NC < W,
+                    NIdx is NR*W+NC ), Nbrs).
+
+% nc_same_color(+CellMap, +Color, +Idx): cell Idx carries colour Color.
+nc_same_color(CellMap, Color, Idx) :-
+% Look the colour up in the cell map.
+    get_assoc(Idx, CellMap, Color).
+
+% nc_comps(+CellMap, +H, +W, +Color, +Conn8, -Comps): connected components.
+nc_comps(CellMap, H, W, Color, Conn8, Comps) :-
+% Enumerate every linear index of the grid.
+    N is H*W, Nm1 is N-1, numlist(0, Nm1, Idxs),
+% Start with an empty visited set.
+    empty_assoc(V0),
+% Sweep the indices, growing one component per unvisited seed.
+    foldl(nc_comp_step(CellMap, H, W, Color, Conn8), Idxs, V0-[], _-Comps).
+
+% nc_comp_step(+CellMap, +H, +W, +Color, +Conn8, +Idx, +Acc, -Acc2): one sweep step.
+nc_comp_step(CellMap, H, W, Color, Conn8, Idx, Vin-Cin, Vout-Cout) :-
+% Grow a component only from an unvisited cell of the target colour.
+    ( get_assoc(Idx, CellMap, Color), \+ get_assoc(Idx, Vin, _)
+% Flood-fill from this seed to collect the component.
+    ->  nc_bfs(CellMap, H, W, Color, Conn8, [Idx], Vin, Vout, [], Cells),
+% Prepend the new component to the accumulator.
+        Cout = [Cells | Cin]
+% Otherwise carry the accumulators unchanged.
+    ;   Vout = Vin, Cout = Cin ).
+
+% nc_bfs(+CellMap, +H, +W, +Color, +Conn8, +Queue, +Vin, -Vout, +Acc, -Cells): flood fill.
+nc_bfs(_, _, _, _, _, [], V, V, Acc, Acc).
+% Process the queue head, marking and expanding same-colour neighbours.
+nc_bfs(CellMap, H, W, Color, Conn8, [Idx | Q], Vin, Vout, Acc, Cells) :-
+% Skip cells already visited (they may sit in the queue twice).
+    ( get_assoc(Idx, Vin, _)
+% Already visited: continue with the rest of the queue.
+    ->  nc_bfs(CellMap, H, W, Color, Conn8, Q, Vin, Vout, Acc, Cells)
+% Fresh cell: mark it visited.
+    ;   put_assoc(Idx, Vin, true, V1),
+% Gather its neighbours under the chosen connectivity.
+        nc_neighbors(Idx, H, W, Conn8, Nbrs),
+% Keep only the same-colour neighbours.
+        include(nc_same_color(CellMap, Color), Nbrs, Same),
+% Append them to the queue.
+        append(Q, Same, Q2),
+% Recurse, adding this cell to the component.
+        nc_bfs(CellMap, H, W, Color, Conn8, Q2, V1, Vout, [Idx | Acc], Cells) ).
+
+% nc_all_regions(+CellMap, +H, +W, +Colors, +Bg, -Regs): every coloured region.
+nc_all_regions(CellMap, H, W, Colors, Bg, Regs) :-
+% For each colour, split its cells into components (background is four-connected).
+    findall(reg0(Col, Cells),
+        ( member(Col, Colors),
+% Background regions use four-connectivity, line regions eight-connectivity.
+          ( Col =:= Bg -> Conn8 = false ; Conn8 = true ),
+% Compute the components for this colour.
+          nc_comps(CellMap, H, W, Col, Conn8, Comps),
+% Yield each component as a region.
+          member(Cells, Comps) ),
+        Regs).
+
+% nc_build(+Grid, -RegsAssoc, -ChildrenAssoc, -Top, -Bg): region containment tree.
+nc_build(Grid, RegsAssoc, ChildrenAssoc, Top, Bg) :-
+% Grid dimensions.
+    nc_dims(Grid, H, W),
+% Colour lookup map keyed by linear index.
+    nc_cellmap(Grid, W, CellMap),
+% Background colour.
+    nc_bg(Grid, Bg),
+% Distinct colours present.
+    nc_colors(Grid, Colors),
+% All regions across every colour.
+    nc_all_regions(CellMap, H, W, Colors, Bg, Regs0),
+% Region count and its zero-based upper bound.
+    length(Regs0, N), Nm1 is N-1,
+% Map each cell to its region id.
+    findall(Idx-Id, ( nth0(Id, Regs0, reg0(_, Cells)), member(Idx, Cells) ), RidPairs0),
+% Sort the pairs by key for association-tree construction.
+    keysort(RidPairs0, RidPairs),
+% Build the cell-to-region association.
+    list_to_assoc(RidPairs, Rid),
+% Build the id-to-region association with centroids.
+    findall(Id-reg(Col, Cells, CR, CC),
+        ( nth0(Id, Regs0, reg0(Col, Cells)),
+% Compute the region centroid.
+          nc_centroid(Cells, W, CR, CC) ),
+        RegPairs),
+% Fold the region records into an association.
+    list_to_assoc(RegPairs, RegsAssoc),
+% Compute region adjacency and the border-touching set.
+    nc_build_adj(Regs0, Rid, H, W, AdjPairs, OnbList),
+% Build the adjacency association.
+    list_to_assoc(AdjPairs, Adj),
+% Deduplicate the border-touching region ids.
+    sort(OnbList, Onb),
+% Seeds are border-touching regions whose colour is the background.
+    findall(I, ( member(I, Onb), get_assoc(I, RegsAssoc, reg(C, _, _, _)), C =:= Bg ), SeedsU),
+% Deduplicate and order the seeds.
+    sort(SeedsU, Seeds),
+% Breadth-first search outward from the seeds to assign depth and parents.
+    nc_bfs_tree(Seeds, Adj, Depth, Par),
+% Build the parent-to-children map.
+    nc_build_children(0, Nm1, Par, ChildrenAssoc),
+% Top-level regions are the children of every depth-zero region.
+    findall(K, ( gen_assoc(I, Depth, 0), get_assoc(I, ChildrenAssoc, Ks), member(K, Ks) ), Top).
+
+% nc_centroid(+Cells, +W, -CR, -CC): mean row and column of the region cells.
+nc_centroid(Cells, W, CR, CC) :-
+% Region cell count.
+    length(Cells, L),
+% Row of every cell.
+    findall(R, ( member(Idx, Cells), R is Idx // W ), Rs),
+% Column of every cell.
+    findall(C, ( member(Idx, Cells), C is Idx mod W ), Cs),
+% Row and column totals.
+    sum_list(Rs, SR), sum_list(Cs, SC),
+% Divide totals by the count to get the mean position.
+    CR is SR / L, CC is SC / L.
+
+% nc_build_adj(+Regs0, +Rid, +H, +W, -AdjPairs, -OnbList): adjacency and border set.
+nc_build_adj(Regs0, Rid, H, W, AdjPairs, OnbList) :-
+% For each region, compute its neighbour set and border flag.
+    findall(Id-AdjSet-Onb,
+        ( nth0(Id, Regs0, reg0(_, Cells)),
+% Neighbour ids and border membership for this region.
+          nc_region_adj(Cells, Id, Rid, H, W, AdjSet, Onb) ),
+        Triples),
+% Extract the id-to-adjacency pairs.
+    findall(Id-AdjSet, member(Id-AdjSet-_, Triples), AdjPairs),
+% Extract the ids of border-touching regions.
+    findall(Id, member(Id- _ -true, Triples), OnbList).
+
+% nc_region_adj(+Cells, +Id, +Rid, +H, +W, -AdjSet, -Onb): one region's adjacency.
+nc_region_adj(Cells, Id, Rid, H, W, AdjSet, Onb) :-
+% Collect the ids of four-neighbour regions different from this one.
+    findall(NId,
+        ( member(Idx, Cells),
+% Orthogonal neighbours of the cell.
+          nc_neighbors4(Idx, H, W, Nbrs),
+% Each neighbour index.
+          member(NIdx, Nbrs),
+% Its region id.
+          get_assoc(NIdx, Rid, NId),
+% Keep only foreign regions.
+          NId =\= Id ),
+        NIds0),
+% Deduplicate the neighbour ids.
+    sort(NIds0, AdjSet),
+% The region touches the border if any cell lies on an edge.
+    ( ( member(Idx, Cells), Idx // W =:= 0 ) -> Onb = true
+% Bottom edge.
+    ; ( member(Idx, Cells), Idx // W =:= H-1 ) -> Onb = true
+% Left edge.
+    ; ( member(Idx, Cells), Idx mod W =:= 0 ) -> Onb = true
+% Right edge.
+    ; ( member(Idx, Cells), Idx mod W =:= W-1 ) -> Onb = true
+% Interior region.
+    ; Onb = false ).
+
+% nc_bfs_tree(+Seeds, +Adj, -Depth, -Par): BFS depth and parent associations.
+nc_bfs_tree(Seeds, Adj, Depth, Par) :-
+% Seed the depth and parent associations.
+    nc_seed_assocs(Seeds, DepthInit, ParInit),
+% Run the breadth-first expansion.
+    nc_bfs_loop(Seeds, Adj, DepthInit, Depth, ParInit, Par).
+
+% nc_seed_assocs(+Seeds, -DepthInit, -ParInit): depth 0 and parent -1 for seeds.
+nc_seed_assocs(Seeds, DepthInit, ParInit) :-
+% Every seed starts at depth zero.
+    findall(S-0, member(S, Seeds), DP),
+% Build the initial depth association.
+    list_to_assoc(DP, DepthInit),
+% Every seed has parent -1 (none).
+    findall(S- (-1), member(S, Seeds), PP),
+% Build the initial parent association.
+    list_to_assoc(PP, ParInit).
+
+% nc_bfs_loop(+Queue, +Adj, +Din, -Dout, +Pin, -Pout): consume the BFS queue.
+nc_bfs_loop([], _, D, D, P, P).
+% Expand the queue head into its unvisited neighbours.
+nc_bfs_loop([I | Q], Adj, Din, Dout, Pin, Pout) :-
+% Depth of the current region.
+    get_assoc(I, Din, Di),
+% Its neighbour list (empty if absent).
+    ( get_assoc(I, Adj, Neigh) -> true ; Neigh = [] ),
+% Visit each neighbour, extending depth, parent, and queue.
+    foldl(nc_bfs_visit(I, Di), Neigh, Din-Pin-Q, D1-P1-Q1),
+% Recurse on the extended queue.
+    nc_bfs_loop(Q1, Adj, D1, Dout, P1, Pout).
+
+% nc_bfs_visit(+I, +Di, +J, +Acc, -Acc2): record a first visit to neighbour J.
+nc_bfs_visit(I, Di, J, Din-Pin-Qin, Dout-Pout-Qout) :-
+% Only record J the first time it is reached.
+    ( get_assoc(J, Din, _)
+% Already seen: leave the accumulators unchanged.
+    ->  Dout = Din, Pout = Pin, Qout = Qin
+% New region: assign depth, parent, and enqueue it.
+    ;   Dj is Di+1, put_assoc(J, Din, Dj, Dout), put_assoc(J, Pin, I, Pout),
+% Append J to the end of the queue (breadth-first).
+        append(Qin, [J], Qout) ).
+
+% nc_build_children(+Lo, +Hi, +Par, -ChildrenAssoc): invert the parent map.
+nc_build_children(Lo, Hi, Par, ChildrenAssoc) :-
+% Enumerate every region id.
+    numlist(Lo, Hi, Ids),
+% Start every id with an empty child list.
+    findall(Id-[], member(Id, Ids), InitPairs),
+% Build the initial children association.
+    list_to_assoc(InitPairs, C0),
+% Fold each id under its parent's child list.
+    foldl(nc_add_child(Par), Ids, C0, ChildrenAssoc).
+
+% nc_add_child(+Par, +Id, +Cin, -Cout): append Id to its parent's children.
+nc_add_child(Par, Id, Cin, Cout) :-
+% Append only when the region has a real parent.
+    ( get_assoc(Id, Par, P), P >= 0
+% Fetch the parent's children, append this id, store back.
+    ->  get_assoc(P, Cin, Ks), append(Ks, [Id], Ks2), put_assoc(P, Cin, Ks2, Cout)
+% No parent: unchanged.
+    ;   Cout = Cin ).
+
+% nc_render(+Regs, +Children, +Node, -Item): render a region subtree to a block.
+nc_render(Regs, Children, Node, item(Blk, AR, AC, AD, AIR, AIC)) :-
+% Fetch the region's colour and original centroid.
+    get_assoc(Node, Regs, reg(Col, _, CR, CC)),
+% Fetch the region's children.
+    get_assoc(Node, Children, Kids),
+% A leaf becomes a single-cell dot; an internal node wraps its arranged kids.
+    ( Kids == []
+% Leaf: one cell, zero anchor offsets, depth 0, anchor at the original centroid.
+    ->  Blk = [[Col]], AR = 0, AC = 0, AD = 0, AIR = CR, AIC = CC
+% Internal: render every child.
+    ;   maplist(nc_render(Regs, Children), Kids, Items),
+% Arrange the children with this region's colour as filler.
+        nc_arrange(Items, Col, item(IBlk, IAR, IAC, IAD, IAIR, IAIC)),
+% Increment the accumulated depth before wrapping.
+        IAD1 is IAD+1,
+% Wrap the arranged block in a one-cell frame of this region's colour.
+        nc_wrap(item(IBlk, IAR, IAC, IAD1, IAIR, IAIC), Col, item(Blk, AR, AC, AD, AIR, AIC)) ).
+
+% nc_wrap(+Item, +Col, -Wrapped): surround the block with a one-cell Col border.
+nc_wrap(item(Blk, AR, AC, AD, AIR, AIC), Col, item(Out, AR1, AC1, AD, AIR, AIC)) :-
+% Width of the inner block plus the two border columns.
+    Blk = [Row0 | _], length(Row0, Wb), Wb2 is Wb+2,
+% A full border row of the frame colour.
+    nc_row_of(Wb2, Col, Border),
+% Flank every inner row with the frame colour.
+    maplist(nc_wrap_row(Col), Blk, Mid),
+% Add the bottom border row.
+    append(Mid, [Border], MidBot),
+% Prepend the top border row.
+    Out = [Border | MidBot],
+% The anchor shifts one cell down and right inside the frame.
+    AR1 is AR+1, AC1 is AC+1.
+
+% nc_wrap_row(+Col, +Row, -Row2): flank a row with the frame colour.
+nc_wrap_row(Col, Row, [Col | R2]) :-
+% Append the trailing frame cell.
+    append(Row, [Col], R2).
+
+% nc_row_of(+N, +V, -Row): a length-N row of value V.
+nc_row_of(N, V, Row) :-
+% Make a list of length N.
+    length(Row, N),
+% Fill every slot with V.
+    maplist(=(V), Row).
+
+% nc_arrange(+Items, +Wall, -Result): place sibling blocks by anchor alignment.
+nc_arrange([Only], _, Only) :- !.
+% Several siblings: cluster by anchor, align, and paint onto a filled canvas.
+nc_arrange(Items, Wall, item(Out, ARo, ACo, ADo, AIRo, AICo)) :-
+% Original anchor rows of every item.
+    maplist(nc_get(5), Items, Airs),
+% Original anchor columns of every item.
+    maplist(nc_get(6), Items, Aics),
+% Cluster items into row bands by anchor row.
+    nc_cluster(Airs, RowBand),
+% Cluster items into column bands by anchor column.
+    nc_cluster(Aics, ColBand),
+% Number of row bands.
+    max_list(RowBand, MaxR), NR is MaxR+1,
+% Number of column bands.
+    max_list(ColBand, MaxC), NC is MaxC+1,
+% Anchor rows within each block.
+    maplist(nc_get(2), Items, ARs),
+% Anchor columns within each block.
+    maplist(nc_get(3), Items, ACs),
+% Accumulated depths of every item.
+    maplist(nc_get(4), Items, ADs),
+% Heights of every block.
+    maplist(nc_blkh, Items, Hs),
+% Widths of every block.
+    maplist(nc_blkw, Items, Ws),
+% Maximum left extent (anchor column) per column band.
+    nc_max_by_band(NC, ColBand, ACs, ColL),
+% Right extents (width minus one minus anchor column) per item.
+    maplist(nc_wr, Ws, ACs, WRs),
+% Maximum right extent per column band.
+    nc_max_by_band(NC, ColBand, WRs, ColR),
+% Maximum top extent (anchor row) per row band.
+    nc_max_by_band(NR, RowBand, ARs, RowT),
+% Bottom extents (height minus one minus anchor row) per item.
+    maplist(nc_wr, Hs, ARs, HRs),
+% Maximum bottom extent per row band.
+    nc_max_by_band(NR, RowBand, HRs, RowB),
+% Width of each column band.
+    maplist(nc_plus1, ColL, ColR, ColW),
+% Height of each row band.
+    maplist(nc_plus1, RowT, RowB, RowH),
+% Starting column of each column band (one-cell gaps between bands).
+    nc_prefix_positions(ColW, ColX, TotalW),
+% Starting row of each row band (one-cell gaps between bands).
+    nc_prefix_positions(RowH, RowY, TotalH),
+% Blank canvas filled with the wall colour.
+    nc_blank_grid(TotalH, TotalW, Wall, Blank),
+% Compute the paint origin of every item.
+    nc_placements(Items, RowBand, ColBand, RowY, RowT, ColX, ColL, Tops, Lefts),
+% Paint every block onto the canvas.
+    foldl(nc_paint_item, Items, Tops, Lefts, Blank-p, Out-_),
+% The deepest item (first on ties) supplies the propagated anchor.
+    nc_argmax_first(ADs, DI),
+% Its paint origin.
+    nth0(DI, Tops, TopDI), nth0(DI, Lefts, LeftDI),
+% Its within-block anchor, depth, and original anchor.
+    nth0(DI, ARs, ARdi), nth0(DI, ACs, ACdi), nth0(DI, ADs, ADdi),
+% Its original anchor row and column.
+    nth0(DI, Airs, AIRdi), nth0(DI, Aics, AICdi),
+% Translate the anchor into canvas coordinates and carry the rest.
+    ARo is TopDI+ARdi, ACo is LeftDI+ACdi, ADo = ADdi, AIRo = AIRdi, AICo = AICdi.
+
+% nc_get(+N, +Item, -V): the Nth argument of an item record.
+nc_get(N, Item, V) :-
+% Read argument N directly.
+    arg(N, Item, V).
+
+% nc_blkh(+Item, -H): the height of an item's block.
+nc_blkh(item(Blk, _, _, _, _, _), H) :-
+% Height is the row count.
+    length(Blk, H).
+
+% nc_blkw(+Item, -W): the width of an item's block.
+nc_blkw(item(Blk, _, _, _, _, _), W) :-
+% Width is the length of the first row.
+    Blk = [R | _], length(R, W).
+
+% nc_wr(+Dim, +A, -V): the far extent Dim minus one minus A.
+nc_wr(Dim, A, V) :-
+% Distance from the anchor to the far edge.
+    V is Dim-1-A.
+
+% nc_plus1(+A, +B, -S): band span A plus B plus one.
+nc_plus1(A, B, S) :-
+% Sum the two extents and add the anchor cell.
+    S is A+B+1.
+
+% nc_max_by_band(+NBands, +Bands, +Values, -MaxList): per-band maxima.
+nc_max_by_band(NBands, Bands, Values, MaxList) :-
+% Enumerate every band index.
+    NBm1 is NBands-1, numlist(0, NBm1, Bs),
+% Take the maximum value within each band.
+    maplist(nc_band_max(Bands, Values), Bs, MaxList).
+
+% nc_band_max(+Bands, +Values, +B, -Max): greatest value among band-B items.
+nc_band_max(Bands, Values, B, Max) :-
+% Collect the values of items in band B.
+    findall(V, ( nth0(I, Bands, B), nth0(I, Values, V) ), Vs),
+% Empty bands contribute zero, else take the maximum (at least zero).
+    ( Vs == [] -> Max = 0 ; max_list(Vs, M), Max is max(0, M) ).
+
+% nc_prefix_positions(+Sizes, -Positions, -Total): band offsets with unit gaps.
+nc_prefix_positions(Sizes, Positions, Total) :-
+% Walk the sizes tracking index and running offset.
+    nc_prefix_positions_(Sizes, 0, 0, Positions, Total).
+
+% nc_prefix_positions_(+Sizes, +Idx, +X, -Positions, -Total): helper accumulator.
+nc_prefix_positions_([], _, X, [], X).
+% Emit each band offset, inserting a one-cell gap before all but the first.
+nc_prefix_positions_([Sz | T], Idx, X, [Pos | Ps], Total) :-
+% Insert a gap before every band after the first.
+    ( Idx =:= 0 -> X1 = X ; X1 is X+1 ),
+% This band starts at the adjusted offset.
+    Pos = X1, X2 is X1+Sz, Idx1 is Idx+1,
+% Recurse on the remaining bands.
+    nc_prefix_positions_(T, Idx1, X2, Ps, Total).
+
+% nc_blank_grid(+H, +W, +V, -Grid): an H-by-W grid filled with V.
+nc_blank_grid(H, W, V, Grid) :-
+% One filled row.
+    nc_row_of(W, V, Row),
+% Replicate it H times.
+    length(Grid, H), maplist(=(Row), Grid).
+
+% nc_placements(+Items, +RowBand, +ColBand, +RowY, +RowT, +ColX, +ColL, -Tops, -Lefts): origins.
+nc_placements([], [], [], _, _, _, _, [], []).
+% Compute one item's paint origin from its band anchors.
+nc_placements([It | Its], [Rb | Rbs], [Cb | Cbs], RowY, RowT, ColX, ColL, [Top | Tops], [Left | Lefts]) :-
+% The item's within-block anchor.
+    It = item(_, AR, AC, _, _, _),
+% Row-band start and top extent.
+    nth0(Rb, RowY, RY), nth0(Rb, RowT, RT),
+% Column-band start and left extent.
+    nth0(Cb, ColX, CX), nth0(Cb, ColL, CL),
+% Align the anchor to the shared band anchor line.
+    Top is RY+RT-AR, Left is CX+CL-AC,
+% Recurse over the remaining items.
+    nc_placements(Its, Rbs, Cbs, RowY, RowT, ColX, ColL, Tops, Lefts).
+
+% nc_paint_item(+Item, +Top, +Left, +Acc, -Acc2): overlay one block onto the canvas.
+nc_paint_item(item(Blk, _, _, _, _, _), Top, Left, Gin-P, Gout-P) :-
+% Overlay the block at its origin.
+    nc_overlay_grid(Gin, Top, Left, Blk, Gout).
+
+% nc_overlay_grid(+Grid, +Top, +Left, +Blk, -Out): stamp Blk at (Top,Left).
+nc_overlay_grid(Grid, Top, Left, Blk, Out) :-
+% Enumerate the grid rows.
+    length(Grid, GH), GHm1 is GH-1, numlist(0, GHm1, Rs),
+% Block height.
+    length(Blk, BH),
+% Overlay row by row.
+    maplist(nc_overlay_row(Top, Left, Blk, BH), Rs, Grid, Out).
+
+% nc_overlay_row(+Top, +Left, +Blk, +BH, +R, +RowIn, -RowOut): overlay one row.
+nc_overlay_row(Top, Left, Blk, BH, R, RowIn, RowOut) :-
+% Only rows covered by the block change.
+    ( R >= Top, R < Top+BH
+% Pick the matching block row and overlay it.
+    ->  DY is R-Top, nth0(DY, Blk, BlkRow), nc_overlay_seg(RowIn, Left, BlkRow, RowOut)
+% Uncovered rows pass through.
+    ;   RowOut = RowIn ).
+
+% nc_overlay_seg(+RowIn, +Left, +BlkRow, -RowOut): overlay a row segment.
+nc_overlay_seg(RowIn, Left, BlkRow, RowOut) :-
+% Block width and canvas width.
+    length(BlkRow, BW), length(RowIn, RW), RWm1 is RW-1, numlist(0, RWm1, Cs),
+% Overlay cell by cell.
+    maplist(nc_seg_cell(Left, BlkRow, BW), Cs, RowIn, RowOut).
+
+% nc_seg_cell(+Left, +BlkRow, +BW, +C, +Vin, -Vout): overlay one cell.
+nc_seg_cell(Left, BlkRow, BW, C, Vin, Vout) :-
+% Cells inside the block window take the block value, others keep theirs.
+    ( C >= Left, C < Left+BW -> DX is C-Left, nth0(DX, BlkRow, Vout) ; Vout = Vin ).
+
+% nc_argmax_first(+Values, -DI): index of the first maximal value.
+nc_argmax_first([V0 | Vs], DI) :-
+% Scan the rest tracking the best index and value.
+    nc_argmax_first_(Vs, 1, 0, V0, DI).
+
+% nc_argmax_first_(+Values, +I, +BI, +BV, -DI): argmax accumulator.
+nc_argmax_first_([], _, BI, _, BI).
+% Update the best only on a strictly greater value (first wins ties).
+nc_argmax_first_([V | Vs], I, BI, BV, DI) :-
+% Keep or replace the running best.
+    ( V > BV -> BI1 = I, BV1 = V ; BI1 = BI, BV1 = BV ),
+% Advance the index and recurse.
+    I1 is I+1, nc_argmax_first_(Vs, I1, BI1, BV1, DI).
+
+% nc_cluster(+Vals, -Bands): assign a band per value, splitting on gaps over 3.
+nc_cluster(Vals, Bands) :-
+% Pair each value with its original index.
+    length(Vals, N), Nm1 is N-1, numlist(0, Nm1, Idxs),
+% Build value-index pairs.
+    pairs_keys_values(Pairs, Vals, Idxs),
+% Sort the pairs by value (stable on ties).
+    keysort(Pairs, Sorted),
+% The smallest value opens band zero.
+    Sorted = [V0-I0 | Rest],
+% Assign bands across the sorted tail.
+    nc_bands(Rest, V0, 0, BandsRest),
+% Re-sort the index-band pairs back into item order.
+    keysort([I0-0 | BandsRest], ByIdx),
+% Drop the indices, keeping band per item.
+    pairs_values(ByIdx, Bands).
+
+% nc_bands(+SortedPairs, +Vprev, +Bprev, -IndexBandPairs): walk the sorted values.
+nc_bands([], _, _, []).
+% Open a new band whenever the value gap exceeds the threshold.
+nc_bands([V-I | T], Vprev, Bprev, [I-B | R]) :-
+% A gap over three cells starts a new band.
+    ( V - Vprev > 3.0 -> B is Bprev+1 ; B = Bprev ),
+% Recurse carrying the new value and band.
+    nc_bands(T, V, B, R).
+
+% nc_pad_lone_edges(+G0, +Bg, -G4): pad edges touched by a lone innermost dot.
+nc_pad_lone_edges(G0, Bg, G4) :-
+% Pad the top when an isolated cell sits on the first row.
+    ( nc_any_iso_row(G0, Bg, 0) -> nc_blank_row_of(G0, Bg, BR), G1 = [BR | G0] ; G1 = G0 ),
+% Recompute the last row index.
+    length(G1, H1), LR is H1-1,
+% Pad the bottom when an isolated cell sits on the last row.
+    ( nc_any_iso_row(G1, Bg, LR) -> nc_blank_row_of(G1, Bg, BR2), append(G1, [BR2], G2) ; G2 = G1 ),
+% Pad the left when an isolated cell sits on the first column.
+    ( nc_any_iso_col(G2, Bg, 0) -> maplist(nc_prepend(Bg), G2, G3) ; G3 = G2 ),
+% Recompute the last column index.
+    nc_dims(G3, _, W3), LC is W3-1,
+% Pad the right when an isolated cell sits on the last column.
+    ( nc_any_iso_col(G3, Bg, LC) -> maplist(nc_append(Bg), G3, G4) ; G4 = G3 ).
+
+% nc_blank_row_of(+G, +Bg, -Row): a background-filled row as wide as G.
+nc_blank_row_of(G, Bg, Row) :-
+% Grid width.
+    nc_dims(G, _, W),
+% Row of background cells.
+    nc_row_of(W, Bg, Row).
+
+% nc_prepend(+Bg, +Row, -Row2): add a background cell at the row's front.
+nc_prepend(Bg, Row, [Bg | Row]).
+
+% nc_append(+Bg, +Row, -Row2): add a background cell at the row's end.
+nc_append(Bg, Row, R2) :-
+% Append the trailing background cell.
+    append(Row, [Bg], R2).
+
+% nc_iso(+G, +Bg, +R, +C): cell (R,C) is a non-background cell with no like neighbour.
+nc_iso(G, Bg, R, C) :-
+% Read the cell value.
+    nc_cell(G, R, C, V),
+% It must not be the background.
+    V =\= Bg,
+% Grid dimensions.
+    nc_dims(G, H, W),
+% No orthogonal neighbour may share its colour.
+    \+ ( member(DR-DC, [1-0, -1-0, 0-1, 0- -1]),
+         NR is R+DR, NC is C+DC, NR >= 0, NR < H, NC >= 0, NC < W, nc_cell(G, NR, NC, V) ).
+
+% nc_any_iso_row(+G, +Bg, +R): some cell in row R is isolated.
+nc_any_iso_row(G, Bg, R) :-
+% Grid width.
+    nc_dims(G, _, W), Wm1 is W-1,
+% Succeed on the first isolated cell in the row.
+    between(0, Wm1, C), nc_iso(G, Bg, R, C), !.
+
+% nc_any_iso_col(+G, +Bg, +C): some cell in column C is isolated.
+nc_any_iso_col(G, Bg, C) :-
+% Grid height.
+    nc_dims(G, H, _), Hm1 is H-1,
+% Succeed on the first isolated cell in the column.
+    between(0, Hm1, R), nc_iso(G, Bg, R, C), !.
