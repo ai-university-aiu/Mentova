@@ -25,5 +25,5 @@ DATA_DIR="${2:-${REPO_ROOT}/data/chat_db}"
 
 exec swipl \
   -l "${REPO_ROOT}/src/mentova/mentova_chat.pl" \
-  -g "mc_db_init('${DATA_DIR}'), mc_start_server(${PORT}), thread_get_message(shutdown)" \
+  -g "mc_chat_main('${DATA_DIR}', ${PORT}), thread_get_message(shutdown)" \
   -t halt
