@@ -1,0 +1,15 @@
+[Unit]
+Description=Mentova Web Chat Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ccaitwo/Mentova
+ExecStart=/usr/bin/bash /home/ccaitwo/Mentova/bin/mentova_chat_start.sh 8088
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
