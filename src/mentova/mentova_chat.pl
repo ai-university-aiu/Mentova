@@ -15,7 +15,9 @@
 % Declare this file as the 'mentova_chat' module and export its predicates.
 :- module(mentova_chat, [
     % mc_start_server/1 — start the HTTP server on the given port.
-    mc_start_server/1
+    mc_start_server/1,
+    % mc_chat_main/2 — convenience: init DB then start server (for -g flag).
+    mc_chat_main/2
 % Close the export list.
 ]).
 
@@ -32,9 +34,9 @@
 % Load the uuid library for generating session identifiers.
 :- use_module(library(uuid)).
 % Load the chat_db module for all persistence operations.
-:- use_module(chat_db).
+:- use_module('chat_db').
 % Load the mentova module for mentova_query/3.
-:- use_module(mentova).
+:- use_module('mentova').
 % Load the small_world module for knowledge base predicates.
 :- use_module('../../knowledge/small_world').
 
@@ -74,6 +76,14 @@ mc_start_server(Port) :-
     % Start the multi-threaded HTTP server on the given port.
     http_server(http_dispatch, [port(Port)]).
 
+% mc_chat_main(+DataDir, +Port) initialises the database and starts the server.
+% This is the convenience entry point for the -g flag, visible in user module.
+mc_chat_main(DataDir, Port) :-
+    % Initialise the persistence layer first.
+    mc_db_init(DataDir),
+    % Then start the HTTP server on the requested port.
+    mc_start_server(Port).
+
 % ------------------------------------------------------------------
 % Static page handlers
 % ------------------------------------------------------------------
@@ -82,15 +92,15 @@ mc_start_server(Port) :-
 mc_handle_index(Request) :-
     % Resolve the path to the assets/chat/index.html file.
     mc_asset_file('chat/index.html', FilePath),
-    % Serve the file with the correct MIME type.
-    http_reply_file(FilePath, [], Request).
+    % Serve the file; unsafe(true) allows absolute paths outside aliases.
+    http_reply_file(FilePath, [unsafe(true)], Request).
 
 % mc_handle_mentor_page/1 serves the mentor chat page.
 mc_handle_mentor_page(Request) :-
     % Resolve the path to the assets/chat/mentor.html file.
     mc_asset_file('chat/mentor.html', FilePath),
-    % Serve the file with the correct MIME type.
-    http_reply_file(FilePath, [], Request).
+    % Serve the file; unsafe(true) allows absolute paths outside aliases.
+    http_reply_file(FilePath, [unsafe(true)], Request).
 
 % mc_handle_assets/1 serves static assets from the assets/ directory.
 mc_handle_assets(Request) :-
@@ -375,34 +385,75 @@ mc_parse_query(Msg, Query) :-
 
 % mc_match_pattern/2 tries to match the lowercased message to a query term.
 mc_match_pattern(Lower, is_a(Subject, Object)) :-
-    % Match "is a X a Y?" or "is X Y?" patterns.
-    (   sub_string(Lower, _, _, _, "is a "),
-        atomic_list_concat(Parts, 'is a ', Lower),
-        Parts = [_, Rest|_],
-        mc_extract_two_words(Rest, Subject, Object)
-    ;   sub_string(Lower, _, _, _, "is "),
-        atomic_list_concat(Parts, 'is ', Lower),
-        Parts = [_, Rest|_],
-        mc_extract_two_words(Rest, Subject, Object)
-    ).
-% Match "what is a X?" or "what is X?" patterns.
+    % Match "is X a Y?" patterns (skip article "a" or "an" between subject and object).
+    sub_string(Lower, _, _, _, "is "),
+    split_string(Lower, " \t\n?.!,", " \t\n?.!,", AllWords),
+    include([P]>>(P \= ""), AllWords, Words),
+    % Remove leading "is" (and optionally "a" or "an" as article for subject).
+    mc_isa_words(Words, Subject, Object).
+
+% mc_isa_words/3 extracts subject and object from the word list after removing "is".
+mc_isa_words(Words, Subject, Object) :-
+    % Drop any leading "is", then skip articles "a" and "an" for subject.
+    ( Words = ["is"|R1] ; Words = [_,"is"|R1] ),
+    mc_skip_article(R1, [SubjectStr|R2]),
+    atom_string(Subject, SubjectStr),
+    % Skip article before object word.
+    mc_skip_article(R2, [ObjectStr|_]),
+    ObjectStr \= "",
+    atom_string(Object, ObjectStr).
+% Match "what is a X?" or "what is X?" patterns — skip article after "what is".
 mc_match_pattern(Lower, what_is(Subject)) :-
     sub_string(Lower, _, _, _, "what is"),
-    atomic_list_concat(Parts, 'what is', Lower),
-    Parts = [_, Rest|_],
-    mc_extract_first_word(Rest, Subject).
-% Match "can X do Y?" or "can a X Y?" patterns.
+    split_string(Lower, " \t\n?.!,", " \t\n?.!,", AllW),
+    include([P]>>(P \= ""), AllW, Words),
+    mc_what_is_words(Words, Subject).
+
+% mc_what_is_words extracts subject after "what", "is", skipping articles.
+mc_what_is_words(Words, Subject) :-
+    % Drop words until after "is".
+    append(_, ["is"|After], Words),
+    mc_skip_article(After, [SubjectStr|_]),
+    SubjectStr \= "",
+    atom_string(Subject, SubjectStr).
+
+% Match "can a X Y?" or "can X Y?" patterns — skip article after "can".
 mc_match_pattern(Lower, capable_of(Subject, Action)) :-
     sub_string(Lower, _, _, _, "can "),
-    atomic_list_concat(Parts, 'can ', Lower),
-    Parts = [_, Rest|_],
-    mc_extract_two_words(Rest, Subject, Action).
-% Match "what can X do?" patterns.
+    split_string(Lower, " \t\n?.!,", " \t\n?.!,", AllW),
+    include([P]>>(P \= ""), AllW, Words),
+    mc_can_words(Words, Subject, Action).
+
+% mc_can_words extracts subject and action after "can", skipping articles.
+mc_can_words(Words, Subject, Action) :-
+    % Drop words until after "can".
+    append(_, ["can"|After], Words),
+    mc_skip_article(After, [SubjectStr|Rest]),
+    SubjectStr \= "",
+    atom_string(Subject, SubjectStr),
+    % Skip "do", "does", "be" etc. if present before action.
+    mc_skip_aux(Rest, [ActionStr|_]),
+    ActionStr \= "",
+    atom_string(Action, ActionStr).
+
+% mc_skip_aux/2 skips common auxiliary words before the action.
+mc_skip_aux(["do"|Rest], Rest) :- !.
+% Skip "does" auxiliary word.
+mc_skip_aux(["does"|Rest], Rest) :- !.
+% Skip "be" auxiliary word.
+mc_skip_aux(["be"|Rest], Rest) :- !.
+% No auxiliary to skip.
+mc_skip_aux(List, List).
+
+% Match "what can X do?" patterns — skip article after "can".
 mc_match_pattern(Lower, what_can(Subject)) :-
     sub_string(Lower, _, _, _, "what can"),
-    atomic_list_concat(Parts, 'what can', Lower),
-    Parts = [_, Rest|_],
-    mc_extract_first_word(Rest, Subject).
+    split_string(Lower, " \t\n?.!,", " \t\n?.!,", AllW),
+    include([P]>>(P \= ""), AllW, Words),
+    append(_, ["can"|After], Words),
+    mc_skip_article(After, [SubjectStr|_]),
+    SubjectStr \= "",
+    atom_string(Subject, SubjectStr).
 % Match "does X cause Y?" or "why does X cause Y?" patterns.
 mc_match_pattern(Lower, causes(Cause, Effect)) :-
     sub_string(Lower, _, _, _, "cause"),
@@ -439,10 +490,17 @@ mc_extract_last_word(Str, Word) :-
     !,
     atom_string(Word, P).
 
+% mc_skip_article/2 skips "a" or "an" at the head of a word list.
+mc_skip_article(["a"|Rest], Rest) :- !.
+% Skip "an" article at head of word list.
+mc_skip_article(["an"|Rest], Rest) :- !.
+% If no article, return the list unchanged.
+mc_skip_article(List, List).
+
 % mc_extract_two_words/3 extracts the first two non-empty words.
 mc_extract_two_words(Str, W1, W2) :-
-    % Split on spaces and punctuation.
-    split_string(Str, " \t\n?.!,a", " \t\n?.!,", Parts),
+    % Split on whitespace and punctuation only (no letters).
+    split_string(Str, " \t\n?.!,", " \t\n?.!,", Parts),
     % Find all non-empty parts.
     include([P]>>(P \= ""), Parts, NonEmpty),
     % Get the first two.
@@ -474,10 +532,10 @@ mc_execute_query(what_is(Subject), Reply, Just) :-
     ;   mc_format_what_is_reply(Subject, Facts, Reply, Just)
     ).
 mc_execute_query(capable_of(Subject, Action), Reply, Just) :-
-    % Check whether Subject is capable_of Action.
-    (   capable_of(Subject, Action)
+    % Use mentova_query to handle both direct and is_a-chain capable_of.
+    (   mentova:mentova_query(deductive, capable_of(Subject, Action), answer(yes, J))
     ->  format(string(Reply), "Yes, ~w can ~w.", [Subject, Action]),
-        format(string(Just), "I know this because capable_of(~w, ~w) is in my knowledge base.", [Subject, Action])
+        mc_format_just(J, Just)
     ;   format(string(Reply), "I have not learned whether ~w can ~w yet, so I do not want to guess.", [Subject, Action]),
         Just = ""
     ).
@@ -525,6 +583,17 @@ mc_gather_facts(Subject, Facts) :-
     findall(at_location(Subject, L), at_location(Subject, L), Locs),
     % Combine all facts.
     append([IsAs, Props, Caps, Locs], Facts).
+
+% mc_format_just/2 converts a justification term to a human-readable string.
+mc_format_just(just(S, capable_of, A, via_isa), Just) :-
+    % Subject can do Action because it inherits from a parent that can.
+    format(string(Just), "~w can ~w because it inherits this ability.", [S, A]).
+% Direct capable_of justification.
+mc_format_just(just(S, capable_of, A, direct), Just) :-
+    format(string(Just), "~w can ~w directly.", [S, A]).
+% Catch-all: format the justification term as text.
+mc_format_just(J, Just) :-
+    format(string(Just), "~w", [J]).
 
 % mc_format_is_a_reply/4 formats a positive is_a reply.
 mc_format_is_a_reply(Subject, Object, Reply, Just) :-
