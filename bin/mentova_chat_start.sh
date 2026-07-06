@@ -23,6 +23,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DATA_DIR="${2:-${REPO_ROOT}/data/chat_db}"
 
+echo "Open your browser at: http://localhost:${PORT}/"
+echo "Mentor panel:         http://localhost:${PORT}/mentor"
+echo "Press Ctrl+C to stop."
+echo ""
+
 exec swipl \
   -l "${REPO_ROOT}/src/mentova/mentova_chat.pl" \
   -g "mc_chat_main('${DATA_DIR}', ${PORT}), thread_get_message(shutdown)" \
