@@ -390,6 +390,13 @@ body {
   margin-top: 0.75rem;
 }
 
+.mc-recording-notice {
+  font-size: 0.72rem;
+  color: var(--text-hint);
+  text-align: center;
+  margin-top: 0.4rem;
+}
+
 .mc-input {
   flex: 1;
   padding: 0.55rem 0.75rem;
