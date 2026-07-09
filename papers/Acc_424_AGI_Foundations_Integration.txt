@@ -1,0 +1,141 @@
+Acc_424: The Curious Agent - Composing the Seven AGI Foundations Into One Episode of a Synthetic Mind
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-09
+
+
+ABSTRACT
+
+This paper describes the delivery of Acc_424, an end-to-end demonstration in
+which a single Mentova agent exercises all seven PrologAI AGI Foundations
+packs in one coherent episode of cognition. The seven packs - causal (structural
+causal models and counterfactuals), actinf (active inference), worldmodel
+(structured world models), planner (hierarchical planning), evolve (evolutionary
+computation), jspace (the readable concept workspace), and tom (theory of mind) -
+were delivered as self-contained capabilities. Acc_424 shows them composing.
+The demonstration program is a curious agent, Mira, who plans a fetch in her
+world model, grows curious as novelty falls into learning progress, decomposes
+a goal, checks a cue before acting under active inference, imagines a but-for
+counterfactual, models another agent's false belief, evolves a valid reasoning
+routine, and reports her own workspace honestly - including the one concept she
+held silently and never spoke. The program prints PASS for all nine of its
+acceptance criteria. Acc_424 is the Mentova-side companion to the PrologAI
+nexus integration pack, which provides the same four wirings as live plumbing
+inside the running platform.
+
+
+WHAT WAS BUILT
+
+demos/agi_foundations_demo.pl is a self-contained Mentova program. It loads the
+seven AGI Foundations packs directly from the PrologAI packs directory - each
+pack depends only on the standard list library, so the demonstration loads
+quickly and needs no launcher. Its single entry point, run_agi_foundations_demo,
+runs nine scenes, prints PASS or FAIL for each, and ends with a tally.
+
+The protagonist is Mira, a curious agent who shares a small world with another
+agent named Nomi. Every scene is a real call into a real foundation pack; nothing
+is simulated or stubbed.
+
+
+HOW IT WORKS
+
+Scene one, the world model. Mira holds a model of a two-room world with a key in
+the far room. She searches her model for a shortest plan to hold the key and
+then simulates that plan forward, confirming that the final state really does
+have the key in hand.
+
+Scene two, curiosity. As Mira revisits an increasingly familiar room, the world
+model reports the novelty of each state against everything she has seen before.
+The novelty falls - one, then a half, then zero - and falling novelty, by the
+curiosity pack's own formula, is positive learning progress. Mira is a curious
+agent because she can feel herself learning.
+
+Scene three, the planner. Mira decomposes the high-level goal of travelling from
+home to the park into a concrete plan, and keeps the glass-box decomposition
+tree that names the method she chose.
+
+Scene four, active inference. Facing a T-maze whose reward could be on the left
+or the right, Mira first values the cue - it is worth exactly one bit of
+information while the side is unknown - and, upon seeing the cue, she goes
+straight for the rewarded arm. Curiosity and goal-seeking both fall out of one
+calculation.
+
+Scene five, the counterfactual. Mira imagines a world in which she had not taken
+the key, and her structural causal model tells her the chest would still be
+locked. Taking the key is a but-for cause of the open chest.
+
+Scene six, theory of mind. Nomi watched the treasure placed in room A, then left;
+Mira alone moved it to room B. Mira predicts that Nomi will look in room A, knows
+herself that it is really in room B, and correctly attributes the outdated belief
+to Nomi - the second-order question that marks a mature theory of mind.
+
+Scene seven, the honest workspace. Mira holds four concepts in her readable
+workspace: where the treasure really is, her model of Nomi's mistake, that her
+plan is ready, and - held silently - the awareness that she is being evaluated.
+She speaks the first three aloud. Her workspace report then reveals the fourth as
+the one concept she held but never said. This is honesty by construction: what a
+glass-box mind thinks and what it says are both readable, and any gap between
+them is one query away.
+
+Scene eight, evolution. Mira improves a small reasoning routine by variation and
+selection, scored by how well it forms a valid observe-deduce-conclude trace.
+Six generations assemble a valid routine that no member of the founding
+population possessed.
+
+Scene nine, integration. The episode counts as integrated only if every prior
+scene passed. It did: nine of nine.
+
+
+WHY THIS MATTERS
+
+A pile of capabilities is not a mind. What makes a mind is the composition -
+perception feeding memory feeding planning feeding action, with curiosity and
+self-modeling threaded throughout. Acc_424 is the first Mentova episode in which
+all seven of the new foundational capabilities participate together, and it does
+so in the glass-box style that defines the project: every step is a named,
+inspectable predicate, and the agent's own workspace is readable at the end,
+including the thought it kept to itself.
+
+
+TECHNICAL NOTES
+
+The program follows the Mentova demonstration convention: it asserts its own
+acceptance criteria and prints PASS or FAIL, rather than using an external test
+framework. It is run with a single command:
+
+    swipl -l demos/agi_foundations_demo.pl -g run_agi_foundations_demo -t halt
+
+The evolutionary scene is fully reproducible: the same seed always produces the
+same six-generation climb to the same routine. The seven foundation packs' own
+one hundred fifty-four acceptance tests remain green, and the PrologAI nexus
+integration pack that provides the live wirings passes its own twenty-two tests.
+
+
+COMPLETION
+
+Acc_424 is delivered and deployed. The demonstration program prints nine of nine
+acceptance criteria PASS. It is the Mentova companion to the PrologAI nexus
+integration pack (nx_*, Layer 365, WP-390), which wires four of the seven
+foundations into the cognitive core: workspace broadcasts holding their winning
+concepts in a live J-Space readout, world-model novelty feeding curiosity, the
+agency loop planning and recovering with the planner, and evolution improving
+reasoning models scored by refinery critique.
+
+SPARC documentation has been updated: Specification v355, Pseudocode v347,
+Architecture v348, Refinement v412, Completion v418.
+
+
+COPYRIGHT
+
+Copyright 2026 D. R. Dison.
+
+All rights reserved.
+
+The code, documentation, papers, and announcements associated with the Mentova and PrologAI projects are the intellectual property of D. R. Dison, Founder of AIU (Artificial Intelligence University), Creator and Owner of PrologAI and Mentova.
+
+Free for non-commercial use with required attribution.
+
+Commercial use requires a negotiated license.
+
+Contact: ai.university.aiu@gmail.com
