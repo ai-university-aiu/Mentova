@@ -397,6 +397,15 @@ body {
   margin-top: 0.4rem;
 }
 
+.mc-terms-link {
+  color: var(--text-hint);
+  text-underline-offset: 2px;
+}
+
+.mc-terms-link:hover {
+  color: var(--border-just);
+}
+
 .mc-input {
   flex: 1;
   padding: 0.55rem 0.75rem;
