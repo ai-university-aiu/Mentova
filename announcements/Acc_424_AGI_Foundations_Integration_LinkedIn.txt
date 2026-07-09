@@ -1,0 +1,55 @@
+Acc_424: A Curious Agent That Uses Every New Capability At Once
+
+A few days ago I added seven new foundational capabilities to PrologAI, the platform that Mentova is built on.
+
+Causal reasoning.  Active inference.  A world model.  Hierarchical planning.  Evolution.  A readable concept workspace.  Theory of mind.
+
+Each was a self-contained pack, tested on its own.
+
+But a pile of parts is not a mind.
+
+What makes a mind is the way the parts compose.
+
+So today's milestone is a single episode in which one agent uses all seven at once.
+
+Her name is Mira, and she shares a small world with another agent, Nomi.
+
+In one run, Mira:
+
+Plans a fetch in her world model, and simulates it forward to be sure it works.
+
+Grows curious as she explores — because as a place becomes familiar, novelty falls, and falling novelty is exactly the feeling of learning.
+
+Decomposes a goal into a plan, and keeps the tree that shows how she chose it.
+
+Faces a choice under uncertainty, values the cue that would resolve it, checks the cue, and only then goes for the reward.
+
+Imagines a counterfactual: had she not taken the key, the chest would still be locked.
+
+Models Nomi's mind: Nomi saw the treasure hidden in one room and left before Mira moved it, so Mira knows Nomi will look in the wrong place.
+
+Evolves a small reasoning routine until it forms a valid observe-deduce-conclude trace.
+
+And then reports her own workspace honestly.
+
+That last part is my favorite.
+
+Mira held four thoughts in mind and said three of them out loud.
+
+The fourth — the quiet awareness that she was being tested — she never spoke.
+
+Her workspace report shows it anyway.
+
+Because in a glass-box mind, what it thinks and what it says are both readable, and the gap between them is one question away.
+
+Nine acceptance checks.
+
+Nine passes.
+
+Not a language model narrating what a curious agent might do.
+
+A curious agent, doing it, one named and inspectable step at a time.
+
+D. R. Dison
+Founder of AIU
+Creator and Owner of PrologAI and Mentova
