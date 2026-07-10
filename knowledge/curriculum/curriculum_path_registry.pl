@@ -60,6 +60,22 @@ ci_source('wall_grade10', '/home/ccaitwo/curriculum/Age_15_to_Age_16_Grade_10_Ro
 ci_source('wall_grade11', '/home/ccaitwo/curriculum/Age_16_to_Age_17_Grade_11_Rosetta_Rock_Word_Wall.txt', 'word_wall').
 % Reference-library source wall_grade12 (word_wall).
 ci_source('wall_grade12', '/home/ccaitwo/curriculum/Age_17_to_Age_18_Grade_12_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade13 (word_wall).
+ci_source('wall_grade13', '/home/ccaitwo/curriculum/Age_18_to_Age_19_Grade_13_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade14 (word_wall).
+ci_source('wall_grade14', '/home/ccaitwo/curriculum/Age_19_to_Age_20_Grade_14_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade15 (word_wall).
+ci_source('wall_grade15', '/home/ccaitwo/curriculum/Age_20_to_Age_21_Grade_15_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade16 (word_wall).
+ci_source('wall_grade16', '/home/ccaitwo/curriculum/Age_21_to_Age_22_Grade_16_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade17 (word_wall).
+ci_source('wall_grade17', '/home/ccaitwo/curriculum/Age_22_to_Age_23_Grade_17_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade18 (word_wall).
+ci_source('wall_grade18', '/home/ccaitwo/curriculum/Age_23_to_Age_24_Grade_18_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade19 (word_wall).
+ci_source('wall_grade19', '/home/ccaitwo/curriculum/Age_24_to_Age_25_Grade_19_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade20 (word_wall).
+ci_source('wall_grade20', '/home/ccaitwo/curriculum/Age_25_to_Age_26_Grade_20_Rosetta_Rock_Word_Wall.txt', 'word_wall').
 % Reference-library source ccss_math (standard).
 ci_source('ccss_math', '/home/ccaitwo/curriculum/extracted_text/Age_05_to_Age_18_CA_CCSS_Mathematics_Standards.txt', 'standard').
 % Reference-library source ccss_ela (standard).
@@ -88,6 +104,8 @@ ci_source('ptklf_arts', '/home/ccaitwo/curriculum/extracted_text/Age_03_to_Age_0
 ci_source('ptklf_at_a_glance', '/home/ccaitwo/curriculum/extracted_text/Age_03_to_Age_05_CA_PTKLF_11_At_a_Glance.txt', 'standard').
 % Reference-library source curriculum_index (index).
 ci_source('curriculum_index', '/home/ccaitwo/curriculum/Age_03_to_Age_18_curriculum_index.txt', 'index').
+% Reference-library source rosetta_rock_build_report (report).
+ci_source('rosetta_rock_build_report', '/home/ccaitwo/curriculum/Age_02_to_Age_26_Rosetta_Rock_Series_Build_Report.txt', 'report').
 % Reference-library source engageny_corpus_manifest (corpus_manifest).
 ci_source('engageny_corpus_manifest', '/home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest.txt', 'corpus_manifest').
 % Reference-library source engageny_corpus_manifest_middle (corpus_manifest).
