@@ -54,8 +54,11 @@
 
 % Load the path registry that maps SourceIds to absolute paths.
 :- use_module('curriculum_path_registry', [ci_source/3, ci_corpus_root/1]).
-% Load the generated understood facts and sound CROs.
-:- use_module('curriculum_elementary_facts', [ci_fact/4, ci_cro/5]).
+% Load the generated understood facts and sound CROs (elementary band).
+% Loaded for their own module namespace; aggregated below by ci_any_fact/4.
+:- use_module('curriculum_elementary_facts', []).
+% Load the generated understood facts (Middle School / Junior High band).
+:- use_module('curriculum_middle_facts', []).
 % Load the Reference Library for registration, search, and citation reading.
 :- use_module('../../src/mentova/reference_library',
               [rl_register/2, rl_search/2, rl_citation_text/2]).
@@ -64,6 +67,31 @@
 
 % The default nexus address for the curriculum's understood facts.
 ci_default_nexus('locus://mentova/curriculum').
+
+% ---------------------------------------------------------------------------
+% ci_any_fact/4 and ci_any_cro/5 — union the per-band generated fact modules
+% so every query and the anchoring loop see all bands (elementary + middle)
+% as one body of knowledge. New bands are added by loading one more module
+% and adding one clause here.
+% ---------------------------------------------------------------------------
+
+% Define ci_any_fact: an understood fact from the elementary band.
+ci_any_fact(Grade, Relation, Args, Citation) :-
+    % Read it from the elementary facts module.
+    curriculum_elementary_facts:ci_fact(Grade, Relation, Args, Citation).
+% Define ci_any_fact: an understood fact from the middle-school band.
+ci_any_fact(Grade, Relation, Args, Citation) :-
+    % Read it from the middle-school facts module.
+    curriculum_middle_facts:ci_fact(Grade, Relation, Args, Citation).
+
+% Define ci_any_cro: a sound CRO from the elementary band.
+ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
+    % Read it from the elementary facts module.
+    curriculum_elementary_facts:ci_cro(Grade, Kind, Subject, Sound, Citation).
+% Define ci_any_cro: a sound CRO from the middle-school band.
+ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
+    % Read it from the middle-school facts module.
+    curriculum_middle_facts:ci_cro(Grade, Kind, Subject, Sound, Citation).
 
 % ---------------------------------------------------------------------------
 % ci_register_sources/0 — make every source known to the Reference Library
@@ -126,7 +154,7 @@ ci_anchor_facts(Count) :-
     (   ci_defined(node_facts:anchor_node(_, _, _, _))
     % Anchor each fact with its grade and citation as referents.
     ->  aggregate_all(count,
-            ( ci_fact(Grade, Relation, Args, Citation),
+            ( ci_any_fact(Grade, Relation, Args, Citation),
               % Anchor one fact; a per-fact error is tolerated, not fatal.
               catch(node_facts:anchor_node(Relation, Args,
                                            [grade(Grade), Citation], _), _, fail) ),
@@ -140,7 +168,7 @@ ci_assert_cros(Count) :-
     (   ci_defined(co_core:co_new_cro(_, _, _, _, _, _, _, _))
     % Build one CRO per sound relation, carrying the citation as provenance.
     ->  aggregate_all(count,
-            ( ci_cro(Grade, makes_sound, Subject, Sound, Citation),
+            ( ci_any_cro(Grade, makes_sound, Subject, Sound, Citation),
               % A subject "makes" a sound: cause -> effect, high strength.
               catch(co_core:co_new_cro([makes(Subject)], [sound(Sound)],
                         temporal(0, 0, instant), sufficient, 0.9,
@@ -173,36 +201,36 @@ ci_chat_bootstrap :-
 % Define ci_word: Word is taught at grade level Grade.
 ci_word(Grade, Word) :-
     % A vocabulary fact names the word and its category.
-    ci_fact(Grade, vocabulary, [Word, _Category], _).
+    ci_any_fact(Grade, vocabulary, [Word, _Category], _).
 
 % Define ci_words_for_grade: the sorted, de-duplicated vocabulary of a grade.
 ci_words_for_grade(Grade, Words) :-
     % Collect every word taught at this grade.
-    findall(W, ci_fact(Grade, vocabulary, [W, _], _), Raw),
+    findall(W, ci_any_fact(Grade, vocabulary, [W, _], _), Raw),
     % Sort and de-duplicate for a stable answer.
     sort(Raw, Words).
 
 % Define ci_grade_of_word: the grade levels at which a word appears.
 ci_grade_of_word(Word, Grades) :-
     % Collect every grade whose vocabulary includes the word.
-    findall(G, ci_fact(G, vocabulary, [Word, _], _), Raw),
+    findall(G, ci_any_fact(G, vocabulary, [Word, _], _), Raw),
     % Sort and de-duplicate the grade list.
     sort(Raw, Grades).
 
 % Define ci_standard: a CCSS mathematics Domain (with Code) for a Grade.
 ci_standard(Grade, Domain, Code) :-
     % A math_domain fact names the domain and its standards code.
-    ci_fact(Grade, math_domain, [Domain, Code], _).
+    ci_any_fact(Grade, math_domain, [Domain, Code], _).
 
 % Define ci_ptklf: a PTKLF Foundation named within a Domain by identifier.
 ci_ptklf(Domain, FoundationId, Name) :-
     % A ptklf_foundation fact belongs to the preschool/TK band.
-    ci_fact(preschool_tk, ptklf_foundation, [Domain, FoundationId, Name], _).
+    ci_any_fact(preschool_tk, ptklf_foundation, [Domain, FoundationId, Name], _).
 
 % Define ci_sound: Subject makes Sound, from a learned sound CRO.
 ci_sound(Subject, Sound) :-
     % Read the subject and sound off a makes_sound relation.
-    ci_cro(_Grade, makes_sound, Subject, Sound, _).
+    ci_any_cro(_Grade, makes_sound, Subject, Sound, _).
 
 % Define ci_search: search every registered source, streamed and capped.
 ci_search(Query, Hits) :-
@@ -212,7 +240,7 @@ ci_search(Query, Hits) :-
 % Define ci_why: the honest reason a word is known — its cited source line.
 ci_why(Word, source(SourceId, Line), Text) :-
     % Find a vocabulary fact for the word and read its citation.
-    ci_fact(_Grade, vocabulary, [Word, _], source(SourceId, Line)),
+    ci_any_fact(_Grade, vocabulary, [Word, _], source(SourceId, Line)),
     % Resolve the citation to the exact line of source text.
     ci_cite(source(SourceId, Line), Text),
     % Commit to the first citation found.
@@ -234,8 +262,8 @@ ci_cite(source(SourceId, Line), Text) :-
 % Define ci_stats: gather counts of facts, CROs, and sources.
 ci_stats(stats(Facts, Cros, Sources)) :-
     % Count every understood fact.
-    aggregate_all(count, ci_fact(_, _, _, _), Facts),
+    aggregate_all(count, ci_any_fact(_, _, _, _), Facts),
     % Count every sound CRO.
-    aggregate_all(count, ci_cro(_, _, _, _, _), Cros),
+    aggregate_all(count, ci_any_cro(_, _, _, _, _), Cros),
     % Count every registered source.
     aggregate_all(count, ci_source(_, _, _), Sources).
