@@ -17,3 +17,7 @@ data/refinery/
 # Large ontology and encyclopedia downloads.
 *.bz2
 *.dump
+
+# ARC-AGI-3 solo attempt reports (runtime-generated; keep the folder, ignore the reports)
+ARC-AGI-3_Solo_Attempts/*.txt
+!ARC-AGI-3_Solo_Attempts/README.txt

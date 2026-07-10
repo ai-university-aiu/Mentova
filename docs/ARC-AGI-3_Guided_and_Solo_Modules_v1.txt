@@ -1,0 +1,175 @@
+ARC-AGI-3 GUIDED AND SOLO SUB-PROJECTS - WORK SUMMARY AND RESULTS
+
+Version 1. Dated 2026-07-10.
+
+
+PURPOSE OF THIS DOCUMENT
+
+This document describes two new sub-projects added to the Mentova ARC-AGI-3 Chat page, and the buttons, dropdown, and record page that drive them.
+
+ARC-AGI-3 stands for Abstraction and Reasoning Corpus for Artificial General Intelligence, version three.
+
+It is a set of interactive games with no instructions, in which a player must explore, learn the rules, and reach the goal.
+
+The two sub-projects are named ARC-AGI-3_Guided and ARC-AGI-3_Solo, and the key idea is that both of them see and read exactly the same learnings.
+
+A note on honesty is made up front: no benchmark score is claimed anywhere in this work.
+
+
+THE TWO SUB-PROJECTS
+
+ARC-AGI-3_Guided is the human-in-the-loop sub-project.
+
+It uses the ARC-AGI-3 Chat page to receive guidance from a human, who types clues like "that looks like a key" or "don't touch that."
+
+Each clue is grounded into a Causalontology assertion, where Causalontology is Mentova's model of cause and effect, and injected into the live game so Mentova learns from it.
+
+ARC-AGI-3_Solo is the unaided sub-project.
+
+It takes everything the guided sessions taught - the learnings held in the data lattice, in the Causalontology relations, and in the Jacobian Space (J-Space) - and runs the game environments with no direct human direction.
+
+The word solo here means Mentova plays alone, watched but not guided.
+
+Both sub-projects are implemented as named modules that delegate to one shared backend, so that whatever the guided side learns, the solo side reads back and plays from.
+
+The two module files are src slash mentova slash arc_agi_3_guided.pl and src slash mentova slash arc_agi_3_solo.pl.
+
+Each exposes a predicate that reads all of the shared learnings at once - the taught goal, the suggested-action priorities, the declared hazards, the object labels, the count of learned causal relations, and the Jacobian Lens reading of the workspace - so that "seeing and reading all learnings" is a concrete, testable capability.
+
+
+THE BUTTONS AND THE DROPDOWN
+
+Four controls were added at the bottom of the ARC-AGI-3 Chat page.
+
+• Button one, labelled Guided Mode.
+
+◦ The chat is functional and working, and Mentova listens and learns from the chat.
+
+◦ The ARC-AGI-3_Guided sub-project is the active one.
+
+• Button two, labelled Solo Mode.
+
+◦ The chat interface becomes greyed out, not clickable, and not usable, and any text that was in the chat is blanked out.
+
+◦ The ARC-AGI-3_Solo sub-project becomes active.
+
+◦ The upper half of the screen becomes a view-only window on what the system is doing, moment to moment.
+
+◦ Each of Mentova's movements shows up as a light-up button press on the upper game interface.
+
+• Button three, labelled Restart Game Environment.
+
+◦ It works in both Guided Mode and Solo Mode, using whichever mode is active at the time.
+
+◦ It starts at the beginning of the currently selected game environment.
+
+◦ Every time Restart is pressed in Solo Mode, Mentova does the best it can and then writes a report.
+
+• The drop-down list box, labelled Select ARC-AGI-3 Game Environment.
+
+◦ It displays the list of all available ARC-AGI-3 game environments and lets the user select one to be active.
+
+Below everything on the page is a link that reads "ARC-AGI-3 Solo Attempts Record."
+
+Clicking that link opens a separate page that lists the date-and-time-stamped report files.
+
+Clicking any of those file names opens that plain-text file for viewing in the web browser.
+
+
+THE SOLO ATTEMPT REPORTS
+
+When a solo attempt finishes, a plain-text report is written.
+
+The report file name is date-and-time-stamped, for example ARC-AGI-3_Solo_2026-07-10_14-19-42.txt.
+
+The reports are written to a subdirectory named ARC-AGI-3_Solo_Attempts.
+
+A note on the folder name: the request wrote "Attemps," which is a small spelling slip for "Attempts," so the corrected spelling ARC-AGI-3_Solo_Attempts was used.
+
+Each report records the game environment, the outcome, the number of steps, the moment-to-moment action trace, and the learnings the run drew on, including the Jacobian Lens reading.
+
+
+THE GAME ENVIRONMENTS
+
+Three local ARC-AGI-3-style environments were provided for the dropdown, each a working game.
+
+• The environment labelled ls20 is the locksmith - find the key, then open the door.
+
+◦ This is the fully-guided environment, the one the human clues are written for.
+
+• The environment labelled vc33 is a navigation game - steer the avatar to the goal cell.
+
+• The environment labelled ft09 is a signal game - raise a hidden counter until the level completes.
+
+These are local stand-ins named after the public ARC-AGI-3 game codes; they let the whole page be exercised and tested without the live servers.
+
+
+HOW THIS PLUGS INTO THE RUNNING SERVER
+
+An important fix was made along the way.
+
+The ARC-AGI-3 page's backend routes were previously loaded only by the acceptance demo, not by the running chat server.
+
+The chat server file now loads the ARC-AGI-3 backend and both sub-projects, so the page and all its endpoints work on the live server at port 8088.
+
+To run the server, from the Mentova directory:
+
+bash bin/mentova_chat_start.sh 8088
+
+Then open a web browser at http://localhost:8088/assets/arc/arc.html
+
+
+RESULTS
+
+Everything built here was tested, and the tests pass.
+
+The acceptance demonstration checks six criteria and prints PASS for all six.
+
+• Three ARC-AGI-3 game environments are selectable.
+
+• The mode switches between Guided and Solo.
+
+• Solo wins the signal game unaided and writes a report.
+
+• After guided teaching, Solo uses the learnings to win the locksmith game, and its report records the taught goal.
+
+• Both sub-projects read exactly the same shared learnings.
+
+• The solo attempts list is populated and a report is viewable.
+
+The clearest result is the fourth one.
+
+A human first taught Mentova, in Guided Mode, that a cell is a key, that picking up is worth doing, and that the door is the goal.
+
+Then, handed off to Solo Mode with no further input, Mentova used those learnings - the goal, the priority, and the labels held in the data lattice, the Causalontology, and the Jacobian Space - to win the locksmith level on its own.
+
+A separate in-process web test confirmed that every new endpoint responds and that both the chat page and the attempts record page serve correctly.
+
+The existing guided acceptance demonstration still passes all eight of its criteria, so nothing was broken.
+
+To run the new demonstration, from the Mentova directory:
+
+swipl -l demos/arc_solo_demo.pl -g run_arc_solo_demo -t halt
+
+
+DEFAULTS CHOSEN, AND WHY
+
+Because this work was carried out without stopping to ask questions, a few reasonable defaults were chosen, and they are recorded here.
+
+• Entering Solo Mode begins a fresh attempt immediately, so the view-only window is lively rather than idle; pressing Restart begins another attempt.
+
+• The solo action budget is sixty actions, after which the attempt ends and reports a best-effort result.
+
+• Solo does its best with whatever it has learned; on an environment it was never guided on, it explores but may not win within budget, which is the honest behaviour the benchmark is designed to expose.
+
+• No benchmark score is claimed, in keeping with the project rule of never announcing a result before it is measured.
+
+
+WHAT REMAINS FOR LIVE PLAY
+
+This work makes the Guided and Solo sub-projects fully functional on local game stand-ins.
+
+For a live attempt, the environments would be replaced by the real ARC-AGI-3 environments through the guarded protocol adapter, and the solo player would be strengthened with the exploration policy and the goal gradient already built in the ARC-AGI-3 Readiness suite, so that it wins unguided environments more often.
+
+
+END OF DOCUMENT

@@ -79,7 +79,31 @@
     % ma_why/1: the justification of the last action.
     ma_why/1,
     % ma_reset_guidance/0: clear all guidance and learning.
-    ma_reset_guidance/0
+    ma_reset_guidance/0,
+    % ma_mode/1: the active mode (guided | solo).
+    ma_mode/1,
+    % ma_set_mode/1: switch the active mode.
+    ma_set_mode/1,
+    % ma_selected_game/1: the selected game environment id.
+    ma_selected_game/1,
+    % ma_set_game/1: select a game environment.
+    ma_set_game/1,
+    % ma_game_info/2: a game environment id and its human title.
+    ma_game_info/2,
+    % ma_render/2: render the current frame of a selected environment.
+    ma_render/2,
+    % ma_restart/2: restart the selected environment in the active mode.
+    ma_restart/2,
+    % ma_solo_tick/1: advance the solo run one step, with telemetry.
+    ma_solo_tick/1,
+    % ma_solo_report/2: write a solo attempt report and return its filename.
+    ma_solo_report/2,
+    % ma_attempts_dir/1: the directory solo reports are written to.
+    ma_attempts_dir/1,
+    % ma_attempts_list/1: the solo attempt report filenames, newest first.
+    ma_attempts_list/1,
+    % ma_learnings/1: the shared learnings both sub-projects read.
+    ma_learnings/1
 ]).
 
 % Register the PrologAI Causalontology pack directories before any
@@ -97,6 +121,8 @@
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_learn/prolog')),
     % The planner.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_plan/prolog')),
+    % The Jacobian Space (J-Space) concept workspace the solo run holds learnings in.
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -111,6 +137,8 @@
 :- use_module(library(co_learn), [co_learn_preventive/2, co_avoid/1, co_learn_causal/2]).
 % Load the harness for curiosity choice and frame deltas.
 :- use_module(library(co_arc3), [co_arc3_choose/3, co_arc3_delta/3, co_arc3_reset/0]).
+% Load the Jacobian Space workspace so the solo run holds its learnings in J-Space.
+:- use_module(library(jspace), [js_open/1, js_hold/4, js_reading/2]).
 % Load the chat database: mentor auth and the teach queue.
 :- use_module('chat_db', [mc_db_init/1, mc_verify_session/2, mc_propose_fact/4, mc_approve_fact/2]).
 % Load the HTTP server framework, exactly as the chat uses it.
@@ -123,6 +151,8 @@
 :- use_module(library(http/http_parameters)).
 % Load list helpers.
 :- use_module(library(lists), [member/2, memberchk/2]).
+% Load aggregation for counting learned relations.
+:- use_module(library(aggregate), [aggregate_all/3]).
 
 % ---------------------------------------------------------------------------
 % ROUTES
@@ -138,6 +168,22 @@
 :- http_handler(root(api/arc/hint), ma_handle_hint, []).
 % The justification endpoint: why the last action.
 :- http_handler(root(api/arc/why), ma_handle_why, []).
+% The mode endpoint: read or switch Guided/Solo.
+:- http_handler(root(api/arc/mode), ma_handle_mode, []).
+% The game list endpoint: the selectable ARC-AGI-3 environments.
+:- http_handler(root(api/arc/games), ma_handle_games, []).
+% The selection endpoint: choose the active game environment.
+:- http_handler(root(api/arc/select), ma_handle_select, []).
+% The restart endpoint: restart the selected environment in the active mode.
+:- http_handler(root(api/arc/restart), ma_handle_restart, []).
+% The solo telemetry endpoint: advance one solo step and report what happened.
+:- http_handler(root(api/arc/solo/tick), ma_handle_solo_tick, []).
+% The attempts list endpoint: the solo report filenames as JSON.
+:- http_handler(root(api/arc/attempts), ma_handle_attempts, []).
+% The attempt view endpoint: one solo report as plain text.
+:- http_handler(root(api/arc/attempts/view), ma_handle_attempt_view, []).
+% The attempts record page: the separate listing page.
+:- http_handler(root(arc/attempts), ma_handle_attempts_page, []).
 
 % Define ma_db_init: attach the chat database this application reuses.
 ma_db_init(Dir) :-
@@ -296,6 +342,465 @@ ma_env(arc3_env(mentova_arc_chat:ma_game_reset,
                 mentova_arc_chat:ma_env_solved)).
 
 % ---------------------------------------------------------------------------
+% GAME ENVIRONMENT REGISTRY — the dropdown's selectable environments
+% ---------------------------------------------------------------------------
+% Three local ARC-AGI-3-style environments, each a working co_arc3 game. The
+% locksmith (ls20) is the fully-guided one; navigate (vc33) and signal (ft09)
+% are additional environments the solo player can attempt. Every environment
+% offers a uniform interface: render, reset, act, actions, and solved.
+
+% ma_game_info(?Id, ?Title): a game environment id and its human-readable title.
+ma_game_info(ls20, 'Locksmith — find the key, open the door (ls20 theme)').
+% The navigation environment.
+ma_game_info(vc33, 'Navigate — steer the avatar to the goal cell (vc33 theme)').
+% The signal environment.
+ma_game_info(ft09, 'Signal — raise the counter to complete the level (ft09 theme)').
+
+% ma_game_sel_/1: the selected game environment id.
+:- dynamic ma_game_sel_/1.
+
+% Define ma_selected_game: the selected environment, defaulting to the locksmith.
+ma_selected_game(Id) :-
+    % Read the selection, or fall back to the locksmith.
+    ( ma_game_sel_(Id) -> true ; Id = ls20 ).
+
+% Define ma_set_game: select a game environment and reset it to its start.
+ma_set_game(Id) :-
+    % The id must be a registered environment.
+    ma_game_info(Id, _),
+    % Replace any previous selection.
+    retractall(ma_game_sel_(_)),
+    % Record the new selection.
+    assertz(ma_game_sel_(Id)),
+    % Start the newly selected environment fresh.
+    ma_reset_env(Id, _),
+    % Selecting a game also ends any solo run in progress.
+    ma_solo_clear.
+
+% Uniform dispatch — render the current frame of an environment.
+% The locksmith renders from its own state.
+ma_render(ls20, Frame) :- ma_game_frame(Frame).
+% The navigation environment renders from the avatar position.
+ma_render(vc33, Frame) :- ma_nav_render(Frame).
+% The signal environment renders from the counter.
+ma_render(ft09, Frame) :- ma_sig_render(Frame).
+
+% Uniform dispatch — reset an environment and return its first frame.
+% The locksmith reset also clears its state.
+ma_reset_env(ls20, Frame) :- ma_game_reset(Frame).
+% The navigation reset places the avatar at the start.
+ma_reset_env(vc33, Frame) :- ma_nav_reset(Frame).
+% The signal reset zeroes the counter.
+ma_reset_env(ft09, Frame) :- ma_sig_reset(Frame).
+
+% Uniform dispatch — apply one action and return the next frame.
+% The locksmith mechanics.
+ma_act_env(ls20, Action, Frame) :- ma_env_act(Action, Frame).
+% The navigation mechanics.
+ma_act_env(vc33, Action, Frame) :- ma_nav_act(Action, Frame).
+% The signal mechanics.
+ma_act_env(ft09, Action, Frame) :- ma_sig_act(Action, Frame).
+
+% Uniform dispatch — the actions an environment affords.
+% The locksmith action set.
+ma_actions_env(ls20, As) :- ma_env_actions(As).
+% The navigation action set: the four moves.
+ma_actions_env(vc33, [action(up), action(down), action(left), action(right)]).
+% The signal action set: increment or idle.
+ma_actions_env(ft09, [action(pickup), action(up)]).
+
+% Uniform dispatch — whether an environment is solved.
+% The locksmith is solved when the door is open.
+ma_solved_env(ls20, Frame) :- ma_env_solved(Frame).
+% Navigation is solved when the avatar is on the goal.
+ma_solved_env(vc33, _) :- ma_nav_(R, C), ma_nav_goal(GR, GC), R =:= GR, C =:= GC.
+% Signal is solved when the counter reaches two.
+ma_solved_env(ft09, _) :- ma_sig_(L), L >= 2.
+
+% ---- The navigation environment (vc33) ----
+
+% ma_nav_/2: the avatar's (Row, Col).
+:- dynamic ma_nav_/2.
+% The avatar starts at the top-left.
+ma_nav_start(0, 0).
+% The goal is the bottom-right.
+ma_nav_goal(4, 4).
+
+% ma_nav_reset(-Frame): place the avatar at the start and render.
+ma_nav_reset(Frame) :-
+    % Forget any previous position.
+    retractall(ma_nav_(_, _)),
+    % Read the start.
+    ma_nav_start(R, C),
+    % Place the avatar.
+    assertz(ma_nav_(R, C)),
+    % Render.
+    ma_nav_render(Frame).
+
+% ma_nav_render(-Frame): a five-by-five grid with the avatar and the goal.
+ma_nav_render(Frame) :-
+    % The avatar position.
+    ma_nav_(AR, AC),
+    % The goal position.
+    ma_nav_goal(GR, GC),
+    % Build the grid row by row.
+    findall(Row,
+        ( between(0, 4, R),
+          findall(V,
+              ( between(0, 4, C), ma_nav_cell(R, C, AR, AC, GR, GC, V) ),
+              Row) ),
+        Frame).
+
+% ma_nav_cell(...): the avatar takes precedence, then the goal, then empty.
+ma_nav_cell(R, C, AR, AC, _, _, 3) :- R =:= AR, C =:= AC, !.
+% The goal cell.
+ma_nav_cell(R, C, _, _, GR, GC, 4) :- R =:= GR, C =:= GC, !.
+% Empty otherwise.
+ma_nav_cell(_, _, _, _, _, _, 0).
+
+% ma_nav_act(+Action, -Frame): move the avatar, clamped to the grid.
+ma_nav_act(Action, Frame) :-
+    % Read the position.
+    retract(ma_nav_(R, C)),
+    % Apply the directional displacement, clamped.
+    ( ma_move_delta(Action, DR, DC)
+    ->  R1 is max(0, min(4, R + DR)), C1 is max(0, min(4, C + DC))
+    ;   R1 = R, C1 = C
+    ),
+    % Store the new position.
+    assertz(ma_nav_(R1, C1)),
+    % Render.
+    ma_nav_render(Frame).
+
+% ---- The signal environment (ft09) ----
+
+% ma_sig_/1: the hidden counter.
+:- dynamic ma_sig_/1.
+
+% ma_sig_reset(-Frame): zero the counter and render.
+ma_sig_reset(Frame) :-
+    % Forget the old counter.
+    retractall(ma_sig_(_)),
+    % Start at zero.
+    assertz(ma_sig_(0)),
+    % Render.
+    ma_sig_render(Frame).
+
+% ma_sig_render(-Frame): a three-by-three grid whose corner lights with the counter.
+ma_sig_render([[0,0,0],[0,0,0],[0,0,Goal]]) :-
+    % Read the counter.
+    ma_sig_(L),
+    % Empty, then part-lit, then lit as the counter rises.
+    ( L >= 2 -> Goal = 3 ; L >= 1 -> Goal = 4 ; Goal = 0 ).
+
+% ma_sig_act(+Action, -Frame): the pickup action raises the counter.
+ma_sig_act(action(pickup), Frame) :-
+    % Read and remove the counter.
+    retract(ma_sig_(L)),
+    % Raise it, capped at two.
+    L1 is min(2, L + 1),
+    % Store it back.
+    assertz(ma_sig_(L1)),
+    % Render.
+    ma_sig_render(Frame),
+    % Commit.
+    !.
+% Any other action leaves the counter unchanged.
+ma_sig_act(_Action, Frame) :-
+    % Just re-render the unchanged state.
+    ma_sig_render(Frame).
+
+% ---------------------------------------------------------------------------
+% MODE — Guided versus Solo
+% ---------------------------------------------------------------------------
+
+% ma_mode_/1: the active mode.
+:- dynamic ma_mode_/1.
+
+% Define ma_mode: the active mode, defaulting to guided.
+ma_mode(Mode) :-
+    % Read the mode, or fall back to guided.
+    ( ma_mode_(Mode) -> true ; Mode = guided ).
+
+% Define ma_set_mode: switch the active mode; entering solo ends any old run.
+ma_set_mode(Mode) :-
+    % Only the two known modes are allowed.
+    memberchk(Mode, [guided, solo]),
+    % Replace the previous mode.
+    retractall(ma_mode_(_)),
+    % Record it.
+    assertz(ma_mode_(Mode)),
+    % Switching mode clears any solo run in progress.
+    ma_solo_clear.
+
+% ---------------------------------------------------------------------------
+% ARC-AGI-3_Solo — unaided play from the shared learnings, moment to moment
+% ---------------------------------------------------------------------------
+
+% ma_solo_/2: (Step, Status) — Status is running or done(Outcome).
+:- dynamic ma_solo_/2.
+% ma_solo_trace_/2: (Step, Action) — the moment-to-moment record for the report.
+:- dynamic ma_solo_trace_/2.
+% ma_solo_reported_/1: the filename of the report already written for this run.
+:- dynamic ma_solo_reported_/1.
+
+% ma_solo_budget(-Budget): the action budget for a solo attempt.
+ma_solo_budget(60).
+
+% Define ma_solo_clear: abandon any solo run state (without a report).
+ma_solo_clear :-
+    % Drop the run.
+    retractall(ma_solo_(_, _)),
+    % Drop the trace.
+    retractall(ma_solo_trace_(_, _)),
+    % Drop the reported flag.
+    retractall(ma_solo_reported_(_)).
+
+% Define ma_solo_start: begin a fresh solo attempt on the selected environment,
+% keeping every learning (relations, goal, priorities, hazards, J-Space) intact.
+ma_solo_start :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Reset only the game position — the learnings persist.
+    ma_reset_env(Sel, _),
+    % Fresh curiosity counters for this attempt.
+    retractall(ma_try_(_, _)),
+    % Clear any previous run.
+    ma_solo_clear,
+    % Seed the J-Space workspace with the learnings this run will use.
+    ma_solo_seed_jspace,
+    % Begin at step zero, running.
+    assertz(ma_solo_(0, running)).
+
+% Define ma_solo_tick: advance the solo run one step and report telemetry.
+ma_solo_tick(Telemetry) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Advance only while the run is live.
+    (   ma_solo_(Step, running)
+    % Take one solo step from the shared learnings.
+    ->  ma_step(step(Action, _Basis, _)),
+        % One more step spent.
+        Step1 is Step + 1,
+        % The action budget.
+        ma_solo_budget(Budget),
+        % Decide the new status.
+        (   ma_solved_env(Sel, _)
+        ->  Status = done(won(Step1))
+        ;   Step1 >= Budget
+        ->  Status = done(budget_exhausted(Step1))
+        ;   Status = running
+        ),
+        % Store the updated run.
+        retractall(ma_solo_(_, _)),
+        % Record it.
+        assertz(ma_solo_(Step1, Status)),
+        % Record the step for the report.
+        assertz(ma_solo_trace_(Step1, Action)),
+        % On completion, write exactly one report.
+        (   Status = done(_), \+ ma_solo_reported_(_)
+        ->  ma_solo_report(RepFile, _), assertz(ma_solo_reported_(RepFile))
+        ;   ( ma_solo_reported_(RepFile) -> true ; RepFile = none )
+        ),
+        % Build the telemetry.
+        ma_solo_telemetry(Sel, Step1, Action, Status, RepFile, Telemetry)
+    % A finished or absent run reports its final frame without advancing.
+    ;   ma_solo_final_telemetry(Sel, Telemetry)
+    ).
+
+% ma_solo_telemetry(+Sel, +Step, +Action, +Status, +RepFile, -T): a live tick.
+ma_solo_telemetry(Sel, Step, Action, Status, RepFile, T) :-
+    % Render the current frame.
+    ( ma_render(Sel, Frame) -> true ; ma_reset_env(Sel, Frame) ),
+    % The action taken, as an atom for the button light-up.
+    term_to_atom(Action, AText),
+    % Whether the run is finished.
+    ( Status = running -> Done = false, OutText = "running"
+    ; Status = done(Outcome) -> Done = true, term_to_atom(Outcome, OutText)
+    ),
+    % Assemble the telemetry dict.
+    T = _{frame: Frame, action: AText, step: Step, done: Done,
+          outcome: OutText, report: RepFile}.
+
+% ma_solo_final_telemetry(+Sel, -T): telemetry when no step is taken.
+ma_solo_final_telemetry(Sel, T) :-
+    % Render the current frame, resetting if the environment is fresh.
+    ( ma_render(Sel, Frame) -> true ; ma_reset_env(Sel, Frame) ),
+    % Report the last outcome and report, if any.
+    (   ma_solo_(Step, done(Outcome))
+    ->  term_to_atom(Outcome, OutText), Done = true,
+        ( ma_solo_reported_(RepFile) -> true ; RepFile = none )
+    ;   Step = 0, OutText = "idle", Done = false, RepFile = none
+    ),
+    % Assemble the telemetry.
+    T = _{frame: Frame, action: "none", step: Step, done: Done,
+          outcome: OutText, report: RepFile}.
+
+% ma_solo_seed_jspace: hold the run's learnings as concepts in J-Space.
+ma_solo_seed_jspace :-
+    % Guarded so a missing workspace can never break a run.
+    catch((
+        % Open the solo workspace.
+        js_open(arc_solo),
+        % Hold the selected game.
+        ma_selected_game(G), js_hold(arc_solo, game(G), 1.0, selection),
+        % Hold the learned goal, if any.
+        ( ma_goal_(Goal) -> js_hold(arc_solo, goal(Goal), 1.0, learned_goal) ; true ),
+        % Hold each human-taught priority.
+        forall(ma_priority_(P), js_hold(arc_solo, priority(P), 0.8, learned_priority)),
+        % Hold each declared hazard.
+        forall(ma_avoid_cell_(pos(R, C)),
+               js_hold(arc_solo, avoid(cell(R, C)), 0.8, learned_hazard))
+    ), _, true).
+
+% ma_jlens(-Reading): the J-Lens readout of the solo workspace.
+ma_jlens(Reading) :-
+    % Guarded, empty when the workspace is unavailable.
+    ( catch(js_reading(arc_solo, Reading), _, fail) -> true ; Reading = [] ).
+
+% ---------------------------------------------------------------------------
+% RESTART — works in both modes, on the selected environment
+% ---------------------------------------------------------------------------
+
+% Define ma_restart: restart the selected environment in the active mode.
+ma_restart(Mode, Reply) :-
+    % The active mode.
+    ma_mode(Mode),
+    % The selected environment.
+    ma_selected_game(Sel),
+    (   Mode == solo
+    % Solo restart: finalise any unreported run, then begin a fresh attempt.
+    ->  ( ma_solo_(_, _), \+ ma_solo_reported_(_)
+        ->  catch((ma_solo_report(_, _)), _, true) ; true ),
+        ma_solo_start,
+        Reply = _{ok: true, mode: solo, game: Sel, did: restart}
+    % Guided restart: reset the game position but keep every learning.
+    ;   ma_reset_env(Sel, _),
+        retractall(ma_last_(_, _)),
+        retractall(ma_try_(_, _)),
+        Reply = _{ok: true, mode: guided, game: Sel, did: restart}
+    ).
+
+% ---------------------------------------------------------------------------
+% SOLO ATTEMPT REPORTS — the date-and-time-stamped record
+% ---------------------------------------------------------------------------
+
+% Define ma_attempts_dir: the directory solo reports are written to.
+ma_attempts_dir('ARC-AGI-3_Solo_Attempts').
+
+% Define ma_solo_report: write one solo attempt report; return its filename.
+ma_solo_report(File, Path) :-
+    % The directory, created if missing.
+    ma_attempts_dir(Dir),
+    % Ensure the directory exists.
+    ( exists_directory(Dir) -> true ; make_directory_path(Dir) ),
+    % A safe date-and-time stamp for the filename.
+    get_time(Now),
+    % Format the stamp as year-month-day_hour-minute-second.
+    format_time(atom(Stamp), '%Y-%m-%d_%H-%M-%S', Now),
+    % The report filename.
+    atomic_list_concat(['ARC-AGI-3_Solo_', Stamp, '.txt'], File),
+    % The full path.
+    atomic_list_concat([Dir, '/', File], Path),
+    % Compose the report text.
+    ma_report_text(Now, Text),
+    % Write it as plain text.
+    setup_call_cleanup(
+        open(Path, write, Stream),
+        write(Stream, Text),
+        close(Stream)).
+
+% ma_report_text(+Now, -Text): the plain-text body of a solo attempt report.
+ma_report_text(Now, Text) :-
+    % A readable timestamp for the body.
+    format_time(atom(When), '%Y-%m-%d %H:%M:%S', Now),
+    % The selected environment and its title.
+    ma_selected_game(Game), ma_game_info(Game, Title),
+    % The run outcome, if the run has one.
+    ( ma_solo_(Steps, done(Outcome)) -> true
+    ; ma_solo_(Steps, _) -> Outcome = interrupted
+    ; Steps = 0, Outcome = none ),
+    % The moment-to-moment action trace.
+    findall(N-A, ma_solo_trace_(N, A), Pairs0),
+    % In step order.
+    msort(Pairs0, Pairs),
+    % Render the trace lines.
+    ma_trace_lines(Pairs, TraceText),
+    % The learnings the run drew on.
+    ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens)),
+    % Render the outcome as text.
+    term_to_atom(Outcome, OutcomeText),
+    % Render the goal.
+    term_to_atom(Goal, GoalText),
+    % Render the priorities.
+    term_to_atom(Priorities, PrioText),
+    % Render the avoided cells.
+    term_to_atom(Avoided, AvoidText),
+    % Render the labels.
+    term_to_atom(Labels, LabelText),
+    % Render the J-Lens reading.
+    term_to_atom(JLens, JLensText),
+    % Assemble the whole report.
+    format(atom(Text),
+'ARC-AGI-3 Solo Attempt Report~n~nWhen: ~w~nGame environment: ~w (~w)~nMode: solo (no human direction)~nOutcome: ~w~nSteps taken: ~w~n~nWhat Mentova did, moment to moment:~n~w~nLearnings drawn from the shared data lattice, Causalontology, and J-Space:~n  Inferred or taught goal: ~w~n  Suggested-action priorities: ~w~n  Declared hazards to avoid: ~w~n  Object labels: ~w~n  Causal relations known (count): ~w~n  J-Space (Jacobian Lens) reading: ~w~n~nNote: this was a solo attempt using only the accumulated learnings; no human guidance was given during the run. No benchmark score is claimed.~n',
+        [When, Game, Title, OutcomeText, Steps, TraceText,
+         GoalText, PrioText, AvoidText, LabelText, CroCount, JLensText]).
+
+% ma_trace_lines(+Pairs, -Text): render the step-action trace as text lines.
+ma_trace_lines([], '  (no steps taken)\n').
+% A non-empty trace.
+ma_trace_lines(Pairs, Text) :-
+    % There is at least one step.
+    Pairs = [_ | _],
+    % Render each step on its own line.
+    findall(Line,
+        ( member(N-A, Pairs),
+          term_to_atom(A, AT),
+          format(atom(Line), '  step ~w: ~w~n', [N, AT]) ),
+        Lines),
+    % Join the lines.
+    atomic_list_concat(Lines, Text).
+
+% Define ma_attempts_list: the solo report filenames, newest first.
+ma_attempts_list(Files) :-
+    % The directory.
+    ma_attempts_dir(Dir),
+    % When it exists, list its text reports.
+    (   exists_directory(Dir)
+    ->  directory_files(Dir, Entries),
+        % Keep only the stamped report files.
+        findall(F,
+            ( member(F, Entries),
+              atom_concat('ARC-AGI-3_Solo_', _, F),
+              atom_concat(_, '.txt', F) ),
+            Reports),
+        % Newest first: the timestamp sorts lexically, so reverse the sort.
+        sort(0, @>=, Reports, Files)
+    % No directory yet means no reports.
+    ;   Files = []
+    ).
+
+% ---------------------------------------------------------------------------
+% SHARED LEARNINGS — what both sub-projects can see and read
+% ---------------------------------------------------------------------------
+
+% Define ma_learnings: the shared learnings the Guided and Solo modules read.
+ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens)) :-
+    % The taught or inferred goal, if any.
+    ( ma_goal_(Goal) -> true ; Goal = none ),
+    % The suggested-action priorities.
+    findall(A, ma_priority_(A), Priorities),
+    % The declared hazards.
+    findall(cell(R, C), ma_avoid_cell_(pos(R, C)), Avoided),
+    % The object labels.
+    findall(cell(R, C)-K, ma_label_(pos(R, C), K), Labels),
+    % How many causal relations have been learned.
+    ( catch(aggregate_all(count, co_cro(_, _, _, _, _, _, _, _), CroCount), _, fail)
+    -> true ; CroCount = 0 ),
+    % The J-Lens reading of the solo workspace.
+    ma_jlens(JLens).
+
+% ---------------------------------------------------------------------------
 % CLUE GROUNDING (Section 10.4) — the small, auditable mapping
 % ---------------------------------------------------------------------------
 
@@ -367,6 +872,8 @@ ma_reset_guidance :-
     retractall(ma_label_(_, _)),
     % Drop the last-action record.
     retractall(ma_last_(_, _)),
+    % Drop the curiosity counters.
+    retractall(ma_try_(_, _)),
     % Clear the harness counters.
     co_arc3_reset.
 
@@ -440,12 +947,14 @@ ma_inject(hint_continue).
 
 % ma_step(-Report): one loop step; the basis of the choice is recorded.
 ma_step(step(Action, Basis, Outcome)) :-
-    % The frame before the action.
-    ma_game_frame(Frame0),
+    % The selected environment.
+    ma_selected_game(Sel),
+    % The frame before the action, resetting if the environment is fresh.
+    ( ma_render(Sel, Frame0) -> true ; ma_reset_env(Sel, Frame0) ),
     % Choose the action and remember why.
     ma_choose(Action, Basis),
-    % Doing: perform it.
-    ma_env_act(Action, Frame1),
+    % Doing: perform it on the selected environment.
+    ma_act_env(Sel, Action, Frame1),
     % The observed effect is the frame delta.
     co_arc3_delta(Frame0, Frame1, Delta),
     % Learn from what followed, exactly as the harness does.
@@ -465,7 +974,9 @@ ma_step(step(Action, Basis, Outcome)) :-
     % Record the last action and its basis for the why endpoint.
     retractall(ma_last_(_, _)),
     % Store it.
-    assertz(ma_last_(Action, Basis)).
+    assertz(ma_last_(Action, Basis)),
+    % Count the try so curiosity varies its choices across the attempt.
+    ma_bump_try(Action).
 
 % ma_choose(-Action, -Basis): the guided choice.
 ma_choose(action(pickup), human_hint(pickup)) :-
@@ -495,14 +1006,41 @@ ma_choose(Action, toward(goal)) :-
     ma_greedy_step(P, D, Action),
     % Commit.
     !.
-% Otherwise curiosity decides, exactly as in the autonomous harness.
+% Otherwise curiosity decides: the least-tried safe action over the selected
+% environment's action set, so unguided play genuinely explores rather than
+% repeating one move.
 ma_choose(Action, curiosity) :-
-    % The game's action set.
-    ma_env_actions(Actions),
+    % The selected environment's action set.
+    ma_selected_game(Sel),
+    % Its actions.
+    ma_actions_env(Sel, Actions),
     % Keep only moves that do not land on a human-declared hazard.
-    findall(A, ( member(A, Actions), \+ ma_lands_on_hazard(A) ), Safe),
-    % The harness's least-tried choice over the safe set.
-    co_arc3_choose(Safe, none, Action).
+    findall(A, ( member(A, Actions), \+ ma_lands_on_hazard(A) ), Safe0),
+    % If every action is hazardous, fall back to the full set rather than stall.
+    ( Safe0 == [] -> Safe = Actions ; Safe = Safe0 ),
+    % Score each safe action by how often it has been tried this attempt.
+    findall(N-A, ( member(A, Safe), ma_try_count(A, N) ), Scored),
+    % There must be something to choose.
+    Scored \== [],
+    % Least-tried first (ties break by standard order).
+    keysort(Scored, [_-Action | _]).
+
+% ma_try_/2: (Action, Count) — the curiosity counter for the current attempt.
+:- dynamic ma_try_/2.
+
+% ma_try_count(+Action, -Count): the try count, zero when untried.
+ma_try_count(Action, Count) :-
+    % Read the counter, defaulting to zero.
+    ( ma_try_(Action, Count) -> true ; Count = 0 ).
+
+% ma_bump_try(+Action): increment the curiosity counter for an action.
+ma_bump_try(Action) :-
+    % Fetch and remove the current count.
+    ( retract(ma_try_(Action, N)) -> true ; N = 0 ),
+    % Increment.
+    N1 is N + 1,
+    % Store it back.
+    assertz(ma_try_(Action, N1)).
 
 % ma_greedy_step(+From, +To, -Action): one step toward a target, never onto
 % a human-declared hazard cell.
@@ -609,14 +1147,22 @@ ma_handle_page(Request) :-
         format('Mentova ARC chat. Use /api/arc/frame, /api/arc/control, /api/arc/hint, /api/arc/why.~n')
     ).
 
-% ma_handle_frame(+Request): the current frame and status as JSON.
+% ma_handle_frame(+Request): the current frame and status as JSON, for the
+% selected environment, with the active mode, game, and last action.
 ma_handle_frame(_Request) :-
-    % Fetch the frame.
-    ma_game_frame(Frame),
+    % The selected environment.
+    ma_selected_game(Sel),
+    % The current frame, resetting the environment if it is fresh.
+    ( ma_render(Sel, Frame) -> true ; ma_reset_env(Sel, Frame) ),
     % Won or still playing?
-    ( ma_env_solved(Frame) -> Status = won ; Status = playing ),
-    % Reply.
-    reply_json_dict(_{frame: Frame, status: Status}).
+    ( ma_solved_env(Sel, Frame) -> Status = won ; Status = playing ),
+    % The active mode.
+    ma_mode(Mode),
+    % The last action taken, for the button light-up (none if none yet).
+    ( ma_last_(LastA, _) -> term_to_atom(LastA, LastText) ; LastText = "none" ),
+    % Reply with the full view.
+    reply_json_dict(_{frame: Frame, status: Status, mode: Mode,
+                      game: Sel, last_action: LastText}).
 
 % ma_handle_control(+Request): reset, step, or auto, mentor-authenticated.
 ma_handle_control(Request) :-
@@ -716,4 +1262,102 @@ ma_handle_why(_Request) :-
         reply_json_dict(_{action: AText, basis: BText, provenance: Provenance})
     % No action has been taken yet.
     ;   reply_json_dict(_{action: none, basis: none, provenance: none})
+    ).
+
+% ma_handle_mode(+Request): read the mode (GET) or switch it (POST).
+ma_handle_mode(Request) :-
+    % The HTTP method.
+    memberchk(method(Method), Request),
+    (   Method == post
+    % A POST switches the mode.
+    ->  http_read_json_dict(Request, Body),
+        % The requested mode as an atom.
+        ( get_dict(mode, Body, MStr) -> atom_string(Mode, MStr) ; Mode = guided ),
+        % Apply it if valid.
+        ( catch(ma_set_mode(Mode), _, fail)
+        ->  reply_json_dict(_{ok: true, mode: Mode})
+        ;   reply_json_dict(_{ok: false, error: "Unknown mode."})
+        )
+    % A GET reports the current mode and game.
+    ;   ma_mode(Mode), ma_selected_game(Game),
+        reply_json_dict(_{ok: true, mode: Mode, game: Game})
+    ).
+
+% ma_handle_games(+Request): the selectable environments as JSON.
+ma_handle_games(_Request) :-
+    % The current selection.
+    ma_selected_game(Sel),
+    % One entry per registered environment.
+    findall(_{id: Id, title: Title, selected: IsSel},
+        ( ma_game_info(Id, Title),
+          ( Id == Sel -> IsSel = true ; IsSel = false ) ),
+        Games),
+    % Reply.
+    reply_json_dict(_{ok: true, games: Games, selected: Sel}).
+
+% ma_handle_select(+Request): choose the active game environment.
+ma_handle_select(Request) :-
+    % Read the body.
+    http_read_json_dict(Request, Body),
+    % The requested game as an atom.
+    ( get_dict(game, Body, GStr) -> atom_string(Game, GStr) ; Game = ls20 ),
+    % Apply it if registered.
+    ( catch(ma_set_game(Game), _, fail)
+    ->  reply_json_dict(_{ok: true, game: Game})
+    ;   reply_json_dict(_{ok: false, error: "Unknown game."})
+    ).
+
+% ma_handle_restart(+Request): restart the selected environment in the active mode.
+ma_handle_restart(_Request) :-
+    % Restart, honouring the active mode.
+    ma_restart(_Mode, Reply),
+    % Reply.
+    reply_json_dict(Reply).
+
+% ma_handle_solo_tick(+Request): advance the solo run one step, with telemetry.
+ma_handle_solo_tick(_Request) :-
+    % Only advance in solo mode; guided mode returns an idle tick.
+    (   ma_mode(solo)
+    ->  ma_solo_tick(T)
+    ;   ma_selected_game(Sel), ma_solo_final_telemetry(Sel, T)
+    ),
+    % Reply with the telemetry.
+    reply_json_dict(T).
+
+% ma_handle_attempts(+Request): the solo report filenames as JSON, newest first.
+ma_handle_attempts(_Request) :-
+    % The report filenames.
+    ma_attempts_list(Files),
+    % Reply.
+    reply_json_dict(_{ok: true, attempts: Files}).
+
+% ma_handle_attempt_view(+Request): serve one solo report as plain text.
+ma_handle_attempt_view(Request) :-
+    % Read the requested filename parameter.
+    http_parameters(Request, [file(File, [atom])]),
+    % The reports directory.
+    ma_attempts_dir(Dir),
+    % Reject any filename that is not a plain stamped report (no path traversal).
+    (   atom_concat('ARC-AGI-3_Solo_', _, File),
+        atom_concat(_, '.txt', File),
+        \+ sub_atom(File, _, _, _, '/'),
+        \+ sub_atom(File, _, _, _, '..')
+    % Safe: serve the file as plain text.
+    ->  atomic_list_concat([Dir, '/', File], Path),
+        ( exists_file(Path)
+        ->  http_reply_file(Path, [mime_type('text/plain; charset=UTF-8'), unsafe(true)], Request)
+        ;   format('Content-type: text/plain~n~n'), format('Report not found.~n')
+        )
+    % Unsafe: refuse.
+    ;   format('Content-type: text/plain~n~n'), format('Invalid report name.~n')
+    ).
+
+% ma_handle_attempts_page(+Request): serve the solo attempts record page.
+ma_handle_attempts_page(Request) :-
+    % Serve the listing page from the assets when it exists.
+    (   exists_file('assets/arc/attempts.html')
+    ->  http_reply_file('assets/arc/attempts.html', [unsafe(true)], Request)
+    % Otherwise a plain-text pointer keeps the route alive.
+    ;   format('Content-type: text/plain~n~n'),
+        format('Solo attempts are listed by /api/arc/attempts.~n')
     ).
