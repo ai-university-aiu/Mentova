@@ -59,6 +59,8 @@
 :- use_module('curriculum_elementary_facts', []).
 % Load the generated understood facts (Middle School / Junior High band).
 :- use_module('curriculum_middle_facts', []).
+% Load the generated understood facts (High School band, Grades 9-12).
+:- use_module('curriculum_high_facts', []).
 % Load the Reference Library for registration, search, and citation reading.
 :- use_module('../../src/mentova/reference_library',
               [rl_register/2, rl_search/2, rl_citation_text/2]).
@@ -83,6 +85,10 @@ ci_any_fact(Grade, Relation, Args, Citation) :-
 ci_any_fact(Grade, Relation, Args, Citation) :-
     % Read it from the middle-school facts module.
     curriculum_middle_facts:ci_fact(Grade, Relation, Args, Citation).
+% Define ci_any_fact: an understood fact from the high-school band.
+ci_any_fact(Grade, Relation, Args, Citation) :-
+    % Read it from the high-school facts module.
+    curriculum_high_facts:ci_fact(Grade, Relation, Args, Citation).
 
 % Define ci_any_cro: a sound CRO from the elementary band.
 ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
@@ -92,6 +98,10 @@ ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
 ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
     % Read it from the middle-school facts module.
     curriculum_middle_facts:ci_cro(Grade, Kind, Subject, Sound, Citation).
+% Define ci_any_cro: a sound CRO from the high-school band.
+ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
+    % Read it from the high-school facts module.
+    curriculum_high_facts:ci_cro(Grade, Kind, Subject, Sound, Citation).
 
 % ---------------------------------------------------------------------------
 % ci_register_sources/0 — make every source known to the Reference Library

@@ -52,6 +52,14 @@ ci_source('wall_grade6', '/home/ccaitwo/curriculum/Age_11_to_Age_12_Grade_06_Ros
 ci_source('wall_grade7', '/home/ccaitwo/curriculum/Age_12_to_Age_13_Grade_07_Rosetta_Rock_Word_Wall.txt', 'word_wall').
 % Reference-library source wall_grade8 (word_wall).
 ci_source('wall_grade8', '/home/ccaitwo/curriculum/Age_13_to_Age_14_Grade_08_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade9 (word_wall).
+ci_source('wall_grade9', '/home/ccaitwo/curriculum/Age_14_to_Age_15_Grade_09_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade10 (word_wall).
+ci_source('wall_grade10', '/home/ccaitwo/curriculum/Age_15_to_Age_16_Grade_10_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade11 (word_wall).
+ci_source('wall_grade11', '/home/ccaitwo/curriculum/Age_16_to_Age_17_Grade_11_Rosetta_Rock_Word_Wall.txt', 'word_wall').
+% Reference-library source wall_grade12 (word_wall).
+ci_source('wall_grade12', '/home/ccaitwo/curriculum/Age_17_to_Age_18_Grade_12_Rosetta_Rock_Word_Wall.txt', 'word_wall').
 % Reference-library source ccss_math (standard).
 ci_source('ccss_math', '/home/ccaitwo/curriculum/extracted_text/Age_05_to_Age_18_CA_CCSS_Mathematics_Standards.txt', 'standard').
 % Reference-library source ccss_ela (standard).
@@ -84,3 +92,5 @@ ci_source('curriculum_index', '/home/ccaitwo/curriculum/Age_03_to_Age_18_curricu
 ci_source('engageny_corpus_manifest', '/home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest.txt', 'corpus_manifest').
 % Reference-library source engageny_corpus_manifest_middle (corpus_manifest).
 ci_source('engageny_corpus_manifest_middle', '/home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest_Middle.txt', 'corpus_manifest').
+% Reference-library source engageny_corpus_manifest_high (corpus_manifest).
+ci_source('engageny_corpus_manifest_high', '/home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest_High.txt', 'corpus_manifest').

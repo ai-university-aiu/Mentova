@@ -357,3 +357,119 @@ The next band up would be High School (Grades 9 to 12, ages 14 to 18): Algebra I
 
 
 END OF MIDDLE SCHOOL / JUNIOR HIGH WORK REPORT.
+
+
+================================================================
+APPENDED WORK REPORT - HIGH SCHOOL IMPORT
+================================================================
+
+Date of this work: 2026-07-10.
+
+Scope of this appendix: the High School years - Grade 9, Grade 10, Grade 11, and Grade 12 (ages 14 to 18).
+
+Method: the same LIGHT PASS as the elementary and middle-school imports above. Clean, structured content (the Grade 9 to 12 Rosetta Rock word walls and the California Common Core standards for those grades) became understood facts in the lattice; the bulk lesson corpus was registered in the Reference Library and streamed on demand.
+
+
+A. ONE-BREATH SUMMARY OF THIS APPENDIX
+
+The clean Grade 9 to 12 word walls, the Common Core higher-mathematics conceptual-category domains, and the Common Core Grade 6 to 12 English Language Arts strands became 711 additional understood facts in the Causalontology lattice, each cited to a real source line.
+
+The Grade 9 to 12 bulk lesson corpus (5,835 EngageNY / Eureka Math documents, about 2.3 gigabytes, already unzipped during the elementary pass) was registered in the Reference Library as a searchable path manifest, streamed on demand.
+
+Combined with the elementary and middle-school imports, Mentova now holds 3,658 understood facts and 5 sound Causal Relation Objects (CROs) across 33 registered sources, spanning age 0 (from the youngest available material at age 2) through Grade 12 - the full Kindergarten-through-Grade-12 span plus the pre-Kindergarten years.
+
+Only about 120 kilobytes of new Prolog entered git; the raw corpus was already on disk and none of it moved into git.
+
+
+B. WHAT WAS IMPORTED (HIGH SCHOOL)
+
+Understood facts generated for this band: 711.
+
+By relation:
+
+• vocabulary (686 facts) - words taught at Grade 9, 10, 11, and 12, each with its themed category.
+
+• math_domain (20 facts) - the Common Core higher-mathematics conceptual-category domains, with their codes. High-school mathematics is organized by conceptual category across the four courses (Algebra I, Geometry, Algebra II, Precalculus) rather than by single grade, so these carry the band label grade9_to_grade12. The 20 domains span all five categories: Number and Quantity (N-RN The Real Number System, N-CN The Complex Number System, N-VM Vector and Matrix Quantities); Algebra (A-SSE Seeing Structure in Expressions, A-APR Arithmetic with Polynomials and Rational Expressions, A-CED Creating Equations, A-REI Reasoning with Equations and Inequalities); Functions (F-IF Interpreting Functions, F-BF Building Functions, F-LE Linear, Quadratic, and Exponential Models, F-TF Trigonometric Functions); Geometry (G-CO Congruence, G-SRT Similarity, Right Triangles, and Trigonometry, G-GPE Expressing Geometric Properties with Equations, G-GMD Geometric Measurement and Dimension, G-MG Modeling with Geometry); and Statistics and Probability (S-ID Interpreting Categorical and Quantitative Data, S-IC Making Inferences and Justifying Conclusions, S-CP Conditional Probability and the Rules of Probability, S-MD Using Probability to Make Decisions).
+
+• ela_strand (5 facts) - the Common Core English Language Arts strands (reading literature, reading informational text, writing, speaking and listening, language), carried at the band label grade9_to_grade12. Common Core groups the reading strands for Grades 6 to 12, so these are the same strands recorded for the middle-school band, here labeled for the high-school band as well; the reading foundational skills strand is Kindergarten to Grade 5 only and correctly does not appear.
+
+By grade:
+
+• grade9: 180
+• grade10: 174
+• grade11: 166
+• grade12: 166
+• grade9_to_grade12 (higher-math conceptual categories + ELA strands): 25
+
+Sound CROs added for this band: 0 (the animal-sound lines are a toddler feature; the 5 elementary sound CROs still stand).
+
+The course-to-grade mapping used for the bulk corpus (from the curriculum index): Grade 9 = Algebra I, Grade 10 = Geometry, Grade 11 = Algebra II, Grade 12 = Precalculus, with the Grade 9 to 12 English Language Arts modules alongside.
+
+
+C. WHERE THE HIGH-SCHOOL DATA LANDED (FULL ABSOLUTE PATHS)
+
+C.1 NEW OR CHANGED ARTIFACTS THAT ENTERED GIT
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_high_facts.pl
+  NEW. The 711 Grade 9 to 12 understood facts (about 120 kilobytes). A separate module (curriculum_high_facts) defining ci_fact/4 and ci_cro/5, composing with the elementary and middle bands without clashing.
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_path_registry.pl
+  UPDATED. Now 33 sources (was 28): added the four Grade 9 to 12 word walls and the high-school corpus manifest. Every registered path was re-verified to exist on disk.
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_lattice.pl
+  UPDATED. The ci_any_fact/4 and ci_any_cro/5 union now includes the high-school band (one added use_module and one added clause each), so all three bands are queried and anchored as one body of knowledge. The public query API is unchanged.
+
+C.2 HIGH-SCHOOL DATA THAT STAYS ON DISK (never in git)
+
+• /home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest_High.txt
+  NEW. The searchable Grade 9 to 12 bulk-corpus path index (about 884 kilobytes): one line per lesson document, "<bytes>  <absolute_path>", 5,835 documents, about 2.3 gigabytes (Grade 9: 1,214 files; Grade 10: 1,408; Grade 11: 1,510; Grade 12: 1,703).
+
+• The four Grade 9 to 12 word walls, cited directly (line numbers point into these files):
+    /home/ccaitwo/curriculum/Age_14_to_Age_15_Grade_09_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_15_to_Age_16_Grade_10_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_16_to_Age_17_Grade_11_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_17_to_Age_18_Grade_12_Rosetta_Rock_Word_Wall.txt
+
+• The Common Core mathematics and English Language Arts texts (already extracted in the elementary pass; the higher-mathematics and Grade 6 to 12 sections are reused here):
+    /home/ccaitwo/curriculum/extracted_text/Age_05_to_Age_18_CA_CCSS_Mathematics_Standards.txt
+    /home/ccaitwo/curriculum/extracted_text/Age_05_to_Age_18_CA_CCSS_ELA_Literacy_Standards.txt
+
+No new unzip or standards extraction was required: the Grade 9 to 12 archives were already surfaced and extracted during the elementary pass (the 37 high-school EngageNY module directories under Age_14 to Age_17 were confirmed present).
+
+
+D. VERIFICATION PERFORMED (HIGH SCHOOL)
+
+• curriculum_high_facts.pl loads cleanly in SWI-Prolog.
+
+• The regenerated path registry lists 33 sources and all 33 paths were confirmed to exist on disk.
+
+• Combined query interface reports facts=3658, cros=5, sources=33.
+
+• High-school queries answer correctly: the higher-math band has 20 conceptual-category domains (for example F-IF Interpreting Functions and G-CO Congruence); Grade 9 vocabulary size is about 163; Grade 12 about 149; a Grade 11 vocabulary word such as "extricate" is present; a Grade 10 word citation resolves to a real source line.
+
+• With the real PrologAI lattice packs loaded: all 3,658 combined facts anchor as node_facts into the nexus locus://mentova/curriculum, and the higher-math Congruence domain anchors with referents [grade(grade9_to_grade12), source(ccss_math, 2860)].
+
+• Reference-Library search over the high-school manifest returns real hits (for example "Algebra II Module" returns lesson-document paths).
+
+• The full mentova_chat.pl module still loads cleanly with the three-band loader.
+
+
+E. GITHUB LIMITS RESPECTED (HIGH SCHOOL)
+
+• Only about 120 kilobytes of new Prolog (curriculum_high_facts.pl) plus small edits to the registry and loader entered git. Nothing approaches the 50 or 100 megabyte thresholds.
+
+• The 2.3 gigabyte Grade 9 to 12 corpus and its manifest stay on disk under /home/ccaitwo/curriculum/, outside the repository. Nothing large entered git.
+
+
+F. RUNNING TOTAL (AGE 0 THROUGH GRADE 12 - THE FULL SPAN)
+
+• Understood facts: 3,658 (elementary 2,372 + middle school 575 + high school 711).
+• Sound CROs: 5.
+• Registered Reference-Library sources: 33 (16 word walls, 13 standards texts, 1 index, 3 bulk-corpus manifests).
+• Bulk corpus registered and streamed: 9,030 elementary + 6,263 middle-school + 5,835 high-school documents = 21,128 documents, about 14.4 gigabytes.
+• New git footprint from this appendix: about 120 kilobytes.
+
+With this appendix the light-pass import spans the complete pre-Kindergarten-through-Grade-12 curriculum. The clean word walls and standards are understood and cited across every band from the toddler years to the twelfth grade; the full EngageNY / Eureka Math and English Language Arts lesson corpus (about 21,000 documents) is registered and searchable on demand. The natural next step, if desired, is the full pass over the high-value documents described in Elementary_School_Full_Pass_Instructions.txt, now applicable to the whole span.
+
+
+END OF HIGH SCHOOL WORK REPORT.
