@@ -245,3 +245,115 @@ Until then, that corpus is fully reachable through the Reference Library manifes
 
 
 END OF IMPORT REPORT.
+
+
+================================================================
+APPENDED WORK REPORT - MIDDLE SCHOOL / JUNIOR HIGH IMPORT
+================================================================
+
+Date of this work: 2026-07-10.
+
+Scope of this appendix: the Middle School / Junior High years - Grade 6, Grade 7, and Grade 8 (ages 11 to 14).
+
+Method: the same LIGHT PASS as the elementary import above. Clean, structured content (the Grade 6 to 8 Rosetta Rock word walls and the California Common Core standards for those grades) became understood facts in the lattice; the bulk lesson corpus was registered in the Reference Library and streamed on demand.
+
+
+A. ONE-BREATH SUMMARY OF THIS APPENDIX
+
+The clean Grade 6 to 8 word walls and the Common Core Grade 6 to 8 mathematics domains and Grade 6 to 12 English Language Arts strands became 575 additional understood facts in the Causalontology lattice, each cited to a real source line.
+
+The Grade 6 to 8 bulk lesson corpus (6,263 EngageNY / Eureka Math documents, about 2.0 gigabytes, already unzipped during the elementary pass) was registered in the Reference Library as a searchable path manifest, streamed on demand.
+
+Combined with the elementary import, Mentova now holds 2,947 understood facts and 5 sound Causal Relation Objects (CROs) across 28 registered sources, spanning age 0 (from the youngest available material at age 2) through Grade 8.
+
+Only about 96 kilobytes of new Prolog entered git; the raw corpus was already on disk and none of it moved into git.
+
+
+B. WHAT WAS IMPORTED (MIDDLE SCHOOL)
+
+Understood facts generated for this band: 575.
+
+By relation:
+
+• vocabulary (555 facts) - words taught at Grade 6, 7, and 8, each with its themed category.
+
+• math_domain (15 facts) - the Common Core mathematics domains for Grades 6 to 8 with their codes: Grade 6 (6.RP Ratios and Proportional Relationships, 6.NS The Number System, 6.EE Expressions and Equations, 6.G Geometry, 6.SP Statistics and Probability); Grade 7 (7.RP, 7.NS, 7.EE, 7.G, 7.SP); Grade 8 (8.NS, 8.EE, 8.F Functions, 8.G, 8.SP).
+
+• ela_strand (5 facts) - the Common Core English Language Arts strands defined for the Grade 6 to 12 band (reading literature, reading informational text, writing, speaking and listening, language). Note: Common Core groups these strands for Grades 6 to 12 rather than for Grades 6 to 8 alone, so the band label on these five facts is grade6_to_grade12; the reading foundational skills strand is Kindergarten to Grade 5 only and correctly does not appear here.
+
+By grade:
+
+• grade6: 190
+• grade7: 191
+• grade8: 189
+• grade6_to_grade12 (ELA strands): 5
+
+Sound CROs added for this band: 0 (the "X says Y" animal-sound lines are a toddler feature and do not appear in the Grade 6 to 8 walls; the 5 elementary sound CROs still stand).
+
+
+C. WHERE THE MIDDLE-SCHOOL DATA LANDED (FULL ABSOLUTE PATHS)
+
+C.1 NEW OR CHANGED ARTIFACTS THAT ENTERED GIT
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_middle_facts.pl
+  NEW. The 575 Grade 6 to 8 understood facts (about 96 kilobytes). A separate module (curriculum_middle_facts) that defines ci_fact/4 and ci_cro/5, so it composes with the elementary data without clashing.
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_path_registry.pl
+  UPDATED. Now 28 sources (was 24): added the three Grade 6 to 8 word walls and the middle-school corpus manifest. Every registered path was re-verified to exist on disk.
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_lattice.pl
+  UPDATED. Refactored to union the per-band fact modules through ci_any_fact/4 and ci_any_cro/5, so every query and the anchoring loop see the elementary and middle bands as one body of knowledge. Adding a future band (for example high school) now means loading one more module and adding one clause. The public query API (ci_word/2, ci_standard/3, ci_sound/2, ci_search/2, ci_why/3, ci_stats/1) is unchanged.
+
+C.2 MIDDLE-SCHOOL DATA THAT STAYS ON DISK (never in git)
+
+• /home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest_Middle.txt
+  NEW. The searchable Grade 6 to 8 bulk-corpus path index (about 896 kilobytes): one line per lesson document, "<bytes>  <absolute_path>", 6,263 documents, about 2.0 gigabytes (Grade 6: 2,082 files; Grade 7: 2,144; Grade 8: 2,037).
+
+• The three Grade 6 to 8 word walls, cited directly (line numbers point into these files):
+    /home/ccaitwo/curriculum/Age_11_to_Age_12_Grade_06_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_12_to_Age_13_Grade_07_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_13_to_Age_14_Grade_08_Rosetta_Rock_Word_Wall.txt
+
+• The two Common Core standards texts were already extracted during the elementary pass and are reused for the Grade 6 to 8 sections (no new extraction needed):
+    /home/ccaitwo/curriculum/extracted_text/Age_05_to_Age_18_CA_CCSS_Mathematics_Standards.txt
+    /home/ccaitwo/curriculum/extracted_text/Age_05_to_Age_18_CA_CCSS_ELA_Literacy_Standards.txt
+
+No new unzip was required: the Grade 6 to 8 archives were already surfaced and extracted during the elementary pass (the 37 middle-school EngageNY module directories under Age_11 to Age_13 were confirmed present).
+
+
+D. VERIFICATION PERFORMED (MIDDLE SCHOOL)
+
+• curriculum_middle_facts.pl loads cleanly in SWI-Prolog.
+
+• The regenerated path registry lists 28 sources and all 28 paths were confirmed to exist on disk.
+
+• Combined query interface reports facts=2947, cros=5, sources=28.
+
+• Middle-school queries answer correctly: ci_standard(grade6, D, C) yields 6.RP Ratios and Proportional Relationships; ci_standard(grade8, ...) yields 8.NS; Grade 7 has 5 math domains; Grade 7 vocabulary size is about 170; a Grade 8 vocabulary word such as "discern" is present.
+
+• With the real PrologAI lattice packs loaded: all 2,947 combined facts anchor as node_facts into the nexus locus://mentova/curriculum, and the Grade 6 domain fact anchors with referents [grade(grade6), source(ccss_math, 1727)].
+
+• Reference-Library search over the middle manifest returns real hits (for example "Grade 7 Module" returns lesson-document paths).
+
+• The full mentova_chat.pl module still loads cleanly with the updated loader.
+
+
+E. GITHUB LIMITS RESPECTED (MIDDLE SCHOOL)
+
+• Only about 96 kilobytes of new Prolog (curriculum_middle_facts.pl) plus small edits to the registry and loader entered git. Nothing approaches the 50 or 100 megabyte thresholds.
+
+• The 2.0 gigabyte Grade 6 to 8 corpus and its manifest stay on disk under /home/ccaitwo/curriculum/, outside the repository. Nothing large entered git.
+
+
+F. RUNNING TOTAL (AGE 0 THROUGH GRADE 8)
+
+• Understood facts: 2,947 (elementary 2,372 + middle school 575).
+• Sound CROs: 5.
+• Registered Reference-Library sources: 28 (12 word walls, 13 standards texts, 1 index, 2 bulk-corpus manifests).
+• Bulk corpus registered and streamed: 9,030 elementary documents (~10.1 GB) plus 6,263 middle-school documents (~2.0 GB) = 15,293 documents.
+• New git footprint from this appendix: about 96 kilobytes.
+
+The next band up would be High School (Grades 9 to 12, ages 14 to 18): Algebra I, Geometry, Algebra II, Precalculus for mathematics, and the Grade 9 to 12 English Language Arts modules, all already unzipped and on disk, ready for the same light pass.
+
+
+END OF MIDDLE SCHOOL / JUNIOR HIGH WORK REPORT.
