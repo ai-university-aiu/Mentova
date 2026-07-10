@@ -61,6 +61,8 @@ mock_port(8094).
 :- http_handler('/api/cmd/ACTION2', mock_action(2), []).
 % Action three.
 :- http_handler('/api/cmd/ACTION3', mock_action(3), []).
+% The undo action (ACTION7) reverts the counter.
+:- http_handler('/api/cmd/ACTION7', mock_undo, []).
 
 % mock_games(+Request): two mock game environments.
 mock_games(_Request) :-
@@ -106,6 +108,26 @@ mock_action(N, Request) :-
     % Reply with the frame data.
     mock_frame_reply(GameId).
 
+% mock_undo(+Request): the undo action reverts the counter by one, floored.
+mock_undo(Request) :-
+    % Read the body.
+    http_read_json_dict(Request, Body),
+    % The game id.
+    atom_string(GameId, Body.game_id),
+    % Fetch the counter.
+    ( retract(mock_ctr_(GameId, C)) -> true ; C = 0 ),
+    % Undo lowers it, never below zero.
+    C1 is max(0, C - 1),
+    % Store it.
+    assertz(mock_ctr_(GameId, C1)),
+    % Reply.
+    mock_frame_reply(GameId).
+
+% mock_avail(+GameId, -Available): the second mock game also offers undo (ACTION7).
+mock_avail('mock-relay', ["ACTION1", "ACTION2", "ACTION7", "RESET"]) :- !.
+% Every other mock game offers the two simple actions.
+mock_avail(_, ["ACTION1", "ACTION2", "RESET"]).
+
 % mock_frame_reply(+GameId): the FrameData reply for the current counter.
 mock_frame_reply(GameId) :-
     % The counter.
@@ -114,10 +136,12 @@ mock_frame_reply(GameId) :-
     ( C >= 3 -> V = 3, State = "WIN" ; C >= 1 -> V = 4, State = "NOT_FINISHED" ; V = 0, State = "NOT_FINISHED" ),
     % The frame as a STACK of grids (the protocol's shape), one 3x3 grid.
     Frame = [[[0,0,0],[0,0,0],[0,0,V]]],
+    % This game's available actions (mock-relay also supports undo).
+    mock_avail(GameId, Avail),
     % Reply with the exact protocol fields.
     reply_json_dict(_{game_id: GameId, guid: "guid-mock",
                       frame: Frame, state: State, levels_completed: 0,
-                      available_actions: ["ACTION1", "ACTION2", "RESET"],
+                      available_actions: Avail,
                       action_input: _{id: "ACTION1"}}).
 
 % ---------------------------------------------------------------------------
@@ -170,6 +194,9 @@ run_arc_live_demo :-
     % AC-005: the dropdown source is live and lists the live games.
     report('AC-LIVE-005', ( ma_source(live), findall(I, ma_available_game(I, _), Is), Is \== [], member(FirstId, Is) )),
 
+    % AC-007: the game that offers ACTION7 shows a canonical undo button.
+    report('AC-LIVE-007', demo_undo_button),
+
     % AC-006: disconnecting returns to the three local stand-ins.
     report('AC-LIVE-006', ( al_disconnect, ma_set_source(local),
                             findall(I, ma_available_game(I, _), Locals), length(Locals, 3) )),
@@ -198,6 +225,21 @@ demo_live_reset(Id) :-
     ma_render(Id, Frame),
     % It is a two-dimensional grid (rows of integers).
     Frame = [Row | _], Row = [Cell | _], integer(Cell).
+
+% demo_undo_button: the undo-capable game shows a canonical undo button.
+demo_undo_button :-
+    % The second mock game supports undo (ACTION7).
+    Id = 'mock-relay',
+    % Select it, which resets it and records its available actions.
+    ma_set_game(Id),
+    % The labelled action descriptors for the live game.
+    mentova_arc_chat:ma_action_descriptors(Id, Ds),
+    % One of them is the undo command ACTION7.
+    member(D, Ds), get_dict(command, D, 'ACTION7'),
+    % Labelled with the protocol-known undo meaning.
+    get_dict(label, D, L), sub_atom(L, _, _, _, undo),
+    % And its source is the protocol (a known meaning, not a guess).
+    get_dict(source, D, protocol).
 
 % demo_solo_live(+Id): Solo plays the live game to a win and writes a report.
 demo_solo_live(Id) :-

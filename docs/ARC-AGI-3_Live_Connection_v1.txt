@@ -32,7 +32,11 @@ The details are as follows.
 
 • A level is started with a POST request to /api/cmd/RESET, carrying the card_id and the game_id, and returns a reply with a guid (the session identifier), a frame (the picture), a state, and the list of available actions.
 
-• An action is taken with a POST request to /api/cmd/ACTION1 through /api/cmd/ACTION6, carrying the game_id and the guid, and for the click action ACTION6 also an x and a y.
+• An action is taken with a POST request to /api/cmd/ACTION1 through /api/cmd/ACTION7, carrying the game_id and the guid, and for the click action ACTION6 also an x and a y.
+
+• ACTION1 through ACTION5 are the simple actions, ACTION6 is the cell-select click, and ACTION7 is the undo action, which per the official documentation is always an undo for the games that support it.
+
+• A game offers only some of these actions, and it reports which ones in the available_actions field of each reply, so the undo action ACTION7 appears only for games that support it.
 
 • The reply's state is one of NOT_PLAYED, NOT_FINISHED, WIN, or GAME_OVER, and WIN is the win.
 
@@ -146,6 +150,8 @@ DEFAULTS AND NOTES
 • The same client code that talks to the mock server talks to the real https://three.arcprize.org when a real key is configured; only the base web address and the key differ.
 
 • The click action ACTION6, when offered by a live game, is sent by default at the centre of the grid; a later change can aim it using the exploration policy and the Jacobian already built in the ARC-AGI-3 Readiness suite.
+
+• The undo action ACTION7 is included in the connector's vocabulary and appears on the action panel as a button labelled "ACTION7 (undo)" for any game whose available_actions includes it; because undo is guaranteed by the protocol, its meaning is shown plainly, without the question mark used for guessed meanings.
 
 • No benchmark score is claimed, in keeping with the project rule of never announcing a result before it is measured.
 
