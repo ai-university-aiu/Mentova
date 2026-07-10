@@ -1,0 +1,53 @@
+Acc_425: A Fact Refinery With a Minority Report Panel
+
+There is a hard problem at the center of building an honest artificial mind.
+
+Language models are the best readers ever built.  They are also fluent guessers that can sound completely sure while being completely wrong.
+
+Mentova's whole identity is that it never bluffs.
+
+So how do you use an army of brilliant, unreliable readers to grow a mind that refuses to guess?
+
+Today's milestone is the answer: a fact refinery.
+
+Raw text goes in one end.  Clean, checked, sourced candidate facts come out the other.
+
+And not one fluent guess is trusted along the way.
+
+Here is how.
+
+A cheap local model reads a passage and proposes facts in a strict shape — subject, relation, object, the exact source sentence, and a citation.
+
+A stronger model qualifies each one: is it the kind of fact you can perceive, like a ball being round, or the kind a trusted record attests, like the Peace of Westphalia being signed in 1648?
+
+Then comes the panel.
+
+Several genuinely different models — different makers, different training — vote on each fact.  Blind, so they cannot echo one another.  Normalized, so the same fact in different words counts as agreement.
+
+Saying "I do not know" is an honest abstention, never a disagreement.
+
+Unanimous facts ride a high-confidence lane.  Four of five gets a lighter human look.  A split goes to the Minority Report Bin — named for the film — where a person, or a stronger referee model, settles it.
+
+And then the part I care about most.
+
+Even a unanimous panel does not get the last word.
+
+A plain program — ordinary rule-following code, on which no model gets a vote — checks that every word of the fact connects to concepts Mentova has already grounded, and that the citation is real and reachable.
+
+In today's demonstration, the panel unanimously endorsed a fact about the moon.
+
+The gate rejected it anyway, because Mentova has not grounded "moon" yet.
+
+The models concurred.  Reality was still asked to concur separately.
+
+Facts that survive enter the same review queue human mentors use.  Approved facts are grounded with their entire story attached — the record, the exact sentence, who voted which way, and the checks that passed.
+
+Ask Mentova "why?" and it shows you all of it.
+
+Twelve acceptance checks.  Twelve passes.
+
+This is how the library on the shelf becomes knowledge in the head — one checked, sourced, reviewed fact at a time — without the mind ever learning to bluff.
+
+D. R. Dison
+Founder of AIU
+Creator and Owner of PrologAI and Mentova

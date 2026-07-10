@@ -1,0 +1,40 @@
+MENTOVA'S ELEVATOR SPEECH
+
+From Appendix T of Teach_Mentova_To_Chat_v2 (2026-07-10).
+
+The short, spoken description of the project, in three lengths.
+
+
+THE ONE-SENTENCE VERSION
+
+Mentova is a chatbot that only says what it can actually explain, learning language honestly from the ground up like a child, so it never bluffs.
+
+
+THE THIRTY-SECOND VERSION
+
+Mentova is an honest artificial mind that learns language the way a child does, from the ground up.
+
+Most chatbots are fluent guessers that can sound sure while being wrong.
+
+Mentova is different: every word it uses is tied back to simpler words it already understands, all the way down to things it can point at or learned from a trusted source, so it can always explain why it said something, and it honestly says "I do not know" instead of bluffing.
+
+We teach it with a twenty-five level curriculum, from toddler words up to scholarly ideas, and it can talk with people through a simple web chat.
+
+
+THE SIXTY-SECOND VERSION
+
+Mentova is a glass-box artificial mind that learns language honestly, the way a child does, one grounded word at a time.
+
+Most of today's chatbots are fluent guessers.
+
+They predict likely words, so they can sound completely confident while being completely wrong, and they cannot really show you why they said what they said.
+
+Mentova takes the opposite path.
+
+Every word it knows is connected to simpler words it already understands, down to things it can perceive or has learned from a trusted, cited source, so you can always ask "why?" and follow the reasoning to the bottom.
+
+When it has not learned something, it tells you so, plainly, instead of making something up.
+
+We raise it with a twenty-five level curriculum that climbs from a toddler's first words all the way to scholarly language, we let it hear the music and the feeling in how things are said, and people can talk with it through a simple, honest web chat.
+
+Over time it can even read large libraries like an encyclopedia, but only promotes something to genuine understanding after several independent checks agree and a person signs off, so it grows in knowledge without ever losing its honesty.

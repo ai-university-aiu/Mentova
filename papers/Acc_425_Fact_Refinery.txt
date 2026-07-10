@@ -1,0 +1,140 @@
+Acc_425: The Fact Refinery and the Minority Report Panel - Growing Knowledge Without Trusting a Fluent Guess
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-10
+
+
+ABSTRACT
+
+This paper describes the delivery of Acc_425, implementing the Version 2
+additions of the Teach Mentova To Chat master plan: Appendix Q (scaling and
+storage), Appendix R (direct and testimonial grounding), Appendix S (the fact
+refinery and the Minority Report panel), and Appendix T (the elevator speech).
+Mentova gains two new modules. The reference library is the look-it-up tier:
+large reference text that Mentova can search and read one page at a time but
+has not understood, and which is never asserted as fact. The fact refinery is
+the frontier between that library and Mentova's understood knowledge: a
+six-stage pipeline in which language models propose candidate facts in a
+strict sourced shape, an odd panel of genuinely different models votes blind
+with normalized answers, a plain program - on which no model gets a vote -
+confirms that each fact connects to grounded concepts and that its citation
+is real, survivors grade into confidence lanes, splits go to a Minority
+Report Bin for a person, and reviewed facts are grounded with their full
+provenance so that "why?" is answered by citing the record, the votes, and
+the checks. The demonstration passes all twelve of its acceptance criteria.
+
+
+WHAT WAS BUILT
+
+Two modules, one demonstration, and four policy artifacts.
+
+src/mentova/reference_library.pl is the look-it-up library of Appendix Q.
+Sources are registered text files; pages and searches stream line by line, so
+a corpus never has to fit in memory; and the module's only dynamic state is
+its registry, so library content can never leak into the fact store.
+Citations have the shape source(SourceId, LineNo) and can be verified
+reachable - the currency of testimonial grounding.
+
+src/mentova/fact_refinery.pl is the refinery of Appendix S. Every model in it
+is a caller-supplied goal - a free local model through the guarded Ollama
+adapter, a stronger remote referee, or a deterministic test double - because
+the refinery's cardinal rule is that nothing a language model says is trusted
+merely because a language model said it.
+
+demos/fact_refinery_demo.pl is the acceptance demonstration, and the
+repository also gains a .gitignore that keeps large corpora out of git, the
+storage policy document, the elevator speech document, and version 2 of all
+six living chat documents.
+
+
+HOW IT WORKS
+
+Stage one, extraction. A cheap model reads a passage and proposes candidates
+in a strict shape - subject, relation, object, the exact source sentence, and
+the citation. The shape is law: malformed proposals are dropped by plain code.
+
+Stage two, qualification. A stronger model checks each candidate and assigns
+the grounding kind of Appendix R: direct, for what can be perceived, like a
+ball being round; or testimonial, for what a trusted record attests, like the
+Peace of Westphalia being signed in 1648 - the very example Appendix R uses.
+A fact does not have to be touchable to be understood.
+
+Stage three, the Minority Report panel. An odd number of genuinely different
+models votes on each fact, blind, so they cannot echo one another. Answers
+are normalized before counting, so the same fact in different words counts as
+agreement and a genuinely different claim counts as a split. "I do not know"
+is an honest abstention and is never counted as a disagreement.
+
+Stage four, the honesty gate. Ordinary rule-following code - no model gets a
+vote - confirms that the fact's words connect to concepts already grounded
+and that the citation is real and reachable. The gate is kept even for
+unanimous facts, because models trained on overlapping text can share a
+misconception: the vote shows the models concur, the source check shows
+reality concurs, and both are wanted. In the demonstration, the panel
+unanimously endorses a fact about the moon, and the gate rejects it anyway,
+because "moon" is not yet a grounded concept.
+
+Stage five, lanes and review. Unanimous facts enter a high-confidence lane
+that may be accepted automatically with a deterministic random sample audited
+by hand; a strong majority, such as four of five, gets a lighter human look;
+a split goes to the Minority Report Bin, which is not a trash can but a
+valuable queue, because disagreement clusters exactly where knowledge is
+contested. A stronger referee model is spent only where it changes an
+outcome: on the Bin. Survivors enter the chat's existing Review Queue through
+the same machinery mentors use, under a reserved system identity.
+
+Stage six, grounding. An approved fact becomes an understood fact with all
+its provenance intact, and Mentova's honest answer to "why?" is: a trusted
+record says so, here is that record and its exact sentence, here is who
+agreed and who did not, and here are the checks that passed.
+
+
+WHY THIS MATTERS
+
+Language models produce confident, well-formed sentences that sound like
+facts, including when they are wrong - which is the opposite of what this
+project stands for. The refinery lets Mentova put many such models to work,
+around the clock, without ever inheriting their confidence. Volume grows;
+honesty does not shrink. And the two-tier storage rule of Appendix Q keeps
+the distinction physical: the library on the shelf is never confused with
+the knowledge in the head.
+
+
+TECHNICAL NOTES
+
+The demonstration follows the Mentova convention of asserting its own
+acceptance criteria and printing PASS or FAIL:
+
+    swipl -l demos/fact_refinery_demo.pl -g run_fact_refinery_demo -t halt
+
+Twelve of twelve criteria pass, on a fresh persistence file and again on a
+re-attached one. The panel members in the demonstration are deterministic
+doubles, so the pipeline is proven independent of any live model; the Ollama
+adapter reports the locally installed models (qwen3:8b and qwen3:14b, the
+model family Appendix S itself names) and is guarded by a catch and a time
+limit so it can never hang or lie. The hand-audit sample is reproducible
+from its seed. The Acc_423 chat code is unchanged, and the Acc_424
+demonstration still passes nine of nine.
+
+
+COMPLETION
+
+Acc_425 is delivered. SPARC documentation has been updated: Specification
+v356, Pseudocode v348, Architecture v349, Refinement v413, Completion v419.
+The six living chat documents are at version 2, with version 1 archived.
+
+
+COPYRIGHT
+
+Copyright 2026 D. R. Dison.
+
+All rights reserved.
+
+The code, documentation, papers, and announcements associated with the Mentova and PrologAI projects are the intellectual property of D. R. Dison, Founder of AIU (Artificial Intelligence University), Creator and Owner of PrologAI and Mentova.
+
+Free for non-commercial use with required attribution.
+
+Commercial use requires a negotiated license.
+
+Contact: ai.university.aiu@gmail.com

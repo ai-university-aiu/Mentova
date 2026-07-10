@@ -1,0 +1,19 @@
+# Appendix Q of Teach_Mentova_To_Chat_v2: GitHub is for code, not for
+# large data. ConceptNet, Wikipedia, curriculum corpora, and any runtime
+# databases must never live in git; they are downloaded from their
+# official sources at build time and stored on the data tiers described
+# in docs/Mentova_Knowledge_Storage_Policy.txt.
+
+# Runtime chat database (library(persistency) journal files).
+data/chat_db/
+
+# The look-it-up reference library tier: raw corpora, never asserted.
+data/reference_library/
+data/corpora/
+
+# Fact refinery working state and scratch output.
+data/refinery/
+
+# Large ontology and encyclopedia downloads.
+*.bz2
+*.dump
