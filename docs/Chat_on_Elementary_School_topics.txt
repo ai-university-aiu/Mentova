@@ -1,0 +1,160 @@
+TESTING THE ELEMENTARY CURRICULUM THROUGH MENTOVA CHAT
+
+How to check that the imported elementary curriculum is reachable, correct, and honestly cited.
+
+Companion to Curriculum_Import_Elementary_School.txt.
+
+Written 2026-07-10.
+
+
+PART 0: WHAT WAS IMPORTED, IN ONE LINE
+
+The Rosetta Rock word walls (ages 2 to Grade 5) and the California standards (PTKLF for ages 3 to 5, Common Core for Kindergarten to Grade 5) are now 2,372 understood facts plus 5 sound Causal Relation Objects in the lattice, and the 9,030-document bulk lesson corpus is searchable through the Reference Library.
+
+
+PART 1: TWO WAYS TO TEST
+
+There are two honest ways to test, and it is worth doing both.
+
+Test mode A - DIRECT LATTICE QUERIES. Query the curriculum module directly in SWI-Prolog. This proves the knowledge is present, correct, and cited, independent of the chat's language layer. These are the definitive tests.
+
+Test mode B - THE CHAT INTERFACE. Ask questions in the browser chat. This exercises the whole path a real user takes. Whether a given natural-language question is answered from the curriculum depends on the chat's existing language-understanding layer routing to the lattice; the curriculum facts are anchored as ordinary node_facts, so lattice-based answering can reach them, and the Reference Library search is always available for look-it-up questions.
+
+
+PART 2: STARTING THE CHAT
+
+From the repository root:
+
+  swipl -q -g "mc_chat_main('data/chat_db', 8080)" src/mentova/mentova_chat.pl
+
+On startup you should see a line like:
+
+  curriculum: registered sources; anchored 2372 facts, 5 CROs into locus://mentova/curriculum
+
+That line confirms the curriculum loaded. If the lattice packs are not on the library path in a given deployment, the count may read 0 while the sources still register; the direct query helpers (Part 3) work either way because they read the loaded facts.
+
+Then open http://localhost:8080/ in a browser for the public chat, or http://localhost:8080/mentor for the mentor view.
+
+
+PART 3: TEST MODE A - DIRECT LATTICE QUERIES (DEFINITIVE)
+
+Start a plain SWI-Prolog session and load just the curriculum:
+
+  swipl
+  ?- use_module('knowledge/curriculum/curriculum_lattice').
+  ?- ci_import_elementary.
+
+Then run these checks. Each is written as: the query, then what to expect.
+
+3.1 TODDLER (ages 2 to 3)
+
+  ?- ci_word(toddler, mama).
+  Expect: true. "mama" is toddler vocabulary.
+
+  ?- ci_sound(dog, S).
+  Expect: S = woof. The toddler sound CRO.
+
+  ?- ci_why(mama, Citation, Text).
+  Expect: Citation = source(wall_toddler, 52), Text = "mama" (the real cited line). This is the glass-box justification.
+
+3.2 PRESCHOOL and TRANSITIONAL KINDERGARTEN (ages 3 to 5)
+
+  ?- ci_words_for_grade(preschool, Words), length(Words, N).
+  Expect: N is about 180 to 190 preschool words.
+
+  ?- ci_words_for_grade(transitional_kindergarten, Words), length(Words, N).
+  Expect: N is about 139.
+
+  ?- ci_ptklf(mathematics, Id, Name).
+  Expect: solutions such as Id = '1.1', Name = 'reciting numbers' - a PTKLF mathematics foundation.
+
+3.3 KINDERGARTEN (ages 5 to 6)
+
+  ?- ci_standard(kindergarten, Domain, Code).
+  Expect: Domain = 'counting and cardinality', Code = 'K.CC' (and other Kindergarten math domains: K.OA, K.NBT, K.MD).
+
+  ?- ci_words_for_grade(kindergarten, W), length(W, N).
+  Expect: N is about 330.
+
+3.4 GRADE 1 and GRADE 2 (ages 6 to 8)
+
+  ?- ci_standard(grade1, D, C).
+  Expect: 1.OA (operations and algebraic thinking), 1.NBT, 1.MD.
+
+  ?- ci_grade_of_word(ball, Grades).
+  Expect: Grades includes toddler and preschool - the same word taught at more than one band.
+
+3.5 GRADE 3, GRADE 4, GRADE 5 (ages 8 to 11)
+
+  ?- ci_standard(grade5, D, C).
+  Expect: 5.OA, 5.NBT, 5.NF (number and operations - fractions), 5.MD, and Geometry.
+
+  ?- ci_word(grade5, W).
+  Expect: richer vocabulary such as "perspective", "assemble", "precede".
+
+  ?- ci_why(assemble, Cite, Text).
+  Expect: a source(wall_grade5, LineNo) citation and the real line read back.
+
+3.6 THE BULK CORPUS (look-it-up, all grades)
+
+  ?- ci_search('Grade 4 Module', Hits), length(Hits, N).
+  Expect: up to 25 hits, including manifest lines that point at real absolute paths of Grade 4 lesson documents on disk.
+
+  ?- ci_search('fractions', Hits).
+  Expect: hits from the standards texts and the manifest.
+
+
+PART 4: TEST MODE B - THE CHAT INTERFACE, SAMPLE QUESTIONS PER GRADE
+
+Type these in the browser chat. For each, the expected behavior is described. Where the language layer routes a question to the lattice, expect a grounded answer; where it does not, the same fact is still retrievable through the "why?" control and through look-it-up search, so nothing is fabricated.
+
+TODDLER (ages 2 to 3):
+• "What sound does a dog make?"  Expect: woof (grounded in the toddler sound CRO; ask "why?" to see the citation to the toddler word wall).
+• "What sound does a cow make?"  Expect: moo.
+• "Is mama a first word?"  Expect: yes, a toddler people-word.
+
+PRESCHOOL and TRANSITIONAL KINDERGARTEN (ages 3 to 5):
+• "What should a preschooler learn in mathematics?"  Expect: reference to PTKLF mathematics foundations such as reciting numbers, one-to-one correspondence, cardinality.
+• "What are the PTKLF domains?"  Expect: the domains represented (mathematics, language and literacy, science, social-emotional development, and so on).
+
+KINDERGARTEN (ages 5 to 6):
+• "What math do kindergartners learn?"  Expect: counting and cardinality (K.CC), operations and algebraic thinking (K.OA), number and operations in base ten (K.NBT), measurement and data (K.MD), geometry.
+• "What are some kindergarten words?"  Expect: words drawn from the Kindergarten word wall.
+
+GRADE 1 and GRADE 2 (ages 6 to 8):
+• "What is 1.OA?"  Expect: operations and algebraic thinking, the Grade 1 math domain.
+• "What words does a first grader learn?"  Expect: Grade 1 vocabulary.
+
+GRADE 3 to GRADE 5 (ages 8 to 11):
+• "What fractions standard is in Grade 5?"  Expect: 5.NF, number and operations - fractions.
+• "What does a fifth grader study in math?"  Expect: 5.OA, 5.NBT, 5.NF, 5.MD, geometry.
+• "Find me the Grade 4 math modules."  Expect: a look-it-up answer from the Reference Library manifest, pointing at real lesson documents on disk.
+
+THE GLASS-BOX CHECK (every grade):
+• After any grounded answer, use the "why?" control (the /api/why endpoint). Expect a citation of the shape source(SourceId, Line) and the exact source line read back. A curriculum answer that cannot show a real citation is a bug, not an answer - that is the honesty guarantee this import was built to keep.
+
+
+PART 5: WHAT COUNTS AS PASS OR FAIL
+
+PASS:
+• The startup line reports the curriculum registered (and, with the lattice packs present, anchored 2372 facts and 5 CROs).
+• The direct queries in Part 3 return the expected values.
+• Every grounded curriculum answer can produce a real source(SourceId, Line) citation whose text reads back correctly.
+• Look-it-up searches return real hits that point at real files.
+
+FAIL (and what it means):
+• A curriculum answer with no resolvable citation - the honesty gate or registration is broken; check ci_register_sources and that the source files still exist at the registered absolute paths.
+• ci_import_elementary reporting 0 anchored facts in a deployment that does load the lattice - the lattice packs are not on the library path; the query helpers still work, but anchoring into the nexus needs the packs.
+• A direct query returning nothing where Part 3 expects a value - reload curriculum_elementary_facts.pl and confirm it consulted without error.
+
+
+PART 6: FILE LOCATIONS
+
+• Loader and query interface: /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_lattice.pl
+• Understood facts: /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_elementary_facts.pl
+• Path registry: /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_path_registry.pl
+• Chat wiring: /home/ccaitwo/Mentova/src/mentova/mentova_chat.pl
+• This guide, and its copy: /home/ccaitwo/curriculum/Chat_on_Elementary_School_topics.txt and /home/ccaitwo/Mentova/docs/Chat_on_Elementary_School_topics.txt
+
+
+END OF CHAT TESTING GUIDE.

@@ -1,0 +1,142 @@
+ELEMENTARY SCHOOL CURRICULUM - FULL PASS INSTRUCTIONS
+
+How to go beyond the light pass and fully extract, register, and ground the bulk lesson corpus later.
+
+Companion to Curriculum_Import_Elementary_School.txt.
+
+Written 2026-07-10.
+
+
+PART 0: WHERE THE LIGHT PASS LEFT OFF
+
+The light pass already did the following, and none of it needs redoing:
+
+• The clean word walls and the California standards became 2,372 understood facts plus 5 sound Causal Relation Objects (CROs) in the lattice, each cited.
+
+• All 281 archives were unzipped (including nested archives) into /home/ccaitwo/curriculum/.
+
+• The 9,030 elementary lesson documents were indexed into a searchable manifest and registered in the Reference Library, streamed on demand.
+
+What the light pass did NOT do: turn the text INSIDE those 9,030 lesson documents into extracted text files, and promote any of that text into understood facts. That is the full pass, described below.
+
+A word is defined the first time it is used. Optical Character Recognition (OCR): reading text out of a scanned image. Teacher edition: the instructor's version of a lesson, richest in objectives and standards alignment.
+
+
+PART 1: WHAT "FULL EXTRACTION" ACTUALLY INVOLVES
+
+Full extraction has three stages. Only stage A is "extraction" in the narrow sense; stages B and C are what make the text useful to Mentova.
+
+Stage A - TEXT EXTRACTION. Convert each lesson document to plain text.
+
+• Portable Document Format (PDF) files: pdftotext -layout (already installed).
+
+• Word files (.docx and .doc): pdftotext cannot read these. Use one of:
+  ◦ pandoc (fastest, cleanest for .docx),
+  ◦ libreoffice --headless --convert-to txt (handles both .docx and old .doc, slower),
+  ◦ antiword for the old .doc format only.
+
+• Image-heavy or scanned PDFs (many student readers and the _jp2 archives): pdftotext yields almost nothing because the pages are pictures. These need OCR (for example tesseract), which is far slower and should be applied only where the text is genuinely wanted.
+
+Stage B - REFERENCE-LIBRARY REGISTRATION. Register each extracted text file with rl_register/2 so it is searchable line by line and can be cited as source(SourceId, Line). Extend curriculum_path_registry.pl with the new sources, or generate a second registry file for the extracted corpus.
+
+Stage C - GROUNDING INTO UNDERSTOOD FACTS. Run the extracted text through the Fact Refinery (src/mentova/fact_refinery.pl): extraction, qualification, the Minority Report panel vote, the plain-code honesty gate (which checks the citation is real and reachable), confidence lanes, and human review. Only facts that survive become understood facts in the lattice. This is the stage that makes Mentova "understand" the lessons rather than merely "look them up," and it is by far the most expensive stage because it spends model calls per candidate fact.
+
+
+PART 2: MEASURED NUMBERS (this machine, this corpus)
+
+Elementary bulk corpus (Prekindergarten through Grade 5), from the manifest:
+
+• 5,319 PDF files, 2,836 .docx files, 875 .doc files = 9,030 documents, about 10.1 gigabytes on disk.
+
+• Sampled PDFs averaged about 25 pages each (so roughly 130,000 to 135,000 PDF pages elementary-wide).
+
+• pdftotext throughput measured at about 500 pages per second on text PDFs on this hardware.
+
+• Text yield averaged about 13 percent of PDF size for text PDFs, but near zero for image-heavy readers (those need OCR).
+
+Whole corpus (Prekindergarten through Grade 12, for Option 2 scope): 12,464 PDF, 6,949 Word files across the full 30 gigabytes on disk.
+
+
+PART 3: OPTION 1 (RECOMMENDED) - FULL FOR HIGH-VALUE DOCS, LIGHT FOR THE BULK
+
+Extract and ground only the high-value documents; leave the mass of individual daily-lesson PDFs in the light (manifest-only) state they are in now.
+
+High-value documents are the ones dense in objectives and standards, and light in disposable worksheet material:
+
+• Module overviews and teacher editions (filenames containing "Module", "TE", "overview", "teacher").
+
+• The Grades 3 to 5 curriculum maps and plans and the foundational reading and language resource packages already present as loose PDFs.
+
+• The Kindergarten to Grade 2 Skills and Listening-and-Learning domain guides (systematic phonics scope and knowledge-building sequences).
+
+Rough size of this subset: on the order of 1,000 to 1,500 documents (perhaps 10 to 15 percent of the elementary corpus).
+
+TIME ESTIMATES (Option 1):
+
+• Stage A text extraction: PDFs a few minutes; Word documents 5 to 20 minutes with pandoc, or up to about an hour with libreoffice. OCR is not needed for this subset (the teacher editions are text PDFs). Total Stage A: well under one hour.
+
+• Stage B registration: seconds (it is just rl_register per file).
+
+• Stage C grounding through the Fact Refinery: this dominates. With a local model through Ollama, budget on the order of several seconds per candidate fact times the panel size; for 1,000 to 1,500 documents this is realistically hours to a couple of days of unattended compute, plus human review time for the medium and Minority-Report lanes. Scale the panel and lane thresholds to the time available.
+
+DISK ESTIMATES (Option 1):
+
+• Extracted text for the high-value subset: roughly 30 to 120 megabytes.
+
+• Fact Refinery working state under data/refinery/ (gitignored): tens of megabytes.
+
+• No change to git footprint except the newly grounded facts (compact), which would be added to knowledge/curriculum/ exactly as the light-pass facts were.
+
+
+PART 4: OPTION 2 - FULL EXTRACTION OF EVERYTHING
+
+Extract text from every lesson document, register all of it, and (optionally) ground all of it.
+
+TIME ESTIMATES (Option 2, elementary scope; multiply by about 2.4 for the whole Prekindergarten-to-Grade-12 corpus):
+
+• Stage A text extraction:
+  ◦ PDFs: about 130,000 pages at about 500 pages per second is roughly 5 minutes of raw pdftotext, call it 15 to 45 minutes allowing for process startup over 5,319 files and slower image-heavy pages.
+  ◦ Word files (3,711 of them): about 10 to 30 minutes with pandoc, or 1 to 3 hours with libreoffice headless.
+  ◦ OCR of image-heavy and _jp2 scanned pages, IF wanted: this is the expensive part. At a typical 2 to 10 seconds per page, tens of thousands of scanned pages run into many hours to a few days. OCR is optional and should be targeted, not blanket.
+  ◦ Total Stage A without OCR: about 30 minutes to 3 hours. With blanket OCR: 1 to 3 days.
+
+• Stage B registration: minutes.
+
+• Stage C grounding of everything through the Fact Refinery: the real cost. Grounding tens of thousands of pages of candidate facts is days to weeks of model compute and a large human-review burden. This is a project, not an afternoon. Strongly consider grounding selectively even under Option 2, using the confidence lanes to auto-accept only unanimous high-lane facts and binning the rest.
+
+DISK ESTIMATES (Option 2, elementary scope):
+
+• Extracted plain text: roughly 250 to 650 megabytes (about 2.4 times that for the whole K-12 corpus, so up to about 1.5 gigabytes).
+
+• If OCR is run, add the intermediate image and hOCR files: potentially several gigabytes of scratch (deletable after).
+
+• Fact Refinery working state: hundreds of megabytes.
+
+• All of this stays on disk under /home/ccaitwo/curriculum/ and data/refinery/; only the final grounded facts (compact) would enter git.
+
+
+PART 5: THE RECOMMENDATION
+
+Do Option 1. Extract and ground the high-value teacher editions, module overviews, curriculum maps, and phonics guides, because those carry the objectives and standards that are worth understanding; leave the mass of daily worksheets in the streamed Reference Library, where Mentova can already find and open them on demand. Reach for Option 2 only when there is a specific reason to understand the full lesson-by-lesson detail, and even then ground selectively through the confidence lanes rather than trying to understand every page.
+
+The light pass plus Option 1 gives Mentova a genuinely understood elementary curriculum (vocabulary, standards, and the high-value lesson objectives) while keeping the understood notebook small and the big corpus on the shelf, exactly as the Knowledge Storage Policy intends.
+
+
+PART 6: A CONCRETE STARTING RECIPE (Option 1)
+
+1. Make an output directory: /home/ccaitwo/curriculum/extracted_text/lessons/
+
+2. Select high-value files from the manifest (grep the manifest for "Module", "teacher", "TE", "overview", "Curriculum Map", "Skills", "Listening").
+
+3. For each selected PDF: pdftotext -layout "<file>" "lessons/<sanitized>.txt".
+   For each selected .docx: pandoc "<file>" -t plain -o "lessons/<sanitized>.txt".
+   For each selected .doc: libreoffice --headless --convert-to txt --outdir lessons/ "<file>".
+
+4. Generate a registry file (mirror gen_registry) that maps a new SourceId per extracted text to its absolute path, and load it in curriculum_lattice with rl_register.
+
+5. Run fact_refinery:fr_refine/3 over each extracted text with a real extractor, qualifier, and an odd panel of genuinely different models; let the honesty gate check every citation.
+
+6. Route survivors: high lane auto-accepts with a sampled hand audit; medium lane gets a lighter human look; the Minority Report Bin goes to a person. Approve with fr_approve/2, which grounds the fact with full provenance so ci_why-style justification keeps working.
+
+
+END OF FULL PASS INSTRUCTIONS.
