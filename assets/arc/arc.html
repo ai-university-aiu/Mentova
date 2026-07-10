@@ -48,13 +48,11 @@
   <div>
     <span id="status"> status: —</span><span id="outcome"></span>
   </div>
-  <div class="pad" id="lights">
-    <span class="lite" id="act-up">Up</span>
-    <span class="lite" id="act-down">Down</span>
-    <span class="lite" id="act-left">Left</span>
-    <span class="lite" id="act-right">Right</span>
-    <span class="lite" id="act-pickup">Pickup</span>
-    <span class="lite" id="act-interact">Interact</span>
+  <div class="pad" id="lights"></div>
+  <div style="font-size:0.78em;color:#9c9;margin-top:-4px">
+    Actions are the ARC-AGI-3 canonical commands. A word in parentheses with "?"
+    is a <em>guess</em> — discovered by playing, or the local stand-in's design.
+    ARC-AGI-3 hides what each action does, and the meaning can differ per game.
   </div>
 
   <!-- Lower half: the chat (greyed out in solo mode). -->
@@ -119,18 +117,39 @@ function log(who, text) {
   d.scrollTop = d.scrollHeight;
 }
 
-// Map a server action string to one of the light-up buttons and flash it.
-function lightUp(actionStr) {
-  const map = {
-    'action(up)':'act-up', 'action(1)':'act-up',
-    'action(down)':'act-down', 'action(2)':'act-down',
-    'action(left)':'act-left', 'action(3)':'act-left',
-    'action(right)':'act-right', 'action(4)':'act-right',
-    'action(pickup)':'act-pickup', 'action(5)':'act-interact'
-  };
-  const id = map[actionStr];
-  if (!id) return;
-  const el = document.getElementById(id);
+// The command set currently rendered, so buttons only rebuild when it changes.
+let currentCmds = '';
+// Render the action buttons from the server's descriptors (canonical names).
+function renderActions(list) {
+  if (!list) return;
+  const cmds = list.map(a => a.command).join(',');
+  const box = document.getElementById('lights');
+  if (cmds !== currentCmds) {
+    // The available action set changed (e.g. a different game): rebuild.
+    box.innerHTML = '';
+    for (const a of list) {
+      const s = document.createElement('span');
+      s.className = 'lite'; s.id = 'cmd-' + a.command;
+      s.textContent = a.label;
+      s.title = a.source === 'discovered' ? 'discovered by playing this game'
+              : a.source === 'assumed' ? 'the local stand-in game’s own design (still a guess for the real benchmark)'
+              : 'unknown — ARC-AGI-3 hides what each action does';
+      box.appendChild(s);
+    }
+    currentCmds = cmds;
+  } else {
+    // Same set: just refresh labels, since discovered semantics can change.
+    for (const a of list) {
+      const el = document.getElementById('cmd-' + a.command);
+      if (el && el.textContent !== a.label) el.textContent = a.label;
+    }
+  }
+}
+// Flash the button for a canonical command (e.g. "ACTION1").
+function lightUp(command) {
+  if (!command || command === 'none') return;
+  const el = document.getElementById('cmd-' + command);
+  if (!el) return;
   el.classList.add('lit');
   setTimeout(() => el.classList.remove('lit'), 320);
 }
@@ -159,7 +178,8 @@ async function refreshFrame() {
   draw(j.frame);
   document.getElementById('status').textContent =
     ' status: ' + j.status + '  |  mode: ' + j.mode + '  |  game: ' + j.game;
-  if (j.last_action && j.last_action !== 'none') lightUp(j.last_action);
+  if (j.actions) renderActions(j.actions);
+  if (j.last_command && j.last_command !== 'none') lightUp(j.last_command);
 }
 
 // Advance the solo run one step and show it (solo mode: view-only telemetry).
@@ -167,7 +187,8 @@ async function tickSolo() {
   const t = await (await fetch('/api/arc/solo/tick', {method: 'POST',
     headers: {'Content-Type': 'application/json'}, body: '{}'})).json();
   draw(t.frame);
-  if (t.action && t.action !== 'none') lightUp(t.action);
+  if (t.actions) renderActions(t.actions);
+  if (t.command && t.command !== 'none') lightUp(t.command);
   document.getElementById('status').textContent =
     ' solo step: ' + t.step + '  |  game: ' + gameSel();
   document.getElementById('outcome').textContent =
