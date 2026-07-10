@@ -1,0 +1,73 @@
+MENTOVA KNOWLEDGE STORAGE POLICY
+
+From Appendix Q of Teach_Mentova_To_Chat_v2 (2026-07-10).
+
+
+THE ONE-BREATH SUMMARY
+
+Mentova's knowledge is split into two very different kinds.
+
+The understood notebook is the grounded Lattice of facts Mentova truly understands and can justify; it stays small and lives on the fast internal drive.
+
+The look-it-up library is the large reference bodies, such as Wikipedia and the full California curriculum, which Mentova consults one page at a time; it lives on a larger, cheaper drive.
+
+The rule: keep the understood notebook small and fast, keep the big library separate, and never confuse the library on the shelf with the knowledge in the head.
+
+
+THE TWO KINDS OF KNOWLEDGE
+
+The grounded Lattice is curated, verified, and tied through simpler words down to perception (direct grounding) or to a trusted record (testimonial grounding), and every fact in it can answer a "why?" question.
+
+The reference library is raw text Mentova has not yet understood, held so it can be searched and read on demand, never asserted as fact - unread text asserted as fact is exactly the bluffing this project forbids.
+
+Understanding grows as a frontier: selected pieces are promoted from the library into the grounded Lattice through the fact refinery (src/mentova/fact_refinery.pl), with panel checking, a plain-code honesty gate, and human review.
+
+In code, the library tier is src/mentova/reference_library.pl: registered sources are streamed page by page and searched line by line, and citations of the shape source(SourceId, LineNo) are the currency of testimonial grounding.
+
+
+APPROXIMATE DATA SIZES (MID 2026)
+
+• Suggested Upper Merged Ontology (SUMO): about 20 megabytes.
+
+• WordNet: about 50 megabytes as a database.
+
+• ConceptNet: 9 to 10 gigabytes to download, 24 to 30 gigabytes loaded into PostgreSQL with indexes; rebuilding it needs at least 30 gigabytes of memory, so load the ready-made copy, never rebuild.
+
+• California curriculum standards: tens to a few hundred megabytes as text.
+
+• English Wikipedia, current articles only: about 25 gigabytes compressed, 20 to 25 gigabytes as extracted plain text; the 10-terabyte full revision history is never downloaded.
+
+Working disk budget: roughly 30 to 40 gigabytes for ontologies plus ConceptNet, and another 100 to 200 gigabytes once Wikipedia and its search helpers are added.
+
+
+WHY LARGE DATA STAYS OUT OF GIT
+
+GitHub blocks single files over 100 megabytes, warns over 50, caps browser uploads at 25, and recommends repositories stay under 1 gigabyte.
+
+Therefore ConceptNet, Wikipedia, and any full corpus never live in this repository; the code and tiny ontology files live in git, and large datasets are downloaded from their official sources at build time.
+
+This policy is enforced by the repository's .gitignore, which excludes data/reference_library/, data/corpora/, data/refinery/, and the runtime data/chat_db/.
+
+
+THE STORAGE DECISIONS TAKEN
+
+• A two-terabyte external solid-state drive (not a spinning disk) will be added on a fast USB port for Wikipedia, ConceptNet, the curriculum, search helpers, and backups.
+
+• For now, while the text-only chat is built and tested, everything stays on the internal drive, whose free space easily covers the ontologies and ConceptNet.
+
+• When the big libraries are actually ingested, they and the backups move to the external solid-state drive.
+
+• Wikipedia and the full curriculum are treated as the look-it-up library, promoted into understanding only through the refinery frontier.
+
+
+THE SCALING TOOLKIT
+
+• Store knowledge in tiers: memory for the hot grounded set, PostgreSQL on disk for the warm Lattice and reference tables, the external drive for the cold raw corpora.
+
+• Use search rather than wholesale grounding for big text: full-text search and vector search find the one relevant passage on demand.
+
+• Keep large data out of git; fetch it from official sources at build time.
+
+• Stream, do not slurp: read giant files a piece at a time so they never have to fit in memory (reference_library.pl reads line by line by construction).
+
+• Grow the hardware later as needed: ample solid-state disk now, more memory when in-memory work demands it, a larger database server when the public chat grows.

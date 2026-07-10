@@ -20,6 +20,8 @@
 
 ## What is Mentova?
 
+> Mentova is a chatbot that only says what it can actually explain, learning language honestly from the ground up like a child, so it never bluffs. *(The full elevator speech is in [docs/Mentova_Elevator_Speech.txt](docs/Mentova_Elevator_Speech.txt).)*
+
 Mentova is a program written in [PrologAI](https://github.com/ai-university-aiu/PrologAI) — a cognitive architecture platform — the same way an application depends on its language and runtime.
 
 It is born, proven, and grown one reasoning type at a time, following the Demonstration and Proof-of-Concept Plan (Volume 6 of the PrologAI SPARC series).
@@ -659,6 +661,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Acc_422` | ARC-AGI-2 Wave 124 (FINAL) — seven_injector rule solves the last task 21897d95 by injecting each blue T-marker's color into the region its stalk points at, healing leftover blue cells to their nearest neighbor, and applying a final quarter-turn keyed by an isolated dark-red seven glyph, reaching the summit at 120/120 = 100.00% on both the benchmark runner and the ledger. |
 | `Acc_423` | Text-only two-tier web chat — public visitors can chat with Mentova and ask why; mentors can teach through a review-gated acquisition path. |
 | `Acc_424` | AGI Foundations end to end — a curious agent (Mira) exercises all seven new PrologAI foundation packs (causal, actinf, worldmodel, planner, evolve, jspace, tom) in one episode: plans and simulates a fetch, grows curious as novelty falls into learning, decomposes a goal, checks a cue then acts under active inference, imagines a but-for counterfactual, reads another agent's false belief, evolves a valid reasoning trace, and reports its own workspace honestly — 9/9 acceptance criteria PASS. |
+| `Acc_425` | The Fact Refinery and the Minority Report Panel — language models propose strictly shaped, cited candidate facts; an odd panel of different models votes blind with normalized answers and honest abstentions; a plain-code honesty gate (concept connection + real citation) outranks even a unanimous panel; survivors grade into confidence lanes, splits go to a human Bin with a stronger referee, and approved facts ground with full provenance so "why?" cites the record, the votes, and the checks — 12/12 acceptance criteria PASS. |
 | `Acc_361` | ARC-AGI-2 Wave 63 — col_rank_fill rule solves task 97d7923e; indicator bar length at each column's row-0 cell gives a rank; rank-R column segment (by descending filler count) has its filler cells replaced by the marker color. Score: 60/120 = 50.00%. |
 | `Acc_360` | ARC-AGI-2 Wave 62 — shape_slide rule solves task 581f7754; anchor seeds on grid edges define slide direction and target row/col; each shape's unique-color interior marker aligns to the target; floating seeds also slide to match. Score: 59/120 = 49.17%. |
 | `Acc_358` | ARC-AGI-2 Wave 60 — layout_tile rule solves task 65b59efc; grid divided by two identical major divider rows and N divider cols into template, layout, and marker row-groups; output is S x S arrangement of S x S blocks, each template recolored by its marker color. Score: 57/120 = 47.50%. |
