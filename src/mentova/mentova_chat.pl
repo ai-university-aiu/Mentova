@@ -37,6 +37,15 @@
 :- use_module('chat_db').
 % Load the mentova module for mentova_query/3.
 :- use_module('mentova').
+% Load the ARC-AGI-3 chat backend so its /arc page and /api/arc/* routes
+% (Guided and Solo modes, game selection, solo telemetry, and the attempts
+% record) are registered on the running chat server.
+:- use_module('mentova_arc_chat').
+% Load the two ARC-AGI-3 learning sub-projects that share the chat backend's
+% learnings: ARC-AGI-3_Guided (human-in-the-loop) and ARC-AGI-3_Solo (unaided).
+:- use_module('arc_agi_3_guided').
+% The unaided solo sub-project.
+:- use_module('arc_agi_3_solo').
 % Load the small_world module for knowledge base predicates.
 :- use_module('../../knowledge/small_world').
 % Load the elementary curriculum loader: understood facts (word walls and

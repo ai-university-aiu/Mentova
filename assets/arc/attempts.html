@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!-- Mentova - ARC-AGI-3 Solo Attempts Record.
+     Lists the date-and-time-stamped plain-text reports written by ARC-AGI-3_Solo,
+     newest first. Clicking a filename opens that report as plain text. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mentova — ARC-AGI-3 Solo Attempts Record</title>
+<style>
+  body { font-family: sans-serif; background: #1d1616; color: #f2e8d5; margin: 0; }
+  #wrap { max-width: 760px; margin: 0 auto; padding: 12px; }
+  h1 { color: #c33; font-size: 1.2em; }
+  a { color: #d4a017; }
+  ul { line-height: 1.9em; }
+  #back { margin-bottom: 12px; }
+  #empty { color: #9c9; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>Mentova — ARC-AGI-3 Solo Attempts Record</h1>
+  <div id="back"><a href="/arc">&larr; Back to the ARC-AGI-3 Chat</a></div>
+  <p>Each solo attempt writes a date-and-time-stamped report. Newest first.</p>
+  <ul id="list"></ul>
+  <div id="empty" style="display:none">No solo attempts have been recorded yet.</div>
+</div>
+<script>
+// Fetch the attempt filenames and render them as links to the plain-text reports.
+async function loadAttempts() {
+  const j = await (await fetch('/api/arc/attempts')).json();
+  const ul = document.getElementById('list');
+  const files = (j && j.attempts) ? j.attempts : [];
+  if (files.length === 0) {
+    document.getElementById('empty').style.display = 'block';
+    return;
+  }
+  for (const f of files) {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    // Open the report as plain text in the browser.
+    a.href = '/api/arc/attempts/view?file=' + encodeURIComponent(f);
+    a.textContent = f;
+    a.target = '_blank';
+    li.appendChild(a);
+    ul.appendChild(li);
+  }
+}
+loadAttempts();
+</script>
+</body>
+</html>

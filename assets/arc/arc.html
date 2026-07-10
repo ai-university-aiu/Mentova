@@ -1,81 +1,238 @@
 <!DOCTYPE html>
-<!-- Mentova - mentova_arc_agi_3_chat split screen (Acc_426).
-     Upper region: the ARC game canvas, rendered from /api/arc/frame.
-     Lower region: the chat in which a human guides Mentova with clues.
-     Click a cell to disambiguate "that"/"there"; the click is sent as the
-     ref of the next clue. -->
+<!-- Mentova - ARC-AGI-3 Chat page (Acc_426, extended).
+     Two learning sub-projects share this page:
+       ARC-AGI-3_Guided - the chat is live and Mentova listens and learns.
+       ARC-AGI-3_Solo   - the chat is greyed out; the upper half is a view-only
+                          window on what Mentova is doing moment to moment, with
+                          movements shown as light-up button presses.
+     A game-environment dropdown selects the active environment. In solo mode,
+     pressing Restart runs a best-effort attempt and writes a date-and-time-
+     stamped report; the "ARC-AGI-3 Solo Attempts Record" link lists them. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Mentova — ARC-AGI-3 Guided Learning</title>
+<title>Mentova — ARC-AGI-3 Chat</title>
 <style>
   body { font-family: sans-serif; background: #1d1616; color: #f2e8d5; margin: 0; }
   #wrap { max-width: 760px; margin: 0 auto; padding: 12px; }
   h1 { color: #c33; font-size: 1.2em; }
   canvas { background: #000; image-rendering: pixelated; border: 2px solid #c33; }
-  #log { height: 200px; overflow-y: auto; background: #241c1c; padding: 8px;
+  #log { height: 180px; overflow-y: auto; background: #241c1c; padding: 8px;
          border: 1px solid #553; margin-top: 10px; font-size: 0.9em; }
-  input, button { background: #2e2424; color: #f2e8d5; border: 1px solid #775;
+  input, button, select { background: #2e2424; color: #f2e8d5; border: 1px solid #775;
                   padding: 6px; }
-  #hint { width: 55%; }
+  #hint { width: 52%; }
   .who { color: #d4a017; }
+  .pad { display: inline-block; margin: 8px 0; }
+  .lite { background: #2e2424; border: 1px solid #775; color: #b9a; padding: 8px 10px;
+          margin: 2px; border-radius: 4px; min-width: 64px; text-align: center;
+          display: inline-block; transition: background 0.08s, color 0.08s; }
+  .lite.lit { background: #d4a017; color: #1d1616; border-color: #d4a017;
+              box-shadow: 0 0 10px #d4a017; }
+  .disabled { opacity: 0.35; pointer-events: none; }
+  #controls { margin-top: 14px; padding-top: 10px; border-top: 1px solid #553; }
+  #controls button { font-weight: bold; margin-right: 6px; }
+  .modeon { outline: 2px solid #d4a017; }
+  #status { color: #9c9; }
+  #outcome { color: #d4a017; margin-left: 8px; }
+  a { color: #d4a017; }
+  #footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #553; }
 </style>
 </head>
 <body>
 <div id="wrap">
-  <h1>Mentova — ARC-AGI-3 Guided Learning</h1>
+  <h1>Mentova — ARC-AGI-3 Chat</h1>
+
+  <!-- Upper half: the game view and the light-up action panel. -->
   <canvas id="game" width="250" height="250"></canvas>
   <div>
-    <button onclick="control('reset')">Reset</button>
-    <button onclick="control('step')">Step</button>
-    <button onclick="control('auto')">Auto</button>
-    <button onclick="why()">Why?</button>
-    <span id="status"></span>
+    <span id="status"> status: —</span><span id="outcome"></span>
   </div>
-  <div id="log"></div>
-  <div style="margin-top:8px">
-    <input id="token" placeholder="mentor token">
-    <input id="hint" placeholder='e.g. "that looks like a key" (click a cell first)'>
-    <button onclick="sendHint()">Guide</button>
+  <div class="pad" id="lights">
+    <span class="lite" id="act-up">Up</span>
+    <span class="lite" id="act-down">Down</span>
+    <span class="lite" id="act-left">Left</span>
+    <span class="lite" id="act-right">Right</span>
+    <span class="lite" id="act-pickup">Pickup</span>
+    <span class="lite" id="act-interact">Interact</span>
+  </div>
+
+  <!-- Lower half: the chat (greyed out in solo mode). -->
+  <div id="chat">
+    <div id="log"></div>
+    <div style="margin-top:8px">
+      <input id="token" placeholder="mentor token">
+      <input id="hint" placeholder='e.g. "that looks like a key" (click a cell first)'>
+      <button onclick="sendHint()">Guide</button>
+      <button onclick="control('step')">Step</button>
+      <button onclick="control('auto')">Auto</button>
+      <button onclick="why()">Why?</button>
+    </div>
+  </div>
+
+  <!-- The mode, restart, and game-selection controls. -->
+  <div id="controls">
+    <button id="btn-guided" onclick="setMode('guided')">Guided Mode</button>
+    <button id="btn-solo" onclick="setMode('solo')">Solo Mode</button>
+    <button id="btn-restart" onclick="restart()">Restart Game Environment</button>
+    <div style="margin-top:10px">
+      <label for="game-select">Select ARC-AGI-3 Game Environment:</label>
+      <select id="game-select" onchange="selectGame()"></select>
+    </div>
+  </div>
+
+  <!-- The separate solo attempts record page. -->
+  <div id="footer">
+    <a href="/arc/attempts">ARC-AGI-3 Solo Attempts Record</a>
   </div>
 </div>
 <script>
-// The ARC palette for the values this game uses.
+// The ARC palette for the values these games use.
 const COLORS = {0:'#000', 3:'#e6e6e6', 4:'#d4a017', 6:'#2a2', 8:'#c33', 15:'#f0f'};
 // The last cell the guide clicked, sent as the ref of the next clue.
 let ref = null;
+// The active mode, mirrored from the server.
+let mode = 'guided';
+// The cell count of the last frame, for the click mapping.
+let lastN = 5;
+
 // Render one frame onto the canvas.
 function draw(frame) {
   const c = document.getElementById('game').getContext('2d');
-  const n = frame.length, s = 250 / n;
+  const n = frame.length; lastN = n;
+  const s = 250 / n;
   for (let r = 0; r < n; r++) for (let q = 0; q < n; q++) {
     c.fillStyle = COLORS[frame[r][q]] || '#555';
     c.fillRect(q * s, r * s, s - 1, s - 1);
   }
 }
-// Poll the current frame.
-async function refresh() {
-  const j = await (await fetch('/api/arc/frame')).json();
-  draw(j.frame);
-  document.getElementById('status').textContent = ' status: ' + j.status;
-}
+
 // Log a line into the chat region.
 function log(who, text) {
   const d = document.getElementById('log');
   d.innerHTML += '<div><span class="who">' + who + ':</span> ' + text + '</div>';
   d.scrollTop = d.scrollHeight;
 }
-// Send a control command.
-async function control(cmd) {
-  const j = await (await fetch('/api/arc/control', {method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({token: document.getElementById('token').value,
-                          cmd: cmd, budget: 40})})).json();
-  log('control', JSON.stringify(j));
-  refresh();
+
+// Map a server action string to one of the light-up buttons and flash it.
+function lightUp(actionStr) {
+  const map = {
+    'action(up)':'act-up', 'action(1)':'act-up',
+    'action(down)':'act-down', 'action(2)':'act-down',
+    'action(left)':'act-left', 'action(3)':'act-left',
+    'action(right)':'act-right', 'action(4)':'act-right',
+    'action(pickup)':'act-pickup', 'action(5)':'act-interact'
+  };
+  const id = map[actionStr];
+  if (!id) return;
+  const el = document.getElementById(id);
+  el.classList.add('lit');
+  setTimeout(() => el.classList.remove('lit'), 320);
 }
-// Send a clue, with the last clicked cell as its reference.
+
+// Grey the chat out and blank any prior text (solo mode).
+function greyChat(on) {
+  const chat = document.getElementById('chat');
+  if (on) {
+    chat.classList.add('disabled');
+    document.getElementById('log').innerHTML = '';
+    document.getElementById('hint').value = '';
+  } else {
+    chat.classList.remove('disabled');
+  }
+}
+
+// Reflect which mode button is active.
+function markMode() {
+  document.getElementById('btn-guided').classList.toggle('modeon', mode === 'guided');
+  document.getElementById('btn-solo').classList.toggle('modeon', mode === 'solo');
+}
+
+// Poll the current frame (guided mode: view of the guided game).
+async function refreshFrame() {
+  const j = await (await fetch('/api/arc/frame')).json();
+  draw(j.frame);
+  document.getElementById('status').textContent =
+    ' status: ' + j.status + '  |  mode: ' + j.mode + '  |  game: ' + j.game;
+  if (j.last_action && j.last_action !== 'none') lightUp(j.last_action);
+}
+
+// Advance the solo run one step and show it (solo mode: view-only telemetry).
+async function tickSolo() {
+  const t = await (await fetch('/api/arc/solo/tick', {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: '{}'})).json();
+  draw(t.frame);
+  if (t.action && t.action !== 'none') lightUp(t.action);
+  document.getElementById('status').textContent =
+    ' solo step: ' + t.step + '  |  game: ' + gameSel();
+  document.getElementById('outcome').textContent =
+    t.done ? ('outcome: ' + t.outcome + (t.report && t.report !== 'none'
+              ? '  |  report: ' + t.report : '')) : '';
+}
+
+// The selected game id from the dropdown.
+function gameSel() {
+  const s = document.getElementById('game-select');
+  return s.value || 'ls20';
+}
+
+// Switch mode. Solo greys the chat and begins a fresh, best-effort attempt.
+async function setMode(m) {
+  const j = await (await fetch('/api/arc/mode', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({mode: m})})).json();
+  if (!j.ok) return;
+  mode = m; markMode();
+  if (m === 'solo') {
+    greyChat(true);
+    document.getElementById('outcome').textContent = '';
+    // Begin a solo attempt immediately (also writes a report on completion).
+    await restart();
+  } else {
+    greyChat(false);
+    document.getElementById('outcome').textContent = '';
+    refreshFrame();
+  }
+}
+
+// Restart the selected environment in the active mode.
+async function restart() {
+  const j = await (await fetch('/api/arc/restart', {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: '{}'})).json();
+  if (mode === 'solo') {
+    document.getElementById('outcome').textContent = '';
+    tickSolo();
+  } else {
+    log('control', 'restarted ' + (j.game || ''));
+    refreshFrame();
+  }
+}
+
+// Select a game environment; in solo, begin an attempt on it.
+async function selectGame() {
+  const g = gameSel();
+  await fetch('/api/arc/select', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({game: g})});
+  if (mode === 'solo') { await restart(); } else { refreshFrame(); }
+}
+
+// Load the game list into the dropdown.
+async function loadGames() {
+  const j = await (await fetch('/api/arc/games')).json();
+  const sel = document.getElementById('game-select');
+  sel.innerHTML = '';
+  for (const g of j.games) {
+    const o = document.createElement('option');
+    o.value = g.id; o.textContent = g.title;
+    if (g.selected) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+// Send a clue, with the last clicked cell as its reference (guided only).
 async function sendHint() {
+  if (mode !== 'guided') return;
   const text = document.getElementById('hint').value;
   const j = await (await fetch('/api/arc/hint', {method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -83,24 +240,52 @@ async function sendHint() {
                           text: text, ref: ref, session_id: 'browser'})})).json();
   log('you', text);
   log('mentova', JSON.stringify(j));
-  refresh();
+  refreshFrame();
 }
-// Ask why Mentova took its last action.
+
+// Send a control command (guided only): one step or an auto run.
+async function control(cmd) {
+  if (mode !== 'guided') return;
+  const j = await (await fetch('/api/arc/control', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({token: document.getElementById('token').value,
+                          cmd: cmd, budget: 40})})).json();
+  log('control', JSON.stringify(j));
+  refreshFrame();
+}
+
+// Ask why Mentova took its last action (guided only).
 async function why() {
+  if (mode !== 'guided') return;
   const j = await (await fetch('/api/arc/why')).json();
   log('why', JSON.stringify(j));
 }
-// Clicking a cell sets the reference for "that"/"there".
+
+// Clicking a cell sets the reference for "that"/"there" (guided only).
 document.getElementById('game').addEventListener('click', e => {
+  if (mode !== 'guided') return;
   const rect = e.target.getBoundingClientRect();
-  const s = 250 / 5;
+  const s = 250 / lastN;
   ref = [Math.floor((e.clientY - rect.top) / s),
          Math.floor((e.clientX - rect.left) / s)];
   log('you', 'clicked cell ' + JSON.stringify(ref));
 });
-// Refresh once on load and then every second.
-refresh();
-setInterval(refresh, 1000);
+
+// The master loop: guided polls the frame, solo advances the run.
+function loop() {
+  if (mode === 'solo') { tickSolo(); } else { refreshFrame(); }
+}
+
+// Initialise: learn the current mode and game, load the list, and start.
+async function init() {
+  const j = await (await fetch('/api/arc/mode')).json();
+  mode = j.mode || 'guided'; markMode();
+  await loadGames();
+  if (mode === 'solo') greyChat(true);
+  loop();
+  setInterval(loop, 600);
+}
+init();
 </script>
 </body>
 </html>
