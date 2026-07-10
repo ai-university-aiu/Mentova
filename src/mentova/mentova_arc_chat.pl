@@ -143,6 +143,10 @@
 :- use_module(library(co_learn), [co_learn_preventive/2, co_avoid/1, co_learn_causal/2]).
 % Load the harness for curiosity choice and frame deltas.
 :- use_module(library(co_arc3), [co_arc3_choose/3, co_arc3_delta/3, co_arc3_reset/0]).
+% Load grid measurement for inferring an action's observed effect (its semantic).
+:- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
+% Load list arithmetic for the centroid computation.
+:- use_module(library(lists), [sum_list/2]).
 % Load the Jacobian Space workspace so the solo run holds its learnings in J-Space.
 :- use_module(library(jspace), [js_open/1, js_hold/4, js_reading/2]).
 % Load the live ARC-AGI-3 client so the dropdown can offer the real environments.
@@ -201,6 +205,8 @@
 :- http_handler(root(api/arc/live/connect), ma_handle_live_connect, []).
 % The live disconnect endpoint: return to the local stand-ins.
 :- http_handler(root(api/arc/live/disconnect), ma_handle_live_disconnect, []).
+% The actions endpoint: the labelled action panel for the selected game.
+:- http_handler(root(api/arc/actions), ma_handle_actions, []).
 
 % Define ma_db_init: attach the chat database this application reuses.
 ma_db_init(Dir) :-
@@ -389,6 +395,8 @@ ma_set_game(Id) :-
     retractall(ma_game_sel_(_)),
     % Record the new selection.
     assertz(ma_game_sel_(Id)),
+    % A different game has its own action semantics: forget the discovered ones.
+    retractall(ma_effect_(_, _)),
     % Start the newly selected environment fresh.
     ma_reset_env(Id, _),
     % Selecting a game also ends any solo run in progress.
@@ -483,6 +491,155 @@ ma_available_game(Id, Title) :-
 ma_default_game(Id) :-
     % The first live game when live, else the locksmith.
     ( ma_source(live), al_game(Live, _) -> Id = Live ; Id = ls20 ), !.
+
+% ---------------------------------------------------------------------------
+% ACTION LABELS — canonical protocol names, with discovered/assumed semantics
+% ---------------------------------------------------------------------------
+% ARC-AGI-3 does not reveal what each action does; the true names are ACTION1
+% through ACTION7. A directional word like "up" is only ever a guess (for a
+% live game) or the design of one of our local stand-ins. So the panel is
+% labelled by the canonical command, and any semantic is shown as discovered
+% (learned by playing, marked with a "?") or as the local stand-in's own
+% design, or left unknown.
+
+% ma_effect_/2: (Action, Descriptor) — the last observed effect of an action.
+:- dynamic ma_effect_/2.
+
+% ma_action_slot(?Action, ?Command): map an action term to its canonical command.
+% The local stand-ins' directional actions occupy ACTION1..ACTION5 by convention.
+ma_action_slot(action(up), 'ACTION1').
+% Down.
+ma_action_slot(action(down), 'ACTION2').
+% Left.
+ma_action_slot(action(left), 'ACTION3').
+% Right.
+ma_action_slot(action(right), 'ACTION4').
+% Pickup.
+ma_action_slot(action(pickup), 'ACTION5').
+% A live simple action already carries its number.
+ma_action_slot(action(N), Cmd) :- integer(N), atom_concat('ACTION', N, Cmd).
+% The cell-select action is ACTION6.
+ma_action_slot(select(_, _), 'ACTION6').
+% Undo is ACTION7.
+ma_action_slot(undo, 'ACTION7').
+
+% ma_local_semantic(?Action, ?Word): the design semantic of a local stand-in action.
+ma_local_semantic(action(up), up).
+% Down.
+ma_local_semantic(action(down), down).
+% Left.
+ma_local_semantic(action(left), left).
+% Right.
+ma_local_semantic(action(right), right).
+% Pickup.
+ma_local_semantic(action(pickup), pickup).
+
+% ma_record_effect(+Action, +Frame0, +Frame1): learn an action's observed effect.
+ma_record_effect(Action, Frame0, Frame1) :-
+    % Infer a coarse effect descriptor from the frame change.
+    ma_infer_move(Frame0, Frame1, Desc),
+    % Replace the previous observation for this action.
+    retractall(ma_effect_(Action, _)),
+    % Record the latest.
+    assertz(ma_effect_(Action, Desc)).
+
+% ma_infer_move(+Frame0, +Frame1, -Desc): a coarse effect from the frame change.
+ma_infer_move(Frame0, Frame1, Desc) :-
+    % The differing cells.
+    gd_diff(Frame0, Frame1, Diffs),
+    (   Diffs == []
+    % Nothing changed.
+    ->  Desc = none
+    % A dominant object shifted: report the direction.
+    ;   ma_centroid_shift(Frame0, Frame1, DR, DC), (DR =\= 0 ; DC =\= 0)
+    ->  ( DR < 0, DC =:= 0 -> Desc = up
+        ; DR > 0, DC =:= 0 -> Desc = down
+        ; DC < 0, DR =:= 0 -> Desc = left
+        ; DC > 0, DR =:= 0 -> Desc = right
+        ; Desc = moves )
+    % Otherwise cells changed without a clean translation.
+    ;   Desc = changes
+    ).
+
+% ma_centroid_shift(+F0, +F1, -DR, -DC): the shift of the most-moved colour.
+ma_centroid_shift(F0, F1, DR, DC) :-
+    % The colours present in the first frame, minus the background.
+    gd_colors(F0, Colours),
+    % Score each colour's centroid displacement.
+    findall(Mag-(dr(R) - dc(C)),
+        ( member(Col, Colours), Col =\= 0,
+          ma_colour_centroid(F0, Col, R0, C0),
+          ma_colour_centroid(F1, Col, R1, C1),
+          R is R1 - R0, C is C1 - C0,
+          Mag is abs(R) + abs(C) ),
+        Scored),
+    % There must be some motion.
+    Scored \== [],
+    % The largest displacement wins.
+    sort(0, @>=, Scored, [_-(dr(DR) - dc(DC)) | _]),
+    % It must be a real shift.
+    ( DR =\= 0 ; DC =\= 0 ).
+
+% ma_colour_centroid(+Frame, +Colour, -R, -C): the rounded centroid of a colour.
+ma_colour_centroid(Frame, Colour, R, C) :-
+    % Measure the frame.
+    gd_size(Frame, Rows, Cols),
+    % Bounds.
+    MaxR is Rows - 1, MaxC is Cols - 1,
+    % Cells of the colour.
+    findall(RR-CC,
+        ( between(0, MaxR, RR), between(0, MaxC, CC), gd_cell(Frame, RR, CC, Colour) ),
+        Cells),
+    % It must appear.
+    Cells \== [],
+    % Sum rows and columns.
+    findall(RR, member(RR-_, Cells), RRs), findall(CC, member(_-CC, Cells), CCs),
+    length(Cells, N), sum_list(RRs, SR), sum_list(CCs, SC),
+    % Rounded means.
+    R is round(SR / N), C is round(SC / N).
+
+% ma_action_descriptors(+GameId, -Descriptors): the labelled action panel.
+ma_action_descriptors(GameId, Descriptors) :-
+    % The actions the game affords.
+    ( ma_actions_env(GameId, Actions) -> true ; Actions = [] ),
+    % One descriptor per action, ordered by canonical command.
+    findall(Cmd-_{command: Cmd, semantic: Sem, source: Src, label: Label},
+        ( member(A, Actions),
+          ma_action_slot(A, Cmd),
+          ma_action_semantic(GameId, A, Sem, Src),
+          ma_action_label(Cmd, Sem, Src, Label) ),
+        Pairs0),
+    % Order and de-duplicate by command.
+    sort(1, @<, Pairs0, Pairs),
+    % Drop the sort keys.
+    findall(D, member(_-D, Pairs), Descriptors).
+
+% ma_action_semantic(+GameId, +Action, -Semantic, -Source): the best semantic.
+ma_action_semantic(_GameId, Action, Sem, discovered) :-
+    % A learned effect, other than nothing, is a discovered semantic.
+    ma_effect_(Action, Desc), Desc \== none, !,
+    % Use it.
+    Sem = Desc.
+ma_action_semantic(_GameId, Action, Sem, assumed) :-
+    % For a local stand-in, its own design semantic, still only an assumption.
+    ma_source(local), ma_local_semantic(Action, Sem), !.
+% Otherwise the semantic is genuinely unknown.
+ma_action_semantic(_GameId, _Action, none, unknown).
+
+% ma_action_label(+Command, +Semantic, +Source, -Label): the button text.
+% An unknown action shows only its canonical command.
+ma_action_label(Cmd, none, _, Cmd) :- !.
+% A discovered or assumed semantic is shown with a question mark: it is a guess.
+ma_action_label(Cmd, Sem, _Source, Label) :-
+    % Compose "ACTIONk (sem?)".
+    format(atom(Label), '~w (~w?)', [Cmd, Sem]).
+
+% ma_last_command(-Command): the canonical command of the last action taken.
+ma_last_command(Cmd) :-
+    % The last action.
+    ma_last_(Action, _),
+    % Its canonical command.
+    ( ma_action_slot(Action, Cmd) -> true ; Cmd = 'none' ).
 
 % ---- The navigation environment (vc33) ----
 
@@ -679,15 +836,19 @@ ma_solo_tick(Telemetry) :-
 ma_solo_telemetry(Sel, Step, Action, Status, RepFile, T) :-
     % Render the current frame.
     ( ma_render(Sel, Frame) -> true ; ma_reset_env(Sel, Frame) ),
-    % The action taken, as an atom for the button light-up.
+    % The action taken, as an atom for the record.
     term_to_atom(Action, AText),
+    % Its canonical command, for the button light-up.
+    ( ma_action_slot(Action, Command) -> true ; Command = 'none' ),
+    % The labelled action panel for this game.
+    ma_action_descriptors(Sel, Actions),
     % Whether the run is finished.
     ( Status = running -> Done = false, OutText = "running"
     ; Status = done(Outcome) -> Done = true, term_to_atom(Outcome, OutText)
     ),
     % Assemble the telemetry dict.
-    T = _{frame: Frame, action: AText, step: Step, done: Done,
-          outcome: OutText, report: RepFile}.
+    T = _{frame: Frame, action: AText, command: Command, actions: Actions,
+          step: Step, done: Done, outcome: OutText, report: RepFile}.
 
 % ma_solo_final_telemetry(+Sel, -T): telemetry when no step is taken.
 ma_solo_final_telemetry(Sel, T) :-
@@ -699,9 +860,11 @@ ma_solo_final_telemetry(Sel, T) :-
         ( ma_solo_reported_(RepFile) -> true ; RepFile = none )
     ;   Step = 0, OutText = "idle", Done = false, RepFile = none
     ),
+    % The labelled action panel for this game.
+    ma_action_descriptors(Sel, Actions),
     % Assemble the telemetry.
-    T = _{frame: Frame, action: "none", step: Step, done: Done,
-          outcome: OutText, report: RepFile}.
+    T = _{frame: Frame, action: "none", command: 'none', actions: Actions,
+          step: Step, done: Done, outcome: OutText, report: RepFile}.
 
 % ma_solo_seed_jspace: hold the run's learnings as concepts in J-Space.
 ma_solo_seed_jspace :-
@@ -943,6 +1106,8 @@ ma_reset_guidance :-
     retractall(ma_last_(_, _)),
     % Drop the curiosity counters.
     retractall(ma_try_(_, _)),
+    % Drop the discovered action semantics.
+    retractall(ma_effect_(_, _)),
     % Clear the harness counters.
     co_arc3_reset.
 
@@ -1026,6 +1191,8 @@ ma_step(step(Action, Basis, Outcome)) :-
     ma_act_env(Sel, Action, Frame1),
     % The observed effect is the frame delta.
     co_arc3_delta(Frame0, Frame1, Delta),
+    % Learn this action's observed effect, for its discovered semantic label.
+    ma_record_effect(Action, Frame0, Frame1),
     % Learn from what followed, exactly as the harness does.
     (   Delta == []
     % Nothing changed.
@@ -1229,9 +1396,14 @@ ma_handle_frame(_Request) :-
     ma_mode(Mode),
     % The last action taken, for the button light-up (none if none yet).
     ( ma_last_(LastA, _) -> term_to_atom(LastA, LastText) ; LastText = "none" ),
+    % The canonical command of the last action, for the light-up.
+    ( ma_last_command(LastCmd) -> true ; LastCmd = 'none' ),
+    % The labelled action panel for this game (canonical names + semantics).
+    ma_action_descriptors(Sel, Actions),
     % Reply with the full view.
     reply_json_dict(_{frame: Frame, status: Status, mode: Mode,
-                      game: Sel, last_action: LastText}).
+                      game: Sel, last_action: LastText,
+                      last_command: LastCmd, actions: Actions}).
 
 % ma_handle_control(+Request): reset, step, or auto, mentor-authenticated.
 ma_handle_control(Request) :-
@@ -1378,6 +1550,15 @@ ma_handle_live_status(_Request) :-
     al_status(Status),
     % Reply.
     reply_json_dict(Status).
+
+% ma_handle_actions(+Request): the labelled action panel for the selected game.
+ma_handle_actions(_Request) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Its labelled action descriptors.
+    ma_action_descriptors(Sel, Actions),
+    % Reply.
+    reply_json_dict(_{ok: true, game: Sel, actions: Actions}).
 
 % ma_handle_live_connect(+Request): attempt to connect the live environments.
 ma_handle_live_connect(_Request) :-
