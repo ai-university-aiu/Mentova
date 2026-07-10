@@ -37,11 +37,7 @@
   #outcome { color: #d4a017; margin-left: 8px; }
   a { color: #d4a017; }
   #footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #553; }
-  /* Pressed state: invert colours while the mouse button is held on a button. */
-  button:active, select:active,
-  button.pressed, select.pressed {
-    background: #f2e8d5; color: #1d1616; border-color: #f2e8d5;
-  }
+  /* The pressed/inverted button state is applied globally by /assets/common/press.js. */
   /* Visible feedback line for action results and rejections. */
   #msg { min-height: 1.2em; margin: 8px 0; font-weight: bold; }
   .msg-error { color: #ff6b6b; }
@@ -124,21 +120,8 @@ function flash(text, kind) {
   if (kind !== 'error') msgTimer = setTimeout(() => { if (m.textContent === text) m.textContent = ''; }, 6000);
 }
 
-// Pressed/inverted visual for ALL buttons and the dropdown: invert while the
-// mouse button is held down on the control, revert on release (the action
-// itself still fires on release via the normal click).
-document.addEventListener('mousedown', e => {
-  const b = e.target.closest('button, select');
-  if (b) b.classList.add('pressed');
-});
-document.addEventListener('mouseup', () => {
-  document.querySelectorAll('.pressed').forEach(b => b.classList.remove('pressed'));
-});
-// Dragging off a held control reverts its colour (no action, like a native click).
-document.addEventListener('mouseout', e => {
-  const b = e.target.closest('button, select');
-  if (b) b.classList.remove('pressed');
-});
+// The pressed/inverted button behaviour is applied globally by
+// /assets/common/press.js (included at the bottom of the page).
 
 // Render one frame onto the canvas.
 function draw(frame) {
@@ -402,5 +385,6 @@ async function init() {
 }
 init();
 </script>
+<script src="/assets/common/press.js"></script>
 </body>
 </html>
