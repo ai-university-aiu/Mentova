@@ -615,6 +615,10 @@ ma_action_descriptors(GameId, Descriptors) :-
     findall(D, member(_-D, Pairs), Descriptors).
 
 % ma_action_semantic(+GameId, +Action, -Semantic, -Source): the best semantic.
+% ACTION7 is the undo action by protocol whenever a game offers it — a known
+% meaning, not a per-game guess.
+ma_action_semantic(_GameId, undo, undo, protocol) :- !.
+% Otherwise a learned effect is a discovered semantic.
 ma_action_semantic(_GameId, Action, Sem, discovered) :-
     % A learned effect, other than nothing, is a discovered semantic.
     ma_effect_(Action, Desc), Desc \== none, !,
@@ -629,6 +633,10 @@ ma_action_semantic(_GameId, _Action, none, unknown).
 % ma_action_label(+Command, +Semantic, +Source, -Label): the button text.
 % An unknown action shows only its canonical command.
 ma_action_label(Cmd, none, _, Cmd) :- !.
+% A protocol-known semantic (undo) is shown plainly, without a question mark.
+ma_action_label(Cmd, Sem, protocol, Label) :- !,
+    % Compose "ACTIONk (sem)".
+    format(atom(Label), '~w (~w)', [Cmd, Sem]).
 % A discovered or assumed semantic is shown with a question mark: it is a guess.
 ma_action_label(Cmd, Sem, _Source, Label) :-
     % Compose "ACTIONk (sem?)".

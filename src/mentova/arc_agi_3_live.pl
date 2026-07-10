@@ -10,7 +10,8 @@
       scorecard  POST /api/scorecard/open        -> { card_id }
                  POST /api/scorecard/close       (card_id)
       reset      POST /api/cmd/RESET             { card_id, game_id, guid? }
-      action     POST /api/cmd/ACTION1..ACTION6  { game_id, guid, x?, y? }
+      action     POST /api/cmd/ACTION1..ACTION7  { game_id, guid, x?, y? }
+                 (ACTION1-5 simple, ACTION6 cell-select with x,y, ACTION7 undo)
       reply      { game_id, guid, frame, state, levels_completed,
                    available_actions, action_input }
       state      NOT_PLAYED | NOT_FINISHED | WIN | GAME_OVER
@@ -398,6 +399,8 @@ al_name_to_action('ACTION4', action(4)).
 al_name_to_action('ACTION5', action(5)).
 % ACTION6 becomes a centre click, a reasonable default target.
 al_name_to_action('ACTION6', select(32, 32)).
+% ACTION7 is the undo action, offered only by games that support it.
+al_name_to_action('ACTION7', undo).
 
 % al_atomize(+X, -Atom): coerce a string or atom to an atom.
 al_atomize(X, X) :- atom(X), !.
