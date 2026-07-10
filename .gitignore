@@ -21,3 +21,6 @@ data/refinery/
 # ARC-AGI-3 solo attempt reports (runtime-generated; keep the folder, ignore the reports)
 ARC-AGI-3_Solo_Attempts/*.txt
 !ARC-AGI-3_Solo_Attempts/README.txt
+
+# ARC-AGI-3 live API key (secret; never commit). Set ARC_API_KEY env var, or drop the key here.
+data/arc_api_key.txt

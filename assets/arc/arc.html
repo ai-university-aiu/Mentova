@@ -79,6 +79,11 @@
       <label for="game-select">Select ARC-AGI-3 Game Environment:</label>
       <select id="game-select" onchange="selectGame()"></select>
     </div>
+    <div style="margin-top:10px" id="live-row">
+      <button id="btn-connect" onclick="connectLive()">Connect Live Environments</button>
+      <button id="btn-disconnect" onclick="disconnectLive()">Use Local Stand-ins</button>
+      <span id="live-status" style="color:#9c9"></span>
+    </div>
   </div>
 
   <!-- The separate solo attempts record page. -->
@@ -217,7 +222,7 @@ async function selectGame() {
   if (mode === 'solo') { await restart(); } else { refreshFrame(); }
 }
 
-// Load the game list into the dropdown.
+// Load the game list into the dropdown and reflect the live status.
 async function loadGames() {
   const j = await (await fetch('/api/arc/games')).json();
   const sel = document.getElementById('game-select');
@@ -228,6 +233,39 @@ async function loadGames() {
     if (g.selected) o.selected = true;
     sel.appendChild(o);
   }
+  // Show the live connection status beside the buttons.
+  const st = document.getElementById('live-status');
+  if (j.connected) {
+    st.textContent = ' Live: connected — ' + j.games.length + ' environment(s).';
+  } else if (j.key_configured) {
+    st.textContent = ' Live: key present, not connected — using local stand-ins. Click Connect.';
+  } else {
+    st.textContent = ' Live: no API key — using local stand-ins (see docs to add ARC_API_KEY).';
+  }
+}
+
+// Attempt to connect the live ARC-AGI-3 environments.
+async function connectLive() {
+  const st = document.getElementById('live-status');
+  st.textContent = ' Live: connecting…';
+  const j = await (await fetch('/api/arc/live/connect', {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: '{}'})).json();
+  if (j.ok) {
+    await loadGames();
+    if (mode === 'solo') { await restart(); } else { refreshFrame(); }
+  } else {
+    st.textContent = ' Live: could not connect (' + (j.error || 'unknown') +
+      ') — using local stand-ins.';
+    await loadGames();
+  }
+}
+
+// Drop the live session and return to the local stand-ins.
+async function disconnectLive() {
+  await fetch('/api/arc/live/disconnect', {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: '{}'});
+  await loadGames();
+  if (mode === 'solo') { await restart(); } else { refreshFrame(); }
 }
 
 // Send a clue, with the last clicked cell as its reference (guided only).
