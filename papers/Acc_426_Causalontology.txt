@@ -1,0 +1,143 @@
+Acc_426: Causalontology Delivered - The Runnable Core, Six Packs, and a Human Who Teaches Mentova to Play
+
+D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+
+Date: 2026-07-10
+
+
+ABSTRACT
+
+This paper describes the delivery of Acc_426, the implementation of
+Causalontology_v5 ("Causalontology: AGI's Missing Link"), the process-first
+Master Ontology in which causation governs the verbs through a reified Causal
+Relation Object, a thin native backbone hosts the nouns, and realizable
+entities form the hinge between them. Three deliverables land together. On
+the PrologAI platform, six new packs - co_noun, co_hinge, co_core, co_learn,
+co_plan, and co_arc3 - realize the ontology's three layers, its learning by
+embodied intervention, its safe planning, and a game-agnostic
+perceive-learn-plan-act harness aimed at the interactive ARC-AGI-3 benchmark.
+On Mentova, the specification's own runnable core ships verbatim and passes
+its self-checks, and the mentova_arc_agi_3_chat application realizes the
+document's Section 10 vision: a split screen in which a human guides Mentova
+through a locksmith game by chatting - "that looks like a key," "pick that
+up," "don't touch that," "that looks like a door; let's walk through it" -
+with every clue grounded into an auditable Causalontology assertion. In the
+acceptance run, four human clues carry Mentova to a win in nine steps, end to
+end over the web interface, and the justification endpoint distinguishes what
+Mentova was guided to from what it discovered alone.
+
+
+WHAT WAS BUILT
+
+On PrologAI (PR 502): the Causalontology suite, work packages 391 through
+396, Layers 366 through 371, 67 public predicates, 44 acceptance tests.
+
+The fundamental unit is the reified Causal Relation Object: causes, effects,
+a temporal window that is part of the mechanism, a modality (necessary,
+sufficient, contributory, or preventive), a strength, enabling context, and a
+provenance envelope. Mere temporal succession is stored separately from
+causal production, so "after" is never read as "because" - the rooster does
+not cause the dawn, and the system can say so. Temporal abduction gates
+candidate causes by their windows: given gastroenteritis and two recent
+meals, the shellfish eaten three hours ago is admitted while the poultry
+eaten two hours ago is excluded purely on timing - the clinician's question,
+executable. Mechanisms decompose hierarchically and a consistency check
+verifies that the fine relations genuinely chain from the coarse relation's
+causes to its effects. The subsumption argument is executable too: an
+external vocabulary's bare causal link imports as a degenerate provisional
+relation that refinement then makes owned and strictly richer.
+
+Learning is interventional: act, observe, induce at strength 0.70, confirm to
+0.99, and on first induction posit on the noun side the disposition the
+verb-side causation revealed. Hazards become preventive relations in a
+closed-world avoid-set; null effects are counted compactly; and what was
+merely observed, never done, is flagged and weighted down. Planning composes
+procedures and chains backward through the causal graph, refusing any plan
+through a hazard. And the harness closes the loop against pluggable
+environments: in its acceptance suite it is dropped into a mock
+volume-control game it has never seen, discovers the mechanics by acting,
+touches the spike exactly once, tags it preventive, never touches it again,
+and wins within budget - with a glass-box trace of every step. A guarded HTTP
+bridge speaks the same environment shape to the live ARC-AGI-3 REST API,
+which remains, as the source document insists, a labeled and falsifiable bet
+rather than a claimed result.
+
+On Mentova: demos/causalontology_demo.pl is the specification's Appendix A,
+carried verbatim, executed, and passing its self-checks - the small thing
+that runs, offered in preference to a described one. And
+src/mentova/mentova_arc_chat.pl with assets/arc/arc.html is the
+mentova_arc_agi_3_chat application.
+
+
+HOW THE GUIDED LEARNING WORKS
+
+The guiding human is a mentor, exactly as in the deployed chat: hints
+require a mentor session, pass the safety check, and travel through the same
+teach queue mentors use, with a game-play auto-approve because a clue biases
+a run rather than committing permanent knowledge.
+
+Each clue is grounded through a small, auditable mapping. "That looks like a
+key," with a clicked cell resolving the "that," posits a key-like continuant
+in the noun layer and attaches a pick-up-able disposition in the hinge.
+"Pick that up" raises the pickup action's priority. "That looks like a door;
+let's walk through it" posits the door and hands the traverse goal to the
+planner. "Don't touch that" tags the referenced cell preventive - enforced
+exactly as a hazard Mentova had learned by touching it. "Good, that worked"
+raises the strength of the relations on the last path.
+
+The guided loop chooses by human priority first, then the human-set goal,
+then the same curiosity that drives the autonomous harness - and never
+through a hazard, declared or learned. In the acceptance run the four clues
+above carry Mentova from its corner to the key, the pickup, and through the
+door in nine steps. Ask why, and the justification endpoint answers with the
+last action, its basis, and its provenance: guided_by_human or
+discovered_alone - so the road to autonomy of Section 10.5, a curriculum
+with a decaying hint budget, has the bookkeeping it needs from day one.
+
+
+WHY THIS MATTERS
+
+A general intelligence must model how and why things happen - predict the
+consequences of its actions, diagnose causes, plan to goals, and avoid harm.
+Causalontology makes that model explicit, learnable by doing, inspectable,
+and transferable; the packs make it real machinery; the runnable core proves
+the mechanisms in miniature; and the chat application shows the leverage the
+specification identified: a human's clues inject exactly the priors that the
+two honest hard parts - perception into occurrents and discovery in a large
+action space - most need.
+
+
+TECHNICAL NOTES
+
+The acceptance demonstration follows the Mentova convention:
+
+    swipl -l demos/arc_chat_demo.pl -g run_arc_chat_demo -t halt
+
+Eight of eight criteria pass, including the verbatim core's self-checks in a
+subprocess and the full HTTP exchange - login, clues through the real teach
+queue, auto run to a win, frame and why endpoints, and refusal of bad
+tokens. Two defects found during acceptance were fixed and are recorded in
+the Refinement volume. Regression: Acc_424 (9/9), Acc_425 (12/12), and the
+PrologAI suite's 44 tests all pass.
+
+
+COMPLETION
+
+Acc_426 is delivered. SPARC documentation has been updated: Specification
+v357, Pseudocode v349, Architecture v350, Refinement v414, Completion v420,
+with superseded versions archived per the archive rule.
+
+
+COPYRIGHT
+
+Copyright 2026 D. R. Dison.
+
+All rights reserved.
+
+The code, documentation, papers, and announcements associated with the Mentova and PrologAI projects are the intellectual property of D. R. Dison, Founder of AIU (Artificial Intelligence University), Creator and Owner of PrologAI and Mentova.
+
+Free for non-commercial use with required attribution.
+
+Commercial use requires a negotiated license.
+
+Contact: ai.university.aiu@gmail.com

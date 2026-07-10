@@ -1,0 +1,47 @@
+Acc_426: I Taught an AI to Play a Game by Talking to It - and Every Word Became Logic
+
+A child learns cause and effect by touching the world.
+
+Press the button, the light comes on.  Touch the stove, it hurts.  Do it, watch what follows, remember why.
+
+Most AI never does this.  It reads about the world instead of acting in it, so it correlates without ever truly causing.
+
+Today's milestone is Causalontology: cause and effect as a first-class, learnable, inspectable object, delivered as six new packs on PrologAI and a new application on Mentova.
+
+The heart of it is a reified causal relation.  Not "A relates to B," but: these causes, these effects, this time window, this kind of necessity, this strength, this provenance - who said so, and how it was checked.
+
+Three things I want to show you.
+
+First, timing is mechanism.  Ask a doctor with a food-poisoned patient what they ask first: "What did you eat, and how long ago?"  Mentova now reasons the same way.  Two suspect meals; the shellfish from three hours ago is admitted, the poultry from two hours ago is excluded - purely because two hours is too soon for poultry to act.  A cause ruled out by the clock alone.
+
+Second, "after" is never "because."  The rooster crows before the sunrise, every single day.  Mentova stores that sequence - and can prove to you that it is not causation.
+
+Third, and my favorite: the guided game.
+
+There is a new split screen.  On top, a little locksmith game - a key, a locked door, a hidden trap.  Below it, a chat.
+
+I clicked a cell and typed: "that looks like a key."
+
+I typed: "pick that up."
+
+I typed: "don't touch that" - on the trap.
+
+I typed: "that looks like a door.  Let's walk through it."
+
+Each sentence was grounded into a formal assertion - a labeled object, a raised priority, an enforced hazard, a goal handed to the planner - and routed through the same review machinery human mentors already use to teach Mentova facts.
+
+Nine steps later, Mentova walked through the door.
+
+Then I asked it why.
+
+It told me which of its choices came from my guidance and which it worked out alone.
+
+That distinction - guided versus discovered, on the record, for every action - is how a mind grows out of its teacher honestly.
+
+Eight acceptance checks.  Eight passes.  And the specification's own demonstration program runs verbatim, self-checks green.
+
+The interactive ARC-AGI-3 benchmark, where the strongest language models score zero, is the labeled bet this machinery was shaped for.  A bet, not a claim - and a glass box turns even a failed bet into a diagnosis.
+
+D. R. Dison
+Founder of AIU
+Creator and Owner of PrologAI and Mentova
