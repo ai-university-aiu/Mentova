@@ -1,0 +1,301 @@
+ARC-AGI-3 HUMAN STEPS IN JACOBIAN-SPACE - FINDINGS, WORK SUMMARY, AND RESULTS
+
+Version 1. Dated 2026-07-10.
+
+
+PURPOSE OF THIS DOCUMENT
+
+This document records the human problem-solving process for ARC-AGI-3, step by micro-step, and the code that lets Mentova follow it while attempting ARC-AGI-3 games on its own.
+
+ARC-AGI-3 stands for Abstraction and Reasoning Corpus for Artificial General Intelligence, version three.
+
+It is a set of small interactive games with no instructions, no rules, and no stated goal, in which the player must explore, work out the mechanics, discover what winning means, and reach it efficiently.
+
+The document is deliberately held in what this project calls the Jacobian-Space (J-Space) and read through the Jacobian-Lens (J-Lens).
+
+A short plain explanation of those two terms is given below, because they are the frame the whole document sits in.
+
+A note on honesty is made up front: no benchmark score is claimed anywhere here.
+
+This is a study of the human process and a working solo controller that follows it; a measured result against the live competition is a separate future step.
+
+
+WHAT JACOBIAN-SPACE AND JACOBIAN-LENS MEAN HERE
+
+A Jacobian, in plain terms, is a table of sensitivities.
+
+It answers the question "if I change this input a little, how much does that output change?" for every input paired with every output.
+
+In a grid game the clearest Jacobian is the action-response table: for each action the player can take, which cells of the picture change, and by how much.
+
+That table is exactly what a human is building in their head during the first minute of play when they press each button to see what it does.
+
+PrologAI already has a small readable workspace called the Jacobian-Space (J-Space), provided by a component named jspace, which holds the handful of concepts a mind is currently thinking about, each with a strength.
+
+The readout of that workspace is called the Jacobian-Lens (J-Lens): it lists what is being held in mind, strongest first.
+
+Keeping this document "in J-Space" means two things.
+
+First, every human micro-step below is treated as a concept that can be held in the workspace, so that at any moment the J-Lens says which step the solver is on.
+
+Second, the concrete sensitivity table - the action-response Jacobian - is the mechanism behind the exploration phase, used to find which object the player controls and which direction reduces the distance to the goal.
+
+As Mentova plays an ARC-AGI-3 game solo, it holds each human step in the live J-Space workspace, so the same structure that organizes this document also narrates Mentova's play in real time.
+
+
+PART ONE - HOW HUMANS PLAY ARC-AGI-3 (RESEARCH FINDINGS)
+
+Deep, wide web research was carried out into how humans actually play these games, drawing on the ARC Prize Foundation's own writing and the merged Human Steps deconstruction already in the platform.
+
+The most important source is the ARC Prize human study, the most exhaustive in the ARC-AGI series.
+
+It involved 458 participants, tested in person in ninety-minute sessions at a testing center.
+
+Each participant saw every environment only once and had a single attempt to beat it, so what was measured was the ability to learn a brand-new problem, not to repeat a solved one.
+
+Both people and machines were given the same minimal note - only the list of available actions - with no hint about rules or goals.
+
+Every environment included in the benchmark was solved by at least two independent participants, which is why humans are said to solve one hundred percent of them.
+
+The central finding about process is that a player spends their actions in two ways.
+
+• Exploration - actions spent probing the environment to learn its mechanics and its goal.
+
+• Execution - actions spent carrying out a strategy to reach the goal.
+
+Good human players explore briefly and then execute successfully, while blind trial-and-error agents may eventually stumble to a win but spend far more actions.
+
+Because scoring uses the Relative Human Action Efficiency (RHAE) measure - how many actions the solver used compared with a human baseline - every wasted action lowers the score, so the human balance of "explore enough, then commit" is exactly what earns points.
+
+The first level of each game is an easy tutorial that teaches the basic controls through play, and later levels build on the mechanics learned earlier, so a good player carries knowledge forward instead of relearning it.
+
+
+PART TWO - THE HUMAN STEP LADDER (SIX PHASES, THIRTY MICRO-STEPS)
+
+The human process decomposes into six phases and thirty micro-steps.
+
+Each micro-step below is written as a concept that Mentova holds in the J-Space workspace when it reaches that point in play.
+
+
+PHASE ONE - INITIAL ENVIRONMENTAL ORIENTATION
+
+• Step I.1 - Observe the initial frame with no context; scan the regions, objects, and colours, and ask what matters.
+
+• Step I.2 - Notice the available action interface and its labels.
+
+• Step I.3 - Activate the explore-before-solve strategy; decide to act deliberately rather than randomly, because actions are counted.
+
+
+PHASE TWO - STRUCTURED EXPLORATION AND MECHANICS DISCOVERY
+
+• Step II.1 - Make a tentative first action purely to observe the response.
+
+• Step II.2 - Observe the consequences by comparing the new frame to the previous one.
+
+• Step II.3 - Encode the state change into memory as a rule of the form "when I did this, that happened."
+
+• Step II.4 - Choose the next exploratory action strategically, to learn the most.
+
+• Step II.5 - Systematically vary the actions across positions and objects.
+
+• Step II.6 - Discover conditional behaviours that depend on context.
+
+• Step II.7 - Detect the environment's constraints, boundaries, and penalty states.
+
+• Step II.8 - Build an internal world model of the actions, objects, constraints, and rules.
+
+
+PHASE THREE - GOAL INFERENCE AND OBJECTIVE DISCOVERY
+
+• Step III.1 - Scan for goal-related cues that stand out from the rest of the grid.
+
+• Step III.2 - Hypothesize potential goals from the structure of the environment.
+
+• Step III.3 - Test the goal hypotheses through targeted actions.
+
+• Step III.4 - Recognize progress indicators and partial success.
+
+• Step III.5 - Detect failure states and anti-goals.
+
+• Step III.6 - Confirm the goal and formulate a clear objective statement.
+
+
+PHASE FOUR - WORLD MODEL FORMATION AND PLANNING
+
+• Step IV.1 - Assess the current state relative to the goal and identify the differences.
+
+• Step IV.2 - Identify sub-goals and milestones.
+
+• Step IV.3 - Generate candidate action sequences using the world model.
+
+• Step IV.4 - Evaluate the candidate plans for feasibility and efficiency, and prepare contingencies.
+
+
+PHASE FIVE - EXECUTION AND ADAPTIVE MONITORING
+
+• Step V.1 - Execute the planned actions step by step.
+
+• Step V.2 - Monitor each action's result against the prediction, and keep counting actions.
+
+• Step V.3 - Update the world model when a prediction fails.
+
+• Step V.4 - Re-plan adaptively from the new state when the surprise is large.
+
+• Step V.5 - Recognize when the goal is achieved and stop acting.
+
+
+PHASE SIX - LEVEL PROGRESSION AND CARRY-FORWARD LEARNING
+
+• Step VI.1 - Observe the new level's initial state and note similarities and differences.
+
+• Step VI.2 - Transfer the mechanics learned in previous levels forward.
+
+• Step VI.3 - Identify the new mechanics introduced in the current level.
+
+• Step VI.4 - Achieve efficiency over time as understanding accumulates.
+
+
+PART THREE - THE JACOBIAN LENS OVER THE STEPS
+
+The exploration phase, Phase Two, is where the Jacobian becomes concrete rather than a metaphor.
+
+When a human presses each control in turn and watches what moves, they are filling in the action-response table one column at a time.
+
+Three quantities come straight out of that table.
+
+• Sensitivity - for each action, how many cells changed.
+
+◦ This separates the live actions, which do something, from the dead ones, which do nothing.
+
+• The controllable object - the thing the player steers.
+
+◦ It is found as the coloured object whose centre of mass moves the most across the tried actions, which is the formal version of "which thing on the screen answers to the controls."
+
+• The position Jacobian - for the controllable object, the change in its row and column produced by each action.
+
+◦ This is the column of partial derivatives of the object's position with respect to the actions; pressing "down" changes the row by plus one, and so on.
+
+From the position Jacobian and a chosen goal cell comes the goal gradient: the ranking of actions by how much each one moves the controllable object closer to the goal.
+
+Manhattan distance - the number of grid steps left plus the number of grid steps up or down - is the measure of "closer."
+
+Descending this gradient, always taking the action that most reduces the remaining distance, is the planning and execution strategy in Phases Four and Five.
+
+So the same Jacobian that Phase Two builds is the object that Phases Four and Five consume.
+
+
+PART FOUR - THE CODE THAT WAS DECIDED AND BUILT
+
+Before deciding what to build, both code bases were examined so that nothing already present would be duplicated.
+
+A key finding shaped the whole design: PrologAI already contained the J-Space workspace, in a component named jspace, whose own description defines J-Space as the Jacobian Space and J-Lens as the Jacobian Lens.
+
+That meant the user's request to keep the work "in the Jacobian-Space and Jacobian-Lens" was a request to build on this existing workspace, not to invent a new one.
+
+The decision for PrologAI was to add one new capability package, named co_hsteps, at work package four hundred and one.
+
+• co_hsteps encodes the six phases and thirty micro-steps as ordered, readable facts.
+
+• It holds the current step as a concept in a J-Space workspace, fading the earlier steps so the newest one dominates the J-Lens readout, so that walking the ladder leaves a glass-box trace of the whole human process.
+
+• It makes the exploration phase concrete with the discrete action-response Jacobian described above: the sensitivity per action, the controllable-object finder, the position Jacobian, and the goal gradient.
+
+The decision for Mentova was to add a solo controller that plays an ARC-AGI-3 game by walking this ladder.
+
+• The new file is src slash mentova slash games slash arc_agi_3_human_steps.pl.
+
+• It plays a small navigation game - a five-by-five grid with a controllable avatar and a goal cell - because navigation is the clearest home for the Jacobian and the goal gradient.
+
+• It walks the human ladder phase by phase, holds each step in the J-Space workspace as it goes, assembles the Jacobian in the probe phase, names the controllable object, descends the goal gradient into a route, and executes that route to a win under the efficiency governor.
+
+• A companion demonstration checks the whole thing automatically.
+
+Both additions carry a comment above every line of code, as the platform requires, and both are covered by automated tests.
+
+
+PART FIVE - RESULTS
+
+Everything built here was tested, and the tests pass.
+
+On the PrologAI side, the co_hsteps package carries eight automated tests, and all eight pass.
+
+They confirm the ladder is complete and well-formed, that walking it holds the current step in the J-Space workspace so the J-Lens reads it back, and that the Jacobian correctly names the controllable object, reports its per-action displacement, and ranks the actions toward a goal.
+
+The package loads cleanly beside the earlier Causalontology and ARC-AGI-3 Readiness suites and the existing J-Space workspace, whose own twenty tests still pass.
+
+On the Mentova side, the solo controller was run end to end against its navigation game, with no human help.
+
+• It won the level.
+
+• It correctly identified the controllable object as the avatar, colour three, purely from the Jacobian.
+
+• It planned the shortest route - four moves down, then four moves right - and executed it in eight actions.
+
+• Against a human baseline of eight actions, the shortest possible, its efficiency score was the full value of one.
+
+• The J-Lens held the human-step process throughout, with the final transfer step showing as the current one when play ended.
+
+The acceptance demonstration prints PASS for all five of its criteria.
+
+Mentova still boots correctly with the new controller wired into its start-up.
+
+
+HOW TO RUN THE WORK
+
+The solo human-step demonstration can be run from the Mentova directory with the following command.
+
+swipl -l demos/arc_agi_3_human_steps_demo.pl -g run_hs_demo -t halt
+
+The co_hsteps tests can be run from the PrologAI directory by putting every package's prolog folder on the library path and running the test file.
+
+swipl -p library=PACKS -g "run_tests, halt" -t "halt(1)" packs/co_hsteps/test/test_co_hsteps.pl
+
+In that command PACKS stands for the colon-separated list of every packs star prolog folder.
+
+
+DEFAULTS CHOSEN, AND WHY
+
+Because this work was carried out without stopping to ask questions, a few reasonable defaults were chosen, and they are recorded here for transparency.
+
+• The human ladder was taken directly from the merged Human Steps deconstruction already in the platform, so the vocabulary matches what is already documented rather than inventing a parallel scheme.
+
+• The J-Space and J-Lens were the existing jspace workspace, reused rather than duplicated, because its own definition already equates them with the Jacobian Space and Jacobian Lens.
+
+• The demonstration game is a navigation grid, because navigation is where the Jacobian, the controllable object, and the goal gradient are clearest and most testable.
+
+• The human baseline in the demonstration is set to the shortest possible route length, so the efficiency figure is exact and easy to check; the true per-level human baselines are known only to the benchmark.
+
+• No benchmark score is claimed, in keeping with the project rule of never announcing a result before it is measured.
+
+
+WHAT REMAINS FOR LIVE PLAY
+
+This work lets Mentova follow the human process on a controlled game; it does not yet run against the live ARC-AGI-3 servers.
+
+The remaining steps for a genuine attempt are the following.
+
+• Point the solo controller at the live environment adapter and the three public games, named ft09, ls20, and vc33, instead of the navigation game.
+
+• Extend the Jacobian probe to the click action, which selects a cell by coordinates, not just the directional moves, so non-navigation games are covered.
+
+• Handle games whose goal is not a location - for example changing colours or arranging objects - by widening the goal representation beyond a target cell.
+
+• Record the real per-level action counts and only then, if the results warrant it, write them up as a measured accomplishment.
+
+
+SOURCES CONSULTED
+
+The research drew on the following public sources.
+
+• ARC Prize, Measuring Human Performance on ARC-AGI-3, https://arcprize.org/blog/arc-agi-3-human-dataset
+
+• ARC Prize, ARC-AGI-3 Preview - 30-Day Learnings, https://arcprize.org/blog/arc-agi-3-preview-30-day-learnings
+
+• ARC Prize, ARC-AGI-3 Technical Report, https://arcprize.org/media/ARC_AGI_3_Technical_Report.pdf and the article version at https://arxiv.org/html/2603.24621v1
+
+• The merged Human Steps deconstruction in the PrologAI repository, docs/ARC-AGI_Human_Steps.txt
+
+• DataCamp, ARC-AGI-3 - The New Interactive Reasoning Benchmark, https://www.datacamp.com/blog/arc-agi-3
+
+
+END OF DOCUMENT

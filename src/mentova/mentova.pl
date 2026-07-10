@@ -125,6 +125,8 @@
 :- use_module(games/arc).
 % Load the autonomous ARC-AGI-3 agent driver so interactive games can be played unaided.
 :- use_module(games/arc_agi_3).
+% Load the ARC-AGI-3 human-step solo controller so games can be solved by walking the human ladder in J-Space.
+:- use_module(games/arc_agi_3_human_steps).
 % Load the Raven's Progressive Matrices driver so RPM tasks can be played as game bodies.
 :- use_module(games/ravens).
 % Load the Baba Is You driver so Baba levels can be played as game bodies.
