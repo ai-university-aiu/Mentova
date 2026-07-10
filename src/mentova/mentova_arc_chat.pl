@@ -103,7 +103,13 @@
     % ma_attempts_list/1: the solo attempt report filenames, newest first.
     ma_attempts_list/1,
     % ma_learnings/1: the shared learnings both sub-projects read.
-    ma_learnings/1
+    ma_learnings/1,
+    % ma_source/1: the active game source (local | live).
+    ma_source/1,
+    % ma_set_source/1: switch the active game source.
+    ma_set_source/1,
+    % ma_available_game/2: a game environment in the active source.
+    ma_available_game/2
 ]).
 
 % Register the PrologAI Causalontology pack directories before any
@@ -139,6 +145,11 @@
 :- use_module(library(co_arc3), [co_arc3_choose/3, co_arc3_delta/3, co_arc3_reset/0]).
 % Load the Jacobian Space workspace so the solo run holds its learnings in J-Space.
 :- use_module(library(jspace), [js_open/1, js_hold/4, js_reading/2]).
+% Load the live ARC-AGI-3 client so the dropdown can offer the real environments.
+:- use_module('arc_agi_3_live',
+    [al_connect/1, al_connected/0, al_disconnect/0, al_game/2, al_games/1,
+     al_render/2, al_reset/2, al_act/3, al_actions/2, al_solved/1,
+     al_status/1, al_has_key/0]).
 % Load the chat database: mentor auth and the teach queue.
 :- use_module('chat_db', [mc_db_init/1, mc_verify_session/2, mc_propose_fact/4, mc_approve_fact/2]).
 % Load the HTTP server framework, exactly as the chat uses it.
@@ -184,6 +195,12 @@
 :- http_handler(root(api/arc/attempts/view), ma_handle_attempt_view, []).
 % The attempts record page: the separate listing page.
 :- http_handler(root(arc/attempts), ma_handle_attempts_page, []).
+% The live status endpoint: the live connection state.
+:- http_handler(root(api/arc/live/status), ma_handle_live_status, []).
+% The live connect endpoint: connect the real ARC-AGI-3 environments.
+:- http_handler(root(api/arc/live/connect), ma_handle_live_connect, []).
+% The live disconnect endpoint: return to the local stand-ins.
+:- http_handler(root(api/arc/live/disconnect), ma_handle_live_disconnect, []).
 
 % Define ma_db_init: attach the chat database this application reuses.
 ma_db_init(Dir) :-
@@ -359,15 +376,15 @@ ma_game_info(ft09, 'Signal — raise the counter to complete the level (ft09 the
 % ma_game_sel_/1: the selected game environment id.
 :- dynamic ma_game_sel_/1.
 
-% Define ma_selected_game: the selected environment, defaulting to the locksmith.
+% Define ma_selected_game: the selected environment, defaulting per source.
 ma_selected_game(Id) :-
-    % Read the selection, or fall back to the locksmith.
-    ( ma_game_sel_(Id) -> true ; Id = ls20 ).
+    % Read the selection, or fall back to the active source's default.
+    ( ma_game_sel_(Id) -> true ; ma_default_game(Id) ).
 
 % Define ma_set_game: select a game environment and reset it to its start.
 ma_set_game(Id) :-
-    % The id must be a registered environment.
-    ma_game_info(Id, _),
+    % The id must be available in the active source.
+    ma_available_game(Id, _),
     % Replace any previous selection.
     retractall(ma_game_sel_(_)),
     % Record the new selection.
@@ -377,45 +394,95 @@ ma_set_game(Id) :-
     % Selecting a game also ends any solo run in progress.
     ma_solo_clear.
 
-% Uniform dispatch — render the current frame of an environment.
-% The locksmith renders from its own state.
-ma_render(ls20, Frame) :- ma_game_frame(Frame).
+% Uniform dispatch — render the current frame, routing to live or local.
+ma_render(Id, Frame) :-
+    % A live game renders from the live client; a local one from its state.
+    ( ma_is_live(Id) -> al_render(Id, Frame) ; ma_local_render(Id, Frame) ).
+% Uniform dispatch — reset, routing to live or local.
+ma_reset_env(Id, Frame) :-
+    % Reset the live game or the local one.
+    ( ma_is_live(Id) -> al_reset(Id, Frame) ; ma_local_reset(Id, Frame) ).
+% Uniform dispatch — act, routing to live or local.
+ma_act_env(Id, Action, Frame) :-
+    % Act on the live game or the local one.
+    ( ma_is_live(Id) -> al_act(Id, Action, Frame) ; ma_local_act(Id, Action, Frame) ).
+% Uniform dispatch — actions, routing to live or local.
+ma_actions_env(Id, Actions) :-
+    % The live game's actions or the local one's.
+    ( ma_is_live(Id) -> al_actions(Id, Actions) ; ma_local_actions(Id, Actions) ).
+% Uniform dispatch — solved, routing to live or local.
+ma_solved_env(Id, Frame) :-
+    % The live game's win test or the local one's.
+    ( ma_is_live(Id) -> al_solved(Id) ; ma_local_solved(Id, Frame) ).
+
+% ma_is_live(+Id): the id names a live game and the live source is active.
+ma_is_live(Id) :-
+    % The live source must be selected.
+    ma_source(live),
+    % And the id must be one of the fetched live games.
+    al_game(Id, _).
+
+% Local render dispatch — the locksmith renders from its own state.
+ma_local_render(ls20, Frame) :- ma_game_frame(Frame).
 % The navigation environment renders from the avatar position.
-ma_render(vc33, Frame) :- ma_nav_render(Frame).
+ma_local_render(vc33, Frame) :- ma_nav_render(Frame).
 % The signal environment renders from the counter.
-ma_render(ft09, Frame) :- ma_sig_render(Frame).
+ma_local_render(ft09, Frame) :- ma_sig_render(Frame).
 
-% Uniform dispatch — reset an environment and return its first frame.
-% The locksmith reset also clears its state.
-ma_reset_env(ls20, Frame) :- ma_game_reset(Frame).
+% Local reset dispatch — the locksmith reset also clears its state.
+ma_local_reset(ls20, Frame) :- ma_game_reset(Frame).
 % The navigation reset places the avatar at the start.
-ma_reset_env(vc33, Frame) :- ma_nav_reset(Frame).
+ma_local_reset(vc33, Frame) :- ma_nav_reset(Frame).
 % The signal reset zeroes the counter.
-ma_reset_env(ft09, Frame) :- ma_sig_reset(Frame).
+ma_local_reset(ft09, Frame) :- ma_sig_reset(Frame).
 
-% Uniform dispatch — apply one action and return the next frame.
-% The locksmith mechanics.
-ma_act_env(ls20, Action, Frame) :- ma_env_act(Action, Frame).
+% Local act dispatch — the locksmith mechanics.
+ma_local_act(ls20, Action, Frame) :- ma_env_act(Action, Frame).
 % The navigation mechanics.
-ma_act_env(vc33, Action, Frame) :- ma_nav_act(Action, Frame).
+ma_local_act(vc33, Action, Frame) :- ma_nav_act(Action, Frame).
 % The signal mechanics.
-ma_act_env(ft09, Action, Frame) :- ma_sig_act(Action, Frame).
+ma_local_act(ft09, Action, Frame) :- ma_sig_act(Action, Frame).
 
-% Uniform dispatch — the actions an environment affords.
-% The locksmith action set.
-ma_actions_env(ls20, As) :- ma_env_actions(As).
+% Local action-set dispatch — the locksmith action set.
+ma_local_actions(ls20, As) :- ma_env_actions(As).
 % The navigation action set: the four moves.
-ma_actions_env(vc33, [action(up), action(down), action(left), action(right)]).
+ma_local_actions(vc33, [action(up), action(down), action(left), action(right)]).
 % The signal action set: increment or idle.
-ma_actions_env(ft09, [action(pickup), action(up)]).
+ma_local_actions(ft09, [action(pickup), action(up)]).
 
-% Uniform dispatch — whether an environment is solved.
-% The locksmith is solved when the door is open.
-ma_solved_env(ls20, Frame) :- ma_env_solved(Frame).
+% Local solved dispatch — the locksmith is solved when the door is open.
+ma_local_solved(ls20, Frame) :- ma_env_solved(Frame).
 % Navigation is solved when the avatar is on the goal.
-ma_solved_env(vc33, _) :- ma_nav_(R, C), ma_nav_goal(GR, GC), R =:= GR, C =:= GC.
+ma_local_solved(vc33, _) :- ma_nav_(R, C), ma_nav_goal(GR, GC), R =:= GR, C =:= GC.
 % Signal is solved when the counter reaches two.
-ma_solved_env(ft09, _) :- ma_sig_(L), L >= 2.
+ma_local_solved(ft09, _) :- ma_sig_(L), L >= 2.
+
+% ma_source_/1: the active game source (local stand-ins or live environments).
+:- dynamic ma_source_/1.
+
+% ma_source(?Source): the active source, defaulting to the local stand-ins.
+ma_source(Source) :-
+    % Read it, or fall back to local.
+    ( ma_source_(Source) -> true ; Source = local ).
+
+% ma_set_source(+Source): switch between the local and live game sources.
+ma_set_source(Source) :-
+    % Only the two sources are valid.
+    memberchk(Source, [local, live]),
+    % Replace the previous source.
+    retractall(ma_source_(_)),
+    % Record it.
+    assertz(ma_source_(Source)).
+
+% ma_available_game(?Id, ?Title): a game environment in the active source.
+ma_available_game(Id, Title) :-
+    % Live games when connected live; the three local stand-ins otherwise.
+    ( ma_source(live) -> al_game(Id, Title) ; ma_game_info(Id, Title) ).
+
+% ma_default_game(-Id): the default selection for the active source.
+ma_default_game(Id) :-
+    % The first live game when live, else the locksmith.
+    ( ma_source(live), al_game(Live, _) -> Id = Live ; Id = ls20 ), !.
 
 % ---- The navigation environment (vc33) ----
 
@@ -714,8 +781,10 @@ ma_solo_report(File, Path) :-
 ma_report_text(Now, Text) :-
     % A readable timestamp for the body.
     format_time(atom(When), '%Y-%m-%d %H:%M:%S', Now),
-    % The selected environment and its title.
-    ma_selected_game(Game), ma_game_info(Game, Title),
+    % The selected environment and its title (live or local, else the id).
+    ma_selected_game(Game),
+    % Its title from the active source, falling back to the id.
+    ( ma_available_game(Game, Title) -> true ; Title = Game ),
     % The run outcome, if the run has one.
     ( ma_solo_(Steps, done(Outcome)) -> true
     ; ma_solo_(Steps, _) -> Outcome = interrupted
@@ -1283,17 +1352,72 @@ ma_handle_mode(Request) :-
         reply_json_dict(_{ok: true, mode: Mode, game: Game})
     ).
 
-% ma_handle_games(+Request): the selectable environments as JSON.
+% ma_handle_games(+Request): the selectable environments as JSON, from the
+% active source (live when connected, otherwise the local stand-ins).
 ma_handle_games(_Request) :-
     % The current selection.
     ma_selected_game(Sel),
-    % One entry per registered environment.
+    % One entry per available environment in the active source.
     findall(_{id: Id, title: Title, selected: IsSel},
-        ( ma_game_info(Id, Title),
+        ( ma_available_game(Id, Title),
           ( Id == Sel -> IsSel = true ; IsSel = false ) ),
         Games),
+    % The active source and whether a live key is configured or connected.
+    ma_source(Source),
+    % Whether a key is present.
+    ( al_has_key -> HasKey = true ; HasKey = false ),
+    % Whether the live session is open.
+    ( al_connected -> Conn = true ; Conn = false ),
     % Reply.
-    reply_json_dict(_{ok: true, games: Games, selected: Sel}).
+    reply_json_dict(_{ok: true, games: Games, selected: Sel,
+                      source: Source, key_configured: HasKey, connected: Conn}).
+
+% ma_handle_live_status(+Request): the live connection status as JSON.
+ma_handle_live_status(_Request) :-
+    % Delegate to the live client's status.
+    al_status(Status),
+    % Reply.
+    reply_json_dict(Status).
+
+% ma_handle_live_connect(+Request): attempt to connect the live environments.
+ma_handle_live_connect(_Request) :-
+    % Try to connect.
+    al_connect(Result),
+    (   Result = connected(N)
+    % On success switch to the live source and select the first live game.
+    ->  ma_set_source(live),
+        retractall(ma_game_sel_(_)),
+        ma_default_game(First), assertz(ma_game_sel_(First)),
+        % Start the selected live game fresh.
+        catch(ma_reset_env(First, _), _, true),
+        % End any solo run from before.
+        ma_solo_clear,
+        % Report success with the status.
+        al_status(Status),
+        reply_json_dict(Status.put(_{ok: true, connected_games: N}))
+    % On failure stay local and report why.
+    ;   Result = error(Reason),
+        term_to_atom(Reason, RText),
+        al_status(Status),
+        reply_json_dict(Status.put(_{ok: false, error: RText}))
+    ).
+
+% ma_handle_live_disconnect(+Request): drop the live session, back to local.
+ma_handle_live_disconnect(_Request) :-
+    % Forget the live session.
+    al_disconnect,
+    % Switch back to the local stand-ins.
+    ma_set_source(local),
+    % Select the local default and reset it.
+    retractall(ma_game_sel_(_)),
+    % The local default.
+    ma_default_game(Local), assertz(ma_game_sel_(Local)),
+    % Reset it.
+    catch(ma_reset_env(Local, _), _, true),
+    % End any solo run.
+    ma_solo_clear,
+    % Reply.
+    reply_json_dict(_{ok: true, source: local, game: Local}).
 
 % ma_handle_select(+Request): choose the active game environment.
 ma_handle_select(Request) :-

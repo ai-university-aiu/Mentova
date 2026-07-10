@@ -1,0 +1,164 @@
+ARC-AGI-3 LIVE ENVIRONMENT CONNECTION - WORK SUMMARY AND HOW TO CONNECT
+
+Version 1. Dated 2026-07-10.
+
+
+PURPOSE OF THIS DOCUMENT
+
+This document explains how Mentova connects to the live ARC-AGI-3 game environments, and exactly what you must do to obtain and install the key that turns the live connection on.
+
+ARC-AGI-3 stands for Abstraction and Reasoning Corpus for Artificial General Intelligence, version three.
+
+It is a set of interactive games run by the ARC Prize Foundation.
+
+A note on honesty is made up front: no benchmark score is claimed anywhere in this work.
+
+
+WHAT WAS CONNECTED
+
+A live client was added that speaks the exact ARC-AGI-3 agents Application Programming Interface, where Application Programming Interface (API) means the defined way one program talks to another.
+
+The exact protocol was confirmed by reading the ARC Prize Foundation's own open-source toolkit, not guessed.
+
+The details are as follows.
+
+• The base web address is https://three.arcprize.org
+
+• The key is sent in a request header named X-API-Key.
+
+• The list of games is fetched with a GET request to /api/games, which returns a list of entries each carrying a game_id.
+
+• A scorecard - the record of a run - is opened with a POST request to /api/scorecard/open, which returns a card_id, and closed with a POST request to /api/scorecard/close.
+
+• A level is started with a POST request to /api/cmd/RESET, carrying the card_id and the game_id, and returns a reply with a guid (the session identifier), a frame (the picture), a state, and the list of available actions.
+
+• An action is taken with a POST request to /api/cmd/ACTION1 through /api/cmd/ACTION6, carrying the game_id and the guid, and for the click action ACTION6 also an x and a y.
+
+• The reply's state is one of NOT_PLAYED, NOT_FINISHED, WIN, or GAME_OVER, and WIN is the win.
+
+The client flattens the reply's picture - which the protocol sends as a stack of grids - down to the single current grid for display, and it maps the wire action names to Mentova's own action terms.
+
+
+THE GRACEFUL FALLBACK
+
+Connecting to the live environments requires a key.
+
+If no key is present, or if the live servers cannot be reached, the system does not break.
+
+Instead it falls back to the three local stand-in environments (the locksmith, the navigation game, and the signal game), and the page says why - for example "Live: no API key - using local stand-ins."
+
+Every network call is guarded, so a missing key or an unreachable server simply keeps Mentova on the local games.
+
+
+HOW TO OBTAIN THE API KEY
+
+The key is free and is obtained from the ARC Prize Foundation.
+
+The steps are as follows.
+
+1. Open a web browser to https://three.arcprize.org
+
+2. Register or sign in to get an account.
+
+3. Find the API key on your account or settings page and copy it.
+
+If you do not register, the toolkit can fetch an anonymous key for development, but a registered key is what gives access to the public games at release, so registering is recommended.
+
+
+HOW TO INSTALL THE API KEY
+
+There are three ways to give Mentova the key; any one of them works.
+
+• The environment variable, which is the standard way.
+
+◦ Before starting the server, set the variable named ARC_API_KEY to your key.
+
+◦ On a typical shell that is: export ARC_API_KEY=your-key-here
+
+◦ Then start the server as usual.
+
+• The key file, which is convenient if you cannot set an environment variable.
+
+◦ Create a plain-text file at data/arc_api_key.txt inside the Mentova directory.
+
+◦ Put your key on the first line and save it.
+
+◦ This file is deliberately ignored by version control so the secret is never committed.
+
+• The optional base override, for advanced use.
+
+◦ If you need to point at a different server, set the environment variable named ARC_API_BASE to that web address; otherwise the public default is used.
+
+Once the key is installed by any of these methods, restart the server so it picks the key up.
+
+
+HOW TO CONNECT ONCE THE KEY IS INSTALLED
+
+Open the ARC-AGI-3 Chat page in a web browser.
+
+At the bottom of the page, beside the game dropdown, is a button labelled Connect Live Environments.
+
+Click it.
+
+If the key is valid and the servers are reachable, the game dropdown fills with the real ARC-AGI-3 games, and the status line reads "Live: connected."
+
+You can then select any live game and play it in Guided Mode or watch Mentova attempt it in Solo Mode, exactly as with the local games.
+
+A button labelled Use Local Stand-ins switches back to the local games at any time.
+
+
+HOW TO RUN THE SERVER
+
+From the Mentova directory:
+
+bash bin/mentova_chat_start.sh 8088
+
+Then open a web browser at http://localhost:8088/assets/arc/arc.html
+
+
+RESULTS
+
+The live client was tested end to end against a mock server that implements the exact ARC-AGI-3 endpoints, so the whole path was proven without needing the real key.
+
+The demonstration checks six criteria and prints PASS for all six.
+
+• With no key, connecting fails cleanly and the system stays on the three local stand-in environments.
+
+• With a key, connecting lists the live games.
+
+• A live game resets and returns a picture, correctly flattened from the protocol's stack-of-grids form.
+
+• Solo plays a live game to a win and writes a date-and-time-stamped report.
+
+• The dropdown shows the live source and lists the live games.
+
+• Disconnecting returns to the three local stand-ins.
+
+The existing local demonstrations still pass - the guided demonstration all eight of its criteria and the guided-and-solo demonstration all six - so nothing was broken.
+
+To run the live demonstration, from the Mentova directory:
+
+swipl -l demos/arc_live_demo.pl -g run_arc_live_demo -t halt
+
+
+DEFAULTS AND NOTES
+
+• The same client code that talks to the mock server talks to the real https://three.arcprize.org when a real key is configured; only the base web address and the key differ.
+
+• The click action ACTION6, when offered by a live game, is sent by default at the centre of the grid; a later change can aim it using the exploration policy and the Jacobian already built in the ARC-AGI-3 Readiness suite.
+
+• No benchmark score is claimed, in keeping with the project rule of never announcing a result before it is measured.
+
+
+SOURCES CONSULTED
+
+• The ARC-AGI-3 agents API base and key: https://three.arcprize.org
+
+• The ARC Prize Foundation reference agent, which confirmed the header and the endpoints: the arcprize/ARC-AGI-3-Agents repository on GitHub.
+
+• The ARC Prize Foundation toolkit, which confirmed the exact routes and request bodies: the arcprize/ARC-AGI repository on GitHub (arc_agi/server.py and arc_agi/remote_wrapper.py).
+
+• The ARC-AGI-3 documentation: https://docs.arcprize.org/
+
+
+END OF DOCUMENT
