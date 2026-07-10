@@ -123,6 +123,8 @@
 :- use_module(game_body).
 % Load the ARC-AGI driver so ARC tasks can be played as game bodies.
 :- use_module(games/arc).
+% Load the autonomous ARC-AGI-3 agent driver so interactive games can be played unaided.
+:- use_module(games/arc_agi_3).
 % Load the Raven's Progressive Matrices driver so RPM tasks can be played as game bodies.
 :- use_module(games/ravens).
 % Load the Baba Is You driver so Baba levels can be played as game bodies.
