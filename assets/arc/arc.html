@@ -37,6 +37,16 @@
   #outcome { color: #d4a017; margin-left: 8px; }
   a { color: #d4a017; }
   #footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #553; }
+  /* Pressed state: invert colours while the mouse button is held on a button. */
+  button:active, select:active,
+  button.pressed, select.pressed {
+    background: #f2e8d5; color: #1d1616; border-color: #f2e8d5;
+  }
+  /* Visible feedback line for action results and rejections. */
+  #msg { min-height: 1.2em; margin: 8px 0; font-weight: bold; }
+  .msg-error { color: #ff6b6b; }
+  .msg-ok { color: #66cc66; }
+  .msg-info { color: #d4a017; }
 </style>
 </head>
 <body>
@@ -48,6 +58,7 @@
   <div>
     <span id="status"> status: —</span><span id="outcome"></span>
   </div>
+  <div id="msg"></div>
   <div class="pad" id="lights"></div>
   <div style="font-size:0.78em;color:#9c9;margin-top:-4px">
     Actions are the ARC-AGI-3 canonical commands. A word in parentheses with "?"
@@ -101,6 +112,33 @@ let ref = null;
 let mode = 'guided';
 // The cell count of the last frame, for the click mapping.
 let lastN = 5;
+
+// Show a visible message so the user is never left guessing.
+let msgTimer = null;
+function flash(text, kind) {
+  const m = document.getElementById('msg');
+  m.textContent = text;
+  m.className = kind === 'error' ? 'msg-error' : kind === 'ok' ? 'msg-ok' : 'msg-info';
+  if (msgTimer) clearTimeout(msgTimer);
+  // Errors linger; other messages clear after a few seconds.
+  if (kind !== 'error') msgTimer = setTimeout(() => { if (m.textContent === text) m.textContent = ''; }, 6000);
+}
+
+// Pressed/inverted visual for ALL buttons and the dropdown: invert while the
+// mouse button is held down on the control, revert on release (the action
+// itself still fires on release via the normal click).
+document.addEventListener('mousedown', e => {
+  const b = e.target.closest('button, select');
+  if (b) b.classList.add('pressed');
+});
+document.addEventListener('mouseup', () => {
+  document.querySelectorAll('.pressed').forEach(b => b.classList.remove('pressed'));
+});
+// Dragging off a held control reverts its colour (no action, like a native click).
+document.addEventListener('mouseout', e => {
+  const b = e.target.closest('button, select');
+  if (b) b.classList.remove('pressed');
+});
 
 // Render one frame onto the canvas.
 function draw(frame) {
@@ -210,16 +248,18 @@ async function setMode(m) {
   const j = await (await fetch('/api/arc/mode', {method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({mode: m})})).json();
-  if (!j.ok) return;
+  if (!j.ok) { flash('Could not switch mode.', 'error'); return; }
   mode = m; markMode();
   if (m === 'solo') {
     greyChat(true);
     document.getElementById('outcome').textContent = '';
+    flash('Solo Mode — watch Mentova play on its own. The chat is disabled.', 'info');
     // Begin a solo attempt immediately (also writes a report on completion).
     await restart();
   } else {
     greyChat(false);
     document.getElementById('outcome').textContent = '';
+    flash('Guided Mode — enter your Mentor Token, then Step/Auto to move and Guide to teach.', 'info');
     refreshFrame();
   }
 }
@@ -230,9 +270,11 @@ async function restart() {
     headers: {'Content-Type': 'application/json'}, body: '{}'})).json();
   if (mode === 'solo') {
     document.getElementById('outcome').textContent = '';
+    flash('Restarted — Mentova is attempting ' + (j.game || gameSel()) + ' solo.', 'ok');
     tickSolo();
   } else {
     log('control', 'restarted ' + (j.game || ''));
+    flash('Restarted ' + (j.game || gameSel()) + '. In Guided Mode, enter your Mentor Token, then Step/Auto to move.', 'ok');
     refreshFrame();
   }
 }
@@ -243,6 +285,7 @@ async function selectGame() {
   await fetch('/api/arc/select', {method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({game: g})});
+  flash('Selected game: ' + g, 'info');
   if (mode === 'solo') { await restart(); } else { refreshFrame(); }
 }
 
@@ -275,11 +318,13 @@ async function connectLive() {
   const j = await (await fetch('/api/arc/live/connect', {method: 'POST',
     headers: {'Content-Type': 'application/json'}, body: '{}'})).json();
   if (j.ok) {
+    flash('✓ Connected to the live ARC-AGI-3 environments.', 'ok');
     await loadGames();
     if (mode === 'solo') { await restart(); } else { refreshFrame(); }
   } else {
     st.textContent = ' Live: could not connect (' + (j.error || 'unknown') +
       ') — using local stand-ins.';
+    flash('⚠ Could not connect live (' + (j.error || 'unknown') + '). Using local stand-ins. Add an ARC_API_KEY — see docs.', 'error');
     await loadGames();
   }
 }
@@ -294,33 +339,41 @@ async function disconnectLive() {
 
 // Send a clue, with the last clicked cell as its reference (guided only).
 async function sendHint() {
-  if (mode !== 'guided') return;
-  const text = document.getElementById('hint').value;
+  if (mode !== 'guided') { flash('Switch to Guided Mode to send clues.', 'info'); return; }
+  const token = document.getElementById('token').value.trim();
+  if (!token) { flash('Enter your Mentor Token first (get one at /mentor), then press Guide.', 'error'); return; }
+  const text = document.getElementById('hint').value.trim();
+  if (!text) { flash('Type a clue first, e.g. "that looks like a key".', 'error'); return; }
   const j = await (await fetch('/api/arc/hint', {method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({token: document.getElementById('token').value,
-                          text: text, ref: ref, session_id: 'browser'})})).json();
+    body: JSON.stringify({token: token, text: text, ref: ref, session_id: 'browser'})})).json();
   log('you', text);
   log('mentova', JSON.stringify(j));
+  if (j.ok === false) flash('⚠ ' + (j.error || 'Clue not accepted.'), 'error');
+  else flash('✓ Clue grounded: ' + (j.grounded || 'ok'), 'ok');
   refreshFrame();
 }
 
 // Send a control command (guided only): one step or an auto run.
 async function control(cmd) {
-  if (mode !== 'guided') return;
+  if (mode !== 'guided') { flash('Switch to Guided Mode to drive the game.', 'info'); return; }
+  const token = document.getElementById('token').value.trim();
+  if (!token) { flash('Enter your Mentor Token first (get one at /mentor), then press ' + cmd + '.', 'error'); return; }
   const j = await (await fetch('/api/arc/control', {method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({token: document.getElementById('token').value,
-                          cmd: cmd, budget: 40})})).json();
+    body: JSON.stringify({token: token, cmd: cmd, budget: 40})})).json();
   log('control', JSON.stringify(j));
+  if (j.ok === false) flash('⚠ ' + (j.error || 'Action rejected.'), 'error');
+  else flash('✓ ' + cmd + (j.outcome ? (' — ' + j.outcome) : (j.did ? ' — ' + j.did : ' done')), 'ok');
   refreshFrame();
 }
 
 // Ask why Mentova took its last action (guided only).
 async function why() {
-  if (mode !== 'guided') return;
+  if (mode !== 'guided') { flash('Switch to Guided Mode.', 'info'); return; }
   const j = await (await fetch('/api/arc/why')).json();
   log('why', JSON.stringify(j));
+  flash('Why: ' + (j.action || 'no action yet') + (j.provenance ? ' (' + j.provenance + ')' : ''), 'info');
 }
 
 // Clicking a cell sets the reference for "that"/"there" (guided only).
