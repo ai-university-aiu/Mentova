@@ -20,8 +20,8 @@
 % mentova_body(BodyId, Type, Description)
 % State the fact: mentova body(text_io,    text,   'Text I/O body — transparent reasoning assistant track').
 mentova_body(text_io,    text,   'Text I/O body — transparent reasoning assistant track').
-% State the fact: mentova body(game_env,   game,   'Game-as-body harness — Pokémon, ARC, Baba Is You').
-mentova_body(game_env,   game,   'Game-as-body harness — Pokémon, ARC, Baba Is You').
+% State the fact: mentova body(game_env,   game,   'Game-as-body harness — Pokémon, ARC, Baba Is You, autonomous ARC-AGI-3').
+mentova_body(game_env,   game,   'Game-as-body harness — Pokémon, ARC, Baba Is You, autonomous ARC-AGI-3').
 % State the fact: mentova body(ros_robot,  robot,  'ROS 2 robot body — virtual first (Gazebo/Webots), then physical').
 mentova_body(ros_robot,  robot,  'ROS 2 robot body — virtual first (Gazebo/Webots), then physical').
 

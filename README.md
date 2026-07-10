@@ -222,16 +222,17 @@ The birth sequence (Rungs 1–9) is the minimum viable Mentova.
 
 ## The Growth Path
 
-After completing the 48-rung reasoning ladder, Mentova continues along six growth path milestones:
+After completing the 48-rung reasoning ladder, Mentova continues along seven growth path milestones:
 
 | # | Milestone | Status |
 |---|---|---|
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
 | 3 | ARC-AGI-2 benchmark | ✅ SUMMIT — Wave 124 (FINAL) complete (120/120 = 100.00%; benchmark runner and ledger both 120/120) |
-| 4 | Live Pokemon (multi-domain game reasoning) | Planned |
-| 5 | Multi-agent society (Mentova agents collaborating) | Planned |
-| 6 | Embodiment (ROS 2 robot body integration) | Planned |
+| 4 | ARC-AGI-3 (Interactive Reasoning Benchmark) | 🔬 Readiness — autonomous agent driver in place over the PrologAI ARC-AGI-3 Readiness suite (co_explore, co_goalinfer, co_effic, co_arc3proto); unaided it explores an unseen game, infers the win condition, and wins within an efficiency budget. No leaderboard score claimed until measured. See `docs/ARC-AGI-3_Preparation_v1.txt` |
+| 5 | Live Pokemon (multi-domain game reasoning) | Planned |
+| 6 | Multi-agent society (Mentova agents collaborating) | Planned |
+| 7 | Embodiment (ROS 2 robot body integration) | Planned |
 
 ---
 
@@ -279,6 +280,7 @@ Nothing is hidden.
 | `global_workspace.pl` | Wires Mentova onto the PrologAI Global Workspace Cycle and Attention Economy — the hub where the most salient mental content is broadcast across all reasoning modules simultaneously. |
 | `attention_schema.pl` | Mentova's model of its own attention — a running self-representation of what the mind is currently focused on and why. |
 | `game_body.pl` | The Game-as-a-Body Harness — enrolls interactive game environments as Mentova bodies following the Mind-Body pattern, so game percepts arrive as Lattice facts and game actions go out as commands. |
+| `games/arc_agi_3.pl` | Autonomous ARC-AGI-3 Agent — plays an unseen interactive game with no human help, wiring the PrologAI ARC-AGI-3 Readiness suite onto the co_arc3 harness: a novelty-seeking, loop-avoiding exploration policy, inference of the unstated win condition, and an efficiency governor that scores the run against a human baseline the way the benchmark does. A guarded adapter speaks the exact March-2026 REST protocol. See `docs/ARC-AGI-3_Preparation_v1.txt`. |
 | `track_a.pl` | Track A: Transparent Reasoning Assistant — a glass-box interface over two real expert ontologies (the Gene Ontology and the Disease Ontology), each loaded into its own isolated scope. |
 
 **Rungs 1–12: Foundational Reasoning**
@@ -364,6 +366,7 @@ Each game driver below plugs into that harness.
 |---|---|
 | `arc_benchmark.pl` | Runs all 400 ARC-AGI-1 public training tasks through Mentova's inductive reasoning engine and reports an honest score. **Current score: 400/400 = 100.00%** — 32,190 lines of named glass-box rules. |
 | `arc.pl` | The ARC-AGI driver — the perceive-reason-act cycle that connects Mentova's reasoning engine to ARC-AGI task data frame by frame. |
+| `arc_agi_3.pl` | The autonomous ARC-AGI-3 agent — plays an unseen interactive game unaided over the PrologAI ARC-AGI-3 Readiness suite: it explores (novelty-seeking, loop-avoiding, preferring actions predicted to change the frame), infers the unstated win condition from the changes that precede a win, spends actions under an efficiency budget, and speaks the exact March-2026 REST protocol through a guarded adapter. The unaided acceptance demo wins the built-in game, infers `reach_colour(3)` at full confidence, and reports its RHAE-style efficiency score — 6/6 criteria PASS. See `docs/ARC-AGI-3_Preparation_v1.txt`. |
 | `baba.pl` | Baba Is You — the rule-rewriting puzzle game by Arvi Teikari. Mentova reasons about the meta-rules of the game world, not just the objects in it. |
 | `pokemon.pl` | The Pokemon driver (stub) for the Pokemon Red / Emerald flagship demonstration — pending emulator bridge integration. |
 | `ravens.pl` | Raven's Progressive Matrices — a nonverbal fluid intelligence test created by John C. Raven (1936). Mentova solves the 3×3 matrix pattern-completion problems. |
