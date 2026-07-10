@@ -9,7 +9,7 @@ ABSTRACT
 
 This paper describes the delivery of Acc_426, the implementation of
 Causalontology_v5 ("Causalontology: AGI's Missing Link"), the process-first
-Master Ontology in which causation governs the verbs through a reified Causal
+Foundational Ontology in which causation governs the verbs through a reified Causal
 Relation Object, a thin native backbone hosts the nouns, and realizable
 entities form the hinge between them. Three deliverables land together. On
 the PrologAI platform, six new packs - co_noun, co_hinge, co_core, co_learn,
