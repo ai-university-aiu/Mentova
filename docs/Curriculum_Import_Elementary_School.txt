@@ -473,3 +473,137 @@ With this appendix the light-pass import spans the complete pre-Kindergarten-thr
 
 
 END OF HIGH SCHOOL WORK REPORT.
+
+
+================================================================
+APPENDED WORK REPORT - HIGHER EDUCATION AND REMAINING DOCUMENTS IMPORT
+================================================================
+
+Date of this work: 2026-07-10.
+
+Scope of this appendix: every remaining educational document in /home/ccaitwo/curriculum/ not covered by the elementary, middle-school, or high-school passes. In practice this is the Higher Education band of the Rosetta Rock word wall series - Grade 13 through Grade 20 (ages 18 to 26: college Years 1 to 4 and graduate/postgraduate study) - plus the series Build Report.
+
+Method: the same LIGHT PASS as the earlier bands. The Common Core and PTKLF standards stop at Grade 12, so these bands are pure advanced vocabulary, promoted to understood facts in the lattice with citations.
+
+
+A. ONE-BREATH SUMMARY OF THIS APPENDIX
+
+The eight remaining Rosetta Rock word walls (Grades 13 to 20) became 1,317 additional understood vocabulary facts in the Causalontology lattice, each cited to a real source line.
+
+The Rosetta Rock Series Build Report was registered in the Reference Library as a look-it-up source.
+
+A coverage sweep confirmed that the three bulk-corpus manifests already cover every EngageNY / Eureka Math lesson document on disk (zero uncovered content files), so no new bulk manifest was needed.
+
+Combined with all earlier passes, Mentova now holds 4,975 understood facts and 5 sound Causal Relation Objects (CROs) across 42 registered sources, spanning the entire Rosetta Rock series from the toddler years (age 2) through the twentieth grade (age 26) - the complete curriculum on disk.
+
+Only about 220 kilobytes of new Prolog entered git.
+
+
+B. WHAT WAS IMPORTED (HIGHER EDUCATION)
+
+Understood facts generated for this band: 1,317, all vocabulary.
+
+By grade (with United States schooling stage):
+
+• grade13 (college Year 1, freshman, ages 18-19): 194
+• grade14 (college Year 2, sophomore, ages 19-20): 164
+• grade15 (college Year 3, junior, ages 20-21): 164
+• grade16 (college Year 4, senior, ages 21-22): 164
+• grade17 (graduate Year 1, ages 22-23): 165
+• grade18 (graduate Year 2, ages 23-24): 165
+• grade19 (graduate Year 3, ages 24-25): 148
+• grade20 (graduate Year 4, ages 25-26): 153
+
+These word walls list only the NEW advanced words introduced at each level (each builds on all earlier levels), so the counts are the fresh vocabulary added per grade. Examples: "trenchant", "pithy", "cogent" (Grade 13); "limn", "inhere" (Grade 20).
+
+Sound CROs added for this band: 0.
+
+Relations used: vocabulary only. The Common Core mathematics and English Language Arts standards and the PTKLF foundations end at Grade 12, so there are no math_domain, ela_strand, or ptklf facts for these bands - correctly.
+
+
+C. THE COVERAGE SWEEP (WHAT ELSE REMAINED, AND ITS DISPOSITION)
+
+Every file remaining in /home/ccaitwo/curriculum/ was checked:
+
+• The eight Grade 13 to 20 word walls - IMPORTED as understood facts (this appendix).
+
+• Age_02_to_Age_26_Rosetta_Rock_Series_Build_Report.txt - a meta-document describing how the word wall series was built and verified. It is not itself grade content, so it was REGISTERED in the Reference Library (source id rosetta_rock_build_report) rather than promoted to understood facts; it is now searchable on demand.
+
+• Age_03_to_Age_18_curriculum_index.txt - already registered in the elementary pass (source id curriculum_index).
+
+• The two Common Core PDFs, the eleven PTKLF PDFs, and their extracted texts - already imported in the earlier passes.
+
+• The EngageNY / Eureka Math bulk corpus - a sweep for content files (PDF, docx, doc) whose extracted-directory prefix falls outside Age_04 through Age_17 returned ZERO files, confirming the three existing manifests (elementary, middle, high) already cover the whole bulk corpus. No new manifest was required.
+
+• download_engageny.sh, download_log.txt, unzip_log.txt - operational scripts and logs, not educational content; left as-is on disk.
+
+• Curriculum_Import_Elementary_School.txt, Elementary_School_Full_Pass_Instructions.txt, Chat_on_Elementary_School_topics.txt - this project's own report files; not source content.
+
+After this appendix, there are no remaining un-handled educational documents in /home/ccaitwo/curriculum/.
+
+
+D. WHERE THE DATA LANDED (FULL ABSOLUTE PATHS)
+
+D.1 NEW OR CHANGED ARTIFACTS THAT ENTERED GIT
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_higher_ed_facts.pl
+  NEW. The 1,317 Grade 13 to 20 understood vocabulary facts (about 220 kilobytes). A separate module (curriculum_higher_ed_facts) defining ci_fact/4 and ci_cro/5, composing with the other three bands without clashing.
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_path_registry.pl
+  UPDATED. Now 42 sources (was 33): added the eight Grade 13 to 20 word walls and the Rosetta Rock Series Build Report. Every registered path was re-verified to exist on disk.
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_lattice.pl
+  UPDATED. The ci_any_fact/4 and ci_any_cro/5 union now includes the higher-education band (one added use_module and one added clause each), so all four bands are queried and anchored as one body of knowledge. The public query API is unchanged.
+
+D.2 DATA THAT STAYS ON DISK (never in git)
+
+• The eight Grade 13 to 20 word walls, cited directly (line numbers point into these files):
+    /home/ccaitwo/curriculum/Age_18_to_Age_19_Grade_13_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_19_to_Age_20_Grade_14_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_20_to_Age_21_Grade_15_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_21_to_Age_22_Grade_16_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_22_to_Age_23_Grade_17_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_23_to_Age_24_Grade_18_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_24_to_Age_25_Grade_19_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_25_to_Age_26_Grade_20_Rosetta_Rock_Word_Wall.txt
+
+• /home/ccaitwo/curriculum/Age_02_to_Age_26_Rosetta_Rock_Series_Build_Report.txt
+  Registered in the Reference Library (source id rosetta_rock_build_report); streamed and searchable on demand.
+
+
+E. VERIFICATION PERFORMED (HIGHER EDUCATION)
+
+• curriculum_higher_ed_facts.pl loads cleanly in SWI-Prolog.
+
+• The regenerated path registry lists 42 sources and all 42 paths were confirmed to exist on disk.
+
+• Combined query interface reports facts=4975, cros=5, sources=42.
+
+• Higher-education queries answer correctly: Grade 13 vocabulary size is about 180; Grade 20 about 138; ci_word(grade13, trenchant) succeeds; ci_why(limn, ...) resolves to source(wall_grade20, 42) reading back the real line "limn".
+
+• With the real PrologAI lattice packs loaded: all 4,975 combined facts anchor as node_facts into the nexus locus://mentova/curriculum.
+
+• The Series Build Report is searchable through the Reference Library (a search for "Build Report" returns hits from source rosetta_rock_build_report).
+
+• The full mentova_chat.pl module still loads cleanly with the four-band loader.
+
+
+F. GITHUB LIMITS RESPECTED (HIGHER EDUCATION)
+
+• Only about 220 kilobytes of new Prolog (curriculum_higher_ed_facts.pl) plus small edits to the registry and loader entered git. Nothing approaches the 50 or 100 megabyte thresholds.
+
+• All raw word walls and the Build Report stay on disk under /home/ccaitwo/curriculum/, outside the repository. Nothing large entered git.
+
+
+G. RUNNING TOTAL (THE COMPLETE ROSETTA ROCK SPAN: AGE 2 THROUGH AGE 26)
+
+• Understood facts: 4,975 (elementary 2,372 + middle school 575 + high school 711 + higher education 1,317).
+• Sound CROs: 5.
+• Registered Reference-Library sources: 42 (24 word walls, 13 standards texts, 1 index, 3 bulk-corpus manifests, 1 series build report).
+• Bulk corpus registered and streamed: 21,128 EngageNY / Eureka Math documents, about 14.4 gigabytes.
+• New git footprint from this appendix: about 220 kilobytes.
+
+With this appendix, every educational document in /home/ccaitwo/curriculum/ has been handled: the clean, structured content (all twenty-four word walls from toddler through the twentieth grade, plus the Common Core and PTKLF standards) is understood and cited in the lattice, and the full EngageNY / Eureka Math lesson corpus is registered and searchable on demand. The light pass over the curriculum folder is complete.
+
+
+END OF HIGHER EDUCATION AND REMAINING DOCUMENTS WORK REPORT.
