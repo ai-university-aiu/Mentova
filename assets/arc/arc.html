@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!-- Mentova - mentova_arc_agi_3_chat split screen (Acc_426).
+     Upper region: the ARC game canvas, rendered from /api/arc/frame.
+     Lower region: the chat in which a human guides Mentova with clues.
+     Click a cell to disambiguate "that"/"there"; the click is sent as the
+     ref of the next clue. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mentova — ARC-AGI-3 Guided Learning</title>
+<style>
+  body { font-family: sans-serif; background: #1d1616; color: #f2e8d5; margin: 0; }
+  #wrap { max-width: 760px; margin: 0 auto; padding: 12px; }
+  h1 { color: #c33; font-size: 1.2em; }
+  canvas { background: #000; image-rendering: pixelated; border: 2px solid #c33; }
+  #log { height: 200px; overflow-y: auto; background: #241c1c; padding: 8px;
+         border: 1px solid #553; margin-top: 10px; font-size: 0.9em; }
+  input, button { background: #2e2424; color: #f2e8d5; border: 1px solid #775;
+                  padding: 6px; }
+  #hint { width: 55%; }
+  .who { color: #d4a017; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>Mentova — ARC-AGI-3 Guided Learning</h1>
+  <canvas id="game" width="250" height="250"></canvas>
+  <div>
+    <button onclick="control('reset')">Reset</button>
+    <button onclick="control('step')">Step</button>
+    <button onclick="control('auto')">Auto</button>
+    <button onclick="why()">Why?</button>
+    <span id="status"></span>
+  </div>
+  <div id="log"></div>
+  <div style="margin-top:8px">
+    <input id="token" placeholder="mentor token">
+    <input id="hint" placeholder='e.g. "that looks like a key" (click a cell first)'>
+    <button onclick="sendHint()">Guide</button>
+  </div>
+</div>
+<script>
+// The ARC palette for the values this game uses.
+const COLORS = {0:'#000', 3:'#e6e6e6', 4:'#d4a017', 6:'#2a2', 8:'#c33', 15:'#f0f'};
+// The last cell the guide clicked, sent as the ref of the next clue.
+let ref = null;
+// Render one frame onto the canvas.
+function draw(frame) {
+  const c = document.getElementById('game').getContext('2d');
+  const n = frame.length, s = 250 / n;
+  for (let r = 0; r < n; r++) for (let q = 0; q < n; q++) {
+    c.fillStyle = COLORS[frame[r][q]] || '#555';
+    c.fillRect(q * s, r * s, s - 1, s - 1);
+  }
+}
+// Poll the current frame.
+async function refresh() {
+  const j = await (await fetch('/api/arc/frame')).json();
+  draw(j.frame);
+  document.getElementById('status').textContent = ' status: ' + j.status;
+}
+// Log a line into the chat region.
+function log(who, text) {
+  const d = document.getElementById('log');
+  d.innerHTML += '<div><span class="who">' + who + ':</span> ' + text + '</div>';
+  d.scrollTop = d.scrollHeight;
+}
+// Send a control command.
+async function control(cmd) {
+  const j = await (await fetch('/api/arc/control', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({token: document.getElementById('token').value,
+                          cmd: cmd, budget: 40})})).json();
+  log('control', JSON.stringify(j));
+  refresh();
+}
+// Send a clue, with the last clicked cell as its reference.
+async function sendHint() {
+  const text = document.getElementById('hint').value;
+  const j = await (await fetch('/api/arc/hint', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({token: document.getElementById('token').value,
+                          text: text, ref: ref, session_id: 'browser'})})).json();
+  log('you', text);
+  log('mentova', JSON.stringify(j));
+  refresh();
+}
+// Ask why Mentova took its last action.
+async function why() {
+  const j = await (await fetch('/api/arc/why')).json();
+  log('why', JSON.stringify(j));
+}
+// Clicking a cell sets the reference for "that"/"there".
+document.getElementById('game').addEventListener('click', e => {
+  const rect = e.target.getBoundingClientRect();
+  const s = 250 / 5;
+  ref = [Math.floor((e.clientY - rect.top) / s),
+         Math.floor((e.clientX - rect.left) / s)];
+  log('you', 'clicked cell ' + JSON.stringify(ref));
+});
+// Refresh once on load and then every second.
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>
