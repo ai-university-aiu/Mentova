@@ -1,0 +1,247 @@
+ELEMENTARY SCHOOL CURRICULUM IMPORT - IMPORT REPORT AND DATA STRUCTURE REPORT
+
+Mentova Causalontology and Lattice knowledge import.
+
+Scope: age 0 through the end of elementary school (Fifth Grade), youngest first.
+
+Import style: LIGHT PASS. Clean, structured content becomes understood facts in the lattice. The bulk lesson corpus is registered in the Reference Library and streamed on demand.
+
+Date of import: 2026-07-10.
+
+
+PART 0: THE ONE-BREATH SUMMARY
+
+The clean, structured curriculum (the Rosetta Rock word walls and the California standards) was turned into 2,372 understood facts plus 5 sound Causal Relation Objects (CROs) in the Causalontology lattice, each carrying a citation to a real, reachable source line.
+
+The bulk lesson corpus (the 30 gigabyte EngageNY / Eureka Math archive) was NOT text-extracted; instead its 9,030 elementary lesson documents were registered in the Reference Library as a searchable path index, streamed on demand.
+
+Only compact text (about 428 kilobytes of Prolog) entered git; the raw 30 gigabytes stay on disk at /home/ccaitwo/curriculum/.
+
+Mentova Chat now loads this curriculum at startup and can answer from it and cite it.
+
+
+PART 1: WHAT "UNDERSTOOD FACTS" VERSUS "REFERENCE LIBRARY" MEANS
+
+A word is defined the first time it is used.
+
+Causal Relation Object (CRO): the fundamental unit of Causalontology, a reified cause-and-effect relation carrying causes, effects, a temporal window, a modality, a strength, a context, and a provenance.
+
+Node_fact: one grounded fact stored in the lattice (the "understood notebook").
+
+The Mentova Knowledge Storage Policy splits knowledge into two tiers:
+
+• The understood notebook is the grounded lattice of facts Mentova truly understands and can justify with a "why?"; it stays small and fast.
+
+• The look-it-up library is the large reference bodies Mentova consults one page at a time but has not yet understood; it stays separate and is streamed line by line.
+
+This import respects that split exactly. The word walls and the standards headings are clean enough to understand now, so they became node_facts and CROs. The thousands of lesson PDFs are bulk text that must not be asserted as fact unread, so they went to the Reference Library.
+
+
+PART 2: THE SCOPE THAT WAS IMPORTED (YOUNGEST FIRST)
+
+Understood facts were generated for every clean, structured source from the youngest band up to Fifth Grade:
+
+• Age 0 to 2 (pre-verbal): no dedicated corpus exists, and none is expected; the youngest teaching material in the corpus is the Toddler word wall for ages 2 to 3. This gap is expected and is noted here for completeness.
+
+• Ages 2 to 3 - Toddler word wall.
+
+• Ages 3 to 4 - Preschool word wall.
+
+• Ages 3 to 5 - California Preschool/Transitional Kindergarten Learning Foundations (PTKLF), all 11 domain documents.
+
+• Ages 4 to 5 - Transitional Kindergarten word wall.
+
+• Ages 5 to 6 - Kindergarten word wall, and the Kindergarten sections of the two California Common Core State Standards (CCSS) documents.
+
+• Ages 6 to 11 - Grade 1 through Grade 5 word walls, and the Grade 1 through Grade 5 sections of the two CCSS documents.
+
+The bulk EngageNY corpus was registered for the same elementary band: Prekindergarten, Kindergarten, and Grades 1 through 5, both Mathematics (Eureka Math) and English Language Arts.
+
+
+PART 3: WHERE EVERYTHING LANDED (FULL ABSOLUTE PATHS)
+
+3.1 COMPACT ARTIFACTS THAT ENTERED GIT (in the Mentova repository)
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_elementary_facts.pl
+  The generated understood facts and sound CROs (about 413 kilobytes). Defines ci_fact/4 and ci_cro/5. This is the data.
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_path_registry.pl
+  The path registry (about 6 kilobytes). Maps each Reference-Library SourceId to the absolute path of its file on disk. Defines ci_source/3 and ci_corpus_root/1.
+
+• /home/ccaitwo/Mentova/knowledge/curriculum/curriculum_lattice.pl
+  The loader and query module (about 11 kilobytes). Registers the sources, anchors the understood facts and CROs into the lattice, and gives Mentova Chat its query interface.
+
+• /home/ccaitwo/Mentova/src/mentova/mentova_chat.pl
+  Edited: it now loads curriculum_lattice and calls ci_chat_bootstrap at server startup (guarded so it can never crash the chat).
+
+3.2 RAW AND EXTRACTED DATA THAT STAYS ON DISK (never in git)
+
+• /home/ccaitwo/curriculum/
+  The raw corpus root, about 30 gigabytes after unzipping. Kept out of git by policy.
+
+• /home/ccaitwo/curriculum/extracted_text/
+  The 13 extracted standards texts (about 2.5 megabytes) that the understood facts were parsed from and that the Reference Library cites:
+    Age_03_to_Age_05_CA_PTKLF_01_Introduction.txt
+    Age_03_to_Age_05_CA_PTKLF_02_Approaches_to_Learning.txt
+    Age_03_to_Age_05_CA_PTKLF_03_Social_Emotional_Development.txt
+    Age_03_to_Age_05_CA_PTKLF_04_Language_Literacy_Development.txt
+    Age_03_to_Age_05_CA_PTKLF_05_Mathematics.txt
+    Age_03_to_Age_05_CA_PTKLF_06_Science.txt
+    Age_03_to_Age_05_CA_PTKLF_07_Physical_Development.txt
+    Age_03_to_Age_05_CA_PTKLF_08_Health.txt
+    Age_03_to_Age_05_CA_PTKLF_09_History_Social_Science.txt
+    Age_03_to_Age_05_CA_PTKLF_10_Visual_Performing_Arts.txt
+    Age_03_to_Age_05_CA_PTKLF_11_At_a_Glance.txt
+    Age_05_to_Age_18_CA_CCSS_ELA_Literacy_Standards.txt
+    Age_05_to_Age_18_CA_CCSS_Mathematics_Standards.txt
+
+• /home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest.txt
+  The searchable bulk-corpus path index (about 1.6 megabytes): one line per elementary lesson document, "<bytes>  <absolute_path>", 9,030 documents, about 10.1 gigabytes of Prekindergarten-through-Grade-5 lessons.
+
+• The nine word walls stay at their original paths and are cited directly (line numbers point into these files):
+    /home/ccaitwo/curriculum/Age_02_to_Age_03_Toddler_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_03_to_Age_04_Preschool_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_04_to_Age_05_TK_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_05_to_Age_06_Kindergarten_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_06_to_Age_07_Grade_01_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_07_to_Age_08_Grade_02_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_08_to_Age_09_Grade_03_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_09_to_Age_10_Grade_04_Rosetta_Rock_Word_Wall.txt
+    /home/ccaitwo/curriculum/Age_10_to_Age_11_Grade_05_Rosetta_Rock_Word_Wall.txt
+
+• /home/ccaitwo/curriculum/unzip_log.txt
+  The full log of the recursive unzip (see Part 6).
+
+• This report is written to two places:
+    /home/ccaitwo/curriculum/Curriculum_Import_Elementary_School.txt
+    /home/ccaitwo/Mentova/docs/Curriculum_Import_Elementary_School.txt
+
+
+PART 4: THE DATA STRUCTURE REPORT
+
+4.1 THE UNDERSTOOD FACTS (node_facts)
+
+Each understood fact has the shape:
+
+  ci_fact(Grade, Relation, Args, source(SourceId, Line)).
+
+The final field is the citation: a source identifier and a one-based line number that resolve, through the Reference Library, to the exact line of real text the fact came from. This is testimonial grounding, and it is what lets Mentova answer "why?" honestly instead of bluffing.
+
+When the lattice is running, curriculum_lattice anchors each ci_fact into the lattice nexus locus://mentova/curriculum as a node_fact whose referents are [grade(Grade), source(SourceId, Line)]. Verified: all 2,372 facts anchor.
+
+Relations used, with counts:
+
+• vocabulary  (1,850 facts) - Args = [Word, Category]. A word the grade level teaches, and the themed group it belongs to. Example: ci_fact('toddler', 'vocabulary', ['mama', 'people'], source('wall_toddler', 52)).
+
+• math_domain  (18 facts) - Args = [DomainName, Code]. A CCSS Mathematics domain for a grade, with its official code. Example: ci_fact('kindergarten', 'math_domain', ['counting and cardinality', 'K.CC'], source('ccss_math', 557)).
+
+• ela_strand  (6 facts) - Args = [StrandName]. A CCSS English Language Arts strand present across the Kindergarten-to-Grade-5 band (reading literature, reading informational text, reading foundational skills, writing, speaking and listening, language).
+
+• ptklf_strand  (70 facts) - Args = [Domain, StrandId, StrandName]. A named strand within a PTKLF domain.
+
+• ptklf_foundation  (428 facts) - Args = [Domain, FoundationId, Name]. A specific PTKLF learning foundation. Example: ci_fact('preschool_tk', 'ptklf_foundation', ['mathematics', '1.1', 'reciting numbers'], source('ptklf_math', ...)).
+
+Counts by grade band (understood facts):
+
+• toddler: 155
+• preschool: 185
+• transitional_kindergarten: 139
+• kindergarten: 332
+• grade1: 259
+• grade2: 210
+• grade3: 210
+• grade4: 187
+• grade5: 191
+• kindergarten_to_grade5 (CCSS ELA strands): 6
+• preschool_tk (PTKLF strands and foundations): 498
+
+Total understood facts: 2,372.
+
+4.2 THE SOUND CAUSAL RELATION OBJECTS (CROs)
+
+Each sound relation has the shape:
+
+  ci_cro(Grade, makes_sound, Subject, Sound, source(SourceId, Line)).
+
+These come from the "X says Y" lines of the toddler word wall (dog says woof, cat says meow, cow says moo, duck says quack, car says beep). When the lattice is running, each becomes a reified CRO of the form:
+
+  cro(Id, [makes(Subject)], [sound(Sound)], temporal(0,0,instant), sufficient, 0.9, [grade(Grade)], prov(curriculum, source(SourceId,Line), 0.9))
+
+That is a genuine cause-and-effect object: the cause is the subject making a sound, the effect is the sound, the strength is high, and the provenance cites the exact source line. Verified: the dog-makes-woof CRO is created and queryable.
+
+Total sound CROs: 5.
+
+4.3 THE PATH REGISTRY (24 sources)
+
+curriculum_path_registry.pl maps SourceIds to absolute paths, by kind:
+
+• word_wall (9): the original Rosetta Rock word walls (word-wall citations point here).
+• standard (13): the extracted PTKLF and CCSS texts (standard citations point here).
+• index (1): the human-readable curriculum index.
+• corpus_manifest (1): the searchable bulk-corpus path index of 9,030 lesson documents.
+
+curriculum_lattice registers every source with the Reference Library at import, so citations resolve and the whole library (clean texts plus the bulk manifest) is searchable line by line through rl_search/2.
+
+
+PART 5: HOW MENTOVA CHAT REACHES THE DATA
+
+The query interface (in curriculum_lattice.pl):
+
+• ci_word(Grade, Word) - a word taught at a grade.
+• ci_words_for_grade(Grade, Words) - a grade's whole vocabulary.
+• ci_grade_of_word(Word, Grades) - where a word is taught.
+• ci_standard(Grade, Domain, Code) - a CCSS mathematics domain for a grade.
+• ci_ptklf(Domain, FoundationId, Name) - a PTKLF foundation.
+• ci_sound(Subject, Sound) - a learned sound relation.
+• ci_search(Query, Hits) - streamed full-text search across every registered source, including the bulk corpus manifest.
+• ci_why(Word, Citation, Text) - the honest reason a word is known: its cited source line, read back verbatim.
+• ci_cite(Citation, Text) - resolve any citation to its exact line.
+
+At startup mc_chat_main calls ci_chat_bootstrap, which registers the sources and anchors the facts, all guarded so a curriculum problem can never crash the chat.
+
+See the companion file Chat_on_Elementary_School_topics.txt for sample questions and expected behavior per grade level.
+
+
+PART 6: THE UNZIP
+
+The recursive extractor unzipped every archive, including archives nested inside other archives, keeping the originals.
+
+• Archives present before: 188. After surfacing and extracting nested archives: 281 total, all extracted.
+• The extraction ran in passes until a pass surfaced no new archives (three passes; pass two surfaced 93 nested archives).
+• Curriculum disk usage after unzip: about 30 gigabytes. Free disk remaining: about 184 gigabytes.
+• Full log: /home/ccaitwo/curriculum/unzip_log.txt.
+
+
+PART 7: GITHUB LIMITS RESPECTED
+
+• GitHub hard-blocks any single file over 100 megabytes, warns over 50 megabytes, and recommends repositories stay under 1 to 5 gigabytes.
+
+• The only files added to git are the three Prolog files in knowledge/curriculum/ (about 428 kilobytes total) and the small edit to mentova_chat.pl. The largest is curriculum_elementary_facts.pl at about 413 kilobytes - far below every limit.
+
+• The raw 30 gigabyte corpus, the extracted standards texts, and the bulk manifest all stay on disk under /home/ccaitwo/curriculum/ and are excluded by the repository .gitignore policy. Nothing large enters git.
+
+
+PART 8: VERIFICATION PERFORMED
+
+• The generated facts file, the path registry, and the loader all load cleanly in SWI-Prolog.
+
+• Every registered source path was checked to exist on disk (24 of 24 present).
+
+• Standalone (no lattice packs): the query interface answers correctly, and ci_why('mama', ...) resolves to source('wall_toddler', 52) reading back the real line "mama".
+
+• With the real PrologAI lattice packs loaded: all 2,372 understood facts anchor as node_facts in the nexus (the mama fact carries referents [grade(toddler), source(wall_toddler,52)]), and all 5 sound CROs are created (the dog-makes-woof CRO is present).
+
+• The full mentova_chat.pl module loads cleanly with the curriculum wiring in place.
+
+
+PART 9: WHAT WAS DELIBERATELY DEFERRED (AND WHY)
+
+Consistent with the light-pass decision, the thousands of lesson PDFs and Word documents in the EngageNY corpus were not text-extracted into understood facts. Extracting and grounding that volume is the full pass, and it is documented, with time and disk-space estimates and two options, in:
+
+  /home/ccaitwo/curriculum/Elementary_School_Full_Pass_Instructions.txt
+  /home/ccaitwo/Mentova/docs/Elementary_School_Full_Pass_Instructions.txt
+
+Until then, that corpus is fully reachable through the Reference Library manifest: Mentova can find and open any lesson document on demand, it simply has not yet "understood" it into grounded facts.
+
+
+END OF IMPORT REPORT.

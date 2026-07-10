@@ -253,7 +253,7 @@ Mentova supports all four major multi-agent protocols:
 ```
 Mentova/
 ├── src/mentova/    The complete reasoning engine — 48 modules + core files (see below)
-├── knowledge/      Three knowledge bases: commonsense, Gene Ontology, Disease Ontology
+├── knowledge/      Knowledge bases: commonsense, Gene Ontology, Disease Ontology, elementary curriculum
 ├── bodies/         Enrolled body configurations following the Mind-Body pattern
 ├── constitution/   The constitutional layer — immutable, unlearnable governing principles
 ├── papers/         331 scientific papers — one per accomplishment and benchmark milestone
@@ -375,6 +375,11 @@ Each game driver below plugs into that harness.
 | `small_world.pl` | The Small-World Commonsense Knowledge Base — a curated, layered fact base covering all 48 reasoning types. Every fact is a Lattice `node_fact`; every answer carries a readable justification. The foundation all 48 reasoning modules draw on. |
 | `gene_ontology.pl` | A curated subset of the Gene Ontology (GO), loaded into its own isolated scope. Covers Biological Process, Molecular Function, and Cellular Component sub-ontologies. Powers Track A glass-box bioinformatics reasoning. |
 | `disease_ontology.pl` | A curated subset of the Disease Ontology (DO), loaded into its own isolated scope. Covers major disease categories with gene-disease associations linking back to GO. Powers Track A medical reasoning. |
+| `curriculum/curriculum_elementary_facts.pl` | The elementary school curriculum as **understood facts** — 2,372 grounded facts plus 5 sound Causal Relation Objects (CROs) parsed from the clean, structured sources (the Rosetta Rock word walls, ages 2 to Grade 5, and the California PTKLF and Common Core standards). Every fact carries a `source(SourceId, Line)` citation resolvable to a real line. |
+| `curriculum/curriculum_path_registry.pl` | The **path registry** for the light-pass curriculum import: maps each Reference-Library `SourceId` to the absolute path of its file on disk (9 word walls, 13 standards texts, the curriculum index, and a searchable manifest of the 9,030-document bulk EngageNY/Eureka Math corpus). The raw 30 GB corpus stays on disk; only this compact registry enters git. |
+| `curriculum/curriculum_lattice.pl` | The loader and query interface that joins the two tiers of the Knowledge Storage Policy: it registers the curriculum sources with the streamed **Reference Library**, anchors the understood facts and CROs into the lattice nexus `locus://mentova/curriculum`, and gives Mentova Chat its `ci_word/2`, `ci_standard/3`, `ci_sound/2`, `ci_search/2`, and glass-box `ci_why/3` predicates. Loaded at chat startup. |
+
+**Elementary curriculum (light pass).** Age 0 through Fifth Grade is imported youngest-first under the two-tier Knowledge Storage Policy: the clean word walls and standards become understood facts in the head (the lattice, cited), while the bulk lesson corpus stays on the shelf (the Reference Library, streamed and searchable on demand, never asserted unread). Full-pass extraction of the bulk corpus is documented with time and disk estimates in `docs/Elementary_School_Full_Pass_Instructions.txt`; testing instructions are in `docs/Chat_on_Elementary_School_topics.txt`; the import and data-structure report is `docs/Curriculum_Import_Elementary_School.txt`.
 
 ### The Constitution — constitution/
 

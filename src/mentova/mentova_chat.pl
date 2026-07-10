@@ -39,6 +39,9 @@
 :- use_module('mentova').
 % Load the small_world module for knowledge base predicates.
 :- use_module('../../knowledge/small_world').
+% Load the elementary curriculum loader: understood facts (word walls and
+% CA standards) plus streamed reference-library access to the bulk corpus.
+:- use_module('../../knowledge/curriculum/curriculum_lattice').
 
 % mc_match_pattern/2 clauses are interleaved with helper predicates.
 :- discontiguous mc_match_pattern/2.
@@ -84,6 +87,9 @@ mc_start_server(Port) :-
 mc_chat_main(DataDir, Port) :-
     % Initialise the persistence layer first.
     mc_db_init(DataDir),
+    % Import the elementary curriculum (guarded so it can never crash startup):
+    % register its reference-library sources and anchor its understood facts.
+    catch(ci_chat_bootstrap, _CurriculumError, true),
     % Then start the HTTP server on the requested port.
     mc_start_server(Port).
 
