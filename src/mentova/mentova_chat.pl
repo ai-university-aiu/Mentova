@@ -71,6 +71,8 @@
 :- http_handler(root(api/why),    mc_handle_why,        [method(get)]).
 % Route POST /api/mentor/login to the mentor login handler.
 :- http_handler(root(api/mentor/login),   mc_handle_login,   [method(post)]).
+% Route POST /api/mentor/signup to the mentor sign-up handler.
+:- http_handler(root(api/mentor/signup),  mc_handle_signup,  [method(post)]).
 % Route POST /api/mentor/logout to the mentor logout handler.
 :- http_handler(root(api/mentor/logout),  mc_handle_logout,  [method(post)]).
 % Route POST /api/mentor/teach to the mentor teach handler.
@@ -242,6 +244,56 @@ mc_handle_login(Request) :-
         reply_json_dict(_{ok: true, token: TokenStr})
     ;   % Return an authentication failure response.
         reply_json_dict(_{ok: false, error: "Invalid username or password."})
+    ).
+
+% ------------------------------------------------------------------
+% POST /api/mentor/signup — self-serve mentor account creation
+% ------------------------------------------------------------------
+
+% mc_handle_signup/1 creates a mentor account and returns a session token so
+% the new mentor is signed in immediately. Sign-up can be turned off for a
+% public deployment by setting the environment variable MENTOVA_DISABLE_SIGNUP
+% to true.
+mc_handle_signup(Request) :-
+    % Read the JSON body from the request.
+    http_read_json_dict(Request, Body),
+    % Extract username and password.
+    _{username: UserStr, password: PassStr} :< Body,
+    % Convert to atoms.
+    atom_string(Username, UserStr),
+    atom_string(Password, PassStr),
+    % Compute the result and reply.
+    mc_signup_result(Username, Password, UserStr, Reply),
+    reply_json_dict(Reply).
+
+% mc_signup_result(+Username, +Password, +UserStr, -Reply): the sign-up outcome.
+% Sign-up is disabled by the environment.
+mc_signup_result(_, _, _, _{ok: false, error: "Sign-up is disabled on this server."}) :-
+    getenv('MENTOVA_DISABLE_SIGNUP', V), downcase_atom(V, VL), VL == true, !.
+% A missing username or password is rejected.
+mc_signup_result(U, P, _, _{ok: false, error: "Username and password are required."}) :-
+    ( U == '' ; P == '' ), !.
+% Too-short passwords are rejected.
+mc_signup_result(_, P, _, _{ok: false, error: "Password must be at least four characters."}) :-
+    atom_length(P, L), L < 4, !.
+% Otherwise create the account; a duplicate username is reported honestly, and
+% any other failure surfaces its real reason rather than being mislabelled.
+mc_signup_result(U, P, UserStr, Reply) :-
+    % Create the mentor account, catching any error.
+    catch(mc_create_mentor(U, P), Err, true),
+    (   var(Err)
+    % Created: sign the new mentor in and return the token.
+    ->  mc_authenticate_mentor(U, P, MentorId),
+        mc_create_session(MentorId, Token),
+        atom_string(Token, TokenStr),
+        Reply = _{ok: true, username: UserStr, token: TokenStr}
+    % A genuine duplicate username.
+    ;   Err = error(duplicate_mentor(_), _)
+    ->  Reply = _{ok: false, error: "That username is already taken."}
+    % Any other failure: report the real reason.
+    ;   term_string(Err, ErrStr),
+        string_concat("Could not create the account: ", ErrStr, Msg),
+        Reply = _{ok: false, error: Msg}
     ).
 
 % ------------------------------------------------------------------

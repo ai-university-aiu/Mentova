@@ -46,6 +46,33 @@
       <button type="submit" class="mc-send-btn">Sign in</button>
       <p id="mc-signin-error" class="mc-error" hidden></p>
     </form>
+
+    <!-- Self-serve account creation and Mentor Token retrieval for the ARC page -->
+    <div id="mt-tool" style="margin-top:22px; border-top:1px solid #775; padding-top:14px;">
+      <h2>New here? Create an account &amp; get a Mentor Token</h2>
+      <p class="mc-notice">
+        There is no account yet until you make one. Create an account below, then
+        copy the Mentor Token into the ARC-AGI-3 Chat page's &ldquo;Mentor Token&rdquo; box
+        to guide Mentova.
+      </p>
+      <label for="mt-user">Username</label>
+      <input id="mt-user" type="text" class="mc-input" maxlength="80" autocomplete="off">
+      <label for="mt-pass">Password (at least four characters)</label>
+      <input id="mt-pass" type="password" class="mc-input" maxlength="200" autocomplete="off">
+      <div style="margin-top:8px">
+        <button id="mt-signup" type="button" class="mc-send-btn">Create account &amp; get token</button>
+        <button id="mt-signin" type="button" class="mc-btn-secondary">I already have an account — get token</button>
+      </div>
+      <p id="mt-msg" style="margin-top:8px" aria-live="polite"></p>
+      <div id="mt-token-box" hidden style="margin-top:8px">
+        <label for="mt-token">Your Mentor Token (copy this into the ARC page):</label>
+        <input id="mt-token" type="text" class="mc-input" readonly onclick="this.select()">
+        <div style="margin-top:6px">
+          <button id="mt-copy" type="button" class="mc-btn-secondary">Copy token</button>
+          <a href="/arc" style="margin-left:10px">Go to the ARC-AGI-3 Chat page &rarr;</a>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Mentor workspace — shown after sign-in -->
@@ -111,6 +138,46 @@
   <script src="/assets/chat/chat.js?v=3"></script>
   <script>
     MentovaChat.init({ tier: 'mentor' });
+  </script>
+  <!-- Self-serve account creation and Mentor Token retrieval (independent of the
+       chat framework above): create/sign in, then show a copyable token. -->
+  <script>
+    (function () {
+      function q(id) { return document.getElementById(id); }
+      function post(url, body) {
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }).then(function (r) { return r.json(); });
+      }
+      function creds() {
+        return { username: (q('mt-user').value || '').trim(), password: q('mt-pass').value || '' };
+      }
+      function handle(j) {
+        var m = q('mt-msg');
+        if (j && j.ok && j.token) {
+          m.style.color = '#2a9d2a';
+          m.textContent = 'Signed in as ' + j.username + '. Your token is ready below.';
+          q('mt-token').value = j.token;
+          q('mt-token-box').hidden = false;
+        } else {
+          m.style.color = '#d9534f';
+          m.textContent = '⚠ ' + ((j && j.error) || 'Something went wrong.');
+          q('mt-token-box').hidden = true;
+        }
+      }
+      function fail(e) { handle({ ok: false, error: String(e) }); }
+      q('mt-signup').addEventListener('click', function () { post('/api/mentor/signup', creds()).then(handle).catch(fail); });
+      q('mt-signin').addEventListener('click', function () { post('/api/mentor/login', creds()).then(handle).catch(fail); });
+      q('mt-copy').addEventListener('click', function () {
+        var t = q('mt-token'); t.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        if (navigator.clipboard) { navigator.clipboard.writeText(t.value); }
+        var m = q('mt-msg'); m.style.color = '#2a9d2a';
+        m.textContent = 'Token copied — paste it into the ARC page’s Mentor Token box.';
+      });
+    }());
   </script>
 </body>
 </html>
