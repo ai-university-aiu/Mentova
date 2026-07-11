@@ -649,6 +649,19 @@ ma_last_command(Cmd) :-
     % Its canonical command.
     ( ma_action_slot(Action, Cmd) -> true ; Cmd = 'none' ).
 
+% ma_command_action(+GameId, +Command, -Action): the action a canonical command
+% names in the selected game, so a mentor can drive the game by pressing a
+% button. The cell-select ACTION6 defaults to the centre of the grid.
+ma_command_action(GameId, Command, Action) :-
+    % Only actions the game actually affords are drivable.
+    ma_actions_env(GameId, Actions),
+    % Find the afforded action whose canonical command matches.
+    member(A, Actions),
+    ma_action_slot(A, Command),
+    !,
+    % A cell-select needs a coordinate; default to the centre.
+    ( A = select(_, _) -> Action = select(32, 32) ; Action = A ).
+
 % ---- The navigation environment (vc33) ----
 
 % ma_nav_/2: the avatar's (Row, Col).
@@ -1188,13 +1201,19 @@ ma_inject(hint_continue).
 % ---------------------------------------------------------------------------
 
 % ma_step(-Report): one loop step; the basis of the choice is recorded.
-ma_step(step(Action, Basis, Outcome)) :-
+ma_step(Report) :-
+    % Choose the action and remember why.
+    ma_choose(Action, Basis),
+    % Perform and learn from it.
+    ma_do_step(Action, Basis, Report).
+
+% ma_do_step(+Action, +Basis, -Report): perform a specific action and learn,
+% shared by the automatic step (ma_step) and the mentor's manual action.
+ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % The selected environment.
     ma_selected_game(Sel),
     % The frame before the action, resetting if the environment is fresh.
     ( ma_render(Sel, Frame0) -> true ; ma_reset_env(Sel, Frame0) ),
-    % Choose the action and remember why.
-    ma_choose(Action, Basis),
     % Doing: perform it on the selected environment.
     ma_act_env(Sel, Action, Frame1),
     % The observed effect is the frame delta.
@@ -1455,6 +1474,23 @@ ma_control("auto", Body, _{ok: true, did: auto, outcome: OText}) :-
     ma_auto(Budget, Outcome),
     % Render the outcome for JSON.
     term_to_atom(Outcome, OText),
+    % Commit.
+    !.
+% A mentor's manual action: perform a specific canonical action on the game.
+ma_control("act", Body, Reply) :-
+    % The requested canonical command, e.g. "ACTION1".
+    ( get_dict(command, Body, CmdStr) -> atom_string(Cmd, CmdStr) ; Cmd = '' ),
+    % The selected game.
+    ma_selected_game(Sel),
+    (   ma_command_action(Sel, Cmd, Action)
+    % The action is afforded: perform it as a manual step and report it.
+    ->  ma_do_step(Action, manual, step(_, _, Outcome)),
+        term_to_atom(Action, AText),
+        term_to_atom(Outcome, OText),
+        Reply = _{ok: true, did: act, command: Cmd, action: AText, outcome: OText}
+    % Not an available action in this game.
+    ;   Reply = _{ok: false, error: "That action is not available in this game."}
+    ),
     % Commit.
     !.
 % Anything else is unknown.
