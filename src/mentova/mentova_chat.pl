@@ -54,6 +54,9 @@
 % Load the ARC-AGI-3 game-knowledge transfer: the 25 mentor guides distilled
 % into game-keyed node-facts, Causalontology relations, and J-Space concepts.
 :- use_module('arc3_knowledge').
+% Load the OODA methodology skill: John Boyd's observe-orient-decide-act loop, held
+% in Jacobian Space as a concept Mentova reasons with (it is co_hplan's middle layer).
+:- use_module('ooda_knowledge').
 
 % mc_match_pattern/2 clauses are interleaved with helper predicates.
 :- discontiguous mc_match_pattern/2.
@@ -110,6 +113,9 @@ mc_chat_main(DataDir, Port) :-
     % Transfer the ARC-AGI-3 game knowledge (the 25 guides) into the mind, so
     % both Guided and Solo know each game's objects, relations, and hazards.
     catch(a3_bootstrap, _Arc3Error, true),
+    % Hold the OODA methodology in Jacobian Space as a skill — the observe-orient-
+    % decide-act loop that is the middle layer of every plan Mentova builds.
+    catch(ooda_bootstrap, _OodaError, true),
     % Then start the HTTP server on the requested port.
     mc_start_server(Port).
 
