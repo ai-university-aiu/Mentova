@@ -3,7 +3,8 @@
     The second of the two ARC-AGI-3 learning sub-projects. ARC-AGI-3_Solo takes
     everything the guided sessions taught - the learnings in the data lattice,
     the Causalontology relations, the human-set goal, priorities, and hazards,
-    and the Jacobian Space (J-Space) - and runs the ARC-AGI-3 game environments
+    the Jacobian Space (J-Space), and the shared state-exploration graph
+    (co_graph) that Guided built - and runs the ARC-AGI-3 game environments
     with no direct human direction. It plays moment to moment, and each attempt
     ends in a date-and-time-stamped plain-text report in the solo attempts
     directory.
@@ -35,13 +36,16 @@
     % s3_mode/1: the active mode.
     s3_mode/1,
     % s3_learnings/1: all shared learnings, read and used.
-    s3_learnings/1
+    s3_learnings/1,
+    % s3_graph/1: the shared state-graph exploration map.
+    s3_graph/1
 ]).
 
 % Load the shared ARC-AGI-3 chat backend both sub-projects operate on.
 :- use_module('mentova_arc_chat',
     [ma_restart/2, ma_solo_tick/1, ma_solo_report/2,
-     ma_attempts_list/1, ma_mode/1, ma_learnings/1, ma_set_mode/1]).
+     ma_attempts_list/1, ma_mode/1, ma_learnings/1, ma_set_mode/1,
+     ma_graph_stats/1]).
 
 % Define s3_start: begin a fresh solo attempt on the selected environment.
 s3_start :-
@@ -74,3 +78,10 @@ s3_mode(Mode) :-
 s3_learnings(Learnings) :-
     % The same shared learnings ARC-AGI-3_Guided wrote.
     ma_learnings(Learnings).
+
+% Define s3_graph: the shared state-graph exploration map (co_graph). Solo reads
+% the very same graph Guided built as the human taught, and adds to it as it
+% plays unaided — one store, shared by both sub-projects.
+s3_graph(Graph) :-
+    % The shared graph statistics.
+    ma_graph_stats(Graph).
