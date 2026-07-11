@@ -1,0 +1,178 @@
+SPARC DESIGN — HIERARCHICAL PLANNING AND THE CLAUDE-FACING AGENT INTERFACE
+Version 1.
+
+Two showcase features designed under the SPARC method (Specification, Pseudocode,
+Architecture, Refinement, Completion):
+
+  1. Hierarchical planning - a multi-level plan (Win Game / observe-orient-decide-
+     act loop / concrete controls) meshed with Causalontology's own hierarchy.
+
+  2. A Claude-facing agent interface - a machine-facing twin of the ARC page so a
+     Claude session can see the grid, operate the controls, and teach Mentova.
+
+
+==============================================================================
+FEATURE 1 — HIERARCHICAL PLANNING
+==============================================================================
+
+SPECIFICATION
+
+ - Honest starting point: co_plan was not hierarchical. It composed a flat action
+   sequence into a single higher-level procedure relation and searched the causal
+   graph backward to produce a linear plan. That is a two-level seed, not a
+   hierarchy of nested detail.
+
+ - Goal: a genuine multi-level plan, each high-level step expandable into a sub-
+   plan, with the canonical shape:
+     Top level:    Win Game.
+     Second level: an observe-orient-decide-act loop - see, observe, orient,
+                   decide, act, and re-observe and update the rules base.
+     Third level:  the concrete environment controls (ACTION1..7, cell-select).
+
+ - Constraint (the showcase): the plan hierarchy must mesh with Causalontology's
+   own hierarchical structure, not sit beside it. It must drive the solo player,
+   and the current plan tree must show in the glass-box why endpoint.
+
+ - Constraint (project): every plan fact is game-keyed; ERC comment above every
+   line; the abstraction that is meant to generalise carries no game id.
+
+
+PSEUDOCODE
+
+  build the plan tree for a game:
+    Tree = hnode(win(Game), strategy, [ hnode(ooda_loop, cycle, PhaseNodes) ])
+    PhaseNodes = one node per phase in [see, observe, orient, decide, act,
+                 reobserve_update]; the act phase's leaves are the game's controls,
+                 every other phase's leaves are its named concrete operations.
+
+  reify the tree onto Causalontology (the mesh):
+    reify(hnode(Goal, _, Children), Id, Pre, Post):
+      Id = a new CRO with cause [Pre], effect [Post], provenance plan_node(Goal)
+      if Children:
+        lay out ordered waypoints Pre = W0 .. Wn = Post
+        reify child i over the slice W(i-1) -> W(i)
+        co_decompose_add(Id, [child ids])   % children ARE the mechanism sub-graph
+    top call: reify(Tree, Root, begin(win(Game)), end(win(Game)))
+
+  because the children chain the parent's waypoints, co_hierarchy_consistent(Id)
+  holds at every level: the coarse "achieve this goal" relation is consistent with
+  the composition of its parts.
+
+  read the plan back from the causal graph alone:
+    plan_from_cros(Id): Goal from the CRO's provenance; children from co_mechanism.
+
+  locate a choice within the plan:
+    classify_basis(Basis) -> (OODA phase, concrete leaf)
+
+
+ARCHITECTURE
+
+ - New PrologAI pack co_hplan (WP-404, Layer 379), requiring co_core and co_plan.
+   Predicates: hp_win_plan/3, hp_reify/2, hp_plan_from_cros/2, hp_consistent/1,
+   hp_render/2 (indented text), hp_render_json/2, hp_classify_basis/3,
+   hp_ooda_phases/1, hp_phase_ops/2, hp_reset/0.
+
+ - Mesh point: Causalontology core already provides co_decompose_add/2,
+   co_mechanism/2, and co_hierarchy_consistent/1 (a coarse CRO's mechanism is a
+   sub-graph of finer CROs). co_hplan reifies onto exactly these, so the plan is a
+   hierarchy of CROs, not a parallel data structure.
+
+ - Mentova wiring (src/mentova/mentova_arc_chat.pl): ma_build_plan/1 builds and
+   reifies the plan per game at attempt start; ma_note_plan_focus/2 records the
+   OODA phase and leaf of each step's choice; ma_plan_view/2 assembles the tree,
+   the active focus, and the two mesh proofs; /api/arc/why returns it.
+
+
+REFINEMENT
+
+ - Consistency was made to hold by the waypoint layout, not asserted by fiat: a
+   parent's children literally chain its begin state to its end state.
+
+ - Two bugs found and fixed in test: the provenance is the eighth CRO field (not
+   the seventh), and a render check used memberchk where member was needed.
+
+ - Tests: packs/co_hplan/test/test_co_hplan.pl (AC-HP-001..010, all PASS) and
+   demos/arc3_plan_demo.pl (AC-HP-101..106, all PASS), the latter proving the
+   integration - the plan is built, consistent, reconstructable from CROs, and the
+   active OODA phase is recorded.
+
+
+COMPLETION
+
+ - PrologAI PR (co_hplan pack + README) merged; Mentova PR (solo wiring + why +
+   demo + README + Climbing entry) merged. Chronicle entry appended.
+
+
+==============================================================================
+FEATURE 2 — THE CLAUDE-FACING AGENT INTERFACE
+==============================================================================
+
+SPECIFICATION
+
+ - Pivotal idea: a two-way connection so a Claude session acts as a mentor and
+   teaches Mentova, seeing the grid and operating the controls the way a human
+   does on the ARC page - but in a machine-readable form.
+
+ - A Claude session cannot see a rendered grid or press a button. It needs the
+   game as text and the controls as callable endpoints.
+
+ - Reuse, do not duplicate: acting and teaching already exist as mentor-
+   authenticated endpoints; the new work is a rich read-only view.
+
+
+PSEUDOCODE
+
+  GET /api/arc/agentview:
+    Frame     = current frame
+    return {
+      game, title, mode, status, levels, size,
+      grid       = Frame,
+      grid_ascii = each row as one string of hex-ish cell chars,
+      inventory  = co_see objects with role and position,
+      meters     = co_see bars joined to the tracked resource trend,
+      actions    = the labelled control panel,
+      plan       = the hierarchical plan view (Feature 1),
+      last_action, last_command,
+      how_to_mentor = the act/teach endpoint note
+    }
+
+  act:   POST /api/arc/control { token, cmd:"act", command:"ACTIONk" }
+  teach: POST /api/arc/hint    { token, text, session_id, ref }
+  auth:  POST /api/mentor/login|signup { username, password } -> { token }
+
+
+ARCHITECTURE
+
+ - One new route and handler in mentova_arc_chat.pl: ma_handle_agentview/1, read-
+   only and unauthenticated (it exposes only what is visible). Helpers:
+   ma_grid_ascii/2, ma_agent_inventory/2, ma_agent_meters/3, ma_agent_status/4,
+   ma_agent_howto/1. Acting and teaching route through the existing
+   ma_handle_control (cmd act) and ma_handle_hint, which already verify a mentor
+   token and ground a clue into Causalontology.
+
+ - Documentation: docs/ARC-AGI-3_Agent_Interface.txt gives the full connect-and-
+   teach flow and a typical mentoring loop.
+
+
+REFINEMENT
+
+ - al_progress/3 was added to the live-client import so level progress can be
+   reported. The ASCII grid uses 0-9 then a-f so a 64-wide row stays one line.
+
+ - The helpers were smoke-tested against a synthetic frame (avatar, dots, a life-
+   bar) and produced the expected digit grid, roled inventory, and meter reading.
+
+
+COMPLETION
+
+ - Mentova PR (agentview endpoint + docs + this SPARC write-up) merged; chronicle
+   entry appended; the chat server restarted so the running site serves the new
+   endpoint and the co_see and planning code.
+
+
+==============================================================================
+ARCHIVE NOTE
+==============================================================================
+
+This is version 1 of this SPARC design series. When a version 2 is written, this
+file moves into docs/archive/ in the same change, per the repository archive rule.

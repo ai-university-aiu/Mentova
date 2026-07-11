@@ -505,6 +505,29 @@ plan it was standing when it decided. The hierarchical planner and its Causalont
 mesh are proven by their own tests, all ten passing, and the integration by six
 more. No live game was played in this work; no leaderboard score is claimed.
 
+2026-07-11  METHODOLOGY. A machine-facing twin of the ARC-AGI-3 Chat page was built
+so that a Claude session can mentor Mentova the way a human does. The human page
+shows a rendered grid, buttons, and a text box; a Claude session can see none of
+those, so it was given the same two-way connection in a form it can read and drive.
+A single read-only endpoint, the agentview, returns everything visible about the
+game as data: the grid both as raw colour rows and as compact digit lines a text
+reader takes in at a glance, the whole-grid object inventory from co_see with each
+object's role and position, the meters read from the grid with their trend, the
+available controls with the labels Mentova has discovered for them, the game status
+and any level progress, and the current hierarchical plan tree with the active
+observe-orient-decide-act phase marked. Acting and teaching reuse the endpoints a
+human mentor already uses: a mentor signs in for a token, performs a control, or
+teaches a clue in plain language that is grounded into Causalontology and injected
+into the game, every fact keyed by the game environment so nothing bleeds between
+games. The effect is a mentor loop a Claude session can run on its own - look at
+the agentview, reason about the grid and the plan, teach a rule, demonstrate a
+move, and read back from the why endpoint whether the teaching changed the
+reasoning - closing the pivotal loop in which one mind teaches another through the
+same channel a person uses. The connect-and-teach flow is documented for a machine
+reader, and the whole design was written up under the SPARC method. No live game
+was played and no scorecard was touched in this work; no leaderboard score is
+claimed.
+
 
 THE VISION
 

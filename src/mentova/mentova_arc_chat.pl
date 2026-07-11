@@ -199,7 +199,7 @@
 :- use_module('arc_agi_3_live',
     [al_connect/1, al_connected/0, al_disconnect/0, al_game/2, al_games/1,
      al_render/2, al_reset/2, al_act/3, al_actions/2, al_solved/1,
-     al_state/2, al_status/1, al_has_key/0]).
+     al_state/2, al_status/1, al_has_key/0, al_progress/3]).
 % Load the chat database: mentor auth and the teach queue.
 :- use_module('chat_db', [mc_db_init/1, mc_verify_session/2, mc_propose_fact/4, mc_approve_fact/2]).
 % Load the HTTP server framework, exactly as the chat uses it.
@@ -255,6 +255,10 @@
 :- http_handler(root(api/arc/actions), ma_handle_actions, []).
 % The conclude endpoint: learn from a won game, then restart it.
 :- http_handler(root(api/arc/conclude), ma_handle_conclude, []).
+% The agentview endpoint: the machine-facing twin of the ARC page, so a Claude
+% session can SEE the grid (digits + object inventory + meters + plan) and know
+% the controls, then act and teach through the existing mentor endpoints.
+:- http_handler(root(api/arc/agentview), ma_handle_agentview, []).
 
 % Define ma_db_init: attach the chat database this application reuses.
 ma_db_init(Dir) :-
@@ -2588,6 +2592,115 @@ ma_handle_frame(_Request) :-
     reply_json_dict(_{frame: Frame, status: Status, mode: Mode,
                       game: Sel, title: Title, last_action: LastText,
                       last_command: LastCmd, actions: Actions}).
+
+% ma_handle_agentview(+Request): the machine-facing twin of the ARC page. A GET
+% returns everything a Claude mentor needs to SEE and reason about the game — the
+% grid as digit rows, co_see's whole-grid object inventory with roles and
+% positions, the meters read from the grid, the available actions with their
+% discovered labels, the game status, and the current hierarchical plan tree —
+% plus a short note on how to act and teach through the existing mentor endpoints.
+% Read-only and unauthenticated: it exposes only what is already visible; driving
+% the game and teaching still require a mentor token on /api/arc/control and
+% /api/arc/hint.
+ma_handle_agentview(_Request) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % The current frame, resetting if the environment is fresh.
+    ( ma_render(Sel, Frame) -> true ; ma_reset_env(Sel, Frame) ),
+    % The grid dimensions.
+    ( catch(gd_size(Frame, Rows, Cols), _, fail) -> true ; Rows = 0, Cols = 0 ),
+    % The grid as compact digit rows (0-9, a-f), for a text-only reader.
+    ( catch(ma_grid_ascii(Frame, Ascii), _, fail) -> true ; Ascii = [] ),
+    % The whole-grid object inventory (co_see), each object with role and position.
+    ma_agent_inventory(Frame, Inventory),
+    % The bar-like meters read from the grid, with their tracked trend.
+    ma_agent_meters(Sel, Frame, Meters),
+    % The available actions with their discovered labels.
+    ma_action_descriptors(Sel, Actions),
+    % The game status (won, lost, or still playing) and any level progress.
+    ma_agent_status(Sel, Frame, Status, Levels),
+    % The current hierarchical plan tree and where the last choice sat on it.
+    ( catch(ma_plan_view(Sel, Plan), _, fail) -> true ; Plan = _{} ),
+    % The last action taken, for continuity.
+    ( ma_last_(LastA, _) -> term_to_atom(LastA, LastText) ; LastText = "none" ),
+    ( ma_last_command(LastCmd) -> true ; LastCmd = 'none' ),
+    % The active mode and the game's human title.
+    ma_mode(Mode),
+    ( ma_available_game(Sel, Title) -> true ; Title = Sel ),
+    % The note that tells a machine mentor how to act and teach.
+    ma_agent_howto(HowTo),
+    % Reply with the full machine-facing view.
+    reply_json_dict(_{
+        game: Sel, title: Title, mode: Mode, status: Status, levels: Levels,
+        size: _{rows: Rows, cols: Cols},
+        grid: Frame, grid_ascii: Ascii,
+        inventory: Inventory, meters: Meters,
+        actions: Actions, plan: Plan,
+        last_action: LastText, last_command: LastCmd,
+        how_to_mentor: HowTo}).
+
+% ma_grid_ascii(+Frame, -Lines): the grid as one compact string per row, each cell
+% a single character (0-9 then a-f for 10-15), so a text-only reader sees the whole
+% board at a glance.
+ma_grid_ascii(Frame, Lines) :-
+    % One line per row.
+    findall(Line,
+        ( member(Row, Frame),
+          findall(Ch, ( member(V, Row), ma_cell_char(V, Ch) ), Chars),
+          atom_chars(Line, Chars) ),
+        Lines).
+
+% ma_cell_char(+Value, -Char): a single character for a cell colour 0..15.
+ma_cell_char(V, Ch) :-
+    % A valid colour maps to a hex digit.
+    ( integer(V), V >= 0, V =< 15
+    ->  nth0(V, ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'], Ch)
+    % Anything else is shown as a dot.
+    ;   Ch = '.' ).
+
+% ma_agent_inventory(+Frame, -Inventory): the co_see object inventory as a list of
+% dicts, each naming an object's colour, size, role, and position.
+ma_agent_inventory(Frame, Inventory) :-
+    % Segment the whole grid, guarded.
+    ( catch(cs_inventory(Frame, Items), _, Items = []) -> true ; Items = [] ),
+    % One dict per object.
+    findall(_{id: Id, colour: Colour, size: Size, role: Role, row: R, col: C},
+        member(seen(Id, Colour, Size, cell(R, C), Role), Items),
+        Inventory).
+
+% ma_agent_meters(+Game, +Frame, -Meters): the bar-like meters on the grid, each
+% with its position and, where the resource model has tracked it, its trend.
+ma_agent_meters(Game, Frame, Meters) :-
+    % The bar-like objects, guarded.
+    ( catch(cs_bars(Frame, Bars), _, Bars = []) -> true ; Bars = [] ),
+    % One dict per meter, joining the tracked trend by colour and orientation.
+    findall(_{colour: Colour, orientation: Orient, length: Len, row: R, col: C, trend: Trend},
+        ( member(bar(Colour, Orient, Len, cell(R, C)), Bars),
+          atomic_list_concat([Colour, '_', Orient], Key),
+          ( ma_meter_(Game, Key, _, Trend0) -> Trend = Trend0 ; Trend = unknown ) ),
+        Meters).
+
+% ma_agent_status(+Game, +Frame, -Status, -Levels): the game status as an atom and
+% the level progress (best-effort; live games report levels, local ones do not).
+ma_agent_status(Game, Frame, Status, Levels) :-
+    % Won, lost, or still playing.
+    ( ma_solved_env(Game, Frame) -> Status = won
+    ; catch(ma_env_over(Game), _, fail) -> Status = game_over
+    ; Status = playing ),
+    % Level progress from the live client, if available.
+    ( catch(al_progress(Game, Done, Win), _, fail)
+    -> Levels = _{completed: Done, win_levels: Win}
+    ;  Levels = _{completed: 0, win_levels: 0} ).
+
+% ma_agent_howto(-HowTo): the short note telling a machine mentor how to act and
+% teach through the same authenticated channel a human mentor uses.
+ma_agent_howto(_{
+    read: "GET /api/arc/agentview — this view (grid, inventory, meters, actions, plan).",
+    sign_in: "POST /api/mentor/login {username, password} → {token}. New mentor: POST /api/mentor/signup {username, password}.",
+    act: "POST /api/arc/control {token, cmd:\"act\", command:\"ACTION1\"} — perform a control (use a 'command' from actions[].command).",
+    teach: "POST /api/arc/hint {token, text, session_id, ref} — teach a clue, grounded into Causalontology and injected into the game.",
+    why: "GET /api/arc/why — what Mentova last did, why, and where on the plan.",
+    docs: "See docs/ARC-AGI-3_Agent_Interface.txt for the full connect-and-teach flow."}).
 
 % ma_handle_control(+Request): reset, step, or auto, mentor-authenticated.
 ma_handle_control(Request) :-
