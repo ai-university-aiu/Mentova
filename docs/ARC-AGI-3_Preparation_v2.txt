@@ -511,7 +511,7 @@ The measured effect.
 
 • An acceptance check drives a handful of actions in Guided mode, which build the graph, and then confirms that the Solo sub-project reads the identical graph - the same states, transitions, and tested and dead counts - proving the single shared store.
 
-• The earlier results still hold: Solo wins the signal game unaided, a game taught in Guided mode is then won by Solo using the shared learnings, and all acceptance demonstrations pass - the guided demonstration all eight criteria, the guided-and-solo demonstration all eight, and the live-connection demonstration all seven.
+• The earlier results still hold: Solo wins the signal game unaided, a game taught in Guided mode is then won by Solo using the shared learnings, and all acceptance demonstrations pass - the guided demonstration all eight criteria, the guided-and-solo demonstration all nine, and the live-connection demonstration all seven.
 
 • No benchmark score is claimed.
 
@@ -549,6 +549,39 @@ The measured effect.
 • An acceptance check teaches the locksmith game a full set of learnings - a label, a priority, a goal, and a hazard - then selects a different game and confirms that not one of those learnings appears there, and finally selects the locksmith again and confirms its learnings are intact and unchanged.
 
 • A companion check in the state-graph capability package proves that two games sharing the one graph store each report only their own states and transitions, and that the frontier search from one game never wanders into the other.
+
+• All acceptance demonstrations continue to pass, and no benchmark score is claimed.
+
+
+PART EIGHT - LEARNINGS SURVIVE A RESTART, KEYED BY GAME ID
+
+Why this matters.
+
+• Until now, every ARC-AGI-3 (Abstraction and Reasoning Corpus, version 3) learning lived only in the running program's memory, so stopping and restarting the server erased everything Mentova had been taught or had won.
+
+• A win should not have to be re-played after a restart, so the learnings a win produces are now written to disk and read back when the program next starts.
+
+What gets written, and when.
+
+• When a win is concluded - the moment the human presses the Conclude button and the winning-session package is produced - that game's whole learning set is snapshotted to one on-disk file.
+
+• The snapshot holds, for that one game, its goal, its suggested-action priorities, its declared hazards, its object labels, its discovered action meanings, its recorded winning path, its slice of the shared state-exploration graph, and its learned causal relations.
+
+• The file keeps one snapshot per game, each stored under its own Game Environment Identification (ID), so one environment's saved learnings are never mixed with another's.
+
+How it comes back.
+
+• On boot, the program reads the file and restores every game's snapshot into the live learning stores, each under the game it came from.
+
+• The graph is rebuilt by replaying its saved transitions, and the causal relations are restored through the same validating front door that first created them, so the reloaded state is exactly what was saved.
+
+• The file sits beside the existing chat database, is created the first time a win is concluded, and is treated as runtime data - it is never committed to the code repository.
+
+The measured effect.
+
+• An acceptance check teaches a game a full set of learnings, saves them as concluding a win does, then wipes every in-memory store to imitate a restart, reads the file back, and confirms every learning returns byte for byte under its own game id.
+
+• The same round trip was confirmed across a genuine restart: one program wrote the file, a second, freshly started program read it, and the game's goal, priorities, hazards, labels, causal relations, and state graph all came back.
 
 • All acceptance demonstrations continue to pass, and no benchmark score is claimed.
 

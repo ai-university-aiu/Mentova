@@ -16,6 +16,8 @@
       AC-GS-007: Guided play builds the shared state graph and Solo reads it.
       AC-GS-008: learnings are keyed by game id — teaching one environment never
                  bleeds into another, and reselecting a game restores its own.
+      AC-GS-009: a game's learnings are persisted to disk and reloaded after a
+                 restart, keyed by game id — a concluded win outlasts the process.
 
     Run:
         swipl -l demos/arc_solo_demo.pl -g run_arc_solo_demo -t halt
@@ -83,6 +85,10 @@ run_arc_solo_demo :-
     % never bleeds into another, and reselecting the first game restores its own.
     report('AC-GS-008', demo_cross_game_isolation),
 
+    % AC-009: a game's learnings are written to disk and reloaded after a restart,
+    % keyed by game id — a concluded win survives the process ending.
+    report('AC-GS-009', demo_durable_persistence),
+
     % Show the current learnings both sub-projects see.
     g3_learnings(Learn),
     format("~nshared learnings (seen by both sub-projects): ~q~n", [Learn]),
@@ -140,6 +146,49 @@ demo_cross_game_isolation :-
     ma_set_game(ls20),
     g3_learnings(learnings(GoalL2, PriosL2, AvoidL2, LabelsL2, _, _, _)),
     GoalL2 == GoalL, PriosL2 == PriosL, AvoidL2 == AvoidL, LabelsL2 == LabelsL.
+
+% demo_durable_persistence: a game's learnings are written to disk when a win is
+% concluded and reloaded on the next boot, so a win outlasts the process. This
+% proves the round trip within one run: teach a game, persist it (exactly what
+% concluding a win does), wipe every in-memory learning store as a restart would,
+% reload from disk, and confirm every learning came back byte for byte, keyed by
+% the game it came from.
+demo_durable_persistence :-
+    % Isolate the durable store in a scratch location so the demo never writes the
+    % repository's own data directory.
+    ma_learn_attach('/tmp/mentova_persist_demo/chat_db'),
+    % Teach the locksmith a full set of learnings and drive a couple of steps so
+    % the graph, effects, and causal relations are populated too.
+    ma_set_game(ls20), ma_set_mode(guided), ma_reset_guidance,
+    g3_inject(hint_label([2, 2], key_like)),
+    g3_inject(hint_action(action(pickup))),
+    g3_inject(hint_goal([0, 4], traverse)),
+    g3_inject(hint_preventive([3, 3])),
+    forall(member(C, ['ACTION2', 'ACTION4']),
+        ( mentova_arc_chat:ma_command_action(ls20, C, A),
+          mentova_arc_chat:ma_do_step(A, manual, _) )),
+    % Persist this game's learnings to disk, exactly as concluding a win does.
+    mentova_arc_chat:ma_persist_game(ls20),
+    % Capture the learnings as they stand, and confirm they are non-trivial.
+    g3_learnings(Before),
+    Before = learnings(GoalB, _, _, _, _, _, _), GoalB \== none,
+    % Simulate a restart: wipe every in-memory learning store, including the
+    % Causalontology relations and the shared state graph.
+    retractall(mentova_arc_chat:ma_goal_(_, _)),
+    retractall(mentova_arc_chat:ma_priority_(_, _)),
+    retractall(mentova_arc_chat:ma_avoid_cell_(_, _)),
+    retractall(mentova_arc_chat:ma_label_(_, _, _)),
+    retractall(mentova_arc_chat:ma_effect_(_, _, _)),
+    retractall(mentova_arc_chat:ma_win_path_(_, _)),
+    catch(mentova_arc_chat:cg_reset, _, true),
+    retractall(co_core:co_cro_(_, _, _, _, _, _, _, _)),
+    % The stores are now empty for the game.
+    g3_learnings(learnings(none, [], [], [], 0, _, stats(0, 0, 0, 0))),
+    % Reload from disk, exactly as boot does.
+    mentova_arc_chat:ma_load_learnings,
+    % Every learning is back, byte for byte, under its own game id.
+    g3_learnings(After),
+    After == Before.
 
 % demo_solo_signal: Solo wins ft09 unaided and a report is written.
 demo_solo_signal :-
