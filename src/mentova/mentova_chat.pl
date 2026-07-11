@@ -98,6 +98,9 @@ mc_start_server(Port) :-
 mc_chat_main(DataDir, Port) :-
     % Initialise the persistence layer first.
     mc_db_init(DataDir),
+    % Attach and reload the durable per-game ARC learnings (guarded so a read
+    % hiccup never blocks startup) — wins concluded before a restart come back.
+    catch(ma_learn_attach(DataDir), _, true),
     % Import the elementary curriculum (guarded so it can never crash startup):
     % register its reference-library sources and anchor its understood facts.
     catch(ci_chat_bootstrap, _CurriculumError, true),

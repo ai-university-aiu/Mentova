@@ -28,3 +28,6 @@ data/arc_api_key.txt
 # ARC-AGI-3 won-session packages (runtime-generated; keep the folder, ignore the packages)
 ARC-AGI-3_Won_Sessions/*.txt
 !ARC-AGI-3_Won_Sessions/README.txt
+
+# ARC-AGI-3 durable per-game learnings store (runtime-generated; never commit).
+data/arc_learnings.db

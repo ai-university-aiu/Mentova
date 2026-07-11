@@ -58,6 +58,12 @@
 :- module(mentova_arc_chat, [
     % ma_db_init/1: attach the chat database.
     ma_db_init/1,
+    % ma_learn_attach/1: attach and load the durable ARC learnings store.
+    ma_learn_attach/1,
+    % ma_load_learnings/0: reload all persisted per-game learnings from disk.
+    ma_load_learnings/0,
+    % ma_persist_game/1: write one game's learnings durably to disk.
+    ma_persist_game/1,
     % ma_start_server/1: start the HTTP server.
     ma_start_server/1,
     % ma_stop_server/1: stop the HTTP server.
@@ -142,7 +148,7 @@
 % Load the hinge for clue-attached dispositions.
 :- use_module(library(co_hinge), [co_realizable_add/3, co_realized_in_add/2]).
 % Load the core for provenance-tagged clue relations and reinforcement.
-:- use_module(library(co_core), [co_new_cro/8, co_cro/8, co_strengthen/2]).
+:- use_module(library(co_core), [co_new_cro/8, co_cro/8, co_strengthen/2, co_the_cro/2, co_cro_assert/1]).
 % Load the learner for preventive enforcement.
 :- use_module(library(co_learn), [co_learn_preventive/2, co_avoid/1, co_learn_causal/2]).
 % Load the harness for curiosity choice and frame deltas.
@@ -150,7 +156,7 @@
 % Load the state-graph explorer: systematic, frontier-directed exploration.
 :- use_module(library(co_graph),
     [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1,
-     cg_stats_for/2]).
+     cg_stats_for/2, cg_edge/3]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -221,7 +227,9 @@
 % Define ma_db_init: attach the chat database this application reuses.
 ma_db_init(Dir) :-
     % The mentor accounts, sessions, and teach queue live there.
-    mc_db_init(Dir).
+    mc_db_init(Dir),
+    % Attach and load the durable per-game ARC learnings beside that directory.
+    catch(ma_learn_attach(Dir), _, true).
 
 % Define ma_start_server: start the threaded HTTP server.
 ma_start_server(Port) :-
@@ -1161,7 +1169,9 @@ ma_conclude_won(won_package(Game, StepCount, ReportFile, Learned)) :-
     % Feed the learning stores.
     ma_learn_from_win(Game, Steps, Learned),
     % Write the package to disk.
-    ma_win_report(Game, Steps, Learned, ReportFile).
+    ma_win_report(Game, Steps, Learned, ReportFile),
+    % Persist this game's whole learning set so the win survives a restart.
+    catch(ma_persist_game(Game), _, true).
 
 % ma_learn_from_win(+Game, +Steps, -Learned): feed lattice, Causalontology, J-Space.
 ma_learn_from_win(Game, Steps, learned(WinPath, Reinforced, Levers)) :-
@@ -1251,6 +1261,171 @@ ma_win_report_text(Game, Steps, learned(WinPath, Reinforced, Levers), Now, Text)
     format(atom(Text),
 'ARC-AGI-3 Won Session Package~n~nWhen: ~w~nGame environment: ~w (~w)~nOutcome: WON~nSteps: ~w~n~nComplete winning game session, step by step:~n~w~nWhat Mentova learned from this win (fed into its learning stores):~n  Data lattice - winning action path recorded for replay (~w actions): ~w~n  Causalontology - relations reinforced on the winning path: ~w~n  Guided levers set from the win: ~w~n  Jacobian Space (J-Space) - the win and its levers are held in the arc_won workspace.~n~nEffect: a future Solo run of this game replays this winning path, and the reinforced relations and levers bias play toward the win. No benchmark score is claimed.~n',
         [When, Game, Title, PathLen, StepText, PathLen, PathText, Reinforced, LeverText]).
+
+% ---------------------------------------------------------------------------
+% DURABLE LEARNINGS — every game's learnings survive a restart, keyed by game id
+% ---------------------------------------------------------------------------
+%
+% Every ARC learning store is an in-memory dynamic fact, so a restart would wipe
+% it. To make wins and teaching outlast a restart, a game's whole learning set is
+% snapshotted to one on-disk file at the moment a win is concluded, and every
+% game's snapshot is reloaded on boot. The file holds one arc_learned/9 term per
+% game, so each game's learnings are kept and restored under its own Game
+% Environment Identification (ID) - one environment's learnings never load into
+% another's.
+
+% ma_learn_file_/1: the resolved path of the durable learnings file.
+:- dynamic ma_learn_file_/1.
+
+% ma_learn_file(-Path): the durable learnings file, defaulting under data/.
+ma_learn_file(Path) :-
+    % Use the attached path if one was set, else the default beside data/.
+    ( ma_learn_file_(P) -> Path = P ; Path = 'data/arc_learnings.db' ).
+
+% Define ma_learn_attach: fix the learnings file beside the chat database's
+% directory and load whatever it already holds. Guarded so a read hiccup can
+% never block startup.
+ma_learn_attach(Dir) :-
+    % The chat database directory's parent holds the sibling learnings file.
+    ( catch(file_directory_name(Dir, Parent), _, fail) -> true ; Parent = 'data' ),
+    % The learnings file path beside the database directory.
+    atomic_list_concat([Parent, '/arc_learnings.db'], File),
+    % Remember it for later writes and reads.
+    retractall(ma_learn_file_(_)),
+    % Store the resolved path.
+    assertz(ma_learn_file_(File)),
+    % Load every game's persisted learnings now.
+    catch(ma_load_learnings, _, true).
+
+% Define ma_load_learnings: restore every game's persisted learnings from disk.
+ma_load_learnings :-
+    % The durable file.
+    ma_learn_file(File),
+    % Restore each stored game term if the file exists; otherwise do nothing.
+    (   exists_file(File)
+    % Read every term and restore it, one game at a time.
+    ->  ma_read_terms(File, Terms),
+        % Restore each game's learnings, guarded so one bad term never stops the rest.
+        forall(member(T, Terms), catch(ma_restore_learned(T), _, true))
+    % No file yet: a clean install has nothing to restore.
+    ;   true
+    ).
+
+% ma_read_terms(+File, -Terms): read every Prolog term from a file into a list.
+ma_read_terms(File, Terms) :-
+    % Open, read all terms, and always close.
+    setup_call_cleanup(open(File, read, S),
+                       ma_read_terms_(S, Terms),
+                       close(S)).
+
+% ma_read_terms_(+Stream, -Terms): read to end of file.
+ma_read_terms_(S, Terms) :-
+    % Read one term.
+    read_term(S, T, []),
+    % Stop at end of file, else keep the term and recurse.
+    (   T == end_of_file
+    % Done.
+    ->  Terms = []
+    % Keep this term and read the rest.
+    ;   Terms = [T | Rest], ma_read_terms_(S, Rest)
+    ).
+
+% ma_restore_learned(+Term): reassert one game's learnings from its stored term.
+ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros)) :-
+    % Clear any current in-memory learnings for this game so a reload is idempotent.
+    retractall(ma_goal_(Game, _)),
+    % Its priorities.
+    retractall(ma_priority_(Game, _)),
+    % Its hazards.
+    retractall(ma_avoid_cell_(Game, _)),
+    % Its labels.
+    retractall(ma_label_(Game, _, _)),
+    % Its discovered action semantics.
+    retractall(ma_effect_(Game, _, _)),
+    % Its recorded winning path.
+    retractall(ma_win_path_(Game, _)),
+    % Restore the goal, unless none was stored.
+    ( Goal == none -> true ; assertz(ma_goal_(Game, Goal)) ),
+    % Restore each priority.
+    forall(member(A, Prios), assertz(ma_priority_(Game, A))),
+    % Restore each hazard.
+    forall(member(Cell, Avoided), assertz(ma_avoid_cell_(Game, Cell))),
+    % Restore each label.
+    forall(member(pos(R, C)-K, Labels), assertz(ma_label_(Game, pos(R, C), K))),
+    % Restore each discovered effect.
+    forall(member(Act-Desc, Effects), assertz(ma_effect_(Game, Act, Desc))),
+    % Restore the winning path, unless none was stored.
+    ( WinPath == none -> true ; assertz(ma_win_path_(Game, WinPath)) ),
+    % Replay each graph edge, which rebuilds this game's nodes, tested, and dead marks.
+    forall(member(edge(F, EA, T), Edges), catch(cg_note(F, EA, T), _, true)),
+    % Restore each causal relation through the validating front door.
+    forall(member(Cro, Cros), catch(co_cro_assert(Cro), _, true)).
+
+% Define ma_persist_game: snapshot one game's learnings and merge them into the
+% durable file, replacing that game's previous snapshot. Serialised so two
+% concludes can never corrupt the file.
+ma_persist_game(Game) :-
+    % One writer at a time.
+    with_mutex(ma_learn_mutex, ma_persist_game_(Game)).
+
+% ma_persist_game_(+Game): the guarded body of ma_persist_game.
+ma_persist_game_(Game) :-
+    % The durable file.
+    ma_learn_file(File),
+    % The terms already on disk, or none if the file is new.
+    ( exists_file(File) -> ma_read_terms(File, Old) ; Old = [] ),
+    % Every stored game except the one being rewritten.
+    ma_without_game(Old, Game, Others),
+    % This game's fresh snapshot.
+    ma_snapshot_game(Game, New),
+    % The full set to write back.
+    append(Others, [New], All),
+    % Write the whole file atomically enough for a single-writer store.
+    ma_write_terms(File, All).
+
+% ma_without_game(+Terms, +Game, -Others): every stored term but this game's.
+ma_without_game(Terms, Game, Others) :-
+    % Keep only the terms that are not this game's snapshot.
+    findall(T,
+        ( member(T, Terms), \+ T = arc_learned(Game, _, _, _, _, _, _, _, _) ),
+        Others).
+
+% ma_snapshot_game(+Game, -Term): gather every store's learnings for one game.
+ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros)) :-
+    % The taught or inferred goal, or none.
+    ( ma_goal_(Game, Goal) -> true ; Goal = none ),
+    % The suggested-action priorities.
+    findall(A, ma_priority_(Game, A), Prios),
+    % The declared hazards.
+    findall(Cell, ma_avoid_cell_(Game, Cell), Avoided),
+    % The object labels.
+    findall(pos(R, C)-K, ma_label_(Game, pos(R, C), K), Labels),
+    % The discovered action semantics.
+    findall(Act-Desc, ma_effect_(Game, Act, Desc), Effects),
+    % The recorded winning path, or none.
+    ( ma_win_path_(Game, WinPath) -> true ; WinPath = none ),
+    % This game's state-graph edges (its prefixed nodes only).
+    atom_concat(Game, '::', Prefix),
+    % Collect every edge leaving one of this game's states.
+    findall(edge(F, EA, T),
+        ( cg_edge(F, EA, T), sub_atom(F, 0, _, _, Prefix) ),
+        Edges),
+    % This game's causal relations, whose cause names the game.
+    findall(cro(Id, Ca, Ef, Te, Mo, St, Co, Pr),
+        ( co_the_cro(Id, cro(Id, Ca, Ef, Te, Mo, St, Co, Pr)), memberchk(g(Game, _), Ca) ),
+        Cros).
+
+% ma_write_terms(+File, +Terms): write each term to the file, one per line.
+ma_write_terms(File, Terms) :-
+    % Ensure the containing directory exists.
+    file_directory_name(File, Dir),
+    % Create it if missing.
+    ( exists_directory(Dir) -> true ; make_directory_path(Dir) ),
+    % Open, write every term with quoting so it reads back, and always close.
+    setup_call_cleanup(open(File, write, S),
+                       forall(member(T, Terms),
+                              ( writeq(S, T), write(S, ' .'), nl(S) )),
+                       close(S)).
 
 % ---------------------------------------------------------------------------
 % CLUE GROUNDING (Section 10.4) — the small, auditable mapping
