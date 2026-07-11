@@ -19,6 +19,10 @@
       AC-LIVE-004: Solo plays a live game to a WIN and writes a report.
       AC-LIVE-005: the dropdown source is live and lists the live games.
       AC-LIVE-006: disconnecting returns to the three local stand-ins.
+      AC-LIVE-007: a game offering ACTION7 shows a canonical undo button.
+      AC-LIVE-008: the scorecard is opened with agent tags and AI-agent
+                   metadata (never a human tag), set at open time via the API.
+      AC-LIVE-009: disconnecting closes the agent's scorecard on the server.
 
     Run:
         swipl -l demos/arc_live_demo.pl -g run_arc_live_demo -t halt
@@ -46,6 +50,10 @@ mock_port(8094).
 
 % mock_ctr_/2: (GameId, Count) — the hidden counter of a mock game.
 :- dynamic mock_ctr_/2.
+% mock_open_body_/1: the last scorecard-open request body the server received.
+:- dynamic mock_open_body_/1.
+% mock_closed_/1: a card id the server was asked to close.
+:- dynamic mock_closed_/1.
 
 % The games list endpoint.
 :- http_handler('/api/games', mock_games, []).
@@ -70,13 +78,24 @@ mock_games(_Request) :-
     reply_json_dict([ _{game_id: "mock-signal", title: "Mock Signal (live-protocol test)"},
                       _{game_id: "mock-relay",  title: "Mock Relay (live-protocol test)"} ]).
 
-% mock_open(+Request): open a scorecard and return a card id.
-mock_open(_Request) :-
+% mock_open(+Request): open a scorecard and return a card id, recording the
+% request body so the demo can confirm the agent tags and metadata were sent.
+mock_open(Request) :-
+    % Read the JSON body the client posted.
+    ( catch(http_read_json_dict(Request, Body), _, fail) -> true ; Body = _{} ),
+    % Remember it for the acceptance check.
+    retractall(mock_open_body_(_)),
+    % Store it.
+    assertz(mock_open_body_(Body)),
     % Reply with a card id.
     reply_json_dict(_{card_id: "card-mock-1"}).
 
-% mock_close(+Request): close a scorecard.
-mock_close(_Request) :-
+% mock_close(+Request): close a scorecard, recording the card id closed.
+mock_close(Request) :-
+    % Read the body carrying the card id.
+    ( catch(http_read_json_dict(Request, Body), _, fail) -> true ; Body = _{} ),
+    % Record which card was closed, if given.
+    ( get_dict(card_id, Body, Card) -> ( retractall(mock_closed_(_)), assertz(mock_closed_(Card)) ) ; true ),
     % Acknowledge.
     reply_json_dict(_{ok: true}).
 
@@ -182,6 +201,10 @@ run_arc_live_demo :-
     % AC-002: connecting lists the live games.
     report('AC-LIVE-002', ( al_connect(connected(N)), N >= 1, al_games(Gs), Gs \== [] )),
 
+    % AC-008: connecting opened the scorecard with agent tags and AI-agent
+    % metadata (never a human tag), so the run files under the agent.
+    report('AC-LIVE-008', demo_agent_scorecard_tags),
+
     % Switch to the live source and select the first live game.
     ma_set_source(live), al_game(FirstId, _),
 
@@ -201,9 +224,33 @@ run_arc_live_demo :-
     report('AC-LIVE-006', ( al_disconnect, ma_set_source(local),
                             findall(I, ma_available_game(I, _), Locals), length(Locals, 3) )),
 
+    % AC-009: disconnecting closed the agent's scorecard on the server.
+    report('AC-LIVE-009', ( mock_closed_(Closed), Closed == "card-mock-1" )),
+
     % Show the status and games.
     al_status(_),
     format("~ndone.~n", []).
+
+% demo_agent_scorecard_tags: the scorecard the client opened carried agent tags
+% and AI-agent metadata, and no human tag — so its results are filed under the
+% agent, never mixed with human play.
+demo_agent_scorecard_tags :-
+    % The open request body the mock server recorded.
+    mock_open_body_(Body),
+    % Its tags.
+    get_dict(tags, Body, Tags),
+    % It is tagged as an agent, as Mentova, and as PrologAI.
+    memberchk("agent", Tags),
+    memberchk("mentova", Tags),
+    memberchk("prologai", Tags),
+    % It is never tagged human.
+    \+ memberchk("human", Tags),
+    % The opaque metadata identifies an AI agent, not a human.
+    get_dict(opaque, Body, Opaque),
+    % Explicitly not human.
+    get_dict(human, Opaque, false),
+    % And of kind ai_agent.
+    get_dict(kind, Opaque, "ai_agent").
 
 % demo_no_key_fallback: with no key configured, connecting fails cleanly.
 demo_no_key_fallback :-

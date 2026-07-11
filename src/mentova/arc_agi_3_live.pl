@@ -7,8 +7,11 @@
       base URL   https://three.arcprize.org  (override with ARC_API_BASE)
       auth       header  X-API-Key: <ARC_API_KEY>
       games      GET  /api/games                 -> [ {game_id, ...}, ... ]
-      scorecard  POST /api/scorecard/open        -> { card_id }
-                 POST /api/scorecard/close       (card_id)
+      scorecard  POST /api/scorecard/open        { tags, source_url, opaque }
+                                                 -> { card_id }
+                 POST /api/scorecard/close       { card_id }
+                 (tags mark this as an AI agent, set only at open time; the
+                  platform web UI cannot change a card's tags afterwards)
       reset      POST /api/cmd/RESET             { card_id, game_id, guid? }
       action     POST /api/cmd/ACTION1..ACTION7  { game_id, guid, x?, y? }
                  (ACTION1-5 simple, ACTION6 cell-select with x,y, ACTION7 undo)
@@ -55,8 +58,12 @@
     al_connect/1,
     % al_connected/0: a live session is open.
     al_connected/0,
-    % al_disconnect/0: forget the live session.
+    % al_disconnect/0: close the scorecard and forget the live session.
     al_disconnect/0,
+    % al_scorecard_open_body/1: the agent-tagged scorecard open request body.
+    al_scorecard_open_body/1,
+    % al_close_card/0: close the open scorecard on the server.
+    al_close_card/0,
     % al_games/1: the live game environments.
     al_games/1,
     % al_game/2: query one live game by id.
@@ -167,8 +174,11 @@ al_connected :-
     % The connected flag is set.
     al_connected_(true).
 
-% Define al_disconnect: forget the live session and its games.
+% Define al_disconnect: close the scorecard on the server, then forget the
+% live session and its games locally.
 al_disconnect :-
+    % Close the open scorecard on the server so the run is finalised, guarded.
+    catch(al_close_card, _, true),
     % Drop the scorecard.
     retractall(al_card_(_)),
     % Drop the games.
@@ -177,6 +187,34 @@ al_disconnect :-
     retractall(al_session_(_, _, _, _, _)),
     % Clear the connected flag.
     retractall(al_connected_(_)).
+
+% al_scorecard_open_body(-Body): the POST body for opening a scorecard. The tags
+% mark this as an AI agent (never a human), and the opaque metadata identifies
+% the agent, so results file under Mentova and are never confused with human
+% play. Tags can only be set here, at open time; the ARC platform's web UI does
+% not let a scorecard's tags be changed afterwards.
+al_scorecard_open_body(
+    _{ tags: ["agent", "mentova", "symbolic", "prologai"],
+       % A link back to the agent's source, returned in the scorecard.
+       source_url: "https://github.com/ai-university-aiu/Mentova",
+       % Arbitrary identifying metadata: this is an AI agent, not a human.
+       opaque: _{ agent: "Mentova",
+                  kind: "ai_agent",
+                  human: false,
+                  engine: "PrologAI",
+                  approach: "symbolic-causalontology" }
+     }).
+
+% Define al_close_card: close the currently open scorecard on the server, so the
+% agent's run is finalised. Does nothing when no scorecard is open.
+al_close_card :-
+    % Only when a scorecard is open.
+    ( al_card_(Card)
+    % Post the close request with the card id; guarded so it never blocks.
+    ->  catch(al_post('/api/scorecard/close', _{card_id: Card}, _), _, true)
+    % No open scorecard: nothing to close.
+    ;   true
+    ).
 
 % ---------------------------------------------------------------------------
 % HTTP helpers — all guarded by the callers
@@ -234,8 +272,11 @@ al_connect_(N) :-
     ( al_has_key -> true ; throw(no_api_key) ),
     % List the games.
     al_get('/api/games', Games),
-    % Open a scorecard for this run.
-    al_post('/api/scorecard/open', _{tags: ["mentova"]}, Sc),
+    % Open a fresh scorecard for this run, tagged as an AI agent (not a human)
+    % so its results are filed under the agent, never mixed with human play.
+    al_scorecard_open_body(Body),
+    % Post the open request with the agent tags and identifying metadata.
+    al_post('/api/scorecard/open', Body, Sc),
     % The scorecard id.
     ( get_dict(card_id, Sc, Card) -> true ; throw(no_card_id) ),
     % Forget any previous session.

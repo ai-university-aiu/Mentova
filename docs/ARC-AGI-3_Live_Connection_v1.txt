@@ -43,6 +43,31 @@ The details are as follows.
 The client flattens the reply's picture - which the protocol sends as a stack of grids - down to the single current grid for display, and it maps the wire action names to Mentova's own action terms.
 
 
+THE SCORECARD AND ITS TAGS - MENTOVA PLAYS AS AN AGENT
+
+A scorecard is the record of a run, and it carries tags that say who or what produced the run. This matters because the benchmark keeps machine agents and human players apart, and the tags are how they are told apart.
+
+• Every time Mentova connects, it opens its own fresh scorecard and tags it as an artificial-intelligence agent. The tags it sends are: agent, mentova, symbolic, and prologai.
+
+• Along with the tags, Mentova sends identifying metadata in the open request: that the agent is named Mentova, that its kind is an artificial-intelligence agent (ai_agent), that it is not a human (human is false), that its engine is PrologAI, and that its approach is symbolic-causalontology. It also sends a source link back to the Mentova code repository.
+
+• A tag can be set only at the moment a scorecard is opened, and only through the application programming interface (API) - the machine-to-machine request. The website's scorecards page does not offer any way to change the tags of a scorecard once it has been opened.
+
+• This has a practical consequence: a scorecard that was opened by hand on the website, and that shows the tag "human", cannot be re-tagged into an agent scorecard afterwards. There is no button for it because tags are fixed at open time. The correct thing to do is simply open a new scorecard with the right tags, which is exactly what Mentova does for itself.
+
+• Mentova never reuses a scorecard that was opened somewhere else. It always mints its own agent-tagged scorecard on connecting, and it takes the card identifier only from that open request, never from anywhere a human-tagged card could enter. So Mentova can never accidentally play under a human scorecard.
+
+• Guidance for the person running Mentova: a scorecard you opened by hand on the website that shows the tag "human" is a human-play card. Leave it unused, or use it only for your own human attempts at the games. Mentova will not touch it, and it will not affect Mentova's results, because Mentova files its own results under its own agent-tagged card.
+
+The lifecycle is open, then play, then close.
+
+• Open: pressing Connect Live Environments opens the agent scorecard and lists the live games.
+
+• Play: every level start (RESET) and every action carries this same agent card identifier, so all of the play - guided or solo, and any win that is concluded - is recorded under the one open agent scorecard. Concluding a won game teaches Mentova and writes its own learning package; it does not close the scorecard, so a run can span many games and levels.
+
+• Close: pressing Disconnect closes the agent scorecard on the server, finalising the run, and returns Mentova to its local practice environments.
+
+
 THE GRACEFUL FALLBACK
 
 Connecting to the live environments requires a key.
