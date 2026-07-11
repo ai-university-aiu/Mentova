@@ -51,6 +51,9 @@
 % Load the elementary curriculum loader: understood facts (word walls and
 % CA standards) plus streamed reference-library access to the bulk corpus.
 :- use_module('../../knowledge/curriculum/curriculum_lattice').
+% Load the ARC-AGI-3 game-knowledge transfer: the 25 mentor guides distilled
+% into game-keyed node-facts, Causalontology relations, and J-Space concepts.
+:- use_module('arc3_knowledge').
 
 % mc_match_pattern/2 clauses are interleaved with helper predicates.
 :- discontiguous mc_match_pattern/2.
@@ -104,6 +107,9 @@ mc_chat_main(DataDir, Port) :-
     % Import the elementary curriculum (guarded so it can never crash startup):
     % register its reference-library sources and anchor its understood facts.
     catch(ci_chat_bootstrap, _CurriculumError, true),
+    % Transfer the ARC-AGI-3 game knowledge (the 25 guides) into the mind, so
+    % both Guided and Solo know each game's objects, relations, and hazards.
+    catch(a3_bootstrap, _Arc3Error, true),
     % Then start the HTTP server on the requested port.
     mc_start_server(Port).
 

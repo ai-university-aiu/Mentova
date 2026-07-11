@@ -383,6 +383,29 @@ but it removes the brittleness that would otherwise stop the graph and the fatal
 move memory from carrying forward on any game with a visible counter. No
 leaderboard score is claimed; no scorecard was published.
 
+2026-07-11  METHODOLOGY. A mentor guide was written for each of the twenty-five
+live game environments, and then, in a heavy pass, the guides were transferred into
+Mentova's mind. Each guide was distilled into game-keyed facts - the game's
+identity, its controls, its objects, its cause-and-effect relations, its hazards,
+and mentor tips - and those facts were carried into the full cognitive stack the
+way the school curriculum's light pass was: every fact anchored as a lattice
+node-fact carrying its guide citation; every cause-effect relation asserted as a
+game-keyed Causal Relation Object, its cause stamped with the game so it never
+bleeds between environments, and thereby entering the causal predictor the Solo
+player uses; and every game concept held in a Jacobian-Space workspace. In all,
+twenty-five games became two hundred and six cited node-facts, seventy cause-effect
+relations, twenty-three hazards, and ninety-five workspace concepts. The knowledge
+lives on disk in the loaded fact file and is re-ingested at every boot, so it
+survives restarts and is present for both Guided and Solo. A verification
+demonstration confirms it landed - all nine checks pass - and answers the intended
+question directly: Mentova now knows that stepping on a ring in ls20 refills the
+step timer, knows it as a cited causal relation, knows it only for ls20 and not for
+another game, and can predict it. Four games whose mechanics had been publicly
+undocumented (a sokoban delivery, a string-rewriting puzzle, a peg-solitaire, and a
+spell-casting maze) were reverse-engineered from the games' own source code and
+their guides and facts corrected to ground truth. No live game was played and no
+scorecard was touched in this work. No leaderboard score is claimed.
+
 
 THE VISION
 
