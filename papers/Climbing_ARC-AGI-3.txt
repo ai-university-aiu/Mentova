@@ -555,6 +555,27 @@ effect on live play is recorded in the sweep entry that follows once the run is
 re-done with this and the perception-caching fix in place. No live game was played
 in the writing of the code; no leaderboard score is claimed.
 
+2026-07-11  METHODOLOGY. The performance wall that halted the last sweep was taken
+down. Whole-grid perception is expensive - each object inventory, salient-target
+list, and meter read runs a full sixty-four by sixty-four connected-component
+segmentation - and a single choice assembled the safe action set up to five times
+for the very same frame, re-segmenting it each time. The fix is a small per-step
+perception cache: the grid is segmented once per step and the stored result is
+handed to the other callers, keyed by a cheap hash of the frame and cleared at the
+start of every step so it only ever serves the current frame and never carries a
+stale reading forward. Only the pure perceptions - the object inventory, the bar
+meters, and the salient click targets, which depend on the frame alone - are
+cached; the ranked action set that depends on the learnings is still recomputed
+each call, so nothing goes stale when a learning changes between calls. Measured on
+a representative sixty-four by sixty-four grid, twenty segmentations that took about
+five hundred milliseconds uncached took about twenty-nine cached, a seventeen-fold
+saving on the hot path, which drops the real per-step segmentation count from five
+or six to one. The state-graph frontier search was given a node-expansion budget in
+the same spirit, so a large carried-forward graph cannot make it unbounded. With
+the perception cache and the verify-before-act world model both in place, the full
+twenty-five-game sweep can be re-run to completion; its measured result is recorded
+in the entry that follows. No live game was played in the writing of the code.
+
 
 THE VISION
 
