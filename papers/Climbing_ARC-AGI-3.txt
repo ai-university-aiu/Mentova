@@ -627,6 +627,37 @@ up in the version-two sweep report in the assets folder. The scorecard was left 
 and never published; no level was won; no leaderboard score is claimed.
 
 
+2026-07-11  WIN. The first real level was completed on the live ARC-AGI-3
+benchmark, taught over the Mentor Bridge. The game was sb26 (SB26), a tile-ordering
+puzzle; the level completed was level one of eight (levels.completed went from zero
+to one, measured live on an agent-tagged, unpublished scorecard). It was won by a
+Claude session acting as the mentor and driving the game through the Mentor Bridge -
+the machine-facing interface built the day before - running the observe-orient-
+decide-act loop by hand. OBSERVE: the agentview returned the grid as digit rows and
+co_see's object inventory. ORIENT: from that inventory the mentor read the puzzle's
+three regions - a row of hollow target boxes at the top giving the required colour
+order (nine, e, b, f), a row of filled tiles at the bottom as the palette (e, f,
+nine, b), and a framed box in the middle holding four empty slots. DECIDE and ACT:
+the mechanic was not known in advance and was decoded live by verifying each move -
+a single click was found to only select a tile (drawing a highlight), a press of
+ACTION5 was found to verify the order and cost energy, and finally selecting a
+palette tile and then clicking a middle slot was found to PLACE the tile into the
+slot. RE-OBSERVE: each action's frame delta was diffed to confirm the effect before
+the next. With the mechanic understood, the four tiles were placed in the target
+order and ACTION5 was pressed; the level completed. The efficient win path, once the
+mechanic was known, is ten actions: four select-then-place pairs and one verify. The
+decoding itself cost extra exploratory clicks, exactly as a first encounter should.
+This required one enabling improvement to the Bridge, built in the same session: the
+mentor control endpoint learned to accept an x and y with the cell-select ACTION6,
+so a mentor can click a specific object rather than only the centre of the grid.
+This is the first level Mentova has ever completed on ARC-AGI-3 - the win signal the
+previous entry named as the true blocker. The full game (status won) requires all
+eight levels and is a longer campaign; level two has a richer, nested layout and was
+not attempted rather than risk a game-over that would reset the measured level-one
+completion. No scorecard was published; no leaderboard score is claimed; the single
+measured fact recorded here is one live level completed.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box

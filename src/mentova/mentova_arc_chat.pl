@@ -744,6 +744,27 @@ ma_command_action(GameId, Command, Action) :-
     % A cell-select needs a coordinate; default to the centre.
     ( A = select(_, _) -> Action = select(32, 32) ; Action = A ).
 
+% ma_command_action_at(+GameId, +Command, +Body, -Action): like ma_command_action,
+% but a cell-select (ACTION6) reads the target cell from the request body's x and y
+% (x is the column, y the row), so a mentor — human or a Claude session over the
+% Mentor Bridge — can click a SPECIFIC object rather than only the centre. Falls
+% back to the centre when no valid coordinate is given.
+ma_command_action_at(GameId, Command, Body, Action) :-
+    % Only actions the game actually affords are drivable.
+    ma_actions_env(GameId, Actions),
+    % Find the afforded action whose canonical command matches.
+    member(A, Actions),
+    ma_action_slot(A, Command),
+    !,
+    % A cell-select takes the body's coordinate; anything else is itself.
+    ( A = select(_, _)
+    ->  ( get_dict(x, Body, X0), get_dict(y, Body, Y0),
+          integer(X0), integer(Y0),
+          X0 >= 0, X0 =< 63, Y0 >= 0, Y0 =< 63
+        ->  Action = select(X0, Y0)
+        ;   Action = select(32, 32) )
+    ;   Action = A ).
+
 % ---- The navigation environment (vc33) ----
 
 % ma_nav_/2: the avatar's (Row, Col).
@@ -2882,7 +2903,7 @@ ma_agent_howto(_{
     name: "The Mentor Bridge — a glass-box bridge between minds. See the game here, then act and teach through the mentor endpoints.",
     read: "GET /api/arc/agentview — this view (grid, inventory, meters, actions, plan).",
     sign_in: "POST /api/mentor/login {username, password} → {token}. New mentor: POST /api/mentor/signup {username, password}.",
-    act: "POST /api/arc/control {token, cmd:\"act\", command:\"ACTION1\"} — perform a control (use a 'command' from actions[].command).",
+    act: "POST /api/arc/control {token, cmd:\"act\", command:\"ACTION1\"} — perform a control (use a 'command' from actions[].command). For the cell-select ACTION6, add x and y (x=column, y=row, 0..63) to click a specific object.",
     teach: "POST /api/arc/hint {token, text, session_id, ref} — teach a clue, grounded into Causalontology and injected into the game.",
     why: "GET /api/arc/why — what Mentova last did, why, and where on the plan.",
     docs: "See docs/ARC-AGI-3_Agent_Interface.txt for the full connect-and-teach flow."}).
@@ -2941,7 +2962,7 @@ ma_control("act", Body, Reply) :-
     ( get_dict(command, Body, CmdStr) -> atom_string(Cmd, CmdStr) ; Cmd = '' ),
     % The selected game.
     ma_selected_game(Sel),
-    (   ma_command_action(Sel, Cmd, Action)
+    (   ma_command_action_at(Sel, Cmd, Body, Action)
     % The action is afforded: perform it as a manual step and report it.
     ->  ma_do_step(Action, manual, step(_, _, Outcome)),
         term_to_atom(Action, AText),

@@ -91,6 +91,16 @@ for a human mentor. The flow is:
     mentor may use: "step" (let Mentova choose one action), "auto" with a budget
     (let it run), and "reset".
 
+    For the cell-select ACTION6, add x and y to click a SPECIFIC cell (x is the
+    column, y the row, each 0 to 63):
+
+    POST /api/arc/control
+      { token, cmd: "act", command: "ACTION6", x: 17, y: 47 }
+
+    Without x and y the click defaults to the centre of the grid. Targeted clicks
+    are what let a mentor place or select a particular object; they are how the
+    first live level (sb26 level one) was won over the Bridge.
+
  4. Teach a rule - a clue in plain language, grounded into Causalontology and
     injected into the live game.
 
