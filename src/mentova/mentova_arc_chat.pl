@@ -145,6 +145,8 @@
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
     % The Causalontology exploration policy: causal-change ranking + salient clicks.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_explore/prolog')),
+    % Whole-grid perception: object inventory, meter/life-bar reading, avatar (WP-403).
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_see/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -167,6 +169,17 @@
 :- use_module(library(co_graph),
     [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1,
      cg_stats_for/2, cg_edge/3]).
+% Load whole-grid perception (WP-403): segment the frame into an inventory of
+% roled objects, read the bar-like meters (life-bars, timers, counters) rather
+% than discarding them, and locate the avatar as whatever moved between frames.
+% This is how the solo player sees the ENTIRE grid instead of poking one spot.
+:- use_module(library(co_see),
+    [cs_inventory/2, cs_objects/2, cs_bars/2, cs_avatar_move/3, cs_background/2]).
+% Load the abstracted cross-game priors, so what was learned from the 25 studied
+% games transfers as generalizable play advice to an environment never seen.
+:- use_module('arc3_priors',
+    [ap_generic_prior/3, ap_priors_for_roles/2, ap_game_archetypes/2,
+     ap_game_resource/2, ap_win_recipe/2]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -870,6 +883,13 @@ ma_solo_start :-
     ma_reset_env(Sel, _),
     % Fresh curiosity counters for this attempt.
     retractall(ma_try_(_, _)),
+    % Fresh per-attempt perception state: the avatar starts unknown, no object has
+    % been visited yet, and no object is being pursued. The learned control map
+    % (ma_move_vec_) and the meter model carry forward across attempts.
+    retractall(ma_avatar_(Sel, _, _)),
+    retractall(ma_visited_(Sel, _, _)),
+    retractall(ma_pursuit_(Sel, _, _)),
+    retractall(ma_meter_(Sel, _, _, _)),
     % Fresh session recording.
     ma_session_reset,
     % If a winning path was learned for this game, replay it this run.
@@ -1578,6 +1598,13 @@ ma_reset_guidance :-
     retractall(ma_cellchg_(_, _, _, _)),
     % And the per-game step counts behind them.
     retractall(ma_framecount_(_, _)),
+    % Drop the whole-grid perception state: avatar cells, learned control maps,
+    % visited/pursued objects, and the meter/resource readings.
+    retractall(ma_avatar_(_, _, _)),
+    retractall(ma_move_vec_(_, _, _, _)),
+    retractall(ma_visited_(_, _, _)),
+    retractall(ma_pursuit_(_, _, _)),
+    retractall(ma_meter_(_, _, _, _)),
     % Clear the harness counters.
     co_arc3_reset.
 
@@ -1709,6 +1736,9 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % Track which cells keep changing (a counter, timer, or animation), so the
     % state signature can ignore them and recognise a returned-to state.
     ma_note_volatility(Sel, Delta),
+    % Refresh the whole-grid perception: where the avatar now is, what this action
+    % did to it (the control map), and how the meters moved (the resource model).
+    ma_perceive_update(Sel, Action, Frame0, Frame1),
     % If this action just ended the game, remember never to take it from this
     % state again — durable, so a later attempt of the game does not re-die here.
     ma_note_death(Sel, Frame0, Action),
@@ -1766,6 +1796,184 @@ ma_volatile(Game, R, C) :-
     ma_cellchg_(Game, R, C, K),
     % Changed on at least sixty percent of the observed steps.
     K * 10 >= N * 6.
+
+% ---------------------------------------------------------------------------
+% WHOLE-GRID PERCEPTION — see every object, track the avatar, READ the meters
+% ---------------------------------------------------------------------------
+%
+% Masking a volatile band keeps the state key stable, but a counter or life-bar
+% is not noise to be thrown away — it is information. This section reads the
+% whole grid through co_see and keeps three living facts per game: where the
+% avatar is (what moved), what each action does to it (the control map, learned
+% not assumed), and how long each meter is (so a shrinking bar is recognised as
+% a depleting resource). The choice-maker below uses all three to go deliberately
+% touch objects and to hurry or refill when a resource is low.
+
+% ma_avatar_/3: (Game, R, C) — the avatar's last known cell (whatever moved).
+:- dynamic ma_avatar_/3.
+% ma_move_vec_/4: (Game, Action, DR, DC) — the avatar displacement an action was
+% observed to cause. This is the game's control scheme, DISCOVERED by perception.
+:- dynamic ma_move_vec_/4.
+% ma_visited_/3: (Game, R, C) — an object cell already visited this attempt, so
+% the player targets a fresh object next instead of mulling on one spot.
+:- dynamic ma_visited_/3.
+% ma_pursuit_/3: (Game, R, C) — the object the avatar is currently walking to.
+:- dynamic ma_pursuit_/3.
+% ma_meter_/4: (Game, Key, Len, Trend) — a bar/meter's last length and whether it
+% is rising, falling, steady, or new: the resource model, read from the grid.
+:- dynamic ma_meter_/4.
+
+% ma_perceive_update(+Game, +Action, +Frame0, +Frame1): after a step, refresh the
+% whole-grid perception — the avatar's cell, this action's learned displacement,
+% and the meter readings. Fully guarded: perception never breaks a step.
+ma_perceive_update(Game, Action, Frame0, Frame1) :-
+    catch(ma_perceive_update_(Game, Action, Frame0, Frame1), _, true).
+
+% The guarded body of the perception update.
+ma_perceive_update_(Game, Action, Frame0, Frame1) :-
+    % Locate the avatar as whatever moved between the two frames.
+    (   catch(cs_avatar_move(Frame0, Frame1, cell(NR, NC)), _, fail)
+    ->  % If we knew where it was and this was a simple (non-click) action, learn
+        % the displacement it caused — the control map, one action at a time.
+        (   ma_avatar_(Game, OR, OC), Action = action(_),
+            DR is NR - OR, DC is NC - OC,
+            ( DR =\= 0 ; DC =\= 0 )
+        ->  retractall(ma_move_vec_(Game, Action, _, _)),
+            assertz(ma_move_vec_(Game, Action, DR, DC))
+        ;   true ),
+        % Record the avatar's new cell.
+        retractall(ma_avatar_(Game, _, _)),
+        assertz(ma_avatar_(Game, NR, NC))
+    ;   true ),
+    % Read the meters and fold them into the resource model.
+    ma_meters_update(Game, Frame1).
+
+% ma_meters_update(+Game, +Frame): read the bar/meter-like objects and remember
+% each one's length and trend, so a later choice can tell a resource is draining.
+% A meter that has already been seen but is missing this frame has drained below
+% the bar-detection length — that too is recorded as falling, so the resource
+% model does not go blind exactly when the life-bar is nearly empty.
+ma_meters_update(Game, Frame) :-
+    % The bar-like objects co_see finds (life-bars, timers, progress counters).
+    ( catch(cs_bars(Frame, Bars), _, Bars = []) -> true ; Bars = [] ),
+    % Fold each present bar into the model, keyed by its colour and orientation.
+    findall(Key,
+        ( member(bar(Colour, Orient, Len, _), Bars),
+          atomic_list_concat([Colour, '_', Orient], Key),
+          % The previous length, to compute the trend.
+          ( ma_meter_(Game, Key, Len0, _) -> true ; Len0 = Len ),
+          ( \+ ma_meter_(Game, Key, _, _) -> Trend = new
+          ; Len < Len0 -> Trend = falling
+          ; Len > Len0 -> Trend = rising
+          ; Trend = steady ),
+          retractall(ma_meter_(Game, Key, _, _)),
+          assertz(ma_meter_(Game, Key, Len, Trend)) ),
+        Present),
+    % A previously-known meter that is absent now (and was not already read as
+    % empty) has drained below the bar-detection length: record it falling to zero.
+    forall(
+        ( ma_meter_(Game, Key0, Len0b, _),
+          \+ memberchk(Key0, Present),
+          Len0b > 0 ),
+        ( retractall(ma_meter_(Game, Key0, _, _)),
+          assertz(ma_meter_(Game, Key0, 0, falling)) )).
+
+% ma_resource_low(+Game): the game has a meter that is currently draining — the
+% cross-game resource-refill prior then makes the player prefer collectible dots.
+ma_resource_low(Game) :-
+    % Any meter observed to be falling.
+    ma_meter_(Game, _, _, falling).
+
+% ma_visit(+Game, +R, +C): mark an object cell visited this attempt.
+ma_visit(Game, R, C) :-
+    ( ma_visited_(Game, R, C) -> true ; assertz(ma_visited_(Game, R, C)) ).
+
+% ma_object_targets(+Game, +Frame, +Items, -Targets): the object cells worth
+% going to, best first. Meters (resources) and large fields (terrain) are not
+% touch targets; the avatar's own cell is excluded; already-visited cells are
+% dropped. When a resource is draining, single-cell dots (likely collectibles)
+% are ranked ahead of larger pieces, per the resource-refill prior. Otherwise
+% the order is by nearest to the avatar (or salience when there is no avatar).
+ma_object_targets(Game, _Frame, Items, Targets) :-
+    % The avatar cell, if known.
+    ( ma_avatar_(Game, AR, AC) -> Origin = at(AR, AC) ; Origin = none ),
+    % The touchable candidates: dots and pieces, not meters/fields, not visited,
+    % not the avatar's own cell.
+    findall(Rank - pos(R, C),
+        ( member(seen(_, _, _, cell(R, C), Role), Items),
+          memberchk(Role, [dot, piece]),
+          \+ ma_visited_(Game, R, C),
+          \+ ( Origin = at(R, C) ),
+          ma_target_rank(Game, Role, Origin, R, C, Rank) ),
+        Ranked),
+    % Best (lowest rank) first.
+    keysort(Ranked, Sorted),
+    findall(P, member(_ - P, Sorted), Targets),
+    Targets \== [].
+
+% ma_target_rank(+Game, +Role, +Origin, +R, +C, -Rank): a smaller rank is a
+% better target. Dots come first when a resource is draining; ties break by the
+% Manhattan distance from the avatar so the nearest fresh object is chosen.
+ma_target_rank(Game, Role, Origin, R, C, Rank) :-
+    % A dot gets a head start only while a meter is falling (seek a refill).
+    ( ma_resource_low(Game), Role == dot -> Bias = 0 ; Bias = 1000 ),
+    % The distance from the avatar, or zero when there is none.
+    ( Origin = at(AR, AC) -> Dist is abs(R - AR) + abs(C - AC) ; Dist = 0 ),
+    % The rank combines the role bias and the distance.
+    Rank is Bias + Dist.
+
+% ma_move_toward(+Game, +AR, +AC, +TR, +TC, -Action): the learned simple action
+% that moves the avatar strictly closer to (TR,TC) under the discovered control
+% map. Fails when no known action reduces the distance, so the caller falls
+% through to another exploration rule rather than oscillating.
+ma_move_toward(Game, AR, AC, TR, TC, Action) :-
+    % The current distance to the target.
+    Cur is abs(TR - AR) + abs(TC - AC),
+    % Each learned action's resulting distance.
+    findall(Dist - Act,
+        ( ma_move_vec_(Game, Act, DR, DC),
+          NR is AR + DR, NC is AC + DC,
+          Dist is abs(TR - NR) + abs(TC - NC) ),
+        Scored),
+    Scored \== [],
+    % The action that gets closest.
+    keysort(Scored, [Best - Action | _]),
+    % Only take it if it genuinely reduces the distance.
+    Best < Cur.
+
+% ma_object_action(+Game, +Frame, +Items, -Action, -Basis): choose a concrete
+% action that pursues a salient object — steering the avatar on a movement game
+% (using the learned control map), or clicking the object on a click game.
+% Movement game: the avatar and a control map are known, so walk toward a target.
+ma_object_action(Game, Frame, Items, Action, moving_to(pos(TR, TC))) :-
+    % A control map has been learned (some action moves the avatar).
+    ma_move_vec_(Game, _, _, _),
+    % The avatar's cell is known.
+    ma_avatar_(Game, AR, AC),
+    % The pursuit target: keep the current one while it is still a fresh object,
+    % otherwise adopt the best fresh target now.
+    (   ma_pursuit_(Game, TR, TC),
+        member(seen(_, _, _, cell(TR, TC), _), Items),
+        \+ ma_visited_(Game, TR, TC)
+    ->  true
+    ;   ma_object_targets(Game, Frame, Items, [pos(TR, TC) | _]),
+        retractall(ma_pursuit_(Game, _, _)),
+        assertz(ma_pursuit_(Game, TR, TC))
+    ),
+    % A step that moves the avatar closer under the control map.
+    ma_move_toward(Game, AR, AC, TR, TC, Action),
+    % If the avatar is already next to (or on) the target, retire it as visited.
+    ( abs(TR - AR) + abs(TC - AC) =< 1
+    -> ma_visit(Game, TR, TC), retractall(ma_pursuit_(Game, _, _)) ; true ).
+% Click game: cell-select is available, so click the best fresh object's centroid.
+ma_object_action(Game, Frame, Items, select(TC, TR), click_object(pos(TR, TC))) :-
+    % The environment affords a cell-select.
+    ( ma_actions_env(Game, As) -> true ; As = [] ),
+    memberchk(select(_, _), As),
+    % The best fresh object to click.
+    ma_object_targets(Game, Frame, Items, [pos(TR, TC) | _]),
+    % A click reaches it in one action, so mark it visited now.
+    ma_visit(Game, TR, TC).
 
 % ma_mask_frame(+Game, +Frame, -Masked): replace this game's volatile cells with
 % a sentinel so they do not affect the state key. When nothing is volatile yet,
@@ -1951,6 +2159,28 @@ ma_choose(Action, explore(novel)) :-
     % Never tried.
     ma_try_count(Action, 0),
     % Commit to it.
+    !.
+% Object-targeted curiosity: SEE the whole grid (co_see inventory), pick a salient
+% object not yet visited this attempt, and deliberately GO TO IT — steering the
+% avatar toward it on a movement game (using the control map perception learned)
+% or clicking its centroid on a click game. This is the "go touch that object to
+% see what it does" behaviour the mentor asked for, and it stops the player
+% mulling on one spot. When a meter is draining, collectible dots are preferred,
+% enacting the cross-game resource-refill prior. It runs after breadth-first
+% novelty (which has meanwhile taught the control map) and yields once every
+% object has been visited, so causal exploitation still follows.
+ma_choose(Action, explore(object(Basis))) :-
+    % The selected environment and its current frame.
+    ma_selected_game(Sel),
+    ma_render(Sel, Frame),
+    % See the whole grid as an inventory of roled objects.
+    catch(cs_inventory(Frame, Items), _, fail),
+    Items \== [],
+    % Choose a concrete action that pursues a fresh object.
+    ma_object_action(Sel, Frame, Items, Action, Basis),
+    % Never a move known to end the game from this state.
+    ma_action_safe(Sel, Frame, Action),
+    % Commit.
     !.
 % Causal-first exploitation: if this game's learned causal graph predicts that
 % some available action changes the world, take the least-tried such action.

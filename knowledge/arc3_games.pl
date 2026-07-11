@@ -29,6 +29,11 @@
 :- dynamic a3_guide/2, a3_game/4, a3_control/3, a3_object/3,
            a3_rel/3, a3_hazard/2, a3_tip/2, a3_note/3.
 
+% The facts are grouped per game (all of ls20 together, then ft09, ...), not per
+% predicate, so declare each predicate discontiguous to keep the load quiet.
+:- discontiguous a3_guide/2, a3_game/4, a3_control/3, a3_object/3,
+                 a3_rel/3, a3_hazard/2, a3_tip/2, a3_note/3.
+
 % ---- The guide files (citations) ----
 % Each game's plain-text mentor guide, the source of its facts below.
 a3_guide(ls20, 'assets/ls20.txt').
