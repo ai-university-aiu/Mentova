@@ -149,6 +149,8 @@
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_see/prolog')),
     % Hierarchical planning: the Win-Game / OODA / controls plan tree (WP-404).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hplan/prolog')),
+    % Verify-before-act: predict a move fatal from the learned model (WP-405).
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_verify/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -189,6 +191,13 @@
 :- use_module(library(co_hplan),
     [hp_win_plan/3, hp_reify/2, hp_reset/0, hp_render/2, hp_render_json/2,
      hp_classify_basis/3, hp_consistent/1, hp_plan_from_cros/2]).
+% Load verify-before-act (WP-405): the world-model safety layer that predicts a
+% move fatal from what has been learned — generalising from deaths in other states
+% and from deadly cell colours — so the player deprioritises a move predicted to
+% end the run before it is ever tried, instead of only recalling the exact deaths.
+:- use_module(library(co_verify),
+    [vb_reset/0, vb_note_fatal/3, vb_fatal_here/3, vb_broadly_fatal/2,
+     vb_predict_fatal/3, vb_rank/4]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -1627,6 +1636,11 @@ ma_reset_guidance :-
     retractall(ma_plan_tree_(_, _)),
     retractall(ma_plan_root_(_, _)),
     retractall(ma_plan_focus_(_, _, _)),
+    % Drop the verify-before-act world model: the learned deadly colours and the
+    % co_verify fatality model (both are durable across attempts, like the death
+    % memory, so they are cleared only on a full guidance reset).
+    retractall(ma_deadly_colour_(_, _)),
+    catch(vb_reset, _, true),
     % Clear the harness counters.
     co_arc3_reset.
 
@@ -1739,6 +1753,9 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % the same action's effect in another environment is a separate relation.
     ;   memberchk(changed(_, _, _, 15), Delta)
     ->  co_learn_preventive(g(Sel, Action), penalty),
+        % Learn the deadly colours this hazard introduced, so stepping onto them is
+        % predicted fatal next time (the verify-before-act world model).
+        ma_learn_deadly(Sel, Delta),
         % Report the hazard.
         Outcome = hazard
     % Otherwise the delta was produced by the action, in this game.
@@ -2038,24 +2055,28 @@ ma_target_rank(Game, Role, Origin, R, C, Rank) :-
     % The rank combines the role bias and the distance.
     Rank is Bias + Dist.
 
-% ma_move_toward(+Game, +AR, +AC, +TR, +TC, -Action): the learned simple action
-% that moves the avatar strictly closer to (TR,TC) under the discovered control
-% map. Fails when no known action reduces the distance, so the caller falls
-% through to another exploration rule rather than oscillating.
-ma_move_toward(Game, AR, AC, TR, TC, Action) :-
+% ma_move_toward(+Game, +Frame, +AR, +AC, +TR, +TC, -Action): the learned simple
+% action that moves the avatar strictly closer to (TR,TC) under the discovered
+% control map, preferring a step the world model does NOT predict fatal. Candidates
+% are ranked by (not-fatal, then closeness), so a non-fatal step is taken even if a
+% fatal one would be a touch closer — the avatar routes around a hazard on its way
+% to an object. Fails when no known action reduces the distance, so the caller
+% falls through rather than oscillating.
+ma_move_toward(Game, Frame, AR, AC, TR, TC, Action) :-
     % The current distance to the target.
     Cur is abs(TR - AR) + abs(TC - AC),
-    % Each learned action's resulting distance.
-    findall(Dist - Act,
+    % Each distance-reducing learned action, tagged with whether it is predicted
+    % fatal (0 safe, 1 fatal) so the sort prefers safe then closest.
+    findall(Fatal - Dist - Act,
         ( ma_move_vec_(Game, Act, DR, DC),
           NR is AR + DR, NC is AC + DC,
-          Dist is abs(TR - NR) + abs(TC - NC) ),
+          Dist is abs(TR - NR) + abs(TC - NC),
+          Dist < Cur,
+          ( ma_predict_fatal(Game, Frame, Act) -> Fatal = 1 ; Fatal = 0 ) ),
         Scored),
     Scored \== [],
-    % The action that gets closest.
-    keysort(Scored, [Best - Action | _]),
-    % Only take it if it genuinely reduces the distance.
-    Best < Cur.
+    % Non-fatal first, then closest; take the best.
+    sort(Scored, [_ - _ - Action | _]).
 
 % ma_object_action(+Game, +Frame, +Items, -Action, -Basis): choose a concrete
 % action that pursues a salient object — steering the avatar on a movement game
@@ -2076,8 +2097,9 @@ ma_object_action(Game, Frame, Items, Action, moving_to(pos(TR, TC))) :-
         retractall(ma_pursuit_(Game, _, _)),
         assertz(ma_pursuit_(Game, TR, TC))
     ),
-    % A step that moves the avatar closer under the control map.
-    ma_move_toward(Game, AR, AC, TR, TC, Action),
+    % A step that moves the avatar closer under the control map, routing around a
+    % step the world model predicts fatal where possible.
+    ma_move_toward(Game, Frame, AR, AC, TR, TC, Action),
     % If the avatar is already next to (or on) the target, retire it as visited.
     ( abs(TR - AR) + abs(TC - AC) =< 1
     -> ma_visit(Game, TR, TC), retractall(ma_pursuit_(Game, _, _)) ; true ).
@@ -2129,7 +2151,11 @@ ma_note_death(Game, Frame0, Action) :-
     ->  catch((
             ma_state_key(Game, Frame0, Key),
             ( ma_death_(Game, Key, Action) -> true
-            ; assertz(ma_death_(Game, Key, Action)) )
+            ; assertz(ma_death_(Game, Key, Action)) ),
+            % Feed the same fatal transition to the verify-before-act model, which
+            % generalises it: an action fatal in enough distinct states is then
+            % predicted fatal in a new state before it is tried there.
+            catch(vb_note_fatal(Game, Key, Action), _, true)
         ), _, true)
     % The game did not end: nothing to record.
     ;   true
@@ -2141,6 +2167,83 @@ ma_action_safe(Game, Frame, Action) :-
     % Safe unless a fatal (state, action) has been recorded for this frame's
     % masked state key (so a ticking counter does not hide a known fatal state).
     \+ ( catch(ma_state_key(Game, Frame, Key), _, fail), ma_death_(Game, Key, Action) ).
+
+% ---------------------------------------------------------------------------
+% VERIFY BEFORE ACT — predict a move fatal before spending a real action on it
+% ---------------------------------------------------------------------------
+%
+% The death memory above refuses a move that HAS ended a run from this exact
+% state. That is reactive: on a new board the same lesson is re-learned by dying
+% again. This section is the world-model check the deaths pinned as the decisive
+% lever. It predicts a move fatal before it is tried, two ways. First, through
+% co_verify's generalisation: an action that ended a run in enough distinct states
+% is predicted fatal anywhere (applied only to non-movement actions, so a needed
+% direction is never banned outright). Second, positionally: for a movement game
+% it SIMULATES where the avatar would land under the learned control map and, if
+% that cell carries a colour that has proved deadly, predicts the step fatal — the
+% su15 lesson (do not walk the avatar into the enemy) learned once and applied
+% everywhere. A predicted-fatal move is deprioritised, not forbidden.
+
+% ma_deadly_colour_/2: (Game, Colour) — a cell colour that has proved deadly in a
+% game (the ARC penalty marker, or the colour the avatar stepped onto when a run
+% ended). Learned, game-keyed, and durable across attempts like the death memory.
+:- dynamic ma_deadly_colour_/2.
+
+% ma_deadly_colour(+Game, ?Colour): a colour deadly in this game. The penalty
+% marker colour fifteen is always deadly; others are learned.
+ma_deadly_colour(_, 15).
+ma_deadly_colour(Game, Colour) :- ma_deadly_colour_(Game, Colour).
+
+% ma_learn_deadly(+Game, +Delta): on a hazard or death step, record the non-
+% background colours the step introduced as deadly, so stepping onto them is
+% predicted fatal next time. Deprioritise-not-forbid semantics make a slightly
+% eager learner safe: a mis-marked colour only sends a move to the back of the
+% queue, it is not banned.
+ma_learn_deadly(Game, Delta) :-
+    % Record each newly-introduced non-background colour.
+    forall(
+        ( member(changed(_, _, _, New), Delta), integer(New), New =\= 0 ),
+        ( ma_deadly_colour_(Game, New) -> true
+        ; assertz(ma_deadly_colour_(Game, New)) )).
+
+% ma_cell_colour(+Frame, +R, +C, -Colour): the colour at a cell, failing off-grid.
+ma_cell_colour(Frame, R, C, Colour) :-
+    % Read the cell, guarded so an off-grid destination simply fails.
+    catch(gd_cell(Frame, R, C, Colour), _, fail).
+
+% ma_predict_fatal(+Game, +Frame, +Action): the verify-before-act judgement — this
+% move is predicted to end the run from the current situation. Fully guarded.
+ma_predict_fatal(Game, Frame, Action) :-
+    catch(ma_predict_fatal_(Game, Frame, Action), _, fail).
+
+% The guarded body: exact memory, positional simulation, or generalisation.
+ma_predict_fatal_(Game, Frame, Action) :-
+    % Exact: this move has ended a run from this very (masked) state.
+    (   catch(ma_state_key(Game, Frame, Key), _, fail),
+        vb_fatal_here(Game, Key, Action)
+    % Positional: simulate the avatar's destination under the learned control map;
+    % a deadly colour there predicts the step fatal.
+    ;   ma_move_vec_(Game, Action, DR, DC),
+        ma_avatar_(Game, AR, AC),
+        R2 is AR + DR, C2 is AC + DC,
+        ma_cell_colour(Frame, R2, C2, Colour),
+        ma_deadly_colour(Game, Colour)
+    % Generalisation: a non-movement action broadly fatal across distinct states.
+    ;   \+ ma_move_vec_(Game, Action, _, _),
+        vb_broadly_fatal(Game, Action)
+    ),
+    % One witness suffices.
+    !.
+
+% ma_deprioritise_fatal(+Game, +Frame, +Actions, -Ranked): keep the safe actions
+% ahead (in their given order) and send the predicted-fatal ones to the back,
+% never dropping any — so if every option looks fatal the least-bad is still there.
+ma_deprioritise_fatal(Game, Frame, Actions, Ranked) :-
+    % Split into not-predicted-fatal and predicted-fatal, preserving order.
+    findall(A, ( member(A, Actions), \+ ma_predict_fatal(Game, Frame, A) ), Safe),
+    findall(A, ( member(A, Actions),    ma_predict_fatal(Game, Frame, A) ), Risky),
+    % Safe first, then risky.
+    append(Safe, Risky, Ranked).
 
 % ma_note_impact(+Game, +Action, +Delta): record the largest effect this action
 % has had in this game, and count consecutive no-change steps. The single most
@@ -2424,7 +2527,12 @@ ma_explore_concrete(Game, Frame, Actions) :-
     % Least-tried first; ties keep their relative order.
     keysort(Scored, Sorted),
     % Drop the counts.
-    findall(A, member(_ - A, Sorted), Actions).
+    findall(A, member(_ - A, Sorted), Actions0),
+    % Verify before act: send actions PREDICTED fatal (by the world model — exact
+    % death memory, a deadly-colour destination, or a broadly-fatal action) to the
+    % back, keeping the least-tried order within each group. Deprioritised, not
+    % dropped, so a genuinely all-risky state still yields the least-bad move.
+    ma_deprioritise_fatal(Game, Frame, Actions0, Actions).
 % Otherwise curiosity decides: the least-tried safe action over the selected
 % environment's action set, so unguided play genuinely explores rather than
 % repeating one move.
