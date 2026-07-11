@@ -597,6 +597,35 @@ orientation dominates, and when to take the fast implicit path. Seven checks con
 the skill landed. No live game was played in this work; no leaderboard score is
 claimed.
 
+2026-07-11  LEARNING. The improved system was taken back to the live benchmark and
+measured, and the honest result is two-part. First, the performance fix works: the
+sweep that last time collapsed under the compute wall at eleven games this time ran
+healthy through eighteen, its process memory flat and its pace steady, and it was
+stopped by choice rather than by a stall because the result was by then unambiguous.
+That was one of the two goals and it is met - the perception cache segments the grid
+once per step instead of five or six times, and the sweep no longer stalls. Second,
+the verify-before-act world model did not, by itself, win a level on this run. Across
+eighteen diverse games it completed zero levels, at an average of about ninety-seven
+actions per game with roughly three-quarters ending in a game-over - a distribution
+statistically indistinguishable from the twenty-five-game baseline. The reason is
+specific and worth recording plainly: the world model learns a deadly colour by
+dying on it once and then refuses that colour forever after, but most of these games
+end the run on the very first hazard contact or on a timeout, and a one-shot first-
+contact death - the action-avoidance game su15 ended in thirty-seven actions again -
+gives the model nothing it could have known beforehand. The lever is real and proven
+by its own tests; it simply cannot pay off on a game that ends at the first mistake.
+The deeper lesson is that the true blocker is no longer survival or perception but a
+WIN SIGNAL. In the baseline and in both improved sweeps, not one level has been
+completed, so the goal-inference machinery has never had a single positive example
+to learn from and the exploration, however well-directed and however safe, has
+nothing to climb toward. The next lever is therefore not another safety or
+perception improvement; it is securing the very first level win on any one game, by
+whatever means - crucially including a human or a Claude mentor teaching a game
+through the newly-built Mentor Bridge - so that goal inference and cross-level
+transfer at last have a foothold. The full per-game table and comparison are written
+up in the version-two sweep report in the assets folder. The scorecard was left open
+and never published; no level was won; no leaderboard score is claimed.
+
 
 THE VISION
 
