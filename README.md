@@ -229,7 +229,7 @@ After completing the 48-rung reasoning ladder, Mentova continues along seven gro
 | 1 | 48/48 Cognitive Reasoning Levels | ✅ Complete |
 | 2 | ARC-AGI-1: 400/400 = 100% | ✅ Complete (2026-06-24) |
 | 3 | ARC-AGI-2 benchmark | ✅ SUMMIT — Wave 124 (FINAL) complete (120/120 = 100.00%; benchmark runner and ledger both 120/120) |
-| 4 | ARC-AGI-3 (Interactive Reasoning Benchmark) | 🔬 Readiness — autonomous agent driver in place over the PrologAI ARC-AGI-3 Readiness suite (co_explore, co_goalinfer, co_effic, co_arc3proto); unaided it explores an unseen game, infers the win condition, and wins within an efficiency budget. No leaderboard score claimed until measured. See `docs/ARC-AGI-3_Preparation_v3.txt` |
+| 4 | ARC-AGI-3 (Interactive Reasoning Benchmark) | 🔬 Readiness — autonomous agent driver in place over the PrologAI ARC-AGI-3 Readiness suite (co_explore, co_goalinfer, co_effic, co_arc3proto); unaided it explores an unseen game, infers the win condition, and wins within an efficiency budget. No leaderboard score claimed until measured. See `docs/ARC-AGI-3_Preparation_v3.txt`; the ascent is chronicled in `papers/Climbing_ARC-AGI-3.txt` |
 | 5 | Live Pokemon (multi-domain game reasoning) | Planned |
 | 6 | Multi-agent society (Mentova agents collaborating) | Planned |
 | 7 | Embodiment (ROS 2 robot body integration) | Planned |
@@ -801,6 +801,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `ARC-AGI-1_Perfect_Score_Report.txt` | The comprehensive achievement report for ARC-AGI-1 — architecture, methodology, why other systems struggle, lessons learned, and next steps. Updated with a postscript noting the subsequent ARC-AGI-2 perfect score. |
 | `Climbing_ARC-AGI-2.txt` | The complete 124-wave ARC-AGI-2 chronicle — every attempt, every score, every rule, every lesson. Concluded at 120/120 = 100.00%. |
 | `ARC-AGI-2_Perfect_Score_Report.txt` | The comprehensive achievement report for ARC-AGI-2 — the second mountain climbed by pure symbolic induction; what was learned about human thinking, experience points gained, and how to teach machines to think like humans without the downsides of large language models. |
+| `Climbing_ARC-AGI-3.txt` | The living ARC-AGI-3 chronicle — the interactive-reasoning ascent, appended (never rewritten) as work lands: methodology, learnings, course corrections, and — especially — the wins. Evidence-first: no leaderboard score is recorded until measured on the live leaderboard, and the ARC-AGI-3 Perfect Score report is written only after real measured wins. |
 
 ### Announcements — announcements/
 
