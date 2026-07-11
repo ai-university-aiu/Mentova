@@ -1,0 +1,90 @@
+ARC-AGI-3 Live Sweep v4 — the fully-wired cognitive stack
+=========================================================
+
+Measured live on three.arcprize.org on 2026-07-11. Agent-tagged, unpublished
+scorecard (tags: agent/mentova/symbolic/prologai; human:false), opened and closed
+by an isolated process separate from the chat server. Fresh learnings store, so no
+carried or local-demo data — a pure cold autonomous measurement, comparable to the
+baseline campaign. Never published.
+
+Stack exercised on every step through the one shared ma_step choice loop:
+co_see (perception), co_explore, co_graph (state graph), co_goalinfer (goal
+inference), co_effic (budget), co_hplan (OODA plan), co_verify (verify-before-act),
+co_wm (executable world model), co_hypo (committed hypotheses), co_rel (ranked-
+utility object targeting).
+
+Per-game budget: 150 actions (matches the baseline campaign for comparability).
+
+
+RESULT
+------
+Games played:           25 / 25   (ran to genuine completion)
+Total levels_completed: 0
+Games with >= 1 level:   0
+Outcomes:                0 won-level, 20 GAME_OVER (80%), 5 budget_exhausted (20%)
+Total actions:          2408   (avg 96.32 / game)
+
+
+PER GAME (id  outcome  actions  levels/win_threshold)
+-----------------------------------------------------
+  sb26   budget_exhausted   150   0/8
+  re86   game_over          100   0/8
+  lp85   game_over           51   0/8
+  lf52   game_over           64   0/10
+  tn36   game_over           61   0/7
+  ka59   game_over          100   0/7
+  cn04   game_over           75   0/6
+  cd82   game_over          100   0/6
+  sp80   game_over           30   0/6
+  r11l   game_over           60   0/6
+  sc25   game_over          121   0/6
+  su15   game_over           38   0/9
+  m0r0   budget_exhausted   150   0/6
+  wa30   budget_exhausted   150   0/9
+  vc33   game_over           50   0/7
+  tr87   game_over          128   0/6
+  ls20   game_over          130   0/7
+  s5i5   game_over           50   0/8
+  bp35   game_over           64   0/9
+  sk48   budget_exhausted   150   0/8
+  ar25   budget_exhausted   150   0/8
+  dc22   game_over          125   0/6
+  tu93   game_over           50   0/9
+  g50t   game_over          130   0/7
+  ft09   game_over          131   0/6
+
+
+HONEST COMPARISON
+-----------------
+  Baseline (v1, 25 games): 0 levels, 2453 actions, avg 98.1, 19 GAME_OVER (76%), 6 budget (24%).
+  v2 (perception upgrade, 11 games, halted for a perf cost): 0 levels, 8 GAME_OVER, 3 budget, avg 105.8.
+  v3 (verify-before-act + caching, 18 games, stopped by choice): 0 levels, ~78% GAME_OVER, avg 96.7.
+  v4 (fully-wired cognitive stack, 25 games, FULL COMPLETION): 0 levels, 2408 actions,
+      avg 96.32, 20 GAME_OVER (80%), 5 budget (20%).
+
+Read honestly: v4 is the first FULL 25-game sweep since the baseline, and it ran to
+genuine completion (the perf fix holds across all 25 with no stall). The fully-wired
+cognitive stack — committed hypotheses, ranked-utility relational targeting, the
+executable world model, goal inference, all now consulted at the point of choice —
+did NOT change the outcome on the public 25: still 0 levels completed autonomously.
+The outcome distribution (80% GAME_OVER, 20% budget) is statistically
+indistinguishable from baseline (76%/24%) and v3 (~78%). Total actions are marginally
+fewer (2408 vs 2453) at a near-identical average.
+
+The one ARC-AGI-3 level Mentova has ever completed remains sb26 level 1, won earlier
+over the Mentor Bridge with a human/AI mentor teaching the tile-ordering mechanic —
+NOT autonomously. This sweep was cold (fresh store), so it did not carry that guided
+win path; it measures pure unaided play.
+
+What this tells us: the wiring is architecturally real and unit-proven, but on the
+public games solo exploration still dies at first-hazard contact before it can
+assemble a winning hypothesis. The blocker named by every prior sweep stands — the
+agent needs a win signal to bootstrap goal inference and hypothesis commitment, and
+on these games it does not manufacture one from cold exploration within budget. The
+levers most likely to move the number next: (1) carry the guided win paths into the
+solo store so a mentored level seeds the autonomous attempt (the persistence is now
+built for exactly this); (2) a survival-first policy that spends the early budget
+mapping hazards before pursuing goals; (3) mentor a second and third game over the
+Bridge to widen the seed set.
+
+No leaderboard score is claimed. Nothing was published.

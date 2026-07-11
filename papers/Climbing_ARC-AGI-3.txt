@@ -768,6 +768,39 @@ drains. Regression held: solo, verify, plan, cognition, and shared-cognition
 demonstrations all pass. No live game was played in this work; no leaderboard score
 is claimed.
 
+2026-07-11  LEARNING. The fully-wired cognitive stack was taken to the live
+benchmark and measured across ALL twenty-five public games, run to genuine
+completion this time. An isolated process opened its own agent-tagged, unpublished
+scorecard, started from a FRESH learnings store so the number is cold and unaided,
+and played every game solo at the baseline's 150-action budget through the one shared
+choice loop that now consults the whole stack: perception, exploration, the state
+graph, goal inference, the budget governor, the OODA plan, verify-before-act, the
+executable world model, committed hypotheses, and ranked-utility relational
+targeting. It completed all twenty-five - the performance fix holds with no stall -
+in two thousand four hundred and eight actions, an average of ninety-six per game,
+twenty ending in GAME_OVER and five hitting the budget. The honest result: ZERO
+levels completed. The fully-wired stack did not change the outcome on the public
+twenty-five; the distribution - eighty per cent GAME_OVER, twenty per cent budget -
+is statistically indistinguishable from the baseline campaign's seventy-six / twenty-
+four and from the third sweep's roughly seventy-eight per cent GAME_OVER, at a near-
+identical action count (two thousand four hundred and eight against the baseline's two
+thousand four hundred and fifty-three). This is recorded plainly and not dressed up:
+the wiring is architecturally real and unit-proven, but on these games cold solo
+exploration still dies at first-hazard contact before it can assemble and commit to a
+winning hypothesis, so goal inference and the world model have no win to bootstrap
+from. The one level Mentova has ever completed remains sb26 level one, won earlier
+over the Mentor Bridge with a mentor teaching the tile-ordering mechanic - not
+autonomously - and this cold sweep deliberately did not carry that guided win path.
+The blocker every prior sweep named therefore stands: the agent needs a win signal to
+bootstrap, and it does not manufacture one from cold exploration within budget. The
+next levers follow from what is now built: carry the guided win paths into the solo
+store so a mentored level SEEDS the autonomous attempt - the cross-mode persistence
+exists for exactly this and was simply not exercised in this cold run; spend the early
+budget mapping hazards before pursuing goals (a survival-first policy); and mentor a
+second and third game over the Bridge to widen the seed set. Evidence-first: the
+report is in assets/ARC-AGI-3_Live_Sweep_v4.txt, the scorecard was closed and never
+published, and no leaderboard score is claimed.
+
 
 THE VISION
 
