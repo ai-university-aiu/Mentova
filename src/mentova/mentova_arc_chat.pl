@@ -64,6 +64,8 @@
     ma_load_learnings/0,
     % ma_persist_game/1: write one game's learnings durably to disk.
     ma_persist_game/1,
+    % ma_persist_level/2: persist a level win's learnings (not only a full win).
+    ma_persist_level/2,
     % ma_start_server/1: start the HTTP server.
     ma_start_server/1,
     % ma_stop_server/1: stop the HTTP server.
@@ -946,6 +948,9 @@ ma_solo_start :-
     % plan the glass box can show.
     ma_build_plan(Sel),
     retractall(ma_plan_focus_(Sel, _, _)),
+    % The env reset put the game back to level zero; forget the persisted-level
+    % mark so re-completing a level in this fresh attempt persists again.
+    retractall(ma_level_seen_(Sel, _)),
     % Fresh session recording.
     ma_session_reset,
     % If a winning path was learned for this game, replay it this run.
@@ -1670,6 +1675,8 @@ ma_reset_guidance :-
     % memory, so they are cleared only on a full guidance reset).
     retractall(ma_deadly_colour_(_, _)),
     catch(vb_reset, _, true),
+    % Reset the per-game persisted-level high-water marks.
+    retractall(ma_level_seen_(_, _)),
     % Clear the harness counters.
     co_arc3_reset.
 
@@ -1817,7 +1824,65 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % state again — durable, so a later attempt of the game does not re-die here.
     ma_note_death(Sel, Frame0, Action),
     % Append this step to the session recording (for the won package).
-    ma_session_record(Action, Delta, Outcome).
+    ma_session_record(Action, Delta, Outcome),
+    % If this action just COMPLETED A LEVEL (levels.completed increased), persist
+    % the game's learnings to disk now — a level win survives a restart, not only
+    % a full-game win.
+    ma_note_level(Sel).
+
+% ---------------------------------------------------------------------------
+% PER-LEVEL WIN PERSISTENCE — a level win persists, not only a full-game win
+% ---------------------------------------------------------------------------
+%
+% ma_conclude_won requires the whole game to be solved. But completing even one
+% level on the live benchmark is a real, hard-won result whose learnings (the
+% mechanic discovered, the path taken) should survive a restart. This watches the
+% live level counter and, each time it climbs, snapshots the game's learnings to
+% disk keyed by game — the same durable store the full-game conclude writes to.
+
+% ma_level_seen_/2: (Game, HighestLevelPersisted) — the last level count for which
+% this game's learnings were persisted, so each new level is persisted once.
+:- dynamic ma_level_seen_/2.
+
+% ma_note_level(+Game): persist the game's learnings when its live level count has
+% climbed since the last persist. Always succeeds — it is a side-effecting hook, so
+% a failure (local game, no level climb) or an error must never break the step.
+ma_note_level(Game) :-
+    ( catch(ma_note_level_(Game), _, fail) -> true ; true ).
+
+% The guarded body of the per-level persistence check.
+ma_note_level_(Game) :-
+    % Only a live game reports a level count.
+    ma_is_live(Game),
+    % Its current levels-completed.
+    al_progress(Game, Completed, _WinLevels),
+    integer(Completed), Completed > 0,
+    % The highest level already persisted for this game.
+    ( ma_level_seen_(Game, Prev) -> true ; Prev = 0 ),
+    % Only act when a NEW level was completed.
+    Completed > Prev,
+    % Record the new high-water mark.
+    retractall(ma_level_seen_(Game, _)),
+    assertz(ma_level_seen_(Game, Completed)),
+    % Persist this level win.
+    ma_persist_level(Game, Completed).
+
+% ma_persist_level(+Game, +Level): learn from the session that reached this level
+% (recording its actions as the win path and reinforcing the relations used), then
+% snapshot the game's whole learning set to disk. Keyed by game, so a later run —
+% Solo included — reloads it on boot.
+ma_persist_level(Game, Level) :-
+    % The recorded session so far, in step order.
+    findall(st(N, A, D, O), ma_session_(N, A, D, O), Raw),
+    msort(Raw, Steps),
+    % Learn from it exactly as a full win does (win path + reinforcement + levers),
+    % when there is anything recorded.
+    ( Steps \== [] -> catch(ma_learn_from_win(Game, Steps, _Learned), _, true) ; true ),
+    % Snapshot the game's learnings durably.
+    catch(ma_persist_game(Game), _, true),
+    % A glass-box line so the win is visible.
+    length(Steps, StepCount),
+    format("level win persisted: ~w reached level ~w (~w steps)~n", [Game, Level, StepCount]).
 
 % ma_death_/3: (Game, StateKey, Action) — an action that ended the game from a
 % state, so a later attempt avoids it there. StateKey is the frame's signature.

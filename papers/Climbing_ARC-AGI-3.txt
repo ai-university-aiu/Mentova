@@ -658,6 +658,22 @@ completion. No scorecard was published; no leaderboard score is claimed; the sin
 measured fact recorded here is one live level completed.
 
 
+2026-07-11  METHODOLOGY. Two supports were built so the first level win is not lost
+and so knowledge can be fed in cleanly. First, per-level win persistence: the
+conclude flow only ever wrote a game's learnings to disk when the WHOLE game was
+solved, so the sb26 level-one win taught over the Mentor Bridge lived only in
+memory. Now, whenever the live level counter climbs, the game's learnings - the
+path taken and the relations reinforced - are snapshotted to disk keyed by game,
+exactly as a full win is, so a single level survives a restart and Solo can reload
+it. Second, a draft-document ingestion pipeline: plain-text draft documents become
+candidate facts, each carried through the nuanced fact doors with the draft's own
+identity as its provenance, so two drafts of the same steps that differ in a detail
+are both kept and flagged as variants with the delta shown, never merged away; a
+per-draft report says what was new, strengthened, or variant-flagged, and an
+endpoint ingests a draft straight into the live mind. Both are proven by their own
+tests. No live game was played in this work; no leaderboard score is claimed.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box
