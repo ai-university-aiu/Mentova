@@ -1,0 +1,135 @@
+ARC-AGI-3 AGENT INTERFACE
+A machine-facing twin of the ARC-AGI-3 Chat page, so a Claude session can see the
+grid, operate the controls, and teach Mentova through the same channel a human
+mentor uses.
+
+
+WHY THIS EXISTS
+
+The ARC-AGI-3 Chat page (arc.html) is built for a human mentor: a rendered grid,
+buttons for the controls, a text box for clues. A Claude session cannot see a
+rendered grid or press a button. This interface gives a machine mentor the same
+two-way connection in a form it can read and drive: one read-only endpoint that
+returns everything visible about the game as JSON and ASCII, and the existing
+mentor-authenticated endpoints for acting and teaching. The machine mentor watches,
+demonstrates moves, and teaches rules; Mentova learns them into the same substrate
+(the data lattice, Causalontology, and J-Space) that a human mentor teaches into.
+
+
+THE ONE ENDPOINT TO SEE THE GAME
+
+  GET /api/arc/agentview
+
+Read-only and unauthenticated: it exposes only what is already visible. It returns
+a JSON object with these fields.
+
+ - game, title, mode:  the selected game id, its human title, and the active mode
+   (guided or solo).
+
+ - status:  won, game_over, or playing.
+
+ - levels:  { completed, win_levels } - the level progress for a live game (zero
+   for the local practice stand-ins, which do not have levels).
+
+ - size:  { rows, cols } - the grid dimensions (64 by 64 on the live benchmark).
+
+ - grid:  the raw frame, a list of rows, each a list of integer colours 0 to 15.
+
+ - grid_ascii:  the same grid as one compact string per row, each cell a single
+   character (0 to 9, then a to f for colours 10 to 15). This is the fastest way
+   for a text reader to take in the whole board at a glance.
+
+ - inventory:  co_see's whole-grid object inventory - one entry per object, each
+   with its id, colour, size, role, and position (row, col). The role is a
+   shape-based guess: meter (a life-bar, timer, or counter), dot (a small
+   collectible or target), field (a large block, wall, or goal-zone), or piece.
+
+ - meters:  the bar-like meters read from the grid, each with its colour,
+   orientation, length, position, and tracked trend (rising, falling, steady, new,
+   or unknown). A falling meter is a draining resource.
+
+ - actions:  the available controls, each with its canonical command (ACTION1 to
+   ACTION7), the semantic label Mentova has discovered for it, the source of that
+   label, and a human-readable label. The command field is what you send to act.
+
+ - plan:  the current hierarchical plan tree (co_hplan) - Win Game over an
+   observe-orient-decide-act loop over the concrete controls - as a nested object,
+   plus the indented text lines, the active OODA phase and leaf, and two proofs
+   that the plan is meshed with Causalontology: causalontology_consistent and
+   reconstructable_from_cros.
+
+ - last_action, last_command:  what Mentova did last.
+
+ - how_to_mentor:  a short note repeating the endpoints below.
+
+
+THE ENDPOINTS TO ACT AND TEACH
+
+Acting on the game and teaching a rule require a mentor token, exactly as they do
+for a human mentor. The flow is:
+
+ 1. Sign in to get a token.
+
+    POST /api/mentor/login   { username, password }        -> { ok, token }
+
+    A brand-new mentor signs up instead:
+
+    POST /api/mentor/signup  { username, password }         -> { ok, token }
+
+ 2. See the game.
+
+    GET /api/arc/agentview
+
+ 3. Demonstrate a move - perform one control on the game.
+
+    POST /api/arc/control
+      { token, cmd: "act", command: "ACTION1" }
+
+    The command is one of the command fields from actions[]. The reply names the
+    action taken and its outcome (learned, hazard, or none). Other cmd values a
+    mentor may use: "step" (let Mentova choose one action), "auto" with a budget
+    (let it run), and "reset".
+
+ 4. Teach a rule - a clue in plain language, grounded into Causalontology and
+    injected into the live game.
+
+    POST /api/arc/hint
+      { token, text: "the ring refills the timer", session_id, ref }
+
+    text is the clue. session_id is any stable string identifying your teaching
+    session. ref is an optional clicked cell [row, col] the clue is about, or omit
+    it. Everything taught is keyed by the current Game Environment ID, so what is
+    taught in one environment never bleeds into another.
+
+ 5. Read back what Mentova did and why.
+
+    GET /api/arc/why
+
+    Returns the last action, the basis for it, its provenance, and the plan tree
+    with the active OODA phase and leaf - so you can see whether your teaching
+    changed the reasoning.
+
+
+A TYPICAL MENTORING LOOP
+
+  loop:
+    view   <- GET  /api/arc/agentview
+    reason about view.grid_ascii, view.inventory, view.meters, view.plan
+    if a rule is worth teaching:
+        POST /api/arc/hint    { token, text: "...", session_id }
+    choose a control from view.actions
+    POST /api/arc/control     { token, cmd: "act", command: "ACTIONk" }
+    check  GET /api/arc/why    to confirm what was learned
+  until view.status is won or game_over
+
+
+NOTES
+
+ - The agentview is a snapshot. Fetch it again after every action to see the
+   result.
+
+ - Colours are the standard ARC cell colours as integers; the ASCII rendering is a
+   convenience, and the raw grid is authoritative.
+
+ - Nothing here publishes a scorecard or claims a score. The interface is for
+   teaching and observation.
