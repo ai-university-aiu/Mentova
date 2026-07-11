@@ -139,6 +139,10 @@
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
     % The state-graph exploration pack (the winning ARC-AGI-3 technique).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_graph/prolog')),
+    % Object detection, needed by the exploration policy's salient click targets.
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
+    % The Causalontology exploration policy: causal-change ranking + salient clicks.
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_explore/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -153,6 +157,10 @@
 :- use_module(library(co_learn), [co_learn_preventive/2, co_avoid/1, co_learn_causal/2]).
 % Load the harness for curiosity choice and frame deltas.
 :- use_module(library(co_arc3), [co_arc3_choose/3, co_arc3_delta/3, co_arc3_reset/0]).
+% Load the Causalontology exploration policy: rank actions by predicted change
+% (this game's causal graph) and turn ACTION6 into salient object-centroid clicks.
+:- use_module(library(co_explore),
+    [cox_choose/5, cox_choose_change/5]).
 % Load the state-graph explorer: systematic, frontier-directed exploration.
 :- use_module(library(co_graph),
     [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1,
@@ -1633,6 +1641,10 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % Append this step to the session recording (for the won package).
     ma_session_record(Action, Delta, Outcome).
 
+% The choice clauses are interleaved with the helpers they call (the graph
+% signature, the explore action set), so declare them discontiguous.
+:- discontiguous ma_choose/2.
+
 % ma_choose(-Action, -Basis): the guided choice.
 % First: if a recorded winning path is being replayed for this game, follow it.
 % This is how a concluded win teaches future Solo runs — they replay the win.
@@ -1681,6 +1693,28 @@ ma_choose(Action, toward(goal)) :-
     ma_greedy_step(P, D, Action),
     % Commit.
     !.
+% Causal-first exploration: if this game's learned causal graph predicts that
+% some available action changes the world, take the least-tried such action.
+% This is the co_explore policy's strongest signal - one of the two behaviours
+% the winning ARC-AGI-3 agents shared (learning which actions have an effect).
+% The action set includes a click marker, so ACTION6 is considered as a click on
+% a salient object rather than a blind cell.
+ma_choose(Action, explore(causal)) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Its current frame.
+    ma_render(Sel, Frame),
+    % Its safe action set, with ACTION6 represented as a salient-click marker.
+    ma_explore_actions(Sel, Frame, Marked),
+    % There must be something to try.
+    Marked \== [],
+    % How many times each concrete action has been tried this attempt.
+    findall(A - N, ma_try_(A, N), Tried),
+    % The least-tried action this game predicts will change the world; fails when
+    % none is predicted, so exploration falls through to the graph frontier.
+    catch(cox_choose_change(Sel, Marked, Tried, Frame, Action), _, fail),
+    % Commit.
+    !.
 % Before falling back to least-tried curiosity, use the state-graph explorer -
 % the winning ARC-AGI-3 technique: probe an untested, non-dead action in the
 % current state, or take the first step toward the nearest unexplored frontier.
@@ -1721,6 +1755,41 @@ ma_game_sig(Game, Frame, Sig) :-
     % Stamp it with the game id.
     atomic_list_concat([Game, '::', Base], Sig).
 
+% If the graph has no frontier to head for, fall to the full co_explore ranking:
+% predicted-change actions first, then least-tried, with the salient object
+% clicks (concrete ACTION6 targets) in play. This keeps ACTION6 useful without
+% enumerating all 4096 cells, and never repeats a known-hazard action.
+ma_choose(Action, explore(salient)) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Its current frame.
+    ma_render(Sel, Frame),
+    % Its safe action set, with ACTION6 as a salient-click marker.
+    ma_explore_actions(Sel, Frame, Marked),
+    % There must be something to try.
+    Marked \== [],
+    % The per-action try counts this attempt.
+    findall(A - N, ma_try_(A, N), Tried),
+    % The best action under the full policy; guarded so a perception hiccup
+    % never blocks the plain-curiosity fallback below.
+    catch(cox_choose(Sel, Marked, Tried, Frame, Action), _, fail),
+    % Commit.
+    !.
+% ma_explore_actions(+Game, +Frame, -Marked): the game's action set with any
+% ACTION6 cell-select replaced by a single click marker (which the policy
+% expands to the salient object centroids), hazards removed, duplicates merged.
+ma_explore_actions(Game, _Frame, Marked) :-
+    % The environment's available actions.
+    ( ma_actions_env(Game, Actions) -> true ; Actions = [] ),
+    % Drop any move that would land on a human-declared hazard.
+    findall(M,
+        ( member(A, Actions),
+          \+ ma_lands_on_hazard(A),
+          % A concrete cell-select becomes the generic click marker.
+          ( A = select(_, _) -> M = click ; M = A ) ),
+        Marked0),
+    % Merge duplicates (many concrete selects collapse to one click marker).
+    sort(Marked0, Marked).
 % Otherwise curiosity decides: the least-tried safe action over the selected
 % environment's action set, so unguided play genuinely explores rather than
 % repeating one move.
