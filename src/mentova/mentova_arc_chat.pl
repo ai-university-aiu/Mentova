@@ -184,6 +184,9 @@
 :- use_module('arc3_priors',
     [ap_generic_prior/3, ap_priors_for_roles/2, ap_game_archetypes/2,
      ap_game_resource/2, ap_win_recipe/2]).
+% Load the draft-document ingestion pipeline, so a mentor can feed plain-text
+% draft documents into the live mind through the nuanced fact doors.
+:- use_module('draft_ingest', [di_ingest_text/3, di_report_json/2]).
 % Load hierarchical planning (WP-404): the multi-level plan tree (Win Game over
 % the observe-orient-decide-act loop over the concrete controls), reified onto
 % Causalontology's decomposition hierarchy, so the solo player's play is driven by
@@ -270,6 +273,9 @@
 % session can SEE the grid (digits + object inventory + meters + plan) and know
 % the controls, then act and teach through the existing mentor endpoints.
 :- http_handler(root(api/arc/agentview), ma_handle_agentview, []).
+% The draft-ingestion endpoint: ingest a plain-text draft document into the live
+% mind through the nuanced fact doors, returning the per-draft report.
+:- http_handler(root(api/arc/ingest_draft), ma_handle_ingest_draft, []).
 
 % Define ma_db_init: attach the chat database this application reuses.
 ma_db_init(Dir) :-
@@ -2907,6 +2913,29 @@ ma_agent_howto(_{
     teach: "POST /api/arc/hint {token, text, session_id, ref} — teach a clue, grounded into Causalontology and injected into the game.",
     why: "GET /api/arc/why — what Mentova last did, why, and where on the plan.",
     docs: "See docs/ARC-AGI-3_Agent_Interface.txt for the full connect-and-teach flow."}).
+
+% ma_handle_ingest_draft(+Request): ingest a plain-text draft document into the
+% live mind through the nuanced fact doors (exact facts strengthen, near-duplicates
+% are kept as flagged variants), returning the per-draft report. Mentor-
+% authenticated, because it writes into Mentova's lattice and Causalontology.
+ma_handle_ingest_draft(Request) :-
+    % Read the JSON body.
+    http_read_json_dict(Request, Body),
+    % A token, the draft text, and a draft id are required.
+    ( get_dict(token, Body, Tk) -> true ; Tk = "" ),
+    ( get_dict(text, Body, Text) -> true ; Text = "" ),
+    ( get_dict(draft_id, Body, DidStr) -> atom_string(Did, DidStr) ; Did = draft ),
+    % Only a mentor may write facts into the mind.
+    (   mc_verify_session(Tk, _GuideId)
+    % Ingest and report, guarded so a bad draft never crashes the endpoint.
+    ->  (   catch(( di_ingest_text(Text, Did, Report),
+                    di_report_json(Report, RDict) ), _E, fail)
+        ->  reply_json_dict(RDict.put(_{ok: true}))
+        ;   reply_json_dict(_{ok: false, error: "Could not ingest the draft."})
+        )
+    % Refuse the unauthenticated.
+    ;   reply_json_dict(_{ok: false, error: "Not signed in."})
+    ).
 
 % ma_handle_control(+Request): reset, step, or auto, mentor-authenticated.
 ma_handle_control(Request) :-
