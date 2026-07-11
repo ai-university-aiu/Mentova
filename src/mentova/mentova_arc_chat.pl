@@ -168,7 +168,7 @@
 % Load the Causalontology exploration policy: rank actions by predicted change
 % (this game's causal graph) and turn ACTION6 into salient object-centroid clicks.
 :- use_module(library(co_explore),
-    [cox_choose/5, cox_choose_change/5, cox_expand_actions/3]).
+    [cox_choose/5, cox_choose_change/5, cox_expand_actions/3, cox_salient_cells/2]).
 % Load the state-graph explorer: systematic, frontier-directed exploration.
 :- use_module(library(co_graph),
     [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1,
@@ -223,6 +223,8 @@
 :- use_module(library(lists), [member/2, memberchk/2]).
 % Load aggregation for counting learned relations.
 :- use_module(library(aggregate), [aggregate_all/3]).
+% Load yall for the small lambda that wraps the cached perception computation.
+:- use_module(library(yall)).
 
 % ---------------------------------------------------------------------------
 % ROUTES
@@ -1725,6 +1727,9 @@ ma_inject(hint_continue).
 
 % ma_step(-Report): one loop step; the basis of the choice is recorded.
 ma_step(Report) :-
+    % Start the step with a clean perception cache, so the grid is segmented once
+    % this step and the several exploration rules reuse the one result.
+    ma_cache_clear,
     % Choose the action and remember why.
     ma_choose(Action, Basis),
     % Perform and learn from it.
@@ -1865,6 +1870,73 @@ ma_volatile(Game, R, C) :-
 % is rising, falling, steady, or new: the resource model, read from the grid.
 :- dynamic ma_meter_/4.
 
+% ---------------------------------------------------------------------------
+% PER-STEP PERCEPTION CACHE — segment the grid once, not five times a step
+% ---------------------------------------------------------------------------
+%
+% Whole-grid perception is expensive: each object inventory, salient-target list,
+% and meter read runs a full 64x64 connected-component segmentation. In one choice
+% the safe-action set is assembled up to five times (once per exploration rule),
+% each time re-segmenting the same frame — the cost that forced the last live sweep
+% to be halted. This cache computes each perception once per step and hands back
+% the stored answer to the other callers. It is keyed by a cheap hash of the frame
+% and cleared at the start of every step, so it only ever serves the current frame
+% and never goes stale across steps (where the try-counts and learnings change).
+
+% ma_pcache_/3: (Kind, FrameHash, Value) — a memoised perception for one frame.
+:- dynamic ma_pcache_/3.
+
+% ma_cache_clear: drop the whole perception cache (called once per step).
+ma_cache_clear :-
+    retractall(ma_pcache_(_, _, _)).
+
+% ma_cached(+Kind, +Frame, :Compute, -Value): return the cached perception for this
+% frame, computing it once (via Compute(Frame, Value)) and storing it on a miss.
+% Only the latest frame's entry per kind is kept, so the cache stays tiny.
+:- meta_predicate ma_cached(+, +, 2, -).
+ma_cached(Kind, Frame, Compute, Value) :-
+    % A cheap hash of the frame.
+    term_hash(Frame, H),
+    (   % Hit: the value for this exact frame is stored.
+        ma_pcache_(Kind, H, V0)
+    ->  Value = V0
+    ;   % Miss: compute once, drop any stale entry of this kind, and store.
+        ( catch(call(Compute, Frame, V1), _, fail) -> true ; V1 = [] ),
+        retractall(ma_pcache_(Kind, _, _)),
+        assertz(ma_pcache_(Kind, H, V1)),
+        Value = V1
+    ).
+
+% ma_inventory(+Frame, -Inv): the co_see object inventory, cached per step.
+ma_inventory(Frame, Inv) :- ma_cached(inventory, Frame, cs_inventory, Inv).
+
+% ma_bars(+Frame, -Bars): the bar/meter objects, cached per step.
+ma_bars(Frame, Bars) :- ma_cached(bars, Frame, cs_bars, Bars).
+
+% ma_salient(+Frame, -Cells): the salient object centroids (largest object first),
+% cached per step. This is the expensive full-grid segmentation the click-target
+% expansion needs; caching it is the core of the performance fix.
+ma_salient(Frame, Cells) :- ma_cached(salient, Frame, cox_salient_cells, Cells).
+
+% ma_expand_actions(+Marked, +Frame, -Concrete): replace the click marker with this
+% frame's salient select(X,Y) targets (x is the column, y the row), passing every
+% other action through unchanged. Uses the cached salient cells, so the grid is
+% segmented once per step no matter how many times the action set is assembled.
+ma_expand_actions([], _Frame, []).
+% The click marker expands to the salient object-centroid clicks.
+ma_expand_actions([click | Rest], Frame, Expanded) :-
+    !,
+    % The cached salient cells for this frame.
+    ( catch(ma_salient(Frame, Cells), _, Cells = []) -> true ; Cells = [] ),
+    % Each salient cell(Row,Col) becomes a select(Col,Row) click.
+    findall(select(X, Y), member(cell(Y, X), Cells), Targets),
+    % Expand the tail, then splice the targets in where the marker was.
+    ma_expand_actions(Rest, Frame, RestExpanded),
+    append(Targets, RestExpanded, Expanded).
+% Any other action passes through unchanged.
+ma_expand_actions([Action | Rest], Frame, [Action | RestExpanded]) :-
+    ma_expand_actions(Rest, Frame, RestExpanded).
+
 % ma_perceive_update(+Game, +Action, +Frame0, +Frame1): after a step, refresh the
 % whole-grid perception — the avatar's cell, this action's learned displacement,
 % and the meter readings. Fully guarded: perception never breaks a step.
@@ -1897,7 +1969,7 @@ ma_perceive_update_(Game, Action, Frame0, Frame1) :-
 % model does not go blind exactly when the life-bar is nearly empty.
 ma_meters_update(Game, Frame) :-
     % The bar-like objects co_see finds (life-bars, timers, progress counters).
-    ( catch(cs_bars(Frame, Bars), _, Bars = []) -> true ; Bars = [] ),
+    ( catch(ma_bars(Frame, Bars), _, Bars = []) -> true ; Bars = [] ),
     % Fold each present bar into the model, keyed by its colour and orientation.
     findall(Key,
         ( member(bar(Colour, Orient, Len, _), Bars),
@@ -2393,7 +2465,7 @@ ma_choose(Action, explore(object(Basis))) :-
     ma_selected_game(Sel),
     ma_render(Sel, Frame),
     % See the whole grid as an inventory of roled objects.
-    catch(cs_inventory(Frame, Items), _, fail),
+    catch(ma_inventory(Frame, Items), _, fail),
     Items \== [],
     % Choose a concrete action that pursues a fresh object.
     ma_object_action(Sel, Frame, Items, Action, Basis),
@@ -2500,15 +2572,19 @@ ma_explore_actions(Game, _Frame, Marked) :-
     % Merge duplicates (many concrete selects collapse to one click marker).
     sort(Marked0, Marked).
 
-% ma_explore_concrete(+Game, +Frame, -Actions): the safe action set with the
-% click marker expanded to this frame's salient object-centroid targets, so the
-% state-graph frontier search and curiosity explore real click targets on a
-% click game instead of a single fixed centre click.
+% ma_explore_concrete(+Game, +Frame, -Actions): the safe action set with the click
+% marker expanded to this frame's salient object-centroid targets, ordered least-
+% tried-first with predicted-fatal moves deprioritised. Recomputed on each call
+% (it depends on the learnings, which a caller may change between calls), but its
+% one expensive part — segmenting the grid for the salient targets — is served from
+% the per-step perception cache, so the segmentation runs once per step, not once
+% per exploration rule. That is the performance fix.
 ma_explore_concrete(Game, Frame, Actions) :-
     % The safe action set with a click marker standing in for cell-select.
     ma_explore_actions(Game, Frame, Marked),
-    % Expand the click marker to the frame's salient select(X,Y) targets.
-    ( catch(cox_expand_actions(Marked, Frame, Concrete0), _, fail)
+    % Expand the click marker to the frame's salient select(X,Y) targets, using the
+    % cached salient cells so the grid is segmented once per step.
+    ( catch(ma_expand_actions(Marked, Frame, Concrete0), _, fail)
     ->  Concrete1a = Concrete0
     % If expansion is unavailable, fall back to the marker list unchanged.
     ;   Concrete1a = Marked
@@ -2770,7 +2846,7 @@ ma_cell_char(V, Ch) :-
 % dicts, each naming an object's colour, size, role, and position.
 ma_agent_inventory(Frame, Inventory) :-
     % Segment the whole grid, guarded.
-    ( catch(cs_inventory(Frame, Items), _, Items = []) -> true ; Items = [] ),
+    ( catch(ma_inventory(Frame, Items), _, Items = []) -> true ; Items = [] ),
     % One dict per object.
     findall(_{id: Id, colour: Colour, size: Size, role: Role, row: R, col: C},
         member(seen(Id, Colour, Size, cell(R, C), Role), Items),
@@ -2780,7 +2856,7 @@ ma_agent_inventory(Frame, Inventory) :-
 % with its position and, where the resource model has tracked it, its trend.
 ma_agent_meters(Game, Frame, Meters) :-
     % The bar-like objects, guarded.
-    ( catch(cs_bars(Frame, Bars), _, Bars = []) -> true ; Bars = [] ),
+    ( catch(ma_bars(Frame, Bars), _, Bars = []) -> true ; Bars = [] ),
     % One dict per meter, joining the tracked trend by colour and orientation.
     findall(_{colour: Colour, orientation: Orient, length: Len, row: R, col: C, trend: Trend},
         ( member(bar(Colour, Orient, Len, cell(R, C)), Bars),
