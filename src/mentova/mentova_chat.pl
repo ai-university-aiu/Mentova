@@ -123,16 +123,25 @@ mc_chat_main(DataDir, Port) :-
     % Then start the HTTP server on the requested port.
     mc_start_server(Port).
 
-% Define mc_dedup_stores: remove content-duplicate node-facts and relations, and
-% log how many were pruned (a glass-box startup line, like the ingest logs).
+% Define mc_dedup_stores: remove EXACT-duplicate node-facts and relations, and
+% surface the near-duplicate VARIANTS that were kept apart for attention. Only
+% exact duplicates are pruned; a near-duplicate (a subtle-difference nugget) is
+% never merged away — it is kept, linked, and reported so it can be examined.
 mc_dedup_stores :-
-    % Remove duplicate lattice node-facts, if the facility is present.
+    % Remove exact-duplicate lattice node-facts, if the facility is present.
     ( catch(node_facts:node_facts_dedup(NF), _, NF = 0) -> true ; NF = 0 ),
-    % Remove duplicate Causalontology relations, if the facility is present.
+    % Remove exact-duplicate Causalontology relations, if the facility is present.
     ( catch(co_core:co_cro_dedup(NC), _, NC = 0) -> true ; NC = 0 ),
-    % Report only when something was actually removed.
+    % Count the flagged near-duplicate variants kept apart in each store.
+    ( catch(node_facts:node_fact_variants(NFV), _, NFV = []) -> true ; NFV = [] ),
+    ( catch(co_core:co_cro_variants(NCV), _, NCV = []) -> true ; NCV = [] ),
+    length(NFV, NFVn), length(NCV, NCVn),
+    % Report only when something was pruned or flagged.
     ( NF + NC > 0
     -> format("dedup: pruned ~w duplicate node-facts and ~w duplicate relations~n", [NF, NC])
+    ;  true ),
+    ( NFVn + NCVn > 0
+    -> format("variants flagged (near-duplicates kept apart for attention): ~w node-facts, ~w relations~n", [NFVn, NCVn])
     ;  true ).
 
 % ------------------------------------------------------------------
