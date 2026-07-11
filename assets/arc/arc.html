@@ -373,7 +373,8 @@ async function actionClick(command) {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({token: token, cmd: 'act', command: command})})).json();
   if (j.ok === false) flash('⚠ ' + (j.error || 'Action rejected.'), 'error');
-  else flash('✓ ' + command + (j.outcome && j.outcome !== 'none' ? ' — ' + j.outcome : ' sent'), 'ok');
+  else if (j.outcome === 'none') flash('✓ ' + command + ' sent — but nothing changed (blocked by a wall, or no effect from here). Try another action.', 'info');
+  else flash('✓ ' + command + ' — ' + (j.outcome || 'sent'), 'ok');
   refreshFrame();
 }
 
