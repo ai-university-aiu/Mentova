@@ -177,7 +177,7 @@
 :- use_module('arc_agi_3_live',
     [al_connect/1, al_connected/0, al_disconnect/0, al_game/2, al_games/1,
      al_render/2, al_reset/2, al_act/3, al_actions/2, al_solved/1,
-     al_status/1, al_has_key/0]).
+     al_state/2, al_status/1, al_has_key/0]).
 % Load the chat database: mentor auth and the teach queue.
 :- use_module('chat_db', [mc_db_init/1, mc_verify_session/2, mc_propose_fact/4, mc_approve_fact/2]).
 % Load the HTTP server framework, exactly as the chat uses it.
