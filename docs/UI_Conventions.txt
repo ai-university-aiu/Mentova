@@ -11,7 +11,7 @@ The exact behaviour is:
 
 • While the mouse button is held down on a button (or a select control), the button's colours invert.
 
-• When the mouse button is released over that button, the colours revert to normal and the button's action fires (this is the normal browser click, which already happens on release).
+• When the mouse button is released over that button, the colours first revert to normal and THEN the button's action fires. This ordering is guaranteed by the browser event sequence mousedown then mouseup then click: the invert is removed on mouseup, and the action runs on the click event that follows, so the button is already back to its normal colours by the time the action fires.
 
 • If the mouse is dragged off the button while still held down, the button's colours revert and no action fires (again, the normal browser behaviour for a cancelled click).
 

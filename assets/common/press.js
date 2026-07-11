@@ -2,9 +2,16 @@
 
     STANDING RULE (see CLAUDE.md, UI BUTTON RULE): every button on every page the
     Mentova server serves must, while the mouse button is held down on it, show
-    an inverted colour scheme; when the mouse button is released the colour goes
-    back to normal and the action is taken (the normal click, which fires on
-    release). Dragging off a held button reverts its colour without firing.
+    an inverted colour scheme; when the mouse button is released the colour first
+    goes back to normal and THEN the action fires. Dragging off a held button
+    reverts its colour without firing.
+
+    Ordering is guaranteed by the browser's event sequence: mousedown -> mouseup
+    -> click. The invert is a class this script adds on mousedown and removes on
+    mouseup; the button's action runs on the click event, which is dispatched
+    only after mouseup completes. So the colour is already back to normal by the
+    time the action fires. The invert is driven solely by the class (not the
+    browser :active state), so it cannot linger into the click.
 
     Every served HTML page includes this file once, just before </body>:
         <script src="/assets/common/press.js"></script>
@@ -17,11 +24,13 @@
   var SEL = 'button, select, [role="button"], ' +
             'input[type="button"], input[type="submit"], input[type="reset"]';
 
-  // Inject the pressed-state style once: inverted colours while held.
-  var active = SEL.split(',').map(function (s) { return s.trim() + ':active'; }).join(', ');
+  // Inject the pressed-state style once: inverted colours while held. The invert
+  // is bound only to the .mc-pressed class (NOT the browser :active state), so
+  // it is fully under this script's control and is removed on release strictly
+  // before the click fires.
   var style = document.createElement('style');
   style.setAttribute('data-mc-press', '1');
-  style.textContent = active + ', .mc-pressed { filter: invert(1) !important; }';
+  style.textContent = '.mc-pressed { filter: invert(1) !important; }';
   (document.head || document.documentElement).appendChild(style);
 
   // The control (if any) that an event happened on.
