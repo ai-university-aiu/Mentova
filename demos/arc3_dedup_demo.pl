@@ -4,12 +4,18 @@
     the ARC-AGI-3 game knowledge a second time adds nothing (the assert-if-new
     doors reuse the existing facts), and the boot dedup sweep finds a clean store.
 
+    It also proves the nuance: a subtle-difference draft of a fact is NOT merged —
+    it is kept as a flagged variant with its delta surfaced for attention.
+
     Acceptance criteria (each prints PASS or FAIL):
       AC-DUP-001: the first ingest anchors node-facts and relations.
       AC-DUP-002: a SECOND ingest adds no new node-facts (idempotent).
       AC-DUP-003: a SECOND ingest adds no new arc3 relations (idempotent).
       AC-DUP-004: the dedup sweep finds nothing to remove on the clean store.
-      AC-DUP-005: the raw doors still make duplicates, and dedup removes them.
+      AC-DUP-005: the raw doors still make EXACT duplicates, and dedup removes them.
+      AC-DUP-006: two drafts differing only in citation are BOTH kept (not merged).
+      AC-DUP-007: the drafts are linked as variants with the delta surfaced.
+      AC-DUP-008: a near-duplicate relation is kept as a flagged variant too.
 
     Run:
         swipl -l demos/arc3_dedup_demo.pl -g run_dedup_demo -t halt
@@ -59,12 +65,41 @@ run_dedup_demo :-
         ( node_facts:node_facts_dedup(DF), co_core:co_cro_dedup(DC),
           DF =:= 0, DC =:= 0 )),
 
-    % AC-005: the RAW doors still make duplicates, and dedup removes them.
+    % AC-005: the RAW doors still make EXACT duplicates, and dedup removes them.
     report('AC-DUP-005',
         ( node_facts:anchor_node(dup_test, [a, b], [], _),
           node_facts:anchor_node(dup_test, [a, b], [], _),
           node_facts:node_facts_dedup(DF2), DF2 >= 1 )),
 
+    % --- the nuance: a subtle-difference draft is kept as a flagged variant ---
+
+    % AC-006: two drafts of the SAME node-fact that differ only in their citation
+    % are BOTH kept (the subtle difference is not merged away).
+    report('AC-DUP-006',
+        ( node_facts:anchor_node_unique(draft_fact, [ls20, ring, refills, timer],
+              [source(draft_a)], DIdA),
+          node_facts:anchor_node_unique(draft_fact, [ls20, ring, refills, timer],
+              [source(draft_b)], DIdB),
+          DIdA \== DIdB )),
+
+    % AC-007: the two drafts are linked as variants with the delta surfaced (which
+    % citation differs) — the nugget flagged for attention, not dropped or merged.
+    report('AC-DUP-007',
+        ( node_facts:node_fact_variant(_, _, Deltas),
+          member(added(source(draft_b)), Deltas) )),
+
+    % AC-008: a near-duplicate RELATION (same cause->effect, different provenance)
+    % is likewise kept as a flagged variant, not merged.
+    report('AC-DUP-008',
+        ( co_core:co_new_cro_unique([g(demo, step_on(ring))], [refill(timer)],
+              temporal(0,0,instant), sufficient, 0.8, [], prov(draft_a, cite_a, 0.8), RA),
+          co_core:co_new_cro_unique([g(demo, step_on(ring))], [refill(timer)],
+              temporal(0,0,instant), sufficient, 0.8, [], prov(draft_b, cite_b, 0.8), RB),
+          RA \== RB,
+          co_core:co_cro_variant(_, _, RDeltas), member(delta(prov, _, _), RDeltas) )),
+
     format("~nnode-facts: ~w (unchanged after re-ingest ~w)  arc3 relations: ~w -> ~w~n",
            [NF1, NF2, CR1, CR2]),
-    format("~n", []).
+    ( node_facts:node_fact_variants(FV) -> length(FV, FVn) ; FVn = 0 ),
+    ( co_core:co_cro_variants(RV) -> length(RV, RVn) ; RVn = 0 ),
+    format("flagged variants: ~w node-facts, ~w relations~n~n", [FVn, RVn]).
