@@ -129,6 +129,8 @@
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_plan/prolog')),
     % The Jacobian Space (J-Space) concept workspace the solo run holds learnings in.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
+    % The state-graph exploration pack (the winning ARC-AGI-3 technique).
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_graph/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -143,6 +145,9 @@
 :- use_module(library(co_learn), [co_learn_preventive/2, co_avoid/1, co_learn_causal/2]).
 % Load the harness for curiosity choice and frame deltas.
 :- use_module(library(co_arc3), [co_arc3_choose/3, co_arc3_delta/3, co_arc3_reset/0]).
+% Load the state-graph explorer: systematic, frontier-directed exploration.
+:- use_module(library(co_graph),
+    [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -399,6 +404,8 @@ ma_set_game(Id) :-
     assertz(ma_game_sel_(Id)),
     % A different game has its own action semantics: forget the discovered ones.
     retractall(ma_effect_(_, _)),
+    % A different game has its own state space: start its exploration graph fresh.
+    catch(cg_reset, _, true),
     % Start the newly selected environment fresh.
     ma_reset_env(Id, _),
     % Begin a fresh session recording for the new game.
@@ -1382,6 +1389,8 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     ma_act_env(Sel, Action, Frame1),
     % The observed effect is the frame delta.
     co_arc3_delta(Frame0, Frame1, Delta),
+    % Record the transition in the state-graph explorer (guarded).
+    ma_graph_note(Frame0, Action, Frame1),
     % Learn this action's observed effect, for its discovered semantic label.
     ma_record_effect(Action, Frame0, Frame1),
     % Learn from what followed, exactly as the harness does.
@@ -1449,6 +1458,36 @@ ma_choose(Action, toward(goal)) :-
     ma_greedy_step(P, D, Action),
     % Commit.
     !.
+% Before falling back to least-tried curiosity, use the state-graph explorer -
+% the winning ARC-AGI-3 technique: probe an untested, non-dead action in the
+% current state, or take the first step toward the nearest unexplored frontier.
+ma_choose(Action, graph_explore) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Its actions.
+    ma_actions_env(Sel, Actions),
+    % Keep only the moves that do not land on a human-declared hazard.
+    findall(A, ( member(A, Actions), \+ ma_lands_on_hazard(A) ), Safe),
+    % There must be something safe to try.
+    Safe \== [],
+    % The current frame and its graph signature.
+    ma_render(Sel, Frame),
+    % Signature, guarded.
+    catch(cg_signature(Frame, Sig), _, fail),
+    % The graph-informed choice, guarded; fails when nothing is left to explore.
+    catch(cg_choose(Sig, Safe, Action), _, fail),
+    % Commit.
+    !.
+
+% ma_graph_note(+Frame0, +Action, +Frame1): record a transition in the graph.
+ma_graph_note(Frame0, Action, Frame1) :-
+    % Guarded so a graph hiccup never breaks a step.
+    catch((
+        cg_signature(Frame0, S0),
+        cg_signature(Frame1, S1),
+        cg_note(S0, Action, S1)
+    ), _, true).
+
 % Otherwise curiosity decides: the least-tried safe action over the selected
 % environment's action set, so unguided play genuinely explores rather than
 % repeating one move.
@@ -1638,6 +1677,8 @@ ma_control("reset", _, _{ok: true, did: reset}) :-
     ma_reset_guidance,
     % Begin a fresh session recording.
     ma_session_reset,
+    % Forget the exploration graph too (a full reset).
+    catch(cg_reset, _, true),
     % Commit.
     !.
 % One step.
