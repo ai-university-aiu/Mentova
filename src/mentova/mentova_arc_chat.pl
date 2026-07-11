@@ -1574,6 +1574,10 @@ ma_reset_guidance :-
     retractall(ma_effect_(_, _, _)),
     % Drop every game's learned fatal moves.
     retractall(ma_death_(_, _, _)),
+    % Drop every game's volatile-cell tallies.
+    retractall(ma_cellchg_(_, _, _, _)),
+    % And the per-game step counts behind them.
+    retractall(ma_framecount_(_, _)),
     % Clear the harness counters.
     co_arc3_reset.
 
@@ -1702,6 +1706,9 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % Remember how big an effect this action had, and track no-progress, so the
     % player can recall its highest-impact action when it gets stuck.
     ma_note_impact(Sel, Action, Delta),
+    % Track which cells keep changing (a counter, timer, or animation), so the
+    % state signature can ignore them and recognise a returned-to state.
+    ma_note_volatility(Sel, Delta),
     % If this action just ended the game, remember never to take it from this
     % state again — durable, so a later attempt of the game does not re-die here.
     ma_note_death(Sel, Frame0, Action),
@@ -1712,6 +1719,81 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
 % state, so a later attempt avoids it there. StateKey is the frame's signature.
 :- dynamic ma_death_/3.
 
+% ---------------------------------------------------------------------------
+% VOLATILE-CELL MASKING — recognise a returned-to state despite a ticking HUD
+% ---------------------------------------------------------------------------
+%
+% A status band (score, timer, lives, moves) or an animation changes on nearly
+% every step regardless of the action. If those cells are part of the state
+% signature, the same situation looks new every tick and the state graph and the
+% fatal-move memory never carry forward. The winning ARC-AGI-3 agent masks the
+% status bars for exactly this reason. Mentova learns which cells are volatile -
+% those that change on a high fraction of steps - and ignores them in the state
+% key. On the small local practice grids and in short runs the threshold is never
+% reached, so behaviour there is unchanged.
+
+% ma_cellchg_/4: (Game, R, C, Count) — how often a cell has appeared in a delta.
+:- dynamic ma_cellchg_/4.
+% ma_framecount_/2: (Game, N) — how many steps of this game have been observed.
+:- dynamic ma_framecount_/2.
+
+% ma_note_volatility(+Game, +Delta): fold one step's changed cells into the tally.
+ma_note_volatility(Game, Delta) :-
+    % One more observed step for this game.
+    ( retract(ma_framecount_(Game, N0)) -> true ; N0 = 0 ),
+    % The new count.
+    N1 is N0 + 1,
+    % Store it.
+    assertz(ma_framecount_(Game, N1)),
+    % Bump the change-count of every cell that changed this step.
+    forall(member(changed(R, C, _, _), Delta), ma_bump_cellchg(Game, R, C)).
+
+% ma_bump_cellchg(+Game, +R, +C): one more observed change of a cell.
+ma_bump_cellchg(Game, R, C) :-
+    % Fetch and remove the current count.
+    ( retract(ma_cellchg_(Game, R, C, K)) -> true ; K = 0 ),
+    % The new count.
+    K1 is K + 1,
+    % Store it.
+    assertz(ma_cellchg_(Game, R, C, K1)).
+
+% ma_volatile(+Game, ?R, ?C): a cell that changes on most steps — a HUD or
+% animation cell to ignore. Requires enough observations to be confident.
+ma_volatile(Game, R, C) :-
+    % Enough steps observed to judge (a short run leaves everything unmasked).
+    ma_framecount_(Game, N), N >= 8,
+    % This cell's change count.
+    ma_cellchg_(Game, R, C, K),
+    % Changed on at least sixty percent of the observed steps.
+    K * 10 >= N * 6.
+
+% ma_mask_frame(+Game, +Frame, -Masked): replace this game's volatile cells with
+% a sentinel so they do not affect the state key. When nothing is volatile yet,
+% the frame passes through unchanged.
+ma_mask_frame(Game, Frame, Masked) :-
+    % Only pay the cost when there is something to mask.
+    (   ma_volatile(Game, _, _)
+    % Rewrite each row, blanking this game's volatile cells to the sentinel.
+    ->  findall(Row2,
+            ( nth0(R, Frame, Row),
+              findall(V2,
+                  ( nth0(C, Row, V),
+                    ( ma_volatile(Game, R, C) -> V2 = -1 ; V2 = V ) ),
+                  Row2) ),
+            Masked)
+    % Nothing volatile yet: use the frame as is.
+    ;   Masked = Frame
+    ).
+
+% ma_state_key(+Game, +Frame, -Key): the canonical signature of a frame with this
+% game's volatile cells masked out — the key the graph and the fatal-move memory
+% share, so a returned-to state is recognised despite a ticking counter.
+ma_state_key(Game, Frame, Key) :-
+    % Mask the volatile cells, then take the canonical signature.
+    ma_mask_frame(Game, Frame, Masked),
+    % The signature of the masked frame.
+    cg_signature(Masked, Key).
+
 % ma_note_death(+Game, +Frame0, +Action): if the game is now over, record that
 % this action, taken from Frame0, is fatal in this state. Nineteen of twenty-five
 % first-campaign attempts ended in a loss; remembering the fatal moves lets a
@@ -1721,7 +1803,7 @@ ma_note_death(Game, Frame0, Action) :-
     (   ma_env_over(Game)
     % Record the fatal (state, action) once, guarded.
     ->  catch((
-            cg_signature(Frame0, Key),
+            ma_state_key(Game, Frame0, Key),
             ( ma_death_(Game, Key, Action) -> true
             ; assertz(ma_death_(Game, Key, Action)) )
         ), _, true)
@@ -1732,8 +1814,9 @@ ma_note_death(Game, Frame0, Action) :-
 % ma_action_safe(+Game, +Frame, +Action): the action is not known to end the game
 % from this state.
 ma_action_safe(Game, Frame, Action) :-
-    % Safe unless a fatal (state, action) has been recorded for this frame.
-    \+ ( catch(cg_signature(Frame, Key), _, fail), ma_death_(Game, Key, Action) ).
+    % Safe unless a fatal (state, action) has been recorded for this frame's
+    % masked state key (so a ticking counter does not hide a known fatal state).
+    \+ ( catch(ma_state_key(Game, Frame, Key), _, fail), ma_death_(Game, Key, Action) ).
 
 % ma_note_impact(+Game, +Action, +Delta): record the largest effect this action
 % has had in this game, and count consecutive no-change steps. The single most
@@ -1925,8 +2008,10 @@ ma_graph_note(Frame0, Action, Frame1) :-
 % ma_game_sig(+Game, +Frame, -Sig): a state signature stamped with the game id,
 % so a state in one environment can never be confused with one in another.
 ma_game_sig(Game, Frame, Sig) :-
-    % The frame's own canonical signature.
-    cg_signature(Frame, Base),
+    % The frame's canonical signature with this game's volatile (HUD/animation)
+    % cells masked out, so a returned-to state is recognised despite a ticking
+    % counter.
+    ma_state_key(Game, Frame, Base),
     % Stamp it with the game id.
     atomic_list_concat([Game, '::', Base], Sig).
 

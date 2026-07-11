@@ -351,6 +351,38 @@ picture signature that ignores such changing regions is the standing prerequisit
 for both death-avoidance and the state graph to carry forward well. No leaderboard
 score is claimed; no scorecard was published.
 
+2026-07-11  METHODOLOGY. A reference on how humans learn and play unfamiliar games
+was researched and written, in papers/How_to_Play_Classic_Video_Games.txt. Its
+most useful finding is that the priors a player brings are not equal, and their
+importance has been measured (Dubey and colleagues, 2018): seeing the world as
+objects matters most by far, then that things which look alike behave alike, then
+what objects mean, then what can be interacted with, then physics, then the
+controls. The winning ARC-AGI-3 agent is those priors made mechanical - segment
+the picture into objects, mask the status bars, act on the most salient object
+first, and remember states in a graph. The report ends with a prioritised list of
+priors an unseen-game agent should follow: parse the frame into objects, find the
+avatar as the thing that moves with your input, move it toward the nearest salient
+non-hazard target, treat a counter going up as progress and a contact-death as a
+hazard, mask the status region before remembering a state, and act under an
+assumed move budget.
+
+2026-07-11  COURSE CORRECTION. The first prior from that reference was distilled
+into the machinery: mask the status region before remembering a state. Mentova now
+learns, per game, which cells change on most steps - a score, a timer, or an
+animation - and ignores them when it forms a state's signature, so a returned-to
+state is recognised despite a ticking counter. This is the standing prerequisite
+the death-avoidance measurement had flagged, and it is exactly what the winning
+agent does. It is safe: on the small practice grids and in short runs the
+threshold is never reached and nothing is masked, so the acceptance demonstrations
+are unchanged, and a new check confirms that two frames differing only in a
+frequently-changing cell are recognised as the same state while a frame differing
+in a stable cell is not. On a live movement game it found and masked twenty-five
+constantly-changing cells over forty-five steps; there the states are still
+genuinely distinct as the avatar moves, so it does not yet reduce the state count,
+but it removes the brittleness that would otherwise stop the graph and the fatal-
+move memory from carrying forward on any game with a visible counter. No
+leaderboard score is claimed; no scorecard was published.
+
 
 THE VISION
 

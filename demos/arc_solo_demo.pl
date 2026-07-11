@@ -22,6 +22,9 @@
                  action it found for the game, and that mechanic survives a restart.
       AC-GS-011: an action learned to end the game from a state is then avoided
                  there, keyed by game, and the fatal move survives a restart.
+      AC-GS-012: a cell that changes on most steps (a status counter or animation)
+                 is masked out of the state key, so a returned-to state is
+                 recognised despite the ticking cell.
 
     Run:
         swipl -l demos/arc_solo_demo.pl -g run_arc_solo_demo -t halt
@@ -100,6 +103,10 @@ run_arc_solo_demo :-
     % AC-011: an action learned to end the game from a state is avoided there,
     % keyed by game, and that fatal move survives a restart.
     report('AC-GS-011', demo_death_avoidance),
+
+    % AC-012: a cell that changes on most steps (a HUD counter or animation) is
+    % masked out of the state key, so a returned-to state is recognised despite it.
+    report('AC-GS-012', demo_volatile_masking),
 
     % Show the current learnings both sub-projects see.
     g3_learnings(Learn),
@@ -246,9 +253,9 @@ demo_death_avoidance :-
     ma_learn_attach('/tmp/mentova_death_demo/chat_db'),
     % A fresh navigation attempt.
     ma_set_game(vc33), ma_set_mode(solo), ma_reset_guidance,
-    % Its starting frame and that frame's state key.
+    % Its starting frame and that frame's (masked) state key.
     mentova_arc_chat:ma_reset_env(vc33, F),
-    mentova_arc_chat:cg_signature(F, Key),
+    mentova_arc_chat:ma_state_key(vc33, F, Key),
     % Record that moving up ends the game from this state.
     retractall(mentova_arc_chat:ma_death_(vc33, _, _)),
     assertz(mentova_arc_chat:ma_death_(vc33, Key, action(up))),
@@ -266,6 +273,32 @@ demo_death_avoidance :-
     mentova_arc_chat:ma_load_learnings,
     mentova_arc_chat:ma_death_(vc33, Key2, action(up)),
     Key2 == Key.
+
+% demo_volatile_masking: a cell that changes on most steps (a HUD counter or an
+% animation) is learned to be volatile and masked out of the state key, so two
+% frames that differ only in that cell are recognised as the same state, while a
+% frame that differs in a stable cell is still a different state. This is the
+% status-bar masking that lets the state graph and the fatal-move memory carry
+% forward despite a ticking counter.
+demo_volatile_masking :-
+    % Start from a clean guidance state (clears any volatility tally).
+    ma_set_game(vc33), ma_set_mode(solo), ma_reset_guidance,
+    % Simulate a run in which cell (0,0) changed on eight of ten observed steps.
+    assertz(mentova_arc_chat:ma_framecount_(vc33, 10)),
+    assertz(mentova_arc_chat:ma_cellchg_(vc33, 0, 0, 8)),
+    % Cell (0,0) is therefore judged volatile; a stable cell is not.
+    mentova_arc_chat:ma_volatile(vc33, 0, 0),
+    \+ mentova_arc_chat:ma_volatile(vc33, 1, 1),
+    % Two frames that differ ONLY in the volatile cell share one state key.
+    mentova_arc_chat:ma_state_key(vc33, [[5, 0], [0, 0]], K1),
+    mentova_arc_chat:ma_state_key(vc33, [[7, 0], [0, 0]], K2),
+    K1 == K2,
+    % A frame differing in a stable cell has a different key.
+    mentova_arc_chat:ma_state_key(vc33, [[5, 0], [0, 9]], K3),
+    K3 \== K1,
+    % Tidy up the simulated tally.
+    retractall(mentova_arc_chat:ma_framecount_(vc33, _)),
+    retractall(mentova_arc_chat:ma_cellchg_(vc33, _, _, _)).
 
 % demo_solo_signal: Solo wins ft09 unaided and a report is written.
 demo_solo_signal :-
