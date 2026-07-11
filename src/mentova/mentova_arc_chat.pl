@@ -153,6 +153,12 @@
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hplan/prolog')),
     % Verify-before-act: predict a move fatal from the learned model (WP-405).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_verify/prolog')),
+    % Hypothesis management with anti-drift commitment (WP-406).
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hypo/prolog')),
+    % The executable, verifiable, repairable world model (WP-407).
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_wm/prolog')),
+    % Object-relational reasoning (WP-408).
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_rel/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -203,6 +209,10 @@
 :- use_module(library(co_verify),
     [vb_reset/0, vb_note_fatal/3, vb_fatal_here/3, vb_broadly_fatal/2,
      vb_predict_fatal/3, vb_rank/4]).
+% Load the executable world model (WP-407): learn each action's effect from play,
+% surface the general laws, so the mind builds a repairable model of the game.
+:- use_module(library(co_wm),
+    [wm_reset/0, wm_observe/4, wm_predict/5, wm_law/3, wm_stats/2]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -1675,6 +1685,8 @@ ma_reset_guidance :-
     % memory, so they are cleared only on a full guidance reset).
     retractall(ma_deadly_colour_(_, _)),
     catch(vb_reset, _, true),
+    % Reset the executable world model (learned transitions) too.
+    catch(wm_reset, _, true),
     % Reset the per-game persisted-level high-water marks.
     retractall(ma_level_seen_(_, _)),
     % Clear the harness counters.
@@ -1825,6 +1837,9 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     ma_note_death(Sel, Frame0, Action),
     % Append this step to the session recording (for the won package).
     ma_session_record(Action, Delta, Outcome),
+    % Learn this transition into the executable world model: what effect the action
+    % had, bucketed, so the model can predict and its general laws can be read out.
+    ma_wm_learn(Sel, Action, Delta, Outcome),
     % If this action just COMPLETED A LEVEL (levels.completed increased), persist
     % the game's learnings to disk now — a level win survives a restart, not only
     % a full-game win.
@@ -1883,6 +1898,26 @@ ma_persist_level(Game, Level) :-
     % A glass-box line so the win is visible.
     length(Steps, StepCount),
     format("level win persisted: ~w reached level ~w (~w steps)~n", [Game, Level, StepCount]).
+
+% ma_wm_learn(+Game, +Action, +Delta, +Outcome): fold one observed transition into
+% the executable world model (co_wm), keyed by the game, with the effect bucketed
+% so the model generalises. Guarded: a modelling hiccup never breaks a step.
+ma_wm_learn(Game, Action, Delta, Outcome) :-
+    catch((
+        % Bucket the effect: hazard, no change, or a small/large change.
+        ( Outcome == hazard -> Eff = hazard
+        ; Delta == []       -> Eff = no_change
+        ; length(Delta, K), ( K < 10 -> Eff = small_change ; Eff = large_change )
+        ),
+        % Record it under the action, context-free for now (the general law).
+        wm_observe(Game, any_ctx, Action, Eff)
+    ), _, true).
+
+% ma_wm_laws(+Game, -Laws): the general laws the world model has learned for a game
+% (actions whose effect is consistent), as law(Action, Effect), for the glass box.
+ma_wm_laws(Game, Laws) :-
+    ( catch(findall(law(A, E), wm_law(Game, A, E), Laws0), _, Laws0 = []) -> true ; Laws0 = [] ),
+    Laws = Laws0.
 
 % ma_death_/3: (Game, StateKey, Action) — an action that ended the game from a
 % state, so a later attempt avoids it there. StateKey is the frame's signature.
@@ -2905,13 +2940,17 @@ ma_handle_agentview(_Request) :-
     ( ma_available_game(Sel, Title) -> true ; Title = Sel ),
     % The note that tells a machine mentor how to act and teach.
     ma_agent_howto(HowTo),
+    % The general laws the executable world model has learned for this game, as
+    % readable strings — the glass box on what the mind now believes the game does.
+    ( catch(ma_wm_laws(Sel, LawTerms), _, LawTerms = []) -> true ; LawTerms = [] ),
+    findall(LS, ( member(L, LawTerms), term_string(L, LS) ), WorldModelLaws),
     % Reply with the full machine-facing view.
     reply_json_dict(_{
         game: Sel, title: Title, mode: Mode, status: Status, levels: Levels,
         size: _{rows: Rows, cols: Cols},
         grid: Frame, grid_ascii: Ascii,
         inventory: Inventory, meters: Meters,
-        actions: Actions, plan: Plan,
+        actions: Actions, plan: Plan, world_model_laws: WorldModelLaws,
         last_action: LastText, last_command: LastCmd,
         how_to_mentor: HowTo}).
 
