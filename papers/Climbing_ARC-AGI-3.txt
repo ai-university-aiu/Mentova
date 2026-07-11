@@ -744,6 +744,30 @@ play across a restart, exactly as intended. Regression held throughout: the solo
 verify, plan, and cognition demonstrations all pass unchanged. No live game was
 played in this work; no leaderboard score is claimed.
 
+2026-07-11  COURSE CORRECTION. The object-relational targeting shipped a moment
+earlier chose the object NEAREST the avatar - and the nearest object is not always
+the one worth going to next. The heuristic was refined from bare distance to a
+RANKED UTILITY. Goal-relevance is now the criterion, in order: the object the
+committed hypothesis says to click, then an object of the inferred win colour, then a
+cell on a proven winning path in that path's own order (the changers-then-door
+ordering a won run teaches), then a collectible dot while a resource is draining.
+Only when nothing is goal-relevant does information value decide - an unvisited
+object of an informative role, for curiosity. Distance is demoted to what it should
+have been all along: a tiebreaker within a tier and the movement cost, never the
+criterion. Hazardous objects - a declared avoid-cell, or an object of a colour that
+has proved deadly - are excluded from candidacy outright, and the walk to the chosen
+object still routes around hazards. The choice stays glass-box: the target carries a
+reason naming why it won, and when a farther object is chosen the reason records that
+it was picked OVER A NEARER ONE and by how much, so the Why endpoint can explain why
+the nearest was passed over. Proven by a new six-part demonstration that a far
+win-coloured object beats a near plain one, that the committed click wins outright,
+that a winning-path cell is chosen over a nearer off-path object, that a hazardous
+object is never chosen even when goal-coloured and nearest, that with no goal signal
+the nearest legitimately wins, and that a refill dot is preferred while a resource
+drains. Regression held: solo, verify, plan, cognition, and shared-cognition
+demonstrations all pass. No live game was played in this work; no leaderboard score
+is claimed.
+
 
 THE VISION
 
