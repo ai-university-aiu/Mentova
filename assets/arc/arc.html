@@ -13,38 +13,38 @@
 <meta charset="utf-8">
 <title>Mentova — ARC-AGI-3 Chat</title>
 <style>
-  body { font-family: sans-serif; background: #1d1616; color: #f2e8d5; margin: 0; }
+  body { font-family: sans-serif; background: #2b0a0a; color: #fdf3c7; margin: 0; }
   #wrap { max-width: 760px; margin: 0 auto; padding: 12px; }
-  h1 { color: #c33; font-size: 1.2em; }
-  canvas { background: #000; image-rendering: pixelated; border: 2px solid #c33; }
-  #log { height: 180px; overflow-y: auto; background: #241c1c; padding: 8px;
-         border: 1px solid #553; margin-top: 10px; font-size: 0.9em; }
-  input, button, select { background: #2e2424; color: #f2e8d5; border: 1px solid #775;
+  h1 { color: #dc143c; font-size: 1.2em; }
+  canvas { background: #000; image-rendering: pixelated; border: 2px solid #dc143c; }
+  #log { height: 180px; overflow-y: auto; background: #3a1212; padding: 8px;
+         border: 1px solid #c9a227; margin-top: 10px; font-size: 0.9em; }
+  input, button, select { background: #3a1212; color: #fdf3c7; border: 1px solid #c9a227;
                   padding: 6px; }
   #hint { width: 52%; }
   .who { color: #d4a017; }
   .pad { display: inline-block; margin: 8px 0; }
-  .lite { background: #2e2424; border: 1px solid #775; color: #b9a; padding: 8px 10px;
+  .lite { background: #3a1212; border: 1px solid #c9a227; color: #f0e0a8; padding: 8px 10px;
           margin: 2px; border-radius: 4px; min-width: 64px; text-align: center;
           display: inline-block; transition: background 0.08s, color 0.08s;
           cursor: pointer; font-size: 1em; font-family: inherit; }
-  .lite.lit { background: #d4a017; color: #1d1616; border-color: #d4a017;
+  .lite.lit { background: #d4a017; color: #2b0a0a; border-color: #d4a017;
               box-shadow: 0 0 10px #d4a017; }
   .disabled { opacity: 0.35; pointer-events: none; }
-  #controls { margin-top: 14px; padding-top: 10px; border-top: 1px solid #553; }
+  #controls { margin-top: 14px; padding-top: 10px; border-top: 1px solid #c9a227; }
   #controls button { font-weight: bold; margin-right: 6px; }
   .modeon { outline: 2px solid #d4a017; }
-  #status { color: #9c9; }
+  #status { color: #f0d68a; }
   #outcome { color: #d4a017; margin-left: 8px; }
   a { color: #d4a017; }
-  #footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #553; }
+  #footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #c9a227; }
   /* The pressed/inverted button state is applied globally by /assets/common/press.js. */
   /* Visible feedback line for action results and rejections. */
-  #btn-conclude { background: #2a7d2a; color: #fff; border-color: #2a7d2a;
+  #btn-conclude { background: #d4af37; color: #2b0a0a; border-color: #d4af37;
                   font-weight: bold; padding: 8px 12px; margin: 6px 0; }
   #msg { min-height: 1.2em; margin: 8px 0; font-weight: bold; }
   .msg-error { color: #ff6b6b; }
-  .msg-ok { color: #66cc66; }
+  .msg-ok { color: #ffd83b; }
   .msg-info { color: #d4a017; }
 </style>
 </head>
@@ -60,7 +60,7 @@
   <div><button id="btn-conclude" type="button" hidden onclick="concludeGame()">Status: won! Conclude game.</button></div>
   <div id="msg"></div>
   <div class="pad" id="lights"></div>
-  <div style="font-size:0.78em;color:#9c9;margin-top:-4px">
+  <div style="font-size:0.78em;color:#f0d68a;margin-top:-4px">
     These are the ARC-AGI-3 canonical commands. <strong>In Guided Mode, click an
     ACTION button (with your Mentor Token entered below) to send that action</strong>
     — or use Step/Auto to let Mentova choose. A word in parentheses with &ldquo;?&rdquo;
@@ -80,7 +80,7 @@
       <button onclick="control('auto')">Auto</button>
       <button onclick="why()">Why?</button>
     </div>
-    <div style="font-size:0.78em;color:#9c9;margin-top:4px">
+    <div style="font-size:0.78em;color:#f0d68a;margin-top:4px">
       If you do not have your Mentor Token, get one at (<a href="/mentor">http://localhost:8088/mentor</a>).
     </div>
   </div>
@@ -97,7 +97,7 @@
     <div style="margin-top:10px" id="live-row">
       <button id="btn-connect" onclick="connectLive()">Connect Live Environments</button>
       <button id="btn-disconnect" onclick="disconnectLive()">Use Local Stand-ins</button>
-      <span id="live-status" style="color:#9c9"></span>
+      <span id="live-status" style="color:#f0d68a"></span>
     </div>
   </div>
 

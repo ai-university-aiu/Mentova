@@ -596,3 +596,47 @@ body {
   .mc-bubble      { max-width: 100%; }
   .mc-theme-btn   { font-size: 0.65rem; padding: 0.25rem 0.45rem; }
 }
+
+/* ==================================================================
+   WARM PALETTE OVERRIDE  (see docs/UI_Conventions.txt)
+   Crimson, red, gold, yellow, limoncello, light yellow, dark red.
+   Applied to every theme with !important so it is consistent whether
+   the viewer picks Light, Dark, or System.
+   ================================================================== */
+:root,
+:root[data-theme="light"],
+:root[data-theme="dark"] {
+  --bg-page:         #2b0a0a !important;  /* dark red */
+  --bg-header:       #7b1113 !important;  /* dark red */
+  --bg-history:      #3a1212 !important;
+  --bg-bubble-you:   #4a1717 !important;
+  --bg-bubble-them:  #3a1010 !important;
+  --bg-bubble-sys:   #45180f !important;
+  --bg-panel:        #3a1212 !important;
+  --bg-toolbar:      #4a1717 !important;
+  --bg-input:        #3d1313 !important;
+  --bg-btn-primary:  #b01030 !important;  /* crimson */
+  --bg-btn-sec:      #3a1212 !important;
+  --bg-just:         #3d2a0a !important;
+
+  --text-main:       #fdf3c7 !important;  /* light yellow */
+  --text-header:     #ffd83b !important;  /* yellow */
+  --text-notice:     #eef23a !important;  /* limoncello */
+  --text-speaker:    #e8c25a !important;  /* gold */
+  --text-sys:        #f0d68a !important;
+  --text-hint:       #d4b483 !important;
+  --text-btn-sec:    #ffd83b !important;  /* yellow/gold */
+  --text-just:       #f0e0a8 !important;
+
+  --border-main:     #c9a227 !important;  /* gold */
+  --border-panel:    #c9a227 !important;
+  --border-sys:      #d4af37 !important;  /* gold */
+  --border-just:     #d4af37 !important;
+  --border-btn-sec:  #d4af37 !important;
+  --border-input:    #c9a227 !important;
+
+  --focus-ring:      #ffd83b !important;  /* yellow */
+  --focus-word:      #eef23a !important;  /* limoncello */
+  --error:           #ff6b5a !important;  /* warm red */
+  --ok:              #ffd83b !important;  /* gold/yellow (was green) */
+}
