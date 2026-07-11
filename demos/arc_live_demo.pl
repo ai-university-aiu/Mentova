@@ -256,9 +256,10 @@ demo_agent_scorecard_tags :-
 demo_no_key_fallback :-
     % Clear any configured key and base.
     al_configure('https://three.arcprize.org', ''),
-    % Ensure no environment key leaks in for this check.
-    ( getenv('ARC_API_KEY', K), K \== '' -> true   % if a real key exists, skip the negative
-    ;   % No key: connect must fail with an error and leave the source local.
+    % Skip the negative check if a key is available from ANY source (env override
+    % or the data/arc_api_key.txt file) — the fallback would defeat "no key".
+    ( al_has_key -> true
+    ;   % No key anywhere: connect must fail with an error and leave source local.
         al_connect(error(_)),
         ma_source(local),
         findall(I, ma_available_game(I, _), Locals), length(Locals, 3)

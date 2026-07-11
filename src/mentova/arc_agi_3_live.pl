@@ -64,6 +64,8 @@
     al_scorecard_open_body/1,
     % al_close_card/0: close the open scorecard on the server.
     al_close_card/0,
+    % al_progress/3: the levels completed and win threshold for a live game.
+    al_progress/3,
     % al_games/1: the live game environments.
     al_games/1,
     % al_game/2: query one live game by id.
@@ -169,10 +171,46 @@ al_has_key :-
 % al_error_/1: the last connection error, if any.
 :- dynamic al_error_/1.
 
+% al_cookie_/2: (Name, Value) — one cookie in the session jar. The live API is
+% behind a load balancer and issues a GAMESESSION cookie plus AWS balancer
+% cookies at scorecard-open time; every later RESET and ACTION must carry them
+% back or the balancer routes the request to a node that has never seen the
+% scorecard, which the server reports as "game not found". The jar keeps them.
+:- dynamic al_cookie_/2.
+
 % Define al_connected: a live session is open.
 al_connected :-
     % The connected flag is set.
     al_connected_(true).
+
+% al_cookie_headers(-Opts): a Cookie request header carrying the whole jar, or an
+% empty option list when the jar is empty.
+al_cookie_headers([request_header('Cookie' = Str)]) :-
+    % Build the cookie string from the jar.
+    al_cookie_string(Str),
+    % Only when there is something to send.
+    Str \== '', !.
+% No cookies yet: send nothing.
+al_cookie_headers([]).
+
+% al_cookie_string(-Str): the jar as a single "name=value; name=value" string.
+al_cookie_string(Str) :-
+    % One name=value pair per stored cookie.
+    findall(NV, ( al_cookie_(N, V), format(atom(NV), '~w=~w', [N, V]) ), NVs),
+    % Join them the way a Cookie header expects.
+    atomic_list_concat(NVs, '; ', Str).
+
+% al_update_cookies(+ReplyHeaders): fold any Set-Cookie headers from a reply into
+% the jar, replacing a cookie by name and honouring the balancer's removal marker.
+al_update_cookies(ReplyHeaders) :-
+    % Each Set-Cookie arrives as set_cookie(set_cookie(Name, Value, Attrs)).
+    forall(member(set_cookie(set_cookie(Name, Value, _)), ReplyHeaders),
+        (   % The balancer clears a slot by sending the sentinel value.
+            Value == '_remove_'
+        ->  retractall(al_cookie_(Name, _))
+        % Otherwise store (replacing any earlier value for this name).
+        ;   retractall(al_cookie_(Name, _)), assertz(al_cookie_(Name, Value))
+        )).
 
 % Define al_disconnect: close the scorecard on the server, then forget the
 % live session and its games locally.
@@ -185,6 +223,10 @@ al_disconnect :-
     retractall(al_game_(_, _)),
     % Drop the sessions.
     retractall(al_session_(_, _, _, _, _)),
+    % Empty the cookie jar (the closed session's cookies are stale).
+    retractall(al_cookie_(_, _)),
+    % Drop the per-game progress records.
+    retractall(al_progress_(_, _, _)),
     % Clear the connected flag.
     retractall(al_connected_(_)).
 
@@ -226,31 +268,44 @@ al_headers([request_header('X-API-Key' = Key),
     % The key must be available.
     al_key(Key).
 
-% al_get(+Path, -Json): GET a path and read the JSON reply.
+% al_get(+Path, -Json): GET a path and read the JSON reply, carrying the session
+% cookie jar and folding any Set-Cookie headers from the reply back into it.
 al_get(Path, Json) :-
     % The base and full URL.
     al_base(Base), atom_concat(Base, Path, Url),
     % The auth headers.
     al_headers(H),
-    % Open, read, and always close.
+    % The current session cookies, if any.
+    al_cookie_headers(CH),
+    % Auth plus cookies.
+    append(H, CH, H1),
+    % Open, read, capture reply cookies, and always close.
     setup_call_cleanup(
-        http_open(Url, S, [timeout(12) | H]),
-        json_read_dict(S, Json),
+        http_open(Url, S, [timeout(12), headers(ReplyH) | H1]),
+        ( json_read_dict(S, Json), al_update_cookies(ReplyH) ),
         close(S)).
 
-% al_post(+Path, +BodyDict, -Json): POST a JSON body and read the JSON reply.
+% al_post(+Path, +BodyDict, -Json): POST a JSON body and read the JSON reply,
+% carrying the session cookie jar and folding reply Set-Cookie headers back in.
+% Carrying the cookies is what keeps the load balancer on the node that holds
+% the scorecard, so RESET and ACTION commands find their game.
 al_post(Path, BodyDict, Json) :-
     % The base and full URL.
     al_base(Base), atom_concat(Base, Path, Url),
     % The auth headers.
     al_headers(H),
+    % The current session cookies, if any.
+    al_cookie_headers(CH),
+    % Auth plus cookies.
+    append(H, CH, H1),
     % Encode the body.
     with_output_to(string(Body), json_write_dict(current_output, BodyDict)),
-    % Post, read, and always close.
+    % Post, read, capture reply cookies, and always close.
     setup_call_cleanup(
         http_open(Url, S,
-                  [ post(string('application/json', Body)), timeout(12) | H ]),
-        json_read_dict(S, Json),
+                  [ post(string('application/json', Body)), timeout(12),
+                    headers(ReplyH) | H1 ]),
+        ( json_read_dict(S, Json), al_update_cookies(ReplyH) ),
         close(S)).
 
 % ---------------------------------------------------------------------------
@@ -270,17 +325,19 @@ al_connect(Result) :-
 al_connect_(N) :-
     % A key is required.
     ( al_has_key -> true ; throw(no_api_key) ),
+    % Forget any previous session FIRST, so its stale card and cookies are gone
+    % before this run opens a fresh scorecard (whose cookies must then survive).
+    al_disconnect,
     % List the games.
     al_get('/api/games', Games),
     % Open a fresh scorecard for this run, tagged as an AI agent (not a human)
     % so its results are filed under the agent, never mixed with human play.
     al_scorecard_open_body(Body),
-    % Post the open request with the agent tags and identifying metadata.
+    % Post the open request with the agent tags and identifying metadata; its
+    % reply seeds the session cookie jar that every later command must carry.
     al_post('/api/scorecard/open', Body, Sc),
     % The scorecard id.
     ( get_dict(card_id, Sc, Card) -> true ; throw(no_card_id) ),
-    % Forget any previous session.
-    al_disconnect,
     % Record the scorecard.
     assertz(al_card_(Card)),
     % Record each game environment.
@@ -367,10 +424,27 @@ al_store(GameId, Resp, Frame) :-
     % The frame, flattened to a single two-dimensional grid.
     ( get_dict(frame, Resp, RawFrame) -> al_frame2d(RawFrame, Frame)
     ; Frame = [[0]] ),
+    % Record the levels completed and the win threshold, for honest measurement.
+    ( get_dict(levels_completed, Resp, LC) -> true ; LC = 0 ),
+    % The number of levels that constitutes a full win, if reported.
+    ( get_dict(win_levels, Resp, WL) -> true ; WL = 0 ),
+    % Replace the progress record.
+    retractall(al_progress_(GameId, _, _)),
+    % Store it.
+    assertz(al_progress_(GameId, LC, WL)),
     % Replace the session record.
     retractall(al_session_(GameId, _, _, _, _)),
     % Store the new one.
     assertz(al_session_(GameId, Guid, Frame, State, Actions)).
+
+% al_progress_/3: (GameId, LevelsCompleted, WinLevels) — how far a live game got.
+:- dynamic al_progress_/3.
+
+% Define al_progress: the levels completed and win threshold for a live game.
+al_progress(GameId, LevelsCompleted, WinLevels) :-
+    % Read the recorded progress, defaulting to none.
+    ( al_progress_(GameId, LevelsCompleted, WinLevels) -> true
+    ; LevelsCompleted = 0, WinLevels = 0 ).
 
 % Define al_render: the last frame of a live game, resetting if it is fresh.
 al_render(GameId, Frame) :-
@@ -440,6 +514,22 @@ al_name_to_action('ACTION4', action(4)).
 al_name_to_action('ACTION5', action(5)).
 % ACTION6 becomes a centre click, a reasonable default target.
 al_name_to_action('ACTION6', select(32, 32)).
+% The live API reports available_actions as bare integer codes (1..7), which
+% al_atomize renders as the atoms '1'..'7'; map those too so a click-only game
+% (which reports just [6]) is not silently mistaken for a five-move game.
+al_name_to_action('1', action(1)).
+% Code two.
+al_name_to_action('2', action(2)).
+% Code three.
+al_name_to_action('3', action(3)).
+% Code four.
+al_name_to_action('4', action(4)).
+% Code five.
+al_name_to_action('5', action(5)).
+% Code six is the cell-select click, expanded later to salient targets.
+al_name_to_action('6', select(32, 32)).
+% Code seven is undo.
+al_name_to_action('7', undo).
 % ACTION7 is the undo action, offered only by games that support it.
 al_name_to_action('ACTION7', undo).
 
