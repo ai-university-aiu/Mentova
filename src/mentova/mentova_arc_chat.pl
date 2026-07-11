@@ -160,7 +160,7 @@
 % Load the Causalontology exploration policy: rank actions by predicted change
 % (this game's causal graph) and turn ACTION6 into salient object-centroid clicks.
 :- use_module(library(co_explore),
-    [cox_choose/5, cox_choose_change/5]).
+    [cox_choose/5, cox_choose_change/5, cox_expand_actions/3]).
 % Load the state-graph explorer: systematic, frontier-directed exploration.
 :- use_module(library(co_graph),
     [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1,
@@ -456,6 +456,12 @@ ma_actions_env(Id, Actions) :-
 ma_solved_env(Id, Frame) :-
     % The live game's win test or the local one's.
     ( ma_is_live(Id) -> al_solved(Id) ; ma_local_solved(Id, Frame) ).
+% Uniform dispatch — the environment has ended in a loss (live GAME_OVER only).
+ma_env_over(Id) :-
+    % Only a live game can report a game-over; local stand-ins cannot lose.
+    ma_is_live(Id),
+    % Its last reported state is GAME_OVER.
+    catch(al_state(Id, 'GAME_OVER'), _, fail).
 
 % ma_is_live(+Id): the id names a live game and the live source is active.
 ma_is_live(Id) :-
@@ -866,15 +872,25 @@ ma_solo_tick(Telemetry) :-
     ma_selected_game(Sel),
     % Advance only while the run is live.
     (   ma_solo_(Step, running)
-    % Take one solo step from the shared learnings.
-    ->  ma_step(step(Action, _Basis, _)),
+    % Take one solo step from the shared learnings; a step can fail when the
+    % environment has ended (a live game reports GAME_OVER and then rejects
+    % further actions), so guard it and end the attempt rather than crashing.
+    ->  (   catch(ma_step(step(Action0, _Basis, _)), _, fail)
+        ->  Action = Action0, Stepped = true
+        ;   Action = none, Stepped = false
+        ),
         % One more step spent.
         Step1 is Step + 1,
         % The action budget.
         ma_solo_budget(Budget),
         % Decide the new status.
-        (   ma_solved_env(Sel, _)
+        (   Stepped == false
+        % The step could not be taken (most often the game is over).
+        ->  Status = done(ended(Step1))
+        ;   ma_solved_env(Sel, _)
         ->  Status = done(won(Step1))
+        ;   ma_env_over(Sel)
+        ->  Status = done(game_over(Step1))
         ;   Step1 >= Budget
         ->  Status = done(budget_exhausted(Step1))
         ;   Status = running
@@ -1801,14 +1817,13 @@ ma_choose(Action, explore(causal)) :-
 ma_choose(Action, graph_explore) :-
     % The selected environment.
     ma_selected_game(Sel),
-    % Its actions.
-    ma_actions_env(Sel, Actions),
-    % Keep only the moves that do not land on a human-declared hazard.
-    findall(A, ( member(A, Actions), \+ ma_lands_on_hazard(A) ), Safe),
+    % Its current frame.
+    ma_render(Sel, Frame),
+    % Its safe action set, with the cell-select expanded to this frame's salient
+    % click targets so the frontier search explores real clicks, not one cell.
+    ma_explore_concrete(Sel, Frame, Safe),
     % There must be something safe to try.
     Safe \== [],
-    % The current frame and its game-keyed graph signature.
-    ma_render(Sel, Frame),
     % Signature stamped with the selected game, guarded.
     catch(ma_game_sig(Sel, Frame, Sig), _, fail),
     % The graph-informed choice, guarded; fails when nothing is left to explore.
@@ -1870,18 +1885,32 @@ ma_explore_actions(Game, _Frame, Marked) :-
         Marked0),
     % Merge duplicates (many concrete selects collapse to one click marker).
     sort(Marked0, Marked).
+
+% ma_explore_concrete(+Game, +Frame, -Actions): the safe action set with the
+% click marker expanded to this frame's salient object-centroid targets, so the
+% state-graph frontier search and curiosity explore real click targets on a
+% click game instead of a single fixed centre click.
+ma_explore_concrete(Game, Frame, Actions) :-
+    % The safe action set with a click marker standing in for cell-select.
+    ma_explore_actions(Game, Frame, Marked),
+    % Expand the click marker to the frame's salient select(X,Y) targets.
+    ( catch(cox_expand_actions(Marked, Frame, Concrete), _, fail)
+    ->  Actions = Concrete
+    % If expansion is unavailable, fall back to the marker list unchanged.
+    ;   Actions = Marked
+    ).
 % Otherwise curiosity decides: the least-tried safe action over the selected
 % environment's action set, so unguided play genuinely explores rather than
 % repeating one move.
 ma_choose(Action, curiosity) :-
     % The selected environment's action set.
     ma_selected_game(Sel),
-    % Its actions.
-    ma_actions_env(Sel, Actions),
-    % Keep only moves that do not land on a human-declared hazard.
-    findall(A, ( member(A, Actions), \+ ma_lands_on_hazard(A) ), Safe0),
-    % If every action is hazardous, fall back to the full set rather than stall.
-    ( Safe0 == [] -> Safe = Actions ; Safe = Safe0 ),
+    % Its current frame.
+    ma_render(Sel, Frame),
+    % Its safe action set, cell-select expanded to salient click targets.
+    ma_explore_concrete(Sel, Frame, Safe0),
+    % If nothing is left (e.g. no objects to click), fall back to the raw set.
+    ( Safe0 == [] -> ma_actions_env(Sel, Safe) ; Safe = Safe0 ),
     % Score each safe action by how often it has been tried this attempt.
     findall(N-A, ( member(A, Safe), ma_try_count(A, N) ), Scored),
     % There must be something to choose.
@@ -2239,8 +2268,9 @@ ma_handle_live_connect(_Request) :-
     ->  ma_set_source(live),
         retractall(ma_game_sel_(_)),
         ma_default_game(First), assertz(ma_game_sel_(First)),
-        % Start the selected live game fresh.
-        catch(ma_reset_env(First, _), _, true),
+        % Start the selected live game fresh; tolerate both failure and error so
+        % one uncooperative game can never make the whole connect handler fail.
+        ignore(catch(ma_reset_env(First, _), _, fail)),
         % End any solo run from before.
         ma_solo_clear,
         % Report success with the status.

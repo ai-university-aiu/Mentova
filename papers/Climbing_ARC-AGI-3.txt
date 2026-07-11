@@ -228,6 +228,42 @@ co_explore policy moved to the forefront of the live player; a self-learning
 recall added; and the live scorecard given explicit artificial-agent tags and a
 clean open-play-close lifecycle. Each is covered by a passing acceptance check.
 
+2026-07-10  COURSE CORRECTION. First real contact with the live benchmark
+exposed several things the mock-tested client had never met, each fixed and
+verified. The largest: the live service sits behind a load balancer that issues
+a session cookie (GAMESESSION) and balancer cookies when a scorecard is opened,
+and every later command must carry them back; without them the balancer routes
+a command to a machine that has never seen the scorecard, which the server
+reports as "game not found". The client now keeps a cookie jar and carries it on
+every request, and only then does a game reset or an action succeed. Alongside
+it: the live list reports each game's available actions as bare numbers, which
+were being misread as a default five-move set, so a click-only game looked like
+a movement game - now the numbers map correctly, and a game that offers only the
+click is played with the click. A game that ends in a loss reports GAME_OVER and
+then refuses further actions; the solo loop now recognises GAME_OVER (and a
+refused action) as the end of an attempt instead of stalling. The click, on a
+click game, was being aimed at the fixed centre of the grid; the salient
+object-centroid targeting is now wired into the state-graph frontier so the
+click lands on a perceived object. And the connect handler was hardened so one
+uncooperative game can never make the whole live-connect fail.
+
+2026-07-10  LEARNING. First live measurement. With a real key installed, Mentova
+connected to the live ARC-AGI-3 service (twenty-five games listed), opened its
+own artificial-agent-tagged scorecard, and played the three public games solo
+and unaided under a small sixty-action first-look budget, then closed the
+scorecard WITHOUT publishing it. Honest result: zero levels completed on each of
+the three. On ls20 (a movement game, win at seven levels) it spent its full
+sixty actions and completed no level; on ft09 (win at six levels) the attempt
+ended after fifty-five actions; on vc33 (a click-only game, win at seven levels)
+the attempt ended after fifty-one actions. A date-and-time-stamped solo report
+was written for each. This is the true baseline, recorded plainly: the plumbing
+now works end to end against the live server, and the agent, at this budget and
+this level of exploration, wins nothing yet. The measurement also surfaced the
+next weakness to fix - on a click game the explorer repeats its single highest-
+salience target rather than spreading its clicks across the perceived objects and
+across states; diversifying the click frontier is the next improvement. No
+leaderboard score is claimed; no scorecard was published.
+
 
 THE VISION
 
