@@ -1,0 +1,74 @@
+# Draft 4 — agentic solve, taxonomy, failure modes, fixes
+principle(taxonomy, depth1_blind_solvable_single_action6)
+principle(taxonomy, action6_solvable_after_probing)
+principle(taxonomy, repeated_same_action_with_budget)
+principle(taxonomy, diverse_exploration_planning_required)
+principle(fix, force_action6_as_first_exploration_step)
+principle(fix, oversight_layer_recalls_prior_discovery)
+principle(failure, action_selection_token_bias_favors_directional)
+principle(failure, unexamined_success_reinforces_false_theory)
+principle(failure, local_effect_recognized_without_global_integration)
+ooda_principle(observe, mask_status_bar_isolate_game_features)
+ooda_principle(orient, generate_hypothesis_about_win_condition)
+ooda_principle(decide, commit_when_belief_entropy_below_threshold)
+ooda_principle(act, replan_on_prediction_mismatch)
+architecture(executable_world_model, python_code_state_transition_goal_planner)
+architecture(aera, entropy_gated_explore_plan_switching)
+architecture(self_learning_agent, oversight_layer_memory_recall)
+ai_weakness(action_selection_token_bias)
+ai_weakness(forgetting_prior_discoveries)
+ai_weakness(state_space_explosion)
+ai_weakness(hallucinated_rules_on_later_levels)
+game: ar25
+mechanic(reflect_pattern_across_axis)
+fill_mirrored_side => complete_reflection
+hazard: drift_into_wrong_mirror_rule
+game: bp35
+mechanic(bridge_or_fill_pit)
+press_action6_first => win_bp35
+llm_token_bias => chose_action1_missed_win
+hazard: action_selection_bottleneck
+game: cn04
+mechanic(connect_nodes_path)
+press_action6 => win_cn04
+optimize_wrong_target => track_nonexistent_progress_bar
+hazard: false_progress_bar_tracking
+game: ka59
+mechanic(shape_matching_and_pushing)
+false_teleport_theory => accidental_level1_solve
+hardened_wrong_theory => level2_failure
+hazard: unexamined_success_false_theory
+game: lp85
+mechanic(click_pull_linked_blocks)
+click_position_5_32 => changed_293_cells
+random_clicks_without_recall => budget_exhaustion
+hazard: forgetting_prior_discovery
+game: ls20
+mechanic(shape_key_matches_door)
+rotator_tile => cycles_key_shape
+key_shape_matches_door => door_opens
+energy_depleted => plan_energy_collection
+hazard: energy_constraint_costly_wandering
+game: r11l
+mechanic(mastermind_rule_deduction)
+first_probe => entropy_rises_0381_to_0834
+hazard: entropy_rise_after_probe
+game: sp80
+mechanic(place_platforms_redirect_flow)
+place_platform => redirect_stream
+repeated_action1_budget_30 => solve_sp80
+hazard: large_action_space_4100
+game: su15
+mechanic(push_block_slides_to_wall)
+push_block => slides_until_wall
+place_backstop => stop_other_block
+hazard: massive_forward_branching
+game: tr87
+mechanic(trace_hamiltonian_path)
+paint_all_tiles_once => complete_level
+mechanic_composition_level6 => catastrophic_ai_failure
+hazard: level6_3962_actions_blowup
+game: vc33
+mechanic(adjust_bar_volume_by_click)
+click_position => adjust_bar_height
+hazard: state_space_explosion_level4

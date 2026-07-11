@@ -1,0 +1,56 @@
+# Draft 6 — benchmark validity, shortcuts, real solver results
+principle(benchmark_validity, eighteen_games_bypassed_by_null_coordinate_zero_zero)
+principle(benchmark_validity, ten_games_solvable_by_single_blind_step)
+principle(benchmark_validity, eight_games_solvable_by_repeated_single_action_budget)
+principle(benchmark_validity, private_55_game_set_is_the_genuine_intelligence_test)
+principle(evaluation, untrained_humans_score_100_percent_first_contact)
+principle(architecture_pattern, executable_world_model_write_verify_refactor_plan)
+principle(architecture_pattern, vision_llm_reads_rule_then_cluster_solver_enumerates_actions)
+principle(solver, lights_out_solved_by_gf2_xor_linear_algebra)
+principle(cognition, explore_then_verify_then_plan_pipeline)
+prior(no_language)
+prior(multiple_mechanics_per_environment)
+ooda_principle(act, one_state_changing_action_per_turn)
+ooda_principle(decide, generalize_earlier_levels_to_harder_later_levels)
+architecture(action_space, action6_click_with_xy_coordinate)
+architecture(action_space, action7_undo_reverts_state)
+architecture(scoring, rhae_equals_human_over_agent_actions_squared)
+architecture(ai_toolbox, verifier_replays_observations_rejects_on_mismatch)
+architecture(ai_toolbox, refactorer_compress_toward_mdl)
+architecture(ai_toolbox, state_graph_of_frame_action_frame_triples)
+ai_weakness(brittle_initial_ontology_high_run_variance)
+ai_weakness(dependence_on_null_coordinate_library_exploit)
+game: ar25
+mechanic(reflect_figure_across_symmetry_axis)
+longest_straight_line => axis_candidate
+click_cell => cell_recolored
+prediction_mismatch => abort_and_remodel
+hazard: null_coordinate_zero_zero_bypass
+game: ft09
+mechanic(lights_out_click_flips_cell_and_neighbors)
+click_cell => toggles_cell_and_orthogonal_neighbors
+game: lp85
+mechanic(loop_and_pull_toggle_rotates_chain)
+toggle_link => rotates_all_connected_blocks
+game: ls20
+mechanic(maze_navigation_carrying_key)
+step_on_paint_tile => key_recolored
+key_shape_color_matches_door => door_opens
+game: g50t
+mechanic(ghost_chase_on_fixed_schedule_loop)
+ghost_loops_every_k_turns => predictable_avoidance
+game: tr87
+mechanic(trace_path_from_a_to_b)
+path_through_blocked_cell => path_blocked
+game: sb26
+mechanic(single_avatar_navigates_small_world)
+hazard: null_coordinate_zero_zero_bypass
+game: wa30
+mechanic(push_square_to_matching_bar)
+push_from_wrong_angle => square_into_wall
+game: vc33
+mechanic(hydraulic_shift_liquid_between_columns)
+move_two_extra_units => column_overshoots
+game: re86
+mechanic(move_reticle_and_fire_at_target)
+aim_one_tile_higher => hit

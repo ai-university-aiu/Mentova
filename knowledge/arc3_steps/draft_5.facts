@@ -1,0 +1,87 @@
+# Draft 5 — POMDP framing, executable world model, per-game mechanics
+principle(nature, interactive_procedural_turn_based_not_static)
+principle(nature, dynamically_infer_unwritten_rules)
+principle(modeling, treat_as_pomdp)
+principle(loop, observe_orient_decide_act_repeat)
+principle(ai_method, executable_world_model_python_code)
+principle(ai_method, verify_model_prediction_against_frame)
+principle(ai_method, replan_on_prediction_mismatch)
+principle(exploration, epistemic_exploration_act_to_see_what_changes)
+ooda_principle(orient, form_hypothesis_about_win_condition)
+ooda_principle(decide, choose_action_to_reduce_belief_entropy)
+architecture(pomdp_agent, belief_state_over_hidden_variables)
+architecture(planner, bfs_dfs_mcts_backward_search)
+ai_weakness(struggles_delayed_credit_assignment)
+ai_weakness(thrashing_repeating_local_actions)
+game: bp35
+mechanic(delayed_credit_assignment)
+object_a_touches_b => enables_move_c
+hazard: delayed_trap
+game: cd82
+mechanic(quantity_change_by_action)
+interact_item => split_duplicate_or_vanish
+game: dc22
+mechanic(objects_move_autonomously)
+environment_updates_independent_of_action => must_model_dynamics
+place_deflector => reroute_entity
+game: g50t
+mechanic(sokoban_style_pushing)
+push_object_to_container => deposit
+push_against_wall => trap_object
+hazard: object_wall_trap
+game: ka59
+mechanic(color_dominance_hierarchy)
+overlap_colors => reveal_dominance
+correct_stack_order => target_image
+game: lf52
+mechanic(sort_by_shared_trait)
+item_in_wrong_zone => flashes_red
+game: lp85
+mechanic(loop_control_pulls_blocks)
+click_loop_control => pull_align_blocks
+one_pull => affects_multiple_blocks
+game: ls20
+mechanic(transformer_alters_key_shape)
+transformer_object => change_key_shape
+key_matches_lock => door_opens
+step_counter_runs_out => failure
+hazard: step_counter_depletion
+game: r11l
+mechanic(mastermind_logic_puzzle)
+green_indicator => correct_element
+optimal_guess => maximize_information_gain
+game: re86
+mechanic(draw_continuous_trail)
+move_avatar => leave_color_trail
+paths_cannot_cross => routing_constraint
+game: s5i5
+mechanic(key_lock_sequential_dependency)
+key_a => unlocks_door_a
+door_a => guards_item_b
+game: sb26
+mechanic(avatar_grows_by_absorbing)
+absorb_pixel => avatar_grows
+larger_shape => risk_narrow_corridor_trap
+hazard: self_trap_narrow_corridor
+game: sc25
+mechanic(oscillating_moving_hazards)
+barrier_cycle => opens_and_closes
+move_at_open_turn => slip_past
+game: sk48
+mechanic(reveal_hidden_opaque_tiles)
+reveal_tile => expose_contents
+update_belief => rerun_safe_path
+game: sp80
+mechanic(purple_stream_falls)
+place_platform => stream_flows_left_or_right
+game: su15
+mechanic(push_block_slides_until_wall)
+push_block => slides_to_obstacle
+place_backstop => stop_next_block
+game: vc33
+mechanic(shift_liquid_between_columns)
+open_valve => transfer_volume
+liquid_level_change => raise_lower_block
+game: wa30
+mechanic(identify_erase_anomalies)
+erase_anomaly => restore_perfect_pattern

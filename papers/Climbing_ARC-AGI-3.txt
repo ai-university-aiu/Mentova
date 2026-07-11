@@ -674,6 +674,47 @@ endpoint ingests a draft straight into the live mind. Both are proven by their o
 tests. No live game was played in this work; no leaderboard score is claimed.
 
 
+2026-07-11  METHODOLOGY. Ten analysis documents on how ARC-AGI-3 is won were read
+in full, distilled, and turned into both knowledge and capability. Read together
+the ten drafts tell one story, not twenty-five: the agents that win segment the
+frame into objects, explore to learn the hidden rules before trying to win, keep an
+EXECUTABLE world model that they verify against what happened and repair on
+mismatch, generate several rule hypotheses and COMMIT to the best without drifting,
+reason over the relations between objects rather than over pixels, spend actions to
+gain information within a scored budget, and carry the simplest general laws from
+one level to the next. Their defining failure, named in every draft, is hypothesis
+drift - forming a rule and abandoning it at the first surprise. Three new PrologAI
+packs close the gaps this account exposed against Mentova's existing perception,
+exploration, state-graph, planning, and verify-before-act layers. co_hypo, the
+eighty-first layer, generates, ranks, and commits to a hypothesis with anti-drift
+hysteresis - sticky enough to hold a good model through a stray surprise, willing to
+yield when the model is truly contradicted, the direct cure for the drift failure.
+co_wm, the eighty-second layer, is the executable world model: it learns
+context-action-effect transitions, predicts the majority effect with a simplicity
+bias toward the context-free law that transfers, verifies a prediction against
+reality, repairs by folding the truth in, rolls a candidate action sequence forward
+to score a plan without acting, and reads out the general laws that are the
+model's compressed core. co_rel, the eighty-third layer, reasons over object
+relations - adjacency, containment, alignment, offset vectors, ordinal size,
+nearest neighbour - because nearly every mechanic is defined on relations, not
+pixels. Each pack is proven by its own tests. The drafts themselves were then
+ingested into the mind: distilled into per-draft candidate-fact files and carried
+through the nuanced fact doors, so six hundred and forty-four distilled facts joined
+the lattice, the Causalontology, and the Jacobian Space without a single true
+duplicate, the drafts' genuine disagreements about several games kept as flagged
+variants rather than merged away. Finally the account was abstracted UP into
+fourteen transfer principles - explore before you optimise, keep and repair an
+executable world model, commit without drifting, reason over relations, spend
+actions to learn, carry the simplest laws forward, show all of your work - each
+mapped DOWN to the Mentova pillar that realises it, and the guiding concept was
+planted in the Jacobian-Space workspace kaggle_northstar: How to Win the Kaggle
+ARC-AGI-3 competition by building Mentova and PrologAI. The public twenty-five are
+the proving ground - several admit shortcuts - and the private and future
+environments are the prize, so the principles, not the twenty-five puzzles, are what
+must transfer. No live game was played in this work; no leaderboard score is
+claimed.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box

@@ -1,0 +1,61 @@
+# Draft 3 — real interactive ARC-AGI-3 benchmark (grounded)
+principle(environment, grid_64x64_16_colours_turn_based)
+principle(environment, no_instructions_infer_goal_and_mechanics)
+principle(environment, standardized_action_set_action1_to_7)
+principle(scoring, action_efficiency_rhae_vs_human_baseline)
+principle(scoring, level_weighted_squared_with_5x_cutoff)
+principle(priors, core_knowledge_only_no_language)
+principle(priors, objectness_geometry_topology_physics_agentness)
+principle(reasoning, causal_attribution_of_delta_to_last_action)
+principle(action, use_undo_to_revert_suboptimal_moves)
+ooda_principle(observe, read_action_affordances_from_ui)
+ooda_principle(orient, build_and_refine_world_model)
+ooda_principle(decide, plan_via_internal_simulation)
+ooda_principle(act, revert_and_replan_on_mismatch)
+architecture(coding_agent_executable_world_model, python_simulator_of_dynamics)
+architecture(coding_agent_executable_world_model, verify_hypotheses_against_history)
+architecture(coding_agent_executable_world_model, refactor_toward_simpler_abstractions)
+ai_weakness(true_local_effect_false_world_model)
+ai_weakness(wrong_level_of_abstraction)
+ai_weakness(solved_level_didnt_learn_game)
+game: ar25
+mechanic(mirror_figure_cover_yellow)
+no_yellow_visible => level_transition
+swap_mode => toggle_figure_vs_line_control
+prior(topology_occlusion)
+game: bp35
+mechanic(upward_gravity_break_blocks_climb)
+break_block => adjacent_blocks_fall
+reach_purple_before_wave => level_complete
+hazard: rising_bottom_wave
+game: cd82
+mechanic(rotate_stamp_paint_target)
+rotate_stamp_and_move_inward => paint_overlap_onto_center
+hazard: overpainting_wrong_pixels
+game: cn04
+mechanic(align_red_connector_dots)
+overlap_red_dots => dots_turn_grey
+tap_figure_without_white_dot => rotate_90_clockwise
+all_red_dots_grey => level_complete
+game: dc22
+mechanic(navigate_character_to_target)
+player_matches_target_state => level_complete
+game: ft09
+mechanic(navigate_interact_reach_goal)
+reach_goal_cell => level_complete
+hazard: lethal_cells
+game: lp85
+mechanic(transform_avatar_match_lock)
+walk_over_tile => change_shape_colour_rotation
+match_lock_then_exit => level_complete
+game: ls20
+mechanic(transform_square_match_lock_exit)
+walk_over_tile => change_shape_color_rotation
+match_lock_reach_exit => level_complete
+game: g50t
+mechanic(navigate_interact_target)
+inefficient_plan => world_model_mismatch
+hazard: wasted_actions_from_mis_model
+game: tr87
+mechanic(long_horizon_control_interact)
+hazard: action_budget_blowup_on_hard_level
