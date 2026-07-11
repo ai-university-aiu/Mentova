@@ -24,3 +24,7 @@ ARC-AGI-3_Solo_Attempts/*.txt
 
 # ARC-AGI-3 live API key (secret; never commit). Set ARC_API_KEY env var, or drop the key here.
 data/arc_api_key.txt
+
+# ARC-AGI-3 won-session packages (runtime-generated; keep the folder, ignore the packages)
+ARC-AGI-3_Won_Sessions/*.txt
+!ARC-AGI-3_Won_Sessions/README.txt

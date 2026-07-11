@@ -40,6 +40,8 @@
   #footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #553; }
   /* The pressed/inverted button state is applied globally by /assets/common/press.js. */
   /* Visible feedback line for action results and rejections. */
+  #btn-conclude { background: #2a7d2a; color: #fff; border-color: #2a7d2a;
+                  font-weight: bold; padding: 8px 12px; margin: 6px 0; }
   #msg { min-height: 1.2em; margin: 8px 0; font-weight: bold; }
   .msg-error { color: #ff6b6b; }
   .msg-ok { color: #66cc66; }
@@ -55,6 +57,7 @@
   <div>
     <span id="status"> status: —</span><span id="outcome"></span>
   </div>
+  <div><button id="btn-conclude" type="button" hidden onclick="concludeGame()">Status: won! Conclude game.</button></div>
   <div id="msg"></div>
   <div class="pad" id="lights"></div>
   <div style="font-size:0.78em;color:#9c9;margin-top:-4px">
@@ -206,6 +209,11 @@ function markMode() {
   document.getElementById('btn-solo').classList.toggle('modeon', mode === 'solo');
 }
 
+// Show or hide the "Conclude game" button (appears when the game is won).
+function showConclude(on) {
+  document.getElementById('btn-conclude').hidden = !on;
+}
+
 // Poll the current frame (guided mode: view of the guided game).
 async function refreshFrame() {
   const j = await (await fetch('/api/arc/frame')).json();
@@ -214,6 +222,25 @@ async function refreshFrame() {
     ' status: ' + j.status + '  |  mode: ' + j.mode + '  |  game: ' + j.game;
   if (j.actions) renderActions(j.actions);
   if (j.last_command && j.last_command !== 'none') lightUp(j.last_command);
+  showConclude(j.status === 'won');
+}
+
+// Conclude a won game: send the winning session to Mentova to learn from, then
+// restart (same as Restart Game Environment).
+async function concludeGame() {
+  const j = await (await fetch('/api/arc/conclude', {method: 'POST',
+    headers: {'Content-Type': 'application/json'}, body: '{}'})).json();
+  if (j.ok) {
+    const L = j.learned || {};
+    flash('✓ Won session concluded — Mentova learned from it (' +
+      (L.win_path_actions || 0) + '-action winning path recorded, ' +
+      (L.relations_reinforced || 0) + ' relations reinforced) and the game restarted. ' +
+      'Future Solo runs of this game will replay the win.', 'ok');
+  } else {
+    flash('⚠ ' + (j.error || 'Could not conclude the game.'), 'error');
+  }
+  showConclude(false);
+  if (mode === 'solo') { tickSolo(); } else { refreshFrame(); }
 }
 
 // Advance the solo run one step and show it (solo mode: view-only telemetry).
@@ -228,6 +255,8 @@ async function tickSolo() {
   document.getElementById('outcome').textContent =
     t.done ? ('outcome: ' + t.outcome + (t.report && t.report !== 'none'
               ? '  |  report: ' + t.report : '')) : '';
+  // Offer to conclude when Solo has won.
+  showConclude(t.done && ('' + t.outcome).indexOf('won') === 0);
 }
 
 // The selected game id from the dropdown.

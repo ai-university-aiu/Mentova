@@ -207,6 +207,8 @@
 :- http_handler(root(api/arc/live/disconnect), ma_handle_live_disconnect, []).
 % The actions endpoint: the labelled action panel for the selected game.
 :- http_handler(root(api/arc/actions), ma_handle_actions, []).
+% The conclude endpoint: learn from a won game, then restart it.
+:- http_handler(root(api/arc/conclude), ma_handle_conclude, []).
 
 % Define ma_db_init: attach the chat database this application reuses.
 ma_db_init(Dir) :-
@@ -399,6 +401,8 @@ ma_set_game(Id) :-
     retractall(ma_effect_(_, _)),
     % Start the newly selected environment fresh.
     ma_reset_env(Id, _),
+    % Begin a fresh session recording for the new game.
+    ma_session_reset,
     % Selecting a game also ends any solo run in progress.
     ma_solo_clear.
 
@@ -810,6 +814,12 @@ ma_solo_start :-
     ma_reset_env(Sel, _),
     % Fresh curiosity counters for this attempt.
     retractall(ma_try_(_, _)),
+    % Fresh session recording.
+    ma_session_reset,
+    % If a winning path was learned for this game, replay it this run.
+    ( ma_win_path_(Sel, Seq)
+    -> retractall(ma_replay_(Sel, _)), assertz(ma_replay_(Sel, Seq))
+    ;  retractall(ma_replay_(Sel, _)) ),
     % Clear any previous run.
     ma_solo_clear,
     % Seed the J-Space workspace with the learnings this run will use.
@@ -929,6 +939,8 @@ ma_restart(Mode, Reply) :-
     ;   ma_reset_env(Sel, _),
         retractall(ma_last_(_, _)),
         retractall(ma_try_(_, _)),
+        % Fresh session recording for the new guided attempt.
+        ma_session_reset,
         Reply = _{ok: true, mode: guided, game: Sel, did: restart}
     ).
 
@@ -1052,6 +1064,152 @@ ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens)) :-
     -> true ; CroCount = 0 ),
     % The J-Lens reading of the solo workspace.
     ma_jlens(JLens).
+
+% ---------------------------------------------------------------------------
+% SESSION RECORDING and the WON PACKAGE — learning from a complete winning game
+% ---------------------------------------------------------------------------
+
+% ma_session_/4: (Step, Action, Delta, Outcome) — every step of the current session.
+:- dynamic ma_session_/4.
+% ma_session_n_/1: the session step counter.
+:- dynamic ma_session_n_/1.
+% ma_win_path_/2: (GameId, ActionSequence) — a recorded winning action sequence.
+:- dynamic ma_win_path_/2.
+% ma_replay_/2: (GameId, RemainingActions) — a winning path being replayed.
+:- dynamic ma_replay_/2.
+
+% ma_session_reset/0: begin a fresh session recording.
+ma_session_reset :-
+    % Clear the recorded steps.
+    retractall(ma_session_(_, _, _, _)),
+    % Clear the counter.
+    retractall(ma_session_n_(_)),
+    % Start at zero.
+    assertz(ma_session_n_(0)).
+
+% ma_session_record(+Action, +Delta, +Outcome): append one step to the session.
+ma_session_record(Action, Delta, Outcome) :-
+    % Fetch and remove the counter, defaulting to zero.
+    ( retract(ma_session_n_(N)) -> true ; N = 0 ),
+    % Next step number.
+    N1 is N + 1,
+    % Store the counter back.
+    assertz(ma_session_n_(N1)),
+    % Record the step.
+    assertz(ma_session_(N1, Action, Delta, Outcome)).
+
+% ma_wins_dir/1: the directory won-session packages are written to.
+ma_wins_dir('ARC-AGI-3_Won_Sessions').
+
+% Define ma_conclude_won: learn from the won session and write a package.
+% Fails if the selected game is not currently won or nothing was recorded.
+ma_conclude_won(won_package(Game, StepCount, ReportFile, Learned)) :-
+    % The selected game.
+    ma_selected_game(Game),
+    % Its current frame.
+    ( ma_render(Game, Frame) -> true ; ma_reset_env(Game, Frame) ),
+    % It must be won.
+    ma_solved_env(Game, Frame),
+    % The recorded session, in step order.
+    findall(st(N, A, D, O), ma_session_(N, A, D, O), Raw),
+    % Ordered.
+    msort(Raw, Steps),
+    % How many steps.
+    length(Steps, StepCount),
+    % There must be something to learn from.
+    StepCount > 0,
+    % Feed the learning stores.
+    ma_learn_from_win(Game, Steps, Learned),
+    % Write the package to disk.
+    ma_win_report(Game, Steps, Learned, ReportFile).
+
+% ma_learn_from_win(+Game, +Steps, -Learned): feed lattice, Causalontology, J-Space.
+ma_learn_from_win(Game, Steps, learned(WinPath, Reinforced, Levers)) :-
+    % The winning action sequence.
+    findall(A, member(st(_, A, _, _), Steps), WinPath),
+    % 1) Data lattice: record the winning path so future Solo runs replay it.
+    retractall(ma_win_path_(Game, _)),
+    assertz(ma_win_path_(Game, WinPath)),
+    % 2) Causalontology: reinforce every relation used on the winning path.
+    ma_reinforce_path(WinPath, Reinforced),
+    % 3) Guided levers the winning strategy implies (helps locksmith-style games).
+    ma_win_levers(Game, Steps, Levers),
+    % 4) Jacobian Space: hold the win and its levers.
+    ma_win_jspace(Game, WinPath, Levers).
+
+% ma_reinforce_path(+Actions, -Count): strengthen each action's relations.
+ma_reinforce_path(Actions, Count) :-
+    % Strengthen every non-preventive relation whose cause is a path action.
+    findall(Id,
+        ( member(A, Actions),
+          catch(co_cro(Id, [A], _, _, M, _, _, _), _, fail),
+          M \== preventive,
+          catch(co_strengthen(Id, 0.1), _, true) ),
+        Ids),
+    % Count the distinct relations reinforced.
+    sort(Ids, Unique), length(Unique, Count).
+
+% ma_win_levers(+Game, +Steps, -Levers): set guided levers from the win.
+ma_win_levers(_Game, Steps, Levers) :-
+    % The winning action sequence.
+    findall(A, member(st(_, A, _, _), Steps), Seq),
+    % If pickup was used and this game keeps locksmith state, prioritise pickup.
+    (   memberchk(action(pickup), Seq), ma_state_(_, _, _, _)
+    ->  ( ma_priority_(action(pickup)) -> true ; assertz(ma_priority_(action(pickup))) ),
+        Prio = [priority(action(pickup))]
+    ;   Prio = []
+    ),
+    % If a door opened (colour six appeared) during the win, set the traverse goal.
+    (   member(st(_, _, D, _), Steps), member(changed(R, C, _, 6), D)
+    ->  retractall(ma_goal_(_)), assertz(ma_goal_(traverse(pos(R, C)))),
+        Goal = [goal(traverse(pos(R, C)))]
+    ;   Goal = []
+    ),
+    % The levers that were set.
+    append(Prio, Goal, Levers).
+
+% ma_win_jspace(+Game, +WinPath, +Levers): hold the win in the Jacobian Space.
+ma_win_jspace(Game, WinPath, Levers) :-
+    % Guarded so a workspace hiccup never blocks concluding.
+    catch((
+        js_open(arc_won),
+        length(WinPath, L),
+        js_hold(arc_won, won(Game, steps(L)), 1.0, win),
+        forall(member(Lv, Levers), js_hold(arc_won, Lv, 0.9, win_lever))
+    ), _, true).
+
+% ma_win_report(+Game, +Steps, +Learned, -File): write the won package to disk.
+ma_win_report(Game, Steps, Learned, File) :-
+    % The wins directory, created if missing.
+    ma_wins_dir(Dir),
+    ( exists_directory(Dir) -> true ; make_directory_path(Dir) ),
+    % A date-and-time stamp.
+    get_time(Now),
+    format_time(atom(Stamp), '%Y-%m-%d_%H-%M-%S', Now),
+    % The filename and path.
+    atomic_list_concat(['ARC-AGI-3_Won_', Game, '_', Stamp, '.txt'], File),
+    atomic_list_concat([Dir, '/', File], Path),
+    % Compose and write the text.
+    ma_win_report_text(Game, Steps, Learned, Now, Text),
+    setup_call_cleanup(open(Path, write, S), write(S, Text), close(S)).
+
+% ma_win_report_text(+Game, +Steps, +Learned, +Now, -Text): the package body.
+ma_win_report_text(Game, Steps, learned(WinPath, Reinforced, Levers), Now, Text) :-
+    format_time(atom(When), '%Y-%m-%d %H:%M:%S', Now),
+    ( ma_available_game(Game, Title) -> true ; Title = Game ),
+    % The step-by-step lines.
+    findall(Line,
+        ( member(st(N, A, D, O), Steps),
+          term_to_atom(A, AT), term_to_atom(D, DT),
+          format(atom(Line), '  step ~w: ~w -> ~w (delta ~w)~n', [N, AT, O, DT]) ),
+        Lines),
+    atomic_list_concat(Lines, StepText),
+    length(WinPath, PathLen),
+    term_to_atom(WinPath, PathText),
+    term_to_atom(Levers, LeverText),
+    format(atom(Text),
+'ARC-AGI-3 Won Session Package~n~nWhen: ~w~nGame environment: ~w (~w)~nOutcome: WON~nSteps: ~w~n~nComplete winning game session, step by step:~n~w~nWhat Mentova learned from this win (fed into its learning stores):~n  Data lattice - winning action path recorded for replay (~w actions): ~w~n  Causalontology - relations reinforced on the winning path: ~w~n  Guided levers set from the win: ~w~n  Jacobian Space (J-Space) - the win and its levers are held in the arc_won workspace.~n~nEffect: a future Solo run of this game replays this winning path, and the reinforced relations and levers bias play toward the win. No benchmark score is claimed.~n',
+        [When, Game, Title, PathLen, StepText, PathLen, PathText, Reinforced, LeverText]).
 
 % ---------------------------------------------------------------------------
 % CLUE GROUNDING (Section 10.4) — the small, auditable mapping
@@ -1239,9 +1397,25 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % Store it.
     assertz(ma_last_(Action, Basis)),
     % Count the try so curiosity varies its choices across the attempt.
-    ma_bump_try(Action).
+    ma_bump_try(Action),
+    % Append this step to the session recording (for the won package).
+    ma_session_record(Action, Delta, Outcome).
 
 % ma_choose(-Action, -Basis): the guided choice.
+% First: if a recorded winning path is being replayed for this game, follow it.
+% This is how a concluded win teaches future Solo runs — they replay the win.
+ma_choose(Action, replay(win)) :-
+    % The selected game.
+    ma_selected_game(G),
+    % There is a next action to replay.
+    ma_replay_(G, [Action | Rest]),
+    % Commit to replaying it.
+    !,
+    % Advance the replay cursor.
+    retractall(ma_replay_(G, _)),
+    % Store the remaining path.
+    assertz(ma_replay_(G, Rest)).
+% Otherwise, the human suggested picking up and Mentova stands on the key.
 ma_choose(action(pickup), human_hint(pickup)) :-
     % The human suggested picking up, and Mentova stands on the key.
     ma_priority_(action(pickup)),
@@ -1454,6 +1628,8 @@ ma_control("reset", _, _{ok: true, did: reset}) :-
     ma_game_reset(_),
     % Clear guidance and learning counters.
     ma_reset_guidance,
+    % Begin a fresh session recording.
+    ma_session_reset,
     % Commit.
     !.
 % One step.
@@ -1603,6 +1779,22 @@ ma_handle_actions(_Request) :-
     ma_action_descriptors(Sel, Actions),
     % Reply.
     reply_json_dict(_{ok: true, game: Sel, actions: Actions}).
+
+% ma_handle_conclude(+Request): learn from a won game, write the package, restart.
+ma_handle_conclude(_Request) :-
+    (   ma_conclude_won(won_package(Game, StepCount, Report, learned(WinPath, Reinforced, Levers)))
+    % Concluded a win: report what was learned, then restart the environment.
+    ->  length(WinPath, PathLen),
+        length(Levers, LeverCount),
+        catch(ma_restart(_, _), _, true),
+        reply_json_dict(_{ok: true, game: Game, steps: StepCount, report: Report,
+                          learned: _{win_path_actions: PathLen,
+                                     relations_reinforced: Reinforced,
+                                     levers_set: LeverCount}})
+    % Nothing to conclude.
+    ;   reply_json_dict(_{ok: false,
+                          error: "The game is not won yet, or there is no session to conclude."})
+    ).
 
 % ma_handle_live_connect(+Request): attempt to connect the live environments.
 ma_handle_live_connect(_Request) :-
