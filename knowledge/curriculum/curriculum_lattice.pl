@@ -171,12 +171,12 @@ ci_maybe_open_nexus(Nexus) :-
 % Define ci_anchor_facts: anchor every understood fact, counting successes.
 ci_anchor_facts(Count) :-
     % Only anchor when the node_facts anchor predicate is available.
-    (   ci_defined(node_facts:anchor_node(_, _, _, _))
+    (   ci_defined(node_facts:anchor_node_unique(_, _, _, _))
     % Anchor each fact with its grade and citation as referents.
     ->  aggregate_all(count,
             ( ci_any_fact(Grade, Relation, Args, Citation),
               % Anchor one fact; a per-fact error is tolerated, not fatal.
-              catch(node_facts:anchor_node(Relation, Args,
+              catch(node_facts:anchor_node_unique(Relation, Args,
                                            [grade(Grade), Citation], _), _, fail) ),
             Count)
     % No lattice available: nothing anchored, but the facts stay queryable.
@@ -185,12 +185,12 @@ ci_anchor_facts(Count) :-
 % Define ci_assert_cros: assert each sound relation as a reified CRO.
 ci_assert_cros(Count) :-
     % Only assert when the co_core CRO constructor is available.
-    (   ci_defined(co_core:co_new_cro(_, _, _, _, _, _, _, _))
+    (   ci_defined(co_core:co_new_cro_unique(_, _, _, _, _, _, _, _))
     % Build one CRO per sound relation, carrying the citation as provenance.
     ->  aggregate_all(count,
             ( ci_any_cro(Grade, makes_sound, Subject, Sound, Citation),
               % A subject "makes" a sound: cause -> effect, high strength.
-              catch(co_core:co_new_cro([makes(Subject)], [sound(Sound)],
+              catch(co_core:co_new_cro_unique([makes(Subject)], [sound(Sound)],
                         temporal(0, 0, instant), sufficient, 0.9,
                         [grade(Grade)], prov(curriculum, Citation, 0.9), _),
                     _, fail) ),

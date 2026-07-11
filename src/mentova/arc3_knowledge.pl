@@ -111,12 +111,12 @@ a3_open_nexus :-
 % citation, counting the successes.
 a3_anchor_facts(Count) :-
     % Only when the node_facts anchor predicate is available.
-    (   a3_defined(node_facts:anchor_node(_, _, _, _))
+    (   a3_defined(node_facts:anchor_node_unique(_, _, _, _))
     % Anchor each enumerated fact; a per-fact error is tolerated.
     ->  aggregate_all(count,
             ( a3_any_fact(Game, Relation, Args),
               a3_cite(Game, Cite),
-              catch(node_facts:anchor_node(Relation, Args,
+              catch(node_facts:anchor_node_unique(Relation, Args,
                         [game(Game), Cite], _), _, fail) ),
             Count)
     % No lattice: the facts stay queryable directly.
@@ -147,12 +147,12 @@ a3_any_fact(Game, arc3_note, [Game, Key, Value]) :-
 % Define a3_assert_cros: assert each cause-effect relation as a game-keyed CRO.
 a3_assert_cros(Count) :-
     % Only when the co_core CRO constructor is available.
-    (   a3_defined(co_core:co_new_cro(_, _, _, _, _, _, _, _))
+    (   a3_defined(co_core:co_new_cro_unique(_, _, _, _, _, _, _, _))
     % Build one CRO per relation, cause keyed by game, cited to the guide.
     ->  aggregate_all(count,
             ( a3_rel(Game, Cause, Effect),
               a3_cite(Game, Cite),
-              catch(co_core:co_new_cro([g(Game, Cause)], [Effect],
+              catch(co_core:co_new_cro_unique([g(Game, Cause)], [Effect],
                         temporal(0, 0, instant), sufficient, 0.85,
                         [game(Game)], prov(arc3_guide, Cite, 0.85), _),
                     _, fail) ),
@@ -164,12 +164,12 @@ a3_assert_cros(Count) :-
 % Define a3_assert_hazards: record each hazard as a game-keyed preventive CRO.
 a3_assert_hazards(Count) :-
     % Only when the CRO constructor is available.
-    (   a3_defined(co_core:co_new_cro(_, _, _, _, _, _, _, _))
+    (   a3_defined(co_core:co_new_cro_unique(_, _, _, _, _, _, _, _))
     % One preventive relation per hazard: this game-state ends the run.
     ->  aggregate_all(count,
             ( a3_hazard(Game, Hazard),
               a3_cite(Game, Cite),
-              catch(co_core:co_new_cro([g(Game, Hazard)], [ends(run)],
+              catch(co_core:co_new_cro_unique([g(Game, Hazard)], [ends(run)],
                         temporal(0, 0, instant), preventive, 0.9,
                         [game(Game)], prov(arc3_guide, Cite, 0.9), _),
                     _, fail) ),
