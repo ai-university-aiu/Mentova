@@ -1,0 +1,103 @@
+DRAFT-DOCUMENT INGESTION
+How to feed plain-text draft documents (for example the ARC-AGI-3_Steps_Draft set)
+into Mentova's lattice, Causalontology, and Jacobian Space through the nuanced fact
+doors, and read the per-draft report.
+
+
+WHAT IT DOES
+
+A draft document is plain text. This pipeline turns each recognised line into a
+candidate fact, tags it with the draft's identity as its provenance, and carries it
+through the NUANCED fact doors: an exact repeat of a fact strengthens the existing
+one, and a near-duplicate (the same core fact that differs in any detail) is kept
+as a separate, linked variant with the difference recorded. It then returns a
+report saying, for that draft, how many facts were new, how many were strengthened,
+and how many were flagged as variants, with the delta for each variant and any
+lines it did not recognise. Nothing is silently merged or dropped.
+
+
+THE ACCEPTED SYNTAX
+
+The parser is lenient. Unrecognised lines are reported, never lost, so you can tune
+it to the drafts' real shape after the first run. It recognises:
+
+ • A comment - a line beginning with # or % - ignored.
+
+ • A game directive - "game: <id>" - sets the game context for the lines that
+   follow, so their facts are keyed to that game.
+
+ • A cause-effect relation - "<cause> => <effect>" - becomes a Causal Relation
+   Object. Example: "step_on(ring) => refill(timer)".
+
+ • A hazard - "hazard: <state>" - becomes a preventive relation from that state to
+   ends(run). Example: "hazard: timer_runs_out".
+
+ • A node-fact - a term "<relation>(<args>)". Example: "object(ring, collectible)".
+
+Under a game context, a relation's cause is wrapped as g(Game, Cause) and a node-
+fact's arguments are prefixed with the game, so a draft's facts never collide with
+another game's.
+
+
+THE ONE COMMAND
+
+To ingest a draft file and print its report, from the Mentova repository root:
+
+    swipl -g "draft_ingest:di_run('path/to/draft.txt', draft_01), halt" \
+          src/mentova/mentova_chat.pl
+
+The draft id (draft_01 above) is the provenance carried on every fact from that
+draft. Give each draft its own id, so that when two drafts assert the same core
+fact the difference in id makes them variants of each other rather than a merge.
+
+Facts ingested this way live in the process that ran the command. To ingest a draft
+into the LIVE mind of the running chat server instead, use the endpoint below.
+
+
+THE ENDPOINT (ingest into the live mind)
+
+    POST /api/arc/ingest_draft
+      { token, text: "<the draft's text>", draft_id: "draft_01" }
+
+Mentor-authenticated (get a token from /api/mentor/login), because it writes facts
+into Mentova's lattice and Causalontology. The reply is the per-draft report as
+JSON:
+
+    { ok: true,
+      draft: "draft_01",
+      total, new, strengthened, variant_flagged, errors,
+      unparsed: [ ...the lines not recognised... ],
+      variants: [ { fact: "...", delta: "..." }, ... ],
+      lines:   [ ...the full rendered report... ] }
+
+
+READING THE REPORT
+
+ • new           - a fact with no prior match; freshly recorded.
+
+ • strengthened  - an EXACT repeat of a fact already present (same in every part);
+                   its confidence was raised, and no duplicate was added.
+
+ • variant       - a near-duplicate: the same core fact that differs in a detail
+                   (a different citation, provenance, modality, or referent). Both
+                   are kept, linked as variants, and the delta names exactly what
+                   differs - the nugget flagged for attention.
+
+ • unparsed      - a line the parser did not recognise. Nothing was ingested for
+                   it; adjust the draft or extend the parser.
+
+
+A TYPICAL DRAFT
+
+    # ls20 steps, draft one
+    game: ls20
+    step_on(ring) => refill(timer)
+    step_on(changer) => cycle(key_property)
+    deliver(matching_key, target) => win(level)
+    object(ring, collectible)
+    object(changer, tool)
+    hazard: timer_runs_out
+
+Ingesting a second draft of the same steps under a different id will report each
+shared fact as a variant, with the delta showing the two drafts' provenance - so a
+subtle difference between the drafts becomes visible rather than being merged away.
