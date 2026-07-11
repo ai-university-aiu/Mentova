@@ -2431,36 +2431,99 @@ ma_object_action(Game, Frame, Items, select(TC, TR), click_object(pos(TR, TC))) 
     % A click reaches it in one action, so mark it visited now.
     ma_visit(Game, TR, TC).
 
-% ma_relation_nearest(+Game, +Items, -pos(TR,TC)): the perceived object nearest the
-% avatar that has not been visited this attempt, chosen by object-relational
-% reasoning (co_rel). The avatar and each perceived centroid are cast as co_rel
-% objects; cr_nearest gives the closest, and among the objects sorted by distance
-% the first UNVISITED one is the target. Fails when the avatar is unknown, there is
-% no object, or every object is already visited (so the caller falls through).
-ma_relation_nearest(Game, Items, pos(TR, TC)) :-
-    % The avatar's cell must be known (a movement or click reference point).
-    ma_avatar_(Game, AR, AC),
-    % Cast each perceived object as a co_rel obj(Id, cell, bbox, Size); the id is the
-    % cell so the target reads straight back out.
-    findall(obj(cell(R, C), cell(R, C), bbox(R, C, R, C), Size),
-        member(seen(_, _, Size, cell(R, C), _), Items),
-        Objs),
-    Objs \== [],
-    % The avatar as a co_rel object, so relations are computed against it.
-    Avatar = obj(avatar, cell(AR, AC), bbox(AR, AC, AR, AC), 1),
-    % Order the objects by their Manhattan distance from the avatar (co_rel's own
-    % nearest metric), nearest first, keeping only unvisited ones.
-    findall(D - pos(R, C),
-        ( member(obj(cell(R, C), _, _, _), Objs),
+% ma_relation_target(+Game, +Frame, +Items, -pos(TR,TC), -Reason): the object worth
+% going to next, chosen by a RANKED UTILITY over the perceived objects — not by bare
+% distance. Nearest is only the tiebreaker/cost term; the criterion is, in order:
+%   (1) GOAL-RELEVANCE — an object the committed hypothesis says to click, or whose
+%       colour matches the inferred win colour, or a cell on a proven winning path
+%       (the changers-then-door ordering learned from a won run), or a collectible
+%       dot while a resource is draining (the refill prior);
+%   (2) INFORMATION VALUE — an unvisited object of an informative role, for curiosity;
+%   (3) distance, only to break ties and as the movement cost.
+% Hazardous cells (declared avoid-cells, or an object of a proved-deadly colour) are
+% excluded from candidacy, and the walk to the target routes around hazards anyway.
+% Reason is a glass-box term naming WHY this object beat any nearer one, so the Why
+% endpoint can explain the choice. Fails (caller falls through) when no object
+% qualifies.
+ma_relation_target(Game, _Frame, Items, pos(TR, TC), Reason) :-
+    % The avatar cell as the distance origin, if known (else salience stands in).
+    ( ma_avatar_(Game, AR, AC) -> Origin = at(AR, AC) ; Origin = none ),
+    % The inferred win colour, if goal inference has one.
+    ( catch(cgi_hypothesise_goal(reach_colour(GoalCol)), _, fail) -> true ; GoalCol = none ),
+    % The committed productive action, if it is a click on a specific cell.
+    ( catch(hy_committed(Game, productive(select(CX, CY))), _, fail) -> true ; CX = none, CY = none ),
+    % The cells on a recorded winning path (its select targets), in order — the
+    % mechanic ordering a won run proved (e.g. change the changers, then the door).
+    ma_win_path_cells(Game, WinCells),
+    % Score every eligible object by its utility (lower key is better), keeping the
+    % avatar distance alongside so the nearest tiebreaks within a tier.
+    findall(key(Score, Dist) - t(pos(R, C), Reason0, Dist),
+        ( member(seen(_, Colour, Size, cell(R, C), Role), Items),
+          % Not the avatar's own cell, not already visited, not a hazard.
+          \+ ( Origin = at(R, C) ),
           \+ ma_visited_(Game, R, C),
-          D is abs(R - AR) + abs(C - AC),
-          D > 0 ),
+          \+ ma_target_hazard(Game, Colour, R, C),
+          % Its distance (or a salience-based cost when there is no avatar).
+          ma_target_dist(Origin, R, C, Size, Dist),
+          % Its utility score and the reason for it (only touchable/relevant objects
+          % score; a bare field that is neither goal-coloured nor on a path fails).
+          ma_target_score(Game, Colour, Role, R, C, GoalCol, CX-CY, WinCells, Score, Reason0) ),
         Scored),
     Scored \== [],
-    keysort(Scored, [_ - pos(TR, TC) | _]),
-    % Anchor the reasoning in co_rel: confirm the chosen object is indeed the/near
-    % the nearest by the pack's relation (best-effort; never blocks the choice).
-    ignore(catch(cr_nearest(Avatar, Objs, _, _), _, true)).
+    keysort(Scored, [key(_, BestDist) - t(pos(TR, TC), Reason0, BestDist) | _]),
+    % Was a NEARER object passed over for a higher-utility one? Report it, so the
+    % glass box can say why the nearest was not chosen.
+    findall(D, member(key(_, D) - _, Scored), Dists),
+    min_list(Dists, MinDist),
+    ( MinDist < BestDist
+    -> Reason = chosen(Reason0, over_nearer_by(BestDist, MinDist))
+    ;  Reason = chosen(Reason0, nearest) ).
+
+% ma_win_path_cells(+Game, -Cells): the select-target cells of a recorded winning
+% path for this game, in path order — the proven object ordering to reuse. Empty
+% when no winning path is stored.
+ma_win_path_cells(Game, Cells) :-
+    ( ma_win_path_(Game, Path), is_list(Path)
+    -> findall(cell(R, C), member(select(C, R), Path), Cells)
+    ;  Cells = [] ).
+
+% ma_target_hazard(+Game, +Colour, +R, +C): the object at (R,C) is one to avoid —
+% either its cell was declared a hazard, or its colour has proved deadly.
+ma_target_hazard(Game, Colour, R, C) :-
+    ( ma_avoid_cell_(Game, pos(R, C))
+    ; catch(ma_deadly_colour_(Game, Colour), _, fail) ).
+
+% ma_target_dist(+Origin, +R, +C, +Size, -Dist): the movement cost to the object —
+% the Manhattan distance from the avatar, or, when there is no avatar (a click game),
+% a salience cost so a larger object costs less. Used only as a tiebreaker.
+ma_target_dist(at(AR, AC), R, C, _Size, Dist) :- !,
+    Dist is abs(R - AR) + abs(C - AC).
+ma_target_dist(none, _R, _C, Size, Dist) :-
+    % Larger objects are more salient, so they cost less; clamp for a stable key.
+    Dist is max(0, 64 - min(Size, 64)).
+
+% ma_target_score(+Game, +Colour, +Role, +R, +C, +GoalCol, +CX-CY, +WinCells,
+%                 -Score, -Reason): the utility score (lower is better) and the
+% reason. Goal-relevance scores lowest (chosen first), then information value.
+% A won-path cell threads its path index into the score so earlier-in-the-win
+% objects lead. An object that is neither touchable nor relevant does not score.
+ma_target_score(_Game, _Colour, _Role, R, C, _GoalCol, CX-CY, _WinCells, 0, committed_click) :-
+    % (1a) The committed hypothesis says to click exactly this object (x=col, y=row).
+    integer(CX), integer(CY), CX =:= C, CY =:= R, !.
+ma_target_score(_Game, Colour, _Role, _R, _C, GoalCol, _, _WinCells, 100, goal_colour(Colour)) :-
+    % (1b) The object's colour is the inferred win colour.
+    GoalCol \== none, Colour == GoalCol, !.
+ma_target_score(_Game, _Colour, _Role, R, C, _GoalCol, _, WinCells, Score, won_path_order(Idx)) :-
+    % (1c) The object sits on a proven winning path; earlier cells lead.
+    nth0(Idx, WinCells, cell(R, C)), !,
+    Score is 200 + Idx.
+ma_target_score(Game, _Colour, dot, _R, _C, _GoalCol, _, _WinCells, 300, resource_refill_dot) :-
+    % (1d) A collectible dot while a resource is draining (the refill prior).
+    ma_resource_low(Game), !.
+ma_target_score(_Game, _Colour, Role, _R, _C, _GoalCol, _, _WinCells, Score, curiosity(Role)) :-
+    % (2) Information value: an unvisited object of a touchable role, for curiosity —
+    % a dot or a piece leads a broad field.
+    ( memberchk(Role, [dot, piece]) -> Score = 1000 ; Role == field -> Score = 1100 ; fail ).
 
 % ma_target_action(+Game, +Frame, +TR, +TC, -Action): resolve a target cell into a
 % concrete action — a control-map step toward it on a movement game, or a cell-select
@@ -2770,20 +2833,21 @@ ma_choose(Action, hypothesis(committed)) :-
     \+ ma_last_(Action, _),
     % Commit.
     !.
-% Relation-aware targeting (co_rel): reason over the RELATIONS between the objects
-% co_see perceives — steer toward, or click, the object NEAREST the avatar that has
-% not been visited this attempt, rather than groping pixel by pixel. Sits above the
-% generic object curiosity so a relation-guided target leads when the avatar and
-% several objects are on the board; falls through to it otherwise.
-ma_choose(Action, relation(nearest_object)) :-
+% Relation-aware targeting (co_rel): reason over the objects co_see perceives and go
+% to the one worth going to NEXT — chosen by a ranked utility (goal-relevance, then
+% information value, with distance only a tiebreaker), NOT by bare nearness. The
+% chosen object may be farther than another; the Reason records why it won, for the
+% glass-box Why. Sits above the generic object curiosity; falls through to it when no
+% object qualifies.
+ma_choose(Action, relation(Reason)) :-
     % The selected environment and its current frame.
     ma_selected_game(Sel),
     ma_render(Sel, Frame),
     % See the whole grid as an inventory of roled objects.
     catch(ma_inventory(Frame, Items), _, fail),
     Items \== [],
-    % The unvisited object nearest the avatar, by object-relational reasoning.
-    catch(ma_relation_nearest(Sel, Items, pos(TR, TC)), _, fail),
+    % The best object to go to next, by ranked utility, with the reason it won.
+    catch(ma_relation_target(Sel, Frame, Items, pos(TR, TC), Reason), _, fail),
     % Turn that target into a concrete move (movement game) or click (click game).
     ma_target_action(Sel, Frame, TR, TC, Action),
     % Never a move known to end the game from this state.
