@@ -2879,6 +2879,7 @@ ma_agent_status(Game, Frame, Status, Levels) :-
 % ma_agent_howto(-HowTo): the short note telling a machine mentor how to act and
 % teach through the same authenticated channel a human mentor uses.
 ma_agent_howto(_{
+    name: "The Mentor Bridge — a glass-box bridge between minds. See the game here, then act and teach through the mentor endpoints.",
     read: "GET /api/arc/agentview — this view (grid, inventory, meters, actions, plan).",
     sign_in: "POST /api/mentor/login {username, password} → {token}. New mentor: POST /api/mentor/signup {username, password}.",
     act: "POST /api/arc/control {token, cmd:\"act\", command:\"ACTION1\"} — perform a control (use a 'command' from actions[].command).",

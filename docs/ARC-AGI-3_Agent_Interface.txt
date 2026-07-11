@@ -1,7 +1,8 @@
-ARC-AGI-3 AGENT INTERFACE
+THE MENTOR BRIDGE — ARC-AGI-3 AGENT INTERFACE
 A machine-facing twin of the ARC-AGI-3 Chat page, so a Claude session can see the
 grid, operate the controls, and teach Mentova through the same channel a human
-mentor uses.
+mentor uses. Its name is the Mentor Bridge: a glass-box bridge between minds. A
+user-facing description lives in the assets folder as Mentor_Bridge.txt.
 
 
 WHY THIS EXISTS
