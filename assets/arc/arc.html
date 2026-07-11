@@ -50,7 +50,7 @@
 </head>
 <body>
 <div id="wrap">
-  <h1>Mentova — ARC-AGI-3 Chat</h1>
+  <h1>Mentova — ARC-AGI-3 Chat — <span id="game-title" style="color:#d4a017; font-size:0.82em; font-weight:normal"></span></h1>
 
   <!-- Upper half: the game view and the light-up action panel. -->
   <canvas id="game" width="250" height="250"></canvas>
@@ -220,6 +220,7 @@ async function refreshFrame() {
   draw(j.frame);
   document.getElementById('status').textContent =
     ' status: ' + j.status + '  |  mode: ' + j.mode + '  |  game: ' + j.game;
+  if (j.title) document.getElementById('game-title').textContent = j.title;
   if (j.actions) renderActions(j.actions);
   if (j.last_command && j.last_command !== 'none') lightUp(j.last_command);
   showConclude(j.status === 'won');
@@ -248,6 +249,7 @@ async function tickSolo() {
   const t = await (await fetch('/api/arc/solo/tick', {method: 'POST',
     headers: {'Content-Type': 'application/json'}, body: '{}'})).json();
   draw(t.frame);
+  if (t.title) document.getElementById('game-title').textContent = t.title;
   if (t.actions) renderActions(t.actions);
   if (t.command && t.command !== 'none') lightUp(t.command);
   document.getElementById('status').textContent =
