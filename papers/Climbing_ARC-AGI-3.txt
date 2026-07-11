@@ -1,0 +1,246 @@
+CLIMBING THE MOUNTAIN: MENTOVA'S ARC-AGI-3 ASCENT
+
+A Scientific Chronicle of the Method, the Wins, the Learnings,
+and the Course Corrections on the Path to the Summit
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+ARC-AGI-3 STATUS: ASCENT UNDERWAY. Readiness established; no leaderboard score is claimed.
+Last updated: 2026-07-10.
+
+This paper is a living chronicle. It is appended to, never rewritten, as Mentova
+climbs ARC-AGI-3. Every piece of ARC-AGI-3 work adds a dated entry below,
+recording - especially - the wins, and also the learnings, the methodology, and
+the course corrections. A leaderboard score is recorded here only when it has
+been really measured on the live ARC-AGI-3 leaderboard. The ARC-AGI-3 Perfect
+Score report will be written only after such measured wins, never ahead of the
+evidence.
+
+
+CRITICAL DISCLOSURE: HONESTY BEFORE SCORE
+
+Unlike ARC-AGI-1 and ARC-AGI-2, which were solved to a perfect 100.00% and whose
+Perfect Score reports rest on measured results, ARC-AGI-3 has not yet been played
+on its live leaderboard by Mentova. What follows is the method built to climb it
+and the reasoning behind that method. No score is asserted. Where a number from
+the wider world is quoted, it is attributed. Where Mentova's own capability is
+described, it is described as a capability, not as a result.
+
+The human contributor (D. R. Dison) authored the scientific vision, the research
+direction, and the authorship of this work.
+
+
+ABSTRACT
+
+ARC-AGI-3 stands for Abstraction and Reasoning Corpus for Artificial General
+Intelligence, version three. It is not the static puzzle benchmark of versions
+one and two. It is an interactive-reasoning benchmark: the agent is dropped into
+an unfamiliar turn-based game with no instructions, no rules, and no stated goal,
+and it must explore, discover what its actions do, infer the win condition, and
+plan its way to a win - efficiently.
+
+Two facts frame the whole climb. First, humans solve every ARC-AGI-3 environment
+- one hundred percent - in about seven to eight minutes each. Second, the best
+large language models score below one percent, because the benchmark rewards
+efficiency and squares the penalty for waste. The agents that do best are not
+larger language models; they are systematic explorers - one that built a graph of
+the states it had seen and always moved toward the nearest unexplored place, and
+one that learned to predict which actions change the world.
+
+Mentova's method is a glass-box synthesis built on Causalontology - the
+process-first ontology in which reified cause-and-effect relations govern the
+verbs. Every action Mentova considers, every state it remembers, every mechanic
+it discovers, and every win it replays is an inspectable symbolic object, keyed
+to the game it came from and written to disk so it outlives a restart. This is
+the chronicle of that method taking shape, and - when they come - of the wins.
+
+
+METHODOLOGY TO DATE
+
+The method rests on a small number of deliberate commitments.
+
+Glass-box symbolic cognition, not a trained network. Every decision Mentova makes
+in an ARC-AGI-3 environment is a symbolic inference that can be read and checked.
+There is no opaque policy network. The exploration policy, the state graph, the
+causal relations, and the recalled mechanics are all inspectable Prolog terms.
+
+Two modes over one shared substrate. A Guided mode lets a human teach Mentova
+through a chat page - each clue grounded into a Causalontology assertion and
+injected into the live game - and a Solo mode plays unaided. Both read and write
+exactly the same learning store, so whatever the human teaches in Guided play is
+available to Solo play, and whatever Solo discovers is available to the next
+Guided session.
+
+Causalontology as the spine. The learning substrate is the Causalontology suite:
+reified Causal Relation Objects with causes, effects, temporal windows, and
+modalities; a noun backbone; the realizable hinge; and a learner that induces a
+relation by intervention and confirms it by repetition. Actions predicted to
+change the world are preferred; actions learned to be harmful are avoided.
+
+The exploration policy at the forefront. The co_explore pack is the leading
+decision-maker in unaided play. It ranks the environment's available actions by
+whether this game's causal graph predicts the action will change the world, then
+by how little the action has been tried, and it turns a whole-grid cell-select
+(pointing or click) action into a handful of salient object-centroid candidates,
+largest object first, rather than every cell of the grid. It is a general-purpose
+policy for any unknown interactive environment; ARC-AGI-3 is its first mountain.
+
+The state graph behind it. The co_graph pack keeps a directed graph of the exact
+states seen and the actions tried from each, marks an action that changed nothing
+as dead so it is never wasted again, and, when the current state offers nothing
+new, walks the shortest path to the nearest state that still has something
+untested. This is the behaviour of the strongest public explorer, rebuilt as
+glass-box PrologAI.
+
+Every learning keyed by Game Environment Identification. ARC-AGI-3 environments
+differ from one another the way the tasks of ARC-AGI-1 and ARC-AGI-2 differed; a
+rule that wins one is usually wrong in the next. So every learning - the goal,
+the priorities, the hazards, the labels, the causal relations, the state graph,
+the winning path, and the discovered mechanics - is keyed by the game it came
+from, and one environment's learnings never bleed into another's.
+
+Durable across restarts. When a win is concluded, that game's whole learning set
+is written to disk under its own game id and reloaded on the next start, so a win
+survives a restart and a later run begins from everything an earlier one learned.
+The benchmark is explicitly designed to reward carrying learning forward across
+the levels of a game, and neither the benchmark's authors nor the top agent
+authors report any public agent that does this well. It is Mentova's clearest
+opportunity, and its substrate is built for exactly it.
+
+Self-learning recall. For each game Mentova remembers the single action that
+produced the largest change it has seen, and when unaided play makes no progress
+for several steps it recalls that highest-impact action rather than drifting -
+the behaviour that, in the wider world, produced far higher scores at the same
+action budget purely by not rediscovering a known mechanic. The record is
+per-game and durable.
+
+Live connection, played as an agent. Mentova speaks the exact live ARC-AGI-3
+protocol. On connecting it opens its own scorecard tagged as an artificial
+agent, with metadata declaring it is not a human, plays every game and level
+under that one scorecard, and closes it on disconnect. It never reuses a card
+opened elsewhere, so it can never file its results as human play. When there is
+no key, or the service is unreachable, it falls back to local practice
+environments and says why.
+
+
+LEARNINGS FROM THE WIDER WORLD
+
+These are recorded as attributed context, not as Mentova results.
+
+The metric is Relative Human Action Efficiency, and it squares the penalty for
+inefficiency: an agent that takes ten times as many actions as a human earns only
+about one percent of the credit. Later levels weigh more. Brute force on early
+levels does not buy a good overall score.
+
+The winning shape is systematic exploration, not scale. At a fixed small budget
+of interactions, a graph-based explorer solved nineteen levels while a language
+model paired with a rule library solved five - fewer than a random agent, which
+solved six. Over long runs the graph explorer reached a median of thirty levels
+and placed third overall.
+
+The current ceiling is verify-before-act world models. A coding agent that writes
+a small program modelling the game, checks that program against what it has
+observed, and plans inside the model before spending real moves reached the best
+scores reported so far. The principle: propose in a cheap, reversible model;
+verify; then spend scarce real actions only on vetted plans.
+
+Memory alone is worth a great deal. A team that added only a layer to remember
+what worked and remind the agent of it when stuck reported more than double the
+score at the same action budget, with no smarter model. The gain came entirely
+from not rediscovering the same thing twice.
+
+Where Mentova stands. Mentova already matches the winning shape - an explicit
+deduplicated state graph, dead-action pruning, a preference for actions predicted
+to change the world, and click-space reduction to salient objects - and it
+uniquely holds durable, game-keyed cross-level transfer, the rewarded and
+still-unsolved opportunity. It is honestly behind on the verify-before-act world-
+model loop and on game-keyed inference of the unstated win condition; those are
+the next steps.
+
+
+COURSE CORRECTIONS
+
+The climb has already required real corrections to the method, each made and
+verified before moving on.
+
+From global learnings to game-keyed learnings. Early learning stores were shared
+across all games, so one environment's teaching could bleed into another's. Every
+store - levers, causal relations, the state graph, the winning path, and later
+the discovered mechanics - was re-keyed by Game Environment Identification, and a
+cross-game isolation test now proves teaching one environment leaves another's
+learnings untouched.
+
+From memory-only to durable on disk. Learnings lived only in the running process
+and were erased by any restart. A win is now concluded to disk and reloaded on
+boot, keyed by game, and a test proves the round trip across a genuine restart.
+
+From graph-only exploration to the exploration policy at the forefront. Unaided
+play explored with the state graph alone. The richer co_explore policy - causal-
+change preference and salient click targeting - was brought to the front of the
+live player, with the state-graph frontier search kept as the layer behind it.
+
+Adding the self-learning recall. Observing that the field's largest cheap gain
+came from recalling a known mechanic, Mentova was given a durable, game-keyed
+recall of its highest-impact action when play stalls.
+
+Playing honestly as an agent. The live scorecard was opened with a thin tag and
+never closed. It is now opened with explicit artificial-agent tags and metadata,
+played under one card through a clean open-play-close lifecycle, and never
+confused with a human scorecard.
+
+Keeping the exploration policy general. The exploration pack had been described
+as though it were ARC-AGI-3-specific. Its purpose is general - to explore any
+unknown interactive environment - and its description was corrected to say so,
+the code confirmed to carry no environment-specific coupling.
+
+
+THE PROGRESS LOG
+
+New entries are appended here, newest last, each dated, each tagged as one of
+WIN, LEARNING, METHODOLOGY, or COURSE CORRECTION. A WIN entry is written only for
+a real, measured result and records the game, the levels completed, the action
+efficiency, and the named glass-box behaviours that produced it.
+
+2026-07-10  METHODOLOGY. The ARC-AGI-3 readiness method is established: two-mode
+guided and solo play over one Causalontology substrate; the co_explore policy at
+the forefront with the co_graph state-graph frontier behind it; every learning
+keyed by Game Environment Identification; durable persistence of a concluded
+win across restarts; a self-learning recall of each game's highest-impact action;
+and a live client that plays as a tagged artificial agent through an open-play-
+close scorecard lifecycle. Acceptance demonstrations pass: guided-and-solo ten of
+ten, guided eight of eight, live-connection nine of nine, autonomous-autoplay six
+of six; the co_explore pack eleven of eleven and co_graph eight of eight. No
+leaderboard score is claimed.
+
+2026-07-10  LEARNING. A deep review of how the world is winning ARC-AGI-3 was
+recorded: humans one hundred percent, best large language model below one percent
+on the squared-efficiency metric; systematic graph exploration and action-effect
+prediction beat larger models; verify-before-act world models hold the ceiling;
+and durable cross-level transfer is the rewarded, still-unsolved opportunity that
+Mentova's substrate is built for. Full detail and sources are in
+docs/ARC-AGI-3_Preparation_v3.txt, Part Ten.
+
+2026-07-10  COURSE CORRECTION. Five corrections landed and were verified: global
+learnings re-keyed by game; memory-only learnings made durable on disk; the
+co_explore policy moved to the forefront of the live player; a self-learning
+recall added; and the live scorecard given explicit artificial-agent tags and a
+clean open-play-close lifecycle. Each is covered by a passing acceptance check.
+
+
+THE VISION
+
+The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box
+symbolic mind that explores an unknown world, discovers its mechanics, infers its
+goal, carries what it learns from one level into the next, and does so
+efficiently - every step inspectable, every learning attributable, nothing
+hidden. Causalontology is the wager: that a process-first ontology of cause and
+effect, made durable and kept honestly apart per environment, is the substrate on
+which such a mind can be built. This paper will record the ascent as it happens.
+
+No leaderboard score is claimed until it is measured on the live ARC-AGI-3
+leaderboard.
+
+
+END OF DOCUMENT
