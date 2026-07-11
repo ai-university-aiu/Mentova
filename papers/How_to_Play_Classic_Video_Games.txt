@@ -1,0 +1,345 @@
+HOW TO PLAY CLASSIC VIDEO GAMES
+
+A Reference on How Humans Learn and Play Unfamiliar Games,
+Written to Inform an Agent That Must Play Unseen Interactive Games With No Manual
+
+Author: D. R. Dison, Founder of AIU, Creator and Owner of PrologAI and Mentova, ORCID 0009-0001-9246-5758, linkedin.com/in/d-r-dison/
+Repository: https://github.com/ai-university-aiu/Mentova
+Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
+
+Last updated: 2026-07-11.
+
+
+PURPOSE
+
+Mentova must play interactive games it has never seen, with no instructions, no
+stated goal, and only a picture and a set of buttons. This is the same problem a
+human faces when handed an unlabelled cartridge. Humans are remarkably good at
+it. This document gathers how they do it - the conventions games share, the
+mechanics players recognise on sight, the heuristics they use on a brand-new
+game, and the efficiency insights of expert play - and ends with a concrete,
+prioritised list of priors an unseen-game agent should follow. It is written to
+be used as a reference by the solving machinery, not as an essay.
+
+A note on scope. The games this informs are grid-based and arcade-flavoured:
+avatars, keys, doors, hazards, timers, lives, score. The lessons are drawn from
+the classic canon (arcade, Nintendo Entertainment System, and similar) because
+those games are small, legible, and built to be understood without words.
+
+
+PART ONE - GENRE CONVENTIONS AND THEIR CORE MECHANICS
+
+Games fall into a handful of families, each with a defining loop, a win
+condition, and a fail condition. Recognising the family early tells a player most
+of what to do.
+
+Maze-and-collect (for example Pac-Man). The avatar roams a maze, gathering every
+pellet while avoiding roaming enemies; power-ups briefly reverse the threat. Win
+by clearing the board; fail by contact with an enemy.
+
+Platformer (for example Super Mario Bros.). The avatar moves generally rightward
+across a stage, jumping over pits and onto or over enemies, to reach an exit
+(a flag or door). Win by reaching the exit; fail by touching a hazard or falling.
+
+Top-down adventure and block-puzzle (for example The Legend of Zelda, Sokoban,
+Chip's Challenge). The avatar navigates a room, pushes blocks, collects keys, and
+passes through doors to reach an exit. Win by reaching the exit or solving the
+room; fail by hazard or by an unsolvable move.
+
+Shooter (for example Space Invaders). The avatar fires at descending enemies and
+dodges their fire. Win by clearing the wave; fail by being hit or overrun.
+
+Lock-and-key and switch-and-door puzzles. A key found in the level opens a locked
+door; a switch or pressure plate opens a gate. This is one of the oldest and most
+universal conventions: levels make use of locked doors that can only be opened
+with a specific key found elsewhere in the level.
+Source: https://en.wikipedia.org/wiki/Action_game
+
+Score-and-timer games. Many early arcade games are unbeatable by design and have
+an indefinite number of levels; the only goal is to get as far as possible and
+maximise score. Others end by finishing a sequence of levels toward a final goal.
+Source: https://en.wikipedia.org/wiki/Action_game
+
+The common spine across all of them: the player moves an avatar through a space,
+as a progression of stages, encountering things that help progress (keys to open
+doors) and things that end it (hazards).
+Source: https://en.wikipedia.org/wiki/Action_game
+
+
+PART TWO - THE UNIVERSAL MECHANICS AND HOW THEY ARE RECOGNISED ON SIGHT
+
+A small set of elements recurs across nearly every classic game. Players
+recognise each by its behaviour, not its label.
+
+The avatar. The player controls a character, usually a protagonist or avatar,
+that navigates the level, collects objects, avoids obstacles, and fights enemies.
+Source: https://en.wikipedia.org/wiki/Action_game
+A human identifies the avatar in seconds by one test: it is the thing on screen
+that moves in response to a button. Nothing else answers to the controller.
+
+Health and lives. The avatar often has hit-points or health depleted by hazards,
+and a small number of lives - chances to retry after death. Extra lives may be
+earned by reaching a score threshold or finding an object.
+Source: https://en.wikipedia.org/wiki/Action_game
+
+Keys, doors, locks, switches, gates. A key opens a matching door; a switch opens
+a gate. The player learns the pairing by seeing a door refuse to open, finding a
+key, and watching the door yield.
+
+Hazards and enemies. In any game that involves navigating a space, the player
+meets obstacles, traps, and enemies; contact with them costs health or a life.
+Source: https://en.wikipedia.org/wiki/Action_game
+A human marks a thing as a hazard the first time it hurts them, and thereafter
+gives it a wide berth.
+
+Collectibles, targets, and exits. Pellets, coins, keys, and the level exit are
+the things to move toward. The exit or level-complete marker is the goal of a
+stage.
+
+Status displays. Timers, move-limits, lives, and score usually sit in a fixed
+band (a status bar) separate from the play area. A player learns to read the
+score going up as "that was good" and the timer going down as "hurry".
+
+
+PART THREE - HOW A PLAYER APPROACHES A BRAND-NEW GAME (THE HEURISTICS)
+
+This is the heart of the matter: what a person actually does in the first minute
+of a game they have never seen and cannot read about.
+
+Map the controls first. The player presses each button and watches what changes.
+This is deliberate, systematic experimentation - try every input, note its
+effect - and it is the first thing anyone does. It is the human version of a
+control survey: which button moves me, which acts on the world, which does
+nothing here.
+
+Find the avatar. Among everything on screen, the player watches for the one
+object that reacts to input. That object is "me". Everything else is either a
+thing to reach or a thing to avoid.
+
+Infer the goal by moving toward the obvious and watching for progress. With no
+instructions, players set their own goal and monitor whether they are achieving
+it: they execute strategies of goal-setting, monitoring of goal achievement, and
+assessment of the strategies' effectiveness.
+Source: https://files.eric.ed.gov/fulltext/EJ1090277.pdf
+Concretely, they move the avatar toward the most salient, most "reachable-looking"
+object - a door, a glowing item, an opening - and check whether something good
+happened: the score rose, a door opened, the screen advanced. Progress is the
+teacher.
+
+Learn hazards from failure, in a low-stress way. Good games let players learn
+from calculated failure: they introduce a hazard in a place where dying is cheap,
+so the player learns what kills them and thereafter avoids it. Mega Man's design
+is a masterclass in teaching through forcing functions and calculated player
+failure, letting players learn from failure in low-stress environments and
+encouraging experimentation.
+Source: https://gameafternoon.com/blogs/design-inspiration/mega-man-x-how-to-tutorialize
+The player's rule is simple: whatever just ended my run, do not do that again from
+there.
+
+Read design nudges. Games teach without words by design. Half-Life 2 uses
+scripted events - such as showing how enemies behave - to nudge the player without
+text. Nintendo strove to make games that taught as they were played.
+Sources: https://lemmy.world/post/3777063 ; https://www.nyfa.edu/student-resources/nintendo-can-teach-us-game-design/
+
+Recognise the "introduce, then combine" grammar. Super Mario Bros. World 1-1 is
+the canonical example: within that one level the player is meant to understand
+what the character is and what the game is about. Each new mechanic, hazard, and
+enemy is introduced in isolation so the player can recognise it and learn its
+behaviour; then mechanics are combined. World 1-1 uses only nine elements
+(treasure blocks, breakable blocks, a Goomba, pits, pipes, platforms, a mushroom,
+coins, a Piranha Plant), each taught before it is combined.
+Sources: https://arxiv.org/pdf/1602.07721 ; https://www.nyfa.edu/student-resources/nintendo-can-teach-us-game-design/
+For an agent, the lesson is that early levels are simple and legible: the first
+level is the place to learn the game's atoms, because they appear alone there.
+
+Transfer from other games. Players who have played many titles are faster on a new
+one: they identify core mechanics, recognise patterns, and transfer skills between
+games, adapting and recalibrating as they go.
+Source: https://www.companionlink.com/blog/2026/02/discoverability-choice-and-learning-across-diverse-pc-games/
+A key that looks like a key, a door that looks like a door, an avatar that moves
+like an avatar - the priors carry over.
+
+The Core Knowledge a human brings. Underneath all of this sits a small set of
+innate priors the player does not have to learn: that the world is made of
+persistent objects (Elizabeth Spelke's Core Knowledge theory calls these the
+object, agent, number, and geometry systems), that some objects are agents that
+act toward goals, that behaviour is goal-directed, that space can be navigated,
+and that actions cause effects. These are exactly the priors the ARC benchmarks
+assume and that an unseen-game agent must supply for itself.
+Sources: https://en.wikipedia.org/wiki/Elizabeth_Spelke ; https://arxiv.org/pdf/1604.00289
+
+The measured priority of the priors. It is not a matter of taste which prior
+matters most; it has been measured. Dubey and colleagues (ICML 2018, Investigating
+Human Priors for Playing Video Games) had one hundred and twenty people play the
+same platformer under conditions that each removed one prior, and timed them.
+Baseline players finished in about one and three-quarter minutes. Removing the
+sense that visibly distinct things are objects worth investigating slowed them to
+nearly eight minutes with six times the deaths - by far the largest effect.
+Removing "things that look alike behave alike" was almost as damaging. Removing
+the meaning of a sprite (that this shape is a ladder, that one a spike) roughly
+doubled the time; removing what-can-be-interacted-with, gravity, and the control
+mapping each cost less. Stripping all object priors at once collapsed play to
+about twenty minutes and forty deaths. The order of importance, measured, is:
+objectness first, then visual similarity, then the meaning of objects, then what
+can be interacted with, then object-specific interactions, then physics, then the
+control mapping. An agent should invest its prior-building effort in that order.
+Source: https://ar5iv.labs.arxiv.org/html/1802.10217
+
+What a winning ARC-AGI-3 agent actually did with these priors. The training-free
+graph-based agent that placed third on the private leaderboard reads almost
+one-to-one off this list: it segments each frame into single-colour connected
+components (objects), masks the status bars so a ticking score or timer does not
+explode its memory, ranks candidate actions in salience tiers by object size,
+shape, and colour prominence and acts on the most salient first, and keeps a graph
+of states and transitions so it probes untested salient actions here or walks to
+the nearest state with something untested. Objectness, salience-toward-target,
+status-masking, and memory-backed systematic search - the human priors, made
+mechanical.
+Source: https://arxiv.org/html/2512.24156v1
+
+
+PART FOUR - EFFICIENCY AND SPEEDRUNNING
+
+Expert play is not just correct; it is efficient. The lessons transfer directly to
+any agent scored on how few actions it uses.
+
+Plan the route before executing it. Speedrun routing is deliberate: runners,
+routers, and glitch-hunters iterate a route until it is optimised, planning the
+path before running it.
+Source: https://www.speedrun.com/forums/speedrunning/ls5x3
+
+Take the shortest path to the goal. Route optimisation in games uses the same
+pathfinding as anywhere else - shortest-path search such as A-star and Dijkstra's
+algorithm - to move toward the objective with the fewest steps.
+Source: https://yetiai.com/ai-in-speedrunning-optimizing-routes/
+
+Do not waste moves. Every wasted input is time lost. Experts avoid detours,
+avoid re-treading ground, and head straight for what advances the game. Where a
+game imposes a move-limit or timer, this is not a preference but a requirement:
+progress must be made before the allowance runs out.
+
+Learn the map, then exploit it. The first pass explores; later passes exploit the
+known route. This is the same carry-forward an agent gets from remembering the
+states and paths it has already mapped.
+
+
+PART FIVE - ACTIONABLE PRIORS FOR AN UNSEEN-GAME AGENT
+
+This section distills the above into a concrete, prioritised policy for an agent
+that must play an unfamiliar grid game with no instructions. It is ordered: earlier
+priors take precedence over later ones. The ordering follows the measured
+importance of priors (objectness first of all), and it matches what the winning
+ARC-AGI-3 agents actually do.
+
+0. Parse the frame into objects first, and remember them across frames. Segment
+   the grid into connected same-colour regions and treat those, not raw cells, as
+   the things to reason about. This is the highest-value prior of all - more
+   important than any single heuristic below - because every other step reasons
+   over objects: the avatar is an object, targets and hazards are objects, a key
+   and its door are objects. Track each object's identity from one frame to the
+   next so it is understood to persist.
+
+1. Map the controls first. On a new game, try each available action at least once
+   and record its effect, before repeating any. Breadth before depth. (Mentova
+   already does this: the explore-novel choice tries each untried action first.)
+
+2. Identify the avatar. The avatar is the object that moves in response to a move
+   action - the small cluster of cells that shifts position after an action while
+   the rest of the scene holds still. Track its cell. Everything else is a target
+   or a hazard.
+
+3. Learn the control-to-direction map. When an action moves the avatar from one
+   cell to another, record the spatial displacement of that action (up, down,
+   left, right). This lets the agent steer.
+
+4. Move the avatar toward the nearest salient, non-hazard target. Once the avatar
+   and a direction map are known, prefer the move that reduces the distance from
+   the avatar to the nearest salient object that is not a known hazard - a door,
+   an item, an opening. This is the universal classic-game loop, and the shortest-
+   path instinct of expert play. Fall back to undirected exploration only when no
+   such target or map is known yet.
+
+5. Treat contact-death and game-ending states as hazards to avoid. Whatever ended
+   the game from a state, do not repeat it from a like state. (Mentova records
+   fatal moves; the open weakness is recognising the "like state" when a counter
+   or animation changes the picture - a signature that ignores such changing
+   regions is required.)
+
+6. Recognise progress and lock onto it. When the score rises, a level completes,
+   a door opens, or the screen advances, the action path that caused it is good:
+   remember it, reinforce it, and reuse it. Progress is the only goal signal an
+   instruction-free game gives, so it must be seized whenever it appears. For
+   ARC-AGI-3 specifically, an increase in the reported levels-completed is exactly
+   this signal.
+
+7. Act under an assumed move budget. Assume the level must be completed within a
+   limited number of actions and that wasted moves are lost progress. Prefer the
+   move that advances the game; do not re-tread mapped ground; head for the
+   obvious target rather than wandering. Where the game ends at a fixed step count
+   without progress, the failure is not death but running out of allowance - the
+   remedy is goal-directed progress, not more wandering.
+
+8. The first level is the teacher. Early levels introduce the game's atoms in
+   isolation and are the simplest and most legible. Spend the first level learning
+   the avatar, the map, and what each object does; carry that forward.
+
+9. Carry everything forward. What is learned on one attempt or level - the avatar,
+   the direction map, the hazards, the progress paths, the map of states - must be
+   kept and reused on the next. A later attempt should never re-learn from zero.
+
+10. Mask the status region before remembering a state. Counters, timers, lives,
+   and score sit in a fixed band and change constantly; if they are part of the
+   picture-signature, every tick makes the same situation look like a brand-new
+   state and the memory of where you have been fragments. Detect the cells that
+   change on nearly every step regardless of the action - the status band and any
+   animation - and exclude them from the state signature, while still reading them
+   as reward and budget. This is the standing prerequisite that makes the state
+   graph and the fatal-move memory actually carry forward, and the winning agent
+   masks the status bars for exactly this reason.
+
+11. Generalise labels by visual similarity. Once an object class is labelled a
+   hazard, a collectible, or a wall by what happened on contact, apply that label
+   to every object that looks alike - same colour and shape. Things that look
+   alike behave alike is the second most valuable prior after objectness, so a
+   single painful or rewarding contact should teach the whole class at once, not
+   just the one object touched.
+
+12. Encode the lock-and-key schema. If a barrier blocks the avatar and a distinct
+   object of matching colour or shape sits elsewhere, hypothesise that the distant
+   object is the enabler: go to it, then to the barrier, and test. Keys and doors,
+   switches and gates, and "gather N items then the exit opens" are all this one
+   template. If the barrier is seen before its key, hold the barrier as a pending
+   goal.
+
+These priors are the bridge between "explore an unknown environment" and "play a
+game": exploration finds the pieces, but it is these game-shaped priors - an
+avatar, a goal to move toward, hazards to avoid, progress to seize, and a budget
+to respect - that turn wandering into play.
+
+
+SOURCES CONSULTED
+
+https://en.wikipedia.org/wiki/Action_game
+https://en.wikipedia.org/wiki/Action-adventure_game
+https://en.wikipedia.org/wiki/Adventure_game
+https://www.nyfa.edu/student-resources/nintendo-can-teach-us-game-design/
+https://gameafternoon.com/blogs/design-inspiration/mega-man-x-how-to-tutorialize
+https://arxiv.org/pdf/1602.07721
+https://files.eric.ed.gov/fulltext/EJ1090277.pdf
+https://www.companionlink.com/blog/2026/02/discoverability-choice-and-learning-across-diverse-pc-games/
+https://lemmy.world/post/3777063
+https://www.speedrun.com/forums/speedrunning/ls5x3
+https://yetiai.com/ai-in-speedrunning-optimizing-routes/
+https://ar5iv.labs.arxiv.org/html/1802.10217 (Dubey et al., Investigating Human Priors for Playing Video Games, ICML 2018)
+https://en.wikipedia.org/wiki/Elizabeth_Spelke (Core Knowledge: object, agent, number, geometry systems)
+https://arxiv.org/pdf/1604.00289 (Lake, Ullman, Tenenbaum, Gershman, Building Machines That Learn and Think Like People)
+https://web.stanford.edu/class/psych209/Readings/MnihEtAlHassibis15NatureControlDeepRL.pdf (DQN, human-level Atari; fails on sparse-reward exploration)
+https://github.com/pathak22/noreward-rl (Intrinsic Curiosity Module - novelty as intrinsic reward)
+https://arxiv.org/html/2512.24156v1 (Graph-Based Exploration for ARC-AGI-3 - object segmentation, status masking, salience tiers)
+https://en.wikipedia.org/wiki/Pac-Man
+https://en.wikipedia.org/wiki/Platformer
+https://en.wikipedia.org/wiki/Space_Invaders
+https://en.wikipedia.org/wiki/Chip's_Challenge
+
+
+END OF DOCUMENT

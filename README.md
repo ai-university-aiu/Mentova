@@ -802,6 +802,7 @@ Every paper is written after the accomplishment has been achieved and measured �
 | `Climbing_ARC-AGI-2.txt` | The complete 124-wave ARC-AGI-2 chronicle — every attempt, every score, every rule, every lesson. Concluded at 120/120 = 100.00%. |
 | `ARC-AGI-2_Perfect_Score_Report.txt` | The comprehensive achievement report for ARC-AGI-2 — the second mountain climbed by pure symbolic induction; what was learned about human thinking, experience points gained, and how to teach machines to think like humans without the downsides of large language models. |
 | `Climbing_ARC-AGI-3.txt` | The living ARC-AGI-3 chronicle — the interactive-reasoning ascent, appended (never rewritten) as work lands: methodology, learnings, course corrections, and — especially — the wins. Evidence-first: no leaderboard score is recorded until measured on the live leaderboard, and the ARC-AGI-3 Perfect Score report is written only after real measured wins. |
+| `How_to_Play_Classic_Video_Games.txt` | A sourced reference on how humans learn and play unseen games — genre conventions, universal mechanics (avatar, keys/doors, hazards, timers, score), the heuristics players use on a new game, and the *measured* priority of priors (objectness first, per Dubey et al. 2018). Ends with a prioritised, implementable prior list for an unseen-game agent; the status-bar-masking prior is already distilled into the solving machinery. |
 
 ### Announcements — announcements/
 
