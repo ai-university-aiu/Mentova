@@ -479,6 +479,32 @@ was left open and never published; no level was won; no leaderboard score is
 claimed. The full per-game table and comparison are written up in the sweep report
 in the assets folder.
 
+2026-07-11  METHODOLOGY. The player was given an explicit plan to follow, and the
+plan was made hierarchical and meshed with the mind's own causal structure. Until
+now the planner could only compose a flat sequence of actions into a single higher-
+level procedure - a two-level seed, not a hierarchy. A new PrologAI pack, co_hplan,
+the seventy-ninth layer of the platform, makes planning genuinely multi-level: a
+plan is a tree with as many levels of detail as the task needs. For playing an
+unknown interactive world the tree has three levels. At the top is the goal, Win
+Game. Beneath it is the method, an observe-orient-decide-act loop with the six
+phases the mentor named - see, observe, orient, decide, act, and re-observe and
+update the rules. Beneath each phase are the concrete operations it uses, and under
+the act phase those operations are the game's own controls. The showcase is that
+this plan is not a diagram bolted onto the side; it is reified onto Causalontology's
+own decomposition hierarchy. The core already lets a coarse causal relation carry a
+mechanism sub-graph of finer relations and checks that the fine relations chain from
+the coarse relation's causes to its effects. co_hplan turns every plan node into a
+causal relation, makes a node's children its mechanism sub-graph, and lays the
+endpoints out as ordered waypoints so that each coarse achieve-this-goal relation is
+consistent with the composition of its parts. The whole plan can therefore be read
+back out of the causal graph alone, and it is consistent at every level. The solo
+player now builds this plan for each game, reifies it, and locates every action it
+takes within it - naming the phase and the leaf the choice came from - so the glass-
+box why endpoint shows not only what Mentova did and why but exactly where on the
+plan it was standing when it decided. The hierarchical planner and its Causalontology
+mesh are proven by their own tests, all ten passing, and the integration by six
+more. No live game was played in this work; no leaderboard score is claimed.
+
 
 THE VISION
 

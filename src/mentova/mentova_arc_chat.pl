@@ -147,6 +147,8 @@
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_explore/prolog')),
     % Whole-grid perception: object inventory, meter/life-bar reading, avatar (WP-403).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_see/prolog')),
+    % Hierarchical planning: the Win-Game / OODA / controls plan tree (WP-404).
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hplan/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -180,6 +182,13 @@
 :- use_module('arc3_priors',
     [ap_generic_prior/3, ap_priors_for_roles/2, ap_game_archetypes/2,
      ap_game_resource/2, ap_win_recipe/2]).
+% Load hierarchical planning (WP-404): the multi-level plan tree (Win Game over
+% the observe-orient-decide-act loop over the concrete controls), reified onto
+% Causalontology's decomposition hierarchy, so the solo player's play is driven by
+% and narrated as an explicit plan the glass box can show.
+:- use_module(library(co_hplan),
+    [hp_win_plan/3, hp_reify/2, hp_reset/0, hp_render/2, hp_render_json/2,
+     hp_classify_basis/3, hp_consistent/1, hp_plan_from_cros/2]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -890,6 +899,11 @@ ma_solo_start :-
     retractall(ma_visited_(Sel, _, _)),
     retractall(ma_pursuit_(Sel, _, _)),
     retractall(ma_meter_(Sel, _, _, _)),
+    % Build the plan hierarchy for this game and reify it onto Causalontology, so
+    % the run is driven by, and narrated as, an explicit Win-Game / OODA / controls
+    % plan the glass box can show.
+    ma_build_plan(Sel),
+    retractall(ma_plan_focus_(Sel, _, _)),
     % Fresh session recording.
     ma_session_reset,
     % If a winning path was learned for this game, replay it this run.
@@ -1605,6 +1619,10 @@ ma_reset_guidance :-
     retractall(ma_visited_(_, _, _)),
     retractall(ma_pursuit_(_, _, _)),
     retractall(ma_meter_(_, _, _, _)),
+    % Drop the plan hierarchy state (trees, reified roots, and the active focus).
+    retractall(ma_plan_tree_(_, _)),
+    retractall(ma_plan_root_(_, _)),
+    retractall(ma_plan_focus_(_, _, _)),
     % Clear the harness counters.
     co_arc3_reset.
 
@@ -1728,6 +1746,9 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     retractall(ma_last_(_, _)),
     % Store it.
     assertz(ma_last_(Action, Basis)),
+    % Locate this choice within the plan hierarchy (its OODA phase and leaf), so
+    % the glass box narrates play as a descent of the Win-Game plan.
+    ma_note_plan_focus(Sel, Basis),
     % Count the try so curiosity varies its choices across the attempt.
     ma_bump_try(Action),
     % Remember how big an effect this action had, and track no-progress, so the
@@ -1883,6 +1904,97 @@ ma_meters_update(Game, Frame) :-
 ma_resource_low(Game) :-
     % Any meter observed to be falling.
     ma_meter_(Game, _, _, falling).
+
+% ---------------------------------------------------------------------------
+% THE PLAN HIERARCHY — Win Game over an OODA loop over the concrete controls
+% ---------------------------------------------------------------------------
+%
+% The solo player's action chain already realises an observe-orient-decide-act
+% loop. This section makes that loop an EXPLICIT multi-level plan (co_hplan): the
+% top goal Win Game, the six-phase OODA method, and the game's real controls at
+% the leaves. The plan is reified onto Causalontology's own decomposition
+% hierarchy, so it is not a separate diagram but a hierarchy of CROs the glass box
+% can show and read back. Each step's choice is located within the plan (its OODA
+% phase and leaf), so play is narrated as a descent of the plan.
+
+% ma_plan_tree_/2: (Game, Tree) — the current plan tree for a game.
+:- dynamic ma_plan_tree_/2.
+% ma_plan_root_/2: (Game, RootCroId) — the root CRO the plan was reified into.
+:- dynamic ma_plan_root_/2.
+% ma_plan_focus_/3: (Game, Phase, Leaf) — the OODA phase and leaf the last choice
+% fell under, so the glass box can say which rung of the plan is active.
+:- dynamic ma_plan_focus_/3.
+
+% ma_build_plan(+Game): build the plan tree for a game and reify it onto the
+% Causalontology decomposition hierarchy. Guarded: a planning hiccup never blocks
+% play. Keyed by game; the act phase's leaves are the game's real control set.
+ma_build_plan(Game) :-
+    catch(ma_build_plan_(Game), _, true).
+
+% The guarded body of the plan build.
+ma_build_plan_(Game) :-
+    % The game's concrete controls, collapsed to readable leaves.
+    ( ma_actions_env(Game, Actions0) -> true ; Actions0 = [] ),
+    ma_plan_actions(Actions0, Actions),
+    % Build the three-level plan tree.
+    hp_win_plan(Game, Actions, Tree),
+    % Store it for this game.
+    retractall(ma_plan_tree_(Game, _)),
+    assertz(ma_plan_tree_(Game, Tree)),
+    % Reify it onto the CRO decomposition graph (fresh, so nodes do not pile up).
+    hp_reset,
+    hp_reify(Tree, Root),
+    retractall(ma_plan_root_(Game, _)),
+    assertz(ma_plan_root_(Game, Root)).
+
+% ma_plan_actions(+Actions0, -Actions): the control leaves for the act phase — a
+% concrete cell-select collapses to one select(x,y) marker so the tree stays
+% readable, and duplicates merge.
+ma_plan_actions(Actions0, Actions) :-
+    % Collapse concrete selects to a single marker.
+    findall(A,
+        ( member(A0, Actions0),
+          ( A0 = select(_, _) -> A = select(x, y) ; A = A0 ) ),
+        As0),
+    % Merge duplicates, keep a stable order.
+    sort(As0, Actions).
+
+% ma_note_plan_focus(+Game, +Basis): record which OODA phase and leaf a choice
+% basis falls under, so the Why endpoint can show the active rung of the plan.
+ma_note_plan_focus(Game, Basis) :-
+    ( catch(hp_classify_basis(Basis, Phase, Leaf), _, fail)
+    -> retractall(ma_plan_focus_(Game, _, _)),
+       assertz(ma_plan_focus_(Game, Phase, Leaf))
+    ;  true ).
+
+% ma_plan_view(+Game, -View): the plan hierarchy as a JSON-ready dict for the Why
+% endpoint and the Claude-facing agentview — the nested tree, the active phase and
+% leaf, and two proofs of the mesh: that the reified hierarchy is causally
+% consistent, and that the whole plan reconstructs from the CRO graph alone.
+ma_plan_view(Game, View) :-
+    % Ensure a plan exists for this game.
+    ( ma_plan_tree_(Game, Tree) -> true
+    ; ma_build_plan(Game), ( ma_plan_tree_(Game, Tree) -> true ; Tree = none ) ),
+    % The nested-dict rendering of the tree.
+    ( Tree \== none, catch(hp_render_json(Tree, TreeJson), _, fail)
+    -> true ; TreeJson = _{} ),
+    % The indented text rendering, one line per list element.
+    ( Tree \== none, catch(hp_render(Tree, Lines0), _, fail)
+    -> true ; Lines0 = [] ),
+    % The active OODA phase and leaf.
+    ( ma_plan_focus_(Game, Ph, Lf)
+    -> term_to_atom(Ph, PhA), term_to_atom(Lf, LfA),
+       Focus = _{phase: PhA, leaf: LfA}
+    ;  Focus = _{phase: none, leaf: none} ),
+    % The mesh proofs, guarded.
+    ( ma_plan_root_(Game, Root), catch(hp_consistent(Root), _, fail)
+    -> Consistent = true ; Consistent = false ),
+    ( ma_plan_root_(Game, Root2), catch(hp_plan_from_cros(Root2, _), _, fail)
+    -> FromCros = true ; FromCros = false ),
+    % Assemble the view.
+    View = _{tree: TreeJson, lines: Lines0, focus: Focus,
+             causalontology_consistent: Consistent,
+             reconstructable_from_cros: FromCros}.
 
 % ma_visit(+Game, +R, +C): mark an object cell visited this attempt.
 ma_visit(Game, R, C) :-
@@ -2586,16 +2698,22 @@ ma_handle_hint(Request) :-
 
 % ma_handle_why(+Request): why Mentova took the last action.
 ma_handle_why(_Request) :-
+    % The selected game, to fetch its plan hierarchy.
+    ma_selected_game(Game),
+    % The plan hierarchy view (tree, active OODA phase, and the mesh proofs).
+    ( catch(ma_plan_view(Game, Plan), _, fail) -> true ; Plan = _{} ),
     % Fetch the justification.
     (   ma_why(why(Action, Basis, Provenance))
     % Render it for JSON.
     ->  term_to_atom(Action, AText),
         % The basis.
         term_to_atom(Basis, BText),
-        % Reply with the full story.
-        reply_json_dict(_{action: AText, basis: BText, provenance: Provenance})
-    % No action has been taken yet.
-    ;   reply_json_dict(_{action: none, basis: none, provenance: none})
+        % Reply with the full story, including where in the plan this choice sits.
+        reply_json_dict(_{action: AText, basis: BText, provenance: Provenance,
+                          plan: Plan})
+    % No action has been taken yet: still show the plan the run will follow.
+    ;   reply_json_dict(_{action: none, basis: none, provenance: none,
+                          plan: Plan})
     ).
 
 % ma_handle_mode(+Request): read the mode (GET) or switch it (POST).
