@@ -18,6 +18,8 @@
                  bleeds into another, and reselecting a game restores its own.
       AC-GS-009: a game's learnings are persisted to disk and reloaded after a
                  restart, keyed by game id — a concluded win outlasts the process.
+      AC-GS-010: when unguided play stalls, the player recalls the highest-impact
+                 action it found for the game, and that mechanic survives a restart.
 
     Run:
         swipl -l demos/arc_solo_demo.pl -g run_arc_solo_demo -t halt
@@ -88,6 +90,10 @@ run_arc_solo_demo :-
     % AC-009: a game's learnings are written to disk and reloaded after a restart,
     % keyed by game id — a concluded win survives the process ending.
     report('AC-GS-009', demo_durable_persistence),
+
+    % AC-010: when unguided play stalls, the player recalls its highest-impact
+    % action for the game, and that discovered mechanic survives a restart.
+    report('AC-GS-010', demo_recall_and_persist_impact),
 
     % Show the current learnings both sub-projects see.
     g3_learnings(Learn),
@@ -189,6 +195,40 @@ demo_durable_persistence :-
     % Every learning is back, byte for byte, under its own game id.
     g3_learnings(After),
     After == Before.
+
+% demo_recall_and_persist_impact: unguided play remembers the action that had
+% the biggest effect in a game; when it later stalls, it recalls that action
+% instead of drifting, and the discovered mechanic is durable across a restart.
+% This is the self-learning behaviour that keeps an agent from wasting its action
+% budget rediscovering a mechanic it already found.
+demo_recall_and_persist_impact :-
+    % Isolate the durable store in a scratch location.
+    ma_learn_attach('/tmp/mentova_impact_demo/chat_db'),
+    % A fresh navigation attempt.
+    ma_set_game(vc33), ma_set_mode(solo), ma_reset_guidance,
+    mentova_arc_chat:ma_reset_env(vc33, _), mentova_arc_chat:ma_session_reset,
+    % Drive the moves; at least one changes the frame and records an impact.
+    forall(member(A, [action(down), action(right), action(up), action(left)]),
+           mentova_arc_chat:ma_do_step(A, manual, _)),
+    % A highest-impact action was learned for this game.
+    mentova_arc_chat:ma_best_impact(vc33, BestA, BestM),
+    BestM > 0,
+    % Simulate being stuck: several no-change steps, with a different last action.
+    retractall(mentova_arc_chat:ma_stale_(vc33, _)),
+    assertz(mentova_arc_chat:ma_stale_(vc33, 3)),
+    retractall(mentova_arc_chat:ma_last_(_, _)),
+    assertz(mentova_arc_chat:ma_last_(action(none), curiosity)),
+    % The player recalls its biggest-effect action rather than drifting.
+    mentova_arc_chat:ma_choose(RecA, recall(biggest_effect)),
+    RecA == BestA,
+    % Persist, then wipe the record to imitate a restart.
+    mentova_arc_chat:ma_persist_game(vc33),
+    retractall(mentova_arc_chat:ma_impact_(vc33, _, _)),
+    \+ mentova_arc_chat:ma_best_impact(vc33, _, _),
+    % Reload from disk: the discovered mechanic returns unchanged.
+    mentova_arc_chat:ma_load_learnings,
+    mentova_arc_chat:ma_best_impact(vc33, BestA2, BestM2),
+    BestA2 == BestA, BestM2 =:= BestM.
 
 % demo_solo_signal: Solo wins ft09 unaided and a report is written.
 demo_solo_signal :-
