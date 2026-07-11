@@ -877,9 +877,12 @@ ma_solo_telemetry(Sel, Step, Action, Status, RepFile, T) :-
     ( Status = running -> Done = false, OutText = "running"
     ; Status = done(Outcome) -> Done = true, term_to_atom(Outcome, OutText)
     ),
+    % The game's human title.
+    ( ma_available_game(Sel, Title) -> true ; Title = Sel ),
     % Assemble the telemetry dict.
     T = _{frame: Frame, action: AText, command: Command, actions: Actions,
-          step: Step, done: Done, outcome: OutText, report: RepFile}.
+          step: Step, done: Done, outcome: OutText, report: RepFile,
+          game: Sel, title: Title}.
 
 % ma_solo_final_telemetry(+Sel, -T): telemetry when no step is taken.
 ma_solo_final_telemetry(Sel, T) :-
@@ -893,9 +896,12 @@ ma_solo_final_telemetry(Sel, T) :-
     ),
     % The labelled action panel for this game.
     ma_action_descriptors(Sel, Actions),
+    % The game's human title.
+    ( ma_available_game(Sel, Title) -> true ; Title = Sel ),
     % Assemble the telemetry.
     T = _{frame: Frame, action: "none", command: 'none', actions: Actions,
-          step: Step, done: Done, outcome: OutText, report: RepFile}.
+          step: Step, done: Done, outcome: OutText, report: RepFile,
+          game: Sel, title: Title}.
 
 % ma_solo_seed_jspace: hold the run's learnings as concepts in J-Space.
 ma_solo_seed_jspace :-
@@ -1601,9 +1607,11 @@ ma_handle_frame(_Request) :-
     ( ma_last_command(LastCmd) -> true ; LastCmd = 'none' ),
     % The labelled action panel for this game (canonical names + semantics).
     ma_action_descriptors(Sel, Actions),
+    % The game's human title (honest fallback to the id for unknown live games).
+    ( ma_available_game(Sel, Title) -> true ; Title = Sel ),
     % Reply with the full view.
     reply_json_dict(_{frame: Frame, status: Status, mode: Mode,
-                      game: Sel, last_action: LastText,
+                      game: Sel, title: Title, last_action: LastText,
                       last_command: LastCmd, actions: Actions}).
 
 % ma_handle_control(+Request): reset, step, or auto, mentor-authenticated.
