@@ -102,6 +102,8 @@
     ma_restart/2,
     % ma_solo_tick/1: advance the solo run one step, with telemetry.
     ma_solo_tick/1,
+    % ma_set_solo_budget/1: set the per-attempt action budget for solo runs.
+    ma_set_solo_budget/1,
     % ma_solo_report/2: write a solo attempt report and return its filename.
     ma_solo_report/2,
     % ma_attempts_dir/1: the directory solo reports are written to.
@@ -832,8 +834,23 @@ ma_set_mode(Mode) :-
 % ma_solo_reported_/1: the filename of the report already written for this run.
 :- dynamic ma_solo_reported_/1.
 
-% ma_solo_budget(-Budget): the action budget for a solo attempt.
-ma_solo_budget(60).
+% ma_solo_budget_/1: an optional runtime override of the solo action budget.
+:- dynamic ma_solo_budget_/1.
+
+% ma_solo_budget(-Budget): the action budget for a solo attempt — a runtime
+% override if one is set, else the default first-look budget.
+ma_solo_budget(Budget) :-
+    % Use the override when present and sensible, else the default.
+    ( ma_solo_budget_(B), integer(B), B > 0 -> Budget = B ; Budget = 60 ).
+
+% ma_set_solo_budget(+Budget): set the per-attempt action budget for solo runs.
+% A larger budget gives an exploration agent more room; carried learnings mean a
+% later attempt of the same game resumes from what an earlier one mapped.
+ma_set_solo_budget(Budget) :-
+    % Replace any previous override.
+    retractall(ma_solo_budget_(_)),
+    % Record the new budget.
+    assertz(ma_solo_budget_(Budget)).
 
 % Define ma_solo_clear: abandon any solo run state (without a report).
 ma_solo_clear :-
@@ -1789,7 +1806,28 @@ ma_choose(Action, recall(biggest_effect)) :-
     \+ ma_lands_on_hazard(Action),
     % Commit.
     !.
-% Causal-first exploration: if this game's learned causal graph predicts that
+% Breadth first: before exploiting a known-effective action, try an action (or
+% salient click target) that has not been tried at all this attempt. Without
+% this, once a single click is learned to change the world the causal-first rule
+% below fixates on it and never probes the other objects — the tunnel-vision
+% failure. The explore set is ordered least-tried-first, so the first untried
+% one leads.
+ma_choose(Action, explore(novel)) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Its current frame.
+    ma_render(Sel, Frame),
+    % Its safe action set with salient clicks, least-tried first.
+    ma_explore_concrete(Sel, Frame, Concrete),
+    % There must be something to try.
+    Concrete \== [],
+    % The first action not yet tried this attempt.
+    member(Action, Concrete),
+    % Never tried.
+    ma_try_count(Action, 0),
+    % Commit to it.
+    !.
+% Causal-first exploitation: if this game's learned causal graph predicts that
 % some available action changes the world, take the least-tried such action.
 % This is the co_explore policy's strongest signal - one of the two behaviours
 % the winning ARC-AGI-3 agents shared (learning which actions have an effect).
@@ -1895,10 +1933,20 @@ ma_explore_concrete(Game, Frame, Actions) :-
     ma_explore_actions(Game, Frame, Marked),
     % Expand the click marker to the frame's salient select(X,Y) targets.
     ( catch(cox_expand_actions(Marked, Frame, Concrete), _, fail)
-    ->  Actions = Concrete
+    ->  Concrete1 = Concrete
     % If expansion is unavailable, fall back to the marker list unchanged.
-    ;   Actions = Marked
-    ).
+    ;   Concrete1 = Marked
+    ),
+    % Order the actions least-tried-first (this attempt). On a click game a
+    % changing region (a counter or animation) makes each frame hash differently,
+    % so the state graph would otherwise re-offer the same largest-object click
+    % forever; ordering by how little each concrete target has been tried spreads
+    % the clicks across the perceived objects instead of hammering one.
+    findall(N - A, ( member(A, Concrete1), ma_try_count(A, N) ), Scored),
+    % Least-tried first; ties keep their relative order.
+    keysort(Scored, Sorted),
+    % Drop the counts.
+    findall(A, member(_ - A, Sorted), Actions).
 % Otherwise curiosity decides: the least-tried safe action over the selected
 % environment's action set, so unguided play genuinely explores rather than
 % repeating one move.
