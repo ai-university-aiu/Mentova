@@ -1,0 +1,50 @@
+# Draft 8 — interactive game overview, mechanics, hazards
+principle(exploration, low_cost_trial_error)
+principle(verification, error_driven_learning)
+principle(planning, minimal_path_accounting_cost)
+principle(generalization, adapt_to_new_mechanics_per_level)
+principle(scoring, squared_efficiency_ratio_penalty)
+ooda_principle(observe, frame_differencing)
+ooda_principle(orient, commit_to_correct_model)
+ooda_principle(decide, account_action_budget)
+architecture(world_model, verifiable_internal_model)
+architecture(world_model, planning_in_compressed_model)
+architecture(neuro_symbolic, hypothesis_verification_loop)
+architecture(reflection, self_reflection)
+ai_weakness(hypothesis_drift)
+ai_weakness(poor_model_commitment)
+ai_weakness(action_inefficiency)
+ai_weakness(combinatorial_explosion)
+ai_weakness(hallucinated_analogy)
+game: ar25
+mechanic(axis_reflect)
+mechanic(movable_axis)
+action_on_one_side => mirror_side_affected
+hazard: hypothesis_drift
+hazard: hallucinate_tetris_analogy
+game: bp35
+mechanic(bottomless_pit)
+mechanic(falling)
+hazard: pit_fall
+game: cd82
+mechanic(crane_dipper)
+mechanic(lift_and_dip)
+game: cn04
+mechanic(connector)
+hazard: invent_wrong_progress_theory
+game: dc22
+mechanic(dragging_chain_reaction)
+hazard: combinatorial_explosion
+game: ls20
+mechanic(locksmith)
+step_on_rotator => cycle_key_shape
+key_shape_matches_door => door_opens
+prior(health_cost_efficiency)
+game: s5i5
+mechanic(stacking)
+hazard: action_budget_limit
+game: sb26
+mechanic(state_toggle)
+game: vc33
+mechanic(block_pushing)
+hazard: pure_llm_pushing_failure

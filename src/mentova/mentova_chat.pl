@@ -57,6 +57,14 @@
 % Load the OODA methodology skill: John Boyd's observe-orient-decide-act loop, held
 % in Jacobian Space as a concept Mentova reasons with (it is co_hplan's middle layer).
 :- use_module('ooda_knowledge').
+% Load the ARC-AGI-3 Steps draft ingestion: the ten analysis drafts distilled into
+% per-draft candidate facts and carried into the lattice, Causalontology, and
+% J-Space through the nuanced (variant-aware) fact doors.
+:- use_module('arc3_steps').
+% Load the cognitive-architecture abstraction and the Kaggle north-star: the
+% principles that transfer to unseen games, mapped to the Mentova pillars, and the
+% guiding concept "How to Win the Kaggle ARC-AGI-3 competition" planted in J-Space.
+:- use_module('arc3_cognition').
 
 % mc_match_pattern/2 clauses are interleaved with helper predicates.
 :- discontiguous mc_match_pattern/2.
@@ -116,6 +124,14 @@ mc_chat_main(DataDir, Port) :-
     % Hold the OODA methodology in Jacobian Space as a skill — the observe-orient-
     % decide-act loop that is the middle layer of every plan Mentova builds.
     catch(ooda_bootstrap, _OodaError, true),
+    % Ingest the ten ARC-AGI-3 Steps drafts through the nuanced fact doors, so the
+    % distilled per-game mechanics, priors, and cognitive-architecture principles
+    % join the mind without cluttering it with true duplicates.
+    catch(as_bootstrap, _StepsError, true),
+    % Plant the cognitive-architecture principles and the Kaggle north-star concept
+    % in Jacobian Space — the abstraction layer that carries the winning recipe to
+    % games never seen, and the guiding goal the whole build serves.
+    catch(cog_bootstrap, _CogError, true),
     % Sweep any duplicate facts out of the lattice and the verb layer, so a store
     % that accumulated duplicates before the assert-if-new doors were in place is
     % cleaned on boot. Ingest now uses the unique doors, so this normally removes 0.

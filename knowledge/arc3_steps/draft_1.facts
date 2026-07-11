@@ -1,0 +1,243 @@
+# ARC-AGI-3_Steps_Draft_1 — extracted candidate facts (cognitive & architectural analysis)
+# General principles first (no game context), then per-game blocks.
+principle(exploration, low_commitment_probing)
+principle(perception, saccadic_object_segmentation)
+principle(perception, background_foreground_separation)
+principle(abstraction, rule_induction_from_pairs)
+principle(abstraction, transformations_compressible)
+principle(reasoning, mental_simulation_before_action)
+principle(reasoning, hypothesis_testing_internal)
+architecture(program_synthesis, dsl_grid_manipulation)
+architecture(program_induction, dreamcoder_recursion)
+architecture(world_model, dreamer_rl_simulation)
+architecture(neuro_symbolic, pixel_to_graph_repair)
+architecture(neuro_symbolic, constraint_solver_backend)
+architecture(vision_language_model, image_plus_symbolic_module)
+architecture(search, monte_carlo_tree_search)
+
+game: ar25
+mechanic(object_topological_transformation)
+mechanic(enclosure)
+human_step(perception)
+human_step(object_segmentation)
+human_step(relational_mapping)
+human_step(rule_induction)
+human_step(rule_application)
+cognitive_tool(mental_rotation)
+cognitive_tool(gestalt_grouping)
+cognitive_tool(spatial_working_memory)
+prior(object_solidity)
+prior(continuous_motion)
+prior(symmetry_likely_outcome)
+prior(object_cardinality_conservation)
+ai_step(grid_tokenization)
+ai_step(program_synthesis)
+ai_step(execution)
+
+game: bp35
+mechanic(anomaly_in_texture)
+mechanic(arithmetic_progression_movement)
+human_step(global_pattern_recognition)
+human_step(anomaly_zoom_in)
+cognitive_tool(visual_hashing)
+prior(background_implies_local_exception)
+ai_step(convolutional_feature_extraction)
+ai_step(anomaly_detection_autoencoder)
+
+game: cd82
+mechanic(gravity_falling)
+mechanic(collision_resting)
+human_step(dynamic_state_tracking)
+human_step(physics_simulation)
+cognitive_tool(intuitive_physics_engine)
+cognitive_tool(predictive_coding)
+prior(objects_fall_downward)
+prior(impenetrability)
+prior(rest_on_contact)
+ai_step(physics_policy_iteration)
+cognitive_tool(rl_world_model_dreamer)
+
+game: cn04
+mechanic(shape_completion)
+mechanic(loop_closure)
+human_step(topological_analysis)
+human_step(gap_filling)
+cognitive_tool(gestalt_closure)
+prior(line_continuity)
+ai_step(graph_extraction)
+ai_step(shortest_path_calculation)
+cognitive_tool(neuro_symbolic_pixel_to_graph)
+
+game: dc22
+mechanic(uniform_scaling)
+mechanic(figure_ground_segregation)
+human_step(proportional_reasoning)
+cognitive_tool(proportional_reasoning)
+prior(structure_preserved_under_scaling)
+prior(aspect_ratio_preserved)
+ai_step(coordinate_multiplication)
+
+game: ft09
+mechanic(axis_reflect)
+mechanic(mirroring)
+human_step(symmetry_detection)
+human_step(mirroring_execution)
+cognitive_tool(mental_folding)
+cognitive_tool(reflection)
+prior(symmetry_favored)
+ai_step(matrix_transposition)
+ai_step(coordinate_inversion)
+
+game: g50t
+mechanic(boolean_layer_logic)
+mechanic(color_blending)
+human_step(boolean_logic_application)
+cognitive_tool(boolean_algebra)
+cognitive_tool(truth_table_lookup)
+prior(colors_as_binary_states)
+ai_step(bitwise_operation)
+
+game: ka59
+mechanic(pattern_completion)
+mechanic(periodicity)
+human_step(periodicity_detection)
+cognitive_tool(periodic_function_fitting)
+prior(patterns_repeat)
+ai_step(autocorrelation)
+cognitive_tool(fast_fourier_transform)
+
+game: lf52
+mechanic(pathfinding)
+mechanic(obstacle_avoidance)
+human_step(route_tracing)
+cognitive_tool(collision_detection)
+prior(shortest_path_often_correct)
+ai_step(pathfinding_execution)
+cognitive_tool(a_star_search)
+
+game: lp85
+mechanic(counting_arithmetic)
+human_step(counting_quantification)
+human_step(subitizing)
+cognitive_tool(subitizing)
+prior(count_is_salient_feature)
+ai_step(connected_component_detection)
+
+game: ls20
+mechanic(jigsaw_assembly)
+mechanic(shape_matching)
+human_step(edge_matching)
+cognitive_tool(mental_rotation)
+prior(fragments_sum_to_whole)
+ai_step(feature_matching)
+
+game: m0r0
+mechanic(conditional_branching)
+human_step(feature_discrimination)
+trigger_present => transformation_a
+trigger_absent => transformation_b
+cognitive_tool(dichotomous_key_reasoning)
+prior(tasks_have_modes)
+ai_step(boolean_branching)
+
+game: r11l
+mechanic(tiling_tessellation)
+human_step(local_to_global_expansion)
+cognitive_tool(tiling_logic)
+prior(local_dictates_global)
+ai_step(array_tiling)
+cognitive_tool(modular_arithmetic)
+
+game: re86
+mechanic(color_substitution)
+mechanic(structural_invariance)
+human_step(color_dictionary_construction)
+cognitive_tool(dictionary_lookup)
+prior(shape_independent_of_color)
+ai_step(array_replacement)
+
+game: s5i5
+mechanic(extremum_projection)
+human_step(extremum_detection)
+cognitive_tool(orthogonal_projection)
+prior(extreme_points_salient)
+ai_step(argmax_argmin)
+cognitive_tool(bresenham_line)
+
+game: sb26
+mechanic(linear_extrapolation)
+human_step(boundary_extension)
+cognitive_tool(momentum_tracking)
+prior(motion_continues_straight)
+ai_step(iterative_forward_projection)
+
+game: sc25
+mechanic(radial_growth)
+mechanic(morphological_dilation)
+human_step(radial_growth)
+cognitive_tool(morphological_dilation)
+prior(isotropic_growth)
+ai_step(padding)
+
+game: sk48
+mechanic(structural_subtraction)
+mechanic(masking)
+human_step(erasing)
+cognitive_tool(set_difference)
+prior(foreground_occludes_background)
+ai_step(bitwise_masking)
+
+game: sp80
+mechanic(sorting_ordering)
+mechanic(seriation)
+human_step(rank_assignment)
+cognitive_tool(seriation)
+prior(objects_have_ordinal_value)
+ai_step(sorting_algorithm)
+
+game: su15
+mechanic(recursive_partitioning)
+mechanic(fractal_generation)
+human_step(self_similarity_recognition)
+cognitive_tool(recursive_thinking)
+prior(complex_from_recursive_simple)
+ai_step(recursive_function_definition)
+
+game: tn36
+mechanic(constraint_satisfaction)
+mechanic(logic_grid_deduction)
+human_step(constraint_propagation)
+cognitive_tool(constraint_propagation)
+prior(unique_solution)
+ai_step(backtracking_search)
+cognitive_tool(prolog_logic_programming)
+
+game: tr87
+mechanic(gravity_stacking)
+human_step(stacking_logic)
+cognitive_tool(bottom_up_filling)
+prior(gravity_downward)
+ai_step(vertical_compaction)
+
+game: tu93
+mechanic(skeletonization)
+mechanic(topological_thinning)
+human_step(skeletonization)
+cognitive_tool(medial_axis_representation)
+prior(shape_has_structural_core)
+ai_step(pixel_erosion)
+
+game: vc33
+mechanic(relative_positioning)
+mechanic(vector_guided_movement)
+human_step(vector_arithmetic)
+cognitive_tool(vector_addition)
+prior(relations_over_absolute_position)
+ai_step(delta_computation)
+
+game: wa30
+mechanic(windowed_local_transform)
+human_step(sliding_application)
+cognitive_tool(receptive_field_restriction)
+prior(global_is_uniform_local)
+ai_step(nested_loop_iteration)

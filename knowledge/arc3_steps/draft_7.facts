@@ -1,0 +1,101 @@
+# Draft 7 — richest architecture, methodology, executable world model
+principle(methodology, explore_before_optimize)
+principle(methodology, separate_model_learning_from_task_optimization)
+principle(methodology, learn_mechanics_first_then_plan)
+principle(methodology, vary_one_factor_at_a_time_to_isolate_causality)
+principle(methodology, prediction_and_verification_form_continuous_feedback_loop)
+principle(methodology, exploration_alone_insufficient_without_causal_model)
+principle(methodology, planning_alone_insufficient_if_model_incomplete)
+principle(simplicity_bias, favor_simpler_models_via_minimum_description_length)
+principle(benchmark_set, private_evaluation_set_is_true_measure_of_generalization)
+principle(benchmark_set, do_not_overinterpret_public_set_performance)
+ooda_principle(observe, observation_itself_is_an_experiment_in_dynamic_games)
+ooda_principle(orient, build_relationship_graph_among_objects)
+ooda_principle(orient, generate_causal_hypotheses_as_experiments)
+ooda_principle(orient, construct_approximate_internal_simulator)
+ooda_principle(orient, maintain_revisable_executable_world_model)
+ooda_principle(orient, choose_experiments_that_discriminate_competing_hypotheses)
+ooda_principle(orient, maximize_expected_information_gain)
+ooda_principle(decide, defer_planning_until_model_is_confident)
+ooda_principle(decide, simulate_and_score_each_plan_internally)
+ooda_principle(act, compare_expected_state_versus_observed_state)
+ooda_principle(act, discrepancy_triggers_hypothesis_revision)
+ooda_principle(act, repair_model_on_prediction_error)
+architecture(graph_based_exploration, nodes_are_states_edges_are_action_transitions)
+architecture(graph_based_exploration, prioritizes_shortest_route_to_unexplored_state_action_pairs)
+architecture(executable_world_model, maintains_executable_program_predicting_dynamics)
+architecture(executable_world_model, repairs_model_when_prediction_contradicts_observation)
+architecture(executable_world_model, uses_simplicity_bias_when_multiple_explanations_fit)
+architecture(object_centric_perception, convert_frames_to_object_relationships_before_reasoning)
+architecture(temporal_world_model, node_encodes_spatial_layout_plus_temporal_context)
+ai_weakness(persisting_with_incorrect_hypothesis_instead_of_replanning)
+ai_weakness(baseline_agents_lack_structured_hypothesis_formation)
+ai_weakness(cannot_assume_fixed_mechanics_across_levels)
+ai_weakness(reasoning_directly_from_pixels_is_costly)
+game: ar25
+mechanic(axis_reflection_symmetry)
+mechanic(mirrored_physics)
+move_right => symmetric_object_motion_toward_center
+prior(reflection)
+prior(causality)
+game: bp35
+mechanic(hazard_holes)
+click_terrain_block => remove_obstruction_enable_progress
+fall_into_pit => level_failure
+hazard: bottomless_pit
+hazard: irreversible_action
+game: cd82
+mechanic(pickup_and_placement)
+pickup_object_before_moving => reach_goal
+tilt_action => transform_object
+hazard: irreversible_mistake
+game: cn04
+mechanic(connecting_endpoints)
+connect_matching_objects => valid_link
+complete_structure => trigger_progress
+invalid_connection => violates_hidden_constraint
+hazard: unseen_constraint_violation
+game: dc22
+mechanic(two_coordinated_control_channels)
+directional_action => move_dial_14_cardinal_direction
+coupled_subsystems => configure_one_before_another
+hazard: misattributing_progress_bar_meaning
+game: ft09
+mechanic(click_toggles_or_cycles_tile_color)
+click_tile => toggle_or_cycle_color
+match_reference_configuration => level_complete
+no_visible_change => reduce_hypothesis_confidence_resume_exploration
+game: g50t
+mechanic(autonomous_moving_entities)
+object_moves_down_automatically => autonomous_motion_hypothesis
+collision_with_moving_entity => failure
+hazard: mistimed_jump
+game: ka59
+mechanic(click_teleports_player_to_target)
+click_target_location => teleport_player_to_target
+object_overlap => level_failure
+hazard: object_overlap_failure
+game: lp85
+mechanic(cyclic_transition_rules)
+red_or_green_button => advance_or_reverse_loop
+align_block_with_target_marker => progress
+hazard: increasing_transformation_complexity
+game: ls20
+mechanic(locks_keys_and_gated_progression)
+activate_object => unlock_new_region
+interaction => persistent_environment_change
+click_no_effect => enter_exploration_mode
+hazard: irreversible_interactions
+game: re86
+mechanic(cursor_or_reticle_positioning)
+move => extend_path
+align_reticle_with_target => enable_activation
+game: sb26
+mechanic(reusable_procedures_and_replay)
+place_colored_block => corresponding_example_block_disappears
+match_target_sequence => complete_level
+game: sc25
+mechanic(ordered_action_sequences)
+compose_actions => cumulative_transformation
+action_a_before_action_b => different_result_than_reverse_order
+reset => try_different_approach

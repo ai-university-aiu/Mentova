@@ -1,0 +1,87 @@
+# Draft 2 — static input-output transform view
+principle(perception, segment_grid_into_objects_first)
+principle(reasoning, generate_then_falsify_hypotheses)
+principle(reasoning, prefer_simplest_rule)
+principle(reasoning, verify_rule_on_all_training_pairs)
+architecture(neurosymbolic_program_synthesis, dreamcoder_style_dsl_search)
+architecture(transformer_program_generation, execution_guided_decoding)
+architecture(object_centric_dsl, primitives_over_segmented_objects)
+ai_weakness(brittle_when_transformation_novel)
+game: ar25
+mechanic(boundary_triggered_recolor)
+object_touches_border => recolour_to_largest_nontouching_object_colour
+prior(compositional_structure)
+cognitive_tool(occams_razor)
+game: bp35
+mechanic(tile_with_rotation)
+extract_motif => place_rotated_copies_in_2x2_macro
+cognitive_tool(mental_rotation)
+game: cd82
+mechanic(count_colour_render_digit)
+count_of_target_colour => output_digit_shape
+game: cn04
+mechanic(connect_dots_in_colour_order)
+sort_dots_by_hue => draw_connecting_polygon
+game: dc22
+mechanic(symmetry_inpainting)
+detect_symmetry_axis => fill_missing_from_mirror
+game: ft09
+mechanic(template_tiling_fill)
+flood_fill_interior => tile_with_pattern_modulo
+game: g50t
+mechanic(maze_shortest_path_trace)
+bfs_from_start => shortest_path_to_goal
+game: ka59
+mechanic(sokoban_push_block_to_target)
+push_block_sequence => block_on_target
+game: lf52
+mechanic(interpolate_third_copy)
+two_shapes_found => interpolate_colour_and_position
+game: lp85
+mechanic(flood_fill_enclosed_region)
+seed_inside_loop => fill_interior
+game: ls20
+mechanic(colour_histogram_bar_chart)
+sort_counts_desc => draw_bar_chart
+game: m0r0
+mechanic(rotate180_and_colour_shift)
+rotate180_then_shift_colour => output_grid
+game: r11l
+mechanic(snap_objects_to_lattice)
+round_centroid_to_lattice => translate_object
+game: re86
+mechanic(rectangle_corner_completion)
+three_corners_known => fourth_corner_and_perimeter
+game: s5i5
+mechanic(spiral_fill_colour_cycle)
+follow_spiral_path => colour_each_cell_in_cycle
+game: sb26
+mechanic(pixelwise_colour_blend)
+both_cells_nonzero => output_sum_mod10
+game: sc25
+mechanic(integer_upscale_blocks)
+each_pixel => nxn_block_of_same_colour
+game: sk48
+mechanic(skeletonise_medial_axis)
+skeletonise_shape => one_pixel_wide_axis
+game: sp80
+mechanic(separate_overlapping_objects)
+overlap_detected => translate_object_apart
+game: su15
+mechanic(recolour_by_quadrant)
+object_in_quadrant => recolour_to_quadrant_colour
+game: tn36
+mechanic(rotate_clone_within_frame)
+extract_content => place_four_rotations_around_centre
+game: tr87
+mechanic(crop_to_bounding_box)
+remove_empty_rows_and_columns => tight_crop
+game: tu93
+mechanic(transpose_and_colour_swap)
+transpose_cell => apply_swapped_colour
+game: vc33
+mechanic(vertical_stack_components)
+sort_by_y => vstack_components
+game: wa30
+mechanic(maze_dead_end_pruning)
+prune_degree1_except_endpoints => solution_path_only
