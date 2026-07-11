@@ -3,6 +3,45 @@ MENTOVA UI CONVENTIONS
 This file records standing rules for the web pages the Mentova server serves, so that future pages follow them.
 
 
+WARM COLOUR PALETTE RULE
+
+Every page the server serves uses one warm palette: crimson, red, gold, yellow, limoncello, light yellow, and dark red. Backgrounds are dark red; text is light yellow or gold; accents are crimson, yellow, and limoncello. There are no cool colours (no blue, no green) in the page chrome.
+
+The reference values are:
+
+• Dark red (page background): #2b0a0a
+
+• Dark red (header, deep panels): #7b1113
+
+• Panel/card background: #3a1212
+
+• Crimson (headings, primary buttons): #dc143c and #b01030
+
+• Red (warnings): #ff6b5a
+
+• Gold (borders, accents, links): #d4af37 and #c9a227
+
+• Yellow (highlights, active state): #ffd83b
+
+• Limoncello (bright notices): #eef23a
+
+• Light yellow (main text): #fdf3c7
+
+How it is applied:
+
+• The chat pages (index, mentor, terms) get the palette from CSS variables in assets/chat/chat.css, overridden to these warm values at the end of that file with !important so every theme (Light, Dark, System) is warm. When chat.css changes, bump its cache-buster (chat.css?v=N) in the pages that link it.
+
+• The ARC pages (arc.html, attempts.html) set these colours directly in their own inline styles.
+
+• The one exception is the ARC game grid itself: the small COLORS map that renders ARC-AGI-3 cell values (0..15) keeps the standard ARC colours, because those are game data, not page chrome.
+
+Rules for new pages:
+
+• Use the palette above. Backgrounds dark red; text light yellow or gold; accents crimson/yellow/limoncello. No cool colours in the chrome.
+
+• The pressed-inverted button rule below still applies (it inverts whatever warm colours a button has).
+
+
 BUTTON PRESS RULE
 
 Every button on every page must show an inverted colour scheme while it is being pressed, and must take its action when the mouse button is released.
