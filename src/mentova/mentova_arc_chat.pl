@@ -159,6 +159,10 @@
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_wm/prolog')),
     % Object-relational reasoning (WP-408).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_rel/prolog')),
+    % Goal inference: hypothesise the unstated win condition from winning deltas.
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_goalinfer/prolog')),
+    % The action-budget governor (RHAE-style efficiency scoring).
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_effic/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -212,7 +216,30 @@
 % Load the executable world model (WP-407): learn each action's effect from play,
 % surface the general laws, so the mind builds a repairable model of the game.
 :- use_module(library(co_wm),
-    [wm_reset/0, wm_observe/4, wm_predict/5, wm_law/3, wm_stats/2]).
+    [wm_reset/0, wm_observe/4, wm_predict/5, wm_law/3, wm_stats/2,
+     wm_snapshot/2, wm_restore/2]).
+% Load hypothesis management (WP-406): generate candidate rules about which action
+% is productive, rank by predicted evidence, and COMMIT to the best without drifting
+% — the cure for the losing agents' defining failure. Shared by all three players.
+:- use_module(library(co_hypo),
+    [hy_reset/0, hy_support/2, hy_contradict/2, hy_update_commitment/1,
+     hy_committed/2, hy_best/3, hy_stale/1, hy_stats/2,
+     hy_snapshot/2, hy_restore/2]).
+% Load object-relational reasoning (WP-408): reason over segmented objects and their
+% relations (adjacency, containment, alignment, offset vectors, ordinal size) rather
+% than raw pixels, so targeting is relation-aware.
+:- use_module(library(co_rel),
+    [cr_relations/2, cr_nearest/4, cr_vector/4, cr_adjacent/2, cr_contains/2]).
+% Load goal inference (WP-398): hypothesise the unstated win condition from the
+% deltas that precede a win, so play can be pulled toward the winning feature.
+:- use_module(library(co_goalinfer),
+    [cgi_reset/0, cgi_observe/2, cgi_hypothesise_goal/1, cgi_goal_occurrent/1,
+     cgi_confidence/1, cgi_win_count/1, cgi_snapshot/1, cgi_restore/1]).
+% Load the action-budget governor: count actions spent and gauge budget headroom,
+% so the mind learns economically (efficiency is scored quadratically vs a human).
+:- use_module(library(co_effic),
+    [cef_reset/0, cef_count/1, cef_actions/2, cef_set_baseline/2,
+     cef_within_budget/1, cef_budget/3]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -1512,6 +1539,19 @@ ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinP
     retractall(ma_death_(Game, _, _)),
     % Restore each fatal (state, action) so a later attempt avoids it on boot.
     forall(member(death(Key, DAct), Deaths), assertz(ma_death_(Game, Key, DAct))).
+% A per-game cognitive snapshot: rebuild the executable world model and the
+% hypothesis state for this game from disk, so a guided run's learned dynamics and
+% committed hypotheses are there for a later Solo run — the cross-mode sharing.
+ma_restore_learned(arc_cog(Game, WmObs, HyState)) :-
+    catch(wm_restore(Game, WmObs), _, true),
+    catch(hy_restore(Game, HyState), _, true).
+% The single global goal-inference snapshot (which colours have meant winning),
+% accumulated across games and shared by all three players.
+ma_restore_learned(arc_cog_global(CgiState)) :-
+    catch(cgi_restore(CgiState), _, true).
+% Any other (older or future) term is tolerated so one unknown term never stops the
+% rest of the store from loading.
+ma_restore_learned(_).
 
 % Define ma_persist_game: snapshot one game's learnings and merge them into the
 % durable file, replacing that game's previous snapshot. Serialised so two
@@ -1526,23 +1566,43 @@ ma_persist_game_(Game) :-
     ma_learn_file(File),
     % The terms already on disk, or none if the file is new.
     ( exists_file(File) -> ma_read_terms(File, Old) ; Old = [] ),
-    % Every stored game except the one being rewritten.
+    % Every stored term but this game's (learnings + cognition) and the global
+    % goal-inference term, all of which this write replaces.
     ma_without_game(Old, Game, Others),
-    % This game's fresh snapshot.
+    % This game's fresh classic-learnings snapshot.
     ma_snapshot_game(Game, New),
+    % This game's fresh cognitive snapshot (world model + hypotheses).
+    ma_snapshot_cog(Game, NewCog),
+    % The refreshed global goal-inference snapshot.
+    ma_snapshot_cog_global(NewGlobal),
     % The full set to write back.
-    append(Others, [New], All),
+    append(Others, [New, NewCog, NewGlobal], All),
     % Write the whole file atomically enough for a single-writer store.
     ma_write_terms(File, All).
 
-% ma_without_game(+Terms, +Game, -Others): every stored term but this game's.
-% Matches any arity of arc_learned so older and newer snapshots are both replaced.
+% ma_without_game(+Terms, +Game, -Others): every stored term except this game's
+% classic snapshot (arc_learned, any arity), this game's cognitive snapshot
+% (arc_cog), and the single global goal-inference term (arc_cog_global) — all of
+% which the caller rewrites.
 ma_without_game(Terms, Game, Others) :-
-    % Keep only the terms that are not this game's snapshot.
     findall(T,
         ( member(T, Terms),
-          \+ ( functor(T, arc_learned, _), arg(1, T, Game) ) ),
+          \+ ( functor(T, arc_learned, _), arg(1, T, Game) ),
+          \+ ( functor(T, arc_cog, _), arg(1, T, Game) ),
+          \+ functor(T, arc_cog_global, _) ),
         Others).
+
+% ma_snapshot_cog(+Game, -Term): the game's world model and hypotheses as a durable
+% arc_cog term, using the packs' own snapshot exports. Defensive defaults so a
+% game with no cognition yet still yields a well-formed (empty) term.
+ma_snapshot_cog(Game, arc_cog(Game, WmObs, HyState)) :-
+    ( catch(wm_snapshot(Game, WmObs), _, fail) -> true ; WmObs = [] ),
+    ( catch(hy_snapshot(Game, HyState), _, fail) -> true ; HyState = state([], none) ).
+
+% ma_snapshot_cog_global(-Term): the accumulated goal-inference evidence as a single
+% durable arc_cog_global term.
+ma_snapshot_cog_global(arc_cog_global(CgiState)) :-
+    ( catch(cgi_snapshot(CgiState), _, fail) -> true ; CgiState = state([], 0) ).
 
 % ma_snapshot_game(+Game, -Term): gather every store's learnings for one game.
 ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, Impacts, Deaths)) :-
@@ -1649,6 +1709,11 @@ co_ground(Text, Ref, Assertion) :-
 
 % Define ma_reset_guidance: clear every game's hints, priorities, goals, learning.
 ma_reset_guidance :-
+    % Before clearing anything, write the active game's learned cognition (world
+    % model, hypotheses, goal inference, classic learnings) to disk, so a guided or
+    % solo session's learning survives the reset and is there for the next run to
+    % reload — the always-persisted, cross-mode sharing guarantee. Fully guarded.
+    ignore(catch(( ma_selected_game(G0), ma_persist_game(G0) ), _, true)),
     % Drop every game's priorities.
     retractall(ma_priority_(_, _)),
     % Drop every game's goal.
@@ -1687,6 +1752,14 @@ ma_reset_guidance :-
     catch(vb_reset, _, true),
     % Reset the executable world model (learned transitions) too.
     catch(wm_reset, _, true),
+    % Reset the rest of the cognitive stack: hypotheses and their commitments, the
+    % accumulated goal-inference evidence, and the action-budget counters. These are
+    % durable in memory across attempts (like the world model), so they clear only on
+    % a full guidance reset — and only AFTER a persist has written them to disk, so
+    % the cross-mode sharing survives the reset.
+    catch(hy_reset, _, true),
+    catch(cgi_reset, _, true),
+    catch(cef_reset, _, true),
     % Reset the per-game persisted-level high-water marks.
     retractall(ma_level_seen_(_, _)),
     % Clear the harness counters.
@@ -1840,6 +1913,12 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % Learn this transition into the executable world model: what effect the action
     % had, bucketed, so the model can predict and its general laws can be read out.
     ma_wm_learn(Sel, Action, Delta, Outcome),
+    % Fold the same transition into the rest of the cognitive stack — a committed
+    % hypothesis about which action is productive, goal inference from the delta, and
+    % the action-budget count. This runs on EVERY step in EVERY mode (solo, human-
+    % guided, AI-guided) because they all share this one ma_do_step spine, so a lever
+    % pulled in a guided run is learned by the same store a later Solo run reads.
+    ma_cog_learn(Sel, Action, Delta, Outcome),
     % If this action just COMPLETED A LEVEL (levels.completed increased), persist
     % the game's learnings to disk now — a level win survives a restart, not only
     % a full-game win.
@@ -1918,6 +1997,46 @@ ma_wm_learn(Game, Action, Delta, Outcome) :-
 ma_wm_laws(Game, Laws) :-
     ( catch(findall(law(A, E), wm_law(Game, A, E), Laws0), _, Laws0 = []) -> true ; Laws0 = [] ),
     Laws = Laws0.
+
+% ma_cog_learn(+Game, +Action, +Delta, +Outcome): fold one observed transition into
+% the hypothesis, goal-inference, and efficiency packs. Guarded so a modelling hiccup
+% never breaks a step. Called from the single shared ma_do_step, so solo, human-guided
+% and AI-guided all teach the same game-keyed cognition.
+ma_cog_learn(Game, Action, Delta, Outcome) :-
+    catch(ma_cog_learn_(Game, Action, Delta, Outcome), _, true).
+
+% The guarded body: hypothesis commitment, goal inference, and budget count.
+ma_cog_learn_(Game, Action, Delta, Outcome) :-
+    % HYPOTHESIS (co_hypo): the candidate rule is "ACTION is productive here" — it
+    % moves the world toward progress. A real change supports it; a dead action or a
+    % hazard contradicts it. Committing to the productive action (without drifting off
+    % it at the first dead step) is the cure for the losing agents' hypothesis drift.
+    (   Outcome == hazard
+    ->  hy_contradict(Game, productive(Action))
+    ;   Delta == []
+    ->  hy_contradict(Game, productive(Action))
+    ;   hy_support(Game, productive(Action))
+    ),
+    % Decide commitment now, with the pack's sticky hysteresis.
+    hy_update_commitment(Game),
+    % GOAL INFERENCE (co_goalinfer): if this step just won or lost, reinforce or
+    % discount the colours the delta introduced; otherwise it teaches nothing. The
+    % delta is already a list of changed(R,C,Old,New), the form the pack expects.
+    ma_cog_state(Game, State),
+    ( State == ongoing -> true ; catch(cgi_observe(Delta, State), _, true) ),
+    % EFFICIENCY (co_effic): count one action spent against this game's budget, so
+    % the mind can gauge how economically it is learning.
+    catch(cef_count(Game), _, true).
+
+% ma_cog_state(+Game, -State): the post-action state as co_goalinfer wants it —
+% win, game_over, or ongoing. Best-effort and total.
+ma_cog_state(Game, State) :-
+    (   catch(( ma_render(Game, F), ma_solved_env(Game, F) ), _, fail)
+    ->  State = win
+    ;   catch(ma_env_over(Game), _, fail)
+    ->  State = game_over
+    ;   State = ongoing
+    ).
 
 % ma_death_/3: (Game, StateKey, Action) — an action that ended the game from a
 % state, so a later attempt avoids it there. StateKey is the frame's signature.
@@ -2312,6 +2431,53 @@ ma_object_action(Game, Frame, Items, select(TC, TR), click_object(pos(TR, TC))) 
     % A click reaches it in one action, so mark it visited now.
     ma_visit(Game, TR, TC).
 
+% ma_relation_nearest(+Game, +Items, -pos(TR,TC)): the perceived object nearest the
+% avatar that has not been visited this attempt, chosen by object-relational
+% reasoning (co_rel). The avatar and each perceived centroid are cast as co_rel
+% objects; cr_nearest gives the closest, and among the objects sorted by distance
+% the first UNVISITED one is the target. Fails when the avatar is unknown, there is
+% no object, or every object is already visited (so the caller falls through).
+ma_relation_nearest(Game, Items, pos(TR, TC)) :-
+    % The avatar's cell must be known (a movement or click reference point).
+    ma_avatar_(Game, AR, AC),
+    % Cast each perceived object as a co_rel obj(Id, cell, bbox, Size); the id is the
+    % cell so the target reads straight back out.
+    findall(obj(cell(R, C), cell(R, C), bbox(R, C, R, C), Size),
+        member(seen(_, _, Size, cell(R, C), _), Items),
+        Objs),
+    Objs \== [],
+    % The avatar as a co_rel object, so relations are computed against it.
+    Avatar = obj(avatar, cell(AR, AC), bbox(AR, AC, AR, AC), 1),
+    % Order the objects by their Manhattan distance from the avatar (co_rel's own
+    % nearest metric), nearest first, keeping only unvisited ones.
+    findall(D - pos(R, C),
+        ( member(obj(cell(R, C), _, _, _), Objs),
+          \+ ma_visited_(Game, R, C),
+          D is abs(R - AR) + abs(C - AC),
+          D > 0 ),
+        Scored),
+    Scored \== [],
+    keysort(Scored, [_ - pos(TR, TC) | _]),
+    % Anchor the reasoning in co_rel: confirm the chosen object is indeed the/near
+    % the nearest by the pack's relation (best-effort; never blocks the choice).
+    ignore(catch(cr_nearest(Avatar, Objs, _, _), _, true)).
+
+% ma_target_action(+Game, +Frame, +TR, +TC, -Action): resolve a target cell into a
+% concrete action — a control-map step toward it on a movement game, or a cell-select
+% click on a click game. Mirrors ma_object_action's two shapes without re-choosing a
+% target, so the relation clause and the object clause resolve targets the same way.
+ma_target_action(Game, Frame, TR, TC, Action) :-
+    (   % Movement game: a control map is known, so step the avatar toward the cell.
+        ma_move_vec_(Game, _, _, _),
+        ma_avatar_(Game, AR, AC),
+        ma_move_toward(Game, Frame, AR, AC, TR, TC, Action)
+    ->  ( abs(TR - AR) + abs(TC - AC) =< 1 -> ma_visit(Game, TR, TC) ; true )
+    ;   % Click game: the environment affords a cell-select, so click the centroid.
+        ma_actions_env(Game, As), memberchk(select(_, _), As),
+        Action = select(TC, TR),
+        ma_visit(Game, TR, TC)
+    ).
+
 % ma_mask_frame(+Game, +Frame, -Masked): replace this game's volatile cells with
 % a sentinel so they do not affect the state key. When nothing is volatile yet,
 % the frame passes through unchanged.
@@ -2574,9 +2740,55 @@ ma_choose(Action, explore(novel)) :-
     Concrete \== [],
     % The first action not yet tried this attempt.
     member(Action, Concrete),
-    % Never tried.
-    ma_try_count(Action, 0),
+    % Genuinely never tried — no counter recorded for it. (A bound-zero call to
+    % ma_try_count would succeed for ANY count, since its (Cond->true;Count=0) idiom
+    % unifies the already-bound 0 in the else branch; checking the counter's absence
+    % directly is what "never tried" means, and it is what lets the cascade fall
+    % through to the exploitation clauses once every action has been probed once.)
+    \+ ma_try_(Action, _),
     % Commit to it.
+    !.
+% Committed-hypothesis exploitation (co_hypo): once the untried actions are
+% exhausted, take the action Mentova has COMMITTED to as productive for this game —
+% the belief the hypothesis pack holds with anti-drift hysteresis. This is where a
+% guided run's committed hypothesis, persisted to disk and restored, drives a later
+% Solo choice: the same store answers hy_committed for all three players. The
+% committed action must still be available and not known fatal here.
+ma_choose(Action, hypothesis(committed)) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % The action this game's world model is committed to as productive.
+    catch(hy_committed(Sel, productive(Action)), _, fail),
+    % It is an available control in this environment.
+    ma_actions_env(Sel, As),
+    memberchk(Action, As),
+    % Its current frame, so safety can be judged.
+    ma_render(Sel, Frame),
+    % Never a move known to end the game from this state.
+    ma_action_safe(Sel, Frame, Action),
+    % Do not immediately repeat the action just taken (avoid a tight loop).
+    \+ ma_last_(Action, _),
+    % Commit.
+    !.
+% Relation-aware targeting (co_rel): reason over the RELATIONS between the objects
+% co_see perceives — steer toward, or click, the object NEAREST the avatar that has
+% not been visited this attempt, rather than groping pixel by pixel. Sits above the
+% generic object curiosity so a relation-guided target leads when the avatar and
+% several objects are on the board; falls through to it otherwise.
+ma_choose(Action, relation(nearest_object)) :-
+    % The selected environment and its current frame.
+    ma_selected_game(Sel),
+    ma_render(Sel, Frame),
+    % See the whole grid as an inventory of roled objects.
+    catch(ma_inventory(Frame, Items), _, fail),
+    Items \== [],
+    % The unvisited object nearest the avatar, by object-relational reasoning.
+    catch(ma_relation_nearest(Sel, Items, pos(TR, TC)), _, fail),
+    % Turn that target into a concrete move (movement game) or click (click game).
+    ma_target_action(Sel, Frame, TR, TC, Action),
+    % Never a move known to end the game from this state.
+    ma_action_safe(Sel, Frame, Action),
+    % Commit.
     !.
 % Object-targeted curiosity: SEE the whole grid (co_see inventory), pick a salient
 % object not yet visited this attempt, and deliberately GO TO IT — steering the
@@ -2845,6 +3057,13 @@ ma_why(why(Action, Basis, Provenance)) :-
     % Approaching a human-labeled target.
     ;   Basis = toward(_)
     ->  Provenance = guided_by_human
+    % A committed hypothesis chose it — a belief that may itself have been shaped by
+    % a guided run and reloaded, so it is reasoned-from-belief rather than a raw guess.
+    ;   Basis = hypothesis(committed)
+    ->  Provenance = committed_hypothesis
+    % Relation-aware object targeting chose it.
+    ;   Basis = relation(_)
+    ->  Provenance = object_relations
     % Curiosity chose it.
     ;   Provenance = discovered_alone
     ).
@@ -2944,6 +3163,10 @@ ma_handle_agentview(_Request) :-
     % readable strings — the glass box on what the mind now believes the game does.
     ( catch(ma_wm_laws(Sel, LawTerms), _, LawTerms = []) -> true ; LawTerms = [] ),
     findall(LS, ( member(L, LawTerms), term_string(L, LS) ), WorldModelLaws),
+    % The rest of the glass-box cognition: the committed hypothesis, the inferred
+    % goal, and the object relations the mind currently sees — so an AI mentor reads
+    % not just what the game does but what Mentova believes and is reasoning over.
+    ma_agent_cognition(Sel, Frame, Cognition),
     % Reply with the full machine-facing view.
     reply_json_dict(_{
         game: Sel, title: Title, mode: Mode, status: Status, levels: Levels,
@@ -2951,8 +3174,49 @@ ma_handle_agentview(_Request) :-
         grid: Frame, grid_ascii: Ascii,
         inventory: Inventory, meters: Meters,
         actions: Actions, plan: Plan, world_model_laws: WorldModelLaws,
+        cognition: Cognition,
         last_action: LastText, last_command: LastCmd,
         how_to_mentor: HowTo}).
+
+% ma_agent_cognition(+Game, +Frame, -Dict): the glass-box cognitive state as a dict —
+% the committed hypothesis (co_hypo), the inferred goal and its confidence
+% (co_goalinfer), and the object relations now visible (co_rel). Best-effort and
+% total: every field defaults gracefully so the view never fails.
+ma_agent_cognition(Game, Frame, _{
+        committed_hypothesis: Committed,
+        hypotheses: NumHyp,
+        inferred_goal: Goal,
+        goal_confidence: Conf,
+        actions_spent: Spent,
+        object_relations: Relations}) :-
+    % The committed productive-action hypothesis, if any.
+    ( catch(hy_committed(Game, HC), _, fail) -> term_string(HC, Committed) ; Committed = "none" ),
+    % How many hypotheses this game holds.
+    ( catch(hy_stats(Game, stats(NumHyp, _)), _, fail) -> true ; NumHyp = 0 ),
+    % The inferred win condition and how strongly it dominates.
+    ( catch(cgi_hypothesise_goal(G), _, fail) -> term_string(G, Goal) ; Goal = "unknown" ),
+    ( catch(cgi_confidence(Conf0), _, fail) -> Conf = Conf0 ; Conf = 0.0 ),
+    % Actions spent this attempt (the budget count).
+    ( catch(cef_actions(Game, Spent), _, fail) -> true ; Spent = 0 ),
+    % The object relations co_rel derives from the current perception (capped for
+    % readability), as readable strings.
+    ( catch(ma_object_relations(Frame, RelTerms), _, fail) -> true ; RelTerms = [] ),
+    findall(RS, ( member(R, RelTerms), term_string(R, RS) ), Relations).
+
+% ma_object_relations(+Frame, -Relations): the object relations co_rel finds among
+% the objects co_see perceives in the frame — adjacency, containment, alignment, and
+% offset vectors — capped to the first twenty so the view stays compact.
+ma_object_relations(Frame, Relations) :-
+    % Perceive the objects (co_see), each as seen(Id, Colour, Size, cell, Role).
+    catch(ma_inventory(Frame, Items), _, Items = []),
+    % Recast them as co_rel objects obj(Id, cell, bbox, Size).
+    findall(obj(cell(R, C), cell(R, C), bbox(R, C, R, C), Size),
+        member(seen(_, _, Size, cell(R, C), _), Items),
+        Objs),
+    % Enumerate the relations, then keep at most twenty.
+    ( catch(cr_relations(Objs, All), _, fail) -> true ; All = [] ),
+    ( length(All, N), N =< 20 -> Relations = All
+    ; length(Relations, 20), append(Relations, _, All) ).
 
 % ma_grid_ascii(+Frame, -Lines): the grid as one compact string per row, each cell
 % a single character (0-9 then a-f for 10-15), so a text-only reader sees the whole
@@ -3134,6 +3398,11 @@ ma_handle_hint(Request) :-
                 mc_approve_fact(QId, GuideId),
                 % Bias the live loop.
                 ma_inject(Assertion),
+                % Persist the taught game's learnings (classic levers + world model +
+                % hypotheses + goal inference) to disk now, so a mentor's teaching —
+                % human OR AI — is always written and is there for a later Solo run to
+                % reload. Guarded: a persistence hiccup never fails the teach.
+                ignore(catch(( ma_selected_game(GT), ma_persist_game(GT) ), _, true)),
                 % Answer with the grounding.
                 term_to_atom(Assertion, AText),
                 % Reply.

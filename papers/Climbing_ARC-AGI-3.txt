@@ -714,6 +714,36 @@ environments are the prize, so the principles, not the twenty-five puzzles, are 
 must transfer. No live game was played in this work; no leaderboard score is
 claimed.
 
+2026-07-11  METHODOLOGY. The cognitive stack was wired end to end into play, and
+made to be shared. Until now the three ways Mentova plays a game - Solo (it plays
+alone), Human-Guided (a person hints and controls), and AI-Guided over the Mentor
+Bridge (a Claude session teaches through the machine-facing view) - each ran the
+same one step spine and the same one choice loop, but only the older layers
+actually reached the decision. The hypothesis pack, the object-relations pack, goal
+inference, and the budget governor were built but not yet consulted where the action
+is chosen. Now every step folds its transition into the whole stack - the world
+model, a committed hypothesis about which action is productive, goal inference from
+the delta, and the action count - and the choice loop consults them: once the untried
+actions are spent it takes the action it has COMMITTED to as productive (the anti-
+drift belief), and it targets the object nearest the avatar by object-relational
+reasoning rather than groping pixel by pixel. Because all three players share the one
+spine, this lands in all three at once. A latent bug was found and fixed on the way
+in: the "try an untried action" test was written so that, asked whether an action's
+try-count was zero, it answered yes for ANY count - so the breadth-first rule fired
+every step and the smarter exploitation rules below it never ran. Corrected to check
+the counter's absence directly, the cascade now falls through to object, causal,
+graph, committed-hypothesis, and relation reasoning as designed. The learnings are
+made durable and shared across the three modes through one game-keyed store that is
+always written to disk: the world model and the hypotheses are snapshotted beside the
+classic learnings in data/arc_learnings.db and reloaded on boot, and a mentor's
+teaching - human or AI - is persisted the moment it is taught. The sharing is proven
+by a test that makes a learning in a GUIDED run, writes it to disk, wipes the
+process's memory as a restart would, reloads, and shows a subsequent SOLO choice use
+the restored committed hypothesis to pick its action - guided teaching feeding solo
+play across a restart, exactly as intended. Regression held throughout: the solo,
+verify, plan, and cognition demonstrations all pass unchanged. No live game was
+played in this work; no leaderboard score is claimed.
+
 
 THE VISION
 
