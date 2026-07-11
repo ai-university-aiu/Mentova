@@ -116,8 +116,24 @@ mc_chat_main(DataDir, Port) :-
     % Hold the OODA methodology in Jacobian Space as a skill — the observe-orient-
     % decide-act loop that is the middle layer of every plan Mentova builds.
     catch(ooda_bootstrap, _OodaError, true),
+    % Sweep any duplicate facts out of the lattice and the verb layer, so a store
+    % that accumulated duplicates before the assert-if-new doors were in place is
+    % cleaned on boot. Ingest now uses the unique doors, so this normally removes 0.
+    catch(mc_dedup_stores, _DedupError, true),
     % Then start the HTTP server on the requested port.
     mc_start_server(Port).
+
+% Define mc_dedup_stores: remove content-duplicate node-facts and relations, and
+% log how many were pruned (a glass-box startup line, like the ingest logs).
+mc_dedup_stores :-
+    % Remove duplicate lattice node-facts, if the facility is present.
+    ( catch(node_facts:node_facts_dedup(NF), _, NF = 0) -> true ; NF = 0 ),
+    % Remove duplicate Causalontology relations, if the facility is present.
+    ( catch(co_core:co_cro_dedup(NC), _, NC = 0) -> true ; NC = 0 ),
+    % Report only when something was actually removed.
+    ( NF + NC > 0
+    -> format("dedup: pruned ~w duplicate node-facts and ~w duplicate relations~n", [NF, NC])
+    ;  true ).
 
 % ------------------------------------------------------------------
 % Static page handlers
