@@ -315,6 +315,42 @@ verify-before-act loop. Those two, plus learning to avoid the actions that end a
 game, are now the clearly-named next work. No leaderboard score is claimed; no
 scorecard was published.
 
+2026-07-11  COURSE CORRECTION. Building the first of those levers - learning to
+avoid the moves that end a game - uncovered a quiet bug that had made the earlier
+game-over handling ineffective: the predicate that reads the live game's state
+was never imported into the player's module, so the test "is the game over" threw
+an error that was silently swallowed and always answered no. In practice the
+player had been noticing a game had ended only indirectly, when its next action
+was refused, and it had never once recorded a fatal move. With the one missing
+import added, the game-over state is read directly: an ended attempt now reports
+a clean game-over at the exact step it happened, and the fatal move is recorded.
+
+2026-07-11  LEARNING. Death-avoidance, measured honestly. Six of the games that
+ended earliest in the campaign were each played three times in a row, so that the
+fatal moves learned in one attempt carried forward to the next, under an
+unpublished scorecard. The mechanism works: each attempt recorded and kept more
+fatal moves than the last. But it did not help the agent survive longer - every
+attempt of every game ended at exactly the same step it had before (sp80 at
+thirty, su15 at thirty-seven, tu93 and vc33 and s5i5 at fifty, r11l at sixty),
+attempt after attempt. The reason is important and was confirmed directly: these
+games do not end because of one repeatable bad move that avoidance could remove;
+they end when a fixed allowance of actions for the level runs out without the
+level being completed - a progress timeout, not a fatal step. A deterministic
+fixed action taken over and over reaches the very same game-over step as varied
+exploration does. So death-avoidance, which is the right tool when a specific
+move ends the game, is the wrong tool for a game that ends by running out of time
+without progress. It is kept - it is cheap, durable, and will help the games
+where a move really is fatal - but the measurement redirects the effort plainly:
+to win these games the agent must make progress and complete the level within its
+allowance, which needs the goal inferred and a model to plan in. Goal inference
+and the verify-before-act loop are the levers that matter here. A further, related
+weakness the flat results expose is that the fatal state is remembered by the
+exact picture, which a changing counter or animation alters between attempts, so
+even a truly fatal move is often not recognised as the same one next time; a
+picture signature that ignores such changing regions is the standing prerequisite
+for both death-avoidance and the state graph to carry forward well. No leaderboard
+score is claimed; no scorecard was published.
+
 
 THE VISION
 
