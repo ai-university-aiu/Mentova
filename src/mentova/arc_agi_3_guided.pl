@@ -6,7 +6,8 @@
     into the live game loop, and takes glass-box steps whose basis it records.
     Everything it learns lands in the shared substrate - the data lattice
     (node facts), the Causalontology relations, the human-set goal, priorities,
-    and hazards, and the Jacobian Space (J-Space) - which the companion
+    and hazards, the Jacobian Space (J-Space), and the shared state-exploration
+    graph (co_graph) which Guided play builds and Solo reads - which the companion
     sub-project ARC-AGI-3_Solo reads back and plays from unaided.
 
     This module is the named face of that sub-project. Its predicates delegate
@@ -36,12 +37,15 @@
     % g3_mode/1: the active mode.
     g3_mode/1,
     % g3_learnings/1: all shared learnings, seen and read.
-    g3_learnings/1
+    g3_learnings/1,
+    % g3_graph/1: the shared state-graph exploration map.
+    g3_graph/1
 ]).
 
 % Load the shared ARC-AGI-3 chat backend both sub-projects operate on.
 :- use_module('mentova_arc_chat',
-    [co_ground/3, ma_inject/1, ma_step/1, ma_why/1, ma_mode/1, ma_learnings/1]).
+    [co_ground/3, ma_inject/1, ma_step/1, ma_why/1, ma_mode/1,
+     ma_learnings/1, ma_graph_stats/1]).
 
 % Define g3_ground: ground one human clue, delegating to the shared backend.
 g3_ground(Text, Ref, Assertion) :-
@@ -72,3 +76,10 @@ g3_mode(Mode) :-
 g3_learnings(Learnings) :-
     % The shared learnings the Solo sub-project also reads.
     ma_learnings(Learnings).
+
+% Define g3_graph: the shared state-graph exploration map (co_graph). Guided play
+% builds this graph as the human drives and teaches, and Solo reads the very same
+% graph — there is one store, not one per mode.
+g3_graph(Graph) :-
+    % The shared graph statistics.
+    ma_graph_stats(Graph).

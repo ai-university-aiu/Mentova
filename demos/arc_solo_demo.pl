@@ -72,12 +72,33 @@ run_arc_solo_demo :-
     % AC-006: the attempts list is populated and a report is viewable.
     report('AC-GS-006', demo_attempts_viewable),
 
+    % AC-007: Guided play builds the shared state graph, and Solo reads the very
+    % same graph (co_graph wired into both, one store).
+    report('AC-GS-007', demo_shared_graph),
+
     % Show the current learnings both sub-projects see.
     g3_learnings(Learn),
     format("~nshared learnings (seen by both sub-projects): ~q~n", [Learn]),
     % Show the recorded attempts.
     ma_attempts_list(Files),
     format("solo attempt reports on record: ~w~n~n", [Files]).
+
+% demo_shared_graph: Guided actions build the state graph; Solo reads the same one.
+demo_shared_graph :-
+    % A fresh navigation game with an empty graph.
+    ma_set_game(vc33), ma_set_mode(guided), ma_reset_guidance,
+    catch(mentova_arc_chat:cg_reset, _, true),
+    % Drive a few guided actions, which build the shared exploration graph.
+    forall(member(C, ['ACTION2', 'ACTION4', 'ACTION2', 'ACTION4']),
+        ( mentova_arc_chat:ma_command_action(vc33, C, A),
+          mentova_arc_chat:ma_do_step(A, manual, _) )),
+    % The Guided sub-project now sees a non-trivial graph.
+    g3_graph(G1),
+    G1 = stats(Nodes, _Edges, Tested, _Dead),
+    Nodes >= 3, Tested >= 3,
+    % The Solo sub-project reads the very same graph (identical statistics).
+    s3_graph(G2),
+    G1 == G2.
 
 % demo_solo_signal: Solo wins ft09 unaided and a report is written.
 demo_solo_signal :-
@@ -109,7 +130,7 @@ demo_guided_then_solo :-
     % Solo must have won using the taught learnings.
     sub_atom(Final.outcome, 0, _, _, won),
     % The learnings Solo drew on must include the taught goal.
-    s3_learnings(learnings(Goal, _, _, _, _, _)),
+    s3_learnings(learnings(Goal, _, _, _, _, _, _)),
     % A goal was carried over from guided teaching.
     Goal \== none.
 

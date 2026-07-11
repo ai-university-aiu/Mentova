@@ -104,6 +104,8 @@
     ma_attempts_list/1,
     % ma_learnings/1: the shared learnings both sub-projects read.
     ma_learnings/1,
+    % ma_graph_stats/1: the shared state-graph exploration map.
+    ma_graph_stats/1,
     % ma_source/1: the active game source (local | live).
     ma_source/1,
     % ma_set_source/1: switch the active game source.
@@ -398,20 +400,27 @@ ma_selected_game(Id) :-
 ma_set_game(Id) :-
     % The id must be available in the active source.
     ma_available_game(Id, _),
-    % Replace any previous selection.
-    retractall(ma_game_sel_(_)),
-    % Record the new selection.
-    assertz(ma_game_sel_(Id)),
-    % A different game has its own action semantics: forget the discovered ones.
-    retractall(ma_effect_(_, _)),
-    % A different game has its own state space: start its exploration graph fresh.
-    catch(cg_reset, _, true),
-    % Start the newly selected environment fresh.
-    ma_reset_env(Id, _),
-    % Begin a fresh session recording for the new game.
-    ma_session_reset,
-    % Selecting a game also ends any solo run in progress.
-    ma_solo_clear.
+    % The currently selected game.
+    ma_selected_game(Prev),
+    (   Id == Prev
+    % Re-selecting the already-active game is a no-op: every learning is kept, so
+    % what Guided taught (the shared state graph, the relations, the goal and
+    % priorities) survives for Solo to use on the same game.
+    ->  true
+    % A genuine game change: its own state space and semantics, so start fresh.
+    ;   retractall(ma_game_sel_(_)),
+        assertz(ma_game_sel_(Id)),
+        % A different game has its own action semantics: forget the discovered ones.
+        retractall(ma_effect_(_, _)),
+        % A different game has its own state space: start its exploration graph fresh.
+        catch(cg_reset, _, true),
+        % Start the newly selected environment fresh.
+        ma_reset_env(Id, _),
+        % Begin a fresh session recording for the new game.
+        ma_session_reset,
+        % Selecting a new game also ends any solo run in progress.
+        ma_solo_clear
+    ).
 
 % Uniform dispatch — render the current frame, routing to live or local.
 ma_render(Id, Frame) :-
@@ -1005,7 +1014,7 @@ ma_report_text(Now, Text) :-
     % Render the trace lines.
     ma_trace_lines(Pairs, TraceText),
     % The learnings the run drew on.
-    ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens)),
+    ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens, _Graph)),
     % Render the outcome as text.
     term_to_atom(Outcome, OutcomeText),
     % Render the goal.
@@ -1063,7 +1072,8 @@ ma_attempts_list(Files) :-
 % ---------------------------------------------------------------------------
 
 % Define ma_learnings: the shared learnings the Guided and Solo modules read.
-ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens)) :-
+% All of these live in one store: whatever Guided writes, Solo reads, and back.
+ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens, Graph)) :-
     % The taught or inferred goal, if any.
     ( ma_goal_(Goal) -> true ; Goal = none ),
     % The suggested-action priorities.
@@ -1076,7 +1086,14 @@ ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens)) :-
     ( catch(aggregate_all(count, co_cro(_, _, _, _, _, _, _, _), CroCount), _, fail)
     -> true ; CroCount = 0 ),
     % The J-Lens reading of the solo workspace.
-    ma_jlens(JLens).
+    ma_jlens(JLens),
+    % The shared state-graph exploration map (nodes, edges, tested, dead).
+    ma_graph_stats(Graph).
+
+% Define ma_graph_stats: the shared exploration graph both modes build and read.
+ma_graph_stats(Graph) :-
+    % Read the graph statistics, guarded, defaulting to an empty graph.
+    ( catch(cg_stats(Graph), _, fail) -> true ; Graph = stats(0, 0, 0, 0) ).
 
 % ---------------------------------------------------------------------------
 % SESSION RECORDING and the WON PACKAGE — learning from a complete winning game
