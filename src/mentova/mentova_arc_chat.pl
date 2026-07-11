@@ -1377,10 +1377,14 @@ ma_read_terms_(S, Terms) :-
 % ma_restore_learned(+Term): reassert one game's learnings from its stored term.
 % An older nine-argument snapshot (no impact record) restores with none.
 ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros)) :-
-    % Delegate to the full form with an empty impact record.
-    ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, [])).
-% The full ten-argument snapshot, including the highest-impact action record.
+    % Delegate to the full form with an empty impact and death record.
+    ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, [], [])).
+% A ten-argument snapshot (impact record, but no death record) restores with none.
 ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, Impacts)) :-
+    % Delegate to the full form with an empty death record.
+    ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, Impacts, [])).
+% The full eleven-argument snapshot, including the learned fatal moves.
+ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, Impacts, Deaths)) :-
     % Clear any current in-memory learnings for this game so a reload is idempotent.
     retractall(ma_goal_(Game, _)),
     % Its priorities.
@@ -1412,7 +1416,11 @@ ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinP
     % Its highest-impact action record.
     retractall(ma_impact_(Game, _, _)),
     % Restore each discovered mechanic so the recall nudge survives a restart.
-    forall(member(impact(Act, Mag), Impacts), assertz(ma_impact_(Game, Act, Mag))).
+    forall(member(impact(Act, Mag), Impacts), assertz(ma_impact_(Game, Act, Mag))),
+    % Its learned fatal moves.
+    retractall(ma_death_(Game, _, _)),
+    % Restore each fatal (state, action) so a later attempt avoids it on boot.
+    forall(member(death(Key, DAct), Deaths), assertz(ma_death_(Game, Key, DAct))).
 
 % Define ma_persist_game: snapshot one game's learnings and merge them into the
 % durable file, replacing that game's previous snapshot. Serialised so two
@@ -1446,7 +1454,7 @@ ma_without_game(Terms, Game, Others) :-
         Others).
 
 % ma_snapshot_game(+Game, -Term): gather every store's learnings for one game.
-ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, Impacts)) :-
+ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, Impacts, Deaths)) :-
     % The taught or inferred goal, or none.
     ( ma_goal_(Game, Goal) -> true ; Goal = none ),
     % The suggested-action priorities.
@@ -1470,7 +1478,9 @@ ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, 
         ( co_the_cro(Id, cro(Id, Ca, Ef, Te, Mo, St, Co, Pr)), memberchk(g(Game, _), Ca) ),
         Cros),
     % This game's highest-impact actions (the discovered mechanics worth recalling).
-    findall(impact(Act, Mag), ma_impact_(Game, Act, Mag), Impacts).
+    findall(impact(Act, Mag), ma_impact_(Game, Act, Mag), Impacts),
+    % This game's learned fatal moves (state, action) that ended the game.
+    findall(death(Key, DAct), ma_death_(Game, Key, DAct), Deaths).
 
 % ma_write_terms(+File, +Terms): write each term to the file, one per line.
 ma_write_terms(File, Terms) :-
@@ -1562,6 +1572,8 @@ ma_reset_guidance :-
     retractall(ma_try_(_, _)),
     % Drop every game's discovered action semantics.
     retractall(ma_effect_(_, _, _)),
+    % Drop every game's learned fatal moves.
+    retractall(ma_death_(_, _, _)),
     % Clear the harness counters.
     co_arc3_reset.
 
@@ -1690,8 +1702,38 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % Remember how big an effect this action had, and track no-progress, so the
     % player can recall its highest-impact action when it gets stuck.
     ma_note_impact(Sel, Action, Delta),
+    % If this action just ended the game, remember never to take it from this
+    % state again — durable, so a later attempt of the game does not re-die here.
+    ma_note_death(Sel, Frame0, Action),
     % Append this step to the session recording (for the won package).
     ma_session_record(Action, Delta, Outcome).
+
+% ma_death_/3: (Game, StateKey, Action) — an action that ended the game from a
+% state, so a later attempt avoids it there. StateKey is the frame's signature.
+:- dynamic ma_death_/3.
+
+% ma_note_death(+Game, +Frame0, +Action): if the game is now over, record that
+% this action, taken from Frame0, is fatal in this state. Nineteen of twenty-five
+% first-campaign attempts ended in a loss; remembering the fatal moves lets a
+% carried-forward later attempt survive longer and explore more.
+ma_note_death(Game, Frame0, Action) :-
+    % Only a live game can report a game-over.
+    (   ma_env_over(Game)
+    % Record the fatal (state, action) once, guarded.
+    ->  catch((
+            cg_signature(Frame0, Key),
+            ( ma_death_(Game, Key, Action) -> true
+            ; assertz(ma_death_(Game, Key, Action)) )
+        ), _, true)
+    % The game did not end: nothing to record.
+    ;   true
+    ).
+
+% ma_action_safe(+Game, +Frame, +Action): the action is not known to end the game
+% from this state.
+ma_action_safe(Game, Frame, Action) :-
+    % Safe unless a fatal (state, action) has been recorded for this frame.
+    \+ ( catch(cg_signature(Frame, Key), _, fail), ma_death_(Game, Key, Action) ).
 
 % ma_note_impact(+Game, +Action, +Delta): record the largest effect this action
 % has had in this game, and count consecutive no-change steps. The single most
@@ -1838,15 +1880,15 @@ ma_choose(Action, explore(causal)) :-
     ma_selected_game(Sel),
     % Its current frame.
     ma_render(Sel, Frame),
-    % Its safe action set, with ACTION6 represented as a salient-click marker.
-    ma_explore_actions(Sel, Frame, Marked),
+    % Its concrete safe action set (salient clicks expanded, fatal moves dropped).
+    ma_explore_concrete(Sel, Frame, Concrete),
     % There must be something to try.
-    Marked \== [],
+    Concrete \== [],
     % How many times each concrete action has been tried this attempt.
     findall(A - N, ma_try_(A, N), Tried),
     % The least-tried action this game predicts will change the world; fails when
     % none is predicted, so exploration falls through to the graph frontier.
-    catch(cox_choose_change(Sel, Marked, Tried, Frame, Action), _, fail),
+    catch(cox_choose_change(Sel, Concrete, Tried, Frame, Action), _, fail),
     % Commit.
     !.
 % Before falling back to least-tried curiosity, use the state-graph explorer -
@@ -1897,15 +1939,15 @@ ma_choose(Action, explore(salient)) :-
     ma_selected_game(Sel),
     % Its current frame.
     ma_render(Sel, Frame),
-    % Its safe action set, with ACTION6 as a salient-click marker.
-    ma_explore_actions(Sel, Frame, Marked),
+    % Its concrete safe action set (salient clicks expanded, fatal moves dropped).
+    ma_explore_concrete(Sel, Frame, Concrete),
     % There must be something to try.
-    Marked \== [],
+    Concrete \== [],
     % The per-action try counts this attempt.
     findall(A - N, ma_try_(A, N), Tried),
     % The best action under the full policy; guarded so a perception hiccup
     % never blocks the plain-curiosity fallback below.
-    catch(cox_choose(Sel, Marked, Tried, Frame, Action), _, fail),
+    catch(cox_choose(Sel, Concrete, Tried, Frame, Action), _, fail),
     % Commit.
     !.
 % ma_explore_actions(+Game, +Frame, -Marked): the game's action set with any
@@ -1932,11 +1974,16 @@ ma_explore_concrete(Game, Frame, Actions) :-
     % The safe action set with a click marker standing in for cell-select.
     ma_explore_actions(Game, Frame, Marked),
     % Expand the click marker to the frame's salient select(X,Y) targets.
-    ( catch(cox_expand_actions(Marked, Frame, Concrete), _, fail)
-    ->  Concrete1 = Concrete
+    ( catch(cox_expand_actions(Marked, Frame, Concrete0), _, fail)
+    ->  Concrete1a = Concrete0
     % If expansion is unavailable, fall back to the marker list unchanged.
-    ;   Concrete1 = Marked
+    ;   Concrete1a = Marked
     ),
+    % Drop any action known to end the game from this state, so a carried-forward
+    % attempt does not repeat a fatal move.
+    findall(A0, ( member(A0, Concrete1a), ma_action_safe(Game, Frame, A0) ), Safe),
+    % If avoiding deaths would leave nothing, keep the set rather than stall.
+    ( Safe == [] -> Concrete1 = Concrete1a ; Concrete1 = Safe ),
     % Order the actions least-tried-first (this attempt). On a click game a
     % changing region (a counter or animation) makes each frame hash differently,
     % so the state graph would otherwise re-offer the same largest-object click

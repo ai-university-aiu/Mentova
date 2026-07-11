@@ -20,6 +20,8 @@
                  restart, keyed by game id — a concluded win outlasts the process.
       AC-GS-010: when unguided play stalls, the player recalls the highest-impact
                  action it found for the game, and that mechanic survives a restart.
+      AC-GS-011: an action learned to end the game from a state is then avoided
+                 there, keyed by game, and the fatal move survives a restart.
 
     Run:
         swipl -l demos/arc_solo_demo.pl -g run_arc_solo_demo -t halt
@@ -94,6 +96,10 @@ run_arc_solo_demo :-
     % AC-010: when unguided play stalls, the player recalls its highest-impact
     % action for the game, and that discovered mechanic survives a restart.
     report('AC-GS-010', demo_recall_and_persist_impact),
+
+    % AC-011: an action learned to end the game from a state is avoided there,
+    % keyed by game, and that fatal move survives a restart.
+    report('AC-GS-011', demo_death_avoidance),
 
     % Show the current learnings both sub-projects see.
     g3_learnings(Learn),
@@ -229,6 +235,37 @@ demo_recall_and_persist_impact :-
     mentova_arc_chat:ma_load_learnings,
     mentova_arc_chat:ma_best_impact(vc33, BestA2, BestM2),
     BestA2 == BestA, BestM2 =:= BestM.
+
+% demo_death_avoidance: an action learned to end the game from a particular
+% state is afterwards excluded from the choices at that state, keyed by game, and
+% the fatal move is written to disk and reloaded so a later attempt does not
+% re-die there. This is the durable death-avoidance that answers the campaign
+% finding that most attempts ended in a loss.
+demo_death_avoidance :-
+    % Isolate the durable store in a scratch location.
+    ma_learn_attach('/tmp/mentova_death_demo/chat_db'),
+    % A fresh navigation attempt.
+    ma_set_game(vc33), ma_set_mode(solo), ma_reset_guidance,
+    % Its starting frame and that frame's state key.
+    mentova_arc_chat:ma_reset_env(vc33, F),
+    mentova_arc_chat:cg_signature(F, Key),
+    % Record that moving up ends the game from this state.
+    retractall(mentova_arc_chat:ma_death_(vc33, _, _)),
+    assertz(mentova_arc_chat:ma_death_(vc33, Key, action(up))),
+    % The chooser now treats up as unsafe here, but other moves as safe.
+    \+ mentova_arc_chat:ma_action_safe(vc33, F, action(up)),
+    mentova_arc_chat:ma_action_safe(vc33, F, action(down)),
+    % The concrete explore set at this frame excludes the fatal move.
+    mentova_arc_chat:ma_explore_concrete(vc33, F, Concrete),
+    \+ member(action(up), Concrete),
+    member(action(down), Concrete),
+    % Persist, wipe, reload — the fatal move survives a restart.
+    mentova_arc_chat:ma_persist_game(vc33),
+    retractall(mentova_arc_chat:ma_death_(vc33, _, _)),
+    \+ mentova_arc_chat:ma_death_(vc33, _, _),
+    mentova_arc_chat:ma_load_learnings,
+    mentova_arc_chat:ma_death_(vc33, Key2, action(up)),
+    Key2 == Key.
 
 % demo_solo_signal: Solo wins ft09 unaided and a report is written.
 demo_solo_signal :-
