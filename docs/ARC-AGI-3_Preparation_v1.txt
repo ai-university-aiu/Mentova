@@ -382,4 +382,73 @@ Additional sources scanned for this note.
 • Not readable as text, and therefore not scanned: the newsletter sign-up page, the Discord invite, the X page (sign-in wall), and the YouTube channel (JavaScript application).
 
 
+REVISION NOTE - SOLVING TECHNIQUES AND STATE-GRAPH EXPLORATION (2026-07-10)
+
+This note records a deep, wide review of the techniques that actually solve ARC-AGI-3, and the one improvement to Mentova's solving machinery that the review justified.
+
+The single most important finding is blunt.
+
+The agents that score on ARC-AGI-3 are not the frontier language models - those score under one percent - but agents that explore systematically.
+
+The strongest non-language agent, described in the paper "Graph-Based Exploration for ARC-AGI-3 Interactive Reasoning Tasks," placed third on the public leaderboard and solved a median of thirty levels across six games, where a language-model-plus-rules baseline solved five.
+
+Here are the main families of technique the review found, from most to least relevant to Mentova.
+
+• Graph-structured exploration - the winning approach.
+
+◦ Keep a directed graph whose nodes are hashes of the exact grid and whose edges are observed transitions of the form state, then action, then next state.
+
+◦ Mark every tried pair as tested, and mark an action that changed nothing as dead so it is never wasted again.
+
+◦ Choose by a simple rule: if the current state has an untested action, take it; otherwise take the first step on the shortest path to the nearest state that still has an untested action; carry the graph forward across attempts.
+
+• Frame-change prediction - the first-place developer-preview agent, StochasticGoose.
+
+◦ A small network learns which of the simple actions will actually change the frame, so exploration is not wasted on actions that do nothing, plus a position-aware way to choose where to click.
+
+• Explore-before-you-solve - epistemic agents that spend a budget of actions reducing their uncertainty before committing to a strategy, trading speed against depth.
+
+• Language-model-as-policy - the 2026 milestone winners.
+
+◦ First place (Tufa Labs, "The Duck") let a local language model write and run code, treating each game as an interactive coding problem, and found that hand-crafted tools actually hurt - letting the model improvise worked better.
+
+◦ Second and third place rendered recent frames as labelled images, asked a local vision-language model for a short JSON reply (what changed, a short plan, and the next one to four actions), kept a reflection memory refreshed every ten steps, avoided repeated failed interactions with a dead-signature mechanism, and preferred exploratory clicks on small, rare-coloured, button-like shapes.
+
+• Intrinsic-motivation and curiosity methods, which use prediction error as a reward, are powerful but were reported as finicky under the sparse rewards and short timeframes of this benchmark.
+
+The decision that followed.
+
+• The graph-structured exploration is both the strongest non-language technique and the one that fits Mentova, because Mentova is a glass-box symbolic system, not a language model.
+
+• It was therefore implemented as a new PrologAI capability package, co_graph (work package four hundred and two), and wired into Mentova's live solo player: before falling back to trying the least-tried action, the solo player now probes an untested action in the current state or takes the first step toward the nearest unexplored part of the state graph, and the graph is carried forward across attempts.
+
+• Several ideas from the other approaches Mentova already had in some form: salient click targeting (the object-centroid clicks of co_explore), avoiding actions that do nothing (now sharpened by the dead-action marking in co_graph), goal inference (co_goalinfer), and efficiency scoring (co_effic).
+
+• The language-model-as-policy approaches were noted but not adopted, because they replace Mentova's symbolic, inspectable reasoning with an opaque model, which is against the design.
+
+The measured effect.
+
+• Mentova's unguided solo play now explores systematically instead of oscillating.
+
+• On the signal game it wins in two steps by probing the one action that changes the world.
+
+• On the navigation game it covers the state space systematically - fifteen distinct states mapped, fifty-two state-action pairs tried, and eleven dead actions pruned within a sixty-action budget - which is genuinely broader coverage than the previous least-tried policy, although a known-goal navigation game is still solved faster by the goal-gradient method Mentova also has (the Jacobian of the human-step controller).
+
+• All existing acceptance demonstrations still pass - the guided demonstration all eight criteria, the guided-and-solo demonstration all six, and the live-connection demonstration all seven.
+
+• No benchmark score is claimed.
+
+Sources for this note.
+
+• Graph-Based Exploration for ARC-AGI-3 Interactive Reasoning Tasks, https://arxiv.org/abs/2512.24156
+
+• Explore Before You Solve - The Speed-Depth Trade-off in Epistemic Agents for ARC-AGI-3, https://arxiv.org/abs/2605.25931
+
+• Dries Smit, First Place in the ARC-AGI-3 Agent Preview Competition (StochasticGoose), https://medium.com/@dries.epos/1st-place-in-the-arc-agi-3-agent-preview-competition-49263f6287db
+
+• ARC Prize 2026 Milestone Prize Number One, https://arcprize.org/blog/arc-prize-2026-milestone-1
+
+• ARC Prize, ARC-AGI-3 Preview 30-Day Learnings, https://arcprize.org/blog/arc-agi-3-preview-30-day-learnings
+
+
 END OF DOCUMENT
