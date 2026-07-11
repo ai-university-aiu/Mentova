@@ -149,7 +149,8 @@
 :- use_module(library(co_arc3), [co_arc3_choose/3, co_arc3_delta/3, co_arc3_reset/0]).
 % Load the state-graph explorer: systematic, frontier-directed exploration.
 :- use_module(library(co_graph),
-    [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1]).
+    [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1,
+     cg_stats_for/2]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -407,14 +408,11 @@ ma_set_game(Id) :-
     % what Guided taught (the shared state graph, the relations, the goal and
     % priorities) survives for Solo to use on the same game.
     ->  true
-    % A genuine game change: its own state space and semantics, so start fresh.
+    % A genuine game change: every learning is keyed by game id and coexists, so
+    % nothing is wiped — switching away and back keeps that game's learnings.
     ;   retractall(ma_game_sel_(_)),
         assertz(ma_game_sel_(Id)),
-        % A different game has its own action semantics: forget the discovered ones.
-        retractall(ma_effect_(_, _)),
-        % A different game has its own state space: start its exploration graph fresh.
-        catch(cg_reset, _, true),
-        % Start the newly selected environment fresh.
+        % Start the newly selected environment fresh (only the live position resets).
         ma_reset_env(Id, _),
         % Begin a fresh session recording for the new game.
         ma_session_reset,
@@ -523,7 +521,7 @@ ma_default_game(Id) :-
 % design, or left unknown.
 
 % ma_effect_/2: (Action, Descriptor) — the last observed effect of an action.
-:- dynamic ma_effect_/2.
+:- dynamic ma_effect_/3.
 
 % ma_action_slot(?Action, ?Command): map an action term to its canonical command.
 % The local stand-ins' directional actions occupy ACTION1..ACTION5 by convention.
@@ -554,14 +552,17 @@ ma_local_semantic(action(right), right).
 % Pickup.
 ma_local_semantic(action(pickup), pickup).
 
-% ma_record_effect(+Action, +Frame0, +Frame1): learn an action's observed effect.
+% ma_record_effect(+Action, +Frame0, +Frame1): learn an action's observed effect,
+% keyed by the selected game (the same action means different things per game).
 ma_record_effect(Action, Frame0, Frame1) :-
+    % The selected game.
+    ma_selected_game(Game),
     % Infer a coarse effect descriptor from the frame change.
     ma_infer_move(Frame0, Frame1, Desc),
-    % Replace the previous observation for this action.
-    retractall(ma_effect_(Action, _)),
+    % Replace the previous observation for this action in this game.
+    retractall(ma_effect_(Game, Action, _)),
     % Record the latest.
-    assertz(ma_effect_(Action, Desc)).
+    assertz(ma_effect_(Game, Action, Desc)).
 
 % ma_infer_move(+Frame0, +Frame1, -Desc): a coarse effect from the frame change.
 ma_infer_move(Frame0, Frame1, Desc) :-
@@ -639,9 +640,9 @@ ma_action_descriptors(GameId, Descriptors) :-
 % meaning, not a per-game guess.
 ma_action_semantic(_GameId, undo, undo, protocol) :- !.
 % Otherwise a learned effect is a discovered semantic.
-ma_action_semantic(_GameId, Action, Sem, discovered) :-
+ma_action_semantic(GameId, Action, Sem, discovered) :-
     % A learned effect, other than nothing, is a discovered semantic.
-    ma_effect_(Action, Desc), Desc \== none, !,
+    ma_effect_(GameId, Action, Desc), Desc \== none, !,
     % Use it.
     Sem = Desc.
 ma_action_semantic(_GameId, Action, Sem, assumed) :-
@@ -925,14 +926,14 @@ ma_solo_seed_jspace :-
     catch((
         % Open the solo workspace.
         js_open(arc_solo),
-        % Hold the selected game.
+        % Hold the selected game — every learning below is read for it alone.
         ma_selected_game(G), js_hold(arc_solo, game(G), 1.0, selection),
-        % Hold the learned goal, if any.
-        ( ma_goal_(Goal) -> js_hold(arc_solo, goal(Goal), 1.0, learned_goal) ; true ),
-        % Hold each human-taught priority.
-        forall(ma_priority_(P), js_hold(arc_solo, priority(P), 0.8, learned_priority)),
-        % Hold each declared hazard.
-        forall(ma_avoid_cell_(pos(R, C)),
+        % Hold this game's learned goal, if any.
+        ( ma_goal_(G, Goal) -> js_hold(arc_solo, goal(Goal), 1.0, learned_goal) ; true ),
+        % Hold each of this game's human-taught priorities.
+        forall(ma_priority_(G, P), js_hold(arc_solo, priority(P), 0.8, learned_priority)),
+        % Hold each of this game's declared hazards.
+        forall(ma_avoid_cell_(G, pos(R, C)),
                js_hold(arc_solo, avoid(cell(R, C)), 0.8, learned_hazard))
     ), _, true).
 
@@ -1074,26 +1075,35 @@ ma_attempts_list(Files) :-
 % Define ma_learnings: the shared learnings the Guided and Solo modules read.
 % All of these live in one store: whatever Guided writes, Solo reads, and back.
 ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens, Graph)) :-
-    % The taught or inferred goal, if any.
-    ( ma_goal_(Goal) -> true ; Goal = none ),
-    % The suggested-action priorities.
-    findall(A, ma_priority_(A), Priorities),
-    % The declared hazards.
-    findall(cell(R, C), ma_avoid_cell_(pos(R, C)), Avoided),
-    % The object labels.
-    findall(cell(R, C)-K, ma_label_(pos(R, C), K), Labels),
-    % How many causal relations have been learned.
-    ( catch(aggregate_all(count, co_cro(_, _, _, _, _, _, _, _), CroCount), _, fail)
+    % Every learning below is read for the selected game only, so one game's
+    % teaching never bleeds into another's.
+    ma_selected_game(Game),
+    % The taught or inferred goal for this game, if any.
+    ( ma_goal_(Game, Goal) -> true ; Goal = none ),
+    % The suggested-action priorities for this game.
+    findall(A, ma_priority_(Game, A), Priorities),
+    % The declared hazards for this game.
+    findall(cell(R, C), ma_avoid_cell_(Game, pos(R, C)), Avoided),
+    % The object labels for this game.
+    findall(cell(R, C)-K, ma_label_(Game, pos(R, C), K), Labels),
+    % How many causal relations have been learned for this game (its g(Game,_) heads).
+    ( catch(aggregate_all(count, co_cro(_, [g(Game, _)|_], _, _, _, _, _, _), CroCount), _, fail)
     -> true ; CroCount = 0 ),
     % The J-Lens reading of the solo workspace.
     ma_jlens(JLens),
-    % The shared state-graph exploration map (nodes, edges, tested, dead).
+    % This game's state-graph exploration map (nodes, edges, tested, dead).
     ma_graph_stats(Graph).
 
-% Define ma_graph_stats: the shared exploration graph both modes build and read.
+% Define ma_graph_stats: the exploration graph, scoped to the selected game so
+% each game reports only its own subgraph of the shared store.
 ma_graph_stats(Graph) :-
-    % Read the graph statistics, guarded, defaulting to an empty graph.
-    ( catch(cg_stats(Graph), _, fail) -> true ; Graph = stats(0, 0, 0, 0) ).
+    % Read the selected game's statistics, guarded, defaulting to an empty graph.
+    (   ma_selected_game(Game),
+        atom_concat(Game, '::', Prefix),
+        catch(cg_stats_for(Prefix, Graph), _, fail)
+    ->  true
+    ;   Graph = stats(0, 0, 0, 0)
+    ).
 
 % ---------------------------------------------------------------------------
 % SESSION RECORDING and the WON PACKAGE — learning from a complete winning game
@@ -1160,38 +1170,39 @@ ma_learn_from_win(Game, Steps, learned(WinPath, Reinforced, Levers)) :-
     % 1) Data lattice: record the winning path so future Solo runs replay it.
     retractall(ma_win_path_(Game, _)),
     assertz(ma_win_path_(Game, WinPath)),
-    % 2) Causalontology: reinforce every relation used on the winning path.
-    ma_reinforce_path(WinPath, Reinforced),
+    % 2) Causalontology: reinforce every (game-keyed) relation used on the path.
+    ma_reinforce_path(Game, WinPath, Reinforced),
     % 3) Guided levers the winning strategy implies (helps locksmith-style games).
     ma_win_levers(Game, Steps, Levers),
     % 4) Jacobian Space: hold the win and its levers.
     ma_win_jspace(Game, WinPath, Levers).
 
-% ma_reinforce_path(+Actions, -Count): strengthen each action's relations.
-ma_reinforce_path(Actions, Count) :-
-    % Strengthen every non-preventive relation whose cause is a path action.
+% ma_reinforce_path(+Game, +Actions, -Count): strengthen each action's relations,
+% keyed by the game so only this environment's relations are reinforced.
+ma_reinforce_path(Game, Actions, Count) :-
+    % Strengthen every non-preventive relation whose cause is this game's action.
     findall(Id,
         ( member(A, Actions),
-          catch(co_cro(Id, [A], _, _, M, _, _, _), _, fail),
+          catch(co_cro(Id, [g(Game, A)], _, _, M, _, _, _), _, fail),
           M \== preventive,
           catch(co_strengthen(Id, 0.1), _, true) ),
         Ids),
     % Count the distinct relations reinforced.
     sort(Ids, Unique), length(Unique, Count).
 
-% ma_win_levers(+Game, +Steps, -Levers): set guided levers from the win.
-ma_win_levers(_Game, Steps, Levers) :-
+% ma_win_levers(+Game, +Steps, -Levers): set this game's guided levers from the win.
+ma_win_levers(Game, Steps, Levers) :-
     % The winning action sequence.
     findall(A, member(st(_, A, _, _), Steps), Seq),
     % If pickup was used and this game keeps locksmith state, prioritise pickup.
     (   memberchk(action(pickup), Seq), ma_state_(_, _, _, _)
-    ->  ( ma_priority_(action(pickup)) -> true ; assertz(ma_priority_(action(pickup))) ),
+    ->  ( ma_priority_(Game, action(pickup)) -> true ; assertz(ma_priority_(Game, action(pickup))) ),
         Prio = [priority(action(pickup))]
     ;   Prio = []
     ),
     % If a door opened (colour six appeared) during the win, set the traverse goal.
     (   member(st(_, _, D, _), Steps), member(changed(R, C, _, 6), D)
-    ->  retractall(ma_goal_(_)), assertz(ma_goal_(traverse(pos(R, C)))),
+    ->  retractall(ma_goal_(Game, _)), assertz(ma_goal_(Game, traverse(pos(R, C)))),
         Goal = [goal(traverse(pos(R, C)))]
     ;   Goal = []
     ),
@@ -1290,50 +1301,55 @@ co_ground(Text, Ref, Assertion) :-
 % HINT INJECTION — biasing the live loop
 % ---------------------------------------------------------------------------
 
-% ma_priority_/1: actions a human has suggested.
-:- dynamic ma_priority_/1.
-% ma_goal_/1: the goal a human has set.
-:- dynamic ma_goal_/1.
-% ma_avoid_cell_/1: cells a human has declared hazardous.
-:- dynamic ma_avoid_cell_/1.
-% ma_label_/2: (pos(R,C), Kind) — human labels on cells.
-:- dynamic ma_label_/2.
+% Every human lever is keyed by the game id, so a clue about one environment
+% never biases another. The first argument is always the game.
+% ma_priority_/2: (Game, Action) — actions a human has suggested for a game.
+:- dynamic ma_priority_/2.
+% ma_goal_/2: (Game, Goal) — the goal a human has set for a game.
+:- dynamic ma_goal_/2.
+% ma_avoid_cell_/2: (Game, pos(R,C)) — cells declared hazardous in a game.
+:- dynamic ma_avoid_cell_/2.
+% ma_label_/3: (Game, pos(R,C), Kind) — human labels on cells in a game.
+:- dynamic ma_label_/3.
 % ma_last_/2: (Action, Basis) — the last action and why it was taken.
 :- dynamic ma_last_/2.
 
-% Define ma_reset_guidance: clear hints, priorities, goals, and learning.
+% Define ma_reset_guidance: clear every game's hints, priorities, goals, learning.
 ma_reset_guidance :-
-    % Drop the priorities.
-    retractall(ma_priority_(_)),
-    % Drop the goal.
-    retractall(ma_goal_(_)),
-    % Drop the declared hazards.
-    retractall(ma_avoid_cell_(_)),
-    % Drop the labels.
-    retractall(ma_label_(_, _)),
+    % Drop every game's priorities.
+    retractall(ma_priority_(_, _)),
+    % Drop every game's goal.
+    retractall(ma_goal_(_, _)),
+    % Drop every game's declared hazards.
+    retractall(ma_avoid_cell_(_, _)),
+    % Drop every game's labels.
+    retractall(ma_label_(_, _, _)),
     % Drop the last-action record.
     retractall(ma_last_(_, _)),
     % Drop the curiosity counters.
     retractall(ma_try_(_, _)),
-    % Drop the discovered action semantics.
-    retractall(ma_effect_(_, _)),
+    % Drop every game's discovered action semantics.
+    retractall(ma_effect_(_, _, _)),
     % Clear the harness counters.
     co_arc3_reset.
 
-% Define ma_inject: apply one grounded assertion to the live loop.
+% Define ma_inject: apply one grounded assertion to the live loop, keyed to the
+% currently selected game so the teaching attaches only to that environment.
 ma_inject(hint_label([R, C], Kind)) :-
-    % Name the labeled object by its cell.
-    atomic_list_concat([obj_, R, '_', C], Id),
+    % The game the clue is about.
+    ma_selected_game(Game),
+    % Name the labeled object by its game and cell (distinct across games).
+    atomic_list_concat([obj_, Game, '_', R, '_', C], Id),
     % NOUN: posit the continuant with its human label.
     co_continuant_add(Id, Kind),
-    % Remember the label for choice-making.
-    assertz(ma_label_(pos(R, C), Kind)),
+    % Remember the label for choice-making, keyed to the game.
+    assertz(ma_label_(Game, pos(R, C), Kind)),
     % HINGE: a key-like object bears a pick-up-able disposition.
     (   Kind == key_like
     % Posit the disposition and its realization seam.
     ->  co_realizable_add(Id, disposition, Id),
-        % Realized in the pickup occurrent.
-        co_realized_in_add(Id, action(pickup))
+        % Realized in this game's pickup occurrent.
+        co_realized_in_add(Id, g(Game, action(pickup)))
     % Other labels posit no disposition here.
     ;   true
     ),
@@ -1341,39 +1357,47 @@ ma_inject(hint_label([R, C], Kind)) :-
     !.
 % A door label with the traverse goal.
 ma_inject(hint_goal([R, C], traverse)) :-
-    % Name and label the door object.
-    atomic_list_concat([obj_, R, '_', C], Id),
+    % The game the clue is about.
+    ma_selected_game(Game),
+    % Name and label the door object, keyed by game.
+    atomic_list_concat([obj_, Game, '_', R, '_', C], Id),
     % NOUN: posit the door-like continuant.
     co_continuant_add(Id, door_like),
-    % Remember the label.
-    assertz(ma_label_(pos(R, C), door_like)),
-    % Set the goal: be beyond the door.
-    retractall(ma_goal_(_)),
+    % Remember the label, keyed to the game.
+    assertz(ma_label_(Game, pos(R, C), door_like)),
+    % Set this game's goal: be beyond the door.
+    retractall(ma_goal_(Game, _)),
     % Record it.
-    assertz(ma_goal_(traverse(pos(R, C)))),
+    assertz(ma_goal_(Game, traverse(pos(R, C)))),
     % Commit.
     !.
 % A suggested action.
 ma_inject(hint_action(Action)) :-
-    % Raise its priority once.
-    ( ma_priority_(Action) -> true ; assertz(ma_priority_(Action)) ),
+    % The game the clue is about.
+    ma_selected_game(Game),
+    % Raise its priority once for this game.
+    ( ma_priority_(Game, Action) -> true ; assertz(ma_priority_(Game, Action)) ),
     % Commit.
     !.
 % A human-declared hazard.
 ma_inject(hint_preventive([R, C])) :-
-    % Remember the cell as avoided for movement choices.
-    ( ma_avoid_cell_(pos(R, C)) -> true ; assertz(ma_avoid_cell_(pos(R, C))) ),
-    % VERB: reify the preventive relation exactly as a self-learned hazard,
-    % provenance marking the human origin.
-    co_learn_preventive(touch(cell(R, C)), penalty),
+    % The game the clue is about.
+    ma_selected_game(Game),
+    % Remember the cell as avoided for movement choices in this game.
+    ( ma_avoid_cell_(Game, pos(R, C)) -> true ; assertz(ma_avoid_cell_(Game, pos(R, C))) ),
+    % VERB: reify the preventive relation, its cause keyed by game so the hazard
+    % belongs only to this environment.
+    co_learn_preventive(g(Game, touch(cell(R, C))), penalty),
     % Commit.
     !.
 % Positive reinforcement: raise the strength of the last action's relations.
 ma_inject(hint_reinforce) :-
+    % The game the clue is about.
+    ma_selected_game(Game),
     % Fetch the last action, if any.
     (   ma_last_(Action, _)
-    % Strengthen every relation whose cause is that action.
-    ->  forall(co_cro(Id, [Action], _, _, M, _, _, _),
+    % Strengthen every relation whose cause is that action in this game.
+    ->  forall(co_cro(Id, [g(Game, Action)], _, _, M, _, _, _),
                % Preventive relations are not reinforced.
                ( M == preventive -> true ; co_strengthen(Id, 0.1) ))
     % No last action: nothing to reinforce.
@@ -1414,13 +1438,14 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     (   Delta == []
     % Nothing changed.
     ->  Outcome = none
-    % The penalty marker is a hazard.
+    % The penalty marker is a hazard. The relation's cause is keyed by game, so
+    % the same action's effect in another environment is a separate relation.
     ;   memberchk(changed(_, _, _, 15), Delta)
-    ->  co_learn_preventive(Action, penalty),
+    ->  co_learn_preventive(g(Sel, Action), penalty),
         % Report the hazard.
         Outcome = hazard
-    % Otherwise the delta was produced by the action.
-    ;   co_learn_causal(Action, delta(Delta)),
+    % Otherwise the delta was produced by the action, in this game.
+    ;   co_learn_causal(g(Sel, Action), delta(Delta)),
         % Report the learning.
         Outcome = learned
     ),
@@ -1449,16 +1474,20 @@ ma_choose(Action, replay(win)) :-
     assertz(ma_replay_(G, Rest)).
 % Otherwise, the human suggested picking up and Mentova stands on the key.
 ma_choose(action(pickup), human_hint(pickup)) :-
-    % The human suggested picking up, and Mentova stands on the key.
-    ma_priority_(action(pickup)),
+    % Only this game's priorities count.
+    ma_selected_game(Sel),
+    % The human suggested picking up for this game.
+    ma_priority_(Sel, action(pickup)),
     % Fetch the state.
     ma_state_(P, at_cell(P), _, _),
     % Commit.
     !.
 % Approach the key while the pickup suggestion stands.
 ma_choose(Action, toward(key)) :-
-    % The suggestion stands and the key is still on the board.
-    ma_priority_(action(pickup)),
+    % Only this game's priorities count.
+    ma_selected_game(Sel),
+    % The suggestion stands for this game and the key is still on the board.
+    ma_priority_(Sel, action(pickup)),
     % Fetch the state.
     ma_state_(P, at_cell(K), _, _),
     % Step greedily toward the key, avoiding declared hazards.
@@ -1467,8 +1496,10 @@ ma_choose(Action, toward(key)) :-
     !.
 % Head for the door once the key is held and the goal is set.
 ma_choose(Action, toward(goal)) :-
-    % The human set the traverse goal.
-    ma_goal_(traverse(D)),
+    % Only this game's goal counts.
+    ma_selected_game(Sel),
+    % The human set this game's traverse goal.
+    ma_goal_(Sel, traverse(D)),
     % The key is held.
     ma_state_(P, held, _, _),
     % Step greedily toward the door, avoiding declared hazards.
@@ -1487,23 +1518,33 @@ ma_choose(Action, graph_explore) :-
     findall(A, ( member(A, Actions), \+ ma_lands_on_hazard(A) ), Safe),
     % There must be something safe to try.
     Safe \== [],
-    % The current frame and its graph signature.
+    % The current frame and its game-keyed graph signature.
     ma_render(Sel, Frame),
-    % Signature, guarded.
-    catch(cg_signature(Frame, Sig), _, fail),
+    % Signature stamped with the selected game, guarded.
+    catch(ma_game_sig(Sel, Frame, Sig), _, fail),
     % The graph-informed choice, guarded; fails when nothing is left to explore.
     catch(cg_choose(Sig, Safe, Action), _, fail),
     % Commit.
     !.
 
-% ma_graph_note(+Frame0, +Action, +Frame1): record a transition in the graph.
+% ma_graph_note(+Frame0, +Action, +Frame1): record a transition in the graph,
+% keyed by the selected game so no two environments share a node.
 ma_graph_note(Frame0, Action, Frame1) :-
     % Guarded so a graph hiccup never breaks a step.
     catch((
-        cg_signature(Frame0, S0),
-        cg_signature(Frame1, S1),
+        ma_selected_game(Game),
+        ma_game_sig(Game, Frame0, S0),
+        ma_game_sig(Game, Frame1, S1),
         cg_note(S0, Action, S1)
     ), _, true).
+
+% ma_game_sig(+Game, +Frame, -Sig): a state signature stamped with the game id,
+% so a state in one environment can never be confused with one in another.
+ma_game_sig(Game, Frame, Sig) :-
+    % The frame's own canonical signature.
+    cg_signature(Frame, Base),
+    % Stamp it with the game id.
+    atomic_list_concat([Game, '::', Base], Sig).
 
 % Otherwise curiosity decides: the least-tried safe action over the selected
 % environment's action set, so unguided play genuinely explores rather than
@@ -1562,7 +1603,8 @@ ma_step_toward(_, C0, _, C1, action(left)) :- C1 < C0.
 % Rightward.
 ma_step_toward(_, C0, _, C1, action(right)) :- C1 > C0.
 
-% ma_lands_on_hazard(+Action): the move would land on a declared hazard.
+% ma_lands_on_hazard(+Action): the move would land on a hazard declared for
+% the selected game.
 ma_lands_on_hazard(Action) :-
     % Only movement actions land anywhere.
     ma_move_delta(Action, DR, DC),
@@ -1572,8 +1614,10 @@ ma_lands_on_hazard(Action) :-
     R1 is max(0, min(4, PR + DR)),
     % Its column.
     C1 is max(0, min(4, PC + DC)),
-    % A human declared it hazardous.
-    ma_avoid_cell_(pos(R1, C1)).
+    % A human declared it hazardous in this game.
+    ma_selected_game(Sel),
+    % Only this game's declared hazards apply.
+    ma_avoid_cell_(Sel, pos(R1, C1)).
 
 % Define ma_auto: run steps until the level is won or the budget is spent.
 ma_auto(Budget, Outcome) :-
