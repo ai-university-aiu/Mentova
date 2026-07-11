@@ -576,6 +576,27 @@ the perception cache and the verify-before-act world model both in place, the fu
 twenty-five-game sweep can be re-run to completion; its measured result is recorded
 in the entry that follows. No live game was played in the writing of the code.
 
+2026-07-11  METHODOLOGY. The methodology at the heart of Mentova's planning was
+studied at its source and held in the mind as a skill. The middle layer of every
+plan Mentova builds is an observe-orient-decide-act loop, which is John Boyd's OODA
+loop. A reference paper was written from Boyd's own Discourse on Winning and Losing
+- the real diagram, not the cartoon four-box circle: the feedback loops that make it
+adaptive, the implicit-guidance links that run straight from orientation to action
+and let an expert bypass explicit decision, the insistence that orientation is the
+schwerpunkt shaped by genetic heritage, cultural tradition, previous experience, new
+information, and the analysis-and-synthesis that fuses them, and the tempo doctrine
+of getting inside an adversary's decision cycle. The paper closes by mapping OODA
+onto co_hplan's middle layer phase for phase: see and observe are Boyd's Observe,
+orient is his Orient, decide his Decide, act his Act, and re-observe-and-update-the-
+rules is the feedback from Act back to Observe that revises the model - Boyd's
+destruction and creation. A copy of the methodology is now held in Mentova's
+Jacobian-Space workspace as twenty concepts - the four phases, the five ingredients
+of orientation, six principles, and the five mappings onto the planner - so the mind
+can reason not only in the shape of OODA but about it: which phase it is in, why
+orientation dominates, and when to take the fast implicit path. Seven checks confirm
+the skill landed. No live game was played in this work; no leaderboard score is
+claimed.
+
 
 THE VISION
 

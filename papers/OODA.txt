@@ -1,0 +1,285 @@
+THE OODA LOOP
+John Boyd's Theory of Decision, Orientation, and Tempo — a Reference for Mentova
+
+Author: D. R. Dison, Founder of AIU (Artificial Intelligence University).
+Creator and Owner of PrologAI and Mentova. Open Researcher and Contributor ID
+(ORCID): 0009-0001-9246-5758. (https://www.linkedin.com/in/d-r-dison/)
+
+
+WHY THIS PAPER EXISTS
+
+Mentova's hierarchical planner (the co_hplan pack) puts an observe-orient-decide-
+act loop at the middle layer of every plan, between the top goal (Win Game) and the
+concrete controls. That middle layer is John Boyd's OODA loop. This paper sets down,
+accurately, what the OODA loop actually is - not the cartoon four-box circle, but
+Boyd's real diagram with its feedback and its implicit-guidance shortcuts and its
+insistence that orientation is the main thing - so that the methodology Mentova
+runs is grounded in the source, and so a copy of it can be held in Mentova's
+Jacobian-Space workspace as a skill it reasons with. The final section maps the
+theory onto co_hplan's middle layer directly.
+
+
+1. JOHN BOYD: THE MAN BEHIND THE LOOP
+
+John Richard Boyd (1927 to 1997) was a United States Air Force fighter pilot and
+one of the most influential, and least conventionally published, military
+strategists of the twentieth century. He flew the F-86 Sabre in the Korean War and
+became an instructor at the Fighter Weapons School at Nellis Air Force Base, where
+he earned the nickname Forty Second Boyd for a standing wager: starting from a
+position of disadvantage on an opponent's tail, he could reverse the situation and
+win the simulated dogfight within forty seconds. He is said never to have lost the
+bet.
+
+His first major contribution was doctrinal. His 1960 Aerial Attack Study
+systematized air-combat maneuvering and became the de facto global standard for
+fighter tactics. In the early 1960s, with mathematician Thomas Christie, he
+developed Energy-Maneuverability theory, which expressed an aircraft's combat
+potential in terms of its specific energy (a function of altitude, speed, thrust,
+drag, and weight) and its ability to change that energy state through maneuver.
+Energy-Maneuverability theory became a world standard for fighter design and shaped
+the F-15, the F-16, and the A-10.
+
+Crucially, Boyd published almost no formal academic papers. His mature strategic
+thought lives almost entirely in briefings - hand-drawn slides and hours-long oral
+presentations he delivered and endlessly revised - collectively titled A Discourse
+on Winning and Losing. Its principal components are Destruction and Creation
+(September 3, 1976, his single formal written essay), Patterns of Conflict (his
+magnum opus briefing, which shaped United States Marine Corps maneuver-warfare
+doctrine), Organic Design for Command and Control, The Strategic Game of ? and ?,
+Conceptual Spiral (1991), and The Essence of Winning and Losing (1995, revised
+January 1996) - the only place Boyd ever actually drew the full OODA loop diagram.
+Boyd died on March 9, 1997, and is buried at Arlington National Cemetery.
+Understanding that the OODA loop exists as sketches and briefings, not as a peer-
+reviewed paper, is essential: nearly every simplified four-box version in
+circulation is a secondhand reconstruction that loses what Boyd actually drew.
+
+
+2. THE FULL OODA LOOP AS BOYD ACTUALLY DREW IT
+
+The popular image is a tidy circle: Observe, then Orient, then Decide, then Act,
+then back to Observe. Boyd's actual 1995 to 1996 diagram is far richer, and its
+details carry the real theory. It is a network of feed-forward and feedback flows,
+not a single ring.
+
+Observe is fed by three external streams entering it: unfolding circumstances,
+outside information, and unfolding interaction with the environment. Observation is
+not passive data collection; it is coupled to a changing world that the actor is
+simultaneously disturbing.
+
+The main forward flow runs Observe to Orient to Decide to Act. Along the way,
+observations feed Orient; Orient yields a decision that Boyd labels a hypothesis;
+and the decision yields an action that Boyd labels a test.
+
+Feedback loops close the system. The output of Act feeds back to Observe, because
+acting changes the unfolding interaction with the environment, which the actor must
+then re-observe. There is also a feedback link from Decide back toward Observe, and
+the observation window continuously feeds itself. Acting is literally a test: you
+act to see what happens, then observe the result.
+
+The two most important and most often-omitted features are the Implicit Guidance
+and Control links. Two arrows run directly out of the Orient box: one from Orient
+back to Observe, and one from Orient forward to Act, the latter bypassing Decide
+entirely. They are labeled Implicit Guidance and Control. They represent the fast,
+intuitive path of the experienced operator: orientation directs what the actor even
+bothers to observe, and, when a situation matches a well-honed mental pattern,
+orientation can drive action directly with no explicit conscious decision. This is
+exactly how Forty Second Boyd won - not by deliberating through four sequential
+boxes, but by having such deep orientation that observation flowed almost instantly
+into action. The explicit Decide step is used mainly when the situation is novel
+and no implicit pattern fits.
+
+So the loop is really many nested, simultaneous loops operating at different speeds:
+a slow explicit loop through Decide, and a fast implicit loop that shortcuts it.
+
+
+3. ORIENTATION AS THE SCHWERPUNKT
+
+Boyd repeatedly insisted that Orientation is the most important element of the
+entire system - its schwerpunkt, a German military term meaning the focal point,
+the center of gravity, the main thing. In his own words, orientation shapes
+observation, shapes decision, shapes action, and in turn is shaped by the feedback
+and other phenomena coming into the observation window. Orientation is thus both
+cause and consequence: it filters what we perceive, frames our options, biases our
+actions, and is itself continuously reshaped by the results. The whole loop, Boyd
+wrote, is an ongoing many-sided implicit cross-referencing process of projection,
+empathy, correlation, and rejection.
+
+Boyd decomposed Orientation into five ingredients, drawn inside the Orient box as
+feeding into one another:
+
+ • Genetic heritage - our innate, biological predispositions.
+
+ • Cultural traditions - the values, language, and social frameworks we are raised
+   inside.
+
+ • Previous experience - the accumulated personal history we bring to a situation.
+
+ • New information - the fresh sensory input arriving in the moment.
+
+ • Analysis and synthesis - the active cognitive process, at the center, that
+   breaks incoming information apart and recombines it into an updated picture of
+   reality.
+
+The first three are inherited or slowly formed; the fourth arrives continuously;
+and the fifth is the engine that fuses all of them into a working model of the
+world. Because orientation governs everything downstream, a competitor with better
+orientation can prevail even when materially weaker: clearer, faster, less-distorted
+orientation lets you see reality more accurately and act on it before an opponent
+has made sense of the same events.
+
+
+4. TEMPO: OPERATING INSIDE THE ADVERSARY'S OODA LOOP
+
+The strategic payoff of the loop is tempo. Boyd's central operational claim is that
+if you can cycle through observe, orient, decide, and act faster and more accurately
+than your adversary, you get inside their decision cycle. As he put it, the ability
+to operate at a faster tempo than an adversary enables one to fold the adversary
+back inside himself so that he can neither appreciate nor keep up with what is going
+on.
+
+The goal is not merely raw speed but the deliberate generation of ambiguity,
+novelty, and mismatch. By changing the situation faster than the opponent can re-
+orient, you make their orientation increasingly wrong; their observations no longer
+match reality, their decisions arrive too late, and their actions address a world
+that has already moved on. The adversary's own OODA loop breaks down from the
+inside; confusion, paralysis, and panic follow.
+
+Boyd analyzed conflict across three interacting dimensions: the physical (forces,
+terrain, resources - the aim is to menace and isolate), the mental (perception and
+decision - the aim is to generate uncertainty and doubt), and the moral (cohesion,
+trust, legitimacy - the aim is to break the bonds that hold the adversary together
+while preserving one's own). He regarded the moral level as the most decisive and
+the physical as the least: victory ultimately comes from shattering the opponent's
+cohesion and will, not merely his equipment.
+
+
+5. ANALYSIS, SYNTHESIS, AND DESTRUCTION AND CREATION
+
+Orientation's fifth ingredient, analysis and synthesis, is the subject of Boyd's one
+formal essay, Destruction and Creation (1976). There Boyd argued that we build
+understanding by two complementary acts: analysis (deduction), which takes an
+existing mental model apart into its components, a kind of destruction; and
+synthesis (induction), which recombines those components, often across domains, into
+a new and more useful model, a kind of creation. Learning and adaptation require
+both: we must be willing to destroy an obsolete mental model in order to create a
+better one.
+
+Boyd grounded this in three deep results. Godel's incompleteness theorems: a
+sufficiently rich formal system cannot prove its own consistency from within.
+Heisenberg's uncertainty principle: one cannot simultaneously fix, with arbitrary
+precision, complementary quantities such as position and momentum, and observation
+itself disturbs the observed. The second law of thermodynamics: closed systems tend
+toward increasing entropy. His synthesis: any mental model, treated as a closed
+system, will drift out of correspondence with a changing reality (entropy rises),
+cannot validate itself from inside (Godel), and cannot be perfected by ever-finer
+observation (Heisenberg). Therefore survival demands a continuous, open cycle of
+destroying and rebuilding one's orientation - which is precisely what the OODA loop
+institutionalizes.
+
+
+6. COMMON MISINTERPRETATIONS
+
+The dominant popular and managerial version of OODA is wrong in three specific ways.
+First, it is drawn as a simple, one-directional four-step cycle, erasing the
+multiple feedback loops that make the system adaptive. Second, and most seriously,
+it omits the Implicit Guidance and Control links - the two arrows from Orient that
+are the fast, intuitive path of the expert and, arguably, the whole point of the
+model; in the pop version every decision must pass through an explicit Decide box,
+exactly the slow behavior Boyd was trying to transcend. Third, it treats the four
+stages as co-equal, losing the primacy of Orientation as the schwerpunkt that
+shapes all the others.
+
+
+7. MODERN APPLICATIONS
+
+Despite living only in briefings, the OODA loop has propagated widely: into United
+States Marine Corps maneuver-warfare doctrine (which prizes tempo, decentralized
+initiative, and shattering enemy cohesion over attrition); into business strategy
+(getting inside a competitor's OODA loop through faster product cycles and superior
+organizational orientation); into cybersecurity incident response (observe
+telemetry, orient against threat intelligence, decide on containment, act, cycling
+faster than an attacker); into litigation, law enforcement, and emergency response;
+into sports and agile software; and, increasingly, into AI agents and autonomous
+systems, where OODA is used as an architectural template (perceive, then model and
+orient, then plan and decide, then act). Recent commentary warns that tool-using AI
+agents each run nested, interleaving OODA loops, and that their inputs and tool
+descriptions become injection vectors that corrupt the Orient step - a modern echo
+of Boyd's insight that whoever controls orientation controls the outcome. The
+through-line across every domain is Boyd's core thesis: victory belongs not to the
+strongest or even the fastest per se, but to whoever can most rapidly and accurately
+re-orient to a changing reality, and deny that same ability to the adversary.
+
+
+8. HOW OODA MAPS ONTO MENTOVA'S HIERARCHICAL PLANNER
+
+Mentova's co_hplan pack makes the OODA loop the explicit middle layer of every plan.
+The correspondence is deliberate and close.
+
+ • The middle-layer phases are Boyd's loop, with two of them named for the parts
+   that the cartoon version drops. co_hplan's phases are see, observe, orient,
+   decide, act, and re-observe-and-update-the-rules. See and observe together are
+   Boyd's Observe fed by the unfolding grid; orient is Boyd's Orient; decide is his
+   Decide; act is his Act; and re-observe-and-update-the-rules is the feedback from
+   Act back to Observe that closes the loop and revises the model - Boyd's insistence
+   that acting is a test whose result must be re-observed and folded back in.
+
+ • Orientation is the schwerpunkt in Mentova too. The orient phase decomposes into
+   applying the cross-game priors, identifying the game's archetype, and ranking the
+   objects and hazards - which is Boyd's analysis-and-synthesis over previous
+   experience (the twenty-five studied games), cultural tradition (the priors), and
+   new information (the current grid). The quality of this phase governs everything
+   downstream, exactly as Boyd held.
+
+ • The implicit-guidance shortcut has a direct analog. Boyd's fast path runs from
+   Orient to Act without an explicit Decide when a situation matches a known pattern.
+   In Mentova, the object-targeted curiosity and the replay of a learned winning path
+   are that shortcut: when orientation recognizes the situation, the player goes
+   straight to touching the salient object or replaying the known win, rather than
+   deliberating over the full policy. The explicit decide phase (causal-change
+   ranking, the state-graph frontier, least-tried curiosity) is used when the
+   situation is novel and no pattern fits.
+
+ • Destroy and rebuild the model. Boyd's destruction-and-creation is Mentova's
+   re-observe-and-update phase: the verify-before-act world model and the death
+   memory are continually revised as the grid teaches new lessons, and an obsolete
+   expectation is discarded when the observed delta contradicts it.
+
+ • The whole plan is reified onto Causalontology's decomposition hierarchy, so the
+   OODA loop is not a picture beside the reasoning but a hierarchy of causal
+   relations the mind can inspect, and the glass-box why endpoint names which OODA
+   phase produced each action. This is orientation made transparent - the opposite
+   of the injection risk that corrupts an opaque agent's Orient step.
+
+Holding this methodology as a skill in Mentova's Jacobian-Space workspace lets the
+mind treat OODA not only as the shape of its plans but as a concept it can reason
+about: which phase it is in, why orientation dominates, and when to take the fast
+implicit path rather than the slow explicit one.
+
+
+SOURCES
+
+ • OODA loop, Wikipedia: https://en.wikipedia.org/wiki/OODA_loop
+ • John Boyd (military strategist), Wikipedia:
+   https://en.wikipedia.org/wiki/John_Boyd_(military_strategist)
+ • The OODA Loop, Farnam Street: https://fs.blog/ooda-loop/
+ • The OODA Loop Explained, OODAloop.com:
+   https://oodaloop.com/the-ooda-loop-explained-the-real-story-about-the-ultimate-model-for-decision-making-in-competitive-environments/
+ • The Strategic Theory of John Boyd (summary of Osinga), Tasshin:
+   https://tasshin.com/blog/the-strategic-theory-of-john-boyd/
+ • The Essence of Winning and Losing, Boyd's original transparencies, USMC
+   University John Boyd Collection:
+   https://www.usmcu.edu/Portals/218/HD/Digitized%20Collections/COLL_2062%20John%20Boyd/COLL%202062_John%20Boyd_Box%208/110128-The%20Essence%20of%20Winning%20and%20Losing%20Transparencies.PDF
+ • Frans P. B. Osinga, Science, Strategy and War: The Strategic Theory of John Boyd:
+   http://www.projectwhitehorse.com/pdfs/ScienceStrategyWar_Osinga.pdf
+ • Chet Richards, Boyd's OODA Loop, Necesse vol. 5 no. 1:
+   https://gamechanger.nu/wp-content/uploads/2025/10/Boyds-OODA-Loop-Necesse-vol-5-nr-1.pdf
+ • Colonel John Boyd Digital Archive: https://www.coljohnboyd.com/
+ • A Discourse on Winning and Losing (ed. Grant T. Hammond):
+   https://www.coljohnboyd.com/static/documents/2018-03__Boyd_John_R__edited_Hammond_Grant_T__A_Discourse_on_Winning_and_Losing.pdf
+ • OODA Loop in Cybersecurity, PacGenesis:
+   https://pacgenesis.com/what-is-the-ooda-loop-in-cybersecurity-a-defenders-playbook/
+ • Agentic AI's OODA Loop Problem, Schneier on Security:
+   https://www.schneier.com/blog/archives/2025/10/agentic-ais-ooda-loop-problem.html
+
+
+END OF DOCUMENT
