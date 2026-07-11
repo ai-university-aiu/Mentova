@@ -26,7 +26,8 @@
   .pad { display: inline-block; margin: 8px 0; }
   .lite { background: #2e2424; border: 1px solid #775; color: #b9a; padding: 8px 10px;
           margin: 2px; border-radius: 4px; min-width: 64px; text-align: center;
-          display: inline-block; transition: background 0.08s, color 0.08s; }
+          display: inline-block; transition: background 0.08s, color 0.08s;
+          cursor: pointer; font-size: 1em; font-family: inherit; }
   .lite.lit { background: #d4a017; color: #1d1616; border-color: #d4a017;
               box-shadow: 0 0 10px #d4a017; }
   .disabled { opacity: 0.35; pointer-events: none; }
@@ -57,9 +58,12 @@
   <div id="msg"></div>
   <div class="pad" id="lights"></div>
   <div style="font-size:0.78em;color:#9c9;margin-top:-4px">
-    Actions are the ARC-AGI-3 canonical commands. A word in parentheses with "?"
-    is a <em>guess</em> — discovered by playing, or the local stand-in's design.
+    These are the ARC-AGI-3 canonical commands. <strong>In Guided Mode, click an
+    ACTION button (with your Mentor Token entered below) to send that action</strong>
+    — or use Step/Auto to let Mentova choose. A word in parentheses with &ldquo;?&rdquo;
+    is a <em>guess</em> (discovered by playing, or the local stand-in's design);
     ARC-AGI-3 hides what each action does, and the meaning can differ per game.
+    In Solo Mode these buttons are view-only, lighting up as Mentova plays.
   </div>
 
   <!-- Lower half: the chat (greyed out in solo mode). -->
@@ -152,12 +156,18 @@ function renderActions(list) {
     // The available action set changed (e.g. a different game): rebuild.
     box.innerHTML = '';
     for (const a of list) {
-      const s = document.createElement('span');
+      // Real buttons: clickable in Guided Mode to send the action, and covered
+      // by the global pressed-invert behaviour.
+      const s = document.createElement('button');
+      s.type = 'button';
       s.className = 'lite'; s.id = 'cmd-' + a.command;
       s.textContent = a.label;
-      s.title = a.source === 'discovered' ? 'discovered by playing this game'
+      s.title = (a.source === 'discovered' ? 'discovered by playing this game'
               : a.source === 'assumed' ? 'the local stand-in game’s own design (still a guess for the real benchmark)'
-              : 'unknown — ARC-AGI-3 hides what each action does';
+              : 'unknown — ARC-AGI-3 hides what each action does')
+              + ' — in Guided Mode, click to send this action';
+      s.dataset.command = a.command;
+      s.addEventListener('click', function () { actionClick(a.command); });
       box.appendChild(s);
     }
     currentCmds = cmds;
@@ -348,6 +358,22 @@ async function control(cmd) {
   log('control', JSON.stringify(j));
   if (j.ok === false) flash('⚠ ' + (j.error || 'Action rejected.'), 'error');
   else flash('✓ ' + cmd + (j.outcome ? (' — ' + j.outcome) : (j.did ? ' — ' + j.did : ' done')), 'ok');
+  refreshFrame();
+}
+
+// Send a specific ACTION when a mentor clicks its button (guided mode only).
+async function actionClick(command) {
+  if (mode !== 'guided') {
+    flash('Solo Mode — Mentova is playing. Switch to Guided Mode to drive the game yourself.', 'info');
+    return;
+  }
+  const token = document.getElementById('token').value.trim();
+  if (!token) { flash('Enter your Mentor Token first (get one at /mentor), then press ' + command + '.', 'error'); return; }
+  const j = await (await fetch('/api/arc/control', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({token: token, cmd: 'act', command: command})})).json();
+  if (j.ok === false) flash('⚠ ' + (j.error || 'Action rejected.'), 'error');
+  else flash('✓ ' + command + (j.outcome && j.outcome !== 'none' ? ' — ' + j.outcome : ' sent'), 'ok');
   refreshFrame();
 }
 
