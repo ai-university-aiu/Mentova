@@ -528,6 +528,33 @@ reader, and the whole design was written up under the SPARC method. No live game
 was played and no scorecard was touched in this work; no leaderboard score is
 claimed.
 
+2026-07-11  METHODOLOGY. The decisive lever the deaths pinned was built: verify
+before act. In the last sweep eight of eleven games ended in a game-over, one of
+them in thirty-seven actions, because the player would walk its avatar toward an
+interesting object and, if the route crossed a hazard, into it - the death memory
+only ever refused a move that had already killed from that exact state, so on a new
+board the same lesson was re-learned by dying again. A new PrologAI pack, co_verify,
+the eightieth layer of the platform, turns that reactive memory into a predictive
+world model. It keeps a small learned model of fatality and predicts a move fatal
+before it is tried, three ways. It recalls the exact deaths. It generalises: an
+action that has ended a run in enough distinct states is judged fatal as a kind of
+move and predicted fatal in a new state before it is tried there. And it plans in
+the model: given a way to say what a state would become under an action, it
+simulates the step and flags it if the simulated next state is one already known to
+be dead - catching a fatal move without spending a real action on it. In Mentova
+the world model is made concrete for the grid: when a run ends or a hazard flashes,
+the colours the step introduced are learned as deadly, and before each move the
+player simulates where the avatar would land under the control map it has discovered
+and predicts the step fatal if that cell carries a deadly colour - the walk-into-
+the-enemy death learned once and refused everywhere. Predicted-fatal moves are
+deprioritised to the back of the queue rather than forbidden, so a genuinely all-
+risky state still yields the least-bad step, and the object-visiting router now
+steps around a predicted-fatal cell on its way to a target. The pack is proven by
+twelve of its own tests and the integration by five more, all passing. The measured
+effect on live play is recorded in the sweep entry that follows once the run is
+re-done with this and the perception-caching fix in place. No live game was played
+in the writing of the code; no leaderboard score is claimed.
+
 
 THE VISION
 
