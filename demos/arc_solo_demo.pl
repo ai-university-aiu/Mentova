@@ -13,6 +13,9 @@
                  locksmith game (ls20), and its report records the taught goal.
       AC-GS-005: both sub-projects read exactly the same shared learnings.
       AC-GS-006: the solo attempts list is populated and a report is viewable.
+      AC-GS-007: Guided play builds the shared state graph and Solo reads it.
+      AC-GS-008: learnings are keyed by game id — teaching one environment never
+                 bleeds into another, and reselecting a game restores its own.
 
     Run:
         swipl -l demos/arc_solo_demo.pl -g run_arc_solo_demo -t halt
@@ -76,6 +79,10 @@ run_arc_solo_demo :-
     % same graph (co_graph wired into both, one store).
     report('AC-GS-007', demo_shared_graph),
 
+    % AC-008: learnings are keyed by game id — what is taught in one environment
+    % never bleeds into another, and reselecting the first game restores its own.
+    report('AC-GS-008', demo_cross_game_isolation),
+
     % Show the current learnings both sub-projects see.
     g3_learnings(Learn),
     format("~nshared learnings (seen by both sub-projects): ~q~n", [Learn]),
@@ -99,6 +106,40 @@ demo_shared_graph :-
     % The Solo sub-project reads the very same graph (identical statistics).
     s3_graph(G2),
     G1 == G2.
+
+% demo_cross_game_isolation: teach the locksmith (ls20) a full set of learnings,
+% then prove none of them appear under a different game (vc33), and that
+% reselecting ls20 restores exactly what was taught there — Game Environment
+% Identification is firmly attached to every learning, so no environment's
+% learnings ever bleed into another's.
+demo_cross_game_isolation :-
+    % Record the navigation game's current learnings as a baseline. Whatever the
+    % locksmith is taught next must leave this baseline completely unchanged.
+    ma_set_game(vc33), ma_set_mode(guided),
+    g3_learnings(BaselineV),
+    % Give the locksmith a fresh, full set of learnings of its own: clear only the
+    % locksmith's guidance, then label, prioritise, set a goal, and mark a hazard.
+    ma_set_game(ls20), ma_reset_guidance,
+    g3_inject(hint_label([2, 2], key_like)),
+    g3_inject(hint_action(action(pickup))),
+    g3_inject(hint_goal([0, 4], traverse)),
+    g3_inject(hint_preventive([3, 3])),
+    % The locksmith now carries real learnings across the lever stores.
+    g3_learnings(learnings(GoalL, PriosL, AvoidL, LabelsL, _, _, _)),
+    GoalL \== none, PriosL \== [], AvoidL \== [], LabelsL \== [],
+    % Switch to the navigation game: teaching the locksmith changed nothing here.
+    % Its learnings are byte-for-byte the baseline — no bleed across environments.
+    ma_set_game(vc33),
+    g3_learnings(AfterV),
+    AfterV == BaselineV,
+    % None of the locksmith's taught levers appear under the navigation game.
+    AfterV = learnings(GoalV, PriosV, AvoidV, LabelsV, _, _, _),
+    GoalV == none, PriosV == [], AvoidV == [], LabelsV == [],
+    % Switch back to the locksmith: its own learnings are intact and unchanged by
+    % anything the other game did.
+    ma_set_game(ls20),
+    g3_learnings(learnings(GoalL2, PriosL2, AvoidL2, LabelsL2, _, _, _)),
+    GoalL2 == GoalL, PriosL2 == PriosL, AvoidL2 == AvoidL, LabelsL2 == LabelsL.
 
 % demo_solo_signal: Solo wins ft09 unaided and a report is written.
 demo_solo_signal :-

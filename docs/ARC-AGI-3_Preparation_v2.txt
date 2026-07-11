@@ -511,9 +511,46 @@ The measured effect.
 
 • An acceptance check drives a handful of actions in Guided mode, which build the graph, and then confirms that the Solo sub-project reads the identical graph - the same states, transitions, and tested and dead counts - proving the single shared store.
 
-• The earlier results still hold: Solo wins the signal game unaided, a game taught in Guided mode is then won by Solo using the shared learnings, and all acceptance demonstrations pass - the guided demonstration all eight criteria, the guided-and-solo demonstration all seven, and the live-connection demonstration all seven.
+• The earlier results still hold: Solo wins the signal game unaided, a game taught in Guided mode is then won by Solo using the shared learnings, and all acceptance demonstrations pass - the guided demonstration all eight criteria, the guided-and-solo demonstration all eight, and the live-connection demonstration all seven.
 
 • No benchmark score is claimed.
+
+
+PART SEVEN - EACH GAME ENVIRONMENT KEEPS ITS OWN LEARNINGS
+
+Why this matters.
+
+• The ARC-AGI-3 game environments are all different from one another, the same way the tasks in ARC-AGI-1 and ARC-AGI-2 were all different - a rule that wins one environment is usually wrong in the next.
+
+• So every learning must carry the identity of the game environment it came from, and a learning from one environment must never be applied in another.
+
+• Game Environment Identification (ID) is the game's own short name - for example ls20 for the locksmith game or vc33 for a navigation game - and it is now firmly attached to every learning Mentova keeps.
+
+What is now keyed by game id.
+
+• The human-set goal, the suggested-action priorities, the declared hazards, and the object labels are each stored under the game they were taught for.
+
+• The causal relations learned in the Causalontology are keyed by the game, so the head of every learned relation names its game.
+
+• The winning path recorded from a won session, and the reinforcement that strengthens a path, are keyed by the game.
+
+• The entries held in the Jacobian Space (J-Space) for a solo run are the selected game's own learnings.
+
+• The state-exploration graph shares one physical store across all games, but every state signature is stamped with its game id, so one game's states can never be confused with another's, and the frontier search can never cross from one game's states into another's.
+
+How the reading stays separate.
+
+• When Mentova reads its learnings, it reads them for the selected game only - the goal, the priorities, the hazards, the labels, the count of causal relations, and the size of the state graph are all the selected game's own.
+
+• Selecting a different game shows that game's learnings, which start empty until that game is taught, and switching back shows the first game's learnings exactly as they were left.
+
+The measured effect.
+
+• An acceptance check teaches the locksmith game a full set of learnings - a label, a priority, a goal, and a hazard - then selects a different game and confirms that not one of those learnings appears there, and finally selects the locksmith again and confirms its learnings are intact and unchanged.
+
+• A companion check in the state-graph capability package proves that two games sharing the one graph store each report only their own states and transitions, and that the frontier search from one game never wanders into the other.
+
+• All acceptance demonstrations continue to pass, and no benchmark score is claimed.
 
 
 END OF DOCUMENT

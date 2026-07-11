@@ -210,14 +210,20 @@ scene_guided_run(ac('AC-ACC426-004', P4, 'clues label, attach a disposition, set
                              'that looks like a door. let''s walk through it'-[0, 4]]),
            % Ground and inject each clue.
            ( co_ground(Text, Ref, Assertion), ma_inject(Assertion) )),
-    % Scene four: the clues took hold in the ontology.
-    (   co_continuant(obj_2_2, key_like),
+    % Every learning is keyed to the selected game, so read its id to check them.
+    ma_selected_game(G),
+    % The key object's game-keyed id.
+    atomic_list_concat([obj_, G, '_2_2'], KeyId),
+    % The door object's game-keyed id.
+    atomic_list_concat([obj_, G, '_0_4'], DoorId),
+    % Scene four: the clues took hold in the ontology, keyed to this game.
+    (   co_continuant(KeyId, key_like),
         % The door was labeled.
-        co_continuant(obj_0_4, door_like),
+        co_continuant(DoorId, door_like),
         % The key-like object bears a disposition.
-        co_realizable(obj_2_2, disposition, obj_2_2),
-        % The human-declared hazard is enforced like a self-learned one.
-        co_avoid(touch(cell(3, 3)))
+        co_realizable(KeyId, disposition, KeyId),
+        % The human-declared hazard is enforced like a self-learned one, keyed to the game.
+        co_avoid(g(G, touch(cell(3, 3))))
     % The ontology holds the guidance.
     ->  P4 = true
     % Otherwise it does not.
@@ -239,14 +245,14 @@ scene_guided_run(ac('AC-ACC426-004', P4, 'clues label, attach a disposition, set
     % Otherwise the story is wrong.
     ;   P6 = false
     ),
-    % Scene seven: reinforcement raises the last action's relations.
+    % Scene seven: reinforcement raises the last action's relations, keyed to the game.
     (   ma_why(why(LastAction, _, _)),
-        % Its current strength.
-        co_cro(_, [LastAction], _, _, _, S0, _, _),
+        % Its current strength (the relation head is keyed to this game).
+        co_cro(_, [g(G, LastAction)], _, _, _, S0, _, _),
         % The guide praises the result.
         ma_inject(hint_reinforce),
         % The strength rose.
-        co_cro(_, [LastAction], _, _, _, S1, _, _),
+        co_cro(_, [g(G, LastAction)], _, _, _, S1, _, _),
         % Strictly.
         S1 > S0
     % Reinforcement worked.
