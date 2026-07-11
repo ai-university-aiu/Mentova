@@ -1,0 +1,710 @@
+ARC-AGI-3 PREPARATION - FINDINGS, WORK SUMMARY, AND RESULTS
+
+Version 3. Dated 2026-07-10.
+
+What version three adds over version two: three new parts at the end. Part Nine puts the exploration policy, co_explore, at the forefront of unguided play in the live player. Part Ten is a fresh, evidence-first review of how the strongest ARC-AGI-3 agents in the world are actually winning, and an honest gap analysis of where Mentova stands against them. Part Eleven adds a self-learning recall behaviour, so the player stops wasting its move budget rediscovering a mechanic it already found. Everything version two contained is kept below, unchanged, followed by the three new parts. Version two is moved, unchanged, into the archive folder.
+
+What version two added over version one: a new part on the state-graph explorer, co_graph, and on wiring it into both ARC-AGI-3 sub-projects - Guided and Solo - so that they build and read one shared learning store. Version one is kept, unchanged, in the archive folder.
+
+
+PURPOSE OF THIS DOCUMENT
+
+This document records a complete piece of preparation work for the ARC-AGI-3 benchmark.
+
+ARC-AGI-3 stands for Abstraction and Reasoning Corpus for Artificial General Intelligence, version three.
+
+The word benchmark means a standard test that many different systems are measured against so their abilities can be compared fairly.
+
+The work had four parts, and this document reports all four.
+
+The first part was deep research into what ARC-AGI-3 actually is.
+
+The second part was a decision about whether the PrologAI platform needed new capability packages, followed by building them.
+
+The third part was a decision about whether Mentova, the synthetic mind built on PrologAI, needed new code, followed by building it.
+
+The fourth part is this write-up of the findings, the decisions, and the measured results.
+
+A note on honesty is made here at the very start, because it matters.
+
+No benchmark score is claimed anywhere in this work.
+
+This is preparation, not a measured result against the live competition, and PrologAI's rule is that a result is announced only after it has been achieved and measured, never ahead of the evidence.
+
+
+PART ONE - WHAT ARC-AGI-3 IS
+
+ARC-AGI-3 is called an Interactive Reasoning Benchmark.
+
+It is made by the ARC Prize Foundation, which was co-founded by the researcher Francois Chollet and by Mike Knoop.
+
+The earlier tests in this family, ARC-AGI-1 and ARC-AGI-2, showed a system a few before-and-after picture pairs and asked it to work out the hidden rule and apply it once.
+
+ARC-AGI-3 is different in kind, not just in difficulty.
+
+Instead of static puzzles, it is a set of small interactive games that an agent must play, turn by turn.
+
+The word agent here means a program that senses a situation, chooses an action, sees what happens, and chooses again, over and over, pursuing a goal.
+
+The defining feature of ARC-AGI-3 is that it gives the agent no instructions, no rules, and no stated goal.
+
+To make any progress the agent must explore the game on its own, figure out how it works, discover what winning even looks like, and carry what it learns forward into later, harder levels.
+
+The benchmark was previewed on 17 July 2025 with three games, a small contest, and an agents Application Programming Interface, where Application Programming Interface (API) means the defined way one program talks to another.
+
+It launched fully on 25 March 2026, with a competition deadline of 2 November 2026 and results announced on 4 December 2026.
+
+At launch the gap between people and machines was stark.
+
+Human players solve one hundred percent of the environments.
+
+The strongest frontier Artificial Intelligence models each scored under one percent - for example Google Gemini 3.1 Pro at about 0.37 percent, OpenAI GPT 5.4 at about 0.26 percent, and Anthropic Opus 4.6 at about 0.25 percent.
+
+This is the widest human-versus-machine gap of any benchmark in the family, which is exactly why it is interesting.
+
+
+THE SHAPE OF A GAME AND THE OBSERVATION FORMAT
+
+Each environment is a turn-based game played on a grid.
+
+A grid is simply a rectangle of coloured cells, like a checkerboard where each square can be one of several colours.
+
+The grid is up to sixty-four cells wide and sixty-four cells tall, and each cell holds one of sixteen possible colours, written as the whole numbers zero through fifteen.
+
+After each action the agent receives a frame, which is one snapshot of the grid, or sometimes a short sequence of frames showing an animation between turns.
+
+The games deliberately rely only on what the ARC Prize Foundation calls Core Knowledge priors - basic ideas like objects being things, simple geometry, simple physics, and the notion of an agent that acts.
+
+There is deliberately no language, no numbers to read, and no cultural symbols, so the test cannot be passed by memorised facts.
+
+
+THE ACTION SPACE
+
+The action space is the complete set of moves the agent is allowed to make.
+
+For ARC-AGI-3 it is small and fixed.
+
+The moves are as follows.
+
+• Five simple actions, named ACTION1 through ACTION5. In many games ACTION1 through ACTION4 mean move up, down, left, and right, and ACTION5 is a general interact or select move, but the meaning is not told to the agent and must be discovered.
+
+• One complex action, named ACTION6, which is a click at a chosen cell. It carries two numbers, an x coordinate and a y coordinate, each from zero to sixty-three, naming the column and the row of the clicked cell.
+
+• An undo action, named ACTION7, which reverts the last turn in games that allow it.
+
+• A reset action, named RESET, which restarts the level.
+
+Because ACTION6 can click any of the sixty-four times sixty-four cells, a naive agent faces four thousand and ninety-six possible clicks every turn, which is far too many to try blindly.
+
+
+THE PROTOCOL - HOW AN AGENT CONNECTS
+
+The agent talks to the benchmark over the internet using a Representational State Transfer interface, where Representational State Transfer (REST) is a common style of web programming interface built on ordinary web requests.
+
+Each command is sent as a web request to a path of the form slash api slash cmd slash COMMAND, for example slash api slash cmd slash ACTION6 for a click.
+
+Data is exchanged as JavaScript Object Notation, where JavaScript Object Notation (JSON) is a simple text format of named fields, for example a click carries the fields x and y.
+
+A session is wrapped by a scorecard, opened at slash api slash scorecard slash open and closed at slash api slash scorecard slash close, which records how the agent did.
+
+Each reply reports the game state as one of four values.
+
+• NOT_PLAYED means the level has not been started.
+
+• NOT_FINISHED means the level is in progress.
+
+• WIN means the level has been won.
+
+• GAME_OVER means the level has ended in failure.
+
+WIN and GAME_OVER are the two terminal states, meaning the level is over, and only WIN counts as a win.
+
+An optional key called ARC_API_KEY identifies the agent; without one an anonymous key is used.
+
+
+HOW SCORING WORKS
+
+ARC-AGI-3 rewards not just winning but winning efficiently.
+
+The primary measure is how many levels the agent completes, and the number of actions it took is the tie-breaker between agents that complete the same levels.
+
+Efficiency is scored against a human baseline, specifically the number of actions the second-best human took on that level.
+
+The per-level score is computed as the smaller of one and the ratio of human actions to agent actions, and then that value is squared.
+
+Squaring is a power-law penalty, which simply means that spending more actions than the human is punished sharply rather than gently.
+
+So matching the human earns a full score of one, while taking twice as many actions as the human earns only one quarter.
+
+A whole environment's score is a weighted average of its level scores, with the earliest levels given the least weight.
+
+The total score is the average of all environment scores, reported as a percentage from zero to one hundred.
+
+To stop brute-force search from buying a win, the benchmark caps spending at about five times the human action count on each level.
+
+An agent that ignores efficiency can therefore complete every level and still score close to zero.
+
+
+WHAT WORKED FOR OTHER TEAMS
+
+The research also looked at what actually succeeded during the preview contest, because that evidence shaped the design decisions later in this document.
+
+The two strongest agents did not win by abstract cleverness; they won by exploring well.
+
+The winning agent used a small Convolutional Neural Network with a Reinforcement Learning method, where Convolutional Neural Network (CNN) is a kind of pattern-recognising network and Reinforcement Learning (RL) is learning by trial and reward, to predict which actions would change the picture, so it stopped wasting turns on actions that did nothing.
+
+The runner-up built a graph of the game states it had already seen and pruned away actions that only led back into loops it had already visited.
+
+A common failure mode was agents that brute-forced blindly, some producing tens of gigabytes of replay files, and language-model-only agents that crashed often and achieved little.
+
+The clear lesson is that good, frugal exploration and a memory of visited states are worth more than raw model size.
+
+
+PART TWO - THE PROLOGAI DECISION AND WORK
+
+Before deciding what to build, the existing state of both code bases was examined carefully so that nothing already present would be duplicated.
+
+PrologAI already contained a package, called co_arc3, that provides the core game loop for interactive environments.
+
+A package in PrologAI is a self-contained, versioned unit of capability; the project calls each one a work package, abbreviated Work Package (WP).
+
+The co_arc3 package closes what it calls the perceive-learn-plan-act loop: it turns a frame into facts, turns the change between two frames into a learned cause-and-effect relation, chooses an action by planning first and being curious second, never repeats an action it has learned is harmful, and keeps a fully readable trace of every step.
+
+It also has a deliberately loose bridge to the live web interface, kept loose on purpose because the exact web addresses change between releases.
+
+Reading the co_arc3 code closely revealed four capabilities that the benchmark demands but that the bare loop leaves for the caller to supply.
+
+• It chose actions only by how few times each had been tried, with no preference for actions likely to change the world and no memory of states already visited - exactly the behaviours the two strongest preview agents relied on.
+
+• It never generated a concrete click for the ACTION6 action, so the large click space was not handled.
+
+• It required the goal to be handed in, with no way to infer the unstated win condition for itself.
+
+• It had no notion of efficiency, human baseline, action budget, or the benchmark's scoring, and its live bridge even encoded the click with the older action-five convention rather than the current ACTION6.
+
+The decision, therefore, was that PrologAI did need new packs, and four were built, one for each gap, each building on co_arc3 rather than replacing it.
+
+The four packs share the co_ family name prefix of the Causalontology suite they extend, and they take the next free work package and layer numbers, Work Packages 397 through 400 at Layers 372 through 375.
+
+The first new pack is co_explore, the exploration policy.
+
+It remembers each state it has seen by a compact, order-free signature made of the grid size and the count of each colour, so that returning to a state is recognised as a loop rather than mistaken for progress.
+
+It ranks the available actions so that an action the learned cause-and-effect graph predicts will change the frame is always preferred to one predicted to do nothing, and among equals the least-tried action wins, while a known hazard is never chosen.
+
+For the ACTION6 click it does not try all four thousand cells; it looks at the objects in the frame and offers only their centre points as click targets, shrinking the click space to a handful of sensible places.
+
+The second new pack is co_goalinfer, the goal inference.
+
+It watches the frame changes that happen just before a WIN reply and adds up support for the colours those winning changes introduced, so that across several wins the real target colour stands out while incidental changes cancel.
+
+A colour that also appears just before a GAME_OVER loss is discounted, so a feature common to both winning and losing is not mistaken for the goal.
+
+It then offers its best guess both as a plain-language goal, reach a certain colour, and as the exact fact shape the planner can aim at, together with a confidence number.
+
+The third new pack is co_effic, the efficiency governor.
+
+It counts the actions spent on each level, holds the human baseline, turns that baseline into the five-times action budget, reports whether the agent is still within budget, and computes the benchmark's scores exactly - the squared human-to-agent ratio for a level, the weighted average for an environment, and the overall percentage.
+
+The fourth new pack is co_arc3proto, the protocol vocabulary.
+
+It pins down the exact March 2026 web interface as plain, inspectable facts: the mapping from each action to its command name, the web address of each command, the scorecard open and close addresses, the four game states, the sixty-four-cell and sixteen-colour frame limits, and a guarded adapter that packages all of this as an environment the co_arc3 loop can play directly.
+
+Because it lives in one small file, a future change to the live interface is a one-file edit rather than a scattered hunt.
+
+
+PART THREE - THE MENTOVA DECISION AND WORK
+
+Mentova already had one piece of ARC-AGI-3 support, the mentova_arc_agi_3_chat application, in which a human guides Mentova to a win by typing clues.
+
+What Mentova did not have was an agent that plays with no human help at all, which is what the benchmark actually measures.
+
+The decision, therefore, was that Mentova did need new code: an autonomous agent driver that wires the four new PrologAI packs onto the co_arc3 loop.
+
+The word autonomous here means acting on its own, without a person in the loop.
+
+The new file is src slash mentova slash games slash arc_agi_3.pl, and it plugs into Mentova's existing Game-as-a-Body harness just like the other game drivers.
+
+On each turn the driver asks the exploration policy to choose the next action, performs it, learns the cause-and-effect of the resulting change, feeds that change to the goal inferencer, counts the action against the efficiency budget, and remembers the new state so loops are recognised.
+
+It ships with two environments.
+
+One is a small built-in mock game whose hidden rule the agent has never seen, so the whole loop can be run and tested offline, without any network.
+
+The other is a guarded wrapper around the exact live protocol, ready for the real benchmark, which never affects any offline test.
+
+The driver also exposes what the agent decided - the inferred goal, the efficiency ledger, and the full readable step-by-step trace - so that its behaviour is glass-box, meaning every decision can be inspected and explained.
+
+
+PART FOUR - RESULTS
+
+Everything built here was tested, and the tests pass.
+
+On the PrologAI side, the four new packs carry twenty-seven automated tests in total, and all twenty-seven pass.
+
+• co_explore has six passing tests.
+
+• co_goalinfer has five passing tests.
+
+• co_effic has seven passing tests.
+
+• co_arc3proto has nine passing tests.
+
+The existing co_arc3 tests still pass unchanged, and all four new packs load together with the whole Causalontology suite without any clash.
+
+On the Mentova side, the autonomous agent was run end to end against its built-in game, with no human help.
+
+The result was a clean, unaided win.
+
+• It won the level in three actions, having first tried the idle action once, then discovered that the transfer action changes the world, then used it to win.
+
+• It inferred the unstated win condition correctly as reach colour three, at full confidence.
+
+• It reported its efficiency honestly - three agent actions against a two-action human baseline gives a squared score of about 0.44.
+
+• Its readable trace recorded every action in order, ending in the win.
+
+The acceptance demonstration checks all of this automatically and prints PASS for all six of its criteria.
+
+Mentova still boots correctly with the new driver wired into its start-up.
+
+
+HOW TO RUN THE WORK
+
+The autonomous agent demonstration can be run from the Mentova directory with the following command.
+
+swipl -l demos/arc_agi_3_autoplay_demo.pl -g run_arc_agi_3_demo -t halt
+
+Each of the four new PrologAI packs can be tested from the PrologAI directory by putting every pack's prolog folder on the library path and running its test file, for example the exploration pack as follows.
+
+swipl -p library=PACKS -g "run_tests, halt" -t "halt(1)" packs/co_explore/test/test_co_explore.pl
+
+In that command PACKS stands for the colon-separated list of every packs star prolog folder.
+
+
+DEFAULTS CHOSEN, AND WHY
+
+Because this work was carried out without stopping to ask questions, a few reasonable defaults were chosen, and they are recorded here for transparency.
+
+• The four capabilities were built as four separate packs rather than one, so that each is small, independently testable, and independently reusable, matching the one-capability-per-pack style of the platform.
+
+• The packs build on co_arc3 rather than replacing it, so no existing capability was disturbed.
+
+• The Mentova driver ships a built-in mock game so the whole system can be proven offline, honestly, without depending on the live servers.
+
+• The human efficiency baseline in the demonstration is set to a small illustrative value, because the true second-best-human action counts are known only to the benchmark and are not published per level.
+
+• No benchmark score is claimed, in keeping with the project rule of never announcing a result before it is measured.
+
+
+WHAT REMAINS FOR A LIVE ATTEMPT
+
+This work makes Mentova ready to attempt ARC-AGI-3; it does not yet attempt it against the live servers.
+
+The remaining steps for a genuine leaderboard attempt are the following.
+
+• Obtain an ARC_API_KEY from the ARC Prize Foundation and confirm the live web addresses still match the protocol pack, adjusting the single protocol file if they have drifted.
+
+• Run the autonomous agent against the three public games, named ft09, ls20, and vc33, and record the levels completed and the actions spent.
+
+• Feed the real per-level results into the efficiency governor to compute honest scores, and only then, if the results warrant it, write them up as a measured accomplishment.
+
+• Consider strengthening the exploration policy with the frame-change-prediction idea that won the preview, if the simple curiosity-plus-prediction policy proves too slow on the harder levels.
+
+
+SOURCES CONSULTED
+
+The research drew on the following public sources.
+
+• ARC Prize, Announcing ARC-AGI-3, https://arcprize.org/blog/arc-agi-3-launch
+
+• ARC Prize, ARC-AGI-3 Preview - 30-Day Learnings, https://arcprize.org/blog/arc-agi-3-preview-30-day-learnings
+
+• ARC Prize, ARC-AGI-3 Technical Report, https://arcprize.org/media/ARC_AGI_3_Technical_Report.pdf and the article version at https://arxiv.org/html/2603.24621v1
+
+• ARC-AGI-3 Documentation, https://docs.arcprize.org/ and the machine index at https://docs.arcprize.org/llms.txt and the games page at https://docs.arcprize.org/games
+
+• The arc-agi-3 software package listing, https://pypi.org/project/arc-agi-3/
+
+• DataCamp, ARC-AGI-3 - The New Interactive Reasoning Benchmark, https://www.datacamp.com/blog/arc-agi-3
+
+
+REVISION NOTE - ADDITIONAL SOURCES SCANNED (2026-07-10)
+
+This note was added after a follow-up review of six ARC Prize resources, to be honest about what the first version of this document did and did not cover, and to record anything new.
+
+First, a straight answer about coverage of the six resources reviewed.
+
+• The official page https://arcprize.org/arc-agi/3 was seen in searches but was not directly read for the first version.
+
+◦ It has now been read.
+
+◦ It adds framing but no new hard specifications: it describes ARC-AGI-3 as measuring skill-acquisition efficiency over time - planning horizons, memory compression, and updating beliefs as new evidence appears - and states that a score of one hundred percent means an agent beats every game as efficiently as humans, and that every environment is human-solvable.
+
+• The GitHub organisation https://github.com/arcprize was not scanned for the first version of this document.
+
+◦ Two of its repositories were later read for the separate live-connection work: the reference agent (ARC-AGI-3-Agents) and the toolkit (ARC-AGI), which is where the exact live protocol was confirmed.
+
+◦ For this note, the remaining relevant repositories were read as well. The findings confirm and slightly extend what we had.
+
+• The newsletter link https://arcprize.kit.com/bc80575d89 is only a sign-up landing page with no content, so there was nothing to learn from it.
+
+• The Discord invite https://discord.gg/9b77dPAmcA cannot be read by a fetcher - it is an invitation that opens the Discord application - so it was not scanned.
+
+• The X (formerly Twitter) page https://twitter.com/arcprize is behind a sign-in wall and could not be read.
+
+• The YouTube channel https://www.youtube.com/channel/UC_rdrp-QkrZn-ce9uCE-0EA is a JavaScript application that returned no readable video titles or description, so no text could be extracted.
+
+What the newly-read GitHub repositories confirm and add.
+
+• ARCEngine (the ARC-AGI-3 game engine) confirms the core specification directly from code: the camera - the visible grid - defaults to sixty-four by sixty-four; the default action set is the numeric identifiers one through six (ACTION1 through ACTION6); and a single action can return multiple frames when it triggers an animation.
+
+◦ This matches this document's Part One and the live client we built, which flattens a multi-frame reply to the current grid.
+
+◦ It also confirms that the undo action, ACTION7, is not part of the engine's default set of six - it is offered only by games that support it, which is exactly how our connector treats it.
+
+• The official benchmarking agent (arc-agi-3-benchmarking) confirms the connection details we used: a key named ARC_API_KEY, and public game identifiers such as ls20. It also shows the ARC Prize's own agent driving frontier models from several providers.
+
+• The Kaggle starter (ARC-AGI-3-Kaggle-Starter) reveals a competition-logistics detail we had not recorded: besides the direct web-interface leaderboard, ARC-AGI-3 is also run as a Kaggle competition (ARC Prize 2026), where an agent is packaged with the arc-agi Python package (which requires Python version 3.12) and submitted as a data file, with a limit of five submissions per day.
+
+Effect on this preparation and on the code.
+
+• Nothing in the new material contradicts the first version of this document or the code we built.
+
+• The new material increases confidence: the sixty-four by sixty-four grid, the sixteen colours, the ACTION1 through ACTION6 action set with ACTION7 as an optional undo, and the multi-frame replies are all confirmed against the ARC Prize Foundation's own engine and agent code.
+
+• The one genuinely new item is a second way to compete - the Kaggle track - which is worth knowing for a future live attempt, alongside the direct Application Programming Interface (API) leaderboard already described here.
+
+• No code change is required as a result of this review.
+
+Additional sources scanned for this note.
+
+• ARC Prize, ARC-AGI-3 overview page, https://arcprize.org/arc-agi/3
+
+• ARC Prize GitHub organisation, https://github.com/arcprize - in particular the repositories ARCEngine, arc-agi-3-benchmarking, and ARC-AGI-3-Kaggle-Starter (and, from the earlier live-connection work, ARC-AGI-3-Agents and the ARC-AGI toolkit).
+
+• Not readable as text, and therefore not scanned: the newsletter sign-up page, the Discord invite, the X page (sign-in wall), and the YouTube channel (JavaScript application).
+
+
+REVISION NOTE - SOLVING TECHNIQUES AND STATE-GRAPH EXPLORATION (2026-07-10)
+
+This note records a deep, wide review of the techniques that actually solve ARC-AGI-3, and the one improvement to Mentova's solving machinery that the review justified.
+
+The single most important finding is blunt.
+
+The agents that score on ARC-AGI-3 are not the frontier language models - those score under one percent - but agents that explore systematically.
+
+The strongest non-language agent, described in the paper "Graph-Based Exploration for ARC-AGI-3 Interactive Reasoning Tasks," placed third on the public leaderboard and solved a median of thirty levels across six games, where a language-model-plus-rules baseline solved five.
+
+Here are the main families of technique the review found, from most to least relevant to Mentova.
+
+• Graph-structured exploration - the winning approach.
+
+◦ Keep a directed graph whose nodes are hashes of the exact grid and whose edges are observed transitions of the form state, then action, then next state.
+
+◦ Mark every tried pair as tested, and mark an action that changed nothing as dead so it is never wasted again.
+
+◦ Choose by a simple rule: if the current state has an untested action, take it; otherwise take the first step on the shortest path to the nearest state that still has an untested action; carry the graph forward across attempts.
+
+• Frame-change prediction - the first-place developer-preview agent, StochasticGoose.
+
+◦ A small network learns which of the simple actions will actually change the frame, so exploration is not wasted on actions that do nothing, plus a position-aware way to choose where to click.
+
+• Explore-before-you-solve - epistemic agents that spend a budget of actions reducing their uncertainty before committing to a strategy, trading speed against depth.
+
+• Language-model-as-policy - the 2026 milestone winners.
+
+◦ First place (Tufa Labs, "The Duck") let a local language model write and run code, treating each game as an interactive coding problem, and found that hand-crafted tools actually hurt - letting the model improvise worked better.
+
+◦ Second and third place rendered recent frames as labelled images, asked a local vision-language model for a short JSON reply (what changed, a short plan, and the next one to four actions), kept a reflection memory refreshed every ten steps, avoided repeated failed interactions with a dead-signature mechanism, and preferred exploratory clicks on small, rare-coloured, button-like shapes.
+
+• Intrinsic-motivation and curiosity methods, which use prediction error as a reward, are powerful but were reported as finicky under the sparse rewards and short timeframes of this benchmark.
+
+The decision that followed.
+
+• The graph-structured exploration is both the strongest non-language technique and the one that fits Mentova, because Mentova is a glass-box symbolic system, not a language model.
+
+• It was therefore implemented as a new PrologAI capability package, co_graph (work package four hundred and two), and wired into Mentova's live solo player: before falling back to trying the least-tried action, the solo player now probes an untested action in the current state or takes the first step toward the nearest unexplored part of the state graph, and the graph is carried forward across attempts.
+
+• Several ideas from the other approaches Mentova already had in some form: salient click targeting (the object-centroid clicks of co_explore), avoiding actions that do nothing (now sharpened by the dead-action marking in co_graph), goal inference (co_goalinfer), and efficiency scoring (co_effic).
+
+• The language-model-as-policy approaches were noted but not adopted, because they replace Mentova's symbolic, inspectable reasoning with an opaque model, which is against the design.
+
+The measured effect.
+
+• Mentova's unguided solo play now explores systematically instead of oscillating.
+
+• On the signal game it wins in two steps by probing the one action that changes the world.
+
+• On the navigation game it covers the state space systematically - fifteen distinct states mapped, fifty-two state-action pairs tried, and eleven dead actions pruned within a sixty-action budget - which is genuinely broader coverage than the previous least-tried policy, although a known-goal navigation game is still solved faster by the goal-gradient method Mentova also has (the Jacobian of the human-step controller).
+
+• All existing acceptance demonstrations still pass - the guided demonstration all eight criteria, the guided-and-solo demonstration all six, and the live-connection demonstration all seven.
+
+• No benchmark score is claimed.
+
+Sources for this note.
+
+• Graph-Based Exploration for ARC-AGI-3 Interactive Reasoning Tasks, https://arxiv.org/abs/2512.24156
+
+• Explore Before You Solve - The Speed-Depth Trade-off in Epistemic Agents for ARC-AGI-3, https://arxiv.org/abs/2605.25931
+
+• Dries Smit, First Place in the ARC-AGI-3 Agent Preview Competition (StochasticGoose), https://medium.com/@dries.epos/1st-place-in-the-arc-agi-3-agent-preview-competition-49263f6287db
+
+• ARC Prize 2026 Milestone Prize Number One, https://arcprize.org/blog/arc-prize-2026-milestone-1
+
+• ARC Prize, ARC-AGI-3 Preview 30-Day Learnings, https://arcprize.org/blog/arc-agi-3-preview-30-day-learnings
+
+
+PART SIX - THE STATE-GRAPH EXPLORER IN BOTH GUIDED AND SOLO
+
+This part, new in version two, records the wiring of the state-graph explorer into both ARC-AGI-3 sub-projects and the single shared store they use.
+
+First, a reminder of the two sub-projects.
+
+ARC-AGI-3_Guided is the human-in-the-loop side: a person drives the game and gives clues, and Mentova learns from them.
+
+ARC-AGI-3_Solo is the unaided side: Mentova plays the game with no human direction, using what it has learned.
+
+The key principle, carried over from earlier work and now extended to the state graph, is that both sub-projects share one learning store.
+
+They are not two separate memories that happen to look alike; they are two faces of one store.
+
+That store now holds all of the following, and both sub-projects read and write the very same copy of each.
+
+• The data lattice - the plain facts of play.
+
+• The Causalontology relations - the learned cause-and-effect of each action.
+
+• The human-set goal, suggested-action priorities, declared hazards, and object labels.
+
+• The Jacobian Space workspace - the concepts held in mind.
+
+• The recorded winning path, replayed on later attempts.
+
+• And now the state-exploration graph provided by the co_graph capability package.
+
+What the state graph is, in one sentence: a directed graph whose nodes are the exact game states the agent has seen and whose edges are the transitions state, then action, then next state, with each tried action marked tested and each action that changed nothing marked dead.
+
+How it is wired into both sub-projects.
+
+• Every action taken, whether the human drives it in Guided mode or Mentova chooses it in Solo mode, is recorded in the same graph as it happens.
+
+• So Guided play builds the graph as the human explores and teaches, and Solo reads that very graph and adds to it as it plays on its own.
+
+• When Mentova has to choose an action for itself - in Solo, or when the human presses Step or Auto in Guided - it consults the graph first: it probes an untested, non-dead action in the current state, or takes the first step on the shortest path to the nearest state that still has something untested, falling back to trying the least-tried action only when the reachable space is exhausted.
+
+• Human guidance still comes first: a clue that sets a goal or suggests an action, and a recorded winning path, both take precedence over graph exploration, so teaching is never overridden.
+
+Keeping the store shared across a hand-off.
+
+• The graph, and every other learning, is carried forward when the human hands a game over from Guided to Solo.
+
+• Re-selecting the game that is already active is treated as a no-op, so nothing is wiped; only choosing a genuinely different game starts a fresh graph for that game's different state space.
+
+• This means the natural workflow works: teach a game in Guided mode, then switch to Solo mode and restart, and Solo resumes from everything Guided mapped and taught.
+
+Making the sharing visible.
+
+• The shared learnings that both sub-projects expose now include the graph's size - how many states, transitions, tested pairs, and dead actions it holds.
+
+• Each sub-project offers a direct reading of the shared graph, and the two readings are, by construction, identical, because there is one graph.
+
+The measured effect.
+
+• An acceptance check drives a handful of actions in Guided mode, which build the graph, and then confirms that the Solo sub-project reads the identical graph - the same states, transitions, and tested and dead counts - proving the single shared store.
+
+• The earlier results still hold: Solo wins the signal game unaided, a game taught in Guided mode is then won by Solo using the shared learnings, and all acceptance demonstrations pass - the guided demonstration all eight criteria, the guided-and-solo demonstration all ten (see the later parts), and the live-connection demonstration all seven.
+
+• No benchmark score is claimed.
+
+
+PART SEVEN - EACH GAME ENVIRONMENT KEEPS ITS OWN LEARNINGS
+
+Why this matters.
+
+• The ARC-AGI-3 game environments are all different from one another, the same way the tasks in ARC-AGI-1 and ARC-AGI-2 were all different - a rule that wins one environment is usually wrong in the next.
+
+• So every learning must carry the identity of the game environment it came from, and a learning from one environment must never be applied in another.
+
+• Game Environment Identification (ID) is the game's own short name - for example ls20 for the locksmith game or vc33 for a navigation game - and it is now firmly attached to every learning Mentova keeps.
+
+What is now keyed by game id.
+
+• The human-set goal, the suggested-action priorities, the declared hazards, and the object labels are each stored under the game they were taught for.
+
+• The causal relations learned in the Causalontology are keyed by the game, so the head of every learned relation names its game.
+
+• The winning path recorded from a won session, and the reinforcement that strengthens a path, are keyed by the game.
+
+• The entries held in the Jacobian Space (J-Space) for a solo run are the selected game's own learnings.
+
+• The state-exploration graph shares one physical store across all games, but every state signature is stamped with its game id, so one game's states can never be confused with another's, and the frontier search can never cross from one game's states into another's.
+
+How the reading stays separate.
+
+• When Mentova reads its learnings, it reads them for the selected game only - the goal, the priorities, the hazards, the labels, the count of causal relations, and the size of the state graph are all the selected game's own.
+
+• Selecting a different game shows that game's learnings, which start empty until that game is taught, and switching back shows the first game's learnings exactly as they were left.
+
+The measured effect.
+
+• An acceptance check teaches the locksmith game a full set of learnings - a label, a priority, a goal, and a hazard - then selects a different game and confirms that not one of those learnings appears there, and finally selects the locksmith again and confirms its learnings are intact and unchanged.
+
+• A companion check in the state-graph capability package proves that two games sharing the one graph store each report only their own states and transitions, and that the frontier search from one game never wanders into the other.
+
+• All acceptance demonstrations continue to pass, and no benchmark score is claimed.
+
+
+PART EIGHT - LEARNINGS SURVIVE A RESTART, KEYED BY GAME ID
+
+Why this matters.
+
+• Until now, every ARC-AGI-3 (Abstraction and Reasoning Corpus, version 3) learning lived only in the running program's memory, so stopping and restarting the server erased everything Mentova had been taught or had won.
+
+• A win should not have to be re-played after a restart, so the learnings a win produces are now written to disk and read back when the program next starts.
+
+What gets written, and when.
+
+• When a win is concluded - the moment the human presses the Conclude button and the winning-session package is produced - that game's whole learning set is snapshotted to one on-disk file.
+
+• The snapshot holds, for that one game, its goal, its suggested-action priorities, its declared hazards, its object labels, its discovered action meanings, its recorded winning path, its slice of the shared state-exploration graph, and its learned causal relations.
+
+• The file keeps one snapshot per game, each stored under its own Game Environment Identification (ID), so one environment's saved learnings are never mixed with another's.
+
+How it comes back.
+
+• On boot, the program reads the file and restores every game's snapshot into the live learning stores, each under the game it came from.
+
+• The graph is rebuilt by replaying its saved transitions, and the causal relations are restored through the same validating front door that first created them, so the reloaded state is exactly what was saved.
+
+• The file sits beside the existing chat database, is created the first time a win is concluded, and is treated as runtime data - it is never committed to the code repository.
+
+The measured effect.
+
+• An acceptance check teaches a game a full set of learnings, saves them as concluding a win does, then wipes every in-memory store to imitate a restart, reads the file back, and confirms every learning returns byte for byte under its own game id.
+
+• The same round trip was confirmed across a genuine restart: one program wrote the file, a second, freshly started program read it, and the game's goal, priorities, hazards, labels, causal relations, and state graph all came back.
+
+• All acceptance demonstrations continue to pass, and no benchmark score is claimed.
+
+
+PART NINE - THE EXPLORATION POLICY AT THE FOREFRONT
+
+What changed.
+
+• The live player used to explore with the state graph alone. It now leads with the exploration policy, co_explore, which is the richer of the two exploration capabilities Mentova has.
+
+• co_explore does two things the bare state graph does not. First, it ranks the available actions by whether this game's learned cause-and-effect graph predicts the action will change the world, so a move known to do something is preferred to one that does nothing. Second, it turns the click action into a small set of sensible targets.
+
+The click action, made usable.
+
+• ARC-AGI-3 offers a click action - called ACTION6 - that may land on any cell of a grid up to sixty-four by sixty-four, which is four thousand and ninety-six possible clicks.
+
+• The environment tells the agent only that clicking is available, never which cells matter, so an agent that tries cells blindly wastes its whole move budget.
+
+• co_explore shrinks that space to a handful: it finds the distinct objects on the screen and offers a click at the centre of each, largest object first, because the biggest, most button-like shape is the most likely interactive control. This is the same click-reduction the strongest public agents use.
+
+How the unguided choice is now ordered.
+
+• Replay a known winning path, if one is being replayed for this game.
+
+• Then any human-taught levers - pick up, go to the key, go to the door.
+
+• Then the causal-first exploration: the least-tried action this game predicts will change the world.
+
+• Then the state graph's frontier search: the first step toward the nearest place not yet explored.
+
+• Then the full policy ranking, which brings in the salient clicks and the least-tried actions.
+
+• Human guidance always comes first, so teaching is never overridden; the policy only decides what to try when nothing has been taught.
+
+Kept apart by game.
+
+• The policy reads only the selected game's cause-and-effect graph and its avoid-set, because those are keyed by the Game Environment Identification (ID), so one environment's learnings never steer another's.
+
+The measured effect.
+
+• The exploration policy's own capability package passes eleven checks, including that it prefers a game's predicted-change action, that it offers the largest object's click first, and that a game with nothing learned predicts nothing.
+
+• In the live player, the causal-first choice was confirmed to select the one action known to change the world when the others do nothing.
+
+• All acceptance demonstrations continue to pass, and no benchmark score is claimed.
+
+
+PART TEN - HOW THE WORLD IS WINNING ARC-AGI-3, AND WHERE MENTOVA STANDS
+
+Why this part exists.
+
+• Before doing more work it is worth looking honestly at how the strongest ARC-AGI-3 agents in the world actually score, and at where Mentova genuinely stands against them. This part records that review. It claims no score for Mentova; a score can only come from measured runs on the live benchmark.
+
+What winning looks like, in numbers.
+
+• The people who built ARC-AGI-3 report that humans solve every environment - one hundred percent - in about seven to eight minutes each.
+
+• The best large language models, by contrast, score below one percent on the official measure. That measure rewards efficiency and punishes waste sharply: an agent that takes ten times as many actions as a human earns only about one percent of the credit, because the ratio is squared.
+
+• The agents that do best are not bigger language models. Two stand out. One built a graph of the states it had seen and always moved toward the nearest unexplored place; it solved a median of thirty levels across six games and placed third overall. Another learned to predict which actions change the screen. At a fixed, small budget of interactions, the graph agent solved nineteen levels while a language-model-plus-rules agent solved five - fewer than a purely random agent, which solved six.
+
+• A separate, higher-scoring line of work has a coding agent write a small program that models the game, checks that program against what it has seen, and plans inside the model before spending real moves. This "propose in a cheap model, verify, then act" loop reached the best scores reported so far.
+
+• A further result is worth noting: a team added a memory layer that simply remembers what worked and reminds the agent of it when it gets stuck, and reported two-and-a-half times the score at the same move budget - without any smarter model. The gain came entirely from not rediscovering the same thing twice.
+
+What makes the benchmark hard for large language models.
+
+• There are no instructions and no examples, so a model cannot lean on what it has read.
+
+• The screens are large, so a running history of them quickly overflows a model's memory.
+
+• There is no correctness signal to check against, and models tend to lock onto a wrong theory of the game and cannot steer out of it.
+
+Where Mentova already matches the winning shape.
+
+• Mentova keeps an explicit graph of the states it has seen, with the actions tried from each, and heads to the nearest unexplored frontier - the third-place agent's core behaviour.
+
+• Mentova marks an action that changed nothing as dead and never wastes it again.
+
+• Mentova learns which actions change the world and prefers them - the other winning behaviour.
+
+• Mentova shrinks the click action to a few salient targets rather than thousands of blind cells.
+
+• Most important, Mentova carries its learnings forward: keyed by game, written to disk, and reloaded on the next run, so a later attempt begins from everything an earlier one learned. The benchmark is explicitly designed to reward carrying learning forward across the levels of a game, and the people who built it, and the top agent authors, both note that no public agent yet does this well. This is Mentova's clearest opportunity, and its foundation - the cause-and-effect ontology, the lattice, the workspace, and the durable per-game store - is built for exactly it.
+
+Where Mentova is honestly behind, and what comes next.
+
+• The verify-before-act loop - modelling the game and planning inside the model before spending real moves - is the single most powerful idea in the field and Mentova does not yet do it. Mentova has the pieces for it: a planner and a cause-and-effect model. Wiring them into a plan-in-the-model-then-act loop is the highest-value next step.
+
+• Inferring the unstated win condition from what changed on a win is a capability Mentova has as a separate part but has not yet keyed by game and wired into the live player; doing so, without letting one game's inferred goal leak into another, is the next step after that.
+
+• Recognising the same state when only a step-counter or timer differs on the screen is a known pitfall; the current signature does not yet mask such a changing region, and doing so safely needs real screens to test against.
+
+• No score is claimed. The ARC-AGI-3 Perfect Score report will be written only after real, measured wins on the live leaderboard - never ahead of the evidence.
+
+
+PART ELEVEN - THE SELF-LEARNING RECALL
+
+The idea, in one sentence.
+
+• When the player has made no progress for several steps, it recalls the single action that has had the biggest effect in this game so far, and tries it again, instead of drifting on and wasting its move budget.
+
+Why it helps.
+
+• The strongest lesson from a team that added a memory layer was that most wasted effort is an agent rediscovering something it already found. Their agent once found that a particular click changed hundreds of cells, then forgot and drifted through twenty more useless clicks; a single reminder of the earlier discovery let it finish.
+
+• Mentova now keeps, for each game, the action that produced the largest change it has seen, and a count of how many steps in a row have changed nothing. When that count crosses a small threshold, and the last action was not already that best action, the player recalls the biggest-effect action.
+
+Kept honest and kept apart.
+
+• The record is per game, so one environment's best action never influences another's.
+
+• It is written to disk with the rest of that game's learnings and reloaded on the next run, so the discovered mechanic survives a restart - the memory-layer benefit, made durable.
+
+• A recall never repeats the action just taken and never triggers a known hazard.
+
+The measured effect.
+
+• An acceptance check drives a game until it records a biggest-effect action, forces a stall, and confirms the player recalls exactly that action; it then wipes the record, reloads from disk, and confirms the discovered mechanic returns unchanged.
+
+• The guided-and-solo demonstration now passes all ten of its checks, and all other demonstrations still pass. No benchmark score is claimed.
+
+
+END OF DOCUMENT

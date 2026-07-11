@@ -1140,6 +1140,9 @@ ma_session_reset :-
     retractall(ma_session_(_, _, _, _)),
     % Clear the counter.
     retractall(ma_session_n_(_)),
+    % Clear the no-progress counters (a fresh attempt starts unstuck). The
+    % highest-impact record is durable learning and deliberately kept.
+    retractall(ma_stale_(_, _)),
     % Start at zero.
     assertz(ma_session_n_(0)).
 
@@ -1339,7 +1342,12 @@ ma_read_terms_(S, Terms) :-
     ).
 
 % ma_restore_learned(+Term): reassert one game's learnings from its stored term.
+% An older nine-argument snapshot (no impact record) restores with none.
 ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros)) :-
+    % Delegate to the full form with an empty impact record.
+    ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, [])).
+% The full ten-argument snapshot, including the highest-impact action record.
+ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, Impacts)) :-
     % Clear any current in-memory learnings for this game so a reload is idempotent.
     retractall(ma_goal_(Game, _)),
     % Its priorities.
@@ -1367,7 +1375,11 @@ ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinP
     % Replay each graph edge, which rebuilds this game's nodes, tested, and dead marks.
     forall(member(edge(F, EA, T), Edges), catch(cg_note(F, EA, T), _, true)),
     % Restore each causal relation through the validating front door.
-    forall(member(Cro, Cros), catch(co_cro_assert(Cro), _, true)).
+    forall(member(Cro, Cros), catch(co_cro_assert(Cro), _, true)),
+    % Its highest-impact action record.
+    retractall(ma_impact_(Game, _, _)),
+    % Restore each discovered mechanic so the recall nudge survives a restart.
+    forall(member(impact(Act, Mag), Impacts), assertz(ma_impact_(Game, Act, Mag))).
 
 % Define ma_persist_game: snapshot one game's learnings and merge them into the
 % durable file, replacing that game's previous snapshot. Serialised so two
@@ -1392,14 +1404,16 @@ ma_persist_game_(Game) :-
     ma_write_terms(File, All).
 
 % ma_without_game(+Terms, +Game, -Others): every stored term but this game's.
+% Matches any arity of arc_learned so older and newer snapshots are both replaced.
 ma_without_game(Terms, Game, Others) :-
     % Keep only the terms that are not this game's snapshot.
     findall(T,
-        ( member(T, Terms), \+ T = arc_learned(Game, _, _, _, _, _, _, _, _) ),
+        ( member(T, Terms),
+          \+ ( functor(T, arc_learned, _), arg(1, T, Game) ) ),
         Others).
 
 % ma_snapshot_game(+Game, -Term): gather every store's learnings for one game.
-ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros)) :-
+ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinPath, Edges, Cros, Impacts)) :-
     % The taught or inferred goal, or none.
     ( ma_goal_(Game, Goal) -> true ; Goal = none ),
     % The suggested-action priorities.
@@ -1421,7 +1435,9 @@ ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, 
     % This game's causal relations, whose cause names the game.
     findall(cro(Id, Ca, Ef, Te, Mo, St, Co, Pr),
         ( co_the_cro(Id, cro(Id, Ca, Ef, Te, Mo, St, Co, Pr)), memberchk(g(Game, _), Ca) ),
-        Cros).
+        Cros),
+    % This game's highest-impact actions (the discovered mechanics worth recalling).
+    findall(impact(Act, Mag), ma_impact_(Game, Act, Mag), Impacts).
 
 % ma_write_terms(+File, +Terms): write each term to the file, one per line.
 ma_write_terms(File, Terms) :-
@@ -1638,8 +1654,53 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     assertz(ma_last_(Action, Basis)),
     % Count the try so curiosity varies its choices across the attempt.
     ma_bump_try(Action),
+    % Remember how big an effect this action had, and track no-progress, so the
+    % player can recall its highest-impact action when it gets stuck.
+    ma_note_impact(Sel, Action, Delta),
     % Append this step to the session recording (for the won package).
     ma_session_record(Action, Delta, Outcome).
+
+% ma_note_impact(+Game, +Action, +Delta): record the largest effect this action
+% has had in this game, and count consecutive no-change steps. The single most
+% impactful discovered action is worth recalling when exploration stalls — a
+% self-learning agent that stops rediscovering the same mechanic scores far
+% higher at the same action budget.
+ma_note_impact(Game, Action, Delta) :-
+    % The size of this effect, in changed cells.
+    length(Delta, Mag),
+    % A real change resets the no-progress counter; a no-op advances it.
+    ( Mag > 0
+    ->  retractall(ma_stale_(Game, _)), assertz(ma_stale_(Game, 0)),
+        % Keep this action's best effect if it beats the previous best.
+        ( ma_impact_(Game, Action, Old), Old >= Mag
+        ->  true
+        ;   retractall(ma_impact_(Game, Action, _)),
+            assertz(ma_impact_(Game, Action, Mag)) )
+    ;   ma_bump_stale(Game)
+    ).
+
+% ma_bump_stale(+Game): one more consecutive no-change step for the game.
+ma_bump_stale(Game) :-
+    % Fetch and remove the current count, defaulting to zero.
+    ( retract(ma_stale_(Game, N)) -> true ; N = 0 ),
+    % Increment.
+    N1 is N + 1,
+    % Store it back.
+    assertz(ma_stale_(Game, N1)).
+
+% ma_best_impact(+Game, -Action, -Mag): the highest-impact action for the game.
+ma_best_impact(Game, Action, Mag) :-
+    % Every recorded impact for the game, magnitude first.
+    findall(M - A, ma_impact_(Game, A, M), Pairs),
+    % There must be at least one.
+    Pairs \== [],
+    % Largest magnitude first.
+    sort(0, @>=, Pairs, [Mag - Action | _]).
+
+% ma_impact_/3: (Game, Action, Magnitude) — the largest effect an action has had.
+:- dynamic ma_impact_/3.
+% ma_stale_/2: (Game, Count) — consecutive no-change steps this attempt.
+:- dynamic ma_stale_/2.
 
 % The choice clauses are interleaved with the helpers they call (the graph
 % signature, the explore action set), so declare them discontiguous.
@@ -1691,6 +1752,25 @@ ma_choose(Action, toward(goal)) :-
     ma_state_(P, held, _, _),
     % Step greedily toward the door, avoiding declared hazards.
     ma_greedy_step(P, D, Action),
+    % Commit.
+    !.
+% Stuck-recall: when unguided play has made no progress for several steps,
+% recall the single action that has had the biggest effect in this game and try
+% it again instead of drifting. This is the self-learning nudge that keeps an
+% agent from wasting its budget rediscovering a mechanic it already found.
+ma_choose(Action, recall(biggest_effect)) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Only after several consecutive no-change steps.
+    ma_stale_(Sel, Stale),
+    % The stuck threshold.
+    Stale >= 3,
+    % This game's highest-impact action.
+    ma_best_impact(Sel, Action, _Mag),
+    % Do not immediately repeat the action just taken (avoid a tight loop).
+    \+ ma_last_(Action, _),
+    % Never recall a move that lands on a declared hazard.
+    \+ ma_lands_on_hazard(Action),
     % Commit.
     !.
 % Causal-first exploration: if this game's learned causal graph predicts that
