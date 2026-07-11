@@ -8,7 +8,7 @@ Repository: https://github.com/ai-university-aiu/Mentova
 Platform: PrologAI (https://github.com/ai-university-aiu/PrologAI)
 
 ARC-AGI-3 STATUS: ASCENT UNDERWAY. Readiness established; no leaderboard score is claimed.
-Last updated: 2026-07-10.
+Last updated: 2026-07-11.
 
 This paper is a living chronicle. It is appended to, never rewritten, as Mentova
 climbs ARC-AGI-3. Every piece of ARC-AGI-3 work adds a dated entry below,
@@ -263,6 +263,57 @@ next weakness to fix - on a click game the explorer repeats its single highest-
 salience target rather than spreading its clicks across the perceived objects and
 across states; diversifying the click frontier is the next improvement. No
 leaderboard score is claimed; no scorecard was published.
+
+2026-07-11  COURSE CORRECTION. The click fixation found in the first measurement
+was diagnosed and fixed. Its true cause was tunnel vision: once a single click
+was learned to change the world, the causal-first rule kept choosing it, because
+it was the only action known to have an effect and so was always the least-tried
+among the known-effective ones. The fix is explore-then-exploit: before
+exploiting a known-effective action, try any action or salient click target not
+yet tried this attempt, and order the whole explore set least-tried-first, so the
+state-graph frontier and curiosity spread across the perceived objects rather
+than re-offering the largest one. Verified live on a click game: the clicks now
+land on many distinct object centroids. The per-attempt action budget was also
+made adjustable so a longer campaign can give the explorer more room.
+
+2026-07-11  COURSE CORRECTION. First contact also exposed that the shared web
+page carries a single, global game selection. While a human had one game chosen,
+an automated live-connect from the same session reselected the default game
+underneath them, so a restart acted on a selection that had changed. This is not
+a fault in either action; it is that the server keeps one game state for all
+viewers, with no indication of who or what last changed it and no lock while an
+unattended run is in progress. Recorded as a known limitation. The recommended
+remedies - showing the current selection and who set it, and a visible indicator
+(or a soft lock) while a solo run is under way - are noted for future work; for
+now, one driver at a time avoids the collision.
+
+2026-07-11  LEARNING. First full live campaign. With the page to itself and the
+budget raised to one hundred and fifty actions per attempt, Mentova played every
+one of the twenty-five live games available that day, solo and unaided, under one
+artificial-agent-tagged scorecard that was closed WITHOUT being published. The
+honest result: zero levels completed on all twenty-five games. It spent two
+thousand four hundred and fifty-three actions in total, about ninety-eight per
+game; nineteen of the twenty-five attempts ended when the game reached its
+GAME_OVER state, and six ran to the action budget. A date-and-time-stamped solo
+report was written for every attempt.
+
+The games and their outcomes (all zero levels completed): lf52, tu93, tr87,
+g50t, ar25, bp35, tn36, cn04, ls20, vc33, m0r0, dc22, ka59, sb26, sk48, ft09,
+lp85, wa30, s5i5, su15, sp80, r11l, cd82, re86, sc25.
+
+What this measures, plainly. The plumbing now works end to end against the live
+server, and the exploration is genuine and varied - but exploration alone does
+not win an ARC-AGI-3 level. Most attempts ended in a loss rather than the budget,
+which says the agent is taking actions that end the game rather than avoiding
+them and steering toward a goal it has inferred. This is exactly the gap the
+wider world's results predict: the systematic explorers place well on efficiency
+but the levels themselves are won by agents that infer the goal and, above all,
+that build a model of the game and plan inside it before spending real moves.
+Mentova has the pieces for both - a goal-inference part not yet keyed by game and
+wired in, and a planner and a cause-and-effect model not yet joined into a
+verify-before-act loop. Those two, plus learning to avoid the actions that end a
+game, are now the clearly-named next work. No leaderboard score is claimed; no
+scorecard was published.
 
 
 THE VISION
