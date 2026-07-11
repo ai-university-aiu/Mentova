@@ -325,4 +325,61 @@ The research drew on the following public sources.
 • DataCamp, ARC-AGI-3 - The New Interactive Reasoning Benchmark, https://www.datacamp.com/blog/arc-agi-3
 
 
+REVISION NOTE - ADDITIONAL SOURCES SCANNED (2026-07-10)
+
+This note was added after a follow-up review of six ARC Prize resources, to be honest about what the first version of this document did and did not cover, and to record anything new.
+
+First, a straight answer about coverage of the six resources reviewed.
+
+• The official page https://arcprize.org/arc-agi/3 was seen in searches but was not directly read for the first version.
+
+◦ It has now been read.
+
+◦ It adds framing but no new hard specifications: it describes ARC-AGI-3 as measuring skill-acquisition efficiency over time - planning horizons, memory compression, and updating beliefs as new evidence appears - and states that a score of one hundred percent means an agent beats every game as efficiently as humans, and that every environment is human-solvable.
+
+• The GitHub organisation https://github.com/arcprize was not scanned for the first version of this document.
+
+◦ Two of its repositories were later read for the separate live-connection work: the reference agent (ARC-AGI-3-Agents) and the toolkit (ARC-AGI), which is where the exact live protocol was confirmed.
+
+◦ For this note, the remaining relevant repositories were read as well. The findings confirm and slightly extend what we had.
+
+• The newsletter link https://arcprize.kit.com/bc80575d89 is only a sign-up landing page with no content, so there was nothing to learn from it.
+
+• The Discord invite https://discord.gg/9b77dPAmcA cannot be read by a fetcher - it is an invitation that opens the Discord application - so it was not scanned.
+
+• The X (formerly Twitter) page https://twitter.com/arcprize is behind a sign-in wall and could not be read.
+
+• The YouTube channel https://www.youtube.com/channel/UC_rdrp-QkrZn-ce9uCE-0EA is a JavaScript application that returned no readable video titles or description, so no text could be extracted.
+
+What the newly-read GitHub repositories confirm and add.
+
+• ARCEngine (the ARC-AGI-3 game engine) confirms the core specification directly from code: the camera - the visible grid - defaults to sixty-four by sixty-four; the default action set is the numeric identifiers one through six (ACTION1 through ACTION6); and a single action can return multiple frames when it triggers an animation.
+
+◦ This matches this document's Part One and the live client we built, which flattens a multi-frame reply to the current grid.
+
+◦ It also confirms that the undo action, ACTION7, is not part of the engine's default set of six - it is offered only by games that support it, which is exactly how our connector treats it.
+
+• The official benchmarking agent (arc-agi-3-benchmarking) confirms the connection details we used: a key named ARC_API_KEY, and public game identifiers such as ls20. It also shows the ARC Prize's own agent driving frontier models from several providers.
+
+• The Kaggle starter (ARC-AGI-3-Kaggle-Starter) reveals a competition-logistics detail we had not recorded: besides the direct web-interface leaderboard, ARC-AGI-3 is also run as a Kaggle competition (ARC Prize 2026), where an agent is packaged with the arc-agi Python package (which requires Python version 3.12) and submitted as a data file, with a limit of five submissions per day.
+
+Effect on this preparation and on the code.
+
+• Nothing in the new material contradicts the first version of this document or the code we built.
+
+• The new material increases confidence: the sixty-four by sixty-four grid, the sixteen colours, the ACTION1 through ACTION6 action set with ACTION7 as an optional undo, and the multi-frame replies are all confirmed against the ARC Prize Foundation's own engine and agent code.
+
+• The one genuinely new item is a second way to compete - the Kaggle track - which is worth knowing for a future live attempt, alongside the direct Application Programming Interface (API) leaderboard already described here.
+
+• No code change is required as a result of this review.
+
+Additional sources scanned for this note.
+
+• ARC Prize, ARC-AGI-3 overview page, https://arcprize.org/arc-agi/3
+
+• ARC Prize GitHub organisation, https://github.com/arcprize - in particular the repositories ARCEngine, arc-agi-3-benchmarking, and ARC-AGI-3-Kaggle-Starter (and, from the earlier live-connection work, ARC-AGI-3-Agents and the ARC-AGI toolkit).
+
+• Not readable as text, and therefore not scanned: the newsletter sign-up page, the Discord invite, the X page (sign-in wall), and the YouTube channel (JavaScript application).
+
+
 END OF DOCUMENT
