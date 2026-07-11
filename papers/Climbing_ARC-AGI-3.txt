@@ -406,6 +406,40 @@ spell-casting maze) were reverse-engineered from the games' own source code and
 their guides and facts corrected to ground truth. No live game was played and no
 scorecard was touched in this work. No leaderboard score is claimed.
 
+2026-07-11  PERCEPTION. Watching the exploration policy play, the mentor observed
+that it pressed buttons and mulled around one spot: it was not seeing the whole
+grid, it was not picking out an object and going to touch it, and the counters it
+found were being ablated rather than read. That critique was correct, and it was
+answered by giving the mind eyes. A new PrologAI perception pack, co_see (the
+seventy-eighth layer of the platform's cognitive stack), makes sight object-first:
+it segments the entire grid into an inventory of objects, tags each with a
+shape-based role - a meter or life-bar, a dot or collectible, a wide field, or a
+piece - singles out the bar-like meters so a counter or life-bar is read and
+interpreted instead of discarded, ranks the object centroids as places worth
+visiting, and locates the avatar as whatever moved between two frames. On top of
+that sight, the Solo player was taught three new habits. First, object-targeted
+curiosity: each step it chooses a salient object it has not yet visited this
+attempt and deliberately goes to it - steering the avatar toward it on a movement
+game, using a control map it discovers by watching which action moves the avatar,
+or clicking its centroid on a click game - so it no longer mulls on one spot.
+Second, a resource model: the volatile band that masking used to only hide is now
+also read as a meter, its length tracked over time, so a shrinking life-bar is
+recognised as a draining resource, and when a resource is low the player prefers
+the collectible dots that tend to refill it. Third, transfer: the twenty-five
+studied games were abstracted into a dozen cross-game mechanic archetypes - refill,
+property-changer, pushable-block, select-then-place, the delivery, match, reach and
+reduce goals, hazard avoidance, and more - each carrying a generalizable play prior,
+so that what was learned from twenty-five games can guide play on the twenty-sixth
+that has never been seen. Every new fact is game-keyed, as the mentor re-emphasised
+it must be; the abstractions carry no game id precisely so they can transfer. A
+verification demonstration confirms the upgrade - all nine checks pass: co_see sees
+the whole grid, reads the life-bar, learns an action's displacement, targets and
+goes to a fresh object, does not repeat a visited one, recognises a draining
+resource, prefers a dot when it is low, and abstracts the guides into archetypes
+that transfer. This work is the perception and habit upgrade; the measured effect
+on live play is recorded in the entry that follows once the sweep is run. No live
+game was played in the writing of the code. No leaderboard score is claimed.
+
 
 THE VISION
 
