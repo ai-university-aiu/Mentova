@@ -440,6 +440,45 @@ that transfer. This work is the perception and habit upgrade; the measured effec
 on live play is recorded in the entry that follows once the sweep is run. No live
 game was played in the writing of the code. No leaderboard score is claimed.
 
+2026-07-11  LEARNING. The perception upgrade was taken to the live benchmark and
+measured honestly, and the honest result is that it did not, by itself, win a
+level. An agent-tagged, unpublished scorecard was opened and the improved system
+played the live games at the same one-hundred-and-fifty-action budget as the first
+campaign. The sweep was halted after eleven of the twenty-five games - not because
+of the result but because of cost, discussed below - and those eleven, a genuinely
+diverse spread across delivery, sokoban, gravity-building, assembly, action-
+avoidance, trail-moving, string-rewriting, pair-matching, program-execution, tile-
+ordering, and lights-out games, completed zero levels. Set beside the baseline,
+the outcome distribution is essentially unchanged: eight of eleven ended in a game-
+over against nineteen of twenty-five before, three of eleven exhausted the budget
+against six of twenty-five, and the levels completed are zero on both. The one
+measurable difference is small and in the expected direction: the improved system
+spent a few more actions per game on average - about one hundred and six against
+ninety-eight - which is what deliberate object-visiting should do, exploring a
+little longer before it dies rather than mulling on one spot. So the upgrade
+improved the quality of exploration, which was the mentor's actual complaint, and
+it did not improve the outcome, which is the honest thing to record. Two lessons
+came out of the run and both are actionable. The first names the next lever
+precisely. Eight of eleven games died, and the action-avoidance game su15 died in
+thirty-seven actions; object-targeted curiosity walks the avatar toward an
+interesting object, and if the route to that object crosses a hazard it walks into
+the hazard. The death memory already refuses a move that HAS killed from a state,
+but nothing yet refuses a move PREDICTED to kill before it has been tried once.
+That verify-before-act check - consult the learned causal graph for a predicted
+game-over from this state, and re-route or pick another object when one is
+foreseen - is the world-model loop the first campaign named as the least-bounded
+lever, and the deaths in this sweep make it concrete. The second lesson is a
+performance cost, mechanical rather than conceptual: running three full sixty-four-
+by-sixty-four segmentations every step, over a state graph that grows across the
+game, does not scale to a game that survives to the full budget - late in the
+twelfth game the process was spending a full core per step with no network wait and
+its memory had grown by half. Caching the inventory once per frame, restricting
+segmentation to the changed region, and bounding the frontier search are the fix,
+and they come first so the next sweep can complete all twenty-five. The scorecard
+was left open and never published; no level was won; no leaderboard score is
+claimed. The full per-game table and comparison are written up in the sweep report
+in the assets folder.
+
 
 THE VISION
 
