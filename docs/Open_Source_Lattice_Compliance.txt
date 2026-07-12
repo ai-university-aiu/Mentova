@@ -1,0 +1,82 @@
+Open-Source Lattice Compliance — Mentova / ARC-AGI-3 prize eligibility
+=====================================================================
+
+Purpose
+-------
+ARC-AGI-3 prize / Kaggle eligibility requires the whole system to be open-sourced,
+the Causalontology lattice included, so a reviewer can obtain and run the full
+functioning mind from the public repositories alone. This note records the honest
+state of what ships and how the lattice is made to ship.
+
+
+What was already open-source
+----------------------------
+The BASE lattice is not a mystery blob; it is rebuilt deterministically at every boot
+from committed sources plus the open PrologAI platform:
+
+  - knowledge/small_world.pl                       Small-World Commonsense knowledge base
+  - knowledge/curriculum/                          curriculum facts + curriculum lattice
+  - knowledge/arc3_games.pl                        the 25 ARC-AGI-3 game guides (node-facts,
+                                                   relations, hazards)
+  - knowledge/arc3_steps/draft_1..10.facts         the 10 distilled ARC-AGI-3 Steps drafts
+  - knowledge/disease_ontology.pl, gene_ontology.pl
+  - src/mentova/arc3_knowledge.pl, arc3_priors.pl, arc3_steps.pl   the ingest code
+  - the PrologAI platform (separate open repo) — the lattice/Causalontology/J-Space engine
+
+At boot mc_chat_main runs ci_chat_bootstrap, a3_bootstrap, as_bootstrap, hr_bootstrap,
+cog_bootstrap, which anchor these into the lattice (curriculum ~4975 facts / 5 CROs; arc3
+206 node-facts / 70 relations / 23 hazards; drafts 644 facts). So the base lattice is
+fully reproducible from committed code.
+
+NOTE: full eligibility also requires the PrologAI platform repo to be public, because the
+lattice/Causalontology engine lives there. Mentova depends on it.
+
+
+What was runtime-only (the gap that was closed)
+-----------------------------------------------
+Two runtime artefacts were git-ignored and did NOT ship:
+
+  - data/arc_learnings.db     the durable per-game LEARNED store (goals, priorities,
+                              hazards, labels, winning paths, causal relations) PLUS
+                              megabyte-scale raw telemetry (per-action effect logs and the
+                              co_graph state-exploration graph).
+  - data/arc_api_key.txt      the ARC-AGI-3 API key (a SECRET — must never ship).
+
+The base lattice shipped (as its generating sources); the accumulated learned store did
+not.
+
+
+The compliant path (what changed)
+---------------------------------
+A versioned lattice snapshot exporter was added:
+
+  tools/lattice_export.pl         builds the lattice in-process (the same boot
+                                  registrations, no HTTP listener) and writes a committed,
+                                  human-readable, re-loadable snapshot.
+  make lattice-snapshot           regenerates it; make lattice-snapshot-verify parses it.
+
+Committed output (data/lattice_snapshot/, ~1 MB, NOT git-ignored):
+
+  lattice_locus_mentova_curriculum.pl   the curriculum nexus node-facts
+  lattice_locus_mentova_arc3.pl         the arc3 game-knowledge nexus node-facts
+  lattice_locus_mentova_drafts.pl       the drafts nexus node-facts
+  causalontology_cros.pl                every Causalontology Reasoning Object (co_cro/8)
+  arc_learnings_snapshot.pl             the per-game learned store, secret-free and
+                                        telemetry-pruned (essential knowledge kept)
+  MANIFEST.txt                          counts, provenance, and the regeneration command
+
+At the time of writing: 3 nexuses, 5,715 node-facts, 282 CROs, 4 learned games.
+
+Two deliberate choices, documented for honesty:
+  - Secrets are excluded. The API key is never in the store and never written; the
+    learned-store export additionally drops any term containing a credential-looking atom.
+  - The learned-store snapshot keeps the distilled KNOWLEDGE (goal, priorities, hazards,
+    labels, winning path, causal relations) and prunes the raw runtime TELEMETRY (the
+    per-action effect logs and the megabyte co_graph exploration graph), which is wholly
+    re-derived at runtime. This keeps the committed snapshot ~1 MB instead of ~7 MB and
+    avoids re-committing a growing telemetry blob. The raw store (data/arc_learnings.db)
+    remains git-ignored; regenerate the snapshot from it with `make lattice-snapshot`.
+
+Bottom line: the full functioning lattice (all node-facts + all CROs) and the essential
+per-game learnings now ship with the open-source repo, secret-free, and are regenerable by
+one command. The base lattice remains independently reproducible from committed sources.

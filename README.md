@@ -816,6 +816,7 @@ Each announcement is paired with its scientific paper and written after the evid
 |---|---|
 | `arc_agi_1/` | 400 ARC-AGI-1 task JSON files (the complete public training set) plus `arc_tasks.pl` — the Prolog loader that makes every task available to `arc_agi_task/4`. **All 400 tasks solved.** |
 | `arc_agi_2/` | ARC-AGI-2 task data — `arc_tasks_2.pl` (all 120 evaluation tasks), `arc_benchmark_2.pl` (the 124-rule glass-box solver), and `ARC-AGI-2_Next_Steps.txt`. **All 120 tasks solved. 120/120 = 100.00%.** |
+| `lattice_snapshot/` | **The committed lattice snapshot** — the materialised, re-loadable, secret-free copy of the full functioning Causalontology lattice (every nexus's node-facts + every `co_cro/8` reasoning object) and the essential per-game learned knowledge, so the whole mind ships open-source for ARC-AGI-3 / Kaggle prize eligibility (not merely regenerable). ~1 MB; regenerate with `make lattice-snapshot`. The base lattice is also independently reproducible from committed sources at boot; the raw runtime store (`arc_learnings.db`, with its megabyte-scale exploration telemetry) and the API key stay git-ignored. See `docs/Open_Source_Lattice_Compliance.txt`. |
 
 ### Demos — demos/
 
