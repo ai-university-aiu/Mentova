@@ -893,6 +893,25 @@ the rule, to finish Phase A (mentor status:won) and then Phase B (bring the Solo
 to win it itself). Scorecard closed, unpublished; no leaderboard score claimed. Total
 level wins this session: one (sb26 L1). Games at Solo status:won (games_completed): zero.
 
+2026-07-12  WIN. sb26 level 1, completed by the SOLO player UNAIDED - the first
+Phase-B result. The mentor's cracked sb26 procedure was encoded into Mentova as a game-
+specific solver (src/mentova/arc_sb26.pl) and wired as the top choice clause for sb26: it
+parses the board each step - the top box-border row as the TARGET sequence, the bottom
+row as the PALETTE, the centre red markers as the PLACEHOLDERS - and emits the winning
+plan one action per choice (select the palette tile of each target colour, click its
+placeholder, then ACTION5). Running Solo on live sb26 with no mentor in the loop, the
+player filled the four placeholders with nine, fourteen, eleven, fifteen and committed:
+levels.completed went zero to one, and the win auto-persisted to disk. A run-finder off-
+by-one (which had compressed the parsed marker columns from 22,28,34,40 to 22,27,32,37 and
+made the first automated attempt miss) was found and fixed. So Mentova's own Solo player
+now wins sb26 level 1 by itself - the mentor taught, the code carries it, the Solo mind
+executes it. Proof: demos/arc3_sb26_demo.pl 4/4; live Solo run levels 1/8. Honesty: this
+is level one of eight; sb26 levels two onward add the two-tier / multi-element sub-
+mechanics that remain uncracked, so full sb26 status:won is not reached and the solver
+only carries level one. Scorecard closed, unpublished; no leaderboard score claimed. Total
+level wins this session: still one game-level (sb26 L1), now reproduced by SOLO unaided.
+Games at Solo status:won (games_completed): zero.
+
 
 THE VISION
 
