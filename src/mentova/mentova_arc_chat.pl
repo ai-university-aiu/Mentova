@@ -1904,7 +1904,9 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     ma_note_volatility(Sel, Delta),
     % Refresh the whole-grid perception: where the avatar now is, what this action
     % did to it (the control map), and how the meters moved (the resource model).
-    ma_perceive_update(Sel, Action, Frame0, Frame1),
+    % The step's already-computed frame delta is threaded in so the avatar is
+    % located from the changed region alone, never by re-scanning the whole grid.
+    ma_perceive_update(Sel, Action, Frame0, Frame1, Delta),
     % If this action just ended the game, remember never to take it from this
     % state again — durable, so a later attempt of the game does not re-die here.
     ma_note_death(Sel, Frame0, Action),
@@ -2183,16 +2185,55 @@ ma_expand_actions([click | Rest], Frame, Expanded) :-
 ma_expand_actions([Action | Rest], Frame, [Action | RestExpanded]) :-
     ma_expand_actions(Rest, Frame, RestExpanded).
 
-% ma_perceive_update(+Game, +Action, +Frame0, +Frame1): after a step, refresh the
-% whole-grid perception — the avatar's cell, this action's learned displacement,
-% and the meter readings. Fully guarded: perception never breaks a step.
-ma_perceive_update(Game, Action, Frame0, Frame1) :-
-    catch(ma_perceive_update_(Game, Action, Frame0, Frame1), _, true).
+% ma_avatar_from_delta(+Frame1, +Delta, -cell(R,C)): locate the avatar as the
+% centroid of the cells that CHANGED this step, biased to the cells it moved INTO
+% (non-background in the new frame). This reads the step's already-computed frame
+% delta (a small list of changed(R,C,Old,New)) instead of re-scanning all 4096
+% cells the way cs_avatar_move does, so the cost tracks what moved, not the whole
+% grid. The bias and centroid match cs_avatar_move, so the located cell is the
+% same — only cheaper.
+ma_avatar_from_delta(Frame1, Delta, cell(R, C)) :-
+    % Something must have changed for there to be a move to locate.
+    Delta \== [],
+    % The new frame's background (cached by co_see), to spot the moved-into cells.
+    ( catch(cs_background(Frame1, Bg1), _, fail) -> true ; Bg1 = 0 ),
+    % The changed cells whose new colour is non-background — where it moved to.
+    findall(cell(CR, CC),
+        ( member(changed(CR, CC, _Old, New), Delta), New \== Bg1 ),
+        NewCells),
+    % Prefer the moved-into cells; fall back to every changed cell.
+    ( NewCells \== [] -> Pick = NewCells
+    ; findall(cell(CR, CC), member(changed(CR, CC, _, _), Delta), Pick) ),
+    % There must be at least one cell to average.
+    Pick \== [],
+    % The rounded centroid of those cells is the avatar's new cell.
+    ma_centroid_cells(Pick, R, C).
+
+% ma_centroid_cells(+Cells, -R, -C): the rounded centroid of a cell(R,C) list.
+ma_centroid_cells(Cells, R, C) :-
+    % The row coordinates of the cells.
+    findall(RR, member(cell(RR, _), Cells), Rows),
+    % The column coordinates of the cells.
+    findall(CC, member(cell(_, CC), Cells), Cols),
+    % How many cells there are (must be at least one).
+    length(Cells, N), N > 0,
+    % Sum the rows and columns.
+    sum_list(Rows, SumR), sum_list(Cols, SumC),
+    % The rounded means are the centroid.
+    R is round(SumR / N), C is round(SumC / N).
+
+% ma_perceive_update(+Game, +Action, +Frame0, +Frame1, +Delta): after a step,
+% refresh the whole-grid perception — the avatar's cell, this action's learned
+% displacement, and the meter readings. Delta is the step's already-computed frame
+% delta, so the avatar is located from the changed region rather than a full
+% 64x64 rescan. Fully guarded: perception never breaks a step.
+ma_perceive_update(Game, Action, Frame0, Frame1, Delta) :-
+    catch(ma_perceive_update_(Game, Action, Frame0, Frame1, Delta), _, true).
 
 % The guarded body of the perception update.
-ma_perceive_update_(Game, Action, Frame0, Frame1) :-
-    % Locate the avatar as whatever moved between the two frames.
-    (   catch(cs_avatar_move(Frame0, Frame1, cell(NR, NC)), _, fail)
+ma_perceive_update_(Game, Action, _Frame0, Frame1, Delta) :-
+    % Locate the avatar as whatever moved this step, read from the frame delta.
+    (   catch(ma_avatar_from_delta(Frame1, Delta, cell(NR, NC)), _, fail)
     ->  % If we knew where it was and this was a simple (non-click) action, learn
         % the displacement it caused — the control map, one action at a time.
         (   ma_avatar_(Game, OR, OC), Action = action(_),
