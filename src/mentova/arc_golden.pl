@@ -1,8 +1,9 @@
 /*  Mentova — Golden Game Environment Reference loader
 
-    For each of the twenty-five ARC-AGI-3 games there is a GOLDEN GAME ENVIRONMENT
-    REFERENCE FILE at /home/ccaitwo/assets/<game>_steps.txt: that game's sections cut
-    from all ten ARC-AGI-3_Steps_Draft documents, one game per file, no cross-game
+    For each of the twenty-five ARC-AGI-3 games there is a unified GOLDEN GAME
+    ENVIRONMENT REFERENCE FILE at /home/ccaitwo/assets/<game>.txt: the practical mentor
+    guide followed by that game's sections cut from all ten ARC-AGI-3_Steps_Draft
+    documents (the former <game>_steps.txt, merged in), one game per file, no cross-game
     spillover. The GOLDEN GAME ENVIRONMENT REFERENCE RULE requires that, before an AI
     Mentor Bridge run to secure status:won for a game, the matching golden file is read
     and its ENTIRE contents are loaded into Jacobian Space (J-Space) so the steps stay
@@ -31,10 +32,13 @@
 % agp_golden_dir(-Dir): where the golden reference files live.
 agp_golden_dir('/home/ccaitwo/assets').
 
-% agp_golden_file(+Game, -Path): the golden reference file path for a game.
+% agp_golden_file(+Game, -Path): the golden reference file path for a game. The golden
+% sets were unified — each game's distilled draft sections were merged onto the end of
+% its practical mentor guide, so the single file is <game>.txt (the former
+% <game>_steps.txt was appended into it and removed).
 agp_golden_file(Game, Path) :-
     agp_golden_dir(Dir),
-    atomic_list_concat([Dir, '/', Game, '_steps.txt'], Path).
+    atomic_list_concat([Dir, '/', Game, '.txt'], Path).
 
 % agp_workspace(+Game, -Workspace): the J-Space workspace name for a game's golden
 % reference — one workspace per game so its steps are held apart.
