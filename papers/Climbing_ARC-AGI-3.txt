@@ -838,6 +838,32 @@ Full sweeps remain allowed only as an occasional benchmark, never as the way pro
 is made. The v5 report is in assets/ARC-AGI-3_Live_Sweep_v5.txt; the scorecard was
 closed and never published; no leaderboard score is claimed.
 
+2026-07-11  METHODOLOGY. The one-game method was given its reference library. The ten
+ARC-AGI-3_Steps_Draft documents were cut, per game, into twenty-five GOLDEN GAME
+ENVIRONMENT REFERENCE FILES - one file per environment (sb26_steps.txt, tu93_steps.txt,
+and so on), each holding that game's sections from every draft that reached it (drafts
+one through six, eight and nine reach all twenty-five; draft seven is truncated at
+about thirteen; draft ten at three), assembled by a header-split that carries no
+cross-game spillover, with the drafts' trailing "next installment" previews of the
+following game stripped out. A new standing rule accompanies them: before an AI Mentor
+Bridge run to secure a game, READ that game's golden reference file and LOAD IT ENTIRE
+INTO JACOBIAN SPACE, so the researched steps stay at the forefront during the run; the
+loader agp_load_golden holds every line of the file as a concept in the game's J-Space
+workspace (verified: the sb26 golden file, three hundred and sixty-one lines, loaded in
+full). The rule was then exercised on sb26: its golden file was read and loaded, and it
+paid off - the file's public-replay evidence named the true mechanic (color the
+placeholders in a working area to match a shown target sequence, alternating palette
+selection and placement, a correct placement making the matching target block
+disappear, positions filled in order). With that in hand the board was decoded into its
+three regions - a top row of four target boxes bordered nine, fourteen, eleven, fifteen;
+a bottom row of four palette tiles; and a blue-framed centre working area holding a row
+of red markers - and the placement was probed precisely. It still did not resolve:
+selecting a palette tile raises a cursor, but clicking a top box interior places
+nothing, and the likeliest true target, the centre red markers, was identified as the
+next thing to probe rather than yet cracked. Honestly: narrowed, not won; no win
+fabricated; scorecard closed and never published; no leaderboard score claimed. The
+golden library and the load-into-J-Space rule now stand for every future run.
+
 
 THE VISION
 
