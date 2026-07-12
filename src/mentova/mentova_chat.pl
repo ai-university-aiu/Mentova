@@ -61,6 +61,11 @@
 % per-draft candidate facts and carried into the lattice, Causalontology, and
 % J-Space through the nuanced (variant-aware) fact doors.
 :- use_module('arc3_steps').
+% Load the history-of-puzzle-games references: two golden-store documents (the
+% outline and the book) carried into the lattice, Causalontology, and J-Space through
+% the same nuanced fact doors, giving the mind the human lineage of the medium it is
+% tested on — the small family of mechanics every ARC-AGI-3 game recombines.
+:- use_module('history_refs').
 % Load the cognitive-architecture abstraction and the Kaggle north-star: the
 % principles that transfer to unseen games, mapped to the Mentova pillars, and the
 % guiding concept "How to Win the Kaggle ARC-AGI-3 competition" planted in J-Space.
@@ -128,6 +133,10 @@ mc_chat_main(DataDir, Port) :-
     % distilled per-game mechanics, priors, and cognitive-architecture principles
     % join the mind without cluttering it with true duplicates.
     catch(as_bootstrap, _StepsError, true),
+    % Ingest the two history-of-puzzle-games references (outline and book) through the
+    % same nuanced doors, so the medium's human lineage and its mechanic taxonomy join
+    % the mind (guarded so a moved golden store never blocks startup).
+    catch(hr_bootstrap, _HistoryError, true),
     % Plant the cognitive-architecture principles and the Kaggle north-star concept
     % in Jacobian Space — the abstraction layer that carries the winning recipe to
     % games never seen, and the guiding goal the whole build serves.

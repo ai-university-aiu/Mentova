@@ -1010,6 +1010,38 @@ Solo level wins across two games. Games at Solo status:won (games_completed): ze
 lever: the ft09 L6 functional-tile Lights-Out GF(2) solver.
 
 
+2026-07-12  METHODOLOGY. The mind was given the human lineage of the medium it is
+tested on. A comprehensive outline and a full companion book, "The History of Puzzle
+Video Games," were compiled from web research across the whole arc of the form - the
+pre-digital roots (the 1880 fifteen puzzle, Rubik's Cube, nonograms), the earliest
+computer and arcade puzzlers (Blockade 1976, Sokoban 1982, Boulder Dash 1984), the
+Tetris revolution and its licensing wars, the falling-block explosion (Columns, Dr.
+Mario, Puyo Puyo, Puzzle Bobble), the match-three lineage (Shariki 1994, Bejeweled,
+Candy Crush Saga), the action and physics puzzlers (Lemmings, The Incredible Machine,
+Portal, Braid, Baba Is You), the deduction family (Minesweeper, Picross, The Witness),
+the puzzle-adventure and programming puzzlers (Myst, the Zachtronics ludography), the
+handheld and mobile casual eras, and - the point of it all - the arc by which puzzle
+games became the artificial-intelligence field's own reasoning benchmarks (Sokoban in
+PSPACE-complete planning, ARC, and ARC-AGI-3 itself). A dedicated twelfth chapter
+compiles the most comprehensive verifiable list obtainable of Newgrounds Flash-era
+puzzle games (the Tank Award winners and nominees, the Submachine series, You Have to
+Burn the Rope, Continuity, Bloxorz, the GROW series, and dozens more), with an explicit
+honesty statement that no complete public enumeration exists and that the Flashpoint
+Archive is the only tool close to a full index. Both documents were placed in the
+golden store (/home/ccaitwo/ARC-AGI-3/History_Outline.txt and History_Book.txt) and
+ingested through the nuanced draft-ingestion doors under draft ids history_outline and
+history_book: 73 structured facts (a mechanic taxonomy, per-title origin dates, and the
+benchmark lineage) entered the Causalontology lattice with zero errors, the prose was
+reported rather than dropped, and each document's concepts were held in a per-draft
+J-Space workspace. To reach the live mind without disrupting a concurrent live-play
+session, the ingest was NOT applied by restarting the running server; instead a guarded
+boot hook (history_refs:hr_bootstrap, wired into mc_chat_main beside the Steps-draft
+bootstrap) now carries both references into the lattice and J-Space at every start,
+idempotently. The wager: a mind that carries the small family of puzzle mechanics -
+sliding, matching, packing, pushing, deducing, constructing, rule-rewriting - rarely
+meets a wholly new ARC-AGI-3 game, only a fresh combination of ideas it already holds.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box
