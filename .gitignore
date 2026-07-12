@@ -30,4 +30,8 @@ ARC-AGI-3_Won_Sessions/*.txt
 !ARC-AGI-3_Won_Sessions/README.txt
 
 # ARC-AGI-3 durable per-game learnings store (runtime-generated; never commit).
+# The raw store also holds the megabyte-scale co_graph exploration telemetry; the
+# committed, secret-free, telemetry-pruned SNAPSHOT of it (and of the whole lattice) lives
+# in data/lattice_snapshot/ (NOT ignored — see tools/lattice_export.pl / make lattice-snapshot),
+# so the full functioning lattice ships open-source.
 data/arc_learnings.db

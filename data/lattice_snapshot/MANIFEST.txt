@@ -1,0 +1,35 @@
+Mentova lattice snapshot (open-source / ARC-AGI-3 prize compliance)
+
+This directory is the materialised, committed copy of the full functioning
+Causalontology lattice and the runtime learned store, so the whole mind ships
+with the open-source repository.
+
+Counts at export time:
+  lattice nexuses      : 3
+  lattice node-facts   : 5715
+  Causalontology CROs  : 282
+  learned-store games  : 4
+  learned-store terms  : 9
+
+Files:
+  lattice_<nexus>.pl        node-facts per nexus (via lattice_dump/2)
+  causalontology_cros.pl    every co_cro/8 reasoning object
+  arc_learnings_snapshot.pl the runtime per-game learned store (secret-free)
+
+Provenance and reproducibility:
+  The BASE lattice is rebuilt deterministically at boot from committed sources
+  (knowledge/ (all .pl), knowledge/curriculum/ (all), knowledge/arc3_games.pl,
+  knowledge/arc3_steps/draft_*.facts) plus the PrologAI platform. This snapshot
+  is that built lattice materialised, plus the runtime learnings that live in the
+  git-ignored data/arc_learnings.db.
+
+The learned-store snapshot keeps the distilled KNOWLEDGE per game (goal,
+  priorities, hazards, labels, winning path, causal relations) and prunes the raw
+  runtime TELEMETRY (per-action effect logs and the megabyte-scale co_graph
+  state-exploration graph), which is wholly re-derived at runtime.
+
+Secrets: the ARC-AGI-3 API key (data/arc_api_key.txt) is NEVER included; the
+  learned-store export additionally drops any term with a credential-looking atom.
+
+Regenerate with:
+  make lattice-snapshot        (or)  swipl -q -g true -t halt tools/lattice_export.pl
