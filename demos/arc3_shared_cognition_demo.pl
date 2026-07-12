@@ -113,6 +113,12 @@ run :-
           mentova_arc_chat:retractall(ma_goal_(G, _)),
           mentova_arc_chat:retractall(ma_stale_(G, _)),
           mentova_arc_chat:retractall(ma_last_(_, _)),
+          % Advance past the opening survival-first survey window, so the committed
+          % hypothesis (a goal-pursuit clause) is reachable rather than suppressed.
+          mentova_arc_chat:ma_survey_budget(SN),
+          Past is SN + 5,
+          mentova_arc_chat:retractall(ma_session_n_(_)),
+          mentova_arc_chat:assertz(ma_session_n_(Past)),
           mentova_arc_chat:ma_render(G, Frame),
           ( catch(mentova_arc_chat:ma_explore_concrete(G, Frame, Concrete), _, Concrete = []) -> true ; Concrete = [] ),
           forall(member(Act, Concrete), catch(mentova_arc_chat:ma_bump_try(Act), _, true)),
