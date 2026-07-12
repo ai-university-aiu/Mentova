@@ -240,7 +240,7 @@
 :- use_module(library(co_effic),
     [cef_reset/0, cef_count/1, cef_actions/2, cef_set_baseline/2,
      cef_within_budget/1, cef_budget/3]).
-% Load the sb26 game-specific solver (Phase B capability): the cracked sb26 procedure
+% Load the sb26 game-specific solver (Phase Solo capability): the cracked sb26 procedure
 % (fill the centre placeholders to match the top target sequence, then ACTION5) so the
 % Solo player wins sb26 level 1 itself.
 :- use_module('arc_sb26', [sb26_is_game/1, sb26_next_action/3, sb26_reset/1]).
@@ -2782,7 +2782,7 @@ ma_best_impact(Game, Action, Mag) :-
 :- discontiguous ma_choose/2.
 
 % ma_choose(-Action, -Basis): the guided choice.
-% sb26 game-specific solver (Phase B): when the selected game is sb26, drive it with
+% sb26 game-specific solver (Phase Solo): when the selected game is sb26, drive it with
 % the cracked procedure — fill the centre placeholders to match the top target sequence
 % (the box borders) then commit with ACTION5, one action per step — so the SOLO player
 % wins sb26 level 1 itself. Applies to sb26 only (guarded by the id) and leads the

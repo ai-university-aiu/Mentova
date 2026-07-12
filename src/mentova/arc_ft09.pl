@@ -1,4 +1,4 @@
-/*  Mentova — ft09 game-specific solver (Phase B, levels 1-2)
+/*  Mentova — ft09 game-specific solver (Phase Solo, levels 1-2)
 
     ft09 is a click-only "Functional Tiles" / Lights-Out puzzle. Its mechanic was
     cracked over the Mentor Bridge: the board holds one or more 3x3-ish grids of 6x6

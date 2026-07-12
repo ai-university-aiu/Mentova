@@ -1,4 +1,4 @@
-/*  Mentova — sb26 solver demonstration (Phase B capability)
+/*  Mentova — sb26 solver demonstration (Phase Solo capability)
 
     The sb26 game-specific solver encodes the cracked level-1 procedure so the Solo
     player wins sb26 level 1 itself: fill the centre placeholders to match the top
