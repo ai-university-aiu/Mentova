@@ -1,4 +1,4 @@
-/*  Mentova — sb26 game-specific solver (Phase B capability)
+/*  Mentova — sb26 game-specific solver (Phase Solo capability)
 
     The sb26 mechanic was cracked over the Mentor Bridge and level 1 was won live: the
     TOP row of bordered boxes spells the TARGET sequence (border colours, left->right),
@@ -6,7 +6,7 @@
     framed red markers are the PLACEHOLDERS. The play is: for each placeholder in order,
     select the palette tile of the matching target colour, click the placeholder, then
     press ACTION5 to commit. This module encodes that procedure so the SOLO player can
-    win sb26 level 1 itself (Phase B), executing it one action per choice.
+    win sb26 level 1 itself (Phase Solo), executing it one action per choice.
 
     Action terms match the live client: an ACTION6 cell-click is select(Col,Row); the
     commit ACTION5 is action(5).

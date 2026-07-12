@@ -1,7 +1,7 @@
 /*  Mentova — Golden Game Environment Reference loader
 
     For each of the twenty-five ARC-AGI-3 games there is a unified GOLDEN GAME
-    ENVIRONMENT REFERENCE FILE at /home/ccaitwo/assets/<game>.txt: the practical mentor
+    ENVIRONMENT REFERENCE FILE at /home/ccaitwo/ARC-AGI-3/<game>.txt: the practical mentor
     guide followed by that game's sections cut from all ten ARC-AGI-3_Steps_Draft
     documents (the former <game>_steps.txt, merged in), one game per file, no cross-game
     spillover. The GOLDEN GAME ENVIRONMENT REFERENCE RULE requires that, before an AI
@@ -30,7 +30,7 @@
 :- ( catch(use_module(library(jspace), [js_open/1, js_hold/4]), _, fail) -> true ; true ).
 
 % agp_golden_dir(-Dir): where the golden reference files live.
-agp_golden_dir('/home/ccaitwo/assets').
+agp_golden_dir('/home/ccaitwo/ARC-AGI-3').
 
 % agp_golden_file(+Game, -Path): the golden reference file path for a game. The golden
 % sets were unified — each game's distilled draft sections were merged onto the end of

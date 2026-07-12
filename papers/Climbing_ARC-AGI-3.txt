@@ -889,7 +889,7 @@ eight; later levels add target boxes and reshape the working area, so full sb26
 status:won is not yet reached, and the mechanic must be re-parsed per level. The learning
 that matters is the PROCEDURE, not a fixed action path - the next build is an sb26 solver
 that parses the target row, the palette, and the centre markers each level and executes
-the rule, to finish Phase A (mentor status:won) and then Phase B (bring the Solo player
+the rule, to finish Phase Bridge (mentor status:won) and then Phase Solo (bring the Solo player
 to win it itself). Scorecard closed, unpublished; no leaderboard score claimed. Total
 level wins this session: one (sb26 L1). Games at Solo status:won (games_completed): zero.
 
