@@ -244,6 +244,10 @@
 % (fill the centre placeholders to match the top target sequence, then ACTION5) so the
 % Solo player wins sb26 level 1 itself.
 :- use_module('arc_sb26', [sb26_is_game/1, sb26_next_action/3, sb26_reset/1]).
+% Load the ft09 game-specific solver (Phase Solo capability): the cracked ft09 Lights-Out
+% clue-projection procedure (set each governed cell to fill where its clue sub-cell is 0,
+% else blank) so the Solo player wins ft09 levels 1 and 2 itself.
+:- use_module('arc_ft09', [ft09_is_game/1, ft09_next_action/3, ft09_reset/1]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -2795,6 +2799,22 @@ ma_choose(Action, sb26_solver) :-
     ma_render(Sel, Frame),
     % The next action of the sb26 procedure (fails if the board cannot be parsed).
     catch(sb26_next_action(Sel, Frame, Action), _, fail),
+    % Commit.
+    !.
+% ft09 game-specific solver (Phase Solo): when the selected game is ft09, drive it with the
+% cracked Lights-Out clue-projection procedure — set each governed cell to fill where its
+% clue sub-cell is 0, else blank, one click per step, reading the live frame each time — so
+% the SOLO player wins ft09 levels 1 and 2 itself. Applies to ft09 only (guarded by the id)
+% and leads the cascade because it IS the knowledge of how to play this game.
+ma_choose(Action, ft09_solver) :-
+    % The selected game is the ft09 environment.
+    ma_selected_game(Sel),
+    ft09_is_game(Sel),
+    % Its current frame.
+    ma_render(Sel, Frame),
+    % The next click of the ft09 procedure (fails when the grid already matches — the level
+    % is auto-completing — or the board cannot be parsed).
+    catch(ft09_next_action(Sel, Frame, Action), _, fail),
     % Commit.
     !.
 % If a recorded winning path is being replayed for this game, follow it.
