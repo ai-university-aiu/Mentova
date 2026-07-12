@@ -689,3 +689,51 @@ FILES TOUCHED BY THIS PASS
   — the 45 extracted math full-module text files.
 
 END OF VERIFICATION AND ENHANCEMENT APPENDIX.
+
+
+================================================================
+WHERE THE DATA LANDS (FULL PATHS)
+================================================================
+
+Added 2026-07-12 so every location is explicit.
+
+COMMITTED TO GIT (compact facts + registry), under
+/home/ccaitwo/Mentova/knowledge/curriculum/:
+
+• curriculum_lattice.pl          - loader + ci_* query API; loaded at chat startup.
+• curriculum_path_registry.pl    - SourceId to absolute path; 87 reference sources.
+• curriculum_elementary_facts.pl - elementary understood facts (ages 0 to Grade 5), cited.
+• curriculum_middle_facts.pl, curriculum_high_facts.pl, curriculum_higher_ed_facts.pl - the other bands.
+
+Chat wiring (committed): /home/ccaitwo/Mentova/src/mentova/mentova_chat.pl
+(imports curriculum_lattice and calls ci_chat_bootstrap at startup).
+
+RUNTIME LATTICE (in memory + journal):
+
+• Nexus address: locus://mentova/curriculum
+• Journal file:  /tmp/prologai_journal_locus_mentova_curriculum
+
+ON DISK, OUT OF GIT (the bulk corpus and its extracted text), under
+/home/ccaitwo/curriculum/:
+
+• EngageNY_Mathematics/ and EngageNY_ELA/  - raw archives and *_unzipped/ module trees (about 30 GB total).
+• extracted_text/*.txt                     - 11 PTKLF domain texts + 2 CA CCSS standards texts (light pass).
+• extracted_text/engageny_math_fullmodule/ - 45 math full-module texts (added 2026-07-12), about 34 MB.
+• extracted_text/EngageNY_Corpus_Manifest.txt (and _Middle, _High) - searchable path manifests.
+• extracted_text/lessons/  - reserved for the Option 1 high-value full pass (see Full Pass Instructions).
+• extracted_text/full/     - reserved for the Option 2 complete full pass.
+
+REPORTS AND GUIDES (a curriculum copy and a Mentova docs copy of each):
+
+• /home/ccaitwo/curriculum/Curriculum_Import_Elementary_School.txt
+  and /home/ccaitwo/Mentova/docs/Curriculum_Import_Elementary_School.txt
+• /home/ccaitwo/curriculum/Chat_on_Elementary_School_topics.txt
+  and /home/ccaitwo/Mentova/docs/Chat_on_Elementary_School_topics.txt
+• /home/ccaitwo/curriculum/Elementary_School_Full_Pass_Instructions.txt
+  and /home/ccaitwo/Mentova/docs/Elementary_School_Full_Pass_Instructions.txt
+
+FUTURE FULL-PASS WORKING STATE (gitignored):
+
+• /home/ccaitwo/Mentova/data/refinery/  - Fact Refinery candidate/vote/lane state.
+
+END OF WHERE-THE-DATA-LANDS SECTION.
