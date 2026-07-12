@@ -1,7 +1,7 @@
 /*  Mentova — Golden Game Environment Reference loader demonstration
 
     Proves the loader that the GOLDEN GAME ENVIRONMENT REFERENCE RULE relies on: before
-    a Mentor Bridge run, the matching golden file (/home/ccaitwo/assets/<game>_steps.txt)
+    a Mentor Bridge run, the matching unified golden file (/home/ccaitwo/assets/<game>.txt)
     is read and its entire contents are loaded into J-Space.
 
     Acceptance criteria (each prints PASS or FAIL):
