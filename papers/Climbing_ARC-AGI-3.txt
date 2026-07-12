@@ -913,6 +913,53 @@ level wins this session: still one game-level (sb26 L1), now reproduced by SOLO 
 Games at Solo status:won (games_completed): zero.
 
 
+2026-07-12 - WIN - ft09 levels 1 AND 2, by the SOLO player, unaided
+
+Mentova's own Solo player now wins ft09 levels 1 and 2 by itself, with no mentor in
+the loop. ft09 ("Functional Tiles") is a click-only Lights-Out puzzle: the board holds
+several grids of 6x6 colour cells; each grid carries a fixed CLUE cell whose 3x3
+mini-pattern says which of the surrounding cells must be filled - a cell is set to the
+FILL colour where the clue's sub-cell is 0, and left BLANK otherwise. Clicking a cell
+toggles it; a level auto-completes the instant the working grid matches its clue
+projection (there is no verify button).
+
+Action efficiency: level 1 completed in 3 clicks, level 2 in 6 clicks - nine clicks to
+clear two levels, a straight-line solve with no wasted moves once the target was read.
+
+Glass-box behaviour that produced it: a reactive clue-projection solver (arc_ft09.pl)
+leads the Solo choice cascade for ft09. On every choice it re-reads the live frame,
+detects the 6x6 cell blocks, clusters them into grids, classifies each cell as a solid
+colour or a 3x3 clue pattern, projects each governed cell's target (fill where the
+governing clue's sub-cell is 0, else blank; ungoverned cells are skipped; when clues
+overlap the last one wins), and clicks the top-left-most governed cell that is off its
+target. When no governed cell remains out of place it simply makes no move, so the
+level's auto-completion and the next level are picked up on the following ticks with no
+per-level bookkeeping - the same reactive loop carries level 1 into level 2 unchanged.
+
+A real course-correction landed here. The first live Solo attempt stalled: it clicked
+one working-grid cell 32 times and then lost the game. Glass-box inspection of the exact
+live level-1 frame showed why - the framed working grid's border corner was a 6x6 blob
+of frame colour mixed with background, which detection mistook for a clue cell whose
+centre sub-cell read as the BACKGROUND colour. That phantom clue set the target fill
+colour to background, an UNREACHABLE target: clicking toggled the cell between blank and
+fill but never to background, so the same cell stayed the first mismatch forever. The fix
+is principled: a real cell is a solid block of one colour or a clue over 0/2/fill and
+never contains gutter/frame background inside it, so detection now rejects any candidate
+block that contains a background pixel. With the phantom gone the working grid reads as a
+clean 3x3, the fill colour reads correctly as 8, and the solve is exact. The projection
+was validated offline against the captured live frame (the three reference grids project
+to zero mismatches; the working grid to exactly its four fill cells) before the live run.
+
+Honesty: this is levels one and two of six. ft09 level 3 onward layers FOUR overlapping
+clues in a diamond whose multiply-governed cells need a GF(2)/parity resolution that is
+not yet decoded (five natural combination rules falsified so far), so the solver carries
+levels 1-2 only and full ft09 status:won is not reached. The Solo run stopped after
+level 2 by design; the scorecard was closed unpublished and no leaderboard score is
+claimed. Session level wins now: sb26 L1 (Solo, unaided), ft09 L1 (Solo, unaided), ft09
+L2 (Solo, unaided) - three Solo level wins across two games. Games at Solo status:won
+(games_completed): zero.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box
