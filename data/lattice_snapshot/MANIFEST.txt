@@ -6,8 +6,8 @@ with the open-source repository.
 
 Counts at export time:
   lattice nexuses      : 3
-  lattice node-facts   : 5715
-  Causalontology CROs  : 282
+  lattice node-facts   : 5830
+  Causalontology CROs  : 334
   learned-store games  : 4
   learned-store terms  : 9
 

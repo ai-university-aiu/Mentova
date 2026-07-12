@@ -1,0 +1,200 @@
+# ARC-AGI-3_Steps_Draft_11 — extracted candidate facts (uber-detailed 25-game report)
+# Distilled from ARC-AGI-3_Steps_Draft_11.txt (generated 2026-07-11). General principles
+# first (no game context), then per-game blocks. Draft 11 states some game mechanics that
+# DISAGREE with later engine-source findings (e.g. ft09 as a grid-matching game, sb26 as a
+# MAP-paper colour-sort) — these are recorded faithfully as this draft's view; the nuanced
+# ingestion doors flag such cross-draft disagreements as VARIANTS rather than merging them.
+
+principle(scoring, rhae_min_ratio_quadratic_penalty)
+principle(exploration, probe_first_small_action_watch_effect)
+principle(exploration, low_commitment_probing)
+principle(generalization, transfer_rule_across_levels)
+principle(reasoning, form_test_recover_hypotheses)
+principle(reasoning, infer_rules_from_sparse_feedback)
+principle(perception, object_segmentation_from_background)
+core_prior(objectness)
+core_prior(geometry_topology)
+core_prior(physics_momentum_gravity_bouncing)
+core_prior(agentness)
+core_prior(numerosity)
+core_prior(containment)
+core_prior(no_language_or_cultural_symbols)
+ai_weakness(null_coordinate_crash_on_depth1_click_games)
+ai_weakness(no_cheap_perception_action_loop)
+ai_weakness(fails_hypothesis_testing_under_reasoning_cost)
+
+game: ar25
+mechanic(mirrored_motion)
+mechanic(movable_axis)
+mechanic(shape_interlocking)
+avatar_action => symmetric_mirrored_counterpart
+axis_selectable_via_action6 => axis_repositioned
+axis_moves_after_action => prior_mirror_rule_fails
+hazard: hypothesis_drift
+prior(symmetry_detection)
+
+game: bp35
+mechanic(selective_green_to_cyan_conversion)
+mechanic(delayed_trap)
+action6_on_green => converts_cell_and_corner_dots_to_cyan
+action6_on_non_green => no_operation
+action3 => move_agent_left_6px
+action4 => move_agent_right_6px
+convert_wrong_green_then_move => delayed_death
+hazard: delayed_causality_death
+
+game: cd82
+mechanic(rotating_bucket_pour)
+mechanic(tool_use_transformation)
+action3 => rotate_container
+action5 => pour_or_dip_paint
+goal(match_top_left_target)
+prior(containment)
+prior(compositional_planning_rotate_then_dip)
+
+game: cn04
+mechanic(single_click_affordance_detection)
+single_action6_click => win_blind
+goal(identify_clickable_entity_versus_background)
+prior(affordance_discovery)
+
+game: dc22
+mechanic(selection_matching_conversion_after_probe)
+not_blind_winnable => must_probe_first
+action6_on_correct_class => state_change_toward_win
+prior(feature_binding)
+prior(instrumental_action_discovery)
+
+game: ft09
+mechanic(non_agentic_logic_pattern_matching)
+mechanic(occasional_overlap)
+variant(draft11_view, four_3x3_grids_match_highlighted_to_reference)
+border_highlighted_grid => controllable_target
+goal(make_highlighted_grid_match_a_reference)
+prior(sameness_difference_pattern_matching)
+prior(occlusion_overlap_reasoning)
+
+game: g50t
+mechanic(budget_constrained_navigation)
+action1_repeated => trivial_win
+robust(no_null_coordinate_crash)
+prior(agentness)
+
+game: ka59
+mechanic(pushing_shape_matching)
+mechanic(two_controllable_characters_two_targets)
+click_selects_object_not_teleport => object_pushed
+push_contact => blocking_or_move
+prior(shape_congruence)
+
+game: lf52
+mechanic(point_and_select_activation)
+single_action6 => win_blind
+prior(singleton_odd_one_out_detection)
+prior(spatial_attention)
+
+game: lp85
+mechanic(circuit_rotation)
+mechanic(large_continuous_action_space_4096)
+action6_click_key_position => rotates_many_cells
+five_consecutive_rotations => solved
+prior(affordance_in_large_action_space)
+
+game: ls20
+mechanic(locksmith_navigation)
+mechanic(key_shape_rotator)
+avatar_holds_key => carried_symbol
+rotator_tile => cycles_held_key_shape
+key_shape_matches_door => door_opens
+prior(health_cost_efficiency)
+
+game: m0r0
+mechanic(single_click_win_goal_discovery)
+single_click_anywhere => win_immediately
+goal(discover_action_type_and_win_signal)
+prior(cause_effect_affordance)
+
+game: r11l
+mechanic(single_non_action6_blind_win)
+one_directional_action => win_no_probe
+prior(action_affordance_discovery)
+
+game: re86
+mechanic(continuous_forward_maze_traversal)
+action1_repeated => advances_agent_win
+prior(pathfinding_inside_outside)
+
+game: s5i5
+mechanic(overlap_contact_win)
+directional_control_action1_to_5 => move_player
+player_overlaps_target => win
+prior(goal_directedness)
+
+game: sb26
+mechanic(colour_sorting_placement)
+mechanic(dual_frame_interleave)
+variant(draft11_view, map_paper_top_panel_target_sequence_middle_placement)
+top_panel => target_colour_sequence
+place_token_matching_target => progress
+prior(inventory_management)
+
+game: sc25
+mechanic(repeated_click_same_coordinate)
+click_salient_24_48_repeated => incremental_progress_to_win
+prior(salience_medium_chromatic_object)
+prior(incremental_causality)
+
+game: sk48
+mechanic(action6_causal_effect_learning)
+probe_action6 => discover_effect
+prior(counterfactual_reasoning)
+prior(epistemic_curiosity)
+
+game: sp80
+mechanic(fluid_dynamics_simulation)
+mechanic(combined_control_scheme)
+prior(physics_fluid_continuity_gravity_containment)
+prior(pressure_accumulation)
+
+game: su15
+mechanic(diverse_exploration_infer_unstated_goal)
+not_blind_solvable => must_reduce_belief_entropy_before_committing
+hazard: fast_death_at_first_hazard
+prior(epistemic_discipline_speed_vs_depth)
+
+game: tn36
+mechanic(other_depth1_blind_win)
+single_non_action6_action => win_blind
+prior(goal_induction_from_sparse_reward)
+
+game: tr87
+mechanic(block_pushing_match)
+blocks_move_collide_match => alignment
+prior(adjacency_alignment_connectedness)
+prior(numerosity_counting)
+
+game: tu93
+mechanic(grid_maze_navigation)
+mechanic(6x6_node_maze)
+player_colour_9 => avatar
+target_colour_14 => goal
+corridor_colour_2 => walkable
+wall_colour_5 => blocked
+step_6px => one_node
+bottom_row => move_counter
+prior(object_permanence_identity)
+
+game: vc33
+mechanic(scrolling_belt_alignment)
+mechanic(other_depth1_blind_win)
+belts => moving_containers
+align_object_with_wall_gap => win
+single_correct_action => win
+prior(spatial_alignment_topology)
+
+game: wa30
+mechanic(carry_boxes_to_container)
+mechanic(friendly_and_adversarial_characters)
+goal(all_boxes_in_container)
+box_carried_by_agent => retains_identity
+prior(object_permanence_containment)
