@@ -894,6 +894,56 @@ to win it itself). Scorecard closed, unpublished; no leaderboard score claimed. 
 level wins this session: one (sb26 L1). Games at Solo status:won (games_completed): zero.
 
 
+2026-07-12  PERCEPTION MADE CHEAPER, and an honest re-measurement that found the true
+per-step cost is NOT where it was thought to be. The improved player still paid a full
+sixty-four by sixty-four connected-component segmentation more than once per step -
+co_see's cs_inventory, cs_bars, cs_object_count and cs_salient_cells all derive from
+cs_objects, so a choice that read the inventory, the meters and the salient cells
+segmented the same frame three times - and cs_avatar_move re-scanned all four thousand
+and ninety-six cells every step to find what moved, while the state-graph frontier search
+could re-walk thousands of nodes as the map grew. Three behaviour-preserving changes
+fixed those three costs. First, co_see now segments each frame once: a frame-hash-keyed
+keep-latest cache sits under cs_objects and cs_background, so every later caller reads the
+stored segmentation - measured about three hundred and ninety times cheaper on a repeated
+segmentation (one point six seven milliseconds a call down to four thousandths of a
+millisecond). Second, the avatar is located from the step's already-computed frame delta
+rather than a whole-grid rescan, by a new ma_avatar_from_delta that takes the centroid of
+the changed cells biased to the cells moved into, and returns the exact same cell
+cs_avatar_move did (verified identical offline). Third, the co_graph frontier search is
+bounded to two hundred and fifty-six node expansions a step. With those in, the full sweep
+was re-run cold, in its own process, with its own agent-tagged unpublished scorecard, over
+all twenty-five public games at the one-hundred-and-fifty-action budget. It completed all
+twenty-five with no stall (the earlier improved sweep had halted at eleven of twenty-five),
+process memory rising only eighteen to seventy-six megabytes across the whole run - and the
+outcome came out byte-for-byte identical to the v5 cold sweep: two thousand four hundred
+and thirty-four actions, zero levels, twenty game-overs, five budget-exhausted. That exact
+match is the proof the changes were behaviour-preserving: cost moved, not a single
+decision. The honest surprise is in the cost numbers. The loop is CPU-bound, not
+network-bound - process CPU was two thousand and eight seconds against a wall clock of two
+thousand two hundred and twenty-eight, ninety percent busy - and per action that is about
+eight hundred and twenty-five milliseconds of CPU, close to the "one core per step" the
+work set out to cure. Offline profiling then showed WHY the three fixes, though correct,
+barely moved it: perception is already cheap. A cached inventory is seven hundredths of a
+millisecond; even an uncached single segmentation is under two milliseconds; the frame
+signature with masking is about two. None of these is the eight hundred milliseconds. The
+per-game time instead grows through a run (tu93 a seventh of a second a step early, sc25
+almost one and a half seconds a step late), which points squarely at the ACCUMULATING
+per-game state: the state-graph nodes are whole-grid signatures rendered with term_to_atom
+into roughly eight-kilobyte atoms, and thousands of them both drive the memory growth and
+make every graph membership test compare large atoms, while the causal store, world model,
+hypothesis and volatility stores all grow per step. So the premise that the segmentations
+were the thing that did not scale was only partly right: once the earlier per-kind cache
+was in place, perception was no longer the bottleneck - the state REPRESENTATION is. The
+next lever, named honestly and not taken here because it changes state-dedup semantics and
+must be measured rather than assumed, is to replace the whole-grid term_to_atom graph
+signature with a compact hashed signature (term_hash builds about forty times faster and
+yields a tiny node id instead of an eight-kilobyte atom), which should cut both the memory
+growth and the per-step comparison cost. Honesty: no level was completed and none was
+fabricated; the result reproduces the prior cold sweeps exactly; the scorecard was closed
+and never published; no leaderboard score is claimed. See assets/ARC-AGI-3_Scaled_Sweep.txt
+for the per-game table and the full cost analysis.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box
