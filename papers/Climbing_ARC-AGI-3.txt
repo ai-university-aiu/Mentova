@@ -1066,6 +1066,47 @@ apart with its delta, not merged) - the boot hook carries the enriched reference
 live lattice and J-Space at next start, with no server restart.
 
 
+2026-07-12 - WIN - ft09 status:won: the SOLO player completes ALL SIX levels, unaided
+                   (the first game Mentova wins outright)
+
+Mentova's own Solo player now wins the WHOLE of ft09 - all six levels, back to back, with
+no mentor in the loop. This is the first ARC-AGI-3 game to reach status:won: games_completed
+goes from zero to one. Measured live in a single unaided run: L1 3 clicks, L2 6, L3 13,
+L4 15, L5 28, L6 13 - status won(83), 83 actions for the whole game (a source-assisted
+community solver needed [4,7,14,16,21,13] = 75). Scorecard closed unpublished; no
+leaderboard score is claimed.
+
+Level 6 was a genuinely different sub-mechanic and it fell to a new glass-box solver. The
+earlier L1-L5 solver reads plain tiles that each cycle only themselves; L6 has NO plain
+tiles - every cell is a FUNCTIONAL tile (a printed 3x3 pattern marked with a colour-6 pixel)
+whose click cycles ITSELF and the neighbour at the colour-6 offset. That is true Lights-Out
+coupling: a linear system over GF(2). The decisive step was, again, evidence over guesswork.
+The board was captured from a live run and analysed offline: 22 functional tiles, all base
+colour 11, every colour-6 marker at offset (-1,0), four clues (nRq 14), palette [11,14]. Two
+toggle models were tested for CONSISTENCY before a single live click was spent - "click
+toggles only the neighbour above" is INCONSISTENT (no solution exists), while "click toggles
+self AND the neighbour" is CONSISTENT and full-rank, giving a unique 13-click solution that,
+applied on paper, meets every clue target. Thirteen - exactly the community solver's L6 count.
+
+The solver encodes that rule and stays a reactive glass box. Each choice it reads the live
+frame, builds the GF(2) toggle system (one unknown per functional tile: click it or not; one
+equation per tile: its final colour must equal its clue target; the toggle set of a click is
+the tile itself plus its colour-6 neighbours), solves it by Gaussian elimination over GF(2),
+and clicks the top-left tile of the solution. Because the system is full-rank the solution is
+unique, so re-solving each tick simply shrinks it by one until the board matches and the
+level auto-completes. One real course-correction landed on the way: the plain-tile levels
+L1-L5 also carry some colour-6 cells, so the discriminator between the two solvers is the
+ABSENCE of plain tiles (L6 has none), not the mere presence of functional ones - keying on
+presence briefly regressed L5 until the guard was fixed to key on plain-tile absence.
+
+So ft09 is complete: L1-L5 by the local relational-constraint conjunction, L6 by the GF(2)
+Lights-Out solve, all six unaided. Session Solo level wins now: sb26 L1, and ft09 L1-L6 -
+seven Solo level wins, and the first whole game. Games at Solo status:won (games_completed):
+ONE (ft09). The methodology that got here - read the engine source, analyse the captured
+board offline, prove the model consistent before spending live budget, encode the rule as a
+reactive glass-box solver - is the template for the next games.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box

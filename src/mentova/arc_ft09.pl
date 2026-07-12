@@ -46,8 +46,12 @@
     ft09_reset/1
 ]).
 
-% List utilities (member/2, nth0/3, append/3, exclude/3, sort/2).
+% List utilities (member/2, nth0/3, append/3, exclude/3, sort/2, foldl/4, numlist/3).
 :- use_module(library(lists)).
+% apply helpers (foldl, exclude with closures).
+:- use_module(library(apply)).
+% Ordered-set operations for the GF(2) row arithmetic (ord_subtract/3, ord_union/3).
+:- use_module(library(ordsets)).
 
 % ft09_is_game(+GameId): true when the id names the ft09 environment (prefix "ft09").
 ft09_is_game(GameId) :-
@@ -78,10 +82,20 @@ ft09_next_action(_Game, Frame, select(Col, Row)) :-
     ft09_groups(Cells, Groups),
     % Classify every cell into solid tiles and constraint clues, tagged by grid.
     ft09_scene(Frame, Groups, Tiles, Clues),
-    % The level palette — the colours a click cycles a tile through.
-    ft09_palette(Tiles, Clues, Palette),
-    % The first constrained tile that currently violates a clue and is fixable.
-    ft09_first_fix(Tiles, Clues, Palette, Box),
+    (   Tiles == []
+    % COUPLED (Lights-Out) board (e.g. L6): NO plain tiles — every cell is a functional tile
+    % whose click cycles ITSELF and its colour-6 neighbours. Solve the GF(2) toggle system to
+    % satisfy the clue targets and click the first tile of the solution; re-solved each tick,
+    % the solution shrinks by one until the board matches and the level auto-completes. (The
+    % plain-tile levels L1-L5 also carry some colour-6 cells, so the discriminator is the
+    % ABSENCE of plain tiles, not the mere presence of functional ones.)
+    ->  ft09_functionals(Frame, Groups, Funcs),
+        Funcs \== [],
+        ft09_l6_click(Funcs, Clues, Box)
+    % PLAIN board (L1-L5): independent self-cycling tiles — click the first violating one.
+    ;   ft09_palette(Tiles, Clues, Palette),
+        ft09_first_fix(Tiles, Clues, Palette, Box)
+    ),
     % Commit to that tile.
     !,
     % The click lands on the tile's centre pixel.
@@ -179,6 +193,202 @@ ft09_con_ok(V, neq(N)) :- V =\= N.
 ft09_satisfiable(Palette, Cons) :-
     % A witnessing colour exists.
     member(C, Palette), ft09_satisfies(C, Cons), !.
+
+% ---------------------------------------------------------------------------
+% COUPLED (LIGHTS-OUT) SOLVE — functional tiles, GF(2)   (e.g. ft09 level 6)
+% ---------------------------------------------------------------------------
+% ft09 L6 has no plain tiles: every cell is a FUNCTIONAL tile (a printed pattern marked with
+% colour-6 pixels) whose base colour must satisfy the clue constraints, and clicking one
+% cycles ITSELF plus each neighbour at its colour-6 offset. With a two-colour palette this is
+% a linear system over GF(2): unknown x_j in {0,1} per functional tile (click it or not), one
+% equation per tile (its final colour must equal its clue target). The solver reads the
+% functional tiles and clues, builds the toggle system, solves it, and clicks the first tile
+% of the solution — re-solved each tick so the unique solution shrinks by one per click.
+
+% ft09_functionals(+Frame, +Groups, -Funcs): every functional tile as
+% func(Group, RI, CI, Box, Base, Offsets) — Base its dominant (non-marker) colour, Offsets the
+% (DR,DC) neighbour offsets marked by colour-6 in its 3x3 pattern.
+ft09_functionals(Frame, Groups, Funcs) :-
+    % Each cell whose printed pattern carries a colour-6 marker.
+    findall(func(G, RI, CI, Box, Base, Offs),
+        ( nth0(G, Groups, Group),
+          ft09_lattice(Group, Ys, Xs),
+          nth0(RI, Ys, CY), nth0(CI, Xs, CX),
+          ft09_cell_box(Group, CY, CX, Box),
+          ft09_classify(Frame, Box, clue(Pat)),
+          ft09_has_six(Pat),
+          ft09_func_offsets(Pat, Offs),
+          ft09_func_base(Frame, Box, Base) ),
+        Funcs).
+
+% ft09_has_six(+Pat): the 3x3 pattern contains a colour-6 pixel (marks a functional tile).
+ft09_has_six(Pat) :-
+    % Some row holds a 6.
+    member(Row, Pat), member(6, Row).
+
+% ft09_func_offsets(+Pat, -Offs): the (DR,DC) neighbour offsets where colour-6 pixels sit.
+ft09_func_offsets(Pat, Offs) :-
+    % Each 6 at pattern (A,B) marks the neighbour at offset (A-1, B-1).
+    findall(off(DR, DC),
+        ( nth0(A, Pat, Row), nth0(B, Row, 6), DR is A - 1, DC is B - 1 ),
+        Offs).
+
+% ft09_func_base(+Frame, +Box, -Base): a functional tile's base colour — the most common
+% cell colour that is not the colour-6 marker.
+ft09_func_base(Frame, box(R0,C0,R1,C1), Base) :-
+    % Every non-6 pixel colour in the cell.
+    findall(V, ( between(R0,R1,R), between(C0,C1,C), ft09_at(Frame,R,C,V), V =\= 6 ), Vs),
+    % Its mode.
+    ft09_most_common(Vs, Base).
+
+% ft09_l6_click(+Funcs, +Clues, -Box): solve the GF(2) toggle system for the whole board and
+% return the box of the first (top-left) functional tile in the solution. Fails when the
+% solution is empty (every tile already at its target — the level is solved).
+ft09_l6_click(Funcs, Clues, Box) :-
+    % The palette (base colours plus clue centres).
+    ft09_l6_palette(Funcs, Clues, Pal),
+    % Number of functional tiles (the unknowns).
+    length(Funcs, N),
+    % Their indices.
+    N1 is N - 1, numlist(0, N1, Ix),
+    % One equation per tile: variables that toggle it, and the right-hand side bit.
+    findall(Vars - Rhs,
+        ( member(I, Ix),
+          nth0(I, Funcs, func(_, _, _, _, Base, _)),
+          ft09_func_target(I, Funcs, Clues, Pal, Target),
+          ( Base =:= Target -> Rhs = 0 ; Rhs = 1 ),
+          ft09_toggles(I, Funcs, Vars) ),
+        Rows),
+    % Solve the system; Ones is the set of tiles to click.
+    ft09_gf2(Rows, Ones),
+    % There must be at least one click left.
+    Ones \== [],
+    % Choose the top-left tile of the solution (keysort on (RI-CI) orders top-left first).
+    findall((RI-CI) - Bx,
+        ( member(I, Ones), nth0(I, Funcs, func(_, RI, CI, Bx, _, _)) ),
+        Cands),
+    keysort(Cands, [ _ - Box | _ ]).
+
+% ft09_l6_palette(+Funcs, +Clues, -Pal): the palette — functional-tile base colours and clue
+% centre colours, markers/background excluded.
+ft09_l6_palette(Funcs, Clues, Pal) :-
+    % Base colours.
+    findall(B, member(func(_,_,_,_,B,_), Funcs), Bs),
+    % Clue centres.
+    findall(N, member(clue(_,_,_,N,_), Clues), Ns),
+    % Pool, drop markers, sort distinct.
+    append(Bs, Ns, All0),
+    exclude([X]>>member(X, [0,2,4,5,6]), All0, All),
+    sort(All, Pal).
+
+% ft09_func_target(+I, +Funcs, +Clues, +Pal, -Target): the target base colour of functional
+% tile I from the clue constraints (eq nRq / differ nRq); its own base when no clue governs.
+ft09_func_target(I, Funcs, Clues, Pal, Target) :-
+    % The tile's grid position and base.
+    nth0(I, Funcs, func(G, RI, CI, _, Base, _)),
+    % The clue constraints on it.
+    ft09_tile_constraints(G, RI, CI, Clues, Cons),
+    ( Cons == []
+    % Unconstrained: leave it at its base colour.
+    ->  Target = Base
+    % Constrained: the palette colour meeting every constraint.
+    ;   ( member(Target, Pal), ft09_satisfies(Target, Cons) -> true ; Target = Base )
+    ).
+
+% ft09_toggles(+I, +Funcs, -Vars): the sorted indices of tiles whose click toggles tile I —
+% tile I itself, plus any tile J whose colour-6 offset lands on I.
+ft09_toggles(I, Funcs, Vars) :-
+    % Tile I's position.
+    nth0(I, Funcs, func(Gi, RIi, CIi, _, _, _)),
+    % Every J that toggles I.
+    findall(J,
+        ( nth0(J, Funcs, func(Gj, RIj, CIj, _, _, Offs)),
+          ( J =:= I
+          ; Gj == Gi, member(off(DR,DC), Offs), RIi =:= RIj + DR, CIi =:= CIj + DC )
+        ),
+        Js),
+    % As a sorted set.
+    sort(Js, Vars).
+
+% ft09_gf2(+Rows, -Ones): solve a GF(2) linear system. Rows is a list of Vars-Rhs (Vars a
+% sorted list of variable indices, Rhs a 0/1 bit). Ones is the sorted set of variables that
+% take the value 1 (free variables default to 0).
+ft09_gf2(Rows, Ones) :-
+    % Reduce to a set of pivot rows.
+    ft09_gf2_elim(Rows, [], Pivots),
+    % Back-substitute for each pivot variable.
+    ft09_gf2_back(Pivots, Assign),
+    % The variables assigned 1.
+    findall(V, member(V-1, Assign), Ones0),
+    sort(Ones0, Ones).
+
+% ft09_gf2_elim(+Rows, +PivsIn, -PivsOut): forward elimination — reduce each row by the
+% pivots so far and, if a leading variable remains, keep it as a new pivot.
+ft09_gf2_elim([], P, P).
+ft09_gf2_elim([Vars-Rhs | T], P0, P) :-
+    % Reduce this row against the existing pivots.
+    ft09_gf2_reduce(Vars, Rhs, P0, Vars1, Rhs1),
+    ( Vars1 == []
+    % An all-zero row adds no pivot (a consistent 0=0, or an ignored 0=1).
+    ->  P1 = P0
+    % Otherwise its least variable is a new pivot column.
+    ;   Vars1 = [Col | _], P1 = [piv(Col, Vars1, Rhs1) | P0]
+    ),
+    ft09_gf2_elim(T, P1, P).
+
+% ft09_gf2_reduce(+Vars, +Rhs, +Pivots, -Vout, -Rout): xor in every pivot whose column is
+% present, to fixpoint (each xor clears that column).
+ft09_gf2_reduce(Vars, Rhs, Pivs, Vout, Rout) :-
+    ( member(piv(Col, PV, PR), Pivs), memberchk(Col, Vars)
+    ->  ft09_xor(Vars, PV, V1), R1 is Rhs xor PR,
+        ft09_gf2_reduce(V1, R1, Pivs, Vout, Rout)
+    ;   Vout = Vars, Rout = Rhs ).
+
+% ft09_xor(+A, +B, -C): symmetric difference of two sorted variable sets (GF(2) row add).
+ft09_xor(A, B, C) :-
+    % (A minus B) union (B minus A).
+    ord_subtract(A, B, AmB), ord_subtract(B, A, BmA), ord_union(AmB, BmA, C).
+
+% ft09_gf2_back(+Pivots, -Assign): back-substitution over the pivot rows (highest column
+% first), leaving free variables at 0. Assign is a list of Var-Bit.
+ft09_gf2_back(Pivots, Assign) :-
+    % Highest pivot column first, so referenced variables are already assigned.
+    sort(1, @>=, Pivots, Sorted),
+    % Assign each pivot variable in turn.
+    foldl(ft09_gf2_assign, Sorted, [], Assign).
+
+% ft09_gf2_assign(+Pivot, +A0, -A1): assign one pivot variable from its row and the running
+% assignment (unassigned variables count as 0).
+ft09_gf2_assign(piv(Col, Vars, Rhs), A0, [Col-Bit | A0]) :-
+    % The other variables in the pivot row.
+    exclude(==(Col), Vars, Others),
+    % Bit = Rhs xor the sum of their current assignments.
+    foldl(ft09_gf2_addvar(A0), Others, Rhs, Bit).
+
+% ft09_gf2_addvar(+A0, +V, +Acc0, -Acc): fold one variable's current bit into the running xor.
+ft09_gf2_addvar(A0, V, Acc0, Acc) :-
+    % Its assigned bit, defaulting to 0.
+    ( memberchk(V - Bv, A0) -> true ; Bv = 0 ),
+    % Accumulate.
+    Acc is Acc0 xor Bv.
+
+% ft09_most_common(+List, -X): the most frequent element (ties resolved by the platform sort).
+ft09_most_common(List, X) :-
+    % Group equal values by sorting.
+    msort(List, Sorted),
+    % Count each run.
+    ft09_runs(Sorted, Runs),
+    % The longest run's value.
+    keysort(Runs, KS), last(KS, _ - X).
+ft09_runs([], []).
+ft09_runs([H | T], Runs) :-
+    % Start the first run.
+    ft09_runs_(T, H, 1, Runs).
+ft09_runs_([], V, N, [N - V]).
+ft09_runs_([H | T], V, N, Runs) :-
+    % Extend the current run or close it and open the next.
+    ( H == V -> N1 is N + 1, ft09_runs_(T, V, N1, Runs)
+    ; Runs = [N - V | R1], ft09_runs_(T, H, 1, R1) ).
 
 % ft09_box_centre(+Box, -Col, -Row): the centre pixel of a cell box, as (Col=x, Row=y).
 ft09_box_centre(box(R0, C0, R1, C1), Col, Row) :-
