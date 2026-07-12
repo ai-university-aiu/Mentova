@@ -158,3 +158,30 @@ PART 6: FILE LOCATIONS
 
 
 END OF CHAT TESTING GUIDE.
+
+
+================================================================
+UPDATE 2026-07-12: MATH LESSON TEXT IS NOW SEARCHABLE
+================================================================
+
+The 45 elementary mathematics full-module documents (PreK through Grade 5)
+have been extracted to text and registered as Reference Library sources of
+kind 'full_module_text'. The registry now holds 87 sources. You can now
+search actual math lesson content, not only the manifest of file paths.
+
+Try, in direct-query mode:
+
+  ?- use_module('knowledge/curriculum/curriculum_lattice').
+  ?- ci_register_sources.
+  ?- ci_search('number bond', Hits), length(Hits, N).
+  Expect: up to 25 hits, the first from the Grade 1 Module 1 full-module text.
+
+  ?- ci_cite(source(mathfull_gpk_m1, 1), Text).
+  Expect: a real line of the Prekindergarten Module 1 math text.
+
+A note on chat natural-language answers: the curriculum facts are anchored in
+the lattice and are reachable through the ci_* API and Reference Library
+search, both verified passing on 2026-07-12. Routing free-form chat questions
+(for example "is a frog an animal?") to the curriculum lattice is a separate
+optional enhancement; until then use direct-query mode and library search as
+the definitive tests, and the chat "why?" control for citations.
