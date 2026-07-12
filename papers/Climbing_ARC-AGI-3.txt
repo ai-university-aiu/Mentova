@@ -864,6 +864,35 @@ next thing to probe rather than yet cracked. Honestly: narrowed, not won; no win
 fabricated; scorecard closed and never published; no leaderboard score claimed. The
 golden library and the load-into-J-Space rule now stand for every future run.
 
+2026-07-11  WIN. sb26, level 1, completed live over the AI Mentor Bridge - and this
+time the MECHANIC itself was cracked, not just a single board. Under the new bridge-
+then-alternate rule (repeat Mentor Bridge attempts, each informed by the last attempt's
+notes and the golden file loaded into J-Space, until the mentor wins), the sb26 golden
+file's public-replay evidence pointed the way, and a precise probe of the centre working
+area found the missing move: the game has three regions - a TOP row of bordered boxes
+whose border colours spell the TARGET SEQUENCE left to right, a BOTTOM row of palette
+tiles, and a CENTRE framed working area holding a row of placeholder markers, one per
+target position. The play is: select a palette colour (ACTION6 on its tile), click the
+matching centre placeholder (ACTION6, which makes the marker take that colour), fill
+every placeholder to match the target sequence in order, then press ACTION5 to commit.
+On the first level the target was nine, fourteen, eleven, fifteen; four palette-select
+and four placeholder-click pairs put those colours into the four markers, one ACTION5
+committed, and levels.completed went from zero to one - the first ARC-AGI-3 level
+completed by DECODING and executing a game's own rule live (the earlier sb26 win, months
+of sessions ago, had not been reproduced this run until now). The glass-box behaviours
+that produced it: reading the target order off the box borders, mapping each target
+colour to its palette tile, filling the centre placeholders left to right, and
+committing - exactly the golden file's "alternating palette selection and placement,
+fill positions in order." The action efficiency was near-optimal for the level: eight
+placement actions plus one commit for four positions. Honesty note: this is level one of
+eight; later levels add target boxes and reshape the working area, so full sb26
+status:won is not yet reached, and the mechanic must be re-parsed per level. The learning
+that matters is the PROCEDURE, not a fixed action path - the next build is an sb26 solver
+that parses the target row, the palette, and the centre markers each level and executes
+the rule, to finish Phase A (mentor status:won) and then Phase B (bring the Solo player
+to win it itself). Scorecard closed, unpublished; no leaderboard score claimed. Total
+level wins this session: one (sb26 L1). Games at Solo status:won (games_completed): zero.
+
 
 THE VISION
 
