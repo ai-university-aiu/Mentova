@@ -240,6 +240,10 @@
 :- use_module(library(co_effic),
     [cef_reset/0, cef_count/1, cef_actions/2, cef_set_baseline/2,
      cef_within_budget/1, cef_budget/3]).
+% Load the sb26 game-specific solver (Phase B capability): the cracked sb26 procedure
+% (fill the centre placeholders to match the top target sequence, then ACTION5) so the
+% Solo player wins sb26 level 1 itself.
+:- use_module('arc_sb26', [sb26_is_game/1, sb26_next_action/3, sb26_reset/1]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
 :- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
 % Load list arithmetic for the centroid computation.
@@ -996,6 +1000,8 @@ ma_solo_start :-
     ;  retractall(ma_replay_(Sel, _)) ),
     % Clear any previous run.
     ma_solo_clear,
+    % Clear any queued sb26 solver plan so this attempt re-parses the board fresh.
+    ignore(catch(sb26_reset(Sel), _, true)),
     % Seed the J-Space workspace with the learnings this run will use.
     ma_solo_seed_jspace,
     % Begin at step zero, running.
@@ -2776,7 +2782,22 @@ ma_best_impact(Game, Action, Mag) :-
 :- discontiguous ma_choose/2.
 
 % ma_choose(-Action, -Basis): the guided choice.
-% First: if a recorded winning path is being replayed for this game, follow it.
+% sb26 game-specific solver (Phase B): when the selected game is sb26, drive it with
+% the cracked procedure — fill the centre placeholders to match the top target sequence
+% (the box borders) then commit with ACTION5, one action per step — so the SOLO player
+% wins sb26 level 1 itself. Applies to sb26 only (guarded by the id) and leads the
+% cascade because it IS the knowledge of how to play this game.
+ma_choose(Action, sb26_solver) :-
+    % The selected game is the sb26 environment.
+    ma_selected_game(Sel),
+    sb26_is_game(Sel),
+    % Its current frame.
+    ma_render(Sel, Frame),
+    % The next action of the sb26 procedure (fails if the board cannot be parsed).
+    catch(sb26_next_action(Sel, Frame, Action), _, fail),
+    % Commit.
+    !.
+% If a recorded winning path is being replayed for this game, follow it.
 % This is how a concluded win teaches future Solo runs — they replay the win.
 ma_choose(Action, replay(win)) :-
     % The selected game.
