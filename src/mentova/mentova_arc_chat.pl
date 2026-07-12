@@ -2673,6 +2673,62 @@ ma_deprioritise_fatal(Game, Frame, Actions, Ranked) :-
     % Safe first, then risky.
     append(Safe, Risky, Ranked).
 
+% ---------------------------------------------------------------------------
+% SURVIVAL-FIRST EARLY-BUDGET POLICY — map the board before pursuing a goal
+% ---------------------------------------------------------------------------
+%
+% The cold sweeps all showed the same failure: unaided play dies at first-hazard
+% contact before it can assemble a winning hypothesis. This policy spends the opening
+% fraction of the attempt budget SURVEYING — safe, breadth-first probing that builds
+% the world model and the hazard map — and defers goal-pursuit until the survey
+% window closes. It is the drafts' "separate model-learning from task-optimisation".
+
+% ma_survey_budget(-SurveyN): how many opening actions of an attempt are spent
+% surveying — about a sixth of the solo budget, clamped to a sane band so a tiny
+% budget still surveys a little and a large one does not survey forever.
+ma_survey_budget(SurveyN) :-
+    ( ma_solo_budget(B) -> true ; B = 60 ),
+    Raw is ceiling(B * 0.15),
+    SurveyN is max(8, min(30, Raw)).
+
+% ma_in_survey_phase(+Game): the attempt is still in its opening survey window.
+ma_in_survey_phase(_Game) :-
+    ma_survey_budget(SurveyN),
+    ( ma_session_n_(N) -> true ; N = 0 ),
+    N < SurveyN.
+
+% ma_survey_action(+Game, +Frame, -Action): the safest informative probe this step.
+% Keep only the actions NOT predicted fatal (a HARD filter, stronger than the
+% deprioritise of normal play), then prefer the one that reveals the most while
+% risking the least, by survival cost; ties break least-tried (the concrete set is
+% already least-tried-first). Falls back to the least-bad action only when every
+% option is predicted fatal, so the run never stalls.
+ma_survey_action(Game, Frame, Action) :-
+    ma_explore_concrete(Game, Frame, Concrete),
+    Concrete \== [],
+    findall(A, ( member(A, Concrete), \+ ma_predict_fatal(Game, Frame, A) ), Safe),
+    (   Safe \== []
+    ->  findall(Cost - A,
+            ( nth0(I, Safe, A), ma_survey_cost(Game, A, C0), Cost is C0 * 1000 + I ),
+            Scored),
+        keysort(Scored, [_ - Action | _])
+    ;   Concrete = [Action | _]
+    ).
+
+% ma_survey_cost(+Game, +Action, -Cost): a survival cost for a probe (lower is safer
+% and more informative). A click probe does not relocate the avatar, so it costs
+% least; a learned move onto an already-visited (mapped) cell next; a move into
+% unmapped territory most, so the survey ventures into the unknown last.
+ma_survey_cost(_Game, select(_, _), 0) :- !.
+ma_survey_cost(Game, Action, Cost) :-
+    (   ma_move_vec_(Game, Action, DR, DC),
+        ma_avatar_(Game, AR, AC)
+    ->  R2 is AR + DR, C2 is AC + DC,
+        ( ma_visited_(Game, R2, C2) -> Cost = 1 ; Cost = 2 )
+    ;   % An action whose effect is not yet mapped: treat as venturing (cost 2).
+        Cost = 2
+    ).
+
 % ma_note_impact(+Game, +Action, +Delta): record the largest effect this action
 % has had in this game, and count consecutive no-change steps. The single most
 % impactful discovered action is worth recalling when exploration stalls — a
@@ -2765,6 +2821,26 @@ ma_choose(Action, toward(goal)) :-
     ma_state_(P, held, _, _),
     % Step greedily toward the door, avoiding declared hazards.
     ma_greedy_step(P, D, Action),
+    % Commit.
+    !.
+% Survival-first survey: for the opening stretch of an attempt, MAP THE BOARD before
+% committing to a goal — the drafts' "explore before you optimise". Sitting above the
+% recall / hypothesis / relation / object clauses, it SUPPRESSES goal-pursuit during
+% the survey window and instead takes the safest informative probe: predicted-fatal
+% moves are HARD-DROPPED here (stronger than the deprioritise of normal play), and a
+% probe that does not relocate the avatar, or a step onto an already-mapped cell, is
+% preferred over a step into unmapped territory — so the world model and the hazard
+% map are built from safe probing before the run ventures or lunges. A mentor's
+% taught move still wins (those clauses are above this one).
+ma_choose(Action, survival_survey) :-
+    % The selected environment.
+    ma_selected_game(Sel),
+    % Still in the opening survey window of this attempt.
+    ma_in_survey_phase(Sel),
+    % Its current frame.
+    ma_render(Sel, Frame),
+    % The safest informative probe this step.
+    ma_survey_action(Sel, Frame, Action),
     % Commit.
     !.
 % Stuck-recall: when unguided play has made no progress for several steps,
@@ -3121,6 +3197,9 @@ ma_why(why(Action, Basis, Provenance)) :-
     % Approaching a human-labeled target.
     ;   Basis = toward(_)
     ->  Provenance = guided_by_human
+    % The survival-first survey chose it — a safe opening probe to map the board.
+    ;   Basis = survival_survey
+    ->  Provenance = survival_first_survey
     % A committed hypothesis chose it — a belief that may itself have been shaped by
     % a guided run and reloaded, so it is reasoned-from-belief rather than a raw guess.
     ;   Basis = hypothesis(committed)
