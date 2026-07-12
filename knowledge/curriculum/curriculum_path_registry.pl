@@ -112,3 +112,100 @@ ci_source('engageny_corpus_manifest', '/home/ccaitwo/curriculum/extracted_text/E
 ci_source('engageny_corpus_manifest_middle', '/home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest_Middle.txt', 'corpus_manifest').
 % Reference-library source engageny_corpus_manifest_high (corpus_manifest).
 ci_source('engageny_corpus_manifest_high', '/home/ccaitwo/curriculum/extracted_text/EngageNY_Corpus_Manifest_High.txt', 'corpus_manifest').
+
+% ---------------------------------------------------------------------------
+% EngageNY/Eureka math FULL-MODULE extracted text (PreK through Grade 5).
+% Added 2026-07-12: every elementary math module's full text, so the
+% Reference Library can stream and search actual lesson content, not only
+% the manifest of file paths. Kind 'full_module_text'. On-disk, out of git.
+% ---------------------------------------------------------------------------
+% Reference-library source mathfull_gpk_m1 (full_module_text).
+ci_source('mathfull_gpk_m1', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_04_to_Age_05_math-gpk-m1-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_gpk_m2 (full_module_text).
+ci_source('mathfull_gpk_m2', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_04_to_Age_05_Math-GPK-M2-Full-Module.txt', 'full_module_text').
+% Reference-library source mathfull_gpk_m3 (full_module_text).
+ci_source('mathfull_gpk_m3', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_04_to_Age_05_math-gpk-m3-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_gpk_m4 (full_module_text).
+ci_source('mathfull_gpk_m4', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_04_to_Age_05_math-gpk-m4-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_gpk_m5 (full_module_text).
+ci_source('mathfull_gpk_m5', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_04_to_Age_05_math-gpk-m5-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_gk_m1 (full_module_text).
+ci_source('mathfull_gk_m1', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_05_to_Age_06_math-gk-m1-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_gk_m2 (full_module_text).
+ci_source('mathfull_gk_m2', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_05_to_Age_06_Math-GK-M2-Full-Module.txt', 'full_module_text').
+% Reference-library source mathfull_gk_m3 (full_module_text).
+ci_source('mathfull_gk_m3', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_05_to_Age_06_math-gk-m3-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_gk_m4 (full_module_text).
+ci_source('mathfull_gk_m4', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_05_to_Age_06_math-gk-m4-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_gk_m5 (full_module_text).
+ci_source('mathfull_gk_m5', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_05_to_Age_06_math-gk-m5-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_gk_m6 (full_module_text).
+ci_source('mathfull_gk_m6', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_05_to_Age_06_math-gk-m6-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g1_m1 (full_module_text).
+ci_source('mathfull_g1_m1', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_06_to_Age_07_math-g1-m1-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g1_m2 (full_module_text).
+ci_source('mathfull_g1_m2', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_06_to_Age_07_math-g1-m2-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g1_m3 (full_module_text).
+ci_source('mathfull_g1_m3', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_06_to_Age_07_math-g1-m3-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g1_m4 (full_module_text).
+ci_source('mathfull_g1_m4', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_06_to_Age_07_math-g1-m4-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g1_m5 (full_module_text).
+ci_source('mathfull_g1_m5', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_06_to_Age_07_math-g1-m5-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g1_m6 (full_module_text).
+ci_source('mathfull_g1_m6', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_06_to_Age_07_math-g1-m6-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g2_m1 (full_module_text).
+ci_source('mathfull_g2_m1', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_07_to_Age_08_Math-G2-M1-Full-Module.txt', 'full_module_text').
+% Reference-library source mathfull_g2_m2 (full_module_text).
+ci_source('mathfull_g2_m2', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_07_to_Age_08_Math-G2-M2-Full-Module.txt', 'full_module_text').
+% Reference-library source mathfull_g2_m3 (full_module_text).
+ci_source('mathfull_g2_m3', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_07_to_Age_08_math-g2-m3-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g2_m4 (full_module_text).
+ci_source('mathfull_g2_m4', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_07_to_Age_08_math-g2-m4-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g2_m5 (full_module_text).
+ci_source('mathfull_g2_m5', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_07_to_Age_08_math-g2-m5-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g2_m6 (full_module_text).
+ci_source('mathfull_g2_m6', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_07_to_Age_08_math-g2-m6-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g2_m7 (full_module_text).
+ci_source('mathfull_g2_m7', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_07_to_Age_08_math-g2-m7-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g2_m8 (full_module_text).
+ci_source('mathfull_g2_m8', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_07_to_Age_08_math-g2-m8-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g3_m1 (full_module_text).
+ci_source('mathfull_g3_m1', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_08_to_Age_09_math-g3-m1-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g3_m2 (full_module_text).
+ci_source('mathfull_g3_m2', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_08_to_Age_09_math-g3-m2-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g3_m3 (full_module_text).
+ci_source('mathfull_g3_m3', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_08_to_Age_09_math-g3-m3-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g3_m4 (full_module_text).
+ci_source('mathfull_g3_m4', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_08_to_Age_09_Math-G3-M4-Full-Module.txt', 'full_module_text').
+% Reference-library source mathfull_g3_m5 (full_module_text).
+ci_source('mathfull_g3_m5', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_08_to_Age_09_math-g3-m5-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g3_m6 (full_module_text).
+ci_source('mathfull_g3_m6', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_08_to_Age_09_math-g3-m6-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g3_m7 (full_module_text).
+ci_source('mathfull_g3_m7', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_08_to_Age_09_math-g3-m7-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g4_m1 (full_module_text).
+ci_source('mathfull_g4_m1', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_09_to_Age_10_math-g4-m1-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g4_m2 (full_module_text).
+ci_source('mathfull_g4_m2', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_09_to_Age_10_math-g4-m2-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g4_m3 (full_module_text).
+ci_source('mathfull_g4_m3', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_09_to_Age_10_math-g4-m3-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g4_m4 (full_module_text).
+ci_source('mathfull_g4_m4', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_09_to_Age_10_math-g4-m4-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g4_m5 (full_module_text).
+ci_source('mathfull_g4_m5', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_09_to_Age_10_math-g4-m5-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g4_m6 (full_module_text).
+ci_source('mathfull_g4_m6', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_09_to_Age_10_math-g4-m6-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g4_m7 (full_module_text).
+ci_source('mathfull_g4_m7', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_09_to_Age_10_math-g4-m7-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g5_m1 (full_module_text).
+ci_source('mathfull_g5_m1', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_10_to_Age_11_math-g5-m1-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g5_m2 (full_module_text).
+ci_source('mathfull_g5_m2', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_10_to_Age_11_math-g5-m2-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g5_m3 (full_module_text).
+ci_source('mathfull_g5_m3', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_10_to_Age_11_math-g5-m3-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g5_m4 (full_module_text).
+ci_source('mathfull_g5_m4', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_10_to_Age_11_math-g5-m4-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g5_m5 (full_module_text).
+ci_source('mathfull_g5_m5', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_10_to_Age_11_math-g5-m5-full-module.txt', 'full_module_text').
+% Reference-library source mathfull_g5_m6 (full_module_text).
+ci_source('mathfull_g5_m6', '/home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/Age_10_to_Age_11_math-g5-m6-full-module.txt', 'full_module_text').

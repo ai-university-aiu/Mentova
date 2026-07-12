@@ -607,3 +607,85 @@ With this appendix, every educational document in /home/ccaitwo/curriculum/ has 
 
 
 END OF HIGHER EDUCATION AND REMAINING DOCUMENTS WORK REPORT.
+
+
+================================================================
+APPENDIX: INDEPENDENT VERIFICATION AND ENHANCEMENT (2026-07-12)
+================================================================
+
+This section records an independent verification pass of the elementary
+curriculum import, plus one enhancement, performed on 2026-07-12.
+
+GITHUB SIZE LIMITS (confirmed and respected)
+
+A hard block applies to any file over 100 megabytes (MB); files over 50 MB
+draw a warning. GitHub asks repositories to stay well under 1 gigabyte (GB)
+ideally, and under 5 GB strongly. The raw elementary corpus on disk is about
+30 GB (188 archives, hundreds of PDFs), so it must never enter git. The
+design honors this: only compact Prolog facts and a path registry are
+committed; the bulk corpus and all extracted text stay on disk at
+/home/ccaitwo/curriculum/ and are reached through absolute-path registration.
+
+VERIFICATION RESULTS (data layer: PASS)
+
+The committed system was loaded and exercised directly in SWI-Prolog 9.0.4:
+
+• ci_stats reported 4,975 understood facts, 5 sound Causal Relation Objects,
+  and (after the enhancement below) 87 registered reference sources.
+
+• ci_word(toddler, mama) succeeds; the toddler band is present.
+
+• ci_sound(dog, S) yields S = woof; the sound CROs are present.
+
+• ci_why(mama, C, T) yields C = source(wall_toddler, 52) and the real cited
+  line "• mama" read back from the file. Glass-box citation confirmed.
+
+• ci_why(assemble, C, T) yields source(wall_grade3, 668) and "• assemble".
+
+• Kindergarten vocabulary count is 309 words; Grade 5 mathematics domains
+  include 5.OA, 5.NBT, and 5.MD.
+
+Every checked fact resolved to a real, reachable source line. The honesty
+gate holds: no curriculum fact was found that could not cite its source.
+
+VERIFICATION RESULTS (chat startup: PASS)
+
+Starting the server with
+  swipl -q -g "mc_chat_main('data/chat_db', PORT), thread_get_message(shutdown)" \
+        src/mentova/mentova_chat.pl
+prints the startup line
+  curriculum: registered sources; anchored 4975 facts, 5 CROs into locus://mentova/curriculum
+confirming the curriculum is registered and anchored into the lattice nexus
+at boot, exactly as the chat testing guide predicts.
+
+NOTE ON CHAT NATURAL-LANGUAGE ANSWERS
+
+The curriculum facts are anchored as node_facts in the lattice nexus and are
+reachable through the ci_* query API and the Reference Library search. The
+deployed chat's natural-language question layer (mentova_chat) answers is_a,
+causes, and similar questions from the small_world relations; routing those
+natural-language questions to the curriculum lattice is a separate, optional
+enhancement. Until then, the definitive way to test curriculum knowledge is
+the direct-query mode (Test mode A) in Chat_on_Elementary_School_topics.txt,
+and the Reference Library search, both of which pass.
+
+ENHANCEMENT: MATH FULL-MODULE TEXT IS NOW SEARCHABLE
+
+Previously the bulk EngageNY math corpus was indexed only by the manifest
+(one path per lesson document); the lesson text itself was not streamable.
+On 2026-07-12 all 45 elementary mathematics full-module documents (PreK
+through Grade 5) were extracted to text (about 34 MB on disk) and registered
+as Reference Library sources of kind 'full_module_text'. The registry now
+holds 87 sources (up from 42). A search now reaches real lesson content: a
+search for "number bond" returns 25 hits, the first from the Grade 1 Module 1
+full-module text. These files live on disk, out of git, per the size policy.
+
+FILES TOUCHED BY THIS PASS
+
+• knowledge/curriculum/curriculum_path_registry.pl — 45 full_module_text
+  sources appended.
+• This report and its copy in Mentova/docs/ — this appendix added.
+• On disk (out of git): /home/ccaitwo/curriculum/extracted_text/engageny_math_fullmodule/
+  — the 45 extracted math full-module text files.
+
+END OF VERIFICATION AND ENHANCEMENT APPENDIX.
