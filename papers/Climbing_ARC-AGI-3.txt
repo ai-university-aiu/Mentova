@@ -1042,6 +1042,30 @@ sliding, matching, packing, pushing, deducing, constructing, rule-rewriting - ra
 meets a wholly new ARC-AGI-3 game, only a fresh combination of ideas it already holds.
 
 
+2026-07-12  LEARNING. The Newgrounds section of the puzzle-games history was upgraded
+from secondary lists to PRIMARY archival evidence by mining the Wayback Machine
+(Internet Archive) directly. The harvest recovered the era's true genre name - Newgrounds
+filed puzzles under "Puzzles & Gadgets" at /games/gadgets.html - and read that static
+genre-listing page across seven dated snapshots (2002-02-03, 2003-02-01, 2003-08-01,
+2004-08-27, 2005-03-01, 2006-04-13, 2008-11-18) plus the 2004-01-09 games index. Genuine
+puzzle titles were tied to the exact snapshot that shows them: Rush Hour (sliding-block,
+2003), Aqua Energizer (maze-logic, 2003), Lost Your Marbles (2003), Bubble Trouble
+(aim-skill, 2003/2004), Blox (block, 2004), Topless Tetris 1-2 (falling-block, 2003),
+World of Words 2 (word, 2008), and The Impossible Quiz 1-2 (trick-quiz, 2008). Two honesty
+findings were recorded rather than smoothed over: the genre deliberately mixed true
+puzzles with novelty "gadget" toys (Fart-O-Mat, Cursing Keyboard, Interactive Buddy),
+which are listed but not counted as puzzles; and Wayback's Flash captures are authoritative
+only for the static 2002-2008 listings - the .swf payloads, the /games/puzzles AJAX list
+(one 2016 snapshot, un-archived body), and the 2009-2020 dynamic listings did not survive,
+so the harvest is primary evidence for the classic era and honestly incomplete after it.
+Both golden documents (History_Outline.txt, History_Book.txt) gained a Wayback addendum
+with snapshot dates and citations; re-ingesting through the nuanced doors now yields 91 new
+facts with 0 errors and 7 near-duplicate VARIANTS correctly flagged (e.g. The Impossible
+Quiz asserted both as a verified-notable title and as a Wayback-verified puzzle is kept
+apart with its delta, not merged) - the boot hook carries the enriched references into the
+live lattice and J-Space at next start, with no server restart.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box
