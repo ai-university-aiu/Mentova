@@ -3746,7 +3746,13 @@ ma_handle_select(Request) :-
     ).
 
 % ma_handle_restart(+Request): restart the selected environment in the active mode.
-ma_handle_restart(_Request) :-
+ma_handle_restart(Request) :-
+    % An optional {budget: N} in the body raises the solo action budget for this attempt
+    % (a multi-level game needs more than the default, since every run starts at level 1).
+    ( catch(http_read_json_dict(Request, Body), _, fail),
+      get_dict(budget, Body, B), integer(B), B > 0
+    ->  ma_set_solo_budget(B)
+    ;   true ),
     % Restart, honouring the active mode.
     ma_restart(_Mode, Reply),
     % Reply.

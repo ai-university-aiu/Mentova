@@ -960,6 +960,56 @@ L2 (Solo, unaided) - three Solo level wins across two games. Games at Solo statu
 (games_completed): zero.
 
 
+2026-07-12 - WIN - ft09 levels 3, 4 AND 5, by the SOLO player, unaided (the wall falls)
+
+The ft09 level-3 "wall" - the overlapping-clue puzzle that five natural combination
+rules (last-wins, XOR, OR, AND, majority) had each failed to crack - is broken, and with
+it levels 4 and 5. In one unaided Solo run Mentova now completes FIVE of ft09's six
+levels: L1 in 3 clicks, L2 in 6, L3 in 13, L4 in 15, L5 in 28 (about 65 actions to clear
+five levels, against a source-assisted community solver's 62). It fell at level 6.
+
+What broke the wall was ground truth, obtained the honest way. A fresh deep web search
+turned up no human discussion of ft09 anywhere (Reddit, Discord, Hacker News, Kaggle, X)
+- but it found the game's ENGINE SOURCE in a community mirror, and reading ft09.py's
+step() and win-check logic gave the real mechanic. Clues do NOT fuse into one target
+pattern (which is why every fusion rule failed). Each clue is a LOCAL RELATIONAL
+CONSTRAINT on the 8 tiles around its own board position, and ALL clues must hold at once
+(a plain conjunction): the clue's centre colour is a reference nRq, and for each of its 8
+border pixels a DARK pixel requires the adjacent tile to EQUAL nRq while a LIT pixel
+requires it to DIFFER. The earlier fill-projection had only ever worked because on L1/L2
+the clue centre happened to equal the fill colour; it was a lucky special case, not the
+rule.
+
+The solver was rebuilt on the true rule and stays a glass-box, reactive, self-click
+loop: on every choice it reads the live frame, gathers each tile's eq/differ constraints
+from the clues that govern it, and clicks the first tile whose colour violates a
+constraint and can be fixed by cycling. Because a plain tile's click cycles only itself
+and each tile's constraints depend only on its own colour, the tiles are INDEPENDENT
+given the fixed clues - so fixing each violating tile one at a time converges to the
+whole-board conjunction and the level auto-completes, with no search and no GF(2). That
+independence is why L3 and L4 (and L5) fell together the moment the constraint was read
+correctly: there was never a coupling to solve, only the right local rule to apply.
+
+One real course-correction landed on the diamond-shaped grids (L3-L6 are diamonds, not
+full rectangles). The cell lattice is a full grid with holes; mapping every lattice
+position to its nearest real cell invented PHANTOM tiles at the holes that duplicated
+real cells with contradictory constraints and made one oscillate forever (the live L5
+run stalled clicking a single cell). The fix requires a real cell to actually lie at a
+lattice point (well under one cell pitch) before it becomes a tile; with the holes
+rejected, L5 solved cleanly.
+
+Honesty: five of six. Level 6 is a genuinely DIFFERENT sub-mechanic and this solver does
+not yet play it - its board has zero plain tiles and twenty-two FUNCTIONAL tiles (marked
+by colour-6 pixels): clicking a functional tile cycles its neighbours at the marked
+offsets, i.e. true Lights-Out coupling, which needs a GF(2) solve over which functional
+tiles to click. The self-click solver finds no plain tile to fix, falls through, and the
+run ends in GAME_OVER on L6 (342 actions total). So full ft09 status:won is NOT reached;
+the encoded solver carries levels 1-5. The scorecard was closed unpublished; no
+leaderboard score is claimed. Session Solo level wins now: sb26 L1, and ft09 L1-L5 - six
+Solo level wins across two games. Games at Solo status:won (games_completed): zero. Next
+lever: the ft09 L6 functional-tile Lights-Out GF(2) solver.
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box

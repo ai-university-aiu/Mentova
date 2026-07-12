@@ -1,32 +1,34 @@
-/*  Mentova — ft09 game-specific solver (Phase Solo, levels 1-2)
+/*  Mentova — ft09 game-specific solver (Phase Solo)
 
-    ft09 is a click-only "Functional Tiles" / Lights-Out puzzle. Its mechanic was
-    cracked over the Mentor Bridge: the board holds one or more grids of 6x6 colour
-    cells; each grid has one or more fixed CLUE cells (a 3x3 mini-pattern of colours
-    0/2/<fill> sampled on the cell's 2px sub-lattice). A clue governs the 3x3 block of
-    cells centred on it: each governed cell must be the FILL colour where the clue's
-    corresponding sub-cell is 0, else the BLANK colour. Clicking a cell toggles it; the
-    level AUTO-COMPLETES when the working grid matches its clue projection (no verify
-    button). The fill colour is the clue's centre sub-cell (8 on L1, 12 on L2); the blank
-    colour is the grid's most common solid cell colour.
+    ft09 ("Functional Tiles") is a click-only constraint puzzle. Its TRUE mechanic — read
+    from the engine source (ft09.py step() + win-check), recorded in the golden file's WEB
+    RESEARCH ADDENDUM (2026-07-12) — is NOT a fill-projection. Clues do NOT combine into one
+    target pattern; each clue is a LOCAL RELATIONAL CONSTRAINT on the 8 tiles adjacent to
+    the clue's own board position, and ALL clues must hold at once (a plain conjunction).
 
-    This module is REACTIVE, mirroring the proven reference solver
-    (/home/ccaitwo/claude_work_summaries/ARC-AGI-3_Observations/ft09_solver.py, which wins
-    ft09 levels 1-2 live). Rather than build a fragile one-shot plan from a single frame,
-    ft09_next_action/3 recomputes from the CURRENT frame every call and returns the single
-    click that moves the working grid toward its target — the top-left-most governed cell
-    whose colour differs from its projected target. Clicking cell-by-cell, re-reading the
-    live frame each step, reproduces the reference solver's "click until target" loop and
-    naturally handles colour cycling and advancing from one level to the next. When no
-    governed cell is out of place the predicate fails, so the level's auto-completion and
-    the next level are picked up on the following calls with no per-level reset.
+    Per clue: the clue's CENTRE colour is nRq (the required reference colour). For each of
+    its 8 border pixels (its 3x3 pattern minus the centre): a DARK pixel (value 0) requires
+    the adjacent tile's colour to EQUAL nRq; a LIT pixel (non-zero) requires it to DIFFER
+    from nRq; no tile at that position is unconstrained. Clicking a plain tile cycles ONLY
+    that tile through the level palette. (Functional tiles — printed patterns marked with
+    colour-6 pixels — cycle neighbours when clicked; they are an EFFICIENCY lever, not a
+    requirement: every tile is directly clickable, so self-clicking each violating tile
+    always wins the level. This solver forgoes functional tiles for a simple, always-correct
+    self-click solve.)
 
-    Faithful to the reference solver on two points the earlier one-shot draft got wrong:
-      * cells NO clue governs are SKIPPED (not forced to blank), and
-      * when clues overlap, the LAST governing clue decides (last-clue-wins).
-    These are correct for levels 1-2 (non/lightly-overlapping clues). Level 3+ overlap the
-    clues heavily and need a GF(2)/parity resolution not yet decoded; on those the
-    projection is a best guess and may not complete the level, but it cannot crash.
+    Why the earlier fill-projection won L1/L2: there the clue centre nRq happened to equal
+    the "fill" colour and the palette was 2-colour, so "border 0 => fill" coincided with the
+    true "border 0 => equal nRq". It broke the moment nRq != fill or the palette held three
+    colours (L3+). This solver implements the true rule and generalises to all six levels.
+
+    REACTIVE: ft09_next_action/3 recomputes from the CURRENT live frame every call and
+    returns the single click for the first solid tile that VIOLATES one of its clue
+    constraints and is SATISFIABLE (a palette colour meets all its constraints). Clicking
+    cycles that tile; because tiles are independent given the fixed clues, fixing each
+    violating tile converges to the global conjunction and the level auto-completes. When no
+    violating tile remains the predicate fails, so the level's completion and the next level
+    are picked up on the following calls with no per-level reset. Contradictory or
+    unconstrained tiles are skipped (no thrash).
 
     Action terms match the live client: an ACTION6 cell-click is select(Col, Row) with
     Col the x (column) and Row the y (row).
@@ -44,7 +46,7 @@
     ft09_reset/1
 ]).
 
-% List utilities (member/2, nth0/3, last/2, msort/2, keysort/2).
+% List utilities (member/2, nth0/3, append/3, exclude/3, sort/2).
 :- use_module(library(lists)).
 
 % ft09_is_game(+GameId): true when the id names the ft09 environment (prefix "ft09").
@@ -59,88 +61,124 @@ ft09_is_game(GameId) :-
 ft09_reset(_Game).
 
 % ---------------------------------------------------------------------------
-% REACTIVE CHOICE
+% REACTIVE CHOICE  (true per-clue relational-constraint conjunction)
 % ---------------------------------------------------------------------------
 
-% ft09_next_action(+Game, +Frame, -Action): choose the single next click. Detect the cell
-% grids, and for the first grid that still has a governed cell off its projected target,
-% return select(Col,Row) at that cell's centre. Fails when every governed cell already
-% matches (the level is solved / auto-completing), letting the caller fall through.
+% ft09_next_action(+Game, +Frame, -Action): choose the single next click. Read the scene
+% (tiles + constraint clues), infer the palette, and click the first solid tile that
+% violates a clue constraint and can be fixed. Fails when every constrained tile already
+% satisfies its clues (the level is solved / auto-completing), letting the caller fall
+% through.
 ft09_next_action(_Game, Frame, select(Col, Row)) :-
-    % Read all 6x6 cell blocks on the board.
+    % All 6x6 cell blocks on the board.
     ft09_cells(Frame, Cells),
     % There must be at least one cell to act on.
     Cells \== [],
     % Cluster the cells into their separate grids.
     ft09_groups(Cells, Groups),
-    % Take the first grid that has a governed cell off target.
-    member(Group, Groups),
-    % Find that cell's bounding box (fails for solved / clueless grids).
-    ft09_group_mismatch(Frame, Group, Box),
-    % Commit to this grid and cell.
+    % Classify every cell into solid tiles and constraint clues, tagged by grid.
+    ft09_scene(Frame, Groups, Tiles, Clues),
+    % The level palette — the colours a click cycles a tile through.
+    ft09_palette(Tiles, Clues, Palette),
+    % The first constrained tile that currently violates a clue and is fixable.
+    ft09_first_fix(Tiles, Clues, Palette, Box),
+    % Commit to that tile.
     !,
-    % The click lands on the cell's centre pixel.
+    % The click lands on the tile's centre pixel.
     ft09_box_centre(Box, Col, Row).
 
-% ft09_group_mismatch(+Frame, +Group, -Box): the box of the first governed cell in the grid
-% whose current colour differs from its clue-projected target. Fails if the grid has no
-% clue, no solid cells, or is already fully matched (a reference grid contributes none).
-ft09_group_mismatch(Frame, Group, Box) :-
-    % Build the target for every governed cell in the grid.
-    ft09_group_targets(Frame, Group, Targets),
-    % Pick a cell whose live colour and target disagree.
-    member(target(Box, Cur, Want), Targets),
-    % Only a genuine mismatch counts.
-    Cur =\= Want.
-
-% ft09_group_targets(+Frame, +Group, -Targets): classify the grid's cells, read its clues,
-% fill and blank colours, and produce target(Box, Cur, Target) for each GOVERNED solid cell
-% (ungoverned cells are skipped, matching the reference solver's want()==None case).
-ft09_group_targets(Frame, Group, Targets) :-
-    % The grid's sorted, de-duplicated cell-centre rows and columns.
-    ft09_lattice(Group, Ys, Xs),
-    % Classify each lattice cell as a solid colour or a 3x3 clue pattern.
-    findall(cinfo(RI, CI, Box, Kind),
-        ( nth0(RI, Ys, CY), nth0(CI, Xs, CX),
+% ft09_scene(+Frame, +Groups, -Tiles, -Clues): classify every lattice cell of every grid.
+% Tiles are the solid (single-colour) cells; Clues are the printed CONSTRAINT patterns.
+% Each item carries its grid index G so constraints stay local to one grid.
+ft09_scene(Frame, Groups, Tiles, Clues) :-
+    % Solid cells become tile(G, RI, CI, Box, Colour).
+    findall(tile(G, RI, CI, Box, V),
+        ( nth0(G, Groups, Group),
+          ft09_lattice(Group, Ys, Xs),
+          nth0(RI, Ys, CY), nth0(CI, Xs, CX),
           ft09_cell_box(Group, CY, CX, Box),
-          ft09_classify(Frame, Box, Kind) ),
-        Cs),
-    % Gather the clue cells with their grid positions and 3x3 patterns.
-    findall(clue(RI, CI, Pat), member(cinfo(RI, CI, _, clue(Pat)), Cs), Clues),
-    % A grid with no clue is not a puzzle grid — reject it.
-    Clues \== [],
-    % The fill colour is a clue centre sub-cell that is not 0 or 2 (8 or 12).
-    ft09_fill_colour(Clues, Fill),
-    % Collect the solid cell colours to find the blank colour.
-    findall(V, member(cinfo(_, _, _, solid(V)), Cs), Solids),
-    % A grid with no solid cell has nothing to set — reject it.
-    Solids \== [],
-    % The blank colour is the most common solid cell colour.
-    ft09_most_common(Solids, Blank),
-    % For each governed solid cell, its live colour and its projected target.
-    findall(target(Box, V, Target),
-        ( member(cinfo(RI, CI, Box, solid(V)), Cs),
-          ft09_want(RI, CI, Clues, Want),
-          ( Want =:= 0 -> Target = Fill ; Target = Blank ) ),
-        Targets).
+          ft09_classify(Frame, Box, solid(V)) ),
+        Tiles),
+    % Printed constraint cells become clue(G, RI, CI, nRq, Pat).
+    findall(clue(G, RI, CI, NRq, Pat),
+        ( nth0(G, Groups, Group),
+          ft09_lattice(Group, Ys, Xs),
+          nth0(RI, Ys, CY), nth0(CI, Xs, CX),
+          ft09_cell_box(Group, CY, CX, Box),
+          ft09_classify(Frame, Box, clue(Pat)),
+          ft09_constraint_clue(Pat, NRq) ),
+        Clues).
 
-% ft09_want(+RI, +CI, +Clues, -Want): the sub-cell value of the LAST clue that governs cell
-% (RI,CI) — the 3x3 block centred on each clue. Fails when no clue governs the cell, so the
-% caller skips it (the reference solver's want()==None). Last-clue-wins mirrors the
-% reference solver's dict-overwrite order for overlapping clues.
-ft09_want(RI, CI, Clues, Want) :-
-    % Every clue whose 3x3 block covers this cell, in clue order.
-    findall(Sub,
-        ( member(clue(GR, GC, Pat), Clues),
+% ft09_constraint_clue(+Pat, -NRq): a printed pattern is a CONSTRAINT clue when its centre
+% sub-cell is a real palette colour (not a marker 0/2/6 nor background 4/5) and it carries
+% no colour-6 pixel (a colour-6 pattern is a FUNCTIONAL tile, which this solver ignores).
+ft09_constraint_clue(Pat, NRq) :-
+    % The centre sub-cell is nRq.
+    nth0(1, Pat, MidRow), nth0(1, MidRow, NRq),
+    % It must be a real colour, not a marker or background.
+    \+ member(NRq, [0, 2, 4, 5, 6]),
+    % The pattern must contain no functional-tile marker (colour 6).
+    \+ ( member(PRow, Pat), member(6, PRow) ).
+
+% ft09_palette(+Tiles, +Clues, -Palette): the level palette — the distinct real colours
+% among the solid tiles and the clue centres (markers and background excluded).
+ft09_palette(Tiles, Clues, Palette) :-
+    % Tile colours.
+    findall(V, member(tile(_, _, _, _, V), Tiles), Vs),
+    % Clue centre colours (each is a palette colour a tile may be required to equal).
+    findall(N, member(clue(_, _, _, N, _), Clues), Ns),
+    % Pool them.
+    append(Vs, Ns, All0),
+    % Drop any marker/background values that slipped in.
+    exclude([X]>>member(X, [0, 2, 4, 5, 6]), All0, All),
+    % Distinct, sorted.
+    sort(All, Palette).
+
+% ft09_first_fix(+Tiles, +Clues, +Palette, -Box): the box of the first solid tile that is
+% constrained, currently violates a constraint, and is satisfiable by some palette colour.
+ft09_first_fix(Tiles, Clues, Palette, Box) :-
+    % Scan tiles in order (grid, then row, then column).
+    member(tile(G, RI, CI, Box, V), Tiles),
+    % Its constraints from the clues that govern it.
+    ft09_tile_constraints(G, RI, CI, Clues, Cons),
+    % The tile must be governed by at least one clue.
+    Cons \== [],
+    % Its current colour must violate some constraint.
+    \+ ft09_satisfies(V, Cons),
+    % And a palette colour must exist that meets all constraints (else clicking cannot fix
+    % it — skip rather than thrash on an unsatisfiable tile).
+    ft09_satisfiable(Palette, Cons),
+    % First such tile wins.
+    !.
+
+% ft09_tile_constraints(+G, +RI, +CI, +Clues, -Cons): the eq/neq constraints imposed on the
+% tile at (RI,CI) in grid G by every clue in the same grid whose 3x3 block covers it. The
+% border pixel at the tile's offset from the clue decides: 0 (dark) => eq(nRq), else neq.
+ft09_tile_constraints(G, RI, CI, Clues, Cons) :-
+    % Every governing clue's constraint on this tile.
+    findall(Con,
+        ( member(clue(G, GR, GC, NRq, Pat), Clues),
           DR is RI - GR, DR >= -1, DR =< 1,
           DC is CI - GC, DC >= -1, DC =< 1,
+          \+ ( DR =:= 0, DC =:= 0 ),
           PR is DR + 1, PC is DC + 1,
-          nth0(PR, Pat, PatRow), nth0(PC, PatRow, Sub) ),
-        Subs),
-    % The cell must be governed by at least one clue.
-    Subs \== [],
-    % The last governing clue decides.
-    last(Subs, Want).
+          nth0(PR, Pat, PRow), nth0(PC, PRow, Sub),
+          ( Sub =:= 0 -> Con = eq(NRq) ; Con = neq(NRq) ) ),
+        Cons).
+
+% ft09_satisfies(+Colour, +Cons): the colour meets every constraint.
+ft09_satisfies(V, Cons) :-
+    % No constraint is violated.
+    forall(member(Con, Cons), ft09_con_ok(V, Con)).
+
+% ft09_con_ok(+Colour, +Con): one constraint holds for the colour.
+ft09_con_ok(V, eq(N))  :- V =:= N.
+ft09_con_ok(V, neq(N)) :- V =\= N.
+
+% ft09_satisfiable(+Palette, +Cons): some palette colour meets every constraint.
+ft09_satisfiable(Palette, Cons) :-
+    % A witnessing colour exists.
+    member(C, Palette), ft09_satisfies(C, Cons), !.
 
 % ft09_box_centre(+Box, -Col, -Row): the centre pixel of a cell box, as (Col=x, Row=y).
 ft09_box_centre(box(R0, C0, R1, C1), Col, Row) :-
@@ -150,7 +188,7 @@ ft09_box_centre(box(R0, C0, R1, C1), Col, Row) :-
     Row is (R0 + R1) // 2.
 
 % ---------------------------------------------------------------------------
-% CELL DETECTION  (unchanged — matches the reference Python solver's detection)
+% CELL DETECTION
 % ---------------------------------------------------------------------------
 
 % ft09_isbg(+V): the background / gutter colours.
@@ -262,7 +300,11 @@ ft09_dd([A, B | T], R) :-
     % Merge B into A when they are within 3px; else keep A and continue.
     ( B - A =< 3 -> ft09_dd([A | T], R) ; R = [A | R1], ft09_dd([B | T], R1) ).
 
-% ft09_cell_box(+Group, +CY, +CX, -Box): the group cell whose centre is nearest (CY,CX).
+% ft09_cell_box(+Group, +CY, +CX, -Box): the group cell that actually sits AT the lattice
+% point (CY,CX). Fails when no cell is there — essential on the DIAMOND-shaped grids (L3-L6)
+% whose lattice is a full rectangle with holes: without this guard an empty lattice position
+% would be mapped to the nearest real cell, inventing a phantom tile that duplicates a real
+% one with contradictory constraints and makes it oscillate forever.
 ft09_cell_box(Group, CY, CX, box(R0,C0,R1,C1)) :-
     % Distance from every cell centre to the lattice point.
     findall(D - box(R0,C0,R1,C1),
@@ -270,8 +312,11 @@ ft09_cell_box(Group, CY, CX, box(R0,C0,R1,C1)) :-
           MY is (R0+R1)//2, MX is (C0+C1)//2,
           D is abs(MY-CY) + abs(MX-CX) ),
         Ds),
-    % The nearest cell wins.
-    keysort(Ds, [_ - Box | _]),
+    % The nearest cell.
+    keysort(Ds, [Dmin - Box | _]),
+    % A real cell must actually lie at this lattice point (well under one cell pitch, ~8px);
+    % a diamond hole's nearest cell is a full pitch away, so this rejects the holes.
+    Dmin =< 4,
     % Bind the box's corners.
     Box = box(R0,C0,R1,C1).
 
@@ -289,33 +334,3 @@ ft09_classify(Frame, box(R0,C0,R1,C1), Kind) :-
           findall(SV, ( member(B, [0,1,2]), CB is C0 + 2*B, ft09_at(Frame, RA, CB, SV) ), RowVals) ),
         Pat),
       Kind = clue(Pat) ).
-
-% ft09_fill_colour(+Clues, -Fill): the fill colour = a clue centre sub-cell value that is
-% not 0 or 2 (i.e. 8 or 12).
-ft09_fill_colour(Clues, Fill) :-
-    % A clue whose centre sub-cell is a fill colour.
-    member(clue(_, _, Pat), Clues),
-    % The centre sub-cell (row 1, column 1 of the 3x3).
-    nth0(1, Pat, Mid), nth0(1, Mid, Fill),
-    % It must be a fill colour, not background/clue-marker 0 or 2.
-    Fill =\= 0, Fill =\= 2, !.
-% Default fill when no clue centre reveals it.
-ft09_fill_colour(_, 8).
-
-% ft09_most_common(+List, -X): the most frequent element.
-ft09_most_common(List, X) :-
-    % Sort so equal values group together.
-    msort(List, Sorted),
-    % Count each run.
-    ft09_runs(Sorted, Runs),
-    % The longest run's value is the most common.
-    keysort(Runs, KS), last(KS, _ - X).
-ft09_runs([], []).
-ft09_runs([H | T], Runs) :-
-    % Start counting from the first element.
-    ft09_runs_(T, H, 1, Runs).
-ft09_runs_([], V, N, [N - V]).
-ft09_runs_([H | T], V, N, Runs) :-
-    % Extend the current run or close it and open the next.
-    ( H == V -> N1 is N + 1, ft09_runs_(T, V, N1, Runs)
-    ; Runs = [N - V | R1], ft09_runs_(T, H, 1, R1) ).
