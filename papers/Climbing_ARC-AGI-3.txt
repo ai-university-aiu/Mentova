@@ -801,6 +801,43 @@ second and third game over the Bridge to widen the seed set. Evidence-first: the
 report is in assets/ARC-AGI-3_Live_Sweep_v4.txt, the scorecard was closed and never
 published, and no leaderboard score is claimed.
 
+2026-07-11  COURSE CORRECTION. Two things landed together: a clean measurement, and a
+change of method. First the measurement. A survival-first early-budget policy was
+built - for the opening sixth of an attempt the run now SURVEYS: it suppresses goal-
+pursuit, hard-drops any move it predicts fatal, and prefers safe probes that do not
+walk the avatar into unmapped ground, so it maps before it commits ("explore before
+optimise"). Because the fourth sweep had been measured just before this policy, a
+fifth cold sweep isolated exactly its effect - same games, same fresh cold store,
+same budget, the one variable changed. The result was unambiguous and is recorded
+without dressing up: twenty-five of twenty-five completed, ZERO levels, twenty
+GAME_OVER and five budget - the IDENTICAL distribution to the fourth sweep, at
+twenty-six more actions total (the survey costs a little). Survival-first, in
+isolation, did not move the number on the public twenty-five. Four cold measurements
+now agree: no combination of the cognitive wiring, the ranked-utility targeting, and
+the survival-first survey wins a level from a cold start, because the blocker is not a
+missing policy - it is the absence of a WIN SIGNAL to bootstrap goal inference and
+hypothesis commitment. Second, the method. Cycling breadth-first through all twenty-
+five to make progress is now retired. The new rule, adopted as a standing course
+correction, is ONE GAME AT A TIME: mentor a single game to a win over the Bridge and
+save the learnings; run Solo on that same game so it reads them; OBSERVE the Solo run
+while it plays and write structured notes - where it gets stuck, how it is and is not
+thinking, what it is obviously missing, and what clue, rule, function, or lattice-
+write could help; adjust from those notes; and repeat on that one game until
+status:won before the next game begins. The instrument for the observing was built,
+Observe_Game_Play_Run: it runs a Solo attempt while tracing every choice's glass-box
+basis, then writes the mentor's notes to disk - the choice-basis distribution (how it
+thinks), the peak staleness (where it stalls), the end cognition (did it commit a
+hypothesis, learn a law, infer a goal, and how often did it die), the diagnostics
+(died_early, no_committed_hypothesis, no_world_model_law, no_goal_inferred,
+dominated_by, never_left_survey), and a candidate mentoring action for each. A live
+attempt to mentor sb26 to a level over the Bridge was made honestly and did not
+succeed within a bounded probe budget - the board was decoded (four target slots
+bordered nine, fourteen, eleven, fifteen, to be filled with matching-colour tiles)
+but the exact select-and-place interaction did not resolve, and no win was fabricated.
+Full sweeps remain allowed only as an occasional benchmark, never as the way progress
+is made. The v5 report is in assets/ARC-AGI-3_Live_Sweep_v5.txt; the scorecard was
+closed and never published; no leaderboard score is claimed.
+
 
 THE VISION
 

@@ -1,0 +1,78 @@
+ARC-AGI-3 Live Sweep v5 — survival-first early-budget policy (clean A/B vs v4 cold)
+====================================================================================
+
+Measured live on three.arcprize.org on 2026-07-11. Agent-tagged, unpublished
+scorecard, isolated process, FRESH cold learnings store, 150-action budget. The ONLY
+change from the v4 sweep is the survival-first early-budget policy (PR #521); v4 was
+measured before it. So v5 vs v4 isolates exactly the survival-first effect.
+
+Stack: co_see, co_explore, co_graph, co_goalinfer, co_effic, co_hplan, co_verify,
+co_wm, co_hypo, co_rel, + survival-first survey (opening ~15% of budget: goal-pursuit
+suppressed, predicted-fatal moves hard-dropped, safe probes preferred).
+
+
+RESULT
+------
+Games played:           25 / 25   (ran to genuine completion; perf fix holds)
+Total levels_completed: 0
+Games with >= 1 level:   0
+Outcomes:                0 won-level, 20 GAME_OVER (80%), 5 budget_exhausted (20%)
+Total actions:          2434   (avg 97.36 / game)
+
+
+PER GAME (id  outcome  actions  levels/win_threshold)
+-----------------------------------------------------
+  cn04  game_over          75    0/6
+  ar25  budget_exhausted  150    0/8
+  vc33  game_over          50    0/7
+  s5i5  game_over          50    0/8
+  re86  game_over         100    0/8
+  cd82  game_over         100    0/6
+  ka59  game_over         100    0/7
+  lp85  game_over          64    0/8
+  ls20  game_over         136    0/7
+  sc25  game_over         128    0/6
+  sb26  budget_exhausted  150    0/8
+  wa30  budget_exhausted  150    0/9
+  m0r0  budget_exhausted  150    0/6
+  su15  game_over          38    0/9
+  tu93  game_over          50    0/9
+  tr87  game_over         128    0/6
+  r11l  game_over          60    0/6
+  bp35  game_over          64    0/9
+  ft09  game_over         131    0/6
+  dc22  game_over         125    0/6
+  g50t  game_over         130    0/7
+  tn36  game_over          61    0/7
+  sp80  game_over          30    0/6
+  sk48  budget_exhausted  150    0/8
+  lf52  game_over          64    0/10
+
+
+HONEST A/B COMPARISON
+---------------------
+  v4 (fully-wired, COLD, no survival-first): 0 levels, 2408 actions, avg 96.32, 20 GAME_OVER, 5 budget.
+  v5 (v4 + survival-first, COLD):            0 levels, 2434 actions, avg 97.36, 20 GAME_OVER, 5 budget.
+
+The distributions are IDENTICAL: 20 GAME_OVER, 5 budget, 0 levels, on the same games.
+v5 spent 26 more actions in total (avg +1.04/game) — the survey costs a little, mapping
+before it pursues. Survival-first, measured in isolation, did NOT change the autonomous
+outcome on the public 25: still zero levels.
+
+Baseline (v1): 0 levels, 2453 actions, 19 GAME_OVER, 6 budget.
+v3 (verify+cache, 18 games): 0 levels, about 78% GAME_OVER, avg 96.7.
+
+
+WHAT THIS SETTLES
+-----------------
+Four cold measurements now agree: no combination of the cognitive wiring, the
+ranked-utility targeting, and the survival-first survey wins a level on the public 25
+from a cold start. The blocker is not a missing policy tweak; it is the absence of a
+WIN SIGNAL to bootstrap goal inference and hypothesis commitment. Breadth-first
+cycling over all 25 does not make progress. This is the evidence behind the course
+correction to a ONE-GAME-AT-A-TIME methodology: mentor a single game to a win over the
+Bridge, let a Solo run read that seed, OBSERVE the solo run (Observe_Game_Play_Run) to
+see exactly where and how it fails, adjust with clues/rules/code/lattice-writes, and
+repeat on that one game until status:won before moving on.
+
+No leaderboard score claimed. Scorecard closed, never published.
