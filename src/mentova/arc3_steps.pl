@@ -1,7 +1,7 @@
 /*  Mentova — ARC-AGI-3 Steps Draft Ingestion
 
-    The ten ARC-AGI-3_Steps_Draft documents were digested into per-draft candidate-
-    fact files under knowledge/arc3_steps/ (draft_1.facts .. draft_10.facts). This
+    The eleven ARC-AGI-3_Steps_Draft documents were digested into per-draft candidate-
+    fact files under knowledge/arc3_steps/ (draft_1.facts .. draft_11.facts). This
     module carries all ten into Mentova's mind at boot through the NUANCED fact
     doors: an exact fact repeated across drafts is merged and strengthened, while a
     fact that a draft states with a subtle difference (a different mechanic, a
@@ -12,7 +12,7 @@
     each draft's concepts are also held in a per-draft J-Space workspace.
 
     Predicates:
-      as_bootstrap/0    ingest all ten drafts (idempotent; safe at startup)
+      as_bootstrap/0    ingest all eleven drafts (idempotent; safe at startup)
       as_ingest/1       -- -Summary(TotalNew, TotalStrengthened, TotalVariant)
       as_stats/1        -- -stats(NodeFactVariants, RelationVariants)
 */
@@ -38,20 +38,20 @@ as_dir('/home/ccaitwo/Mentova/knowledge/arc3_steps').
 
 % as_draft(-DraftId, -File): each draft and its fact file.
 as_draft(DraftId, File) :-
-    member(N, [1,2,3,4,5,6,7,8,9,10]),
+    member(N, [1,2,3,4,5,6,7,8,9,10,11]),
     atom_concat(draft_, N, DraftId),
     as_dir(Dir),
     atomic_list_concat([Dir, '/', DraftId, '.facts'], File).
 
-% as_bootstrap: ingest all ten drafts, tolerating any error so boot never fails.
+% as_bootstrap: ingest all eleven drafts, tolerating any error so boot never fails.
 as_bootstrap :-
     catch(( as_ingest(summary(New, Strong, Var)),
-            format("arc3_steps: ingested 10 drafts — ~w new facts, ~w strengthened, ~w variants flagged~n",
+            format("arc3_steps: ingested 11 drafts — ~w new facts, ~w strengthened, ~w variants flagged~n",
                    [New, Strong, Var]) ),
           _Err, true).
 
 % as_ingest(-Summary): ingest each draft through the nuanced doors, summing the
-% new / strengthened / variant-flagged counts across all ten reports.
+% new / strengthened / variant-flagged counts across all eleven reports.
 as_ingest(summary(New, Strong, Var)) :-
     findall(counts(N, S, V),
         ( as_draft(DraftId, File),
