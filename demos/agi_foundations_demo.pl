@@ -1,15 +1,15 @@
 /*  Mentova — AGI Foundations End-to-End Scenario  (Acc_424)
 
     A single coherent episode of Mentova's cognition that exercises all
-    seven PrologAI AGI Foundations packs (causal, actinf, worldmodel,
+    seven PrologAI AGI Foundations packs (causal, actinf, co_wm,
     planner, evolve, jspace, tom) in one connected story.
 
     The protagonist is Mira, a curious Mentova agent sharing a small world
     with another agent, Nomi. In one episode Mira:
 
-      1. worldmodel  builds a model of her world and plans a fetch in it,
+      1. co_wm  builds a model of her world and plans a fetch in it,
                      verifying the plan by simulation.
-      2. worldmodel  measures novelty as she explores; falling novelty is
+      2. co_wm  measures novelty as she explores; falling novelty is
          (curiosity) her learning-progress signal — she is a curious agent.
       3. planner     decomposes her high-level goal into a primitive plan
                      and keeps the glass-box decomposition tree.
@@ -28,7 +28,7 @@
                      it forms a valid observe-deduce-conclude trace.
 
     Acceptance criteria (each prints PASS or FAIL at run time):
-      AC-ACC424-001: worldmodel plans and simulates the fetch to its goal.
+      AC-ACC424-001: co_wm plans and simulates the fetch to its goal.
       AC-ACC424-002: exploration novelty falls, giving positive learning progress.
       AC-ACC424-003: the planner decomposes the goal and names its methods.
       AC-ACC424-004: active inference checks the cue, then goes for the reward.
@@ -53,7 +53,7 @@
     % The active inference engine pack.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/actinf/prolog')),
     % The structured world model pack.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/worldmodel/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_wm/prolog')),
     % The hierarchical planner pack.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/planner/prolog')),
     % The evolutionary computation pack.
@@ -69,7 +69,7 @@
 % Load the active inference predicates used in the T-maze scene.
 :- use_module(library(actinf), [ai_model/7, ai_epistemic/4, ai_step/7]).
 % Load the world model predicates used in the fetch and novelty scenes.
-:- use_module(library(worldmodel), [wm_action/5, wm_plan_bfs/5, wm_simulate/4, wm_holds/2, wm_novelty/3]).
+:- use_module(library(co_wm), [wm_action/5, wm_plan_bfs/5, wm_simulate/4, wm_holds/2, wm_novelty/3]).
 % Load the planner predicates used in the decomposition scene.
 :- use_module(library(planner), [ht_domain/3, ht_plan/5, ht_task_tree/5]).
 % Load the evolutionary run predicate used in the self-improvement scene.
@@ -91,7 +91,7 @@ run_agi_foundations_demo :-
     % Print the scenario banner.
     banner,
     % Scene one: the world model plans and simulates a fetch.
-    scene_worldmodel(A1),
+    scene_co_wm(A1),
     % Scene two: curiosity from falling novelty.
     scene_curiosity(A2),
     % Scene three: the planner decomposes the goal.
@@ -129,7 +129,7 @@ banner :-
     nl.
 
 % ===========================================================================
-% SCENE ONE — worldmodel: plan and simulate a fetch
+% SCENE ONE — co_wm: plan and simulate a fetch
 % ===========================================================================
 
 % mira_world_actions(-Actions): Mira's two-room world action repertoire.
@@ -142,8 +142,8 @@ mira_world_actions([Move, Take]) :-
 % mira_world_start(-State): the initial world — Mira in room one, key in two.
 mira_world_start([at(r1), key_in(r2), door(r1, r2), door(r2, r1)]).
 
-% scene_worldmodel(-AC): plan the fetch and verify it by simulation.
-scene_worldmodel(ac('AC-ACC424-001', Pass, 'worldmodel plans and simulates the fetch')) :-
+% scene_co_wm(-AC): plan the fetch and verify it by simulation.
+scene_co_wm(ac('AC-ACC424-001', Pass, 'co_wm plans and simulates the fetch')) :-
     % Fetch the action repertoire.
     mira_world_actions(As),
     % Fetch the initial world state.
