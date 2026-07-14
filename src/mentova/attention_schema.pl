@@ -48,7 +48,7 @@
 :- initialization((
     % Add the attention_schema pack directory to the global library search path.
     assertz(user:file_search_path(library,
-        '/home/ccaitwo/PrologAI/packs/attention_schema/prolog')),
+        '/home/ccaitwo/PrologAI/packs/attention/prolog')),
     % Load the pack, importing its public predicates.
     use_module(library(attention),
                [attention_schema/2, attention_predict/2,
