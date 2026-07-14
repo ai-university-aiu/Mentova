@@ -140,7 +140,7 @@
     % The planner.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_planner/prolog')),
     % The Jacobian Space (J-Space) concept workspace the solo run holds learnings in.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jacobian_space/prolog')),
     % The state-graph exploration pack (the winning ARC-AGI-3 technique).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/state_graph/prolog')),
     % Object detection, needed by the exploration policy's salient click targets.
@@ -253,7 +253,7 @@
 % Load list arithmetic for the centroid computation.
 :- use_module(library(lists), [sum_list/2]).
 % Load the Jacobian Space workspace so the solo run holds its learnings in J-Space.
-:- use_module(library(jspace), [js_open/1, js_hold/4, js_reading/2]).
+:- use_module(library(jacobian_space), [jacobian_space_open/1, jacobian_space_hold/4, jacobian_space_reading/2]).
 % Load the live ARC-AGI-3 client so the dropdown can offer the real environments.
 :- use_module('arc_agi_3_live',
     [al_connect/1, al_connected/0, al_disconnect/0, al_game/2, al_games/1,
@@ -1102,22 +1102,22 @@ ma_solo_seed_jspace :-
     % Guarded so a missing workspace can never break a run.
     catch((
         % Open the solo workspace.
-        js_open(arc_solo),
+        jacobian_space_open(arc_solo),
         % Hold the selected game — every learning below is read for it alone.
-        ma_selected_game(G), js_hold(arc_solo, game(G), 1.0, selection),
+        ma_selected_game(G), jacobian_space_hold(arc_solo, game(G), 1.0, selection),
         % Hold this game's learned goal, if any.
-        ( ma_goal_(G, Goal) -> js_hold(arc_solo, goal(Goal), 1.0, learned_goal) ; true ),
+        ( ma_goal_(G, Goal) -> jacobian_space_hold(arc_solo, goal(Goal), 1.0, learned_goal) ; true ),
         % Hold each of this game's human-taught priorities.
-        forall(ma_priority_(G, P), js_hold(arc_solo, priority(P), 0.8, learned_priority)),
+        forall(ma_priority_(G, P), jacobian_space_hold(arc_solo, priority(P), 0.8, learned_priority)),
         % Hold each of this game's declared hazards.
         forall(ma_avoid_cell_(G, pos(R, C)),
-               js_hold(arc_solo, avoid(cell(R, C)), 0.8, learned_hazard))
+               jacobian_space_hold(arc_solo, avoid(cell(R, C)), 0.8, learned_hazard))
     ), _, true).
 
 % ma_jlens(-Reading): the J-Lens readout of the solo workspace.
 ma_jlens(Reading) :-
     % Guarded, empty when the workspace is unavailable.
-    ( catch(js_reading(arc_solo, Reading), _, fail) -> true ; Reading = [] ).
+    ( catch(jacobian_space_reading(arc_solo, Reading), _, fail) -> true ; Reading = [] ).
 
 % ---------------------------------------------------------------------------
 % RESTART — works in both modes, on the selected environment
@@ -1395,10 +1395,10 @@ ma_win_levers(Game, Steps, Levers) :-
 ma_win_jspace(Game, WinPath, Levers) :-
     % Guarded so a workspace hiccup never blocks concluding.
     catch((
-        js_open(arc_won),
+        jacobian_space_open(arc_won),
         length(WinPath, L),
-        js_hold(arc_won, won(Game, steps(L)), 1.0, win),
-        forall(member(Lv, Levers), js_hold(arc_won, Lv, 0.9, win_lever))
+        jacobian_space_hold(arc_won, won(Game, steps(L)), 1.0, win),
+        forall(member(Lv, Levers), jacobian_space_hold(arc_won, Lv, 0.9, win_lever))
     ), _, true).
 
 % ma_win_report(+Game, +Steps, +Learned, -File): write the won package to disk.

@@ -182,13 +182,13 @@ a3_assert_hazards(Count) :-
 % the arc3_mind workspace.
 a3_hold_jspace(Count) :-
     % Only when the J-Space workspace is available.
-    (   a3_defined(jspace:js_open(_)), a3_defined(jspace:js_hold(_, _, _, _))
+    (   a3_defined(jspace:jacobian_space_open(_)), a3_defined(jspace:jacobian_space_hold(_, _, _, _))
     % Open the workspace, guarded.
-    ->  catch(jspace:js_open(arc3_mind), _, true),
+    ->  catch(jspace:jacobian_space_open(arc3_mind), _, true),
         % Hold each game's identity and each of its relations.
         aggregate_all(count,
             ( a3_jspace_item(Concept, Strength),
-              catch(jspace:js_hold(arc3_mind, Concept, Strength, arc3_guide), _, fail) ),
+              catch(jspace:jacobian_space_hold(arc3_mind, Concept, Strength, arc3_guide), _, fail) ),
             Count)
     % No J-Space: nothing held.
     ;   Count = 0

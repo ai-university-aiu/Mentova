@@ -196,10 +196,10 @@ di_ingest_one(cfact(node, Relation, Args), DraftId,
 % J-Space workspace, best effort.
 di_hold_jspace(DraftId, Facts) :-
     catch((
-        jspace:js_open(draft(DraftId)),
+        jspace:jacobian_space_open(draft(DraftId)),
         forall(member(F, Facts),
             ( di_concept(F, Concept),
-              catch(jspace:js_hold(draft(DraftId), Concept, 0.8, draft(DraftId)), _, true) ))
+              catch(jspace:jacobian_space_hold(draft(DraftId), Concept, 0.8, draft(DraftId)), _, true) ))
     ), _, true).
 
 % di_concept(+CFact, -Concept): the J-Space concept term for a candidate fact.
