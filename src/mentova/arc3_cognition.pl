@@ -90,7 +90,7 @@ cog_principle(glass_box_transparency,
 cog_pillar(perception,            co_see,       'segment the whole grid into roled objects and read meters').
 cog_pillar(exploration,           co_explore,   'novelty-seeking, loop-avoiding, salient-target action selection').
 cog_pillar(state_graph_memory,    co_graph,     'a directed graph of frame-hash states and action transitions').
-cog_pillar(world_model,           co_wm,        'learn, verify, repair, and roll forward a transition model').
+cog_pillar(world_model,           world_model,        'learn, verify, repair, and roll forward a transition model').
 cog_pillar(hypothesis_commitment, co_hypo,      'generate, rank, and commit to a hypothesis without drift').
 cog_pillar(object_relations,      co_rel,       'relations between objects: adjacency, containment, vectors').
 cog_pillar(hierarchical_plan,     co_hplan,     'the Win-Game / OODA / controls plan reified onto the causal graph').
