@@ -16,7 +16,7 @@
                    object-centroid clicks instead of thousands of blind cells.
       co_core /    the harness induces a reified causal relation from each
       co_learn     frame delta and tags a penalty delta preventive.
-      co_goalinfer watches the frame changes before a win and hypothesises the
+      goal_inference watches the frame changes before a win and hypothesises the
                    unstated win condition, with a confidence reading.
       efficiency_governor     counts the actions spent and scores the run against a human
                    baseline the way the benchmark does.
@@ -93,7 +93,7 @@
     % The exploration policy (WP-397).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_explore/prolog')),
     % The goal inference (WP-398).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_goalinfer/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/goal_inference/prolog')),
     % The efficiency governor (WP-399).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/efficiency_governor/prolog')),
     % The protocol vocabulary and live adapter (WP-400).
@@ -108,8 +108,8 @@
 :- use_module(library(co_explore),
     [cox_reset/0, cox_choose/4, cox_mark_seen/1, cox_would_loop/1]).
 % Load the goal inference.
-:- use_module(library(co_goalinfer),
-    [cgi_reset/0, cgi_observe/2, cgi_hypothesise_goal/1, cgi_confidence/1]).
+:- use_module(library(goal_inference),
+    [goal_inference_reset/0, goal_inference_observe/2, goal_inference_hypothesise_goal/1, goal_inference_confidence/1]).
 % Load the efficiency governor.
 :- use_module(library(efficiency_governor),
     [efficiency_governor_reset/0, efficiency_governor_count/1, efficiency_governor_actions/2, efficiency_governor_set_baseline/2,
@@ -151,7 +151,7 @@ a3_reset :-
     % Reset the exploration memory.
     cox_reset,
     % Reset the goal inference.
-    cgi_reset,
+    goal_inference_reset,
     % Reset the efficiency governor (clears counters and baselines).
     efficiency_governor_reset,
     % Re-apply the configured human baseline so it survives the reset.
@@ -312,7 +312,7 @@ a3_turn(arc3_env(_, ActGoal, ActionsGoal, SolvedGoal), Frame, Frame1, Action, St
     ;   State = ongoing
     ),
     % Feed the delta and state to the goal inferencer.
-    cgi_observe(Delta, State),
+    goal_inference_observe(Delta, State),
     % Remember the new state unless it is a state already seen (a loop).
     ( cox_would_loop(Frame1) -> true ; cox_mark_seen(Frame1) ).
 
@@ -352,9 +352,9 @@ a3_bump_try(Action) :-
 % Define a3_inferred_goal: the win condition the agent inferred, with confidence.
 a3_inferred_goal(goal(Goal, confidence(Conf))) :-
     % The goal inferencer's best hypothesis.
-    cgi_hypothesise_goal(Goal),
+    goal_inference_hypothesise_goal(Goal),
     % Its confidence.
-    cgi_confidence(Conf).
+    goal_inference_confidence(Conf).
 
 % Define a3_efficiency: the RHAE-style ledger of the last run.
 a3_efficiency(efficiency(Human, Agent, Score)) :-

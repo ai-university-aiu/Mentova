@@ -51,9 +51,9 @@ run :-
           mentova_arc_chat:retractall(ma_priority_(ls20, _)),
           % A committed hypothesis that WOULD be used past the survey window.
           mentova_arc_chat:ma_actions_env(ls20, As), As = [A1 | _],
-          catch(mentova_arc_chat:hy_reset, _, true),
-          forall(between(1, 8, _), mentova_arc_chat:hy_support(ls20, productive(A1))),
-          mentova_arc_chat:hy_update_commitment(ls20),
+          catch(mentova_arc_chat:hypothesis_reset, _, true),
+          forall(between(1, 8, _), mentova_arc_chat:hypothesis_support(ls20, productive(A1))),
+          mentova_arc_chat:hypothesis_update_commitment(ls20),
           % Session count is 0 (fresh attempt) -> we are in the survey window.
           mentova_arc_chat:retractall(ma_session_n_(_)),
           mentova_arc_chat:assertz(ma_session_n_(0)),

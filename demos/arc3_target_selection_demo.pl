@@ -38,8 +38,8 @@ ts_clean(G) :-
     mentova_arc_chat:retractall(ma_deadly_colour_(G, _)),
     mentova_arc_chat:retractall(ma_win_path_(G, _)),
     mentova_arc_chat:retractall(ma_meter_(G, _, _, _)),
-    catch(mentova_arc_chat:hy_reset, _, true),
-    catch(mentova_arc_chat:cgi_reset, _, true).
+    catch(mentova_arc_chat:hypothesis_reset, _, true),
+    catch(mentova_arc_chat:goal_inference_reset, _, true).
 
 % A convenience: run the selector on a synthetic inventory.
 ts_pick(G, Items, Pos, Reason) :-
@@ -56,7 +56,7 @@ run :-
     report('AC-TS-001',
         ( ts_clean(G),
           mentova_arc_chat:assertz(ma_avatar_(G, 0, 0)),
-          mentova_arc_chat:cgi_observe([changed(1, 1, 0, 4)], win),
+          mentova_arc_chat:goal_inference_observe([changed(1, 1, 0, 4)], win),
           Items1 = [ seen(a, 5, 3, cell(0, 2), piece),
                      seen(b, 4, 3, cell(0, 8), piece) ],
           ts_pick(G, Items1, Pos1, Reason1),
@@ -68,8 +68,8 @@ run :-
     report('AC-TS-002',
         ( ts_clean(G),
           mentova_arc_chat:assertz(ma_avatar_(G, 0, 0)),
-          forall(between(1, 8, _), mentova_arc_chat:hy_support(G, productive(select(3, 3)))),
-          mentova_arc_chat:hy_update_commitment(G),
+          forall(between(1, 8, _), mentova_arc_chat:hypothesis_support(G, productive(select(3, 3)))),
+          mentova_arc_chat:hypothesis_update_commitment(G),
           Items2 = [ seen(a, 5, 3, cell(0, 1), piece),
                      seen(b, 5, 3, cell(3, 3), piece) ],
           ts_pick(G, Items2, Pos2, Reason2),
@@ -96,7 +96,7 @@ run :-
     report('AC-TS-004',
         ( ts_clean(G),
           mentova_arc_chat:assertz(ma_avatar_(G, 0, 0)),
-          mentova_arc_chat:cgi_observe([changed(1, 1, 0, 4)], win),
+          mentova_arc_chat:goal_inference_observe([changed(1, 1, 0, 4)], win),
           mentova_arc_chat:assertz(ma_avoid_cell_(G, pos(0, 1))),
           Items4 = [ seen(a, 4, 3, cell(0, 1), piece),
                      seen(b, 5, 3, cell(0, 6), piece) ],

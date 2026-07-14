@@ -1,7 +1,7 @@
 /*  Mentova — Claude-Facing Agent Interface Demonstration
 
     Proves the machine-facing agentview gives a Claude session everything it needs
-    to see the game and reason about it: the grid as digit lines, co_see's object
+    to see the game and reason about it: the grid as digit lines, grid_perception's object
     inventory with roles and positions, the meters, the labelled controls, and the
     current hierarchical plan tree. Acting and teaching reuse the existing mentor
     endpoints, so this demo checks the read-side data the agentview assembles.

@@ -4,7 +4,7 @@
     Bridge) — drive one shared step spine (ma_do_step) and one shared choice loop
     (ma_choose), and now one shared, always-persisted, game-keyed COGNITIVE store.
     Every step of a guided run folds its transition into the executable world model
-    (world_model), the hypothesis-commitment pack (co_hypo), goal inference (co_goalinfer)
+    (world_model), the hypothesis-commitment pack (hypothesis), goal inference (goal_inference)
     and the budget governor (efficiency_governor); those learnings are written to disk keyed by
     game; and a later Solo run reloads them and REASONS FROM them.
 
@@ -58,8 +58,8 @@ run :-
     % Start clean in guided mode on the navigation game.
     ma_set_mode(guided), ma_set_game(G), ma_reset_guidance,
     catch(mentova_arc_chat:world_model_reset, _, true),
-    catch(mentova_arc_chat:hy_reset, _, true),
-    catch(mentova_arc_chat:cgi_reset, _, true),
+    catch(mentova_arc_chat:hypothesis_reset, _, true),
+    catch(mentova_arc_chat:goal_inference_reset, _, true),
     % Drive several REAL guided steps through the shared spine (ma_do_step), exactly
     % as a mentor's manual actions do — this folds each transition into the world
     % model and the rest of the cognitive stack.
@@ -73,13 +73,13 @@ run :-
     forall(between(1, 8, _),
         mentova_arc_chat:ma_cog_learn(G, ADown, [changed(0, 0, 1, 2)], learned)),
     % And a couple of winning observations so goal inference has a colour to carry.
-    catch(mentova_arc_chat:cgi_observe([changed(1, 1, 0, 4)], win), _, true),
-    catch(mentova_arc_chat:cgi_observe([changed(2, 2, 0, 4)], win), _, true),
+    catch(mentova_arc_chat:goal_inference_observe([changed(1, 1, 0, 4)], win), _, true),
+    catch(mentova_arc_chat:goal_inference_observe([changed(2, 2, 0, 4)], win), _, true),
 
     % AC-001: the guided run committed to the productive action and built a world
     % model, and persisting writes BOTH to the durable disk store keyed by game.
     report('AC-SC-001',
-        ( mentova_arc_chat:hy_committed(G, productive(ADown)),
+        ( mentova_arc_chat:hypothesis_committed(G, productive(ADown)),
           mentova_arc_chat:world_model_stats(G, stats(_, T0)), T0 > 0,
           mentova_arc_chat:ma_persist_game(G),
           sc_file(File), mentova_arc_chat:ma_read_terms(File, Terms),
@@ -90,16 +90,16 @@ run :-
     % AC-002: after the wipe (a restart), nothing is left in memory.
     report('AC-SC-002',
         ( catch(mentova_arc_chat:world_model_reset, _, true),
-          catch(mentova_arc_chat:hy_reset, _, true),
-          catch(mentova_arc_chat:cgi_reset, _, true),
-          \+ mentova_arc_chat:hy_committed(G, _),
+          catch(mentova_arc_chat:hypothesis_reset, _, true),
+          catch(mentova_arc_chat:goal_inference_reset, _, true),
+          \+ mentova_arc_chat:hypothesis_committed(G, _),
           mentova_arc_chat:world_model_stats(G, stats(_, 0)) )),
 
     % ---- SOLO BOOT: reload the durable store -----------------------------------
     % AC-003: reloading restores the guided run's committed hypothesis and model.
     report('AC-SC-003',
         ( mentova_arc_chat:ma_load_learnings,
-          mentova_arc_chat:hy_committed(G, productive(ADown)),
+          mentova_arc_chat:hypothesis_committed(G, productive(ADown)),
           mentova_arc_chat:world_model_stats(G, stats(_, T1)), T1 > 0 )),
 
     % AC-004: a SOLO choice now USES the restored committed hypothesis. Clear the
@@ -128,7 +128,7 @@ run :-
 
     % AC-005: goal inference made in the guided run also survived the round-trip.
     report('AC-SC-005',
-        ( mentova_arc_chat:cgi_hypothesise_goal(reach_colour(4)) )),
+        ( mentova_arc_chat:goal_inference_hypothesise_goal(reach_colour(4)) )),
 
     nb_getval(sc_fails, F),
     ( F =:= 0

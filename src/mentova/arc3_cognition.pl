@@ -87,15 +87,15 @@ cog_principle(glass_box_transparency,
 
 % cog_pillar(?Capability, ?Pack, ?Role): the architecture Mentova is building toward
 % the north-star, each a concrete pack that realises part of the winning recipe.
-cog_pillar(perception,            co_see,       'segment the whole grid into roled objects and read meters').
+cog_pillar(perception,            grid_perception,       'segment the whole grid into roled objects and read meters').
 cog_pillar(exploration,           co_explore,   'novelty-seeking, loop-avoiding, salient-target action selection').
 cog_pillar(state_graph_memory,    state_graph,     'a directed graph of frame-hash states and action transitions').
 cog_pillar(world_model,           world_model,        'learn, verify, repair, and roll forward a transition model').
-cog_pillar(hypothesis_commitment, co_hypo,      'generate, rank, and commit to a hypothesis without drift').
+cog_pillar(hypothesis_commitment, hypothesis,      'generate, rank, and commit to a hypothesis without drift').
 cog_pillar(object_relations,      object_relations,       'relations between objects: adjacency, containment, vectors').
 cog_pillar(hierarchical_plan,     hierarchical_planning,     'the Win-Game / OODA / controls plan reified onto the causal graph').
 cog_pillar(verify_before_act,     verification,    'predict a move fatal before spending a real action on it').
-cog_pillar(goal_inference,        co_goalinfer, 'hypothesise the unstated win condition from winning deltas').
+cog_pillar(goal_inference,        goal_inference, 'hypothesise the unstated win condition from winning deltas').
 cog_pillar(efficiency,            efficiency_governor,      'the action-budget governor and RHAE-style scoring').
 cog_pillar(cross_game_priors,     arc3_priors,   'mechanic archetypes abstracted from studied games, for the unseen').
 cog_pillar(ooda_skill,            ooda_knowledge,'the OODA methodology held in J-Space as a concept it reasons with').

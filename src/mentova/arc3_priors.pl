@@ -7,7 +7,7 @@
     This module reads across every a3_rel and a3_hazard fact and lifts them into a
     handful of generalizable ARCHETYPES — the recurring shapes of a mechanic —
     and the play PRIORS that follow from them. On a game we have never seen, the
-    priors still apply: if perception (co_see) reports a shrinking bar, the
+    priors still apply: if perception (grid_perception) reports a shrinking bar, the
     resource-refill prior says "seek a collectible to top it up"; if it reports
     loose pieces next to the avatar, the pushable-block prior says "try shoving
     one".
@@ -22,7 +22,7 @@
         derived from its own a3_rel/a3_hazard facts (never hard-coded).
       - ap_win_recipe/2 is GAME-KEYED: the abstracted "how this game is won".
       - ap_prior/3 and ap_generic_prior/3 are the GENERAL layer: the play advice
-        an archetype (or a co_see role on an unseen game) implies. These carry no
+        an archetype (or a grid_perception role on an unseen game) implies. These carry no
         game id — they are meant to transfer.
 
     Loaded by arc3_knowledge.pl / the chat stack; queried by the Mentova solo
@@ -50,7 +50,7 @@
     ap_game_resource/2,
     % ap_prior/3: an archetype's generalizable play prior (priority, advice).
     ap_prior/3,
-    % ap_generic_prior/3: a co_see role's generalizable prior on an unseen game.
+    % ap_generic_prior/3: a grid_perception role's generalizable prior on an unseen game.
     ap_generic_prior/3,
     % ap_priors_for_roles/2: the generic priors that apply to a set of roles.
     ap_priors_for_roles/2,
@@ -253,7 +253,7 @@ ap_win_recipe(Game, win_by(Family, Cause)) :-
     ( ap_cause_family(Cause, Family) -> true ; Family = goal_condition ).
 
 % ap_resource_hazard(?Family): the hazard names that denote a depleting resource
-% (as opposed to a contact death). These are the meters co_see should track.
+% (as opposed to a contact death). These are the meters grid_perception should track.
 ap_resource_hazard(timer_runs_out).
 ap_resource_hazard(budget_runs_out).
 ap_resource_hazard(energy_runs_out).
@@ -306,7 +306,7 @@ ap_prior(program_execution,   50,
 ap_prior(transform_shape,     50,
     'Route the piece through the zones/walls that reshape or recolour it toward the target.').
 
-% ap_generic_prior(?Role, ?Priority, ?Advice): the generalizable prior a co_see
+% ap_generic_prior(?Role, ?Priority, ?Advice): the generalizable prior a grid_perception
 % object ROLE implies on a game we have never seen. This is how the twenty-five
 % guides pay off on the twenty-sixth game: perception + these priors, no memory.
 % A meter/life-bar is a resource — read it every step.
@@ -323,7 +323,7 @@ ap_generic_prior(field,  50,
     'A large block is terrain, a wall, or a goal-zone: note its boundary; the avatar likely cannot cross it, or must reach it.').
 
 % ap_priors_for_roles(+Roles, -Priors): the generic priors that apply to a set of
-% co_see roles, highest priority first. Roles is a list of role atoms (with dups
+% grid_perception roles, highest priority first. Roles is a list of role atoms (with dups
 % allowed); the output is de-duplicated advice sorted by descending priority.
 ap_priors_for_roles(Roles, Priors) :-
     % Every distinct (priority, role, advice) whose role appears in Roles.

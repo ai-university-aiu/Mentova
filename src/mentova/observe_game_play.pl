@@ -138,9 +138,9 @@ ogp_stuck(Trace, stuck(MaxStale, AtStep)) :-
 % hypothesis, how many general laws did the world model learn, did it infer a goal,
 % and how many times did it die.
 ogp_cognition(Game, cog(Committed, Laws, Goal, Deaths)) :-
-    ( catch(mentova_arc_chat:hy_committed(Game, HC), _, fail) -> Committed = HC ; Committed = none ),
+    ( catch(mentova_arc_chat:hypothesis_committed(Game, HC), _, fail) -> Committed = HC ; Committed = none ),
     ( catch(aggregate_all(count, mentova_arc_chat:world_model_law(Game, _, _), Laws), _, fail) -> true ; Laws = 0 ),
-    ( catch(mentova_arc_chat:cgi_hypothesise_goal(G0), _, fail) -> Goal = G0 ; Goal = none ),
+    ( catch(mentova_arc_chat:goal_inference_hypothesise_goal(G0), _, fail) -> Goal = G0 ; Goal = none ),
     ( catch(aggregate_all(count, mentova_arc_chat:ma_death_(Game, _, _), Deaths), _, fail) -> true ; Deaths = 0 ).
 
 % ogp_missing(...): the diagnostics — WHAT THE RUN IS MISSING, each a flag the mentor
@@ -179,7 +179,7 @@ ogp_interventions(Missing, Interventions) :-
 ogp_intervention(died_early,
     'Died early: teach the deadly cell/colour as a hazard (hint_preventive) or a control-map correction, so the survival-first survey routes around it; consider lengthening the survey window for this game.').
 ogp_intervention(no_committed_hypothesis,
-    'No committed hypothesis: the productive action is unclear. Mentor a hint_action naming the action that advances this game, or write a CRO to the lattice (co_learn_causal) linking the right action to its effect, so co_hypo can commit.').
+    'No committed hypothesis: the productive action is unclear. Mentor a hint_action naming the action that advances this game, or write a CRO to the lattice (co_learn_causal) linking the right action to its effect, so hypothesis can commit.').
 ogp_intervention(no_world_model_law,
     'No world-model law: effects look inconsistent (a changing HUD/counter is masking them). Teach the volatile region, or add a context feature to world_model so the effect becomes learnable.').
 ogp_intervention(no_goal_inferred,
