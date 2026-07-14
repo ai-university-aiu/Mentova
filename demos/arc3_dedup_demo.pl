@@ -26,7 +26,7 @@
 :- use_module('../src/mentova/arc3_knowledge').
 % The stores under test.
 :- use_module(library(node_facts)).
-:- use_module(library(co_core)).
+:- use_module(library(causal_core)).
 :- use_module(library(aggregate), [aggregate_all/3]).
 
 % report(+Id, +Goal): print PASS or FAIL for one criterion.
@@ -38,7 +38,7 @@ report(Id, Goal) :-
 % nf_count(-N): total lattice node-facts.
 nf_count(N) :- aggregate_all(count, node_facts:lattice_node_fact(_,_,_,_,_), N).
 % arc_cro_count(-N): arc3-sourced relations.
-arc_cro_count(N) :- aggregate_all(count, co_core:co_cro_(_,_,_,_,_,_,_,prov(arc3_guide,_,_)), N).
+arc_cro_count(N) :- aggregate_all(count, causal_core:causal_core_cro_(_,_,_,_,_,_,_,prov(arc3_guide,_,_)), N).
 
 % run_dedup_demo: ingest, re-ingest, and check nothing duplicated.
 run_dedup_demo :-
@@ -62,7 +62,7 @@ run_dedup_demo :-
 
     % AC-004: the dedup sweep finds nothing to remove on the clean store.
     report('AC-DUP-004',
-        ( node_facts:node_facts_dedup(DF), co_core:co_cro_dedup(DC),
+        ( node_facts:node_facts_dedup(DF), causal_core:causal_core_cro_dedup(DC),
           DF =:= 0, DC =:= 0 )),
 
     % AC-005: the RAW doors still make EXACT duplicates, and dedup removes them.
@@ -91,15 +91,15 @@ run_dedup_demo :-
     % AC-008: a near-duplicate RELATION (same cause->effect, different provenance)
     % is likewise kept as a flagged variant, not merged.
     report('AC-DUP-008',
-        ( co_core:co_new_cro_unique([g(demo, step_on(ring))], [refill(timer)],
+        ( causal_core:causal_core_new_cro_unique([g(demo, step_on(ring))], [refill(timer)],
               temporal(0,0,instant), sufficient, 0.8, [], prov(draft_a, cite_a, 0.8), RA),
-          co_core:co_new_cro_unique([g(demo, step_on(ring))], [refill(timer)],
+          causal_core:causal_core_new_cro_unique([g(demo, step_on(ring))], [refill(timer)],
               temporal(0,0,instant), sufficient, 0.8, [], prov(draft_b, cite_b, 0.8), RB),
           RA \== RB,
-          co_core:co_cro_variant(_, _, RDeltas), member(delta(prov, _, _), RDeltas) )),
+          causal_core:causal_core_cro_variant(_, _, RDeltas), member(delta(prov, _, _), RDeltas) )),
 
     format("~nnode-facts: ~w (unchanged after re-ingest ~w)  arc3 relations: ~w -> ~w~n",
            [NF1, NF2, CR1, CR2]),
     ( node_facts:node_fact_variants(FV) -> length(FV, FVn) ; FVn = 0 ),
-    ( co_core:co_cro_variants(RV) -> length(RV, RVn) ; RVn = 0 ),
+    ( causal_core:causal_core_cro_variants(RV) -> length(RV, RVn) ; RVn = 0 ),
     format("flagged variants: ~w node-facts, ~w relations~n~n", [FVn, RVn]).

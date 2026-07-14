@@ -16,7 +16,7 @@
         swipl -l demos/draft_ingest_demo.pl -g run_draft_demo -t halt
 */
 
-% Load the full stack (co_core, node_facts, lattice, jspace) + the pipeline.
+% Load the full stack (causal_core, node_facts, lattice, jspace) + the pipeline.
 :- use_module('../src/mentova/mentova_chat').
 :- use_module('../src/mentova/draft_ingest').
 :- use_module(library(lists), [member/2]).

@@ -130,7 +130,7 @@
     % The grid pack for frames and diffs.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/grid/prolog')),
     % The Causalontology core.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_core/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_core/prolog')),
     % The hinge.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hinge/prolog')),
     % The noun backbone.
@@ -172,7 +172,7 @@
 % Load the hinge for clue-attached dispositions.
 :- use_module(library(co_hinge), [co_realizable_add/3, co_realized_in_add/2]).
 % Load the core for provenance-tagged clue relations and reinforcement.
-:- use_module(library(co_core), [co_new_cro/8, co_cro/8, co_strengthen/2, co_the_cro/2, co_cro_assert/1]).
+:- use_module(library(causal_core), [causal_core_new_cro/8, causal_core_cro/8, causal_core_strengthen/2, causal_core_the_cro/2, causal_core_cro_assert/1]).
 % Load the learner for preventive enforcement.
 :- use_module(library(co_learn), [co_learn_preventive/2, co_avoid/1, co_learn_causal/2]).
 % Load the harness for curiosity choice and frame deltas.
@@ -1264,7 +1264,7 @@ ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens, Graph
     % The object labels for this game.
     findall(cell(R, C)-K, ma_label_(Game, pos(R, C), K), Labels),
     % How many causal relations have been learned for this game (its g(Game,_) heads).
-    ( catch(aggregate_all(count, co_cro(_, [g(Game, _)|_], _, _, _, _, _, _), CroCount), _, fail)
+    ( catch(aggregate_all(count, causal_core_cro(_, [g(Game, _)|_], _, _, _, _, _, _), CroCount), _, fail)
     -> true ; CroCount = 0 ),
     % The J-Lens reading of the solo workspace.
     ma_jlens(JLens),
@@ -1365,9 +1365,9 @@ ma_reinforce_path(Game, Actions, Count) :-
     % Strengthen every non-preventive relation whose cause is this game's action.
     findall(Id,
         ( member(A, Actions),
-          catch(co_cro(Id, [g(Game, A)], _, _, M, _, _, _), _, fail),
+          catch(causal_core_cro(Id, [g(Game, A)], _, _, M, _, _, _), _, fail),
           M \== preventive,
-          catch(co_strengthen(Id, 0.1), _, true) ),
+          catch(causal_core_strengthen(Id, 0.1), _, true) ),
         Ids),
     % Count the distinct relations reinforced.
     sort(Ids, Unique), length(Unique, Count).
@@ -1540,7 +1540,7 @@ ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinP
     % Replay each graph edge, which rebuilds this game's nodes, tested, and dead marks.
     forall(member(edge(F, EA, T), Edges), catch(state_graph_note(F, EA, T), _, true)),
     % Restore each causal relation through the validating front door.
-    forall(member(Cro, Cros), catch(co_cro_assert(Cro), _, true)),
+    forall(member(Cro, Cros), catch(causal_core_cro_assert(Cro), _, true)),
     % Its highest-impact action record.
     retractall(ma_impact_(Game, _, _)),
     % Restore each discovered mechanic so the recall nudge survives a restart.
@@ -1636,7 +1636,7 @@ ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, 
         Edges),
     % This game's causal relations, whose cause names the game.
     findall(cro(Id, Ca, Ef, Te, Mo, St, Co, Pr),
-        ( co_the_cro(Id, cro(Id, Ca, Ef, Te, Mo, St, Co, Pr)), memberchk(g(Game, _), Ca) ),
+        ( causal_core_the_cro(Id, cro(Id, Ca, Ef, Te, Mo, St, Co, Pr)), memberchk(g(Game, _), Ca) ),
         Cros),
     % This game's highest-impact actions (the discovered mechanics worth recalling).
     findall(impact(Act, Mag), ma_impact_(Game, Act, Mag), Impacts),
@@ -1839,9 +1839,9 @@ ma_inject(hint_reinforce) :-
     % Fetch the last action, if any.
     (   ma_last_(Action, _)
     % Strengthen every relation whose cause is that action in this game.
-    ->  forall(co_cro(Id, [g(Game, Action)], _, _, M, _, _, _),
+    ->  forall(causal_core_cro(Id, [g(Game, Action)], _, _, M, _, _, _),
                % Preventive relations are not reinforced.
-               ( M == preventive -> true ; co_strengthen(Id, 0.1) ))
+               ( M == preventive -> true ; causal_core_strengthen(Id, 0.1) ))
     % No last action: nothing to reinforce.
     ;   true
     ),

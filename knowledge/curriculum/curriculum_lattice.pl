@@ -184,18 +184,18 @@ ci_anchor_facts(Count) :-
 
 % Define ci_assert_cros: assert each sound relation as a reified CRO.
 ci_assert_cros(Count) :-
-    % Only assert when the co_core CRO constructor is available.
-    (   ci_defined(co_core:co_new_cro_unique(_, _, _, _, _, _, _, _))
+    % Only assert when the causal_core CRO constructor is available.
+    (   ci_defined(causal_core:causal_core_new_cro_unique(_, _, _, _, _, _, _, _))
     % Build one CRO per sound relation, carrying the citation as provenance.
     ->  aggregate_all(count,
             ( ci_any_cro(Grade, makes_sound, Subject, Sound, Citation),
               % A subject "makes" a sound: cause -> effect, high strength.
-              catch(co_core:co_new_cro_unique([makes(Subject)], [sound(Sound)],
+              catch(causal_core:causal_core_new_cro_unique([makes(Subject)], [sound(Sound)],
                         temporal(0, 0, instant), sufficient, 0.9,
                         [grade(Grade)], prov(curriculum, Citation, 0.9), _),
                     _, fail) ),
             Count)
-    % No co_core available: the sound relations stay queryable via ci_sound/2.
+    % No causal_core available: the sound relations stay queryable via ci_sound/2.
     ;   Count = 0 ).
 
 % Define ci_defined: true when Head's predicate is defined, never throwing.

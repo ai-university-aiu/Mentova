@@ -18,7 +18,7 @@
 
     Outputs (all under data/lattice_snapshot/, committed):
       lattice_<nexus>.pl        the materialised lattice node-facts, one file per nexus
-      causalontology_cros.pl    every Causalontology Reasoning Object (co_cro/8)
+      causalontology_cros.pl    every Causalontology Reasoning Object (causal_core_cro/8)
       arc_learnings_snapshot.pl the runtime per-game learned store (secret-free)
       MANIFEST.txt              counts, provenance, and the regeneration command
 */
@@ -95,14 +95,14 @@ le_dump_one_nexus(Dir, Nx, Acc0, Acc) :-
 
 % le_dump_cros(+Dir, -CroCount): write every Causalontology Reasoning Object to one file.
 le_dump_cros(Dir, CroCount) :-
-    % Collect every CRO term (co_cro/8) present.
+    % Collect every CRO term (causal_core_cro/8) present.
     findall(cro(A,B,C,D,E,F,G,H),
-            catch(co_core:co_cro(A,B,C,D,E,F,G,H), _, fail), Cros),
+            catch(causal_core:causal_core_cro(A,B,C,D,E,F,G,H), _, fail), Cros),
     % Its snapshot file.
     atomic_list_concat([Dir, '/causalontology_cros.pl'], File),
     % Write a headed, re-loadable list of CROs.
     setup_call_cleanup(open(File, write, S),
-        ( le_header(S, "Causalontology Reasoning Objects (co_cro/8) — materialised snapshot"),
+        ( le_header(S, "Causalontology Reasoning Objects (causal_core_cro/8) — materialised snapshot"),
           forall(member(T, Cros), ( write_term(S, T, [quoted(true)]), write(S, '.\n') )) ),
         close(S)),
     % How many were written.
@@ -187,7 +187,7 @@ le_manifest(Dir, NexusCount, NodeFactCount, CroCount, GameCount, TermCount) :-
           format(S, "  learned-store terms  : ~w~n~n", [TermCount]),
           format(S, "Files:~n", []),
           format(S, "  lattice_<nexus>.pl        node-facts per nexus (via lattice_dump/2)~n", []),
-          format(S, "  causalontology_cros.pl    every co_cro/8 reasoning object~n", []),
+          format(S, "  causalontology_cros.pl    every causal_core_cro/8 reasoning object~n", []),
           format(S, "  arc_learnings_snapshot.pl the runtime per-game learned store (secret-free)~n~n", []),
           format(S, "Provenance and reproducibility:~n", []),
           format(S, "  The BASE lattice is rebuilt deterministically at boot from committed sources~n", []),

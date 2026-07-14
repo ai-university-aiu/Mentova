@@ -13,7 +13,7 @@ Counts at export time:
 
 Files:
   lattice_<nexus>.pl        node-facts per nexus (via lattice_dump/2)
-  causalontology_cros.pl    every co_cro/8 reasoning object
+  causalontology_cros.pl    every causal_core_cro/8 reasoning object
   arc_learnings_snapshot.pl the runtime per-game learned store (secret-free)
 
 Provenance and reproducibility:

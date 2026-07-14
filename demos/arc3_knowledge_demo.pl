@@ -12,7 +12,7 @@
       AC-KT-003: Mentova knows ls20 rings refill the step timer.
       AC-KT-004: the knowledge is game-keyed — vc33 does NOT know rings.
       AC-KT-005: the ls20 ring relation is a Causalontology CRO cited to its guide.
-      AC-KT-006: the relation reached the causal predictor (co_predict).
+      AC-KT-006: the relation reached the causal predictor (causal_core_predict).
       AC-KT-007: recall answers "what does Mentova know about ls20 rings?".
       AC-KT-008: the facts are anchored as lattice node-facts with citations.
       AC-KT-009: the J-Space workspace holds the game concepts.
@@ -52,12 +52,12 @@ run_arc3_knowledge_demo :-
 
     % AC-005: the ls20 ring relation is a Causalontology CRO cited to its guide.
     report('AC-KT-005',
-        ( co_core:co_cro(_, [g(ls20, step_on(ring))], [refill(timer)],
+        ( causal_core:causal_core_cro(_, [g(ls20, step_on(ring))], [refill(timer)],
                          _, _, _, _, prov(arc3_guide, source(arc3_guide, 'assets/ls20.txt'), _)) )),
 
     % AC-006: the relation reached the causal predictor (used by the solver).
     report('AC-KT-006',
-        ( co_core:co_predict(g(ls20, step_on(ring)), refill(timer)) )),
+        ( causal_core:causal_core_predict(g(ls20, step_on(ring)), refill(timer)) )),
 
     % AC-007: recall answers "what does Mentova know about ls20 rings?".
     report('AC-KT-007',

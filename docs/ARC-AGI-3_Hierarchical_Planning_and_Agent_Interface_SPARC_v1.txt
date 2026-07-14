@@ -51,15 +51,15 @@ PSEUDOCODE
       if Children:
         lay out ordered waypoints Pre = W0 .. Wn = Post
         reify child i over the slice W(i-1) -> W(i)
-        co_decompose_add(Id, [child ids])   % children ARE the mechanism sub-graph
+        causal_core_decompose_add(Id, [child ids])   % children ARE the mechanism sub-graph
     top call: reify(Tree, Root, begin(win(Game)), end(win(Game)))
 
-  because the children chain the parent's waypoints, co_hierarchy_consistent(Id)
+  because the children chain the parent's waypoints, causal_core_hierarchy_consistent(Id)
   holds at every level: the coarse "achieve this goal" relation is consistent with
   the composition of its parts.
 
   read the plan back from the causal graph alone:
-    plan_from_cros(Id): Goal from the CRO's provenance; children from co_mechanism.
+    plan_from_cros(Id): Goal from the CRO's provenance; children from causal_core_mechanism.
 
   locate a choice within the plan:
     classify_basis(Basis) -> (OODA phase, concrete leaf)
@@ -67,13 +67,13 @@ PSEUDOCODE
 
 ARCHITECTURE
 
- - New PrologAI pack co_hplan (WP-404, Layer 379), requiring co_core and co_plan.
+ - New PrologAI pack co_hplan (WP-404, Layer 379), requiring causal_core and co_plan.
    Predicates: hp_win_plan/3, hp_reify/2, hp_plan_from_cros/2, hp_consistent/1,
    hp_render/2 (indented text), hp_render_json/2, hp_classify_basis/3,
    hp_ooda_phases/1, hp_phase_ops/2, hp_reset/0.
 
- - Mesh point: Causalontology core already provides co_decompose_add/2,
-   co_mechanism/2, and co_hierarchy_consistent/1 (a coarse CRO's mechanism is a
+ - Mesh point: Causalontology core already provides causal_core_decompose_add/2,
+   causal_core_mechanism/2, and causal_core_hierarchy_consistent/1 (a coarse CRO's mechanism is a
    sub-graph of finer CROs). co_hplan reifies onto exactly these, so the plan is a
    hierarchy of CROs, not a parallel data structure.
 

@@ -60,7 +60,7 @@ Committed output (data/lattice_snapshot/, ~1 MB, NOT git-ignored):
   lattice_locus_mentova_curriculum.pl   the curriculum nexus node-facts
   lattice_locus_mentova_arc3.pl         the arc3 game-knowledge nexus node-facts
   lattice_locus_mentova_drafts.pl       the drafts nexus node-facts
-  causalontology_cros.pl                every Causalontology Reasoning Object (co_cro/8)
+  causalontology_cros.pl                every Causalontology Reasoning Object (causal_core_cro/8)
   arc_learnings_snapshot.pl             the per-game learned store, secret-free and
                                         telemetry-pruned (essential knowledge kept)
   MANIFEST.txt                          counts, provenance, and the regeneration command
