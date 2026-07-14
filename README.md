@@ -3,12 +3,12 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/powered%20by-PrologAI-lemonchiffon?style=for-the-badge" alt="Powered by PrologAI">
-  <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-yellow?style=for-the-badge" alt="ARC-AGI-1: 400/400">
-  <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-goldenrod?style=for-the-badge" alt="48/48 Reasoning Types">
-  <img src="https://img.shields.io/badge/accomplishments-363-red?style=for-the-badge" alt="363 Accomplishments">
-  <img src="https://img.shields.io/badge/ARC--AGI--2-120%2F120%20%3D%20100.00%25-crimson?style=for-the-badge" alt="ARC-AGI-2: 120/120 = 100.00%">
-  <img src="https://img.shields.io/badge/glass--box-yes-darkred?style=for-the-badge" alt="Glass-Box">
+  <img src="https://img.shields.io/badge/powered%20by-PrologAI-FFCE59?style=for-the-badge" alt="Powered by PrologAI">
+  <img src="https://img.shields.io/badge/ARC--AGI--1-400%2F400%20%3D%20100%25-FA842F?style=for-the-badge" alt="ARC-AGI-1: 400/400">
+  <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-E44B19?style=for-the-badge" alt="48/48 Reasoning Types">
+  <img src="https://img.shields.io/badge/accomplishments-363-B22313?style=for-the-badge" alt="363 Accomplishments">
+  <img src="https://img.shields.io/badge/ARC--AGI--2-120%2F120%20%3D%20100.00%25-670100?style=for-the-badge" alt="ARC-AGI-2: 120/120 = 100.00%">
+  <img src="https://img.shields.io/badge/glass--box-yes-3A0000?style=for-the-badge" alt="Glass-Box">
 </p>
 
 <p align="center">
