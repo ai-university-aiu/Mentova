@@ -87,9 +87,9 @@ a3_ingest :-
 % its arc3_guide provenance, so a re-ingest is idempotent.
 a3_clear :-
     % Only when the Causalontology store is present.
-    (   a3_defined(co_core:co_cro(_, _, _, _, _, _, _, _))
+    (   a3_defined(causal_core:causal_core_cro(_, _, _, _, _, _, _, _))
     % Retract every CRO whose provenance names an arc3 guide, in one sweep.
-    ->  catch(retractall(co_core:co_cro_(_, _, _, _, _, _, _, prov(arc3_guide, _, _))), _, true)
+    ->  catch(retractall(causal_core:causal_core_cro_(_, _, _, _, _, _, _, prov(arc3_guide, _, _))), _, true)
     % No store: nothing to clear.
     ;   true
     ).
@@ -146,35 +146,35 @@ a3_any_fact(Game, arc3_note, [Game, Key, Value]) :-
 
 % Define a3_assert_cros: assert each cause-effect relation as a game-keyed CRO.
 a3_assert_cros(Count) :-
-    % Only when the co_core CRO constructor is available.
-    (   a3_defined(co_core:co_new_cro_unique(_, _, _, _, _, _, _, _))
+    % Only when the causal_core CRO constructor is available.
+    (   a3_defined(causal_core:causal_core_new_cro_unique(_, _, _, _, _, _, _, _))
     % Build one CRO per relation, cause keyed by game, cited to the guide.
     ->  aggregate_all(count,
             ( a3_rel(Game, Cause, Effect),
               a3_cite(Game, Cite),
-              catch(co_core:co_new_cro_unique([g(Game, Cause)], [Effect],
+              catch(causal_core:causal_core_new_cro_unique([g(Game, Cause)], [Effect],
                         temporal(0, 0, instant), sufficient, 0.85,
                         [game(Game)], prov(arc3_guide, Cite, 0.85), _),
                     _, fail) ),
             Count)
-    % No co_core: the relations stay queryable via a3_rel/3.
+    % No causal_core: the relations stay queryable via a3_rel/3.
     ;   Count = 0
     ).
 
 % Define a3_assert_hazards: record each hazard as a game-keyed preventive CRO.
 a3_assert_hazards(Count) :-
     % Only when the CRO constructor is available.
-    (   a3_defined(co_core:co_new_cro_unique(_, _, _, _, _, _, _, _))
+    (   a3_defined(causal_core:causal_core_new_cro_unique(_, _, _, _, _, _, _, _))
     % One preventive relation per hazard: this game-state ends the run.
     ->  aggregate_all(count,
             ( a3_hazard(Game, Hazard),
               a3_cite(Game, Cite),
-              catch(co_core:co_new_cro_unique([g(Game, Hazard)], [ends(run)],
+              catch(causal_core:causal_core_new_cro_unique([g(Game, Hazard)], [ends(run)],
                         temporal(0, 0, instant), preventive, 0.9,
                         [game(Game)], prov(arc3_guide, Cite, 0.9), _),
                     _, fail) ),
             Count)
-    % No co_core: hazards stay queryable via a3_hazard/2.
+    % No causal_core: hazards stay queryable via a3_hazard/2.
     ;   Count = 0
     ).
 
@@ -215,11 +215,11 @@ a3_cite(Game, source(arc3_guide, Path)) :-
 % from the Causalontology when present, else from the loaded facts.
 a3_knows(Game, Cause, Effect) :-
     % Prefer the ingested CROs (proves the transfer reached the mind).
-    (   a3_defined(co_core:co_cro(_, _, _, _, _, _, _, _)),
-        co_core:co_cro(_, [g(Game, Cause)], [Effect], _, Modality, _, _, _),
+    (   a3_defined(causal_core:causal_core_cro(_, _, _, _, _, _, _, _)),
+        causal_core:causal_core_cro(_, [g(Game, Cause)], [Effect], _, Modality, _, _, _),
         Modality \== preventive
     % Otherwise fall back to the loaded relation facts.
-    ;   \+ a3_defined(co_core:co_cro(_, _, _, _, _, _, _, _)),
+    ;   \+ a3_defined(causal_core:causal_core_cro(_, _, _, _, _, _, _, _)),
         a3_rel(Game, Cause, Effect)
     ).
 

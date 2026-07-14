@@ -1,7 +1,7 @@
 /*  Mentova — Draft-Document Ingestion Pipeline
 
     Turns a plain-text draft document into candidate facts, carries each through the
-    NUANCED fact doors (co_new_cro_nuanced for relations, anchor_node_nuanced for
+    NUANCED fact doors (causal_core_new_cro_nuanced for relations, anchor_node_nuanced for
     node-facts, plus a J-Space hold), and emits a per-draft ingestion report saying
     exactly what was new, what was an exact repeat (strengthened), and what was a
     near-duplicate variant — with the delta that flags the difference. Every fact
@@ -46,7 +46,7 @@
     di_report_json/2
 ]).
 
-% The stores this pipeline drives (co_core, node_facts, lattice, jspace) are called
+% The stores this pipeline drives (causal_core, node_facts, lattice, jspace) are called
 % module-qualified and guarded, NOT use_module'd here, because their library paths
 % may not be registered yet when this file is loaded as a dependency — the same
 % robust pattern arc3_knowledge uses.
@@ -181,7 +181,7 @@ di_open_nexus :-
 di_ingest_one(cfact(cro, Causes, Effects, Modality, Kind), DraftId,
               result(cro(Causes, Effects, Modality), Status)) :-
     catch(
-        co_core:co_new_cro_nuanced(Causes, Effects, temporal(0, 0, instant), Modality,
+        causal_core:causal_core_new_cro_nuanced(Causes, Effects, temporal(0, 0, instant), Modality,
             0.80, [kind(Kind)], prov(draft, draft(DraftId), 0.80), _Id, Status),
         _, Status = error).
 % A node-fact: carry the draft as a referent, so cross-draft near-duplicates vary

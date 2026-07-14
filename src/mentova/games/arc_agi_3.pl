@@ -14,7 +14,7 @@
                    one, ties break to the least-tried, hazards are never
                    chosen — and expands the ACTION6 cell-select to a few
                    object-centroid clicks instead of thousands of blind cells.
-      co_core /    the harness induces a reified causal relation from each
+      causal_core /    the harness induces a reified causal relation from each
       co_learn     frame delta and tags a penalty delta preventive.
       goal_inference watches the frame changes before a win and hypothesises the
                    unstated win condition, with a confidence reading.
@@ -83,7 +83,7 @@
     % The realizable hinge.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hinge/prolog')),
     % The Causalontology core.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_core/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_core/prolog')),
     % The interventional learner.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_learn/prolog')),
     % The planner.

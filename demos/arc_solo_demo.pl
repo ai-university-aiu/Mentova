@@ -200,7 +200,7 @@ demo_durable_persistence :-
     retractall(mentova_arc_chat:ma_effect_(_, _, _)),
     retractall(mentova_arc_chat:ma_win_path_(_, _)),
     catch(mentova_arc_chat:state_graph_reset, _, true),
-    retractall(co_core:co_cro_(_, _, _, _, _, _, _, _)),
+    retractall(causal_core:causal_core_cro_(_, _, _, _, _, _, _, _)),
     % The stores are now empty for the game.
     g3_learnings(learnings(none, [], [], [], 0, _, stats(0, 0, 0, 0))),
     % Reload from disk, exactly as boot does.
