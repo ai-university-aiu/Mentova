@@ -65,15 +65,15 @@
 ), now).
 
 % Load the causal predicates used in the counterfactual scene.
-:- use_module(library(causal), [cf_model/2, cf_but_for/5, cf_counterfactual/6]).
+:- use_module(library(causal), [causal_model/2, causal_but_for/5, causal_counterfactual/6]).
 % Load the active inference predicates used in the T-maze scene.
 :- use_module(library(actinf), [ai_model/7, ai_epistemic/4, ai_step/7]).
 % Load the world model predicates used in the fetch and novelty scenes.
 :- use_module(library(world_model), [world_model_action/5, world_model_plan_bfs/5, world_model_simulate/4, world_model_holds/2, world_model_novelty/3]).
 % Load the planner predicates used in the decomposition scene.
-:- use_module(library(planner), [ht_domain/3, ht_plan/5, ht_task_tree/5]).
+:- use_module(library(planner), [planner_domain/3, planner_plan/5, planner_task_tree/5]).
 % Load the evolutionary run predicate used in the self-improvement scene.
-:- use_module(library(evolve), [ev_run_until/10]).
+:- use_module(library(evolve), [evolve_run_until/10]).
 % Load the J-Space predicates used in the honest self-report scene.
 :- use_module(library(jspace), [js_open/1, js_hold/4, js_verbalize/2, js_silent/2, js_derive/3, js_reading/2, js_report/2]).
 % Load the theory of mind predicates used in the false-belief scene.
@@ -223,7 +223,7 @@ mira_mean(List, Mean) :-
 % mira_travel_domain(-Domain): a small travel domain, walk preferred.
 mira_travel_domain(Domain) :-
     % Assemble the domain from primitives and methods.
-    ht_domain(
+    planner_domain(
         % The primitive actions Mira can take.
         [prim(walk(X1, Y1), [at(me, X1), short(X1, Y1)], [at(me, Y1)], [at(me, X1)]),
          prim(call_taxi(X2), [at(me, X2)], [taxi_at(X2)], []),
@@ -241,11 +241,11 @@ scene_planner(ac('AC-ACC424-003', Pass, 'planner decomposes the goal and names i
     % Mira is at home with the park within walking distance.
     State = [at(me, home), short(home, park), has_cash],
     % Decompose the travel task into a primitive plan.
-    (   ht_plan(D, State, [travel(home, park)], 10, Plan),
+    (   planner_plan(D, State, [travel(home, park)], 10, Plan),
         % The preferred method yields a single walk.
         Plan == [walk(home, park)],
         % The glass-box tree names the method Mira chose.
-        ht_task_tree(D, State, travel(home, park), 10, Tree),
+        planner_task_tree(D, State, travel(home, park), 10, Tree),
         % The tree records the walking method and its primitive leaf.
         Tree = tree(travel(home, park), go_by_foot, [primitive(walk(home, park))])
     % The scene passes when both the plan and its explanation are correct.
@@ -316,7 +316,7 @@ scene_actinf(ac('AC-ACC424-004', Pass, 'active inference checks the cue then goe
 % mira_chest_model(-SCM): taking the key unlocks and opens the chest.
 mira_chest_model(SCM) :-
     % Build the structural causal model of the chest.
-    cf_model([
+    causal_model([
         % Whether Mira reaches for the key is the exogenous background.
         exo(agent_takes, 1),
         % She holds the key exactly when she reaches for it.
@@ -332,9 +332,9 @@ scene_causal(ac('AC-ACC424-005', Pass, 'but-for counterfactual: no key means a l
     % Build the chest model.
     mira_chest_model(SCM),
     % Taking the key is a but-for cause of the open chest.
-    (   cf_but_for(SCM, [agent_takes-1], took_key, [0], chest_open),
+    (   causal_but_for(SCM, [agent_takes-1], took_key, [0], chest_open),
         % And the counterfactual value confirms it: not taking leaves it shut.
-        cf_counterfactual(SCM, [agent_takes-[0, 1]], [chest_open-1], [took_key-0], chest_open, V),
+        causal_counterfactual(SCM, [agent_takes-[0, 1]], [chest_open-1], [took_key-0], chest_open, V),
         % The chest would have been closed.
         V =:= 0
     % The scene passes when both the but-for and the counterfactual agree.
@@ -424,7 +424,7 @@ scene_evolve(ac('AC-ACC424-008', Pass, 'evolution assembles a valid reasoning tr
     % The alphabet of reasoning operators.
     Ops = [observe, deduce, abduce, induce, conclude, branch],
     % Evolve under the structural fitness from a fixed seed and budget.
-    (   ev_run_until(agi_foundations_demo_script:mira_fitness,
+    (   evolve_run_until(agi_foundations_demo_script:mira_fitness,
                      params(Ops, 3, 0.15, 2), 24, 5, 80, 1.0, 5, Best, Score, _Gens),
         % The evolved routine reaches the perfect quality bar.
         Score =:= 1.0,
