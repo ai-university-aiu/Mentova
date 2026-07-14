@@ -9,7 +9,7 @@
     the four things the ARC-AGI-3 benchmark actually measures.
 
     What each pack contributes to one turn:
-      co_explore   ranks the environment's actions best-first — an action the
+      curiosity   ranks the environment's actions best-first — an action the
                    causal graph predicts will change the frame beats a dead
                    one, ties break to the least-tried, hazards are never
                    chosen — and expands the ACTION6 cell-select to a few
@@ -91,7 +91,7 @@
     % The perceive-learn-plan-act harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/arc3_harness/prolog')),
     % The exploration policy (WP-397).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_explore/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/curiosity/prolog')),
     % The goal inference (WP-398).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/goal_inference/prolog')),
     % The efficiency governor (WP-399).
@@ -105,8 +105,8 @@
 % Load the learner for causal induction and preventive tagging.
 :- use_module(library(causal_learning), [causal_learning_causal/2, causal_learning_preventive/2, causal_learning_reset/0]).
 % Load the exploration policy.
-:- use_module(library(co_explore),
-    [cox_reset/0, cox_choose/4, cox_mark_seen/1, cox_would_loop/1]).
+:- use_module(library(curiosity),
+    [curiosity_reset/0, curiosity_choose/4, curiosity_mark_seen/1, curiosity_would_loop/1]).
 % Load the goal inference.
 :- use_module(library(goal_inference),
     [goal_inference_reset/0, goal_inference_observe/2, goal_inference_hypothesise_goal/1, goal_inference_confidence/1]).
@@ -149,7 +149,7 @@ a3_reset :-
     % Reset the learner.
     causal_learning_reset,
     % Reset the exploration memory.
-    cox_reset,
+    curiosity_reset,
     % Reset the goal inference.
     goal_inference_reset,
     % Reset the efficiency governor (clears counters and baselines).
@@ -250,7 +250,7 @@ a3_autoplay(Env, Budget, Outcome) :-
     % Reset the environment and receive the first frame.
     call(ResetGoal, Frame0),
     % Remember the starting state so a return to it is a loop.
-    cox_mark_seen(Frame0),
+    curiosity_mark_seen(Frame0),
     % Run the recursion from step zero.
     a3_loop(Env, Frame0, 0, Budget, Outcome).
 
@@ -286,7 +286,7 @@ a3_turn(arc3_env(_, ActGoal, ActionsGoal, SolvedGoal), Frame, Frame1, Action, St
     % Gather the agent's own try counts.
     a3_tries_list(Tried),
     % Let the exploration policy choose the next action.
-    cox_choose(Actions, Tried, Frame, Action),
+    curiosity_choose(Actions, Tried, Frame, Action),
     % Count the try.
     a3_bump_try(Action),
     % Remember it for the justification endpoint.
@@ -314,7 +314,7 @@ a3_turn(arc3_env(_, ActGoal, ActionsGoal, SolvedGoal), Frame, Frame1, Action, St
     % Feed the delta and state to the goal inferencer.
     goal_inference_observe(Delta, State),
     % Remember the new state unless it is a state already seen (a loop).
-    ( cox_would_loop(Frame1) -> true ; cox_mark_seen(Frame1) ).
+    ( curiosity_would_loop(Frame1) -> true ; curiosity_mark_seen(Frame1) ).
 
 % a3_learn(+Action, +Delta): induce a relation or tag a hazard from the delta.
 a3_learn(_Action, []) :- !.
@@ -400,4 +400,4 @@ arc_agi_3(reason, _GameId, Frame, _StepN, _QueryType, Action,
     % The agent's current try counts.
     a3_tries_list(Tried),
     % Let the exploration policy choose.
-    cox_choose(Actions, Tried, Frame, Action).
+    curiosity_choose(Actions, Tried, Frame, Action).

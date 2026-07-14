@@ -1,6 +1,6 @@
 /*  Mentova — Whole-Grid Perception & Object-Targeted Curiosity Demonstration
 
-    Proves the co_explore upgrade: Mentova now SEES the entire grid (grid_perception),
+    Proves the curiosity upgrade: Mentova now SEES the entire grid (grid_perception),
     learns the control map by watching what moves, deliberately goes to touch a
     fresh object instead of mulling on one spot, and READS a shrinking bar as a
     depleting resource rather than masking it away. It also proves the 25 studied
