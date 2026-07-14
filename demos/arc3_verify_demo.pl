@@ -2,7 +2,7 @@
 
     Proves the solo player predicts a move fatal BEFORE trying it and deprioritises
     it, rather than only recalling the exact moves that already killed. Three ways:
-    exact death memory, positional simulation onto a deadly colour, and co_verify's
+    exact death memory, positional simulation onto a deadly colour, and verification's
     generalisation of a broadly-fatal action to a new state.
 
     Acceptance criteria (each prints PASS or FAIL):
@@ -18,8 +18,8 @@
 
 % Load the backend under test.
 :- use_module('../src/mentova/mentova_arc_chat').
-% co_verify, to seed the fatality model directly.
-:- use_module(library(co_verify), [vb_reset/0, vb_note_fatal/3]).
+% verification, to seed the fatality model directly.
+:- use_module(library(verification), [verification_reset/0, verification_note_fatal/3]).
 % List helpers.
 :- use_module(library(lists), [member/2, memberchk/2, last/2]).
 
@@ -43,7 +43,7 @@ run_verify_demo :-
     % Announce.
     format("~n=== Verify-Before-Act Integration ===~n~n", []),
     % A clean world model and a demo game.
-    catch(vb_reset, _, true),
+    catch(verification_reset, _, true),
     G = vfdemo, frame(F),
     retractall(mentova_arc_chat:ma_deadly_colour_(G, _)),
     retractall(mentova_arc_chat:ma_avatar_(G, _, _)),
@@ -67,10 +67,10 @@ run_verify_demo :-
         \+ mentova_arc_chat:ma_predict_fatal(G, F, action(4))),
 
     % AC-004: a non-movement action fatal in two distinct states is predicted fatal
-    % in a brand-new state, by co_verify's generalisation (the model feeds through).
+    % in a brand-new state, by verification's generalisation (the model feeds through).
     report('AC-VF-004',
-        ( vb_note_fatal(G, s(one), action(6)),
-          vb_note_fatal(G, s(two), action(6)),
+        ( verification_note_fatal(G, s(one), action(6)),
+          verification_note_fatal(G, s(two), action(6)),
           mentova_arc_chat:ma_predict_fatal(G, F, action(6)) )),
 
     % AC-005: deprioritising keeps the safe left step ahead and sends the fatal

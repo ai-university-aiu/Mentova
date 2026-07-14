@@ -142,7 +142,7 @@
     % The Jacobian Space (J-Space) concept workspace the solo run holds learnings in.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
     % The state-graph exploration pack (the winning ARC-AGI-3 technique).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_graph/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/state_graph/prolog')),
     % Object detection, needed by the exploration policy's salient click targets.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
     % The Causalontology exploration policy: causal-change ranking + salient clicks.
@@ -150,19 +150,19 @@
     % Whole-grid perception: object inventory, meter/life-bar reading, avatar (WP-403).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_see/prolog')),
     % Hierarchical planning: the Win-Game / OODA / controls plan tree (WP-404).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hplan/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/hierarchical_planning/prolog')),
     % Verify-before-act: predict a move fatal from the learned model (WP-405).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_verify/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/verification/prolog')),
     % Hypothesis management with anti-drift commitment (WP-406).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hypo/prolog')),
     % The executable, verifiable, repairable world model (WP-407).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/world_model/prolog')),
     % Object-relational reasoning (WP-408).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_rel/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/object_relations/prolog')),
     % Goal inference: hypothesise the unstated win condition from winning deltas.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_goalinfer/prolog')),
     % The action-budget governor (RHAE-style efficiency scoring).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_effic/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/efficiency_governor/prolog')),
     % The harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
 ), now).
@@ -182,9 +182,9 @@
 :- use_module(library(co_explore),
     [cox_choose/5, cox_choose_change/5, cox_expand_actions/3, cox_salient_cells/2]).
 % Load the state-graph explorer: systematic, frontier-directed exploration.
-:- use_module(library(co_graph),
-    [cg_reset/0, cg_signature/2, cg_note/3, cg_choose/3, cg_stats/1,
-     cg_stats_for/2, cg_edge/3]).
+:- use_module(library(state_graph),
+    [state_graph_reset/0, state_graph_signature/2, state_graph_note/3, state_graph_choose/3, state_graph_stats/1,
+     state_graph_stats_for/2, state_graph_edge/3]).
 % Load whole-grid perception (WP-403): segment the frame into an inventory of
 % roled objects, read the bar-like meters (life-bars, timers, counters) rather
 % than discarding them, and locate the avatar as whatever moved between frames.
@@ -203,16 +203,16 @@
 % the observe-orient-decide-act loop over the concrete controls), reified onto
 % Causalontology's decomposition hierarchy, so the solo player's play is driven by
 % and narrated as an explicit plan the glass box can show.
-:- use_module(library(co_hplan),
-    [hp_win_plan/3, hp_reify/2, hp_reset/0, hp_render/2, hp_render_json/2,
-     hp_classify_basis/3, hp_consistent/1, hp_plan_from_cros/2]).
+:- use_module(library(hierarchical_planning),
+    [hierarchical_planning_win_plan/3, hierarchical_planning_reify/2, hierarchical_planning_reset/0, hierarchical_planning_render/2, hierarchical_planning_render_json/2,
+     hierarchical_planning_classify_basis/3, hierarchical_planning_consistent/1, hierarchical_planning_plan_from_cros/2]).
 % Load verify-before-act (WP-405): the world-model safety layer that predicts a
 % move fatal from what has been learned — generalising from deaths in other states
 % and from deadly cell colours — so the player deprioritises a move predicted to
 % end the run before it is ever tried, instead of only recalling the exact deaths.
-:- use_module(library(co_verify),
-    [vb_reset/0, vb_note_fatal/3, vb_fatal_here/3, vb_broadly_fatal/2,
-     vb_predict_fatal/3, vb_rank/4]).
+:- use_module(library(verification),
+    [verification_reset/0, verification_note_fatal/3, verification_fatal_here/3, verification_broadly_fatal/2,
+     verification_predict_fatal/3, verification_rank/4]).
 % Load the executable world model (WP-407): learn each action's effect from play,
 % surface the general laws, so the mind builds a repairable model of the game.
 :- use_module(library(world_model),
@@ -228,8 +228,8 @@
 % Load object-relational reasoning (WP-408): reason over segmented objects and their
 % relations (adjacency, containment, alignment, offset vectors, ordinal size) rather
 % than raw pixels, so targeting is relation-aware.
-:- use_module(library(co_rel),
-    [cr_relations/2, cr_nearest/4, cr_vector/4, cr_adjacent/2, cr_contains/2]).
+:- use_module(library(object_relations),
+    [object_relations_relations/2, object_relations_nearest/4, object_relations_vector/4, object_relations_adjacent/2, object_relations_contains/2]).
 % Load goal inference (WP-398): hypothesise the unstated win condition from the
 % deltas that precede a win, so play can be pulled toward the winning feature.
 :- use_module(library(co_goalinfer),
@@ -237,9 +237,9 @@
      cgi_confidence/1, cgi_win_count/1, cgi_snapshot/1, cgi_restore/1]).
 % Load the action-budget governor: count actions spent and gauge budget headroom,
 % so the mind learns economically (efficiency is scored quadratically vs a human).
-:- use_module(library(co_effic),
-    [cef_reset/0, cef_count/1, cef_actions/2, cef_set_baseline/2,
-     cef_within_budget/1, cef_budget/3]).
+:- use_module(library(efficiency_governor),
+    [efficiency_governor_reset/0, efficiency_governor_count/1, efficiency_governor_actions/2, efficiency_governor_set_baseline/2,
+     efficiency_governor_within_budget/1, efficiency_governor_budget/3]).
 % Load the sb26 game-specific solver (Phase Solo capability): the cracked sb26 procedure
 % (fill the centre placeholders to match the top target sequence, then ACTION5) so the
 % Solo player wins sb26 level 1 itself.
@@ -1277,7 +1277,7 @@ ma_graph_stats(Graph) :-
     % Read the selected game's statistics, guarded, defaulting to an empty graph.
     (   ma_selected_game(Game),
         atom_concat(Game, '::', Prefix),
-        catch(cg_stats_for(Prefix, Graph), _, fail)
+        catch(state_graph_stats_for(Prefix, Graph), _, fail)
     ->  true
     ;   Graph = stats(0, 0, 0, 0)
     ).
@@ -1538,7 +1538,7 @@ ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinP
     % Restore the winning path, unless none was stored.
     ( WinPath == none -> true ; assertz(ma_win_path_(Game, WinPath)) ),
     % Replay each graph edge, which rebuilds this game's nodes, tested, and dead marks.
-    forall(member(edge(F, EA, T), Edges), catch(cg_note(F, EA, T), _, true)),
+    forall(member(edge(F, EA, T), Edges), catch(state_graph_note(F, EA, T), _, true)),
     % Restore each causal relation through the validating front door.
     forall(member(Cro, Cros), catch(co_cro_assert(Cro), _, true)),
     % Its highest-impact action record.
@@ -1632,7 +1632,7 @@ ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, 
     atom_concat(Game, '::', Prefix),
     % Collect every edge leaving one of this game's states.
     findall(edge(F, EA, T),
-        ( cg_edge(F, EA, T), sub_atom(F, 0, _, _, Prefix) ),
+        ( state_graph_edge(F, EA, T), sub_atom(F, 0, _, _, Prefix) ),
         Edges),
     % This game's causal relations, whose cause names the game.
     findall(cro(Id, Ca, Ef, Te, Mo, St, Co, Pr),
@@ -1756,10 +1756,10 @@ ma_reset_guidance :-
     retractall(ma_plan_root_(_, _)),
     retractall(ma_plan_focus_(_, _, _)),
     % Drop the verify-before-act world model: the learned deadly colours and the
-    % co_verify fatality model (both are durable across attempts, like the death
+    % verification fatality model (both are durable across attempts, like the death
     % memory, so they are cleared only on a full guidance reset).
     retractall(ma_deadly_colour_(_, _)),
-    catch(vb_reset, _, true),
+    catch(verification_reset, _, true),
     % Reset the executable world model (learned transitions) too.
     catch(world_model_reset, _, true),
     % Reset the rest of the cognitive stack: hypotheses and their commitments, the
@@ -1769,7 +1769,7 @@ ma_reset_guidance :-
     % the cross-mode sharing survives the reset.
     catch(hy_reset, _, true),
     catch(cgi_reset, _, true),
-    catch(cef_reset, _, true),
+    catch(efficiency_governor_reset, _, true),
     % Reset the per-game persisted-level high-water marks.
     retractall(ma_level_seen_(_, _)),
     % Clear the harness counters.
@@ -2034,9 +2034,9 @@ ma_cog_learn_(Game, Action, Delta, Outcome) :-
     % delta is already a list of changed(R,C,Old,New), the form the pack expects.
     ma_cog_state(Game, State),
     ( State == ongoing -> true ; catch(cgi_observe(Delta, State), _, true) ),
-    % EFFICIENCY (co_effic): count one action spent against this game's budget, so
+    % EFFICIENCY (efficiency_governor): count one action spent against this game's budget, so
     % the mind can gauge how economically it is learning.
-    catch(cef_count(Game), _, true).
+    catch(efficiency_governor_count(Game), _, true).
 
 % ma_cog_state(+Game, -State): the post-action state as co_goalinfer wants it —
 % win, game_over, or ongoing. Best-effort and total.
@@ -2259,7 +2259,7 @@ ma_resource_low(Game) :-
 % ---------------------------------------------------------------------------
 %
 % The solo player's action chain already realises an observe-orient-decide-act
-% loop. This section makes that loop an EXPLICIT multi-level plan (co_hplan): the
+% loop. This section makes that loop an EXPLICIT multi-level plan (hierarchical_planning): the
 % top goal Win Game, the six-phase OODA method, and the game's real controls at
 % the leaves. The plan is reified onto Causalontology's own decomposition
 % hierarchy, so it is not a separate diagram but a hierarchy of CROs the glass box
@@ -2286,13 +2286,13 @@ ma_build_plan_(Game) :-
     ( ma_actions_env(Game, Actions0) -> true ; Actions0 = [] ),
     ma_plan_actions(Actions0, Actions),
     % Build the three-level plan tree.
-    hp_win_plan(Game, Actions, Tree),
+    hierarchical_planning_win_plan(Game, Actions, Tree),
     % Store it for this game.
     retractall(ma_plan_tree_(Game, _)),
     assertz(ma_plan_tree_(Game, Tree)),
     % Reify it onto the CRO decomposition graph (fresh, so nodes do not pile up).
-    hp_reset,
-    hp_reify(Tree, Root),
+    hierarchical_planning_reset,
+    hierarchical_planning_reify(Tree, Root),
     retractall(ma_plan_root_(Game, _)),
     assertz(ma_plan_root_(Game, Root)).
 
@@ -2311,7 +2311,7 @@ ma_plan_actions(Actions0, Actions) :-
 % ma_note_plan_focus(+Game, +Basis): record which OODA phase and leaf a choice
 % basis falls under, so the Why endpoint can show the active rung of the plan.
 ma_note_plan_focus(Game, Basis) :-
-    ( catch(hp_classify_basis(Basis, Phase, Leaf), _, fail)
+    ( catch(hierarchical_planning_classify_basis(Basis, Phase, Leaf), _, fail)
     -> retractall(ma_plan_focus_(Game, _, _)),
        assertz(ma_plan_focus_(Game, Phase, Leaf))
     ;  true ).
@@ -2325,10 +2325,10 @@ ma_plan_view(Game, View) :-
     ( ma_plan_tree_(Game, Tree) -> true
     ; ma_build_plan(Game), ( ma_plan_tree_(Game, Tree) -> true ; Tree = none ) ),
     % The nested-dict rendering of the tree.
-    ( Tree \== none, catch(hp_render_json(Tree, TreeJson), _, fail)
+    ( Tree \== none, catch(hierarchical_planning_render_json(Tree, TreeJson), _, fail)
     -> true ; TreeJson = _{} ),
     % The indented text rendering, one line per list element.
-    ( Tree \== none, catch(hp_render(Tree, Lines0), _, fail)
+    ( Tree \== none, catch(hierarchical_planning_render(Tree, Lines0), _, fail)
     -> true ; Lines0 = [] ),
     % The active OODA phase and leaf.
     ( ma_plan_focus_(Game, Ph, Lf)
@@ -2336,9 +2336,9 @@ ma_plan_view(Game, View) :-
        Focus = _{phase: PhA, leaf: LfA}
     ;  Focus = _{phase: none, leaf: none} ),
     % The mesh proofs, guarded.
-    ( ma_plan_root_(Game, Root), catch(hp_consistent(Root), _, fail)
+    ( ma_plan_root_(Game, Root), catch(hierarchical_planning_consistent(Root), _, fail)
     -> Consistent = true ; Consistent = false ),
-    ( ma_plan_root_(Game, Root2), catch(hp_plan_from_cros(Root2, _), _, fail)
+    ( ma_plan_root_(Game, Root2), catch(hierarchical_planning_plan_from_cros(Root2, _), _, fail)
     -> FromCros = true ; FromCros = false ),
     % Assemble the view.
     View = _{tree: TreeJson, lines: Lines0, focus: Focus,
@@ -2576,7 +2576,7 @@ ma_state_key(Game, Frame, Key) :-
     % Mask the volatile cells, then take the canonical signature.
     ma_mask_frame(Game, Frame, Masked),
     % The signature of the masked frame.
-    cg_signature(Masked, Key).
+    state_graph_signature(Masked, Key).
 
 % ma_note_death(+Game, +Frame0, +Action): if the game is now over, record that
 % this action, taken from Frame0, is fatal in this state. Nineteen of twenty-five
@@ -2593,7 +2593,7 @@ ma_note_death(Game, Frame0, Action) :-
             % Feed the same fatal transition to the verify-before-act model, which
             % generalises it: an action fatal in enough distinct states is then
             % predicted fatal in a new state before it is tried there.
-            catch(vb_note_fatal(Game, Key, Action), _, true)
+            catch(verification_note_fatal(Game, Key, Action), _, true)
         ), _, true)
     % The game did not end: nothing to record.
     ;   true
@@ -2614,7 +2614,7 @@ ma_action_safe(Game, Frame, Action) :-
 % state. That is reactive: on a new board the same lesson is re-learned by dying
 % again. This section is the world-model check the deaths pinned as the decisive
 % lever. It predicts a move fatal before it is tried, two ways. First, through
-% co_verify's generalisation: an action that ended a run in enough distinct states
+% verification's generalisation: an action that ended a run in enough distinct states
 % is predicted fatal anywhere (applied only to non-movement actions, so a needed
 % direction is never banned outright). Second, positionally: for a movement game
 % it SIMULATES where the avatar would land under the learned control map and, if
@@ -2658,7 +2658,7 @@ ma_predict_fatal(Game, Frame, Action) :-
 ma_predict_fatal_(Game, Frame, Action) :-
     % Exact: this move has ended a run from this very (masked) state.
     (   catch(ma_state_key(Game, Frame, Key), _, fail),
-        vb_fatal_here(Game, Key, Action)
+        verification_fatal_here(Game, Key, Action)
     % Positional: simulate the avatar's destination under the learned control map;
     % a deadly colour there predicts the step fatal.
     ;   ma_move_vec_(Game, Action, DR, DC),
@@ -2668,7 +2668,7 @@ ma_predict_fatal_(Game, Frame, Action) :-
         ma_deadly_colour(Game, Colour)
     % Generalisation: a non-movement action broadly fatal across distinct states.
     ;   \+ ma_move_vec_(Game, Action, _, _),
-        vb_broadly_fatal(Game, Action)
+        verification_broadly_fatal(Game, Action)
     ),
     % One witness suffices.
     !.
@@ -2950,7 +2950,7 @@ ma_choose(Action, hypothesis(committed)) :-
     \+ ma_last_(Action, _),
     % Commit.
     !.
-% Relation-aware targeting (co_rel): reason over the objects co_see perceives and go
+% Relation-aware targeting (object_relations): reason over the objects co_see perceives and go
 % to the one worth going to NEXT — chosen by a ranked utility (goal-relevance, then
 % information value, with distance only a tiebreaker), NOT by bare nearness. The
 % chosen object may be farther than another; the Reason records why it won, for the
@@ -3031,7 +3031,7 @@ ma_choose(Action, graph_explore) :-
     % Signature stamped with the selected game, guarded.
     catch(ma_game_sig(Sel, Frame, Sig), _, fail),
     % The graph-informed choice, guarded; fails when nothing is left to explore.
-    catch(cg_choose(Sig, Safe, Action), _, fail),
+    catch(state_graph_choose(Sig, Safe, Action), _, fail),
     % Commit.
     !.
 
@@ -3043,7 +3043,7 @@ ma_graph_note(Frame0, Action, Frame1) :-
         ma_selected_game(Game),
         ma_game_sig(Game, Frame0, S0),
         ma_game_sig(Game, Frame1, S1),
-        cg_note(S0, Action, S1)
+        state_graph_note(S0, Action, S1)
     ), _, true).
 
 % ma_game_sig(+Game, +Frame, -Sig): a state signature stamped with the game id,
@@ -3364,7 +3364,7 @@ ma_handle_agentview(_Request) :-
 
 % ma_agent_cognition(+Game, +Frame, -Dict): the glass-box cognitive state as a dict —
 % the committed hypothesis (co_hypo), the inferred goal and its confidence
-% (co_goalinfer), and the object relations now visible (co_rel). Best-effort and
+% (co_goalinfer), and the object relations now visible (object_relations). Best-effort and
 % total: every field defaults gracefully so the view never fails.
 ma_agent_cognition(Game, Frame, _{
         committed_hypothesis: Committed,
@@ -3381,24 +3381,24 @@ ma_agent_cognition(Game, Frame, _{
     ( catch(cgi_hypothesise_goal(G), _, fail) -> term_string(G, Goal) ; Goal = "unknown" ),
     ( catch(cgi_confidence(Conf0), _, fail) -> Conf = Conf0 ; Conf = 0.0 ),
     % Actions spent this attempt (the budget count).
-    ( catch(cef_actions(Game, Spent), _, fail) -> true ; Spent = 0 ),
-    % The object relations co_rel derives from the current perception (capped for
+    ( catch(efficiency_governor_actions(Game, Spent), _, fail) -> true ; Spent = 0 ),
+    % The object relations object_relations derives from the current perception (capped for
     % readability), as readable strings.
     ( catch(ma_object_relations(Frame, RelTerms), _, fail) -> true ; RelTerms = [] ),
     findall(RS, ( member(R, RelTerms), term_string(R, RS) ), Relations).
 
-% ma_object_relations(+Frame, -Relations): the object relations co_rel finds among
+% ma_object_relations(+Frame, -Relations): the object relations object_relations finds among
 % the objects co_see perceives in the frame — adjacency, containment, alignment, and
 % offset vectors — capped to the first twenty so the view stays compact.
 ma_object_relations(Frame, Relations) :-
     % Perceive the objects (co_see), each as seen(Id, Colour, Size, cell, Role).
     catch(ma_inventory(Frame, Items), _, Items = []),
-    % Recast them as co_rel objects obj(Id, cell, bbox, Size).
+    % Recast them as object_relations objects obj(Id, cell, bbox, Size).
     findall(obj(cell(R, C), cell(R, C), bbox(R, C, R, C), Size),
         member(seen(_, _, Size, cell(R, C), _), Items),
         Objs),
     % Enumerate the relations, then keep at most twenty.
-    ( catch(cr_relations(Objs, All), _, fail) -> true ; All = [] ),
+    ( catch(object_relations_relations(Objs, All), _, fail) -> true ; All = [] ),
     ( length(All, N), N =< 20 -> Relations = All
     ; length(Relations, 20), append(Relations, _, All) ).
 
@@ -3514,7 +3514,7 @@ ma_control("reset", _, _{ok: true, did: reset}) :-
     % Begin a fresh session recording.
     ma_session_reset,
     % Forget the exploration graph too (a full reset).
-    catch(cg_reset, _, true),
+    catch(state_graph_reset, _, true),
     % Commit.
     !.
 % One step.

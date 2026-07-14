@@ -215,10 +215,10 @@ di_concept(cfact(node, Relation, Args), node(Relation, Args)).
 % variant deltas and any unparsed lines.
 di_render_report(report(DraftId, Results, Unparsed), Lines) :-
     % Partition the results by status.
-    di_count(Results, new, NewN),
-    di_count(Results, exact, ExactN),
-    di_count(Results, variant, VarN),
-    di_count(Results, error, ErrN),
+    consolidation_count(Results, new, NewN),
+    consolidation_count(Results, exact, ExactN),
+    consolidation_count(Results, variant, VarN),
+    consolidation_count(Results, error, ErrN),
     length(Results, Total),
     length(Unparsed, UnN),
     % The header and summary lines.
@@ -241,8 +241,8 @@ di_render_report(report(DraftId, Results, Unparsed), Lines) :-
     ( ULines == [] -> USect = [] ; USect = ['  --- lines not recognised (tune the parser) ---' | ULines] ),
     append([[H0, H1, H2], VSect, USect], Lines).
 
-% di_count(+Results, +Which, -N): count results whose status is Which.
-di_count(Results, Which, N) :-
+% consolidation_count(+Results, +Which, -N): count results whose status is Which.
+consolidation_count(Results, Which, N) :-
     aggregate_all(count, ( member(result(_, S), Results), di_status_is(S, Which) ), N).
 
 % di_status_is(+Status, +Which): classify a status.
@@ -262,10 +262,10 @@ di_fact_label(node(Relation, Args), Label) :-
 % ingestion endpoint — counts, the flagged variants with their deltas as text, the
 % unrecognised lines, and the full rendered lines.
 di_report_json(report(DraftId, Results, Unparsed), Dict) :-
-    di_count(Results, new, NewN),
-    di_count(Results, exact, ExactN),
-    di_count(Results, variant, VarN),
-    di_count(Results, error, ErrN),
+    consolidation_count(Results, new, NewN),
+    consolidation_count(Results, exact, ExactN),
+    consolidation_count(Results, variant, VarN),
+    consolidation_count(Results, error, ErrN),
     length(Results, Total),
     % The variants as {fact, delta} dicts.
     findall(_{fact: FL, delta: DL},

@@ -18,15 +18,15 @@
       co_learn     frame delta and tags a penalty delta preventive.
       co_goalinfer watches the frame changes before a win and hypothesises the
                    unstated win condition, with a confidence reading.
-      co_effic     counts the actions spent and scores the run against a human
+      efficiency_governor     counts the actions spent and scores the run against a human
                    baseline the way the benchmark does.
-      co_arc3proto for a live run, packages the exact March-2026 REST protocol
+      arc3_protocol for a live run, packages the exact March-2026 REST protocol
                    as the environment the loop plays.
 
     Two environments ship here. a3_local_env/1 is a self-contained mock — a
     tiny "raise the counter to win" game whose mechanics the agent has never
     seen — so the whole autonomous loop runs and is tested offline. a3_live_env/4
-    wraps co_arc3proto's guarded adapter for the real benchmark; it never
+    wraps arc3_protocol's guarded adapter for the real benchmark; it never
     load-bears a test.
 
     Driver interface for game_body.pl (the Game-as-a-Body harness):
@@ -95,9 +95,9 @@
     % The goal inference (WP-398).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_goalinfer/prolog')),
     % The efficiency governor (WP-399).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_effic/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/efficiency_governor/prolog')),
     % The protocol vocabulary and live adapter (WP-400).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3proto/prolog'))
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/arc3_protocol/prolog'))
 ), now).
 
 % Load the harness for frame deltas and its reset.
@@ -111,11 +111,11 @@
 :- use_module(library(co_goalinfer),
     [cgi_reset/0, cgi_observe/2, cgi_hypothesise_goal/1, cgi_confidence/1]).
 % Load the efficiency governor.
-:- use_module(library(co_effic),
-    [cef_reset/0, cef_count/1, cef_actions/2, cef_set_baseline/2,
-     cef_baseline/2, cef_level_score/3]).
+:- use_module(library(efficiency_governor),
+    [efficiency_governor_reset/0, efficiency_governor_count/1, efficiency_governor_actions/2, efficiency_governor_set_baseline/2,
+     efficiency_governor_baseline/2, efficiency_governor_level_score/3]).
 % Load the protocol adapter for the live environment.
-:- use_module(library(co_arc3proto), [cap_env/4]).
+:- use_module(library(arc3_protocol), [arc3_protocol_env/4]).
 % Load grid cell access for the mock win test.
 :- use_module(library(grid), [gd_cell/4]).
 % Load list helpers.
@@ -153,9 +153,9 @@ a3_reset :-
     % Reset the goal inference.
     cgi_reset,
     % Reset the efficiency governor (clears counters and baselines).
-    cef_reset,
+    efficiency_governor_reset,
     % Re-apply the configured human baseline so it survives the reset.
-    ( a3_baseline_(H) -> cef_set_baseline(mock, H) ; true ).
+    ( a3_baseline_(H) -> efficiency_governor_set_baseline(mock, H) ; true ).
 
 % ---------------------------------------------------------------------------
 % The built-in mock game — hidden mechanics the agent must discover
@@ -222,7 +222,7 @@ a3_local_env(arc3_env(
 % Define a3_live_env: the guarded live ARC-AGI-3 environment.
 a3_live_env(BaseUrl, ApiKey, GameId, Env) :-
     % Delegate to the protocol adapter, which speaks the exact API.
-    cap_env(BaseUrl, ApiKey, GameId, Env).
+    arc3_protocol_env(BaseUrl, ApiKey, GameId, Env).
 
 % ---------------------------------------------------------------------------
 % The efficiency baseline
@@ -235,7 +235,7 @@ a3_set_baseline(Human) :-
     % Store the configured baseline.
     assertz(a3_baseline_(Human)),
     % Record it against the single mock level identifier.
-    cef_set_baseline(mock, Human).
+    efficiency_governor_set_baseline(mock, Human).
 
 % ---------------------------------------------------------------------------
 % The autonomous episode loop
@@ -300,7 +300,7 @@ a3_turn(arc3_env(_, ActGoal, ActionsGoal, SolvedGoal), Frame, Frame1, Action, St
     % Learn from the effect.
     a3_learn(Action, Delta),
     % Spend one action against the efficiency budget.
-    cef_count(mock),
+    efficiency_governor_count(mock),
     % Classify the resulting state for goal inference.
     (   call(SolvedGoal, Frame1)
     % A win.
@@ -359,11 +359,11 @@ a3_inferred_goal(goal(Goal, confidence(Conf))) :-
 % Define a3_efficiency: the RHAE-style ledger of the last run.
 a3_efficiency(efficiency(Human, Agent, Score)) :-
     % Read how many actions the agent spent.
-    cef_actions(mock, Agent),
+    efficiency_governor_actions(mock, Agent),
     % Read the human baseline if one was set.
-    (   cef_baseline(mock, Human)
+    (   efficiency_governor_baseline(mock, Human)
     % A known baseline yields a numeric score.
-    ->  cef_level_score(Human, Agent, Score)
+    ->  efficiency_governor_level_score(Human, Agent, Score)
     % An unknown baseline leaves the human and score unknown.
     ;   Human = unknown, Score = unknown
     ).

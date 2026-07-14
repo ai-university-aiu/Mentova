@@ -55,7 +55,7 @@
 % into game-keyed node-facts, Causalontology relations, and J-Space concepts.
 :- use_module('arc3_knowledge').
 % Load the OODA methodology skill: John Boyd's observe-orient-decide-act loop, held
-% in Jacobian Space as a concept Mentova reasons with (it is co_hplan's middle layer).
+% in Jacobian Space as a concept Mentova reasons with (it is hierarchical_planning's middle layer).
 :- use_module('ooda_knowledge').
 % Load the ARC-AGI-3 Steps draft ingestion: the ten analysis drafts distilled into
 % per-draft candidate facts and carried into the lattice, Causalontology, and
