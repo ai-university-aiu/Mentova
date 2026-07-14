@@ -37,10 +37,10 @@
         '/home/ccaitwo/PrologAI/packs/assessment/prolog'))
 ), now).
 
-% Register the node_facts pack prolog directory.
+% Register the lattice pack prolog directory, which provides node_facts.pl.
 :- initialization((
     assertz(user:file_search_path(library,
-        '/home/ccaitwo/PrologAI/packs/node_facts/prolog'))
+        '/home/ccaitwo/PrologAI/packs/lattice/prolog'))
 ), now).
 
 % Load the Mentova top-level interface.
