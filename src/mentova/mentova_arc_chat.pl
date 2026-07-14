@@ -11,7 +11,7 @@
     the guiding human is a mentor (chat_db's mc_verify_session), each clue is
     a proposed fact routed through the teach queue (mc_propose_fact) with a
     game-play auto-approve (mc_approve_fact), and a justification endpoint
-    shows why Mentova took its last action. The game loop is the co_arc3
+    shows why Mentova took its last action. The game loop is the arc3_harness
     machinery of the PrologAI Causalontology suite, and hints bias exactly
     the levers Section 10.4 names: a posited continuant labels an object, a
     suggested action raises its priority, a posited goal is handed to the
@@ -45,7 +45,7 @@
       ma_stop_server/1    -- stop it
       ma_game_reset/1     -- reset the game, returning the first frame
       ma_game_frame/1     -- the current frame
-      ma_env/1            -- the game as a pluggable co_arc3 environment
+      ma_env/1            -- the game as a pluggable arc3_harness environment
       co_ground/3         -- natural-language clue -> Causalontology assertion
       ma_inject/1         -- bias the live loop with a grounded assertion
       ma_step/1           -- one guided loop step, with its basis recorded
@@ -74,7 +74,7 @@
     ma_game_reset/1,
     % ma_game_frame/1: the current frame.
     ma_game_frame/1,
-    % ma_env/1: the game as a co_arc3 environment.
+    % ma_env/1: the game as a arc3_harness environment.
     ma_env/1,
     % co_ground/3: clue text to Causalontology assertion.
     co_ground/3,
@@ -132,11 +132,11 @@
     % The Causalontology core.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_core/prolog')),
     % The hinge.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hinge/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/realizable_hinge/prolog')),
     % The noun backbone.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_noun/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/noun_backbone/prolog')),
     % The interventional learner.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_learn/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_learning/prolog')),
     % The planner.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_plan/prolog')),
     % The Jacobian Space (J-Space) concept workspace the solo run holds learnings in.
@@ -164,19 +164,19 @@
     % The action-budget governor (RHAE-style efficiency scoring).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/efficiency_governor/prolog')),
     % The harness.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog'))
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/arc3_harness/prolog'))
 ), now).
 
 % Load the Causalontology noun backbone for clue-labeled continuants.
-:- use_module(library(co_noun), [co_continuant_add/2, co_continuant/2]).
+:- use_module(library(noun_backbone), [noun_backbone_continuant_add/2, noun_backbone_continuant/2]).
 % Load the hinge for clue-attached dispositions.
-:- use_module(library(co_hinge), [co_realizable_add/3, co_realized_in_add/2]).
+:- use_module(library(realizable_hinge), [realizable_hinge_realizable_add/3, realizable_hinge_realized_in_add/2]).
 % Load the core for provenance-tagged clue relations and reinforcement.
 :- use_module(library(causal_core), [causal_core_new_cro/8, causal_core_cro/8, causal_core_strengthen/2, causal_core_the_cro/2, causal_core_cro_assert/1]).
 % Load the learner for preventive enforcement.
-:- use_module(library(co_learn), [co_learn_preventive/2, co_avoid/1, co_learn_causal/2]).
+:- use_module(library(causal_learning), [causal_learning_preventive/2, causal_learning_avoid/1, causal_learning_causal/2]).
 % Load the harness for curiosity choice and frame deltas.
-:- use_module(library(co_arc3), [co_arc3_choose/3, co_arc3_delta/3, co_arc3_reset/0]).
+:- use_module(library(arc3_harness), [arc3_harness_choose/3, arc3_harness_delta/3, arc3_harness_reset/0]).
 % Load the Causalontology exploration policy: rank actions by predicted change
 % (this game's causal graph) and turn ACTION6 into salient object-centroid clicks.
 :- use_module(library(co_explore),
@@ -476,7 +476,7 @@ ma_env_solved(Frame) :-
     % Somewhere in the frame.
     memberchk(6, Row).
 
-% Define ma_env: the game as a pluggable co_arc3 environment.
+% Define ma_env: the game as a pluggable arc3_harness environment.
 ma_env(arc3_env(mentova_arc_chat:ma_game_reset,
                 mentova_arc_chat:ma_env_act,
                 mentova_arc_chat:ma_env_actions,
@@ -485,7 +485,7 @@ ma_env(arc3_env(mentova_arc_chat:ma_game_reset,
 % ---------------------------------------------------------------------------
 % GAME ENVIRONMENT REGISTRY — the dropdown's selectable environments
 % ---------------------------------------------------------------------------
-% Three local ARC-AGI-3-style environments, each a working co_arc3 game. The
+% Three local ARC-AGI-3-style environments, each a working arc3_harness game. The
 % locksmith (ls20) is the fully-guided one; navigate (vc33) and signal (ft09)
 % are additional environments the solo player can attempt. Every environment
 % offers a uniform interface: render, reset, act, actions, and solved.
@@ -1773,7 +1773,7 @@ ma_reset_guidance :-
     % Reset the per-game persisted-level high-water marks.
     retractall(ma_level_seen_(_, _)),
     % Clear the harness counters.
-    co_arc3_reset.
+    arc3_harness_reset.
 
 % Define ma_inject: apply one grounded assertion to the live loop, keyed to the
 % currently selected game so the teaching attaches only to that environment.
@@ -1783,15 +1783,15 @@ ma_inject(hint_label([R, C], Kind)) :-
     % Name the labeled object by its game and cell (distinct across games).
     atomic_list_concat([obj_, Game, '_', R, '_', C], Id),
     % NOUN: posit the continuant with its human label.
-    co_continuant_add(Id, Kind),
+    noun_backbone_continuant_add(Id, Kind),
     % Remember the label for choice-making, keyed to the game.
     assertz(ma_label_(Game, pos(R, C), Kind)),
     % HINGE: a key-like object bears a pick-up-able disposition.
     (   Kind == key_like
     % Posit the disposition and its realization seam.
-    ->  co_realizable_add(Id, disposition, Id),
+    ->  realizable_hinge_realizable_add(Id, disposition, Id),
         % Realized in this game's pickup occurrent.
-        co_realized_in_add(Id, g(Game, action(pickup)))
+        realizable_hinge_realized_in_add(Id, g(Game, action(pickup)))
     % Other labels posit no disposition here.
     ;   true
     ),
@@ -1804,7 +1804,7 @@ ma_inject(hint_goal([R, C], traverse)) :-
     % Name and label the door object, keyed by game.
     atomic_list_concat([obj_, Game, '_', R, '_', C], Id),
     % NOUN: posit the door-like continuant.
-    co_continuant_add(Id, door_like),
+    noun_backbone_continuant_add(Id, door_like),
     % Remember the label, keyed to the game.
     assertz(ma_label_(Game, pos(R, C), door_like)),
     % Set this game's goal: be beyond the door.
@@ -1829,7 +1829,7 @@ ma_inject(hint_preventive([R, C])) :-
     ( ma_avoid_cell_(Game, pos(R, C)) -> true ; assertz(ma_avoid_cell_(Game, pos(R, C))) ),
     % VERB: reify the preventive relation, its cause keyed by game so the hazard
     % belongs only to this environment.
-    co_learn_preventive(g(Game, touch(cell(R, C))), penalty),
+    causal_learning_preventive(g(Game, touch(cell(R, C))), penalty),
     % Commit.
     !.
 % Positive reinforcement: raise the strength of the last action's relations.
@@ -1874,7 +1874,7 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % Doing: perform it on the selected environment.
     ma_act_env(Sel, Action, Frame1),
     % The observed effect is the frame delta.
-    co_arc3_delta(Frame0, Frame1, Delta),
+    arc3_harness_delta(Frame0, Frame1, Delta),
     % Record the transition in the state-graph explorer (guarded).
     ma_graph_note(Frame0, Action, Frame1),
     % Learn this action's observed effect, for its discovered semantic label.
@@ -1886,14 +1886,14 @@ ma_do_step(Action, Basis, step(Action, Basis, Outcome)) :-
     % The penalty marker is a hazard. The relation's cause is keyed by game, so
     % the same action's effect in another environment is a separate relation.
     ;   memberchk(changed(_, _, _, 15), Delta)
-    ->  co_learn_preventive(g(Sel, Action), penalty),
+    ->  causal_learning_preventive(g(Sel, Action), penalty),
         % Learn the deadly colours this hazard introduced, so stepping onto them is
         % predicted fatal next time (the verify-before-act world model).
         ma_learn_deadly(Sel, Delta),
         % Report the hazard.
         Outcome = hazard
     % Otherwise the delta was produced by the action, in this game.
-    ;   co_learn_causal(g(Sel, Action), delta(Delta)),
+    ;   causal_learning_causal(g(Sel, Action), delta(Delta)),
         % Report the learning.
         Outcome = learned
     ),

@@ -3,7 +3,7 @@
     Exercises the unaided ARC-AGI-3 agent driver end to end. Where the Acc_426
     chat application wins with a human's clues, this driver wins with none: it
     wires the PrologAI ARC-AGI-3 Readiness suite (co_explore, goal_inference,
-    efficiency_governor, arc3_protocol) onto the co_arc3 harness and plays a game whose
+    efficiency_governor, arc3_protocol) onto the arc3_harness harness and plays a game whose
     mechanics it has never seen.
 
     Acceptance criteria (each prints PASS or FAIL at run time):
@@ -17,7 +17,7 @@
       AC-A3-005: the exploration policy explored before exploiting — the first
                  action differs from the transfer that wins.
       AC-A3-006: the live ARC-AGI-3 environment builds as a well-formed,
-                 guarded co_arc3 environment (no network is touched).
+                 guarded arc3_harness environment (no network is touched).
 
     Run:
         swipl -l demos/arc_agi_3_autoplay_demo.pl -g run_arc_agi_3_demo -t halt
@@ -108,5 +108,5 @@ demo_explored_first :-
 demo_live_env_ok :-
     % Build a live environment against an unreachable endpoint.
     a3_live_env('https://example.invalid', 'no-key', ft09, Env),
-    % It has the four-goal co_arc3 shape.
+    % It has the four-goal arc3_harness shape.
     Env = arc3_env(_, _, _, _).
