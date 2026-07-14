@@ -61,7 +61,7 @@
     % The J-Space concept workspace pack.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
     % The theory of mind pack.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/tom/prolog'))
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/theory_of_mind/prolog'))
 ), now).
 
 % Load the causal predicates used in the counterfactual scene.
