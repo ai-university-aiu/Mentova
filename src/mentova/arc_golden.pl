@@ -27,7 +27,7 @@
 :- use_module(library(lists)).
 
 % Load the Jacobian-Space workspace, tolerating its absence at load time.
-:- ( catch(use_module(library(jspace), [js_open/1, js_hold/4]), _, fail) -> true ; true ).
+:- ( catch(use_module(library(jacobian_space), [jacobian_space_open/1, jacobian_space_hold/4]), _, fail) -> true ; true ).
 
 % agp_golden_dir(-Dir): where the golden reference files live.
 agp_golden_dir('/home/ccaitwo/ARC-AGI-3').
@@ -71,9 +71,9 @@ agp_load_golden(Game, Count) :-
     ( agp_golden_lines(Game, Lines) -> true ; Lines = [] ),
     agp_workspace(Game, Workspace),
     ( agp_jspace_ready
-    ->  catch(jspace:js_open(Workspace), _, true),
+    ->  catch(jspace:jacobian_space_open(Workspace), _, true),
         % A header concept naming the reference, then each line as a numbered step.
-        catch(jspace:js_hold(Workspace, golden_reference(Game), 1.0, arc_golden), _, true),
+        catch(jspace:jacobian_space_hold(Workspace, golden_reference(Game), 1.0, arc_golden), _, true),
         foldl(agp_hold_line(Workspace, Game), Lines, 1, _),
         length(Lines, Count)
     ;   Count = 0
@@ -81,10 +81,10 @@ agp_load_golden(Game, Count) :-
 
 % agp_hold_line(+Workspace, +Game, +Line, +N0, -N1): hold one golden line as a concept.
 agp_hold_line(Workspace, Game, Line, N0, N1) :-
-    catch(jspace:js_hold(Workspace, golden_step(Game, N0, Line), 1.0, arc_golden), _, true),
+    catch(jspace:jacobian_space_hold(Workspace, golden_step(Game, N0, Line), 1.0, arc_golden), _, true),
     N1 is N0 + 1.
 
 % agp_jspace_ready: the J-Space workspace predicates are available.
 agp_jspace_ready :-
-    current_predicate(jspace:js_open/1),
-    current_predicate(jspace:js_hold/4).
+    current_predicate(jspace:jacobian_space_open/1),
+    current_predicate(jspace:jacobian_space_hold/4).

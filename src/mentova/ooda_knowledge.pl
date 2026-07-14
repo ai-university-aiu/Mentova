@@ -113,18 +113,18 @@ ooda_bootstrap :-
 
 % The guarded body of the bootstrap.
 ooda_bootstrap_ :-
-    (   ooda_defined(jspace:js_open(_)), ooda_defined(jspace:js_hold(_, _, _, _))
+    (   ooda_defined(jspace:jacobian_space_open(_)), ooda_defined(jspace:jacobian_space_hold(_, _, _, _))
     ->  % Open (or reset) the workspace.
-        catch(jspace:js_open(ooda_mind), _, true),
+        catch(jspace:jacobian_space_open(ooda_mind), _, true),
         % Hold each phase, ingredient, principle, and mapping as a concept.
         forall(ooda_phase(P, _),
-            catch(jspace:js_hold(ooda_mind, phase(P), 1.0, ooda_boyd), _, true)),
+            catch(jspace:jacobian_space_hold(ooda_mind, phase(P), 1.0, ooda_boyd), _, true)),
         forall(ooda_orientation_ingredient(I, _),
-            catch(jspace:js_hold(ooda_mind, orientation(I), 0.9, ooda_boyd), _, true)),
+            catch(jspace:jacobian_space_hold(ooda_mind, orientation(I), 0.9, ooda_boyd), _, true)),
         forall(ooda_principle(Pr, _),
-            catch(jspace:js_hold(ooda_mind, principle(Pr), 0.95, ooda_boyd), _, true)),
+            catch(jspace:jacobian_space_hold(ooda_mind, principle(Pr), 0.95, ooda_boyd), _, true)),
         forall(ooda_hplan_map(O, H),
-            catch(jspace:js_hold(ooda_mind, maps_to(O, H), 0.85, ooda_boyd), _, true))
+            catch(jspace:jacobian_space_hold(ooda_mind, maps_to(O, H), 0.85, ooda_boyd), _, true))
     ;   % No jspace: the facts remain available directly.
         true
     ).
@@ -161,7 +161,7 @@ ooda_stats(stats(Phases, Ingredients, Principles, Held)) :-
     aggregate_all(count, ooda_phase(_, _), Phases),
     aggregate_all(count, ooda_orientation_ingredient(_, _), Ingredients),
     aggregate_all(count, ooda_principle(_, _), Principles),
-    ( ooda_defined(jspace:js_reading(_, _)),
-      catch(jspace:js_reading(ooda_mind, Reading), _, fail),
+    ( ooda_defined(jspace:jacobian_space_reading(_, _)),
+      catch(jspace:jacobian_space_reading(ooda_mind, Reading), _, fail),
       is_list(Reading)
     -> length(Reading, Held) ; Held = 0 ).

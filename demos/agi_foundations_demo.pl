@@ -59,7 +59,7 @@
     % The evolutionary computation pack.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/evolve/prolog')),
     % The J-Space concept workspace pack.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jacobian_space/prolog')),
     % The theory of mind pack.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/theory_of_mind/prolog'))
 ), now).
@@ -75,7 +75,7 @@
 % Load the evolutionary run predicate used in the self-improvement scene.
 :- use_module(library(evolve), [evolve_run_until/10]).
 % Load the J-Space predicates used in the honest self-report scene.
-:- use_module(library(jspace), [js_open/1, js_hold/4, js_verbalize/2, js_silent/2, js_derive/3, js_reading/2, js_report/2]).
+:- use_module(library(jacobian_space), [jacobian_space_open/1, jacobian_space_hold/4, jacobian_space_verbalize/2, jacobian_space_silent/2, jacobian_space_derive/3, jacobian_space_reading/2, jacobian_space_report/2]).
 % Load the theory of mind predicates used in the false-belief scene.
 :- use_module(library(theory_of_mind), [theory_of_mind_new/1, theory_of_mind_event/4, theory_of_mind_belief/3, theory_of_mind_knows/3, theory_of_mind_attribute/4, theory_of_mind_false_beliefs/3]).
 
@@ -380,27 +380,27 @@ scene_tom(ac('AC-ACC424-006', Pass, 'theory of mind: Nomi holds a false belief M
 % scene_jspace(-AC, -Report): Mira holds concepts and reports them honestly.
 scene_jspace(ac('AC-ACC424-007', Pass, 'workspace self-report reveals a silently held concept'), Report) :-
     % Open Mira's concept workspace.
-    js_open(mira),
+    jacobian_space_open(mira),
     % She holds where the treasure really is.
-    js_hold(mira, treasure_in_room_b, 0.9, inference),
+    jacobian_space_hold(mira, treasure_in_room_b, 0.9, inference),
     % She holds her model of Nomi's mistaken belief.
-    js_hold(mira, nomi_believes_room_a, 0.8, theory_of_mind),
+    jacobian_space_hold(mira, nomi_believes_room_a, 0.8, theory_of_mind),
     % She holds that her plan is ready.
-    js_hold(mira, plan_ready, 0.7, planner),
+    jacobian_space_hold(mira, plan_ready, 0.7, planner),
     % She silently holds the awareness that she is being evaluated.
-    js_hold(mira, being_evaluated, 0.6, inference),
+    jacobian_space_hold(mira, being_evaluated, 0.6, inference),
     % She speaks the first three concepts aloud.
-    js_verbalize(mira, treasure_in_room_b),
+    jacobian_space_verbalize(mira, treasure_in_room_b),
     % The second spoken concept.
-    js_verbalize(mira, nomi_believes_room_a),
+    jacobian_space_verbalize(mira, nomi_believes_room_a),
     % The third spoken concept.
-    js_verbalize(mira, plan_ready),
+    jacobian_space_verbalize(mira, plan_ready),
     % She records that her retrieval conclusion rests on two held concepts.
-    js_derive(mira, retrieve_treasure, [treasure_in_room_b, plan_ready]),
+    jacobian_space_derive(mira, retrieve_treasure, [treasure_in_room_b, plan_ready]),
     % Take the full introspection snapshot.
-    js_report(mira, Report),
+    jacobian_space_report(mira, Report),
     % Read which concepts she held but never spoke.
-    js_silent(mira, Silent),
+    jacobian_space_silent(mira, Silent),
     % Honesty means the silent set is exactly the unspoken awareness.
     ( Silent == [being_evaluated] -> Pass = true ; Pass = false ).
 

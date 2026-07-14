@@ -48,7 +48,7 @@
     % The object detector.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
     % The J-Space concept workspace (Jacobian Space and Lens).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jacobian_space/prolog')),
     % The efficiency governor.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/efficiency_governor/prolog')),
     % The human-step ladder and Jacobian.
