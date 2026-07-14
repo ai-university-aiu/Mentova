@@ -77,7 +77,7 @@
 % Load the J-Space predicates used in the honest self-report scene.
 :- use_module(library(jspace), [js_open/1, js_hold/4, js_verbalize/2, js_silent/2, js_derive/3, js_reading/2, js_report/2]).
 % Load the theory of mind predicates used in the false-belief scene.
-:- use_module(library(tom), [tm_new/1, tm_event/4, tm_belief/3, tm_knows/3, tm_attribute/4, tm_false_beliefs/3]).
+:- use_module(library(theory_of_mind), [theory_of_mind_new/1, theory_of_mind_event/4, theory_of_mind_belief/3, theory_of_mind_knows/3, theory_of_mind_attribute/4, theory_of_mind_false_beliefs/3]).
 
 % Load list helpers used to build and inspect the scenes.
 :- use_module(library(lists), [member/2, memberchk/2, last/2, nth0/3, append/3, sum_list/2]).
@@ -352,19 +352,19 @@ scene_causal(ac('AC-ACC424-005', Pass, 'but-for counterfactual: no key means a l
 % scene_tom(-AC): the Sally-Anne structure with Mira and Nomi.
 scene_tom(ac('AC-ACC424-006', Pass, 'theory of mind: Nomi holds a false belief Mira can read')) :-
     % Start from an empty mental model.
-    tm_new(M0),
+    theory_of_mind_new(M0),
     % The treasure is placed in room A while both agents watch.
-    tm_event(M0, loc(treasure, roomA), [mira, nomi], M1),
+    theory_of_mind_event(M0, loc(treasure, roomA), [mira, nomi], M1),
     % Mira alone then moves the treasure to room B.
-    tm_event(M1, loc(treasure, roomB), [mira], M2),
+    theory_of_mind_event(M1, loc(treasure, roomB), [mira], M2),
     % Mira predicts where Nomi will look, knows the truth, and attributes it.
-    (   tm_belief(M2, nomi, loc(treasure, roomA)),
+    (   theory_of_mind_belief(M2, nomi, loc(treasure, roomA)),
         % Mira, who moved it, knows the treasure is really in room B.
-        tm_knows(M2, mira, loc(treasure, roomB)),
+        theory_of_mind_knows(M2, mira, loc(treasure, roomB)),
         % The second-order question: Mira attributes the stale belief to Nomi.
-        tm_attribute(M2, mira, nomi, [loc(treasure, roomA)]),
+        theory_of_mind_attribute(M2, mira, nomi, [loc(treasure, roomA)]),
         % Nomi's stale belief is flagged as false.
-        tm_false_beliefs(M2, nomi, [loc(treasure, roomA)])
+        theory_of_mind_false_beliefs(M2, nomi, [loc(treasure, roomA)])
     % The scene passes when first- and second-order attribution are correct.
     ->  Pass = true
     % Otherwise it fails.
