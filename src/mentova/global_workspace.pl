@@ -79,9 +79,9 @@
                                      pai_broadcast_subscribe/1,
                                      pai_pin_item/2, pai_salience/2]),
     % Load the attention economy pack.
-    use_module(library(attention),  [pai_wage/3, pai_banker_cycle/0,
-                                     pai_attention_metrics/1,
-                                     pai_attention_link/2])
+    use_module(library(attention),  [attention_wage/3, attention_banker_cycle/0,
+                                     attention_metrics/1,
+                                     attention_link/2])
 % Run this initialization immediately at load time (not deferred to main).
 ), now).
 % Load lists for member/2.
@@ -152,7 +152,7 @@ ws_log_broadcast(broadcast_content(CId, Relation, Ids, Salience)) :-
     forall(
         member(Id, Ids),
         catch(
-            pai_wage(Id, 0.8, _Credits),
+            attention_wage(Id, 0.8, _Credits),
             _, true
         )
     ).
@@ -180,7 +180,7 @@ workspace_seed([item(Relation, Args, Referents) | Rest]) :-
             anchor_node(linked, [Id, dummy], [], NbrId),
             _, NbrId = unknown
         ),
-        catch(pai_attention_link(Id, NbrId), _, true)
+        catch(attention_link(Id, NbrId), _, true)
     ;   true
     ),
     % Recurse for the rest of the items.
@@ -199,7 +199,7 @@ workspace_run_cycle(N) :-
     % Run one workspace cycle (coalition form, select winner, broadcast, habituate).
     workspace_cycle,
     % Run one banker cycle (rent, spread, conservation).
-    catch(pai_banker_cycle, _, true),
+    catch(attention_banker_cycle, _, true),
     % Decrement the counter.
     N1 is N - 1,
     % Recurse for the remaining cycles.
@@ -230,7 +230,7 @@ workspace_report(Report) :-
             History),
     % Get current attention economy metrics.
     catch(
-        pai_attention_metrics(Metrics),
+        attention_metrics(Metrics),
         _, Metrics = metrics(0.0, 0.0, 1000.0)
     ),
     % Build the report term.
@@ -334,7 +334,7 @@ workspace_demo :-
     % Report the attention economy state.
     format("~n--- Attention Economy Metrics ---~n"),
     catch(
-        ( pai_attention_metrics(metrics(TotSTI, TotLTI, Reserve)),
+        ( attention_metrics(metrics(TotSTI, TotLTI, Reserve)),
           format("Total STI in circulation: ~4f~n", [TotSTI]),
           format("Total LTI accumulated:    ~4f~n", [TotLTI]),
           format("Reserve remaining:        ~4f~n", [Reserve])
