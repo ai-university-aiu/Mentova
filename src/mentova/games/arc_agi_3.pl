@@ -3,7 +3,7 @@
     The mentova_arc_agi_3_chat application (Acc_426) plays an ARC-AGI-3-style
     game with a human giving clues. This driver is its unaided sibling: it
     plays with no human at all. It wires the PrologAI ARC-AGI-3 Readiness suite
-    (WP-397 through WP-400) onto the co_arc3 harness so Mentova can, on its
+    (WP-397 through WP-400) onto the arc3_harness harness so Mentova can, on its
     own, explore an unknown interactive environment, work out what winning
     means, spend its actions frugally, and speak the live protocol exactly —
     the four things the ARC-AGI-3 benchmark actually measures.
@@ -15,7 +15,7 @@
                    chosen — and expands the ACTION6 cell-select to a few
                    object-centroid clicks instead of thousands of blind cells.
       causal_core /    the harness induces a reified causal relation from each
-      co_learn     frame delta and tags a penalty delta preventive.
+      causal_learning     frame delta and tags a penalty delta preventive.
       goal_inference watches the frame changes before a win and hypothesises the
                    unstated win condition, with a confidence reading.
       efficiency_governor     counts the actions spent and scores the run against a human
@@ -79,17 +79,17 @@
     % The object detector the exploration policy uses for click targets.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
     % The noun backbone the Causalontology core rests on.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_noun/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/noun_backbone/prolog')),
     % The realizable hinge.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hinge/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/realizable_hinge/prolog')),
     % The Causalontology core.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_core/prolog')),
     % The interventional learner.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_learn/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_learning/prolog')),
     % The planner.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_plan/prolog')),
     % The perceive-learn-plan-act harness.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_arc3/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/arc3_harness/prolog')),
     % The exploration policy (WP-397).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_explore/prolog')),
     % The goal inference (WP-398).
@@ -101,9 +101,9 @@
 ), now).
 
 % Load the harness for frame deltas and its reset.
-:- use_module(library(co_arc3), [co_arc3_delta/3, co_arc3_reset/0]).
+:- use_module(library(arc3_harness), [arc3_harness_delta/3, arc3_harness_reset/0]).
 % Load the learner for causal induction and preventive tagging.
-:- use_module(library(co_learn), [co_learn_causal/2, co_learn_preventive/2, co_learn_reset/0]).
+:- use_module(library(causal_learning), [causal_learning_causal/2, causal_learning_preventive/2, causal_learning_reset/0]).
 % Load the exploration policy.
 :- use_module(library(co_explore),
     [cox_reset/0, cox_choose/4, cox_mark_seen/1, cox_would_loop/1]).
@@ -145,9 +145,9 @@ a3_reset :-
     % Drop the trace.
     retractall(a3_trace_(_)),
     % Reset the harness.
-    co_arc3_reset,
+    arc3_harness_reset,
     % Reset the learner.
-    co_learn_reset,
+    causal_learning_reset,
     % Reset the exploration memory.
     cox_reset,
     % Reset the goal inference.
@@ -208,7 +208,7 @@ a3_mock_solved(Frame) :-
     % Read the bottom-right cell.
     gd_cell(Frame, 2, 2, 3).
 
-% Define a3_local_env: the built-in mock as a pluggable co_arc3 environment.
+% Define a3_local_env: the built-in mock as a pluggable arc3_harness environment.
 a3_local_env(arc3_env(
     % The reset goal.
     arc_agi_3:a3_mock_reset,
@@ -296,7 +296,7 @@ a3_turn(arc3_env(_, ActGoal, ActionsGoal, SolvedGoal), Frame, Frame1, Action, St
     % Perform the action and receive the next frame.
     call(ActGoal, Action, Frame1),
     % The change between the frames is the observed effect.
-    co_arc3_delta(Frame, Frame1, Delta),
+    arc3_harness_delta(Frame, Frame1, Delta),
     % Learn from the effect.
     a3_learn(Action, Delta),
     % Spend one action against the efficiency budget.
@@ -323,13 +323,13 @@ a3_learn(Action, Delta) :-
     % Detect the penalty colour among the changes.
     memberchk(changed(_, _, _, 15), Delta),
     % Tag the action preventive so it is never chosen again.
-    co_learn_preventive(Action, penalty),
+    causal_learning_preventive(Action, penalty),
     % Commit to the hazard clause.
     !.
 % Otherwise the delta is the effect the action produced.
 a3_learn(Action, Delta) :-
     % Induce a causal relation from the action to its effect.
-    co_learn_causal(Action, delta(Delta)).
+    causal_learning_causal(Action, delta(Delta)).
 
 % a3_tries_list(-Tried): the agent's try counts as an Action-Count list.
 a3_tries_list(Tried) :-

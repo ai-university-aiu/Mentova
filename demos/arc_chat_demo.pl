@@ -38,15 +38,15 @@
 :- use_module('../src/mentova/chat_db',
               [mc_create_mentor/2, mc_authenticate_mentor/3, mc_create_session/2]).
 % Load the Causalontology stores the clues write into.
-:- use_module(library(co_noun), [co_continuant/2]).
+:- use_module(library(noun_backbone), [noun_backbone_continuant/2]).
 % Load the hinge the key clue populates.
-:- use_module(library(co_hinge), [co_realizable/3]).
+:- use_module(library(realizable_hinge), [realizable_hinge_realizable/3]).
 % Load the learner whose avoid-set the hazard clue feeds.
-:- use_module(library(co_learn), [co_avoid/1, co_learn_reset/0]).
+:- use_module(library(causal_learning), [causal_learning_avoid/1, causal_learning_reset/0]).
 % Load the core for the reinforcement check.
 :- use_module(library(causal_core), [causal_core_cro/8, causal_core_reset/0]).
 % Load the hinge reset.
-:- use_module(library(co_hinge), [co_hinge_reset/0]).
+:- use_module(library(realizable_hinge), [realizable_hinge_reset/0]).
 % Load the HTTP client for the over-the-wire scenes.
 :- use_module(library(http/http_open)).
 % Load the JSON codec.
@@ -66,9 +66,9 @@ fresh :-
     % Clear the verb layer.
     causal_core_reset,
     % Clear the hinge.
-    co_hinge_reset,
+    realizable_hinge_reset,
     % Clear the learning state.
-    co_learn_reset,
+    causal_learning_reset,
     % Clear guidance, labels, and counters.
     ma_reset_guidance,
     % Reset the game.
@@ -217,13 +217,13 @@ scene_guided_run(ac('AC-ACC426-004', P4, 'clues label, attach a disposition, set
     % The door object's game-keyed id.
     atomic_list_concat([obj_, G, '_0_4'], DoorId),
     % Scene four: the clues took hold in the ontology, keyed to this game.
-    (   co_continuant(KeyId, key_like),
+    (   noun_backbone_continuant(KeyId, key_like),
         % The door was labeled.
-        co_continuant(DoorId, door_like),
+        noun_backbone_continuant(DoorId, door_like),
         % The key-like object bears a disposition.
-        co_realizable(KeyId, disposition, KeyId),
+        realizable_hinge_realizable(KeyId, disposition, KeyId),
         % The human-declared hazard is enforced like a self-learned one, keyed to the game.
-        co_avoid(g(G, touch(cell(3, 3))))
+        causal_learning_avoid(g(G, touch(cell(3, 3))))
     % The ontology holds the guidance.
     ->  P4 = true
     % Otherwise it does not.

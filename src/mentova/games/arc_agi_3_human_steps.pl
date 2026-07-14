@@ -26,7 +26,7 @@
     reads the process back.
 
     Predicates:
-      hs3_nav_env/1   -- -Env    (the navigation environment as a co_arc3 quad)
+      hs3_nav_env/1   -- -Env    (the navigation environment as a arc3_harness quad)
       hs3_play/2      -- +Space, -Result   (play the game solo, walking the ladder)
       hs3_jlens/2     -- +Space, -Reading  (the J-Lens readout of the process)
 */
@@ -149,7 +149,7 @@ hs3_solved(_Frame) :-
     % They must coincide.
     R =:= GR, C =:= GC.
 
-% Define hs3_nav_env: the navigation environment as a co_arc3 quadruple.
+% Define hs3_nav_env: the navigation environment as a arc3_harness quadruple.
 hs3_nav_env(arc3_env(
     % The reset goal.
     arc_agi_3_human_steps:hs3_reset,

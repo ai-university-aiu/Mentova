@@ -12,8 +12,8 @@ Causalontology_v5 ("Causalontology: AGI's Missing Link"), the process-first
 Foundational Ontology in which causation governs the verbs through a reified Causal
 Relation Object, a thin native backbone hosts the nouns, and realizable
 entities form the hinge between them. Three deliverables land together. On
-the PrologAI platform, six new packs - co_noun, co_hinge, causal_core, co_learn,
-co_plan, and co_arc3 - realize the ontology's three layers, its learning by
+the PrologAI platform, six new packs - noun_backbone, realizable_hinge, causal_core, causal_learning,
+co_plan, and arc3_harness - realize the ontology's three layers, its learning by
 embodied intervention, its safe planning, and a game-agnostic
 perceive-learn-plan-act harness aimed at the interactive ARC-AGI-3 benchmark.
 On Mentova, the specification's own runnable core ships verbatim and passes

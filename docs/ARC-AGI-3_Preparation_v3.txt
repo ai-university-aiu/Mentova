@@ -164,15 +164,15 @@ PART TWO - THE PROLOGAI DECISION AND WORK
 
 Before deciding what to build, the existing state of both code bases was examined carefully so that nothing already present would be duplicated.
 
-PrologAI already contained a package, called co_arc3, that provides the core game loop for interactive environments.
+PrologAI already contained a package, called arc3_harness, that provides the core game loop for interactive environments.
 
 A package in PrologAI is a self-contained, versioned unit of capability; the project calls each one a work package, abbreviated Work Package (WP).
 
-The co_arc3 package closes what it calls the perceive-learn-plan-act loop: it turns a frame into facts, turns the change between two frames into a learned cause-and-effect relation, chooses an action by planning first and being curious second, never repeats an action it has learned is harmful, and keeps a fully readable trace of every step.
+The arc3_harness package closes what it calls the perceive-learn-plan-act loop: it turns a frame into facts, turns the change between two frames into a learned cause-and-effect relation, chooses an action by planning first and being curious second, never repeats an action it has learned is harmful, and keeps a fully readable trace of every step.
 
 It also has a deliberately loose bridge to the live web interface, kept loose on purpose because the exact web addresses change between releases.
 
-Reading the co_arc3 code closely revealed four capabilities that the benchmark demands but that the bare loop leaves for the caller to supply.
+Reading the arc3_harness code closely revealed four capabilities that the benchmark demands but that the bare loop leaves for the caller to supply.
 
 • It chose actions only by how few times each had been tried, with no preference for actions likely to change the world and no memory of states already visited - exactly the behaviours the two strongest preview agents relied on.
 
@@ -182,7 +182,7 @@ Reading the co_arc3 code closely revealed four capabilities that the benchmark d
 
 • It had no notion of efficiency, human baseline, action budget, or the benchmark's scoring, and its live bridge even encoded the click with the older action-five convention rather than the current ACTION6.
 
-The decision, therefore, was that PrologAI did need new packs, and four were built, one for each gap, each building on co_arc3 rather than replacing it.
+The decision, therefore, was that PrologAI did need new packs, and four were built, one for each gap, each building on arc3_harness rather than replacing it.
 
 The four packs share the co_ family name prefix of the Causalontology suite they extend, and they take the next free work package and layer numbers, Work Packages 397 through 400 at Layers 372 through 375.
 
@@ -208,7 +208,7 @@ It counts the actions spent on each level, holds the human baseline, turns that 
 
 The fourth new pack is co_arc3proto, the protocol vocabulary.
 
-It pins down the exact March 2026 web interface as plain, inspectable facts: the mapping from each action to its command name, the web address of each command, the scorecard open and close addresses, the four game states, the sixty-four-cell and sixteen-colour frame limits, and a guarded adapter that packages all of this as an environment the co_arc3 loop can play directly.
+It pins down the exact March 2026 web interface as plain, inspectable facts: the mapping from each action to its command name, the web address of each command, the scorecard open and close addresses, the four game states, the sixty-four-cell and sixteen-colour frame limits, and a guarded adapter that packages all of this as an environment the arc3_harness loop can play directly.
 
 Because it lives in one small file, a future change to the live interface is a one-file edit rather than a scattered hunt.
 
@@ -219,7 +219,7 @@ Mentova already had one piece of ARC-AGI-3 support, the mentova_arc_agi_3_chat a
 
 What Mentova did not have was an agent that plays with no human help at all, which is what the benchmark actually measures.
 
-The decision, therefore, was that Mentova did need new code: an autonomous agent driver that wires the four new PrologAI packs onto the co_arc3 loop.
+The decision, therefore, was that Mentova did need new code: an autonomous agent driver that wires the four new PrologAI packs onto the arc3_harness loop.
 
 The word autonomous here means acting on its own, without a person in the loop.
 
@@ -250,7 +250,7 @@ On the PrologAI side, the four new packs carry twenty-seven automated tests in t
 
 • co_arc3proto has nine passing tests.
 
-The existing co_arc3 tests still pass unchanged, and all four new packs load together with the whole Causalontology suite without any clash.
+The existing arc3_harness tests still pass unchanged, and all four new packs load together with the whole Causalontology suite without any clash.
 
 On the Mentova side, the autonomous agent was run end to end against its built-in game, with no human help.
 
@@ -288,7 +288,7 @@ Because this work was carried out without stopping to ask questions, a few reaso
 
 • The four capabilities were built as four separate packs rather than one, so that each is small, independently testable, and independently reusable, matching the one-capability-per-pack style of the platform.
 
-• The packs build on co_arc3 rather than replacing it, so no existing capability was disturbed.
+• The packs build on arc3_harness rather than replacing it, so no existing capability was disturbed.
 
 • The Mentova driver ships a built-in mock game so the whole system can be proven offline, honestly, without depending on the live servers.
 
