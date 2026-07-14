@@ -1,7 +1,7 @@
 /*  Mentova — Hierarchical Plan Integration Demonstration
 
     Proves the solo player is driven by, and narrates play as, an explicit
-    multi-level plan (co_hplan): the top goal Win Game, the observe-orient-decide-
+    multi-level plan (hierarchical_planning): the top goal Win Game, the observe-orient-decide-
     act loop, and the game's concrete controls — reified onto Causalontology's own
     decomposition hierarchy and exposed in the glass box.
 

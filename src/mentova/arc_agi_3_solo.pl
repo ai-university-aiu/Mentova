@@ -4,7 +4,7 @@
     everything the guided sessions taught - the learnings in the data lattice,
     the Causalontology relations, the human-set goal, priorities, and hazards,
     the Jacobian Space (J-Space), and the shared state-exploration graph
-    (co_graph) that Guided built - and runs the ARC-AGI-3 game environments
+    (state_graph) that Guided built - and runs the ARC-AGI-3 game environments
     with no direct human direction. It plays moment to moment, and each attempt
     ends in a date-and-time-stamped plain-text report in the solo attempts
     directory.
@@ -79,7 +79,7 @@ s3_learnings(Learnings) :-
     % The same shared learnings ARC-AGI-3_Guided wrote.
     ma_learnings(Learnings).
 
-% Define s3_graph: the shared state-graph exploration map (co_graph). Solo reads
+% Define s3_graph: the shared state-graph exploration map (state_graph). Solo reads
 % the very same graph Guided built as the human taught, and adds to it as it
 % plays unaided — one store, shared by both sub-projects.
 s3_graph(Graph) :-

@@ -82,7 +82,7 @@ run :-
           ma_render(ls20, F4),
           mentova_arc_chat:ma_state_key(ls20, F4, Key4),
           mentova_arc_chat:ma_actions_env(ls20, As4), As4 = [Fatal4 | _],
-          catch(mentova_arc_chat:vb_note_fatal(ls20, Key4, Fatal4), _, true),
+          catch(mentova_arc_chat:verification_note_fatal(ls20, Key4, Fatal4), _, true),
           mentova_arc_chat:ma_predict_fatal(ls20, F4, Fatal4),
           mentova_arc_chat:ma_survey_action(ls20, F4, Chosen4),
           Chosen4 \== Fatal4,

@@ -7,7 +7,7 @@
     Everything it learns lands in the shared substrate - the data lattice
     (node facts), the Causalontology relations, the human-set goal, priorities,
     and hazards, the Jacobian Space (J-Space), and the shared state-exploration
-    graph (co_graph) which Guided play builds and Solo reads - which the companion
+    graph (state_graph) which Guided play builds and Solo reads - which the companion
     sub-project ARC-AGI-3_Solo reads back and plays from unaided.
 
     This module is the named face of that sub-project. Its predicates delegate
@@ -77,7 +77,7 @@ g3_learnings(Learnings) :-
     % The shared learnings the Solo sub-project also reads.
     ma_learnings(Learnings).
 
-% Define g3_graph: the shared state-graph exploration map (co_graph). Guided play
+% Define g3_graph: the shared state-graph exploration map (state_graph). Guided play
 % builds this graph as the human drives and teaches, and Solo reads the very same
 % graph — there is one store, not one per mode.
 g3_graph(Graph) :-

@@ -1,7 +1,7 @@
 /*  Mentova — OODA Methodology as a Held Skill in Jacobian Space
 
     The OODA loop (Observe, Orient, Decide, Act) is the middle layer of every plan
-    Mentova builds (co_hplan). This module holds the methodology itself in Mentova's
+    Mentova builds (hierarchical_planning). This module holds the methodology itself in Mentova's
     Jacobian-Space workspace as a skill the mind can reason about — not only the
     shape of its plans but a concept it carries: which phase it is in, why
     orientation is the schwerpunkt, when to take the fast implicit path, and how the
@@ -13,7 +13,7 @@
       ooda_phase/2                -- ?Phase, ?Description   (Boyd's four)
       ooda_orientation_ingredient/2 -- ?Ingredient, ?Description (the five)
       ooda_principle/2            -- ?Principle, ?Description
-      ooda_hplan_map/2            -- ?OodaPhase, ?HplanPhases (the co_hplan mapping)
+      ooda_hplan_map/2            -- ?OodaPhase, ?HplanPhases (the hierarchical_planning mapping)
       ooda_recall/2               -- +Topic, -Items
       ooda_stats/1                -- -stats(Phases, Ingredients, Principles, Held)
 */
@@ -28,7 +28,7 @@
     ooda_orientation_ingredient/2,
     % ooda_principle/2: a core OODA principle and its meaning.
     ooda_principle/2,
-    % ooda_hplan_map/2: how an OODA phase maps onto co_hplan's middle layer.
+    % ooda_hplan_map/2: how an OODA phase maps onto hierarchical_planning's middle layer.
     ooda_hplan_map/2,
     % ooda_recall/2: recall the held OODA concepts matching a topic.
     ooda_recall/2,
@@ -46,7 +46,7 @@
 % ===========================================================================
 
 % ooda_phase(?Phase, ?Description): Boyd's four phases. See and re-observe are the
-% two co_hplan names them into; here they are Boyd's canonical four.
+% two hierarchical_planning names them into; here they are Boyd's canonical four.
 ooda_phase(observe,
     'Take in the situation, fed by the unfolding circumstances, outside information, and the unfolding interaction with the environment.').
 ooda_phase(orient,
@@ -85,11 +85,11 @@ ooda_principle(moral_mental_physical,
     'Conflict has three dimensions — physical (menace and isolate), mental (generate uncertainty), and moral (break cohesion). The moral is most decisive, the physical least.').
 
 % ===========================================================================
-% SECTION 2 — the mapping onto co_hplan's middle layer
+% SECTION 2 — the mapping onto hierarchical_planning's middle layer
 % ===========================================================================
 
 % ooda_hplan_map(?OodaPhase, ?HplanPhases): how each of Boyd's phases corresponds to
-% the phases co_hplan puts in a plan's middle layer.
+% the phases hierarchical_planning puts in a plan's middle layer.
 ooda_hplan_map(observe, [see, observe]).
 ooda_hplan_map(orient,  [orient]).
 ooda_hplan_map(decide,  [decide]).

@@ -1,14 +1,14 @@
 /*  Mentova — OODA Methodology Skill Demonstration
 
     Proves that Mentova holds John Boyd's OODA loop as a skill it can reason about,
-    in Jacobian Space, and that the methodology maps onto co_hplan's middle layer.
+    in Jacobian Space, and that the methodology maps onto hierarchical_planning's middle layer.
 
     Acceptance criteria (each prints PASS or FAIL):
       AC-OO-001: the four OODA phases are known.
       AC-OO-002: the five ingredients of orientation are known.
       AC-OO-003: the implicit-guidance principle is known (the expert's fast path).
       AC-OO-004: orientation is recorded as the schwerpunkt.
-      AC-OO-005: each OODA phase maps onto co_hplan's middle-layer phases.
+      AC-OO-005: each OODA phase maps onto hierarchical_planning's middle-layer phases.
       AC-OO-006: the methodology is held as concepts in the J-Space workspace.
       AC-OO-007: recall answers a query about tempo.
 
@@ -29,7 +29,7 @@ report(Id, Goal) :-
     -> V = 'PASS' ; V = 'FAIL' ),
     format("~w: ~w~n", [Id, V]).
 
-% run_ooda_demo: hold the methodology and check it landed and maps to co_hplan.
+% run_ooda_demo: hold the methodology and check it landed and maps to hierarchical_planning.
 run_ooda_demo :-
     % Announce.
     format("~n=== OODA Methodology as a Held Skill ===~n~n", []),
@@ -55,7 +55,7 @@ run_ooda_demo :-
         ( ooda_principle(orientation_is_schwerpunkt, T2),
           sub_atom(T2, _, _, _, 'main thing') )),
 
-    % AC-005: each OODA phase maps onto co_hplan's middle-layer phases.
+    % AC-005: each OODA phase maps onto hierarchical_planning's middle-layer phases.
     report('AC-OO-005',
         ( ooda_hplan_map(observe, [see, observe]),
           ooda_hplan_map(orient, [orient]),

@@ -7,8 +7,8 @@
     currently on live in the Jacobian Space (J-Space) workspace, so the
     Jacobian Lens reads out the whole human process as it plays.
 
-    It uses the PrologAI co_hsteps pack for the ladder, the J-Space holding, and
-    the discrete action-response Jacobian, and co_effic for the efficiency
+    It uses the PrologAI human_steps pack for the ladder, the J-Space holding, and
+    the discrete action-response Jacobian, and efficiency_governor for the efficiency
     score. The game is a small navigation environment (the clearest home for
     the Jacobian): a five-by-five grid with a controllable avatar (colour three)
     and a goal cell (colour four); the four actions move the avatar up, down,
@@ -50,18 +50,18 @@
     % The J-Space concept workspace (Jacobian Space and Lens).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
     % The efficiency governor.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_effic/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/efficiency_governor/prolog')),
     % The human-step ladder and Jacobian.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hsteps/prolog'))
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/human_steps/prolog'))
 ), now).
 
 % Load the human-step ladder, J-Space holding, and the Jacobian.
-:- use_module(library(co_hsteps),
-    [hs_reset/1, hs_enter/2, hs_reading/2, hs_ladder/1,
-     hs_controllable/2, hs_jacobian/3, hs_goal_gradient/4]).
+:- use_module(library(human_steps),
+    [human_steps_reset/1, human_steps_enter/2, human_steps_reading/2, human_steps_ladder/1,
+     human_steps_controllable/2, human_steps_jacobian/3, human_steps_goal_gradient/4]).
 % Load the efficiency governor for the execution score.
-:- use_module(library(co_effic),
-    [cef_reset/0, cef_set_baseline/2, cef_count/1, cef_actions/2, cef_level_score/3]).
+:- use_module(library(efficiency_governor),
+    [efficiency_governor_reset/0, efficiency_governor_set_baseline/2, efficiency_governor_count/1, efficiency_governor_actions/2, efficiency_governor_level_score/3]).
 % Load list helpers.
 :- use_module(library(lists), [member/2, numlist/3, reverse/2]).
 
@@ -168,7 +168,7 @@ hs3_nav_env(arc3_env(
 hs3_play(Space, result(Outcome, actions(Actions), score(Score),
                        controllable(Ctrl), goal(cell(GR, GC)), plan(Plan))) :-
     % Open the J-Space workspace at the first human step.
-    hs_reset(Space),
+    human_steps_reset(Space),
     % The navigation environment.
     hs3_nav_env(Env),
     % Phase I — orient: hold the remaining orientation steps.
@@ -178,9 +178,9 @@ hs3_play(Space, result(Outcome, actions(Actions), score(Score),
     % Try each action once and assemble the transitions.
     hs3_probe(Env, Transitions),
     % Read off which object the agent controls (the avatar).
-    hs_controllable(Transitions, Ctrl),
+    human_steps_controllable(Transitions, Ctrl),
     % Build the discrete action-response Jacobian for it.
-    hs_jacobian(Transitions, Ctrl, Jacobian),
+    human_steps_jacobian(Transitions, Ctrl, Jacobian),
     % Phase III — goal: hold the goal-inference steps.
     hs3_hold(Space, ['III.1','III.2','III.3','III.4','III.5','III.6']),
     % Locate the goal cell.
@@ -201,7 +201,7 @@ hs3_play(Space, result(Outcome, actions(Actions), score(Score),
 % hs3_hold(+Space, +StepIds): hold each step in J-Space, in order.
 hs3_hold(Space, StepIds) :-
     % Enter every listed step, decaying the earlier ones as it goes.
-    forall(member(S, StepIds), hs_enter(Space, S)).
+    forall(member(S, StepIds), human_steps_enter(Space, S)).
 
 % hs3_probe(+Env, -Transitions): try each action once from the start.
 hs3_probe(arc3_env(Reset, Act, Actions, _), Transitions) :-
@@ -232,7 +232,7 @@ hs3_descend(_, _, _, _, _, Step, Cap, Acc, Acc) :- Step >= Cap, !.
 % Otherwise take the gradient's best action and continue.
 hs3_descend(Jac, R, C, GR, GC, Step, Cap, Acc, Plan) :-
     % The best action from here by the goal gradient.
-    hs_goal_gradient(Jac, cell(R, C), cell(GR, GC), [Best | _]),
+    human_steps_goal_gradient(Jac, cell(R, C), cell(GR, GC), [Best | _]),
     % Its modelled displacement.
     member(jac(Best, DR, DC), Jac),
     % The grid bound.
@@ -255,17 +255,17 @@ hs3_execute(Env, Plan, Outcome, Actions, Score) :-
     % Unpack the reset goal.
     Env = arc3_env(Reset, _, _, _),
     % Clear the efficiency counters.
-    cef_reset,
+    efficiency_governor_reset,
     % The human baseline is the shortest route length (Manhattan distance).
-    cef_set_baseline(nav, 8),
+    efficiency_governor_set_baseline(nav, 8),
     % Reset the environment to the start.
     call(Reset, _),
     % Run the plan until the win.
     hs3_run(Env, Plan, Outcome),
     % How many actions were spent.
-    cef_actions(nav, Actions),
+    efficiency_governor_actions(nav, Actions),
     % The efficiency score against the human baseline.
-    cef_level_score(8, Actions, Score).
+    efficiency_governor_level_score(8, Actions, Score).
 
 % hs3_run(+Env, +Plan, -Outcome): execute actions, stopping at the win.
 % A win at the current state ends execution.
@@ -279,11 +279,11 @@ hs3_run(Env, [A | As], Outcome) :-
     % Perform the action.
     call(Act, A, _F1),
     % Count it against the efficiency budget.
-    cef_count(nav),
+    efficiency_governor_count(nav),
     % Continue with the rest of the plan.
     hs3_run(Env, As, Outcome).
 
 % Define hs3_jlens: the J-Lens readout of the human process in the workspace.
 hs3_jlens(Space, Reading) :-
     % Delegate to the ladder's reading, which reads the Jacobian Lens.
-    hs_reading(Space, Reading).
+    human_steps_reading(Space, Reading).

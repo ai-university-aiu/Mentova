@@ -85,7 +85,7 @@ run_arc_solo_demo :-
     report('AC-GS-006', demo_attempts_viewable),
 
     % AC-007: Guided play builds the shared state graph, and Solo reads the very
-    % same graph (co_graph wired into both, one store).
+    % same graph (state_graph wired into both, one store).
     report('AC-GS-007', demo_shared_graph),
 
     % AC-008: learnings are keyed by game id — what is taught in one environment
@@ -119,7 +119,7 @@ run_arc_solo_demo :-
 demo_shared_graph :-
     % A fresh navigation game with an empty graph.
     ma_set_game(vc33), ma_set_mode(guided), ma_reset_guidance,
-    catch(mentova_arc_chat:cg_reset, _, true),
+    catch(mentova_arc_chat:state_graph_reset, _, true),
     % Drive a few guided actions, which build the shared exploration graph.
     forall(member(C, ['ACTION2', 'ACTION4', 'ACTION2', 'ACTION4']),
         ( mentova_arc_chat:ma_command_action(vc33, C, A),
@@ -199,7 +199,7 @@ demo_durable_persistence :-
     retractall(mentova_arc_chat:ma_label_(_, _, _)),
     retractall(mentova_arc_chat:ma_effect_(_, _, _)),
     retractall(mentova_arc_chat:ma_win_path_(_, _)),
-    catch(mentova_arc_chat:cg_reset, _, true),
+    catch(mentova_arc_chat:state_graph_reset, _, true),
     retractall(co_core:co_cro_(_, _, _, _, _, _, _, _)),
     % The stores are now empty for the game.
     g3_learnings(learnings(none, [], [], [], 0, _, stats(0, 0, 0, 0))),

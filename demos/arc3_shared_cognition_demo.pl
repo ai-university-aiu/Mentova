@@ -5,7 +5,7 @@
     (ma_choose), and now one shared, always-persisted, game-keyed COGNITIVE store.
     Every step of a guided run folds its transition into the executable world model
     (world_model), the hypothesis-commitment pack (co_hypo), goal inference (co_goalinfer)
-    and the budget governor (co_effic); those learnings are written to disk keyed by
+    and the budget governor (efficiency_governor); those learnings are written to disk keyed by
     game; and a later Solo run reloads them and REASONS FROM them.
 
     This demonstration proves exactly the orchestrator's acceptance test: a learning
