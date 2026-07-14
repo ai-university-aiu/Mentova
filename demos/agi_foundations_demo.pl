@@ -51,7 +51,7 @@
     % The structural causal models pack.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal/prolog')),
     % The active inference engine pack.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/actinf/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/active_inference/prolog')),
     % The structured world model pack.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/world_model/prolog')),
     % The hierarchical planner pack.
@@ -67,7 +67,7 @@
 % Load the causal predicates used in the counterfactual scene.
 :- use_module(library(causal), [causal_model/2, causal_but_for/5, causal_counterfactual/6]).
 % Load the active inference predicates used in the T-maze scene.
-:- use_module(library(actinf), [ai_model/7, ai_epistemic/4, ai_step/7]).
+:- use_module(library(active_inference), [active_inference_model/7, active_inference_epistemic/4, active_inference_step/7]).
 % Load the world model predicates used in the fetch and novelty scenes.
 :- use_module(library(world_model), [world_model_action/5, world_model_plan_bfs/5, world_model_simulate/4, world_model_holds/2, world_model_novelty/3]).
 % Load the planner predicates used in the decomposition scene.
@@ -263,7 +263,7 @@ scene_planner(ac('AC-ACC424-003', Pass, 'planner decomposes the goal and names i
 % mira_tmaze(-GM): the T-maze generative model, reward left or right.
 mira_tmaze(GM) :-
     % Assemble and validate the generative model.
-    ai_model(
+    active_inference_model(
         % States pair a location with the true reward side.
         [c_l, c_r, q_l, q_r, l_l, l_r, r_l, r_r],
         % The five observations Mira can make.
@@ -294,11 +294,11 @@ scene_actinf(ac('AC-ACC424-004', Pass, 'active inference checks the cue then goe
     % Build the T-maze model.
     mira_tmaze(GM),
     % The cue is worth information while the reward side is unknown.
-    ai_epistemic(GM, [c_l-0.5, c_r-0.5], check, EV),
+    active_inference_epistemic(GM, [c_l-0.5, c_r-0.5], check, EV),
     % Standing at the cue, Mira sees the left cue and updates her belief.
     (   EV > 0.6,
         % She perceives the cue and picks her next action in one step.
-        ai_step(GM, [q_l-0.5, q_r-0.5], cue_left, 1, 4.0, Action, _Posterior),
+        active_inference_step(GM, [q_l-0.5, q_r-0.5], cue_left, 1, 4.0, Action, _Posterior),
         % The revealed side sends her to the rewarded arm.
         Action == left
     % The scene passes when curiosity and goal-seeking both fire correctly.
