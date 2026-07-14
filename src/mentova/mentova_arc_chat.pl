@@ -138,7 +138,7 @@
     % The interventional learner.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_learning/prolog')),
     % The planner.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_plan/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_planner/prolog')),
     % The Jacobian Space (J-Space) concept workspace the solo run holds learnings in.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jspace/prolog')),
     % The state-graph exploration pack (the winning ARC-AGI-3 technique).
