@@ -139,7 +139,7 @@ ogp_stuck(Trace, stuck(MaxStale, AtStep)) :-
 % and how many times did it die.
 ogp_cognition(Game, cog(Committed, Laws, Goal, Deaths)) :-
     ( catch(mentova_arc_chat:hy_committed(Game, HC), _, fail) -> Committed = HC ; Committed = none ),
-    ( catch(aggregate_all(count, mentova_arc_chat:wm_law(Game, _, _), Laws), _, fail) -> true ; Laws = 0 ),
+    ( catch(aggregate_all(count, mentova_arc_chat:world_model_law(Game, _, _), Laws), _, fail) -> true ; Laws = 0 ),
     ( catch(mentova_arc_chat:cgi_hypothesise_goal(G0), _, fail) -> Goal = G0 ; Goal = none ),
     ( catch(aggregate_all(count, mentova_arc_chat:ma_death_(Game, _, _), Deaths), _, fail) -> true ; Deaths = 0 ).
 
@@ -181,7 +181,7 @@ ogp_intervention(died_early,
 ogp_intervention(no_committed_hypothesis,
     'No committed hypothesis: the productive action is unclear. Mentor a hint_action naming the action that advances this game, or write a CRO to the lattice (co_learn_causal) linking the right action to its effect, so co_hypo can commit.').
 ogp_intervention(no_world_model_law,
-    'No world-model law: effects look inconsistent (a changing HUD/counter is masking them). Teach the volatile region, or add a context feature to co_wm so the effect becomes learnable.').
+    'No world-model law: effects look inconsistent (a changing HUD/counter is masking them). Teach the volatile region, or add a context feature to world_model so the effect becomes learnable.').
 ogp_intervention(no_goal_inferred,
     'No goal inferred: there is no win to bootstrap from. This is the core blocker — mentor a hint_goal (the target cell/colour), or seed a winning path over the Bridge so goal inference has a delta to learn from.').
 ogp_intervention(dominated_by(Key),

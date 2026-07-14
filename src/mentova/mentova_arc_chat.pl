@@ -156,7 +156,7 @@
     % Hypothesis management with anti-drift commitment (WP-406).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_hypo/prolog')),
     % The executable, verifiable, repairable world model (WP-407).
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_wm/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/world_model/prolog')),
     % Object-relational reasoning (WP-408).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_rel/prolog')),
     % Goal inference: hypothesise the unstated win condition from winning deltas.
@@ -215,9 +215,9 @@
      vb_predict_fatal/3, vb_rank/4]).
 % Load the executable world model (WP-407): learn each action's effect from play,
 % surface the general laws, so the mind builds a repairable model of the game.
-:- use_module(library(co_wm),
-    [wm_reset/0, wm_observe/4, wm_predict/5, wm_law/3, wm_stats/2,
-     wm_snapshot/2, wm_restore/2]).
+:- use_module(library(world_model),
+    [world_model_reset/0, world_model_observe/4, world_model_predict/5, world_model_law/3, world_model_stats/2,
+     world_model_snapshot/2, world_model_restore/2]).
 % Load hypothesis management (WP-406): generate candidate rules about which action
 % is productive, rank by predicted evidence, and COMMIT to the best without drifting
 % — the cure for the losing agents' defining failure. Shared by all three players.
@@ -1553,7 +1553,7 @@ ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinP
 % hypothesis state for this game from disk, so a guided run's learned dynamics and
 % committed hypotheses are there for a later Solo run — the cross-mode sharing.
 ma_restore_learned(arc_cog(Game, WmObs, HyState)) :-
-    catch(wm_restore(Game, WmObs), _, true),
+    catch(world_model_restore(Game, WmObs), _, true),
     catch(hy_restore(Game, HyState), _, true).
 % The single global goal-inference snapshot (which colours have meant winning),
 % accumulated across games and shared by all three players.
@@ -1606,7 +1606,7 @@ ma_without_game(Terms, Game, Others) :-
 % arc_cog term, using the packs' own snapshot exports. Defensive defaults so a
 % game with no cognition yet still yields a well-formed (empty) term.
 ma_snapshot_cog(Game, arc_cog(Game, WmObs, HyState)) :-
-    ( catch(wm_snapshot(Game, WmObs), _, fail) -> true ; WmObs = [] ),
+    ( catch(world_model_snapshot(Game, WmObs), _, fail) -> true ; WmObs = [] ),
     ( catch(hy_snapshot(Game, HyState), _, fail) -> true ; HyState = state([], none) ).
 
 % ma_snapshot_cog_global(-Term): the accumulated goal-inference evidence as a single
@@ -1761,7 +1761,7 @@ ma_reset_guidance :-
     retractall(ma_deadly_colour_(_, _)),
     catch(vb_reset, _, true),
     % Reset the executable world model (learned transitions) too.
-    catch(wm_reset, _, true),
+    catch(world_model_reset, _, true),
     % Reset the rest of the cognitive stack: hypotheses and their commitments, the
     % accumulated goal-inference evidence, and the action-budget counters. These are
     % durable in memory across attempts (like the world model), so they clear only on
@@ -1989,7 +1989,7 @@ ma_persist_level(Game, Level) :-
     format("level win persisted: ~w reached level ~w (~w steps)~n", [Game, Level, StepCount]).
 
 % ma_wm_learn(+Game, +Action, +Delta, +Outcome): fold one observed transition into
-% the executable world model (co_wm), keyed by the game, with the effect bucketed
+% the executable world model (world_model), keyed by the game, with the effect bucketed
 % so the model generalises. Guarded: a modelling hiccup never breaks a step.
 ma_wm_learn(Game, Action, Delta, Outcome) :-
     catch((
@@ -1999,13 +1999,13 @@ ma_wm_learn(Game, Action, Delta, Outcome) :-
         ; length(Delta, K), ( K < 10 -> Eff = small_change ; Eff = large_change )
         ),
         % Record it under the action, context-free for now (the general law).
-        wm_observe(Game, any_ctx, Action, Eff)
+        world_model_observe(Game, any_ctx, Action, Eff)
     ), _, true).
 
 % ma_wm_laws(+Game, -Laws): the general laws the world model has learned for a game
 % (actions whose effect is consistent), as law(Action, Effect), for the glass box.
 ma_wm_laws(Game, Laws) :-
-    ( catch(findall(law(A, E), wm_law(Game, A, E), Laws0), _, Laws0 = []) -> true ; Laws0 = [] ),
+    ( catch(findall(law(A, E), world_model_law(Game, A, E), Laws0), _, Laws0 = []) -> true ; Laws0 = [] ),
     Laws = Laws0.
 
 % ma_cog_learn(+Game, +Action, +Delta, +Outcome): fold one observed transition into
