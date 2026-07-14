@@ -31,17 +31,11 @@
 % Declare this file as the growth_path_report module.
 :- module(growth_path_report, [run_growth_path_report/0]).
 
-% Register the assessment pack prolog directory on the library search path.
-:- initialization((
-    assertz(user:file_search_path(library,
-        '/home/ccaitwo/PrologAI/packs/assessment/prolog'))
-), now).
-
-% Register the lattice pack prolog directory, which provides node_facts.pl.
-:- initialization((
-    assertz(user:file_search_path(library,
-        '/home/ccaitwo/PrologAI/packs/lattice/prolog'))
-), now).
+% Attach the whole PrologAI pack directory so every library(...) the Mentova
+% stack imports (about thirty packs, transitively) resolves from one directive,
+% instead of enumerating each pack's prolog directory (the earlier two-path
+% registration was incomplete and could not load the full stack).
+:- attach_packs('/home/ccaitwo/PrologAI/packs', [duplicate(replace)]).
 
 % Load the Mentova top-level interface.
 :- use_module('../src/mentova/mentova').
