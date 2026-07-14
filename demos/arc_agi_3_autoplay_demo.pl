@@ -2,7 +2,7 @@
 
     Exercises the unaided ARC-AGI-3 agent driver end to end. Where the Acc_426
     chat application wins with a human's clues, this driver wins with none: it
-    wires the PrologAI ARC-AGI-3 Readiness suite (co_explore, co_goalinfer,
+    wires the PrologAI ARC-AGI-3 Readiness suite (co_explore, goal_inference,
     efficiency_governor, arc3_protocol) onto the co_arc3 harness and plays a game whose
     mechanics it has never seen.
 

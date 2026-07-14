@@ -1,6 +1,6 @@
 /*  Mentova — Whole-Grid Perception & Object-Targeted Curiosity Demonstration
 
-    Proves the co_explore upgrade: Mentova now SEES the entire grid (co_see),
+    Proves the co_explore upgrade: Mentova now SEES the entire grid (grid_perception),
     learns the control map by watching what moves, deliberately goes to touch a
     fresh object instead of mulling on one spot, and READS a shrinking bar as a
     depleting resource rather than masking it away. It also proves the 25 studied
@@ -8,7 +8,7 @@
     unseen environment.
 
     Acceptance criteria (each prints PASS or FAIL):
-      AC-WP-001: co_see sees the whole grid — several roled objects, not one.
+      AC-WP-001: grid_perception sees the whole grid — several roled objects, not one.
       AC-WP-002: a meter/life-bar is read out as an object, not discarded.
       AC-WP-003: perception locates the avatar and LEARNS an action's displacement.
       AC-WP-004: object-targeting picks a fresh object and steers toward it.
@@ -26,8 +26,8 @@
 :- use_module('../src/mentova/mentova_arc_chat').
 % Load the cross-game priors.
 :- use_module('../src/mentova/arc3_priors').
-% Load co_see directly so the demo can inspect the inventory too.
-:- use_module(library(co_see), [cs_inventory/2, cs_bars/2]).
+% Load grid_perception directly so the demo can inspect the inventory too.
+:- use_module(library(grid_perception), [grid_perception_inventory/2, grid_perception_bars/2]).
 
 % The backend module, for reaching its internal (unexported) predicates.
 :- use_module(library(lists), [member/2, memberchk/2]).
@@ -79,13 +79,13 @@ run_wp_demo :-
     retractall(mentova_arc_chat:ma_pursuit_(G, _, _)),
     retractall(mentova_arc_chat:ma_meter_(G, _, _, _)),
 
-    % AC-001: co_see sees the whole grid — the avatar, the dot, and the bar.
+    % AC-001: grid_perception sees the whole grid — the avatar, the dot, and the bar.
     report('AC-WP-001',
-        ( cs_inventory(F0, Items), length(Items, N), N >= 3 )),
+        ( grid_perception_inventory(F0, Items), length(Items, N), N >= 3 )),
 
     % AC-002: a meter/life-bar is read out (not discarded).
     report('AC-WP-002',
-        ( cs_inventory(F0, Items2), member(seen(_, 2, _, _, meter), Items2) )),
+        ( grid_perception_inventory(F0, Items2), member(seen(_, 2, _, _, meter), Items2) )),
 
     % AC-003: perception locates the avatar and learns action(3)'s displacement.
     % Seed the avatar's start cell, then feed the observed step.
@@ -99,14 +99,14 @@ run_wp_demo :-
 
     % AC-004: object-targeting picks the fresh dot and steers toward it.
     report('AC-WP-004',
-        ( cs_inventory(F1, Items4),
+        ( grid_perception_inventory(F1, Items4),
           mentova_arc_chat:ma_object_action(G, F1, Items4, Action4, Basis4),
           Action4 = action(3), Basis4 = moving_to(pos(1, 6)) )),
 
     % AC-005: once an object is visited it is not chosen again. The dot at (1,6)
     % is the first target; after marking it visited it must drop out of the list.
     report('AC-WP-005',
-        ( cs_inventory(F1, Items5),
+        ( grid_perception_inventory(F1, Items5),
           mentova_arc_chat:ma_object_targets(G, F1, Items5, [pos(1, 6) | _]),
           assertz(mentova_arc_chat:ma_visited_(G, 1, 6)),
           mentova_arc_chat:ma_object_targets(G, F1, Items5, Again),
@@ -122,7 +122,7 @@ run_wp_demo :-
 
     % AC-007: with the resource draining, a dot is preferred (bias to collectibles).
     report('AC-WP-007',
-        ( cs_inventory(F1, Items7),
+        ( grid_perception_inventory(F1, Items7),
           mentova_arc_chat:ma_object_targets(G, F1, Items7, [pos(1, 6) | _]) )),
 
     % AC-008: the 25 guides abstract to cross-game archetypes (ls20 → refill).
@@ -134,7 +134,7 @@ run_wp_demo :-
         ( ap_priors_for_roles([piece, meter, dot], [prior(meter, _) | _]) )),
 
     % Show what Mentova now sees and intends on this frame.
-    ( cs_inventory(F1, Inv) -> true ; Inv = [] ),
+    ( grid_perception_inventory(F1, Inv) -> true ; Inv = [] ),
     format("~nMentova sees on the frame: ~q~n", [Inv]),
     ( mentova_arc_chat:ma_object_action(wpdemo2, F1, Inv, _, _) -> true ; true ),
     format("~n", []).
