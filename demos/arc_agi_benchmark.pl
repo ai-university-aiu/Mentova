@@ -13,9 +13,11 @@
 % Declare this file as the arc_agi_benchmark module.
 :- module(arc_agi_benchmark, [run_arc_agi_benchmark/0]).
 
-% Register the PrologAI library path so packs can be found.
+% Attach the whole PrologAI pack directory so every library(...) the Mentova
+% stack imports (about thirty packs, transitively) resolves from one directive,
+% instead of registering a single pack path that cannot load the full stack.
 :- initialization(
-    asserta(file_search_path(library, '/home/ccaitwo/PrologAI/packs/assessment/prolog'))
+    attach_packs('/home/ccaitwo/PrologAI/packs', [duplicate(replace)])
 , now).
 % Register the Mentova source path.
 :- initialization(
