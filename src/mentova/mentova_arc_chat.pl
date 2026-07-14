@@ -146,7 +146,7 @@
     % Object detection, needed by the exploration policy's salient click targets.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
     % The Causalontology exploration policy: causal-change ranking + salient clicks.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_explore/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/curiosity/prolog')),
     % Whole-grid perception: object inventory, meter/life-bar reading, avatar (WP-403).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/grid_perception/prolog')),
     % Hierarchical planning: the Win-Game / OODA / controls plan tree (WP-404).
@@ -179,8 +179,8 @@
 :- use_module(library(arc3_harness), [arc3_harness_choose/3, arc3_harness_delta/3, arc3_harness_reset/0]).
 % Load the Causalontology exploration policy: rank actions by predicted change
 % (this game's causal graph) and turn ACTION6 into salient object-centroid clicks.
-:- use_module(library(co_explore),
-    [cox_choose/5, cox_choose_change/5, cox_expand_actions/3, cox_salient_cells/2]).
+:- use_module(library(curiosity),
+    [curiosity_choose/5, curiosity_choose_change/5, curiosity_expand_actions/3, curiosity_salient_cells/2]).
 % Load the state-graph explorer: systematic, frontier-directed exploration.
 :- use_module(library(state_graph),
     [state_graph_reset/0, state_graph_signature/2, state_graph_note/3, state_graph_choose/3, state_graph_stats/1,
@@ -2172,7 +2172,7 @@ ma_bars(Frame, Bars) :- ma_cached(bars, Frame, grid_perception_bars, Bars).
 % ma_salient(+Frame, -Cells): the salient object centroids (largest object first),
 % cached per step. This is the expensive full-grid segmentation the click-target
 % expansion needs; caching it is the core of the performance fix.
-ma_salient(Frame, Cells) :- ma_cached(salient, Frame, cox_salient_cells, Cells).
+ma_salient(Frame, Cells) :- ma_cached(salient, Frame, curiosity_salient_cells, Cells).
 
 % ma_expand_actions(+Marked, +Frame, -Concrete): replace the click marker with this
 % frame's salient select(X,Y) targets (x is the column, y the row), passing every
@@ -2995,7 +2995,7 @@ ma_choose(Action, explore(object(Basis))) :-
     !.
 % Causal-first exploitation: if this game's learned causal graph predicts that
 % some available action changes the world, take the least-tried such action.
-% This is the co_explore policy's strongest signal - one of the two behaviours
+% This is the curiosity policy's strongest signal - one of the two behaviours
 % the winning ARC-AGI-3 agents shared (learning which actions have an effect).
 % The action set includes a click marker, so ACTION6 is considered as a click on
 % a salient object rather than a blind cell.
@@ -3012,7 +3012,7 @@ ma_choose(Action, explore(causal)) :-
     findall(A - N, ma_try_(A, N), Tried),
     % The least-tried action this game predicts will change the world; fails when
     % none is predicted, so exploration falls through to the graph frontier.
-    catch(cox_choose_change(Sel, Concrete, Tried, Frame, Action), _, fail),
+    catch(curiosity_choose_change(Sel, Concrete, Tried, Frame, Action), _, fail),
     % Commit.
     !.
 % Before falling back to least-tried curiosity, use the state-graph explorer -
@@ -3056,7 +3056,7 @@ ma_game_sig(Game, Frame, Sig) :-
     % Stamp it with the game id.
     atomic_list_concat([Game, '::', Base], Sig).
 
-% If the graph has no frontier to head for, fall to the full co_explore ranking:
+% If the graph has no frontier to head for, fall to the full curiosity ranking:
 % predicted-change actions first, then least-tried, with the salient object
 % clicks (concrete ACTION6 targets) in play. This keeps ACTION6 useful without
 % enumerating all 4096 cells, and never repeats a known-hazard action.
@@ -3073,7 +3073,7 @@ ma_choose(Action, explore(salient)) :-
     findall(A - N, ma_try_(A, N), Tried),
     % The best action under the full policy; guarded so a perception hiccup
     % never blocks the plain-curiosity fallback below.
-    catch(cox_choose(Sel, Concrete, Tried, Frame, Action), _, fail),
+    catch(curiosity_choose(Sel, Concrete, Tried, Frame, Action), _, fail),
     % Commit.
     !.
 % ma_explore_actions(+Game, +Frame, -Marked): the game's action set with any

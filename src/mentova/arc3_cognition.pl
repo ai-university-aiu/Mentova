@@ -88,7 +88,7 @@ cog_principle(glass_box_transparency,
 % cog_pillar(?Capability, ?Pack, ?Role): the architecture Mentova is building toward
 % the north-star, each a concrete pack that realises part of the winning recipe.
 cog_pillar(perception,            grid_perception,       'segment the whole grid into roled objects and read meters').
-cog_pillar(exploration,           co_explore,   'novelty-seeking, loop-avoiding, salient-target action selection').
+cog_pillar(exploration,           curiosity,   'novelty-seeking, loop-avoiding, salient-target action selection').
 cog_pillar(state_graph_memory,    state_graph,     'a directed graph of frame-hash states and action transitions').
 cog_pillar(world_model,           world_model,        'learn, verify, repair, and roll forward a transition model').
 cog_pillar(hypothesis_commitment, hypothesis,      'generate, rank, and commit to a hypothesis without drift').
