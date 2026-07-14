@@ -87,7 +87,7 @@
     % The interventional learner.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_learning/prolog')),
     % The planner.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/co_plan/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/causal_planner/prolog')),
     % The perceive-learn-plan-act harness.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/arc3_harness/prolog')),
     % The exploration policy (WP-397).
