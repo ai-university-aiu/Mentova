@@ -6,7 +6,7 @@
     state, and a short-horizon prediction of the next cycle's winner.
 
     On each workspace broadcast, the schema subscriber:
-        1. Records win(CycleN, Winner, STI) via pai_attention_schema/2.
+        1. Records win(CycleN, Winner, STI) via attention_schema/2.
         2. Records suppress(CycleN, CId) for non-winning coalitions.
         3. The schema's make_prediction/1 fires internally for CycleN+1.
 
@@ -15,7 +15,7 @@
         AC-PR42-002: Schema disabled → workspace continues, prediction gone.
 
     Dissociation invariant (FR-PR42-004):
-        pai_schema_disable halts prediction without halting the workspace.
+        attention_schema_disable halts prediction without halting the workspace.
 
     This module is named 'mentova_attention_schema' to avoid a name
     collision with the PrologAI attention_schema pack module.
@@ -50,10 +50,10 @@
     assertz(user:file_search_path(library,
         '/home/ccaitwo/PrologAI/packs/attention_schema/prolog')),
     % Load the pack, importing its public predicates.
-    use_module(library(attention_schema),
-               [pai_attention_schema/2, pai_attention_predict/2,
-                pai_schema_disable/0,   pai_schema_enable/0,
-                pai_schema_score/3])
+    use_module(library(attention),
+               [attention_schema/2, attention_predict/2,
+                attention_schema_disable/0,   attention_schema_enable/0,
+                attention_schema_score/3])
 ), now).
 
 % Load standard list predicates for member/2 and last/2.
@@ -112,7 +112,7 @@ schema_on_broadcast(broadcast_content(_CId, Relation, _Ids, Salience)) :-
         % (new ID each cycle), but the winning relation type is consistent.
         % This gives the schema meaningful historical data to predict from.
         ignore(catch(
-            pai_attention_schema(win(N1, Relation, Salience), _),
+            attention_schema(win(N1, Relation, Salience), _),
             _, true
         )),
         % Record this actual winner (by relation) for later scoring.
@@ -120,7 +120,7 @@ schema_on_broadcast(broadcast_content(_CId, Relation, _Ids, Salience)) :-
         % Log the schema's prediction for the NEXT cycle.
         NextCycle is N1 + 1,
         ignore(catch(
-            ( pai_attention_predict(NextCycle, Pred),
+            ( attention_predict(NextCycle, Pred),
               retractall(schema_predictions_log(NextCycle, _)),
               assertz(schema_predictions_log(NextCycle, Pred))
             ),
@@ -183,7 +183,7 @@ schema_score_recent(Score) :-
     findall(actual(N, W), schema_actuals(N, W), Actuals),
     % Score using the pack's scoring predicate.
     catch(
-        pai_schema_score(Preds, Actuals, Score),
+        attention_schema_score(Preds, Actuals, Score),
         _, Score = score(0.0, 0.0)
     ).
 
@@ -234,7 +234,7 @@ schema_demo :-
     % Record the broadcast count before disabling.
     global_workspace:ws_cycle_counter(BeforeDisable),
     % Disable the attention schema.
-    catch(pai_schema_disable, _, true),
+    catch(attention_schema_disable, _, true),
     format("Schema disabled. Workspace cycle continues independently.~n"),
     % Run 5 more cycles with the schema disabled.
     format("Running 5 cycles with schema disabled...~n"),
@@ -248,7 +248,7 @@ schema_demo :-
     schema_broadcast_count(SchemaCount),
     PredCycle is SchemaCount + 1,
     catch(
-        pai_attention_predict(PredCycle, PredWhileDisabled),
+        attention_predict(PredCycle, PredWhileDisabled),
         _, PredWhileDisabled = no_prediction
     ),
     format("Schema prediction for cycle ~w (disabled): ~w~n",
@@ -268,13 +268,13 @@ schema_demo :-
     ),
     % Re-enable the schema and show prediction resumes.
     format("--- Re-enabling schema and showing prediction resumes ---~n"),
-    catch(pai_schema_enable, _, true),
+    catch(attention_schema_enable, _, true),
     % Run 3 cycles to let the schema rebuild its history.
     global_workspace:workspace_run_cycle(3),
     schema_broadcast_count(CountAfterReenable),
     NextPredCycle is CountAfterReenable + 1,
     catch(
-        pai_attention_predict(NextPredCycle, PredAfterReenable),
+        attention_predict(NextPredCycle, PredAfterReenable),
         _, PredAfterReenable = no_prediction
     ),
     format("Schema re-enabled. Prediction for cycle ~w: ~w~n",
