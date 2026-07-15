@@ -213,9 +213,9 @@ scene_guided_run(ac('AC-ACC426-004', P4, 'clues label, attach a disposition, set
     % Every learning is keyed to the selected game, so read its id to check them.
     ma_selected_game(G),
     % The key object's game-keyed id.
-    atomic_list_concat([obj_, G, '_2_2'], KeyId),
+    atomic_list_concat([object_, G, '_2_2'], KeyId),
     % The door object's game-keyed id.
-    atomic_list_concat([obj_, G, '_0_4'], DoorId),
+    atomic_list_concat([object_, G, '_0_4'], DoorId),
     % Scene four: the clues took hold in the ontology, keyed to this game.
     (   noun_backbone_continuant(KeyId, key_like),
         % The door was labeled.

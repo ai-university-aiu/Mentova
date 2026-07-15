@@ -11,12 +11,12 @@
     This demonstration closes the agent-society interface item from Part 8.
     It exercises the A2A (Agent-to-Agent) protocol implemented in PR 43:
 
-        a2a_agent_card/1      — publish an agent card with identity and capabilities
-        a2a_register_identity/2 — register a named agent identity
-        a2a_register_capability/2 — register a skill capability on an agent
-        a2a_a2a_task/4        — submit a task through the A2A lifecycle
-        a2a_peer_mail_send/3  — send durable addressed mail to a peer
-        a2a_peer_mail_fetch/3 — fetch pending mail from the mailbox
+        agent_to_agent_agent_card/1      — publish an agent card with identity and capabilities
+        agent_to_agent_register_identity/2 — register a named agent identity
+        agent_to_agent_register_capability/2 — register a skill capability on an agent
+        agent_to_agent_task/4        — submit a task through the A2A lifecycle
+        agent_to_agent_peer_mail_send/3  — send durable addressed mail to a peer
+        agent_to_agent_peer_mail_fetch/3 — fetch pending mail from the mailbox
 
     Scenario: Two minds participate in the agent society:
         mentova        — the primary mind (PrologAI / all 48 reasoning rungs).
@@ -52,14 +52,14 @@
 % Register the A2A pack prolog directory on the library search path.
 :- initialization((
     assertz(user:file_search_path(library,
-        '/home/ccaitwo/PrologAI/packs/a2a/prolog'))
+        '/home/ccaitwo/PrologAI/packs/agent_to_agent/prolog'))
 ), now).
 % Load the A2A agent-interoperability pack (PR 43).
-:- use_module(library(a2a), [
-    a2a_agent_card/1,
-    a2a_a2a_task/4,
-    a2a_peer_mail_send/3,
-    a2a_peer_mail_fetch/3
+:- use_module(library(agent_to_agent), [
+    agent_to_agent_agent_card/1,
+    agent_to_agent_task/4,
+    agent_to_agent_peer_mail_send/3,
+    agent_to_agent_peer_mail_fetch/3
 ]).
 
 % ---------------------------------------------------------------------------
@@ -67,33 +67,33 @@
 % ---------------------------------------------------------------------------
 
 % Declare agent_capability/2 as dynamic (in the a2a module namespace).
-:- dynamic a2a:agent_capability/2.
+:- dynamic agent_to_agent:agent_to_agent_agent_capability/2.
 % Declare agent_identity/2 as dynamic.
-:- dynamic a2a:agent_identity/2.
+:- dynamic agent_to_agent:agent_to_agent_agent_identity/2.
 
 % Define register_agent/2: register an agent's identity.
 register_agent(AgentId, Identity) :-
     % Remove any prior identity for this agent.
-    retractall(a2a:agent_identity(AgentId, _)),
+    retractall(agent_to_agent:agent_to_agent_agent_identity(AgentId, _)),
     % Assert the new identity.
-    assertz(a2a:agent_identity(AgentId, Identity)).
+    assertz(agent_to_agent:agent_to_agent_agent_identity(AgentId, Identity)).
 
 % Define register_cap/2: register a capability for an agent.
 register_cap(AgentId, Cap) :-
     % Only add if not already registered.
-    ( a2a:agent_capability(AgentId, Cap) -> true
-    ; assertz(a2a:agent_capability(AgentId, Cap)) ).
+    ( agent_to_agent:agent_to_agent_agent_capability(AgentId, Cap) -> true
+    ; assertz(agent_to_agent:agent_to_agent_agent_capability(AgentId, Cap)) ).
 
 % Define get_agent_card/2: generate agent card for a named agent.
 get_agent_card(AgentId, card(identity(Id), capabilities(Caps), endpoint(local))) :-
     % Resolve the agent identity.
-    ( a2a:agent_identity(AgentId, Id) -> true ; Id = AgentId ),
+    ( agent_to_agent:agent_to_agent_agent_identity(AgentId, Id) -> true ; Id = AgentId ),
     % Collect all registered capabilities for this agent.
-    findall(C, a2a:agent_capability(AgentId, C), Caps).
+    findall(C, agent_to_agent:agent_to_agent_agent_capability(AgentId, C), Caps).
 
 % ---------------------------------------------------------------------------
 % A2A TASK LIFECYCLE (local simulation)
-% In a live deployment, a2a_a2a_task/4 dispatches to the remote endpoint.
+% In a live deployment, agent_to_agent_task/4 dispatches to the remote endpoint.
 % Here we run a local simulate to show the lifecycle glass-box.
 % ---------------------------------------------------------------------------
 
@@ -208,7 +208,7 @@ run_agent_society_demo :-
     % ------------------------------------------------------------------
     format("~n--- Step 3: Peer Mail — Mentova sends a query to mentor_b ---~n"),
 
-    a2a_peer_mail_send(mentor_b,
+    agent_to_agent_peer_mail_send(mentor_b,
                        'theory_of_mind_query',
                        'Does Sally hold a false belief about marble_in_basket?'),
 
@@ -221,7 +221,7 @@ run_agent_society_demo :-
     % ------------------------------------------------------------------
     format("~n--- Step 4: mentor_b fetches its mailbox ---~n"),
 
-    a2a_peer_mail_fetch(mentor_b, local, Messages),
+    agent_to_agent_peer_mail_fetch(mentor_b, local, Messages),
     length(Messages, NMsg),
     format("  mentor_b mailbox (~w message(s)):~n", [NMsg]),
     forall(member(Msg, Messages),
@@ -247,11 +247,11 @@ run_agent_society_demo :-
     format(atom(ReplyBody), "Result: ~w", [SkillResult]),
 
     % mentor_b sends reply mail to Mentova.
-    a2a_peer_mail_send(mentova, 'theory_of_mind_reply', ReplyBody),
+    agent_to_agent_peer_mail_send(mentova, 'theory_of_mind_reply', ReplyBody),
     format("~n  mentor_b sent reply to Mentova.~n"),
 
     % Mentova fetches its mailbox.
-    a2a_peer_mail_fetch(mentova, local, MentovaMessages),
+    agent_to_agent_peer_mail_fetch(mentova, local, MentovaMessages),
     length(MentovaMessages, NReply),
     format("  Mentova mailbox (~w message(s)):~n", [NReply]),
     forall(member(RMsg, MentovaMessages),

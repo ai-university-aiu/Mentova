@@ -77,7 +77,7 @@
     % The grid pack for frames and diffs.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/grid/prolog')),
     % The object detector the exploration policy uses for click targets.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/grid_object/prolog')),
     % The noun backbone the Causalontology core rests on.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/noun_backbone/prolog')),
     % The realizable hinge.

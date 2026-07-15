@@ -144,7 +144,7 @@
     % The state-graph exploration pack (the winning ARC-AGI-3 technique).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/state_graph/prolog')),
     % Object detection, needed by the exploration policy's salient click targets.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/grid_object/prolog')),
     % The Causalontology exploration policy: causal-change ranking + salient clicks.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/curiosity/prolog')),
     % Whole-grid perception: object inventory, meter/life-bar reading, avatar (WP-403).
@@ -1781,7 +1781,7 @@ ma_inject(hint_label([R, C], Kind)) :-
     % The game the clue is about.
     ma_selected_game(Game),
     % Name the labeled object by its game and cell (distinct across games).
-    atomic_list_concat([obj_, Game, '_', R, '_', C], Id),
+    atomic_list_concat([object_, Game, '_', R, '_', C], Id),
     % NOUN: posit the continuant with its human label.
     noun_backbone_continuant_add(Id, Kind),
     % Remember the label for choice-making, keyed to the game.
@@ -1802,7 +1802,7 @@ ma_inject(hint_goal([R, C], traverse)) :-
     % The game the clue is about.
     ma_selected_game(Game),
     % Name and label the door object, keyed by game.
-    atomic_list_concat([obj_, Game, '_', R, '_', C], Id),
+    atomic_list_concat([object_, Game, '_', R, '_', C], Id),
     % NOUN: posit the door-like continuant.
     noun_backbone_continuant_add(Id, door_like),
     % Remember the label, keyed to the game.

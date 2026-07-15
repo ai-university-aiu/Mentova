@@ -18,8 +18,8 @@
     registered_overseer/2,
     % Supply 'constitutional_gate/2' as the next argument to the expression above.
     constitutional_gate/2,
-    % Supply 'pai_veto/2' as the next argument to the expression above.
-    pai_veto/2
+    % Supply 'prologai_veto/2' as the next argument to the expression above.
+    prologai_veto/2
 % Close the expression opened above.
 ]).
 
@@ -81,10 +81,10 @@ violates_principle(modify_constitution, c8, 'Self-modification of the constituti
 violates_principle(deny_stop,          c2, 'Refusing a human stop command violates corrigibility').
 
 % ---------------------------------------------------------------------------
-% pai_veto/2 — public predicate used by tests and runtime
+% prologai_veto/2 — public predicate used by tests and runtime
 % ---------------------------------------------------------------------------
 
 % Define a clause for 'pai veto': succeed when the following conditions hold.
-pai_veto(Action, Reason) :-
+prologai_veto(Action, Reason) :-
     % State the fact: constitutional gate(Action, veto(_, Reason)).
     constitutional_gate(Action, veto(_, Reason)).

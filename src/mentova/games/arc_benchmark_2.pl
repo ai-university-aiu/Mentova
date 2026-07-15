@@ -7,10 +7,10 @@
     on the ARC-AGI-2 corpus, named glass-box rules for every solved task.
 
     Four search levels are tried for each task, dispatched by task category:
-        Level 1 (single): taskcat_categorize → single_rule strategy.
-        Level 2 (composite): taskcat_categorize → multi_step / seqinfer 2-step.
-        Level 3 (context_gated): taskcat_categorize → context_gate_search.
-        Level 4 (symbol_table): taskcat_categorize → symbol_table_learning.
+        Level 1 (single): task_category_categorize → single_rule strategy.
+        Level 2 (composite): task_category_categorize → multi_step / seqinfer 2-step.
+        Level 3 (context_gated): task_category_categorize → context_gate_search.
+        Level 4 (symbol_table): task_category_categorize → symbol_table_learning.
 
     ARC-AGI-2 task data is stored in data/arc_agi_2/arc_tasks_2.pl.
     That file is populated by tools/arc_agi2_to_prolog.py once JSON files
@@ -3768,11 +3768,11 @@ arc2_induce_rule(TrainingPairs, apex_shadow) :-
 % Reference: ARC-AGI-2 task 8e5c0c38.
 % ===========================================================================
 
-% Register sym_restore as a known named rule.
-arc2_named_rule(sym_restore).
+% Register symmetry_transform_restore as a known named rule.
+arc2_named_rule(symmetry_transform_restore).
 
-% arc2_transform for sym_restore: restore per-colour vertical symmetry.
-arc2_transform(sym_restore, Grid, Result) :-
+% arc2_transform for symmetry_transform_restore: restore per-colour vertical symmetry.
+arc2_transform(symmetry_transform_restore, Grid, Result) :-
 % Flatten grid to a single list for modal counting.
     append(Grid, SrFlat_), msort(SrFlat_, SrSorted_),
 % Find background colour (most-frequent value).
@@ -3866,12 +3866,12 @@ sr_remove_row_([V|Rest], R, C, Bg, Orphans, [NewV|NewRest]) :-
     C1 is C + 1,
     sr_remove_row_(Rest, R, C1, Bg, Orphans, NewRest).
 
-% arc2_induce_rule for sym_restore: verify all training pairs match.
-arc2_induce_rule(TrainingPairs, sym_restore) :-
+% arc2_induce_rule for symmetry_transform_restore: verify all training pairs match.
+arc2_induce_rule(TrainingPairs, symmetry_transform_restore) :-
 % Require at least one training pair.
     TrainingPairs \= [],
 % Every pair must satisfy arc2_transform exactly.
-    maplist([pair(In,Out)]>>(arc2_transform(sym_restore, In, Out)),
+    maplist([pair(In,Out)]>>(arc2_transform(symmetry_transform_restore, In, Out)),
         TrainingPairs).
 
 % ---------------------------------------------------------------------------
@@ -11571,7 +11571,7 @@ bb_render_(Grid, Paint, Out) :-
 % ---------------------------------------------------------------------------
 
 % arc2_induce_rule(+TrainingPairs, -Rule)
-% Classify the task with taskcat_categorize, then dispatch to the right solver.
+% Classify the task with task_category_categorize, then dispatch to the right solver.
 % Rule is an atom or compound term identifying the transformation.
 arc2_induce_rule(TrainingPairs, Rule) :-
     % Attempt geometric/structural single-rule search first.

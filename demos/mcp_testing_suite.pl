@@ -11,24 +11,24 @@
         The gateway is the boundary: no Lattice contents cross it.
 
     This suite exercises the following MCP predicates from pack mcp_gateway:
-        mcp_gateway_start/1   — start the HTTP server on a given port
-        mcp_gateway_stop/0    — stop the HTTP server
-        mcp_set_api_key/1     — set the API key for authentication
-        mcp_get_api_key/1     — retrieve the current API key
+        model_context_protocol_gateway_start/1   — start the HTTP server on a given port
+        model_context_protocol_gateway_stop/0    — stop the HTTP server
+        model_context_protocol_gateway_set_api_key/1     — set the API key for authentication
+        model_context_protocol_gateway_get_api_key/1     — retrieve the current API key
 
-    And the following tool dispatch paths (tested glass-box via mcp_gateway_tool/3):
+    And the following tool dispatch paths (tested glass-box via model_context_protocol_gateway_tool/3):
         lattice_query      — wraps traverse_nexus/4
         lattice_inscribe   — wraps anchor_node/4
         actor_list         — wraps cyclic_actor_list/1
         assess_all         — wraps assess_all/2
 
     Acceptance criteria:
-        AC-PR63-001: mcp_gateway_start/1 starts the server; mcp_active_port/1 confirms.
-        AC-PR63-002: mcp_set_api_key/1 updates the key; mcp_get_api_key/1 retrieves it.
-        AC-PR63-003: mcp_gateway_tool(lattice_inscribe, ...) anchors a node_fact and
-                     mcp_gateway_tool(lattice_query, ...) retrieves it.
-        AC-PR63-004: mcp_gateway_tool(actor_list, ...) returns a list (opacity: no raw memory).
-        AC-PR63-005: mcp_gateway_stop/0 stops the server; mcp_active_port/1 is cleared.
+        AC-PR63-001: model_context_protocol_gateway_start/1 starts the server; mcp_active_port/1 confirms.
+        AC-PR63-002: model_context_protocol_gateway_set_api_key/1 updates the key; model_context_protocol_gateway_get_api_key/1 retrieves it.
+        AC-PR63-003: model_context_protocol_gateway_tool(lattice_inscribe, ...) anchors a node_fact and
+                     model_context_protocol_gateway_tool(lattice_query, ...) retrieves it.
+        AC-PR63-004: model_context_protocol_gateway_tool(actor_list, ...) returns a list (opacity: no raw memory).
+        AC-PR63-005: model_context_protocol_gateway_stop/0 stops the server; mcp_active_port/1 is cleared.
 
     Run:
         swipl -l demos/mcp_testing_suite.pl \
@@ -40,7 +40,7 @@
 
 % Register the PrologAI library path so Mentova can load PrologAI packs.
 :- initialization(
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/mcp_gateway/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/model_context_protocol_gateway/prolog')),
     now).
 
 % Register the node_facts library path.
@@ -52,7 +52,7 @@
 :- use_module('../src/mentova/mentova').
 
 % Load the MCP gateway module.
-:- use_module(library(mcp_gateway)).
+:- use_module(library(model_context_protocol_gateway)).
 
 % Import standard list utilities.
 :- use_module(library(lists), [member/2]).
@@ -77,11 +77,11 @@ run_mcp_testing_suite :-
     format("~n--- Section 1: Gateway Start (AC-PR63-001) ---~n~n"),
 
     % Start the MCP gateway on the default port.
-    format("  Calling mcp_gateway_start(7474)...~n"),
+    format("  Calling model_context_protocol_gateway_start(7474)...~n"),
     % Start the MCP HTTP server on port 7474.
-    mcp_gateway_start(7474),
+    model_context_protocol_gateway_start(7474),
     % Confirm the gateway is active by checking the stored active port.
-    ( mcp_gateway:mcp_active_port(7474)
+    ( model_context_protocol_gateway:model_context_protocol_gateway_active_port(7474)
     ->  format("  AC-PR63-001: PASS — mcp_active_port(7474) confirmed.~n")
     ;   format("  AC-PR63-001: FAIL — mcp_active_port(7474) not found.~n")
     ),
@@ -92,11 +92,11 @@ run_mcp_testing_suite :-
     format("~n--- Section 2: API Key Management (AC-PR63-002) ---~n~n"),
 
     % Set a test API key.
-    format("  Calling mcp_set_api_key('mentova-test-key-2026')...~n"),
+    format("  Calling model_context_protocol_gateway_set_api_key('mentova-test-key-2026')...~n"),
     % Update the API key in the gateway.
-    mcp_set_api_key('mentova-test-key-2026'),
+    model_context_protocol_gateway_set_api_key('mentova-test-key-2026'),
     % Retrieve and verify the key.
-    mcp_get_api_key(RetrievedKey),
+    model_context_protocol_gateway_get_api_key(RetrievedKey),
     ( RetrievedKey = 'mentova-test-key-2026'
     ->  format("  AC-PR63-002: PASS — API key set and retrieved: ~w~n", [RetrievedKey])
     ;   format("  AC-PR63-002: FAIL — retrieved key ~w, expected mentova-test-key-2026~n",
@@ -110,16 +110,16 @@ run_mcp_testing_suite :-
 
     % Use the MCP tool dispatch path to inscribe a node_fact.
     format("  Inscribing node_fact: relation=mcp_test, args=[mentova,acc63], refs=[]~n"),
-    % Call mcp_gateway_tool to invoke the lattice_inscribe tool.
-    mcp_gateway:mcp_gateway_tool(lattice_inscribe,
+    % Call model_context_protocol_gateway_tool to invoke the lattice_inscribe tool.
+    model_context_protocol_gateway:model_context_protocol_gateway_tool(lattice_inscribe,
         json{relation: mcp_test, args: '[mentova,acc63]', referents: '[]'},
         InscribeId),
     format("  Inscribed node_fact with ID: ~w~n", [InscribeId]),
 
     % Query the Lattice for the inscribed node_fact.
     format("  Querying Lattice for pattern: mcp_test~n"),
-    % Call mcp_gateway_tool to invoke the lattice_query tool.
-    mcp_gateway:mcp_gateway_tool(lattice_query,
+    % Call model_context_protocol_gateway_tool to invoke the lattice_query tool.
+    model_context_protocol_gateway:model_context_protocol_gateway_tool(lattice_query,
         json{pattern: 'mcp_test', k: 5},
         QueryResults),
     ( QueryResults \= []
@@ -135,9 +135,9 @@ run_mcp_testing_suite :-
     format("~n--- Section 4: Actor List — Opacity Check (AC-PR63-004) ---~n~n"),
 
     % List all running cyclic actors via the MCP tool dispatch path.
-    format("  Calling mcp_gateway_tool(actor_list, ...)~n"),
-    % Call mcp_gateway_tool to invoke the actor_list tool.
-    mcp_gateway:mcp_gateway_tool(actor_list, json{}, ActorNames),
+    format("  Calling model_context_protocol_gateway_tool(actor_list, ...)~n"),
+    % Call model_context_protocol_gateway_tool to invoke the actor_list tool.
+    model_context_protocol_gateway:model_context_protocol_gateway_tool(actor_list, json{}, ActorNames),
     % Verify that the result is a list (type check for opacity compliance).
     ( is_list(ActorNames)
     ->  format("  AC-PR63-004: PASS — actor_list returns a list; no raw Lattice contents.~n"),
@@ -151,11 +151,11 @@ run_mcp_testing_suite :-
     format("~n--- Section 5: Gateway Stop (AC-PR63-005) ---~n~n"),
 
     % Stop the MCP gateway.
-    format("  Calling mcp_gateway_stop/0...~n"),
+    format("  Calling model_context_protocol_gateway_stop/0...~n"),
     % Stop the HTTP server.
-    mcp_gateway_stop,
+    model_context_protocol_gateway_stop,
     % Verify that the active port fact is cleared.
-    ( \+ mcp_gateway:mcp_active_port(_)
+    ( \+ model_context_protocol_gateway:model_context_protocol_gateway_active_port(_)
     ->  format("  AC-PR63-005: PASS — mcp_active_port cleared after stop.~n")
     ;   format("  AC-PR63-005: FAIL — mcp_active_port still present after stop.~n")
     ),
