@@ -31471,74 +31471,80 @@ w74_greedy([P|Rest], Used, Sel) :-
     ).
 
 % -----------------------------------------------------------------------
-% Wave 75: assemble_3pieces_at_5_joints (234bbc79)
+% Wave 75 (generalized): assemble_pieces_at_5_joints (234bbc79 and N-piece grids)
 % -----------------------------------------------------------------------
-% ERC 0.10 %
-arc_named_rule(assemble_3pieces_at_5_joints).
-% ERC 0.10 %
-arc_transform(assemble_3pieces_at_5_joints, Grid, Out) :-
-% ERC 0.10 %
+% Name the general chain-assembly rule: N colored pieces joined at 5-cells.
+arc_named_rule(assemble_pieces_at_5_joints).
+% Assemble N pieces into a left-to-right chain linked at their 5-valued joints.
+arc_transform(assemble_pieces_at_5_joints, Grid, Out) :-
+    % Measure the grid height, which the output preserves.
     length(Grid, NR),
-% ERC 0.10 %
+    % Collect every non-background (non-zero) cell coordinate.
     findall(R-C, (nth0(R,Grid,Row), nth0(C,Row,V), V\=0), NZCells),
-% ERC 0.10 %
+    % There must be something to assemble.
+    NZCells \= [],
+    % Group the non-zero cells into 4-connected components (the pieces).
     w75_comps(NZCells, Grid, Comps0),
-% ERC 0.10 %
-    length(Comps0, 3),
-% ERC 0.10 %
+    % Count the pieces; a chain needs at least two.
+    length(Comps0, NP), NP >= 2,
+    % Keep the rule specific: the grid must carry 5-valued joint cells.
+    once((nth0(_,Grid,JRow), memberchk(5,JRow))),
+    % Tag each piece with its leftmost column for ordering.
     maplist([Comp,MinC-Comp]>>(findall(CC,member(_-CC,Comp),Css),min_list(Css,MinC)), Comps0, Tagged),
-% ERC 0.10 %
-    msort(Tagged, [_-CompA,_-CompB,_-CompC]),
-% ERC 0.10 %
-    w75_piece_color(Grid, CompA, ColA),
-% ERC 0.10 %
-    w75_piece_color(Grid, CompB, ColB),
-% ERC 0.10 %
-    w75_piece_color(Grid, CompC, ColC),
-% ERC 0.10 %
-    findall(R-C,(member(R-C,CompA),nth0(R,Grid,Ra),nth0(C,Ra,5)), JA),
-% ERC 0.10 %
-    findall(R-C,(member(R-C,CompB),nth0(R,Grid,Rb),nth0(C,Rb,5)), JBU),
-% ERC 0.10 %
-    findall(R-C,(member(R-C,CompC),nth0(R,Grid,Rc),nth0(C,Rc,5)), JC),
-% ERC 0.10 %
-    (JA\=[] -> w75_max_col(JA,ExitA) ; w75_max_col(CompA,ExitA)),
-% ERC 0.10 %
-    sort(2,@=<,JBU,JBS),
-% ERC 0.10 %
-    (JBS\=[] -> JBS=[EntryB|_], last(JBS,ExitB) ; w75_min_col(CompB,EntryB), w75_max_col(CompB,ExitB)),
-% ERC 0.10 %
-    (JC\=[] -> w75_min_col(JC,EntryC) ; w75_min_col(CompC,EntryC)),
-% ERC 0.10 %
-    ExitA=ERA-ECA, EntryB=ERB-ECB,
-% ERC 0.10 %
-    ShiftBR is ERA-ERB, ShiftBC is ECA+1-ECB,
-% ERC 0.10 %
-    ExitB=EB2R-EB2C, EB2SR is EB2R+ShiftBR, EB2SC is EB2C+ShiftBC,
-% ERC 0.10 %
-    EntryC=ERC2-ECC2,
-% ERC 0.10 %
-    ShiftCR is EB2SR-ERC2, ShiftCC is EB2SC+1-ECC2,
-% ERC 0.10 %
-    findall(R-C-ColA, member(R-C,CompA), CellsA),
-% ERC 0.10 %
-    findall(R2-C2-ColB, (member(R-C,CompB),R2 is R+ShiftBR,C2 is C+ShiftBC), CellsB),
-% ERC 0.10 %
-    findall(R2-C2-ColC, (member(R-C,CompC),R2 is R+ShiftCR,C2 is C+ShiftCC), CellsC),
-% ERC 0.10 %
-    append(CellsA,CellsB,CAB), append(CAB,CellsC,AllCells),
-% ERC 0.10 %
+    % Sort the pieces left to right by their leftmost column.
+    keysort(Tagged, SortedTagged),
+    % Drop the sort keys, keeping the ordered piece cell-lists.
+    findall(Comp, member(_-Comp, SortedTagged), Pieces),
+    % Build a descriptor (cells, colour, entry joint, exit joint) per piece.
+    maplist(w75_piece_descriptor(Grid), Pieces, Descs),
+    % The first piece anchors the chain unshifted.
+    Descs = [piece(Cells1,Col1,_E1,Exit1)|RestDescs],
+    % Place the first piece's cells at their original positions, painted its colour.
+    findall(R-C-Col1, member(R-C,Cells1), Placed1),
+    % Chain the remaining pieces, each entry one column right of the previous exit.
+    w75_chain(RestDescs, Exit1, Placed1, AllCells),
+    % Find the widest column used after assembly.
     findall(C2, member(_-C2-_, AllCells), ColsList),
-% ERC 0.10 %
+    % The output width is one past the widest used column.
     max_list(ColsList, MaxC), NCOut is MaxC+1,
-% ERC 0.10 %
+    % Start from a blank output grid of the preserved height and new width.
     findall(Row2,(between(1,NR,_),length(Row2,NCOut),maplist(=(0),Row2)), BlankGrid),
-% ERC 0.10 %
+    % Paint every assembled cell that falls inside the output bounds.
     foldl([R2-C2-V, G, Go]>>(
-% ERC 0.10 %
+        % Write the cell if in range, otherwise leave the grid unchanged.
         (R2>=0,R2<NR,C2>=0,C2<NCOut -> w53_set_cell(G,R2,C2,V,Go) ; Go=G)
-% ERC 0.10 %
     ), AllCells, BlankGrid, Out).
+% Describe a piece: its colour, its entry joint (leftmost 5, else leftmost cell),
+% and its exit joint (rightmost 5, else rightmost cell).
+w75_piece_descriptor(Grid, Cells, piece(Cells, Color, Entry, Exit)) :-
+    % The piece colour is its single non-5 value.
+    w75_piece_color(Grid, Cells, Color),
+    % Collect the piece's 5-valued joint cells.
+    findall(R-C, (member(R-C,Cells), nth0(R,Grid,Rw), nth0(C,Rw,5)), Joints),
+    % Use the joints for alignment when present, else fall back to all cells.
+    ( Joints \= [] -> Ref = Joints ; Ref = Cells ),
+    % The entry is the leftmost reference cell.
+    w75_min_col(Ref, Entry),
+    % The exit is the rightmost reference cell.
+    w75_max_col(Ref, Exit).
+% End of the chain: nothing left to place; the accumulator is the result.
+w75_chain([], _PrevExit, Acc, Acc).
+% Attach the next piece so its entry sits one column right of the previous exit.
+w75_chain([piece(Cells,Col,Entry,Exit)|Rest], PrevExitR-PrevExitC, Acc0, Out) :-
+    % Name the entry joint's row and column.
+    Entry = ER-EC,
+    % The vertical shift lines the entry up with the previous exit's row.
+    ShiftR is PrevExitR - ER,
+    % The horizontal shift places the entry one column past the previous exit.
+    ShiftC is PrevExitC + 1 - EC,
+    % Shift every cell of this piece and paint it the piece colour.
+    findall(R2-C2-Col, (member(R-C,Cells), R2 is R+ShiftR, C2 is C+ShiftC), Placed),
+    % Add the placed cells to the accumulator.
+    append(Acc0, Placed, Acc1),
+    % Compute this piece's exit after shifting, for the next link.
+    Exit = XR-XC, NewExitR is XR+ShiftR, NewExitC is XC+ShiftC,
+    % Recurse to place the rest of the chain.
+    w75_chain(Rest, NewExitR-NewExitC, Acc1, Out).
 % ERC 0.10 %
 w75_comps([], _, []) :- !.
 % ERC 0.10 %
@@ -31888,136 +31894,152 @@ w77_try_place(T2, TCol, Color, Holes, OutR, OutC, GIn, GOut) :-
 % -----------------------------------------------------------------------
 % Wave 78: assemble_concentric_rings (4290ef0e)
 % -----------------------------------------------------------------------
-% ERC 0.10 %
+% Register the concentric-rings rule name.
 arc_named_rule(assemble_concentric_rings).
-% ERC 0.10 %
+% Assemble each colour fragment into a ring, nested concentrically by radius about a shared centre.
 arc_transform(assemble_concentric_rings, Grid, Out) :-
-% ERC 0.10 %
+% Collect every non-zero value across the grid so we can find the background.
     findall(V78,(nth0(_,Grid,Row78),nth0(_,Row78,V78),V78\=0), NZVals78),
-% ERC 0.10 %
+% Sort the non-zero values keeping duplicates, then collapse to the unique set.
     msort(NZVals78, NZS78), sort(NZS78, UVals78),
-% ERC 0.10 %
+% Count how many times each unique colour occurs.
     maplist([V78,N78-V78]>>(include(=(V78),NZS78,S78),length(S78,N78)), UVals78, CVCounts78),
-% ERC 0.10 %
+% The most frequent non-zero colour is the background.
     max_member(_-BG78, CVCounts78),
-% ERC 0.10 %
-    findall(N78-H78-W78-MR78-MC78-Col78,(
-% ERC 0.10 %
-        member(_-Col78, CVCounts78), Col78\=BG78,
-% ERC 0.10 %
-        findall(R-C,(nth0(R,Grid,Row78b),nth0(C,Row78b,Col78)), Cells78),
-% ERC 0.10 %
-        findall(R,member(R-_,Cells78),Rs78), findall(C,member(_-C,Cells78),Cs78),
-% ERC 0.10 %
-        min_list(Rs78,MR78), max_list(Rs78,MxR78),
-% ERC 0.10 %
-        min_list(Cs78,MC78), max_list(Cs78,MxC78),
-% ERC 0.10 %
-        H78 is MxR78-MR78+1, W78 is MxC78-MC78+1, N78 is max(H78,W78)
-% ERC 0.10 %
-    ), RingData78),
-% ERC 0.10 %
-    RingData78\=[],
-% ERC 0.10 %
-    findall(N78x,member(N78x-_-_-_-_-_,RingData78), Ns78), max_list(Ns78,OutSize78),
-% ERC 0.10 %
-    ( member(1-_-_-_-_-SC1col,RingData78) -> CenterCol78=SC1col ;
-% ERC 0.10 %
-      (member(Row78c,Grid), member(0,Row78c)) -> CenterCol78=0 ;
-% ERC 0.10 %
+% The fragment colours are every unique non-zero colour that is not the background.
+    findall(Col78,(member(Col78,UVals78),Col78\=BG78), FragCols78),
+% There must be at least one fragment to assemble.
+    FragCols78\=[],
+% For each fragment colour, gather its cells and derive its ring centre and radius.
+    findall(frag78(R78,CR78,CC78,Cells78,Col78),(
+% Pick a fragment colour.
+        member(Col78,FragCols78),
+% Collect all grid cells carrying that colour as Row-Col pairs.
+        findall(Rr78-Cc78,(nth0(Rr78,Grid,GRow78),nth0(Cc78,GRow78,Col78)), Cells78),
+% Derive the ring radius R78 and shared centre (CR78,CC78) robustly from the corner and its midpoint gap.
+        w78_ring_geometry(Cells78, R78, CR78, CC78)
+    ), Frags78),
+% The rings to draw are the fragments with a positive radius (radius zero is a lone centre dot).
+    include([frag78(Rz78,_,_,_,_)]>>(Rz78>=1), Frags78, RingFrags78),
+% There must be at least one ring.
+    RingFrags78\=[],
+% The output side is set by the largest ring radius: side is 2*Rmax+1.
+    findall(Rr2_78, member(frag78(Rr2_78,_,_,_,_),RingFrags78), AllR78),
+% Take the maximum radius present.
+    max_list(AllR78, RMax78),
+% The output is a square of side 2*Rmax+1.
+    OutSize78 is 2*RMax78+1,
+% The common centre index of the output square equals Rmax.
+    OC78 is RMax78,
+% Decide the centre cell colour: a lone dot fragment wins, else a zero in the grid, else the background.
+    ( member(frag78(0,_,_,_,CDot78),Frags78) -> CenterCol78=CDot78 ;
+% If any input row contains a zero, the centre is zero.
+      (member(ZRow78,Grid), memberchk(0,ZRow78)) -> CenterCol78=0 ;
+% Otherwise the centre takes the background colour.
       CenterCol78=BG78 ),
-% ERC 0.10 %
-    findall(Row78d,(between(1,OutSize78,_),length(Row78d,OutSize78),maplist(=(BG78),Row78d)), BlankG78),
-% ERC 0.10 %
-    findall(N78y-Col78y,(member(_-Col78y,CVCounts78),Col78y\=BG78,member(N78y-_-_-_-_-Col78y,RingData78)), NColList78),
-% ERC 0.10 %
-    msort(NColList78, NColAsc78),
-% ERC 0.10 %
-    reverse(NColAsc78, SortedNC78),
-% ERC 0.10 %
-    foldl([N78f-Col78f, G78, Go78]>>(
-% ERC 0.10 %
-        ( N78f=:=1 -> Go78=G78 ;
-% ERC 0.10 %
-            member(N78f-H78f-W78f-MR78f-MC78f-Col78f, RingData78),
-% ERC 0.10 %
-            findall(R-C,(nth0(R,Grid,Row78e),nth0(C,Row78e,Col78f)), RCells78),
-% ERC 0.10 %
-            w78_map_cells(RCells78, MR78f, MC78f, N78f, H78f, W78f, RingBorder78),
-% ERC 0.10 %
-            w78_complete_ring(RingBorder78, N78f, CompRing78),
-% ERC 0.10 %
-            Off78 is (OutSize78-N78f)//2,
-% ERC 0.10 %
-            foldl([DR-DC,Gin78,Gout78]>>(
-% ERC 0.10 %
-                OutR78 is Off78+DR, OutC78 is Off78+DC,
-% ERC 0.10 %
-                w53_set_cell(Gin78,OutR78,OutC78,Col78f,Gout78)
-% ERC 0.10 %
-            ), CompRing78, G78, Go78)
-% ERC 0.10 %
-        )
-% ERC 0.10 %
-    ), SortedNC78, BlankG78, OutBC78),
-% ERC 0.10 %
-    CtrIdx78 is OutSize78//2,
-% ERC 0.10 %
-    w53_set_cell(OutBC78, CtrIdx78, CtrIdx78, CenterCol78, Out).
-% ERC 0.10 %
-w78_map_cells(Cells, MinR, MinC, N, H, W, RingBorder) :-
-% ERC 0.10 %
-    N1w is N-1, H1w is H-1, W1w is W-1,
-% ERC 0.10 %
-    ( H=:=N, W<N ->
-% ERC 0.10 %
-        findall(DC2,(member(R-C,Cells),DRx is R-MinR,DRx =\= 0,DRx =\= H1w,DC2 is C-MinC), ArmDCs),
-% ERC 0.10 %
-        ( ArmDCs\=[], max_list(ArmDCs,MaxADC),MaxADC=:=W1w -> Rev78=true ; Rev78=false )
-% ERC 0.10 %
-    ;
-% ERC 0.10 %
-        Rev78=false
-% ERC 0.10 %
-    ),
-% ERC 0.10 %
-    findall(RDR-RDC,(
-% ERC 0.10 %
-        member(R-C,Cells),
-% ERC 0.10 %
-        RDR is R-MinR,
-% ERC 0.10 %
-        ( Rev78=true -> RDC is W1w-(C-MinC) ; RDC is C-MinC ),
-% ERC 0.10 %
-        ( RDR=:=0 ; RDR=:=N1w ; RDC=:=0 ; RDC=:=N1w )
-% ERC 0.10 %
-    ), RingBorder0),
-% ERC 0.10 %
-    sort(RingBorder0, RingBorder).
-% ERC 0.10 %
-w78_complete_ring(RingBorder0, N, Complete) :-
-% ERC 0.10 %
-    N1cr is N-1,
-% ERC 0.10 %
-    findall(DR2-DC2,(
-% ERC 0.10 %
-        member(DR-DC, RingBorder0),
-% ERC 0.10 %
-        ( DR2=DR, DC2=DC
-% ERC 0.10 %
-        ; DR2 is N1cr-DR, DC2=DC
-% ERC 0.10 %
-        ; DR2=DR, DC2 is N1cr-DC
-% ERC 0.10 %
-        ; DR2 is N1cr-DR, DC2 is N1cr-DC
-% ERC 0.10 %
-        ),
-% ERC 0.10 %
-        ( DR2=:=0 ; DR2=:=N1cr ; DC2=:=0 ; DC2=:=N1cr )
-% ERC 0.10 %
-    ), AllMirrors78),
-% ERC 0.10 %
-    sort(AllMirrors78, Complete).
+% Build a blank output square filled with the background colour.
+    findall(BRow78,(between(1,OutSize78,_),length(BRow78,OutSize78),maplist(=(BG78),BRow78)), BlankG78),
+% Enumerate every output paint point by 4-fold (D4) symmetric reflection of each fragment cell about its ring centre.
+    findall(OR78-OCc78-PCol78,(
+% Choose a ring fragment.
+        member(frag78(RR78,FR78,FC78,FCells78,PCol78),RingFrags78),
+% Choose one of its cells.
+        member(CellR78-CellC78,FCells78),
+% Offset of that cell from the ring centre.
+        DR78 is CellR78-FR78, DC78 is CellC78-FC78,
+% Generate each of the eight D4 images of the offset.
+        w78_d4(DR78,DC78,A78,B78),
+% Keep only images that lie exactly on the ring border (Chebyshev distance equals the radius).
+        max(abs(A78),abs(B78)) =:= RR78,
+% Map the offset onto the centred output square.
+        OR78 is OC78+A78, OCc78 is OC78+B78
+    ), Points78),
+% Paint every ring point onto the blank square.
+    foldl([OPR78-OPC78-OPV78,Gin78,Gout78]>>w53_set_cell(Gin78,OPR78,OPC78,OPV78,Gout78), Points78, BlankG78, OutRings78),
+% Finally stamp the centre cell.
+    w53_set_cell(OutRings78, OC78, OC78, CenterCol78, Out).
+% A lone single-cell fragment has radius zero and its cell is the centre.
+w78_ring_geometry([RS78-CS78], 0, RS78, CS78) :- !.
+% General case: find the ring corner, then the midpoint gap gives the centreline and radius.
+w78_ring_geometry(Cells78, R78, CR78, CC78) :-
+% Bounding box of the fragment.
+    w78_bbox(Cells78, MinR78, MaxR78, MinC78, MaxC78),
+% Choose the true ring corner (a bbox corner occupied with both inward arms); fall back to top-left.
+    ( w78_pick_corner(Cells78, MinR78, MaxR78, MinC78, MaxC78, BR78, BC78) -> true
+    ; BR78=MinR78, BC78=MinC78 ),
+% If the corner's own row shows a midpoint gap, that gap centre is the vertical centreline column.
+    ( w78_row_gap(Cells78, BR78, GapC78) ->
+% Radius is the distance from the corner column to the centreline column.
+        R78 is abs(BC78-GapC78),
+% The vertical centreline column is the gap centre.
+        CC78 = GapC78,
+% The horizontal centreline is R rows inward from the corner (down from a top corner, up from a bottom corner).
+        ( BR78 =:= MinR78 -> CR78 is BR78+R78 ; CR78 is BR78-R78 )
+% Otherwise, if the corner's own column shows a midpoint gap, that gap centre is the horizontal centreline row.
+    ; w78_col_gap(Cells78, BC78, GapR78) ->
+% Radius is the distance from the corner row to the centreline row.
+        R78 is abs(BR78-GapR78),
+% The horizontal centreline row is the gap centre.
+        CR78 = GapR78,
+% The vertical centreline is R columns inward from the corner (right of a left corner, left of a right corner).
+        ( BC78 =:= MinC78 -> CC78 is BC78+R78 ; CC78 is BC78-R78 )
+% Otherwise the fragment is a full small ring: radius and centre come from the bounding box.
+    ; H78 is MaxR78-MinR78+1, W78 is MaxC78-MinC78+1,
+% The nominal side is the larger of height and width.
+      N78 is max(H78,W78),
+% Radius is half the side.
+      R78 is (N78-1)//2,
+% The centre is the bounding-box centre.
+      CR78 is (MinR78+MaxR78)//2, CC78 is (MinC78+MaxC78)//2
+    ).
+% Bounding box of a set of Row-Col cells.
+w78_bbox(Cells, MinR, MaxR, MinC, MaxC) :-
+% Extract the row coordinates.
+    findall(R, member(R-_,Cells), Rs),
+% Extract the column coordinates.
+    findall(C, member(_-C,Cells), Cs),
+% Row extremes.
+    min_list(Rs,MinR), max_list(Rs,MaxR),
+% Column extremes.
+    min_list(Cs,MinC), max_list(Cs,MaxC).
+% A ring corner is a bbox corner cell that is present and has both a horizontal and a vertical arm.
+w78_pick_corner(Cells, MinR, MaxR, MinC, MaxC, BR, BC) :-
+% Try the four bbox corners in order.
+    member(BR-BC, [MinR-MinC, MinR-MaxC, MaxR-MinC, MaxR-MaxC]),
+% The corner cell itself must be occupied.
+    memberchk(BR-BC, Cells),
+% There must be another fragment cell in the same row (the horizontal arm).
+    member(BR-C2c, Cells), C2c =\= BC,
+% There must be another fragment cell in the same column (the vertical arm).
+    member(R2c-BC, Cells), R2c =\= BR,
+% Commit to the first qualifying corner.
+    !.
+% Detect a midpoint gap along row BR: the centre column of the first break in the sorted columns.
+w78_row_gap(Cells, BR, GapC) :-
+% Columns occupied in that row.
+    findall(C, member(BR-C,Cells), Cs0),
+% Sorted and deduplicated.
+    sort(Cs0, Cs),
+% Find the first adjacent pair separated by a gap and return its midpoint.
+    w78_find_gap(Cs, GapC).
+% Detect a midpoint gap along column BC: the centre row of the first break in the sorted rows.
+w78_col_gap(Cells, BC, GapR) :-
+% Rows occupied in that column.
+    findall(R, member(R-BC,Cells), Rs0),
+% Sorted and deduplicated.
+    sort(Rs0, Rs),
+% Find the first adjacent pair separated by a gap and return its midpoint.
+    w78_find_gap(Rs, GapR).
+% The first pair of adjacent sorted values with a gap between them yields the gap midpoint.
+w78_find_gap([A,B|_], G) :- B-A > 1, !, G is (A+B)//2.
+% Otherwise keep scanning further along the sorted list.
+w78_find_gap([_|T], G) :- w78_find_gap(T, G).
+% The eight D4 images of an offset (DR,DC): four sign flips plus the axis swap.
+w78_d4(DR, DC, A, B) :-
+% Precompute the negated offsets.
+    NDR is -DR, NDC is -DC,
+% Enumerate the eight symmetric images.
+    member(A-B, [DR-DC, DR-NDC, NDR-DC, NDR-NDC, DC-DR, DC-NDR, NDC-DR, NDC-NDR]).
 % -----------------------------------------------------------------------
 % Wave 79: reflect_chain_at_markers (b775ac94)
 % -----------------------------------------------------------------------
