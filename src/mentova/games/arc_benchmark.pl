@@ -19781,12 +19781,12 @@ arc_transform(wrap_isolated_dots(ColorMap), Grid, Out) :-
     !.
 
 % ---------------------------------------------------------------------------
-% Wave 39 Rule 3: rect_frame_to_interior (task d5d6de2d)
+% Wave 39 Rule 3: rectangle_frame_to_interior (task d5d6de2d)
 % Each closed rectangular frame of 2s becomes a block of 3s at its interior;
 % the frame itself is removed (all cells become 0 or 3).
 % ---------------------------------------------------------------------------
-arc_named_rule(rect_frame_to_interior).
-arc_transform(rect_frame_to_interior, Grid, Out) :-
+arc_named_rule(rectangle_frame_to_interior).
+arc_transform(rectangle_frame_to_interior, Grid, Out) :-
 % ERC size guard
     length(Grid, NR), NR =< 30,
     Grid = [GRrfti1|_], length(GRrfti1, NC), NC =< 30,
@@ -26139,7 +26139,7 @@ arc_transform(diagonal_cavity_stamp, Grid, Out) :-
     % Count the number of cavity cells.
     length(W60BCavity, W60BCavLen),
     % Determine diagonal direction by comparing marker position to centroid sum.
-    % Use integer arithmetic: marker*len vs sum to avoid floating-point.
+    % Use integer grid_arithmetic: marker*len vs sum to avoid floating-point.
     % Row component of direction D.
     ( W60BMR0 * W60BCavLen > W60BSumR -> W60BDR = 1
     ; W60BMR0 * W60BCavLen < W60BSumR -> W60BDR = -1

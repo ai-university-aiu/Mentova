@@ -118,7 +118,7 @@ protocol_discipline(
 extension_discipline(
     'Four-protocol extension (Acc_63-Acc_65)',
     'Each of Acc_63, Acc_64, and Acc_65 was demonstrated before its paper and \
-announcement were written. Acc_63 demo passed: mcp_gateway_start, key management, \
+announcement were written. Acc_63 demo passed: model_context_protocol_gateway_start, key management, \
 inscribe/query, actor_list, gateway_stop. Acc_64 demo passed: run creation, status \
 polling, cancellation, agent description, unknown skill failure. Acc_65 demo passed: \
 DID stability, agent description, sign/verify, tamper rejection, meta-protocol \

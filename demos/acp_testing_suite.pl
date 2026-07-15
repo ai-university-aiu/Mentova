@@ -12,21 +12,21 @@
         The boundary is strict: task results are artifacts, not Lattice queries.
 
     This suite exercises the following ACP predicates from pack acp:
-        pai_acp_start/1              — start the ACP HTTP listener
-        pai_acp_stop/0               — stop the ACP HTTP listener
-        pai_acp_run/4                — create and execute an ACP run
-        pai_acp_status/2             — poll the status of a run
-        pai_acp_cancel/1             — cancel a pending or running run
-        pai_acp_agent_description/1  — retrieve the ACP agent description
+        agent_communication_protocol_start/1              — start the ACP HTTP listener
+        agent_communication_protocol_stop/0               — stop the ACP HTTP listener
+        agent_communication_protocol_run/4                — create and execute an ACP run
+        agent_communication_protocol_status/2             — poll the status of a run
+        agent_communication_protocol_cancel/1             — cancel a pending or running run
+        agent_communication_protocol_agent_description/1  — retrieve the ACP agent description
 
     Acceptance criteria:
-        AC-PR64-001: pai_acp_run/4 creates a run with a unique RunId and returns
+        AC-PR64-001: agent_communication_protocol_run/4 creates a run with a unique RunId and returns
                      an artifact with status=completed for a valid task.
-        AC-PR64-002: pai_acp_status/2 correctly reports the run status after
-                     pai_acp_run/4 completes: Status=completed.
-        AC-PR64-003: pai_acp_cancel/1 transitions a created run to cancelled;
-                     pai_acp_status/2 returns cancelled afterward.
-        AC-PR64-004: pai_acp_agent_description/1 returns a description listing
+        AC-PR64-002: agent_communication_protocol_status/2 correctly reports the run status after
+                     agent_communication_protocol_run/4 completes: Status=completed.
+        AC-PR64-003: agent_communication_protocol_cancel/1 transitions a created run to cancelled;
+                     agent_communication_protocol_status/2 returns cancelled afterward.
+        AC-PR64-004: agent_communication_protocol_agent_description/1 returns a description listing
                      capabilities and protocols without Lattice contents.
         AC-PR64-005: A run containing an unknown skill returns failed status,
                      not an exception that breaks the ACP lifecycle.
@@ -41,14 +41,14 @@
 
 % Register the PrologAI ACP pack library path.
 :- initialization(
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/acp/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/agent_communication_protocol/prolog')),
     now).
 
 % Load the Mentova top-level interface.
 :- use_module('../src/mentova/mentova').
 
 % Load the ACP gateway module.
-:- use_module(library(acp)).
+:- use_module(library(agent_communication_protocol)).
 
 % Import standard list utilities.
 :- use_module(library(lists), [member/2, memberchk/2]).
@@ -74,7 +74,7 @@ run_acp_testing_suite :-
 
     format("  Submitting ACP run: task(reasoning, 'birds can fly') in sync mode...~n"),
     % Create an ACP run with the reasoning capability.
-    pai_acp_run(task(reasoning, 'birds can fly'), sync, RunId1, Artifact1),
+    agent_communication_protocol_run(task(reasoning, 'birds can fly'), sync, RunId1, Artifact1),
     format("  RunId: ~w~n", [RunId1]),
     % Convert the artifact to a string for display.
     term_to_atom(Artifact1, ArtifactAtom1),
@@ -92,7 +92,7 @@ run_acp_testing_suite :-
 
     format("  Polling status for RunId: ~w~n", [RunId1]),
     % Query the run status.
-    pai_acp_status(RunId1, Status1),
+    agent_communication_protocol_status(RunId1, Status1),
     format("  Status: ~w~n", [Status1]),
     ( Status1 = completed
     ->  format("  AC-PR64-002: PASS — Status is completed after sync run.~n")
@@ -108,17 +108,17 @@ run_acp_testing_suite :-
     % Since sync runs execute immediately, we insert a created record manually.
     format("  Creating a run record in 'created' state for cancellation test...~n"),
     % Insert a test run record directly into the dynamic store.
-    assertz(acp:acp_run_record('test-cancel-run-001', task(reasoning, test), created, none)),
+    assertz(agent_communication_protocol:agent_communication_protocol_run_record('test-cancel-run-001', task(reasoning, test), created, none)),
     % Verify it is in created state before cancellation.
-    pai_acp_status('test-cancel-run-001', PreCancelStatus),
+    agent_communication_protocol_status('test-cancel-run-001', PreCancelStatus),
     format("  Status before cancel: ~w~n", [PreCancelStatus]),
     % Cancel the run.
-    pai_acp_cancel('test-cancel-run-001'),
+    agent_communication_protocol_cancel('test-cancel-run-001'),
     % Verify it is now in cancelled state.
-    pai_acp_status('test-cancel-run-001', PostCancelStatus),
+    agent_communication_protocol_status('test-cancel-run-001', PostCancelStatus),
     format("  Status after cancel: ~w~n", [PostCancelStatus]),
     ( PostCancelStatus = cancelled
-    ->  format("  AC-PR64-003: PASS — Status is cancelled after pai_acp_cancel/1.~n")
+    ->  format("  AC-PR64-003: PASS — Status is cancelled after agent_communication_protocol_cancel/1.~n")
     ;   format("  AC-PR64-003: FAIL — Status is ~w, expected cancelled.~n",
               [PostCancelStatus])
     ),
@@ -128,9 +128,9 @@ run_acp_testing_suite :-
     % ------------------------------------------------------------------
     format("~n--- Section 4: Agent Description Opacity (AC-PR64-004) ---~n~n"),
 
-    format("  Calling pai_acp_agent_description/1...~n"),
+    format("  Calling agent_communication_protocol_agent_description/1...~n"),
     % Get the ACP agent description.
-    pai_acp_agent_description(Desc),
+    agent_communication_protocol_agent_description(Desc),
     % Display the description.
     term_to_atom(Desc, DescAtom),
     format("  Description: ~w~n", [DescAtom]),
@@ -157,10 +157,10 @@ run_acp_testing_suite :-
 
     format("  Submitting ACP run with unknown skill: task(unknown_skill_xyz, input)...~n"),
     % Run a task with a skill that is not registered.
-    pai_acp_run(task(unknown_skill_xyz, test_input), sync, RunId5, Artifact5),
+    agent_communication_protocol_run(task(unknown_skill_xyz, test_input), sync, RunId5, Artifact5),
     format("  RunId: ~w~n", [RunId5]),
     % Check the run status.
-    pai_acp_status(RunId5, Status5),
+    agent_communication_protocol_status(RunId5, Status5),
     format("  Status: ~w~n", [Status5]),
     term_to_atom(Artifact5, Artifact5Atom),
     format("  Artifact: ~w~n", [Artifact5Atom]),

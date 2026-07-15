@@ -46,7 +46,7 @@
     % The grid pack.
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/grid/prolog')),
     % The object detector.
-    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/gridobj/prolog')),
+    assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/grid_object/prolog')),
     % The J-Space concept workspace (Jacobian Space and Lens).
     assertz(user:file_search_path(library, '/home/ccaitwo/PrologAI/packs/jacobian_space/prolog')),
     % The efficiency governor.

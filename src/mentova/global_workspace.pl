@@ -59,7 +59,7 @@
         '/home/ccaitwo/PrologAI/packs/actors/prolog')),
     % Add sona directory (provides sona — continual learning).
     assertz(user:file_search_path(library,
-        '/home/ccaitwo/PrologAI/packs/sona/prolog')),
+        '/home/ccaitwo/PrologAI/packs/synaptic_ontological_neural_aggregator/prolog')),
     % Add workspace directory (provides workspace — the cognitive cycle).
     assertz(user:file_search_path(library,
         '/home/ccaitwo/PrologAI/packs/workspace/prolog')),

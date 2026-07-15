@@ -84,7 +84,7 @@ schema_boot :-
     ( schema_broadcast_count(0)
     ->  % Subscribe the schema updater as a broadcast listener.
         catch(
-            global_workspace:pai_broadcast_subscribe(
+            global_workspace:prologai_broadcast_subscribe(
                 mentova_attention_schema:schema_on_broadcast),
             _, true
         ),
