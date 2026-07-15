@@ -16,7 +16,7 @@
         mcp_set_api_key/1     — set the API key for authentication
         mcp_get_api_key/1     — retrieve the current API key
 
-    And the following tool dispatch paths (tested glass-box via dispatch_tool/3):
+    And the following tool dispatch paths (tested glass-box via mcp_gateway_tool/3):
         lattice_query      — wraps traverse_nexus/4
         lattice_inscribe   — wraps anchor_node/4
         actor_list         — wraps cyclic_actor_list/1
@@ -25,9 +25,9 @@
     Acceptance criteria:
         AC-PR63-001: mcp_gateway_start/1 starts the server; mcp_active_port/1 confirms.
         AC-PR63-002: mcp_set_api_key/1 updates the key; mcp_get_api_key/1 retrieves it.
-        AC-PR63-003: dispatch_tool(lattice_inscribe, ...) anchors a node_fact and
-                     dispatch_tool(lattice_query, ...) retrieves it.
-        AC-PR63-004: dispatch_tool(actor_list, ...) returns a list (opacity: no raw memory).
+        AC-PR63-003: mcp_gateway_tool(lattice_inscribe, ...) anchors a node_fact and
+                     mcp_gateway_tool(lattice_query, ...) retrieves it.
+        AC-PR63-004: mcp_gateway_tool(actor_list, ...) returns a list (opacity: no raw memory).
         AC-PR63-005: mcp_gateway_stop/0 stops the server; mcp_active_port/1 is cleared.
 
     Run:
@@ -110,16 +110,16 @@ run_mcp_testing_suite :-
 
     % Use the MCP tool dispatch path to inscribe a node_fact.
     format("  Inscribing node_fact: relation=mcp_test, args=[mentova,acc63], refs=[]~n"),
-    % Call dispatch_tool to invoke the lattice_inscribe tool.
-    mcp_gateway:dispatch_tool(lattice_inscribe,
+    % Call mcp_gateway_tool to invoke the lattice_inscribe tool.
+    mcp_gateway:mcp_gateway_tool(lattice_inscribe,
         json{relation: mcp_test, args: '[mentova,acc63]', referents: '[]'},
         InscribeId),
     format("  Inscribed node_fact with ID: ~w~n", [InscribeId]),
 
     % Query the Lattice for the inscribed node_fact.
     format("  Querying Lattice for pattern: mcp_test~n"),
-    % Call dispatch_tool to invoke the lattice_query tool.
-    mcp_gateway:dispatch_tool(lattice_query,
+    % Call mcp_gateway_tool to invoke the lattice_query tool.
+    mcp_gateway:mcp_gateway_tool(lattice_query,
         json{pattern: 'mcp_test', k: 5},
         QueryResults),
     ( QueryResults \= []
@@ -135,9 +135,9 @@ run_mcp_testing_suite :-
     format("~n--- Section 4: Actor List — Opacity Check (AC-PR63-004) ---~n~n"),
 
     % List all running cyclic actors via the MCP tool dispatch path.
-    format("  Calling dispatch_tool(actor_list, ...)~n"),
-    % Call dispatch_tool to invoke the actor_list tool.
-    mcp_gateway:dispatch_tool(actor_list, json{}, ActorNames),
+    format("  Calling mcp_gateway_tool(actor_list, ...)~n"),
+    % Call mcp_gateway_tool to invoke the actor_list tool.
+    mcp_gateway:mcp_gateway_tool(actor_list, json{}, ActorNames),
     % Verify that the result is a list (type check for opacity compliance).
     ( is_list(ActorNames)
     ->  format("  AC-PR63-004: PASS — actor_list returns a list; no raw Lattice contents.~n"),
