@@ -13,19 +13,19 @@
       3. Improves a failing output through one round of structured feedback:
          the improver receives the output and its critique and returns a
          better version that passes all criteria.
-      4. Runs a full rn_optimize/5 loop that generates candidates, scores
+      4. Runs a full refinery_optimize/5 loop that generates candidates, scores
          them, and stops when the quality bar is met.
-      5. Stores a lesson from a failure (rn_learn/3), retrieves it
-         (rn_recall/2), and confirms it is gone after clearing (rn_forget/1).
+      5. Stores a lesson from a failure (refinery_learn/3), retrieves it
+         (refinery_recall/2), and confirms it is gone after clearing (refinery_forget/1).
 
     Acceptance criteria:
-      AC-ACC75-001: rn_critique/4 returns [] for passing output and
+      AC-ACC75-001: refinery_critique/4 returns [] for passing output and
                     [found_issue(non_empty,fail)] for empty output.
-      AC-ACC75-002: rn_score/3 returns 1.0, 0.5, and 0.0 for three outputs.
-      AC-ACC75-003: rn_improve/5 transforms a failing output into a passing one.
-      AC-ACC75-004: rn_optimize/5 stops at the quality bar and returns the
+      AC-ACC75-002: refinery_score/3 returns 1.0, 0.5, and 0.0 for three outputs.
+      AC-ACC75-003: refinery_improve/5 transforms a failing output into a passing one.
+      AC-ACC75-004: refinery_optimize/5 stops at the quality bar and returns the
                     expected best candidate.
-      AC-ACC75-005: rn_learn/3 + rn_recall/2 + rn_forget/1 round-trip correctly.
+      AC-ACC75-005: refinery_learn/3 + refinery_recall/2 + refinery_forget/1 round-trip correctly.
 
     Usage:
         swipl \
@@ -64,7 +64,7 @@ run_refinery_demo :-
     write('=== All five criteria pass. Acc_75 complete. ==='), nl.
 
 % -----------------------------------------------------------------------
-% AC-ACC75-001: rn_critique/4 returns [] for passing output; issues for failing
+% AC-ACC75-001: refinery_critique/4 returns [] for passing output; issues for failing
 % -----------------------------------------------------------------------
 
 % Define demo_ac75_001: verify critique detects pass and fail correctly.
@@ -73,9 +73,9 @@ demo_ac75_001 :-
     Criteria = [criterion(non_empty, [O]>>(O \= [])),
                 criterion(short,     [O]>>(length(O, L), L < 5))],
     % Critique a valid output: [a, b, c] passes both criteria.
-    rn_critique([a, b, c], Criteria, 5, PassCritique),
+    refinery_critique([a, b, c], Criteria, 5, PassCritique),
     % Critique an invalid output: [] fails the non_empty criterion.
-    rn_critique([], Criteria, 5, FailCritique),
+    refinery_critique([], Criteria, 5, FailCritique),
     % Verify the passing output yields an empty critique.
     ( PassCritique = [],
       % Verify the failing output includes the non_empty issue.
@@ -88,7 +88,7 @@ demo_ac75_001 :-
     ).
 
 % -----------------------------------------------------------------------
-% AC-ACC75-002: rn_score/3 returns correct scores for three outputs
+% AC-ACC75-002: refinery_score/3 returns correct scores for three outputs
 % -----------------------------------------------------------------------
 
 % Define demo_ac75_002: verify score computation for all-pass, half-pass, all-fail.
@@ -97,14 +97,14 @@ demo_ac75_002 :-
     CriteriaA = [criterion(non_empty, [O]>>(O \= [])),
                  criterion(short,     [O]>>(length(O, L), L < 5))],
     % Score [a, b]: both criteria pass; expected 1.0.
-    rn_score([a, b], CriteriaA, Score1),
+    refinery_score([a, b], CriteriaA, Score1),
     % Score [a, b, c, d, e, f]: non_empty passes, short fails; expected 0.5.
-    rn_score([a, b, c, d, e, f], CriteriaA, Score2),
+    refinery_score([a, b, c, d, e, f], CriteriaA, Score2),
     % Use a different criteria pair where both fail on [].
     CriteriaB = [criterion(non_empty, [O]>>(O \= [])),
                  criterion(has_x,    [O]>>(member(x, O)))],
     % Score []: both criteria fail; expected 0.0.
-    rn_score([], CriteriaB, Score3),
+    refinery_score([], CriteriaB, Score3),
     % Verify all three scores.
     ( Score1 =:= 1.0,
       Score2 =:= 0.5,
@@ -116,7 +116,7 @@ demo_ac75_002 :-
     ).
 
 % -----------------------------------------------------------------------
-% AC-ACC75-003: rn_improve/5 transforms a failing output into a passing one
+% AC-ACC75-003: refinery_improve/5 transforms a failing output into a passing one
 % -----------------------------------------------------------------------
 
 % Define demo_ac75_003: verify the improvement loop.
@@ -129,7 +129,7 @@ demo_ac75_003 :-
     % replaces the empty list with a non-empty list.
     ImproverGoal = [_O, _C, I]>>(I = [improved_item]),
     % Run one round of improvement with a budget of 3 iterations.
-    rn_improve(StartOutput, Criteria, ImproverGoal, 3, Improved),
+    refinery_improve(StartOutput, Criteria, ImproverGoal, 3, Improved),
     % Verify the improved output is non-empty.
     ( Improved \= []
     % Report pass.
@@ -139,7 +139,7 @@ demo_ac75_003 :-
     ).
 
 % -----------------------------------------------------------------------
-% AC-ACC75-004: rn_optimize/5 stops at quality bar and returns best candidate
+% AC-ACC75-004: refinery_optimize/5 stops at quality bar and returns best candidate
 % -----------------------------------------------------------------------
 
 % Define demo_ac75_004: verify the evaluator-optimizer loop.
@@ -150,37 +150,37 @@ demo_ac75_004 :-
     EvaluatorGoal = [_O, S]>>(S = 1.0),
     % Quality bar: 0.9; generator immediately scores 1.0, so loop must stop
     % on the first iteration.
-    rn_optimize(GeneratorGoal, EvaluatorGoal, 0.9, 10, Best),
+    refinery_optimize(GeneratorGoal, EvaluatorGoal, 0.9, 10, Best),
     % Verify the best candidate is what the generator produced.
     ( Best = optimized_result
     % Report pass.
-    ->  write('AC-ACC75-004: PASS  rn_optimize stopped at bar; best = optimized_result'), nl
+    ->  write('AC-ACC75-004: PASS  refinery_optimize stopped at bar; best = optimized_result'), nl
     % Report fail with actual best.
     ;   format('AC-ACC75-004: FAIL  best = ~w~n', [Best])
     ).
 
 % -----------------------------------------------------------------------
-% AC-ACC75-005: rn_learn + rn_recall + rn_forget lesson database round-trip
+% AC-ACC75-005: refinery_learn + refinery_recall + refinery_forget lesson database round-trip
 % -----------------------------------------------------------------------
 
 % Define demo_ac75_005: verify the lesson database.
 demo_ac75_005 :-
     % Store a lesson: when working on list_sorting and the output is empty,
     % use a non-empty generator next time.
-    rn_learn(list_sorting, output_was_empty, use_non_empty_generator),
+    refinery_learn(list_sorting, output_was_empty, use_non_empty_generator),
     % Retrieve all lessons for list_sorting.
-    rn_recall(list_sorting, Lessons),
+    refinery_recall(list_sorting, Lessons),
     % Verify the lesson is present.
     ( member(lesson(output_was_empty, use_non_empty_generator), Lessons)
     % Clear all lessons for list_sorting.
-    ->  rn_forget(list_sorting),
+    ->  refinery_forget(list_sorting),
         % Verify lessons are now gone.
-        rn_recall(list_sorting, LessonsAfter),
+        refinery_recall(list_sorting, LessonsAfter),
         ( LessonsAfter = []
         % Report pass.
         ->  write('AC-ACC75-005: PASS  lesson stored, recalled, and cleared correctly'), nl
         % Report fail: lessons remain after forget.
-        ;   format('AC-ACC75-005: FAIL  lessons remain after rn_forget: ~w~n', [LessonsAfter])
+        ;   format('AC-ACC75-005: FAIL  lessons remain after refinery_forget: ~w~n', [LessonsAfter])
         )
     % Report fail: lesson not found in recall.
     ;   format('AC-ACC75-005: FAIL  lesson not found in recall; got ~w~n', [Lessons])
