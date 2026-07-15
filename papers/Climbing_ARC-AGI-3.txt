@@ -1107,6 +1107,16 @@ board offline, prove the model consistent before spending live budget, encode th
 reactive glass-box solver - is the template for the next games.
 
 
+2026-07-15  COURSE CORRECTION. A regression check of the 1/25 progress (game ft09 completed, sb26 level one won) after the whole-word pack-renaming program surfaced a SILENT break. The rename retired the jspace pack to jacobian_space, but twenty-seven module-qualified goals across six Mentova files still carried the dead jspace: qualifier - the predicate names had been updated to jacobian_space_*, only the module prefix was missed. Because every such call is wrapped in catch(_, _, true), the failures were invisible: the J-Space holds simply never happened. The golden-reference loader (arc_golden, which the Mentor Bridge relies on) degraded to loading zero concepts; ARC-AGI-3 knowledge transfer and cognition, draft ingest, and the OODA knowledge bridge silently stopped populating J-Space.
+
+The two glass-box solvers that actually won the levels - arc_ft09 (functional-tile relational constraints plus a GF(2) Lights-Out solve for level six) and arc_sb26 - were untouched: they are stateless readers of the live frame with no J-Space dependency, so the measured 1/25 stands. What was broken was the supporting J-Space instrumentation around it.
+
+The fix migrated every jspace: qualifier to jacobian_space:. Verified: the golden loader now holds 50+ concepts (AC-GD-003 PASS, was silently zero); the knowledge demo transfers 95 J-Space concepts (was silently zero) with 9/9 checks green; and the six affected modules' unit tests all pass (arc_golden 6, arc3_knowledge 11, arc3_cognition 7, draft_ingest 6, ooda_knowledge 9), as do the two solver suites (arc_ft09 9, arc_sb26 5). A whole-repo qualifier sweep confirmed jspace: was the only stale module prefix remaining.
+
+LEARNING: a pack rename must migrate module-qualified goal calls of the form oldpack:Goal, and the ones most dangerous to miss are those hidden inside catch/3 - a dead qualifier there fails silently rather than loudly, so the loss of a whole subsystem leaves no error in the log. Regression-test the interactive progress end to end, not just the solver units, precisely because the instrumentation degrades quietly.
+
+
+
 THE VISION
 
 The summit is a real, measured climb of the ARC-AGI-3 leaderboard by a glass-box
