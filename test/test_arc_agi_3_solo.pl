@@ -22,8 +22,34 @@
 % Load the module under test from the library path.
 :- use_module(library(arc_agi_3_solo)).
 
-% Open the test block for arc_agi_3_solo.
-:- begin_tests(arc_agi_3_solo).
+% Track the solo report files that already exist before the suite runs.
+:- dynamic solo_reports_before/1.
+
+% Record the pre-existing solo attempt reports so cleanup deletes only new ones.
+s3_hermetic_setup :-
+    % Read the current solo report basenames (empty if none or on error).
+    ( catch(s3_attempts(Before), _, Before = []) -> true ; Before = [] ),
+    % Replace any stale baseline record.
+    retractall(solo_reports_before(_)),
+    % Store the baseline for the cleanup step.
+    assertz(solo_reports_before(Before)).
+
+% Delete every solo report this suite created, so the test leaves the tree clean.
+s3_hermetic_cleanup :-
+    % Read the solo report basenames now present after the tests.
+    ( catch(s3_attempts(After), _, After = []) -> true ; After = [] ),
+    % Retrieve the baseline recorded at setup.
+    ( solo_reports_before(Before) -> true ; Before = [] ),
+    % The reports created during the suite are those not in the baseline.
+    subtract(After, Before, Created),
+    % Delete each created report from the solo attempts directory.
+    forall(member(F, Created),
+           % Build the relative path and remove the file, ignoring errors.
+           ( atom_concat('ARC-AGI-3_Solo_Attempts/', F, Path),
+             catch(delete_file(Path), _, true) )).
+
+% Open the test block, recording and cleaning solo reports so it is hermetic.
+:- begin_tests(arc_agi_3_solo, [setup(s3_hermetic_setup), cleanup(s3_hermetic_cleanup)]).
 
 % s3_start begins a solo attempt and s3_mode then reports the solo mode.
 test(s3_start_activates_solo_mode) :-
