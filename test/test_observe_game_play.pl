@@ -25,7 +25,34 @@
 :- use_module(library(lists)).
 
 % Open the test block for observe_game_play.
-:- begin_tests(observe_game_play).
+% Track the solo-attempts directory contents before the suite runs.
+:- dynamic ogp_attempts_before/1.
+
+% Record the existing attempt files so cleanup deletes only those the suite creates.
+ogp_hermetic_setup :-
+    % List the solo attempts directory (empty if absent or on error).
+    ( catch(directory_files('ARC-AGI-3_Solo_Attempts', B), _, B = []) -> true ; B = [] ),
+    % Replace any stale baseline record.
+    retractall(ogp_attempts_before(_)),
+    % Store the baseline for the cleanup step.
+    assertz(ogp_attempts_before(B)).
+
+% Delete every attempt file this suite created, leaving the repo tree clean.
+ogp_hermetic_cleanup :-
+    % List the directory contents now present after the tests.
+    ( catch(directory_files('ARC-AGI-3_Solo_Attempts', A), _, A = []) -> true ; A = [] ),
+    % Retrieve the baseline recorded at setup.
+    ( ogp_attempts_before(B) -> true ; B = [] ),
+    % The files created during the suite are those not in the baseline.
+    subtract(A, B, Created),
+    % Delete each created file from the solo attempts directory.
+    forall(member(F, Created),
+           % Build the relative path and remove the file, ignoring errors.
+           ( atom_concat('ARC-AGI-3_Solo_Attempts/', F, Path),
+             catch(delete_file(Path), _, true) )).
+
+% Open the test block with the hermetic setup and cleanup wrappers.
+:- begin_tests(observe_game_play, [setup(ogp_hermetic_setup), cleanup(ogp_hermetic_cleanup)]).
 
 % AC-OGP-001: ogp_run/3 returns a report/8 keyed to the game, whose step count
 % equals the length of the recorded trace.
