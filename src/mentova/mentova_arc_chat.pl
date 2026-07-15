@@ -249,7 +249,7 @@
 % else blank) so the Solo player wins ft09 levels 1 and 2 itself.
 :- use_module('arc_ft09', [ft09_is_game/1, ft09_next_action/3, ft09_reset/1]).
 % Load grid measurement for inferring an action's observed effect (its semantic).
-:- use_module(library(grid), [gd_diff/3, gd_colors/2, gd_size/3, gd_cell/4]).
+:- use_module(library(grid), [grid_diff/3, grid_colors/2, grid_size/3, grid_cell/4]).
 % Load list arithmetic for the centroid computation.
 :- use_module(library(lists), [sum_list/2]).
 % Load the Jacobian Space workspace so the solo run holds its learnings in J-Space.
@@ -681,7 +681,7 @@ ma_record_effect(Action, Frame0, Frame1) :-
 % ma_infer_move(+Frame0, +Frame1, -Desc): a coarse effect from the frame change.
 ma_infer_move(Frame0, Frame1, Desc) :-
     % The differing cells.
-    gd_diff(Frame0, Frame1, Diffs),
+    grid_diff(Frame0, Frame1, Diffs),
     (   Diffs == []
     % Nothing changed.
     ->  Desc = none
@@ -699,7 +699,7 @@ ma_infer_move(Frame0, Frame1, Desc) :-
 % ma_centroid_shift(+F0, +F1, -DR, -DC): the shift of the most-moved colour.
 ma_centroid_shift(F0, F1, DR, DC) :-
     % The colours present in the first frame, minus the background.
-    gd_colors(F0, Colours),
+    grid_colors(F0, Colours),
     % Score each colour's centroid displacement.
     findall(Mag-(dr(R) - dc(C)),
         ( member(Col, Colours), Col =\= 0,
@@ -718,12 +718,12 @@ ma_centroid_shift(F0, F1, DR, DC) :-
 % ma_colour_centroid(+Frame, +Colour, -R, -C): the rounded centroid of a colour.
 ma_colour_centroid(Frame, Colour, R, C) :-
     % Measure the frame.
-    gd_size(Frame, Rows, Cols),
+    grid_size(Frame, Rows, Cols),
     % Bounds.
     MaxR is Rows - 1, MaxC is Cols - 1,
     % Cells of the colour.
     findall(RR-CC,
-        ( between(0, MaxR, RR), between(0, MaxC, CC), gd_cell(Frame, RR, CC, Colour) ),
+        ( between(0, MaxR, RR), between(0, MaxC, CC), grid_cell(Frame, RR, CC, Colour) ),
         Cells),
     % It must appear.
     Cells \== [],
@@ -2647,7 +2647,7 @@ ma_learn_deadly(Game, Delta) :-
 % ma_cell_colour(+Frame, +R, +C, -Colour): the colour at a cell, failing off-grid.
 ma_cell_colour(Frame, R, C, Colour) :-
     % Read the cell, guarded so an off-grid destination simply fails.
-    catch(gd_cell(Frame, R, C, Colour), _, fail).
+    catch(grid_cell(Frame, R, C, Colour), _, fail).
 
 % ma_predict_fatal(+Game, +Frame, +Action): the verify-before-act judgement — this
 % move is predicted to end the run from the current situation. Fully guarded.
@@ -3322,7 +3322,7 @@ ma_handle_agentview(_Request) :-
     % The current frame, resetting if the environment is fresh.
     ( ma_render(Sel, Frame) -> true ; ma_reset_env(Sel, Frame) ),
     % The grid dimensions.
-    ( catch(gd_size(Frame, Rows, Cols), _, fail) -> true ; Rows = 0, Cols = 0 ),
+    ( catch(grid_size(Frame, Rows, Cols), _, fail) -> true ; Rows = 0, Cols = 0 ),
     % The grid as compact digit rows (0-9, a-f), for a text-only reader.
     ( catch(ma_grid_ascii(Frame, Ascii), _, fail) -> true ; Ascii = [] ),
     % The whole-grid object inventory (grid_perception), each object with role and position.
