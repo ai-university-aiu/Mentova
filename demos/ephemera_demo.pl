@@ -5,20 +5,20 @@
     as runnable code rather than as symbolic Prolog facts.
 
     The demonstration:
-      1. Evaluates a Prolog goal with a timeout (ep_eval/3).
-      2. Captures standard output from a shell command (ep_shell/3).
-      3. Runs a Python snippet, captures the result (ep_ephemeral/4).
-      4. Runs a synthesize-execute-check iteration cycle (ep_iterate/5).
-      5. Records and retrieves an execution trace (ep_trace_record/4, ep_trace_get/2).
+      1. Evaluates a Prolog goal with a timeout (ephemera_eval/3).
+      2. Captures standard output from a shell command (ephemera_shell/3).
+      3. Runs a Python snippet, captures the result (ephemera_ephemeral/4).
+      4. Runs a synthesize-execute-check iteration cycle (ephemera_iterate/5).
+      5. Records and retrieves an execution trace (ephemera_trace_record/4, ephemera_trace_get/2).
 
     Acceptance criteria:
-      AC-ACC73-001: ep_eval(true, 5, R) returns success.
-      AC-ACC73-002: ep_eval((X is 6*7), 5, R) binds X to 42 and returns success.
-      AC-ACC73-003: ep_shell(['echo','hello_from_mentova'], 10, shell_result(0,Out,_))
+      AC-ACC73-001: ephemera_eval(true, 5, R) returns success.
+      AC-ACC73-002: ephemera_eval((X is 6*7), 5, R) binds X to 42 and returns success.
+      AC-ACC73-003: ephemera_shell(['echo','hello_from_mentova'], 10, shell_result(0,Out,_))
                     captures 'hello_from_mentova' in Out.
-      AC-ACC73-004: ep_ephemeral(python, 'print(2**10)', 10, shell_result(0,Out,_))
+      AC-ACC73-004: ephemera_ephemeral(python, 'print(2**10)', 10, shell_result(0,Out,_))
                     captures '1024\n' in Out.
-      AC-ACC73-005: ep_trace_record and ep_trace_get round-trip correctly.
+      AC-ACC73-005: ephemera_trace_record and ephemera_trace_get round-trip correctly.
 
     Usage:
         swipl \
@@ -55,71 +55,71 @@ run_ephemera_demo :-
     write('=== All five criteria pass. Acc_73 complete. ==='), nl.
 
 % -----------------------------------------------------------------------
-% AC-ACC73-001: ep_eval returns success for a trivially true goal
+% AC-ACC73-001: ephemera_eval returns success for a trivially true goal
 % -----------------------------------------------------------------------
 
-% Define demo_ac73_001: verify ep_eval/3 on a trivially true goal.
+% Define demo_ac73_001: verify ephemera_eval/3 on a trivially true goal.
 demo_ac73_001 :-
     % Evaluate the built-in goal 'true' with a 5-second timeout.
-    ep_eval(true, 5, R),
+    ephemera_eval(true, 5, R),
     % Verify the result is the atom success.
     ( R = success
     % Report pass.
-    ->  write('AC-ACC73-001: PASS  ep_eval(true, 5, success)'), nl
+    ->  write('AC-ACC73-001: PASS  ephemera_eval(true, 5, success)'), nl
     % Report fail with the actual result.
     ;   format('AC-ACC73-001: FAIL  got ~w~n', [R])
     ).
 
 % -----------------------------------------------------------------------
-% AC-ACC73-002: ep_eval binds variables in the goal on success
+% AC-ACC73-002: ephemera_eval binds variables in the goal on success
 % -----------------------------------------------------------------------
 
-% Define demo_ac73_002: verify variable binding through ep_eval/3.
+% Define demo_ac73_002: verify variable binding through ephemera_eval/3.
 demo_ac73_002 :-
     % Evaluate the arithmetic goal (X is 6 * 7) with a 5-second timeout.
-    ep_eval((X is 6 * 7), 5, R),
+    ephemera_eval((X is 6 * 7), 5, R),
     % Verify success and correct binding.
     ( R = success, X =:= 42
     % Report pass with the bound value.
-    ->  format('AC-ACC73-002: PASS  ep_eval((X is 6*7), 5, success), X = ~w~n', [X])
+    ->  format('AC-ACC73-002: PASS  ephemera_eval((X is 6*7), 5, success), X = ~w~n', [X])
     % Report fail.
     ;   format('AC-ACC73-002: FAIL  R = ~w, X = ~w~n', [R, X])
     ).
 
 % -----------------------------------------------------------------------
-% AC-ACC73-003: ep_shell captures stdout from echo
+% AC-ACC73-003: ephemera_shell captures stdout from echo
 % -----------------------------------------------------------------------
 
-% Define demo_ac73_003: verify ep_shell/3 captures shell stdout.
+% Define demo_ac73_003: verify ephemera_shell/3 captures shell stdout.
 demo_ac73_003 :-
     % Run 'echo hello_from_mentova' and capture output.
-    ep_shell(['echo', 'hello_from_mentova'], 10, shell_result(Code, Out, _)),
+    ephemera_shell(['echo', 'hello_from_mentova'], 10, shell_result(Code, Out, _)),
     % Verify exit code is zero and output contains the expected text.
     ( Code =:= 0,
       atom_codes(Out, Codes),
       atom_codes('hello_from_mentova', HCodes),
       append(HCodes, _, Codes)
     % Report pass.
-    ->  format('AC-ACC73-003: PASS  ep_shell echo -> exit ~w, out contains hello_from_mentova~n', [Code])
+    ->  format('AC-ACC73-003: PASS  ephemera_shell echo -> exit ~w, out contains hello_from_mentova~n', [Code])
     % Report fail.
     ;   format('AC-ACC73-003: FAIL  exit ~w, out = ~w~n', [Code, Out])
     ).
 
 % -----------------------------------------------------------------------
-% AC-ACC73-004: ep_ephemeral runs a Python snippet and captures output
+% AC-ACC73-004: ephemera_ephemeral runs a Python snippet and captures output
 % -----------------------------------------------------------------------
 
-% Define demo_ac73_004: verify ep_ephemeral/4 with a Python script.
+% Define demo_ac73_004: verify ephemera_ephemeral/4 with a Python script.
 demo_ac73_004 :-
     % Write and run a Python snippet that prints 2^10.
-    ep_ephemeral(python, 'print(2**10)', 10, shell_result(Code, Out, _)),
+    ephemera_ephemeral(python, 'print(2**10)', 10, shell_result(Code, Out, _)),
     % Verify exit code zero and output contains 1024.
     ( Code =:= 0,
       atom_codes(Out, OutCodes),
       atom_codes('1024', ExpCodes),
       append(ExpCodes, _, OutCodes)
     % Report pass.
-    ->  format('AC-ACC73-004: PASS  ep_ephemeral python 2**10 -> exit ~w, out starts with 1024~n', [Code])
+    ->  format('AC-ACC73-004: PASS  ephemera_ephemeral python 2**10 -> exit ~w, out starts with 1024~n', [Code])
     % Report fail with actual output.
     ;   format('AC-ACC73-004: FAIL  exit ~w, out = ~w~n', [Code, Out])
     ).
@@ -131,13 +131,13 @@ demo_ac73_004 :-
 % Define demo_ac73_005: verify trace recording and retrieval.
 demo_ac73_005 :-
     % Allocate a fresh trace ID.
-    ep_next_trace_id(TId),
+    ephemera_next_trace_id(TId),
     % Record step 1: evaluating 'X is 3+4'.
-    ep_trace_record(TId, 1, 'X is 3+4', success),
+    ephemera_trace_record(TId, 1, 'X is 3+4', success),
     % Record step 2: evaluating 'Y is 10-2'.
-    ep_trace_record(TId, 2, 'Y is 10-2', success),
+    ephemera_trace_record(TId, 2, 'Y is 10-2', success),
     % Retrieve the full trace.
-    ep_trace_get(TId, Entries),
+    ephemera_trace_get(TId, Entries),
     % Verify there are exactly two entries.
     length(Entries, N),
     ( N =:= 2
