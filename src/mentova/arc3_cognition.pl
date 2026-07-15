@@ -136,19 +136,19 @@ cog_bootstrap :-
     catch(cog_bootstrap_, _Err, true).
 
 cog_bootstrap_ :-
-    (   cog_defined(jspace:jacobian_space_open(_)), cog_defined(jspace:jacobian_space_hold(_, _, _, _))
-    ->  catch(jspace:jacobian_space_open(kaggle_northstar), _, true),
+    (   cog_defined(jacobian_space:jacobian_space_open(_)), cog_defined(jacobian_space:jacobian_space_hold(_, _, _, _))
+    ->  catch(jacobian_space:jacobian_space_open(kaggle_northstar), _, true),
         % The north-star itself, at full strength.
         cog_northstar(Star),
-        catch(jspace:jacobian_space_hold(kaggle_northstar, north_star(Star), 1.0, arc3_cognition), _, true),
+        catch(jacobian_space:jacobian_space_hold(kaggle_northstar, north_star(Star), 1.0, arc3_cognition), _, true),
         % Each principle as a concept.
         forall(cog_principle(Slug, _),
-            catch(jspace:jacobian_space_hold(kaggle_northstar, principle(Slug), 0.95, arc3_cognition), _, true)),
+            catch(jacobian_space:jacobian_space_hold(kaggle_northstar, principle(Slug), 0.95, arc3_cognition), _, true)),
         % Each pillar and the principle it realises.
         forall(cog_pillar(Cap, Pack, _),
-            catch(jspace:jacobian_space_hold(kaggle_northstar, pillar(Cap, Pack), 0.9, arc3_cognition), _, true)),
+            catch(jacobian_space:jacobian_space_hold(kaggle_northstar, pillar(Cap, Pack), 0.9, arc3_cognition), _, true)),
         forall(cog_maps(P, Cap),
-            catch(jspace:jacobian_space_hold(kaggle_northstar, realises(Cap, P), 0.85, arc3_cognition), _, true))
+            catch(jacobian_space:jacobian_space_hold(kaggle_northstar, realises(Cap, P), 0.85, arc3_cognition), _, true))
     ;   true
     ).
 
@@ -156,6 +156,6 @@ cog_bootstrap_ :-
 cog_stats(stats(Principles, Pillars, Held)) :-
     aggregate_all(count, cog_principle(_, _), Principles),
     aggregate_all(count, cog_pillar(_, _, _), Pillars),
-    ( cog_defined(jspace:jacobian_space_reading(_, _)),
-      catch(jspace:jacobian_space_reading(kaggle_northstar, R), _, fail), is_list(R)
+    ( cog_defined(jacobian_space:jacobian_space_reading(_, _)),
+      catch(jacobian_space:jacobian_space_reading(kaggle_northstar, R), _, fail), is_list(R)
     -> length(R, Held) ; Held = 0 ).

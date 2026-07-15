@@ -71,7 +71,7 @@ run_arc3_knowledge_demo :-
 
     % AC-009: the J-Space workspace holds the game concepts.
     report('AC-KT-009',
-        ( catch(jspace:jacobian_space_reading(arc3_mind, R), _, fail), R \== [] )),
+        ( catch(jacobian_space:jacobian_space_reading(arc3_mind, R), _, fail), R \== [] )),
 
     % Show a sample of what Mentova now knows about ls20 rings.
     ( a3_recall(ls20, ring, Sample) -> true ; Sample = [] ),
