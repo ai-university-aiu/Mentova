@@ -7,10 +7,10 @@
     on the ARC-AGI-2 corpus, named glass-box rules for every solved task.
 
     Four search levels are tried for each task, dispatched by task category:
-        Level 1 (single): tc_categorize → single_rule strategy.
-        Level 2 (composite): tc_categorize → multi_step / seqinfer 2-step.
-        Level 3 (context_gated): tc_categorize → context_gate_search.
-        Level 4 (symbol_table): tc_categorize → symbol_table_learning.
+        Level 1 (single): taskcat_categorize → single_rule strategy.
+        Level 2 (composite): taskcat_categorize → multi_step / seqinfer 2-step.
+        Level 3 (context_gated): taskcat_categorize → context_gate_search.
+        Level 4 (symbol_table): taskcat_categorize → symbol_table_learning.
 
     ARC-AGI-2 task data is stored in data/arc_agi_2/arc_tasks_2.pl.
     That file is populated by tools/arc_agi2_to_prolog.py once JSON files
@@ -11571,7 +11571,7 @@ bb_render_(Grid, Paint, Out) :-
 % ---------------------------------------------------------------------------
 
 % arc2_induce_rule(+TrainingPairs, -Rule)
-% Classify the task with tc_categorize, then dispatch to the right solver.
+% Classify the task with taskcat_categorize, then dispatch to the right solver.
 % Rule is an atom or compound term identifying the transformation.
 arc2_induce_rule(TrainingPairs, Rule) :-
     % Attempt geometric/structural single-rule search first.
