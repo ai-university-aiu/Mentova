@@ -117,7 +117,7 @@
 % Load the protocol adapter for the live environment.
 :- use_module(library(arc3_protocol), [arc3_protocol_env/4]).
 % Load grid cell access for the mock win test.
-:- use_module(library(grid), [gd_cell/4]).
+:- use_module(library(grid), [grid_cell/4]).
 % Load list helpers.
 :- use_module(library(lists), [member/2, memberchk/2]).
 
@@ -206,7 +206,7 @@ a3_mock_actions([action(1), action(5)]).
 % a3_mock_solved(+Frame): the level is won when the goal cell is colour three.
 a3_mock_solved(Frame) :-
     % Read the bottom-right cell.
-    gd_cell(Frame, 2, 2, 3).
+    grid_cell(Frame, 2, 2, 3).
 
 % Define a3_local_env: the built-in mock as a pluggable arc3_harness environment.
 a3_local_env(arc3_env(
