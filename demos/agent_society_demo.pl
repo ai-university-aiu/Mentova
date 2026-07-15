@@ -11,12 +11,12 @@
     This demonstration closes the agent-society interface item from Part 8.
     It exercises the A2A (Agent-to-Agent) protocol implemented in PR 43:
 
-        pai_agent_card/1      — publish an agent card with identity and capabilities
-        pai_register_identity/2 — register a named agent identity
-        pai_register_capability/2 — register a skill capability on an agent
-        pai_a2a_task/4        — submit a task through the A2A lifecycle
-        pai_peer_mail_send/3  — send durable addressed mail to a peer
-        pai_peer_mail_fetch/3 — fetch pending mail from the mailbox
+        a2a_agent_card/1      — publish an agent card with identity and capabilities
+        a2a_register_identity/2 — register a named agent identity
+        a2a_register_capability/2 — register a skill capability on an agent
+        a2a_a2a_task/4        — submit a task through the A2A lifecycle
+        a2a_peer_mail_send/3  — send durable addressed mail to a peer
+        a2a_peer_mail_fetch/3 — fetch pending mail from the mailbox
 
     Scenario: Two minds participate in the agent society:
         mentova        — the primary mind (PrologAI / all 48 reasoning rungs).
@@ -56,10 +56,10 @@
 ), now).
 % Load the A2A agent-interoperability pack (PR 43).
 :- use_module(library(a2a), [
-    pai_agent_card/1,
-    pai_a2a_task/4,
-    pai_peer_mail_send/3,
-    pai_peer_mail_fetch/3
+    a2a_agent_card/1,
+    a2a_a2a_task/4,
+    a2a_peer_mail_send/3,
+    a2a_peer_mail_fetch/3
 ]).
 
 % ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ get_agent_card(AgentId, card(identity(Id), capabilities(Caps), endpoint(local)))
 
 % ---------------------------------------------------------------------------
 % A2A TASK LIFECYCLE (local simulation)
-% In a live deployment, pai_a2a_task/4 dispatches to the remote endpoint.
+% In a live deployment, a2a_a2a_task/4 dispatches to the remote endpoint.
 % Here we run a local simulate to show the lifecycle glass-box.
 % ---------------------------------------------------------------------------
 
@@ -208,7 +208,7 @@ run_agent_society_demo :-
     % ------------------------------------------------------------------
     format("~n--- Step 3: Peer Mail — Mentova sends a query to mentor_b ---~n"),
 
-    pai_peer_mail_send(mentor_b,
+    a2a_peer_mail_send(mentor_b,
                        'theory_of_mind_query',
                        'Does Sally hold a false belief about marble_in_basket?'),
 
@@ -221,7 +221,7 @@ run_agent_society_demo :-
     % ------------------------------------------------------------------
     format("~n--- Step 4: mentor_b fetches its mailbox ---~n"),
 
-    pai_peer_mail_fetch(mentor_b, local, Messages),
+    a2a_peer_mail_fetch(mentor_b, local, Messages),
     length(Messages, NMsg),
     format("  mentor_b mailbox (~w message(s)):~n", [NMsg]),
     forall(member(Msg, Messages),
@@ -247,11 +247,11 @@ run_agent_society_demo :-
     format(atom(ReplyBody), "Result: ~w", [SkillResult]),
 
     % mentor_b sends reply mail to Mentova.
-    pai_peer_mail_send(mentova, 'theory_of_mind_reply', ReplyBody),
+    a2a_peer_mail_send(mentova, 'theory_of_mind_reply', ReplyBody),
     format("~n  mentor_b sent reply to Mentova.~n"),
 
     % Mentova fetches its mailbox.
-    pai_peer_mail_fetch(mentova, local, MentovaMessages),
+    a2a_peer_mail_fetch(mentova, local, MentovaMessages),
     length(MentovaMessages, NReply),
     format("  Mentova mailbox (~w message(s)):~n", [NReply]),
     forall(member(RMsg, MentovaMessages),
