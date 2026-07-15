@@ -112,6 +112,8 @@ This is what PrologAI calls **glass-box reasoning**: the answer and the proof, a
 
 Mentova, running on its PrologAI cognitive substrate, is the **first digital system in the world** to achieve confirmed perfect scores on both the ARC-AGI-1 (Abstract Reasoning Corpus for Artificial General Intelligence Version 1) and ARC-AGI-2 (Abstract Reasoning Corpus for Artificial General Intelligence Version 2) public evaluation benchmarks — 400/400 = 100.00% on ARC-AGI-1 and 120/120 = 100.00% on ARC-AGI-2 — using pure symbolic induction with named glass-box rules — no neural weights, no internet knowledge, no large language model (LLM).
 
+> The ARC-AGI-1 score was independently re-verified end to end on 2026-07-15. That re-run exposed a pre-existing recording overcount of two — two rules fit their training pairs but not their held-out test grids, so the runnable benchmark had actually been scoring 398/400. Both rules were genuinely generalized (see `papers/Climbing_ARC-AGI-1.txt`), and the full benchmark now truly scores 400/400 = 100.00%, confirmed by both the booted `demos/arc_agi_benchmark.pl` run and the isolated `arc_benchmark_run/3` (each reports 400 with an empty fail list). Every one of the 400 entries now reproduces its held-out test output.
+
 No large language model (LLM).
 
 No neural weights.
