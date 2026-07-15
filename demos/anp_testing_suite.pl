@@ -13,24 +13,24 @@
         a mind speaks before initiating contact.
 
     This suite exercises the following ANP predicates from pack anp:
-        pai_anp_did/1               — retrieve or generate the mind's DID
-        pai_anp_agent_description/1 — retrieve the ANP agent description
-        pai_anp_send/3              — compose and sign an outbound message
-        pai_anp_receive/3           — verify and admit an inbound message
-        pai_anp_verify/2            — verify a message signature only
-        pai_anp_negotiate/2         — perform meta-protocol negotiation
+        anp_anp_did/1               — retrieve or generate the mind's DID
+        anp_anp_agent_description/1 — retrieve the ANP agent description
+        anp_anp_send/3              — compose and sign an outbound message
+        anp_anp_receive/3           — verify and admit an inbound message
+        anp_anp_verify/2            — verify a message signature only
+        anp_anp_negotiate/2         — perform meta-protocol negotiation
 
     Acceptance criteria:
-        AC-PR65-001: pai_anp_did/1 returns a stable did:web DID across two
+        AC-PR65-001: anp_anp_did/1 returns a stable did:web DID across two
                      calls in the same session; the DID begins with 'did:web:'.
-        AC-PR65-002: pai_anp_agent_description/1 returns a description listing
+        AC-PR65-002: anp_anp_agent_description/1 returns a description listing
                      the DID, supported protocols, and a key fingerprint without
                      exposing Lattice contents.
-        AC-PR65-003: pai_anp_send/3 composes a signed envelope; pai_anp_verify/2
+        AC-PR65-003: anp_anp_send/3 composes a signed envelope; anp_anp_verify/2
                      returns verified for the signed envelope.
         AC-PR65-004: An envelope with a tampered signature is rejected by
-                     pai_anp_verify/2 returning failed(signature_mismatch).
-        AC-PR65-005: pai_anp_negotiate/2 returns a protocol set containing
+                     anp_anp_verify/2 returning failed(signature_mismatch).
+        AC-PR65-005: anp_anp_negotiate/2 returns a protocol set containing
                      all four protocols: mcp, a2a, acp, anp.
 
     Run:
@@ -75,11 +75,11 @@ run_anp_testing_suite :-
     % ------------------------------------------------------------------
     format("~n--- Section 1: DID Stability and Format (AC-PR65-001) ---~n~n"),
 
-    format("  Calling pai_anp_did/1 twice to verify stability...~n"),
+    format("  Calling anp_anp_did/1 twice to verify stability...~n"),
     % First call — generates or retrieves the DID.
-    pai_anp_did(DID1),
+    anp_anp_did(DID1),
     % Second call — must return the same DID.
-    pai_anp_did(DID2),
+    anp_anp_did(DID2),
     format("  DID (call 1): ~w~n", [DID1]),
     format("  DID (call 2): ~w~n", [DID2]),
     % Verify stability: both calls return the same DID.
@@ -99,9 +99,9 @@ run_anp_testing_suite :-
     % ------------------------------------------------------------------
     format("~n--- Section 2: Agent Description (AC-PR65-002) ---~n~n"),
 
-    format("  Calling pai_anp_agent_description/1...~n"),
+    format("  Calling anp_anp_agent_description/1...~n"),
     % Get the ANP agent description.
-    pai_anp_agent_description(Desc),
+    anp_anp_agent_description(Desc),
     % Convert to atom for inspection.
     term_to_atom(Desc, DescAtom),
     format("  Description: ~w~n", [DescAtom]),
@@ -137,10 +137,10 @@ run_anp_testing_suite :-
     % Create a signed outbound envelope.
     TestPayload = message('Hello from Mentova', context(reasoning_query)),
     % Send (compose and sign) the message.
-    pai_anp_send('did:web:peer-mind', TestPayload, Envelope),
+    anp_anp_send('did:web:peer-mind', TestPayload, Envelope),
     format("  Envelope composed: ~w~n", [Envelope]),
     % Verify the envelope's signature.
-    pai_anp_verify(Envelope, VerifyResult),
+    anp_anp_verify(Envelope, VerifyResult),
     format("  Verification result: ~w~n", [VerifyResult]),
     ( VerifyResult = verified
     ->  format("  AC-PR65-003: PASS — signed envelope verifies correctly.~n")
@@ -162,7 +162,7 @@ run_anp_testing_suite :-
         payload(malicious_payload)
     ),
     % Verify the tampered envelope.
-    pai_anp_verify(TamperedEnvelope, TamperedResult),
+    anp_anp_verify(TamperedEnvelope, TamperedResult),
     format("  Verification result: ~w~n", [TamperedResult]),
     ( TamperedResult = failed(_)
     ->  format("  AC-PR65-004: PASS — tampered envelope is rejected (failed).~n")
@@ -179,9 +179,9 @@ run_anp_testing_suite :-
     % ------------------------------------------------------------------
     format("~n--- Section 5: Meta-Protocol Negotiation (AC-PR65-005) ---~n~n"),
 
-    format("  Calling pai_anp_negotiate/2 for peer 'did:web:peer-mind'...~n"),
+    format("  Calling anp_anp_negotiate/2 for peer 'did:web:peer-mind'...~n"),
     % Perform meta-protocol negotiation.
-    pai_anp_negotiate('did:web:peer-mind', ProtocolSet),
+    anp_anp_negotiate('did:web:peer-mind', ProtocolSet),
     format("  Protocol set returned: ~w~n", [ProtocolSet]),
     % Verify that all four protocols are in the returned set.
     ( member(protocol(mcp, _), ProtocolSet),

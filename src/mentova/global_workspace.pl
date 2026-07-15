@@ -74,10 +74,10 @@
                                      set_default_nexus/1, default_nexus/1,
                                      live_node_facts/2, node_activation/3]),
     % Load the workspace cycle pack.
-    use_module(library(workspace),  [pai_coalition_form/3, workspace_cycle/0,
+    use_module(library(workspace),  [workspace_coalition_form/3, workspace_cycle/0,
                                      install_workspace_actor/0,
-                                     pai_broadcast_subscribe/1,
-                                     pai_pin_item/2, pai_salience/2]),
+                                     workspace_broadcast_subscribe/1,
+                                     workspace_pin_item/2, workspace_salience/2]),
     % Load the attention economy pack.
     use_module(library(attention),  [attention_wage/3, attention_banker_cycle/0,
                                      attention_metrics/1,
@@ -125,7 +125,7 @@ workspace_boot :-
         catch(set_default_nexus(Nexus), _, true)
     ),
     % Subscribe the broadcast logger so every broadcast is recorded.
-    pai_broadcast_subscribe(global_workspace:ws_log_broadcast),
+    workspace_broadcast_subscribe(global_workspace:ws_log_broadcast),
     % Install the attention-arbiter actor for the 200 ms cognitive cycle.
     catch(install_workspace_actor, _, true),
     % Report workspace boot to the console.
@@ -281,10 +281,10 @@ workspace_demo :-
     retractall(workspace:coalition_content(coalition_low, _)),
     assertz(workspace:coalition_content(coalition_low, [2])),
     % Pin coalition_high so it appears in candidacy.
-    pai_pin_item(coalition_high, 90),
+    workspace_pin_item(coalition_high, 90),
     % Read back the salience scores.
-    pai_salience(coalition_high, S1),
-    pai_salience(coalition_low,  S2),
+    workspace_salience(coalition_high, S1),
+    workspace_salience(coalition_low,  S2),
     % Report the salience values.
     format("coalition_high salience: ~4f~n", [S1]),
     format("coalition_low  salience: ~4f~n", [S2]),
