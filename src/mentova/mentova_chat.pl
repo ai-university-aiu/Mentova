@@ -156,10 +156,10 @@ mc_dedup_stores :-
     % Remove exact-duplicate lattice node-facts, if the facility is present.
     ( catch(node_facts:node_facts_dedup(NF), _, NF = 0) -> true ; NF = 0 ),
     % Remove exact-duplicate Causalontology relations, if the facility is present.
-    ( catch(causal_core:causal_core_cro_dedup(NC), _, NC = 0) -> true ; NC = 0 ),
+    ( catch(causal_core:causal_core_causal_relation_object_dedup(NC), _, NC = 0) -> true ; NC = 0 ),
     % Count the flagged near-duplicate variants kept apart in each store.
     ( catch(node_facts:node_fact_variants(NFV), _, NFV = []) -> true ; NFV = [] ),
-    ( catch(causal_core:causal_core_cro_variants(NCV), _, NCV = []) -> true ; NCV = [] ),
+    ( catch(causal_core:causal_core_causal_relation_object_variants(NCV), _, NCV = []) -> true ; NCV = [] ),
     length(NFV, NFVn), length(NCV, NCVn),
     % Report only when something was pruned or flagged.
     ( NF + NC > 0

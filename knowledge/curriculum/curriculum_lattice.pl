@@ -3,7 +3,7 @@
     This module joins three pieces into one accessible whole:
 
       curriculum_path_registry.pl     SourceId -> absolute file path
-      curriculum_elementary_facts.pl  the understood facts + sound CROs
+      curriculum_elementary_facts.pl  the understood facts + sound causal_relation_objects
       reference_library.pl            streamed, on-demand look-it-up access
 
     On import it (1) registers every curriculum source with the Reference
@@ -24,7 +24,7 @@
 :- module(curriculum_lattice, [
     % Register every curriculum source with the Reference Library.
     ci_register_sources/0,
-    % Anchor the understood facts and CROs into a named lattice nexus.
+    % Anchor the understood facts and causal_relation_objects into a named lattice nexus.
     ci_import_elementary/1,
     % Import into the default curriculum nexus name.
     ci_import_elementary/0,
@@ -54,7 +54,7 @@
 
 % Load the path registry that maps SourceIds to absolute paths.
 :- use_module('curriculum_path_registry', [ci_source/3, ci_corpus_root/1]).
-% Load the generated understood facts and sound CROs (elementary band).
+% Load the generated understood facts and sound causal_relation_objects (elementary band).
 % Loaded for their own module namespace; aggregated below by ci_any_fact/4.
 :- use_module('curriculum_elementary_facts', []).
 % Load the generated understood facts (Middle School / Junior High band).
@@ -73,7 +73,7 @@
 ci_default_nexus('locus://mentova/curriculum').
 
 % ---------------------------------------------------------------------------
-% ci_any_fact/4 and ci_any_cro/5 — union the per-band generated fact modules
+% ci_any_fact/4 and ci_any_causal_relation_object/5 — union the per-band generated fact modules
 % so every query and the anchoring loop see all bands (elementary + middle)
 % as one body of knowledge. New bands are added by loading one more module
 % and adding one clause here.
@@ -96,22 +96,22 @@ ci_any_fact(Grade, Relation, Args, Citation) :-
     % Read it from the higher-education facts module.
     curriculum_higher_ed_facts:ci_fact(Grade, Relation, Args, Citation).
 
-% Define ci_any_cro: a sound CRO from the elementary band.
-ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
+% Define ci_any_causal_relation_object: a sound causal_relation_object from the elementary band.
+ci_any_causal_relation_object(Grade, Kind, Subject, Sound, Citation) :-
     % Read it from the elementary facts module.
-    curriculum_elementary_facts:ci_cro(Grade, Kind, Subject, Sound, Citation).
-% Define ci_any_cro: a sound CRO from the middle-school band.
-ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
+    curriculum_elementary_facts:ci_causal_relation_object(Grade, Kind, Subject, Sound, Citation).
+% Define ci_any_causal_relation_object: a sound causal_relation_object from the middle-school band.
+ci_any_causal_relation_object(Grade, Kind, Subject, Sound, Citation) :-
     % Read it from the middle-school facts module.
-    curriculum_middle_facts:ci_cro(Grade, Kind, Subject, Sound, Citation).
-% Define ci_any_cro: a sound CRO from the high-school band.
-ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
+    curriculum_middle_facts:ci_causal_relation_object(Grade, Kind, Subject, Sound, Citation).
+% Define ci_any_causal_relation_object: a sound causal_relation_object from the high-school band.
+ci_any_causal_relation_object(Grade, Kind, Subject, Sound, Citation) :-
     % Read it from the high-school facts module.
-    curriculum_high_facts:ci_cro(Grade, Kind, Subject, Sound, Citation).
-% Define ci_any_cro: a sound CRO from the higher-education band.
-ci_any_cro(Grade, Kind, Subject, Sound, Citation) :-
+    curriculum_high_facts:ci_causal_relation_object(Grade, Kind, Subject, Sound, Citation).
+% Define ci_any_causal_relation_object: a sound causal_relation_object from the higher-education band.
+ci_any_causal_relation_object(Grade, Kind, Subject, Sound, Citation) :-
     % Read it from the higher-education facts module.
-    curriculum_higher_ed_facts:ci_cro(Grade, Kind, Subject, Sound, Citation).
+    curriculum_higher_ed_facts:ci_causal_relation_object(Grade, Kind, Subject, Sound, Citation).
 
 % ---------------------------------------------------------------------------
 % ci_register_sources/0 — make every source known to the Reference Library
@@ -129,7 +129,7 @@ ci_register_sources :-
            ;  true )).
 
 % ---------------------------------------------------------------------------
-% ci_import_elementary/1 — anchor understood facts + CROs into a nexus
+% ci_import_elementary/1 — anchor understood facts + causal_relation_objects into a nexus
 % ---------------------------------------------------------------------------
 
 % Define ci_import_elementary/0: import into the default curriculum nexus.
@@ -148,9 +148,9 @@ ci_import_elementary(Nexus) :-
     % Anchor each understood fact as a node_fact (best effort).
     ci_anchor_facts(Count),
     % Assert each sound relation as a Causal Relation Object (best effort).
-    ci_assert_cros(CroCount),
+    ci_assert_causal_relation_objects(CroCount),
     % Report what was anchored, for a glass-box startup log.
-    format("curriculum: registered sources; anchored ~w facts, ~w CROs into ~w~n",
+    format("curriculum: registered sources; anchored ~w facts, ~w CausalRelationObjects into ~w~n",
            [Count, CroCount, Nexus]).
 
 % Define ci_maybe_open_nexus: open + select the nexus if the lattice is loaded.
@@ -182,15 +182,15 @@ ci_anchor_facts(Count) :-
     % No lattice available: nothing anchored, but the facts stay queryable.
     ;   Count = 0 ).
 
-% Define ci_assert_cros: assert each sound relation as a reified CRO.
-ci_assert_cros(Count) :-
-    % Only assert when the causal_core CRO constructor is available.
-    (   ci_defined(causal_core:causal_core_new_cro_unique(_, _, _, _, _, _, _, _))
-    % Build one CRO per sound relation, carrying the citation as provenance.
+% Define ci_assert_causal_relation_objects: assert each sound relation as a reified causal_relation_object.
+ci_assert_causal_relation_objects(Count) :-
+    % Only assert when the causal_core causal_relation_object constructor is available.
+    (   ci_defined(causal_core:causal_core_new_causal_relation_object_unique(_, _, _, _, _, _, _, _))
+    % Build one causal_relation_object per sound relation, carrying the citation as provenance.
     ->  aggregate_all(count,
-            ( ci_any_cro(Grade, makes_sound, Subject, Sound, Citation),
+            ( ci_any_causal_relation_object(Grade, makes_sound, Subject, Sound, Citation),
               % A subject "makes" a sound: cause -> effect, high strength.
-              catch(causal_core:causal_core_new_cro_unique([makes(Subject)], [sound(Sound)],
+              catch(causal_core:causal_core_new_causal_relation_object_unique([makes(Subject)], [sound(Sound)],
                         temporal(0, 0, instant), sufficient, 0.9,
                         [grade(Grade)], prov(curriculum, Citation, 0.9), _),
                     _, fail) ),
@@ -247,10 +247,10 @@ ci_ptklf(Domain, FoundationId, Name) :-
     % A ptklf_foundation fact belongs to the preschool/TK band.
     ci_any_fact(preschool_tk, ptklf_foundation, [Domain, FoundationId, Name], _).
 
-% Define ci_sound: Subject makes Sound, from a learned sound CRO.
+% Define ci_sound: Subject makes Sound, from a learned sound causal_relation_object.
 ci_sound(Subject, Sound) :-
     % Read the subject and sound off a makes_sound relation.
-    ci_any_cro(_Grade, makes_sound, Subject, Sound, _).
+    ci_any_causal_relation_object(_Grade, makes_sound, Subject, Sound, _).
 
 % Define ci_search: search every registered source, streamed and capped.
 ci_search(Query, Hits) :-
@@ -279,11 +279,11 @@ ci_cite(source(SourceId, Line), Text) :-
 % ci_stats/1 — a compact tally for reports and startup logs
 % ---------------------------------------------------------------------------
 
-% Define ci_stats: gather counts of facts, CROs, and sources.
+% Define ci_stats: gather counts of facts, causal_relation_objects, and sources.
 ci_stats(stats(Facts, Cros, Sources)) :-
     % Count every understood fact.
     aggregate_all(count, ci_any_fact(_, _, _, _), Facts),
-    % Count every sound CRO.
-    aggregate_all(count, ci_any_cro(_, _, _, _, _), Cros),
+    % Count every sound causal_relation_object.
+    aggregate_all(count, ci_any_causal_relation_object(_, _, _, _, _), Cros),
     % Count every registered source.
     aggregate_all(count, ci_source(_, _, _), Sources).

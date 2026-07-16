@@ -8,12 +8,12 @@
 */
 
 % Declare the generated middle-school data predicates.
-:- module(curriculum_middle_facts, [ci_fact/4, ci_cro/5]).
+:- module(curriculum_middle_facts, [ci_fact/4, ci_causal_relation_object/5]).
 
 % Allow these facts to be inspected and extended at runtime.
 :- dynamic ci_fact/4.
-% Allow the sound CROs to be inspected and extended at runtime.
-:- dynamic ci_cro/5.
+% Allow the sound causal_relation_objects to be inspected and extended at runtime.
+:- dynamic ci_causal_relation_object/5.
 
 % ---- Understood facts (node_facts): vocabulary and standards ----
 % A grounded curriculum fact cited to a real reference-library line.
@@ -1167,4 +1167,4 @@ ci_fact('grade6_to_grade12', 'ela_strand', ['reading_literature'], source('ccss_
 % A grounded curriculum fact cited to a real reference-library line.
 ci_fact('grade6_to_grade12', 'ela_strand', ['reading_informational_text'], source('ccss_ela', 128)).
 
-% ---- Sound CROs: a subject makes a sound (cause -> effect) ----
+% ---- Sound causal_relation_objects: a subject makes a sound (cause -> effect) ----

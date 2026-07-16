@@ -1,7 +1,7 @@
 /*  Mentova — Draft-Document Ingestion Pipeline
 
     Turns a plain-text draft document into candidate facts, carries each through the
-    NUANCED fact doors (causal_core_new_cro_nuanced for relations, anchor_node_nuanced for
+    NUANCED fact doors (causal_core_new_causal_relation_object_nuanced for relations, anchor_node_nuanced for
     node-facts, plus a J-Space hold), and emits a per-draft ingestion report saying
     exactly what was new, what was an exact repeat (strengthened), and what was a
     near-duplicate variant — with the delta that flags the difference. Every fact
@@ -16,7 +16,7 @@
     ACCEPTED PLAIN-TEXT SYNTAX (lenient; unrecognised lines are reported, not lost):
       # ... or % ...        a comment (ignored)
       game: <id>            set the current game context for following facts
-      <cause> => <effect>   a cause-effect relation (a CRO)
+      <cause> => <effect>   a cause-effect relation (a causal_relation_object)
       hazard: <state>       a hazardous state (a preventive relation to ends(run))
       <relation>(<args>)    a node-fact, e.g.  object(ring, collectible)
     A relation line under a game context is game-keyed (cause becomes g(Game,Cause);
@@ -60,7 +60,7 @@
 % ===========================================================================
 
 % A candidate fact is one of:
-%   cfact(cro,  Causes, Effects, Modality, Cite)   -- a relation
+%   cfact(causal_relation_object,  Causes, Effects, Modality, Cite)   -- a relation
 %   cfact(node, Relation, Args)                     -- a node-fact
 
 % di_parse(+Text, +DraftId, -Facts, -Unparsed): split the draft into candidate
@@ -101,12 +101,12 @@ di_line(Line, _Game0, Game1, []) :-
     di_key_value(Line, "game", Value), !,
     di_atom(Value, Game1).
 % A hazard directive: "hazard: <state>" — a preventive relation to ends(run).
-di_line(Line, Game, Game, [cfact(cro, [Cause], [ends(run)], preventive, hazard)]) :-
+di_line(Line, Game, Game, [cfact(causal_relation_object, [Cause], [ends(run)], preventive, hazard)]) :-
     di_key_value(Line, "hazard", Value), !,
     di_term(Value, State),
     di_game_cause(Game, State, Cause).
 % A cause-effect relation: "<cause> => <effect>".
-di_line(Line, Game, Game, [cfact(cro, [Cause], [Effect], sufficient, step)]) :-
+di_line(Line, Game, Game, [cfact(causal_relation_object, [Cause], [Effect], sufficient, step)]) :-
     di_split_arrow(Line, LeftS, RightS), !,
     di_term(LeftS, LeftT), di_term(RightS, Effect),
     di_game_cause(Game, LeftT, Cause).
@@ -178,10 +178,10 @@ di_open_nexus :-
 % nuanced door, tagging it with the draft's provenance. Result records the fact and
 % its status (new | exact | variant with deltas).
 % A relation: carry the draft as provenance so cross-draft near-duplicates are seen.
-di_ingest_one(cfact(cro, Causes, Effects, Modality, Kind), DraftId,
-              result(cro(Causes, Effects, Modality), Status)) :-
+di_ingest_one(cfact(causal_relation_object, Causes, Effects, Modality, Kind), DraftId,
+              result(causal_relation_object(Causes, Effects, Modality), Status)) :-
     catch(
-        causal_core:causal_core_new_cro_nuanced(Causes, Effects, temporal(0, 0, instant), Modality,
+        causal_core:causal_core_new_causal_relation_object_nuanced(Causes, Effects, temporal(0, 0, instant), Modality,
             0.80, [kind(Kind)], prov(draft, draft(DraftId), 0.80), _Id, Status),
         _, Status = error).
 % A node-fact: carry the draft as a referent, so cross-draft near-duplicates vary
@@ -203,7 +203,7 @@ di_hold_jspace(DraftId, Facts) :-
     ), _, true).
 
 % di_concept(+CFact, -Concept): the J-Space concept term for a candidate fact.
-di_concept(cfact(cro, Causes, Effects, _, _), relation(Causes, Effects)).
+di_concept(cfact(causal_relation_object, Causes, Effects, _, _), relation(Causes, Effects)).
 di_concept(cfact(node, Relation, Args), node(Relation, Args)).
 
 % ===========================================================================
@@ -253,7 +253,7 @@ di_status_is(error, error) :- !.
 di_status_is(_, _) :- fail.
 
 % di_fact_label(+Fact, -Label): a short label for a fact in the report.
-di_fact_label(cro(Causes, Effects, Modality), Label) :-
+di_fact_label(causal_relation_object(Causes, Effects, Modality), Label) :-
     format(atom(Label), '~w => ~w [~w]', [Causes, Effects, Modality]).
 di_fact_label(node(Relation, Args), Label) :-
     format(atom(Label), '~w(~w)', [Relation, Args]).

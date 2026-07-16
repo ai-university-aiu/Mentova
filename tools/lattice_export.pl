@@ -18,7 +18,7 @@
 
     Outputs (all under data/lattice_snapshot/, committed):
       lattice_<nexus>.pl        the materialised lattice node-facts, one file per nexus
-      causalontology_cros.pl    every Causalontology Reasoning Object (causal_core_cro/8)
+      causalontology_causal_relation_objects.pl    every Causalontology Reasoning Object (causal_core_causal_relation_object/8)
       arc_learnings_snapshot.pl the runtime per-game learned store (secret-free)
       MANIFEST.txt              counts, provenance, and the regeneration command
 */
@@ -42,14 +42,14 @@ le_export :-
     % Dump each populated nexus's node-facts.
     le_dump_nexuses(Dir, NexusCount, NodeFactCount),
     % Dump every Causalontology Reasoning Object.
-    le_dump_cros(Dir, CroCount),
+    le_dump_causal_relation_objects(Dir, CroCount),
     % Snapshot the runtime learned store (secret-free).
     le_dump_learned(Dir, GameCount, TermCount),
     % Write the manifest tying it together.
     le_manifest(Dir, NexusCount, NodeFactCount, CroCount, GameCount, TermCount),
     % Report to the console.
     format("lattice snapshot written to ~w~n", [Dir]),
-    format("  nexuses=~w node_facts=~w cros=~w learned_games=~w learned_terms=~w~n",
+    format("  nexuses=~w node_facts=~w causal_relation_objects=~w learned_games=~w learned_terms=~w~n",
            [NexusCount, NodeFactCount, CroCount, GameCount, TermCount]).
 
 % le_build_lattice: run the boot registrations that populate the lattice, each guarded so
@@ -93,16 +93,16 @@ le_dump_one_nexus(Dir, Nx, Acc0, Acc) :-
     % Accumulate.
     Acc is Acc0 + N.
 
-% le_dump_cros(+Dir, -CroCount): write every Causalontology Reasoning Object to one file.
-le_dump_cros(Dir, CroCount) :-
-    % Collect every CRO term (causal_core_cro/8) present.
-    findall(cro(A,B,C,D,E,F,G,H),
-            catch(causal_core:causal_core_cro(A,B,C,D,E,F,G,H), _, fail), Cros),
+% le_dump_causal_relation_objects(+Dir, -CroCount): write every Causalontology Reasoning Object to one file.
+le_dump_causal_relation_objects(Dir, CroCount) :-
+    % Collect every causal_relation_object term (causal_core_causal_relation_object/8) present.
+    findall(causal_relation_object(A,B,C,D,E,F,G,H),
+            catch(causal_core:causal_core_causal_relation_object(A,B,C,D,E,F,G,H), _, fail), Cros),
     % Its snapshot file.
-    atomic_list_concat([Dir, '/causalontology_cros.pl'], File),
-    % Write a headed, re-loadable list of CROs.
+    atomic_list_concat([Dir, '/causalontology_causal_relation_objects.pl'], File),
+    % Write a headed, re-loadable list of causal_relation_objects.
     setup_call_cleanup(open(File, write, S),
-        ( le_header(S, "Causalontology Reasoning Objects (causal_core_cro/8) — materialised snapshot"),
+        ( le_header(S, "Causalontology Reasoning Objects (causal_core_causal_relation_object/8) — materialised snapshot"),
           forall(member(T, Cros), ( write_term(S, T, [quoted(true)]), write(S, '.\n') )) ),
         close(S)),
     % How many were written.
@@ -121,7 +121,7 @@ le_dump_learned(Dir, GameCount, TermCount) :-
     % Keep only terms with no secret-looking atom in them.
     include(le_secret_free, Terms, Safe),
     % Prune raw per-action telemetry (the Effects/Impacts/Deaths logs), keeping the essential
-    % learned KNOWLEDGE — goal, priorities, hazards, labels, winning path, causal edges, CROs.
+    % learned KNOWLEDGE — goal, priorities, hazards, labels, winning path, causal edges, causal_relation_objects.
     % The telemetry is re-derived at runtime; dropping it keeps the committed snapshot lean.
     maplist(le_prune_learned, Safe, Pruned),
     % Write them back, headed and re-loadable.
@@ -182,12 +182,12 @@ le_manifest(Dir, NexusCount, NodeFactCount, CroCount, GameCount, TermCount) :-
           format(S, "Counts at export time:~n", []),
           format(S, "  lattice nexuses      : ~w~n", [NexusCount]),
           format(S, "  lattice node-facts   : ~w~n", [NodeFactCount]),
-          format(S, "  Causalontology CROs  : ~w~n", [CroCount]),
+          format(S, "  Causalontology CausalRelationObjects  : ~w~n", [CroCount]),
           format(S, "  learned-store games  : ~w~n", [GameCount]),
           format(S, "  learned-store terms  : ~w~n~n", [TermCount]),
           format(S, "Files:~n", []),
           format(S, "  lattice_<nexus>.pl        node-facts per nexus (via lattice_dump/2)~n", []),
-          format(S, "  causalontology_cros.pl    every causal_core_cro/8 reasoning object~n", []),
+          format(S, "  causalontology_causal_relation_objects.pl    every causal_core_causal_relation_object/8 reasoning object~n", []),
           format(S, "  arc_learnings_snapshot.pl the runtime per-game learned store (secret-free)~n~n", []),
           format(S, "Provenance and reproducibility:~n", []),
           format(S, "  The BASE lattice is rebuilt deterministically at boot from committed sources~n", []),

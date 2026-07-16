@@ -12,11 +12,11 @@
 :- dynamic continuant/2.        % NOUN:  continuant(Id, Category)
 :- dynamic realizable/3.        % HINGE: realizable(Id, Kind, Bearer)
 :- dynamic realized_in/2.       % HINGE->VERB: realized_in(RealizableId, OccurrentType)
-:- dynamic cro/8.               % VERB:  reified Causal Relation Object
+:- dynamic causal_relation_object/8.               % VERB:  reified Causal Relation Object
 :- dynamic avoid/1.             % safety set (never re-run for exploration)
 :- dynamic clue/1.              % an environment clue the agent can read
 
-% cro(Id, Causes, Effects, temporal(Dmin,Dmax,Unit), Modality, Strength,
+% causal_relation_object(Id, Causes, Effects, temporal(Dmin,Dmax,Unit), Modality, Strength,
 %     Context, prov(Source,Evidence,Conf))
 
 % ---------------- GROUND-TRUTH ENVIRONMENT (hidden from the agent) ----------
@@ -32,7 +32,7 @@ act(_, none).
 % ---------------- INITIALISATION (perception -> NOUN layer) -----------------
 init_world :-
     retractall(continuant(_,_)), retractall(realizable(_,_,_)),
-    retractall(realized_in(_,_)), retractall(cro(_,_,_,_,_,_,_,_)),
+    retractall(realized_in(_,_)), retractall(causal_relation_object(_,_,_,_,_,_,_,_)),
     retractall(avoid(_)), retractall(clue(_)),
     forall(member(B, [b_red, b_green, b_blue, door, spike]),
            assertz(continuant(B, object))),
@@ -46,14 +46,14 @@ intervene(Action) :-
     ;                      learn_causal(Action, Effect) ).
 
 learn_causal(Action, Effect) :-
-    ( cro(Id, [Action], [Effect], T, M, S0, C, _) ->
+    ( causal_relation_object(Id, [Action], [Effect], T, M, S0, C, _) ->
         S1 is min(0.99, S0 + 0.2),
-        retract(cro(Id, [Action], [Effect], T, M, S0, C, _)),
-        assertz(cro(Id, [Action], [Effect], T, M, S1, C,
+        retract(causal_relation_object(Id, [Action], [Effect], T, M, S0, C, _)),
+        assertz(causal_relation_object(Id, [Action], [Effect], T, M, S1, C,
                     prov(agent, learned_by_intervention, S1))),
         format("  confirm  ~w : do(~w) => ~w   (strength ~2f)~n", [Id, Action, Effect, S1])
-    ;   gensym(cro_, Id),
-        assertz(cro(Id, [Action], [Effect],
+    ;   gensym(causal_relation_object_, Id),
+        assertz(causal_relation_object(Id, [Action], [Effect],
                     temporal(0,0,instant), sufficient, 0.70, [],
                     prov(agent, learned_by_intervention, 0.70))),
         format("  induce   ~w : do(~w) => ~w   (strength 0.70)~n", [Id, Action, Effect]),
@@ -72,28 +72,28 @@ posit_disposition(_).
 learn_preventive(Action, Effect) :-
     ( avoid(Action) -> true
     ; assertz(avoid(Action)),
-      gensym(cro_, Id),
-      assertz(cro(Id, [Action], [Effect],
+      gensym(causal_relation_object_, Id),
+      assertz(causal_relation_object(Id, [Action], [Effect],
                   temporal(0,0,instant), preventive, 0.90, [],
                   prov(agent, learned_by_intervention, 0.90))),
       format("  HAZARD   do(~w) => ~w : tag PREVENTIVE, add to avoid-set~n", [Action, Effect]) ).
 
 % ---------------- FORWARD PREDICTION and ABDUCTION --------------------------
 predict(Action, Effect) :-
-    cro(_, [Action], [Effect], _, Modality, _, _, _),
+    causal_relation_object(_, [Action], [Effect], _, Modality, _, _, _),
     Modality \== preventive.
 
 seed_temporal_kb :-
-    ( cro(cro_shellfish,_,_,_,_,_,_,_) -> true
-    ; assertz(cro(cro_shellfish, [ate(spoiled_shellfish)], [state(gastroenteritis)],
+    ( causal_relation_object(causal_relation_object_shellfish,_,_,_,_,_,_,_) -> true
+    ; assertz(causal_relation_object(causal_relation_object_shellfish, [ate(spoiled_shellfish)], [state(gastroenteritis)],
                   temporal(1,6,hours), contributory, 0.70, [], prov(kb, asserted, 0.70))),
-      assertz(cro(cro_poultry,   [ate(undercooked_poultry)], [state(gastroenteritis)],
+      assertz(causal_relation_object(causal_relation_object_poultry,   [ate(undercooked_poultry)], [state(gastroenteritis)],
                   temporal(6,72,hours), contributory, 0.60, [], prov(kb, asserted, 0.60))) ).
 
 temporal_abduction(Meals, Ranked) :-
     findall(Conf-Cause,
             ( member(Cause-HoursAgo, Meals),
-              cro(_, [Cause], [state(gastroenteritis)], temporal(Dmin,Dmax,hours), _, S, _, _),
+              causal_relation_object(_, [Cause], [state(gastroenteritis)], temporal(Dmin,Dmax,hours), _, S, _, _),
               HoursAgo >= Dmin, HoursAgo =< Dmax,     % temporal admissibility gate
               Conf = S ),
             Fits),
@@ -101,7 +101,7 @@ temporal_abduction(Meals, Ranked) :-
 
 report_temporal(Meals) :-
     forall(member(Cause-HoursAgo, Meals),
-           ( cro(_, [Cause], [state(gastroenteritis)], temporal(Dmin,Dmax,hours), _, _, _, _),
+           ( causal_relation_object(_, [Cause], [state(gastroenteritis)], temporal(Dmin,Dmax,hours), _, _, _, _),
              ( (HoursAgo >= Dmin, HoursAgo =< Dmax) -> Tag = admissible ; Tag = 'EXCLUDED-by-timing' ),
              format("    ~w eaten ~wh ago vs window ~w-~wh  ->  ~w~n",
                     [Cause, HoursAgo, Dmin, Dmax, Tag]) )).
@@ -109,19 +109,19 @@ report_temporal(Meals) :-
 % ---------------- HIERARCHY + PLANNING --------------------------------------
 compose_procedure :-
     clue(sequence(Seq) -> Goal),
-    ( cro(_, [sequence(Seq)], [Goal], _, _, _, _, _) -> true
-    ; gensym(cro_, Id),
-      assertz(cro(Id, [sequence(Seq)], [Goal],
+    ( causal_relation_object(_, [sequence(Seq)], [Goal], _, _, _, _, _) -> true
+    ; gensym(causal_relation_object_, Id),
+      assertz(causal_relation_object(Id, [sequence(Seq)], [Goal],
                   temporal(0,1,short), sufficient, 0.60, [], prov(clue, asserted, 0.60))),
       format("  compose  ~w : sequence ~w => ~w~n", [Id, Seq, Goal]) ).
 
 plan(Goal, Plan) :-
-    cro(_, [sequence(Seq)], [Goal], _, _, _, _, _),
+    causal_relation_object(_, [sequence(Seq)], [Goal], _, _, _, _, _),
     forall(member(Step, Seq), (achievable(Step), \+ avoid(Step))),
     Plan = Seq.
 
 achievable(Action) :-
-    cro(_, [Action], [_], _, Mod, _, _, _),
+    causal_relation_object(_, [Action], [_], _, Mod, _, _, _),
     Mod \== preventive.
 
 execute(Plan, Result) :-
@@ -129,11 +129,11 @@ execute(Plan, Result) :-
 
 % ---------------- GLASS-BOX JUSTIFICATION -----------------------------------
 why(Goal) :-
-    cro(Id, [sequence(Seq)], [Goal], _, _, _, _, prov(Src,_,_)),
+    causal_relation_object(Id, [sequence(Seq)], [Goal], _, _, _, _, prov(Src,_,_)),
     format("  ~w  holds because ~w asserts:  sequence ~w => ~w   [source: ~w]~n",
            [Goal, Id, Seq, Goal, Src]),
     forall(member(Step, Seq),
-           ( cro(Cid, [Step], [Eff], _, _, S, _, prov(S2,_,_)),
+           ( causal_relation_object(Cid, [Step], [Eff], _, _, S, _, prov(S2,_,_)),
              format("     - ~w realizes ~w => ~w   [~w, ~w, strength ~2f]~n",
                     [Step, Step, Eff, Cid, S2, S]) )).
 
@@ -146,14 +146,14 @@ demo :-
     format("SWI-Prolog; no LLM, no neural weights; every step is an inspectable rule.~n"),
     banner('1. NOUN LAYER: objects registered by perception'),
     forall(continuant(Id,Cat), format("  continuant(~w, ~w)~n",[Id,Cat])),
-    banner('2. INTERVENTIONAL LEARNING: do -> observe -> induce CROs (+ dispositions)'),
+    banner('2. INTERVENTIONAL LEARNING: do -> observe -> induce CausalRelationObjects (+ dispositions)'),
     intervene(press(b_red)), intervene(press(b_green)), intervene(press(b_blue)),
     intervene(press(b_red)),
     format("~n  HINGE now populated bottom-up:~n"),
     forall(realized_in(D,Occ),
            ( realizable(D,Kind,Bearer),
              format("    realizable(~w,~w) on ~w  --realized_in-->  ~w~n",[D,Kind,Bearer,Occ]) )),
-    banner('3. FORWARD PREDICTION from the learned CROs'),
+    banner('3. FORWARD PREDICTION from the learned CausalRelationObjects'),
     forall(predict(press(B), E), format("  predict: do(~w) => ~w~n",[press(B),E])),
     banner('4. TIMING-AS-MECHANISM: temporal abduction (excludes a cause on timing)'),
     seed_temporal_kb,
@@ -185,7 +185,7 @@ var_ok :-
     init_world,
     intervene(press(b_red)), intervene(press(b_green)), intervene(press(b_blue)),
     seed_temporal_kb, compose_procedure, intervene(touch(spike)),
-    aggregate_all(count, cro(_,[press(_)],[light(_,_)],_,_,_,_,_), NLights),
+    aggregate_all(count, causal_relation_object(_,[press(_)],[light(_,_)],_,_,_,_,_), NLights),
     assertion(NLights =:= 3),
     aggregate_all(count, realizable(_,pressable,_), NDisp),
     assertion(NDisp =:= 3),

@@ -8,16 +8,16 @@
 
     Loaded and anchored into the lattice by curriculum_lattice.pl.
     ci_fact(Grade, Relation, Args, source(SourceId, Line)).
-    ci_cro(Grade, makes_sound, Subject, Sound, source(SourceId, Line)).
+    ci_causal_relation_object(Grade, makes_sound, Subject, Sound, source(SourceId, Line)).
 */
 
 % Declare the generated data predicates so a bare load never errors.
-:- module(curriculum_elementary_facts, [ci_fact/4, ci_cro/5]).
+:- module(curriculum_elementary_facts, [ci_fact/4, ci_causal_relation_object/5]).
 
 % Allow these facts to be inspected and extended at runtime.
 :- dynamic ci_fact/4.
-% Allow the sound CROs to be inspected and extended at runtime.
-:- dynamic ci_cro/5.
+% Allow the sound causal_relation_objects to be inspected and extended at runtime.
+:- dynamic ci_causal_relation_object/5.
 
 % ---- Understood facts (node_facts): vocabulary and standards ----
 % A grounded curriculum fact cited to a real reference-library line.
@@ -4765,14 +4765,14 @@ ci_fact('preschool_tk', 'ptklf_foundation', ['at_a_glance', '4.7', 'inventing an
 % A grounded curriculum fact cited to a real reference-library line.
 ci_fact('preschool_tk', 'ptklf_foundation', ['at_a_glance', '4.8', 'communicating feelings through dance'], source('ptklf_at_a_glance', 2760)).
 
-% ---- Sound CROs: a subject makes a sound (cause -> effect) ----
+% ---- Sound causal_relation_objects: a subject makes a sound (cause -> effect) ----
 % A learned sound relation: the subject produces the sound.
-ci_cro('toddler', makes_sound, 'dog', 'woof', source('wall_toddler', 378)).
+ci_causal_relation_object('toddler', makes_sound, 'dog', 'woof', source('wall_toddler', 378)).
 % A learned sound relation: the subject produces the sound.
-ci_cro('toddler', makes_sound, 'cat', 'meow', source('wall_toddler', 380)).
+ci_causal_relation_object('toddler', makes_sound, 'cat', 'meow', source('wall_toddler', 380)).
 % A learned sound relation: the subject produces the sound.
-ci_cro('toddler', makes_sound, 'cow', 'moo', source('wall_toddler', 382)).
+ci_causal_relation_object('toddler', makes_sound, 'cow', 'moo', source('wall_toddler', 382)).
 % A learned sound relation: the subject produces the sound.
-ci_cro('toddler', makes_sound, 'duck', 'quack', source('wall_toddler', 384)).
+ci_causal_relation_object('toddler', makes_sound, 'duck', 'quack', source('wall_toddler', 384)).
 % A learned sound relation: the subject produces the sound.
-ci_cro('toddler', makes_sound, 'car', 'beep', source('wall_toddler', 386)).
+ci_causal_relation_object('toddler', makes_sound, 'car', 'beep', source('wall_toddler', 386)).

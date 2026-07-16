@@ -172,7 +172,7 @@
 % Load the hinge for clue-attached dispositions.
 :- use_module(library(realizable_hinge), [realizable_hinge_realizable_add/3, realizable_hinge_realized_in_add/2]).
 % Load the core for provenance-tagged clue relations and reinforcement.
-:- use_module(library(causal_core), [causal_core_new_cro/8, causal_core_cro/8, causal_core_strengthen/2, causal_core_the_cro/2, causal_core_cro_assert/1]).
+:- use_module(library(causal_core), [causal_core_new_causal_relation_object/8, causal_core_causal_relation_object/8, causal_core_strengthen/2, causal_core_the_causal_relation_object/2, causal_core_causal_relation_object_assert/1]).
 % Load the learner for preventive enforcement.
 :- use_module(library(causal_learning), [causal_learning_preventive/2, causal_learning_avoid/1, causal_learning_causal/2]).
 % Load the harness for curiosity choice and frame deltas.
@@ -205,7 +205,7 @@
 % and narrated as an explicit plan the glass box can show.
 :- use_module(library(hierarchical_planning),
     [hierarchical_planning_win_plan/3, hierarchical_planning_reify/2, hierarchical_planning_reset/0, hierarchical_planning_render/2, hierarchical_planning_render_json/2,
-     hierarchical_planning_classify_basis/3, hierarchical_planning_consistent/1, hierarchical_planning_plan_from_cros/2]).
+     hierarchical_planning_classify_basis/3, hierarchical_planning_consistent/1, hierarchical_planning_plan_from_causal_relation_objects/2]).
 % Load verify-before-act (WP-405): the world-model safety layer that predicts a
 % move fatal from what has been learned — generalising from deaths in other states
 % and from deadly cell colours — so the player deprioritises a move predicted to
@@ -1264,7 +1264,7 @@ ma_learnings(learnings(Goal, Priorities, Avoided, Labels, CroCount, JLens, Graph
     % The object labels for this game.
     findall(cell(R, C)-K, ma_label_(Game, pos(R, C), K), Labels),
     % How many causal relations have been learned for this game (its g(Game,_) heads).
-    ( catch(aggregate_all(count, causal_core_cro(_, [g(Game, _)|_], _, _, _, _, _, _), CroCount), _, fail)
+    ( catch(aggregate_all(count, causal_core_causal_relation_object(_, [g(Game, _)|_], _, _, _, _, _, _), CroCount), _, fail)
     -> true ; CroCount = 0 ),
     % The J-Lens reading of the solo workspace.
     ma_jlens(JLens),
@@ -1365,7 +1365,7 @@ ma_reinforce_path(Game, Actions, Count) :-
     % Strengthen every non-preventive relation whose cause is this game's action.
     findall(Id,
         ( member(A, Actions),
-          catch(causal_core_cro(Id, [g(Game, A)], _, _, M, _, _, _), _, fail),
+          catch(causal_core_causal_relation_object(Id, [g(Game, A)], _, _, M, _, _, _), _, fail),
           M \== preventive,
           catch(causal_core_strengthen(Id, 0.1), _, true) ),
         Ids),
@@ -1540,7 +1540,7 @@ ma_restore_learned(arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, WinP
     % Replay each graph edge, which rebuilds this game's nodes, tested, and dead marks.
     forall(member(edge(F, EA, T), Edges), catch(state_graph_note(F, EA, T), _, true)),
     % Restore each causal relation through the validating front door.
-    forall(member(Cro, Cros), catch(causal_core_cro_assert(Cro), _, true)),
+    forall(member(Cro, Cros), catch(causal_core_causal_relation_object_assert(Cro), _, true)),
     % Its highest-impact action record.
     retractall(ma_impact_(Game, _, _)),
     % Restore each discovered mechanic so the recall nudge survives a restart.
@@ -1635,8 +1635,8 @@ ma_snapshot_game(Game, arc_learned(Game, Goal, Prios, Avoided, Labels, Effects, 
         ( state_graph_edge(F, EA, T), sub_atom(F, 0, _, _, Prefix) ),
         Edges),
     % This game's causal relations, whose cause names the game.
-    findall(cro(Id, Ca, Ef, Te, Mo, St, Co, Pr),
-        ( causal_core_the_cro(Id, cro(Id, Ca, Ef, Te, Mo, St, Co, Pr)), memberchk(g(Game, _), Ca) ),
+    findall(causal_relation_object(Id, Ca, Ef, Te, Mo, St, Co, Pr),
+        ( causal_core_the_causal_relation_object(Id, causal_relation_object(Id, Ca, Ef, Te, Mo, St, Co, Pr)), memberchk(g(Game, _), Ca) ),
         Cros),
     % This game's highest-impact actions (the discovered mechanics worth recalling).
     findall(impact(Act, Mag), ma_impact_(Game, Act, Mag), Impacts),
@@ -1839,7 +1839,7 @@ ma_inject(hint_reinforce) :-
     % Fetch the last action, if any.
     (   ma_last_(Action, _)
     % Strengthen every relation whose cause is that action in this game.
-    ->  forall(causal_core_cro(Id, [g(Game, Action)], _, _, M, _, _, _),
+    ->  forall(causal_core_causal_relation_object(Id, [g(Game, Action)], _, _, M, _, _, _),
                % Preventive relations are not reinforced.
                ( M == preventive -> true ; causal_core_strengthen(Id, 0.1) ))
     % No last action: nothing to reinforce.
@@ -2262,13 +2262,13 @@ ma_resource_low(Game) :-
 % loop. This section makes that loop an EXPLICIT multi-level plan (hierarchical_planning): the
 % top goal Win Game, the six-phase OODA method, and the game's real controls at
 % the leaves. The plan is reified onto Causalontology's own decomposition
-% hierarchy, so it is not a separate diagram but a hierarchy of CROs the glass box
+% hierarchy, so it is not a separate diagram but a hierarchy of causal_relation_objects the glass box
 % can show and read back. Each step's choice is located within the plan (its OODA
 % phase and leaf), so play is narrated as a descent of the plan.
 
 % ma_plan_tree_/2: (Game, Tree) — the current plan tree for a game.
 :- dynamic ma_plan_tree_/2.
-% ma_plan_root_/2: (Game, RootCroId) — the root CRO the plan was reified into.
+% ma_plan_root_/2: (Game, RootCroId) — the root causal_relation_object the plan was reified into.
 :- dynamic ma_plan_root_/2.
 % ma_plan_focus_/3: (Game, Phase, Leaf) — the OODA phase and leaf the last choice
 % fell under, so the glass box can say which rung of the plan is active.
@@ -2290,7 +2290,7 @@ ma_build_plan_(Game) :-
     % Store it for this game.
     retractall(ma_plan_tree_(Game, _)),
     assertz(ma_plan_tree_(Game, Tree)),
-    % Reify it onto the CRO decomposition graph (fresh, so nodes do not pile up).
+    % Reify it onto the causal_relation_object decomposition graph (fresh, so nodes do not pile up).
     hierarchical_planning_reset,
     hierarchical_planning_reify(Tree, Root),
     retractall(ma_plan_root_(Game, _)),
@@ -2319,7 +2319,7 @@ ma_note_plan_focus(Game, Basis) :-
 % ma_plan_view(+Game, -View): the plan hierarchy as a JSON-ready dict for the Why
 % endpoint and the Claude-facing agentview — the nested tree, the active phase and
 % leaf, and two proofs of the mesh: that the reified hierarchy is causally
-% consistent, and that the whole plan reconstructs from the CRO graph alone.
+% consistent, and that the whole plan reconstructs from the causal_relation_object graph alone.
 ma_plan_view(Game, View) :-
     % Ensure a plan exists for this game.
     ( ma_plan_tree_(Game, Tree) -> true
@@ -2338,12 +2338,12 @@ ma_plan_view(Game, View) :-
     % The mesh proofs, guarded.
     ( ma_plan_root_(Game, Root), catch(hierarchical_planning_consistent(Root), _, fail)
     -> Consistent = true ; Consistent = false ),
-    ( ma_plan_root_(Game, Root2), catch(hierarchical_planning_plan_from_cros(Root2, _), _, fail)
+    ( ma_plan_root_(Game, Root2), catch(hierarchical_planning_plan_from_causal_relation_objects(Root2, _), _, fail)
     -> FromCros = true ; FromCros = false ),
     % Assemble the view.
     View = _{tree: TreeJson, lines: Lines0, focus: Focus,
              causalontology_consistent: Consistent,
-             reconstructable_from_cros: FromCros}.
+             reconstructable_from_causal_relation_objects: FromCros}.
 
 % ma_visit(+Game, +R, +C): mark an object cell visited this attempt.
 ma_visit(Game, R, C) :-

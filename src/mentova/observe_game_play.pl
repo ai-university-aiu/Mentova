@@ -179,7 +179,7 @@ ogp_interventions(Missing, Interventions) :-
 ogp_intervention(died_early,
     'Died early: teach the deadly cell/colour as a hazard (hint_preventive) or a control-map correction, so the survival-first survey routes around it; consider lengthening the survey window for this game.').
 ogp_intervention(no_committed_hypothesis,
-    'No committed hypothesis: the productive action is unclear. Mentor a hint_action naming the action that advances this game, or write a CRO to the lattice (causal_learning_causal) linking the right action to its effect, so hypothesis can commit.').
+    'No committed hypothesis: the productive action is unclear. Mentor a hint_action naming the action that advances this game, or write a CausalRelationObject to the lattice (causal_learning_causal) linking the right action to its effect, so hypothesis can commit.').
 ogp_intervention(no_world_model_law,
     'No world-model law: effects look inconsistent (a changing HUD/counter is masking them). Teach the volatile region, or add a context feature to world_model so the effect becomes learnable.').
 ogp_intervention(no_goal_inferred,

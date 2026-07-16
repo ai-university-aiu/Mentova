@@ -9,12 +9,12 @@
 */
 
 % Declare the generated higher-education data predicates.
-:- module(curriculum_higher_ed_facts, [ci_fact/4, ci_cro/5]).
+:- module(curriculum_higher_ed_facts, [ci_fact/4, ci_causal_relation_object/5]).
 
 % Allow these facts to be inspected and extended at runtime.
 :- dynamic ci_fact/4.
-% Allow the sound CROs to be inspected and extended at runtime.
-:- dynamic ci_cro/5.
+% Allow the sound causal_relation_objects to be inspected and extended at runtime.
+:- dynamic ci_causal_relation_object/5.
 
 % ---- Understood facts (node_facts): advanced vocabulary ----
 % A grounded curriculum fact cited to a real reference-library line.
@@ -2652,4 +2652,4 @@ ci_fact('grade20', 'vocabulary', ['whatness', 'text_and_history'], source('wall_
 % A grounded curriculum fact cited to a real reference-library line.
 ci_fact('grade20', 'vocabulary', ['worldhood', 'text_and_history'], source('wall_grade20', 736)).
 
-% ---- Sound CROs (none expected at this level) ----
+% ---- Sound causal_relation_objects (none expected at this level) ----

@@ -9,7 +9,7 @@
       AC-HP-101: a plan tree is built for a game (Win Game -> OODA -> controls).
       AC-HP-102: the plan view carries the six OODA phases in order.
       AC-HP-103: the reified plan is causally consistent (the Causalontology mesh).
-      AC-HP-104: the whole plan reconstructs from the CRO graph alone.
+      AC-HP-104: the whole plan reconstructs from the causal_relation_object graph alone.
       AC-HP-105: a choice basis is located within the plan (its OODA phase + leaf).
       AC-HP-106: the plan view renders indented glass-box lines.
 
@@ -55,10 +55,10 @@ run_plan_demo :-
         ( mentova_arc_chat:ma_plan_view(G, V2),
           get_dict(causalontology_consistent, V2, true) )),
 
-    % AC-104: the whole plan reconstructs from the CRO graph alone.
+    % AC-104: the whole plan reconstructs from the causal_relation_object graph alone.
     report('AC-HP-104',
         ( mentova_arc_chat:ma_plan_view(G, V3),
-          get_dict(reconstructable_from_cros, V3, true) )),
+          get_dict(reconstructable_from_causal_relation_objects, V3, true) )),
 
     % AC-105: a solo choice basis is located within the plan.
     report('AC-HP-105',

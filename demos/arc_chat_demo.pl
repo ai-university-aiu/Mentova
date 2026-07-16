@@ -44,7 +44,7 @@
 % Load the learner whose avoid-set the hazard clue feeds.
 :- use_module(library(causal_learning), [causal_learning_avoid/1, causal_learning_reset/0]).
 % Load the core for the reinforcement check.
-:- use_module(library(causal_core), [causal_core_cro/8, causal_core_reset/0]).
+:- use_module(library(causal_core), [causal_core_causal_relation_object/8, causal_core_reset/0]).
 % Load the hinge reset.
 :- use_module(library(realizable_hinge), [realizable_hinge_reset/0]).
 % Load the HTTP client for the over-the-wire scenes.
@@ -248,11 +248,11 @@ scene_guided_run(ac('AC-ACC426-004', P4, 'clues label, attach a disposition, set
     % Scene seven: reinforcement raises the last action's relations, keyed to the game.
     (   ma_why(why(LastAction, _, _)),
         % Its current strength (the relation head is keyed to this game).
-        causal_core_cro(_, [g(G, LastAction)], _, _, _, S0, _, _),
+        causal_core_causal_relation_object(_, [g(G, LastAction)], _, _, _, S0, _, _),
         % The guide praises the result.
         ma_inject(hint_reinforce),
         % The strength rose.
-        causal_core_cro(_, [g(G, LastAction)], _, _, _, S1, _, _),
+        causal_core_causal_relation_object(_, [g(G, LastAction)], _, _, _, S1, _, _),
         % Strictly.
         S1 > S0
     % Reinforcement worked.

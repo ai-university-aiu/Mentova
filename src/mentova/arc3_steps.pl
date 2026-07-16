@@ -72,5 +72,5 @@ as_report_counts(report(_, Results, _), New, Strong, Variant) :-
 % variants now held apart in the two stores.
 as_stats(stats(NFV, RV)) :-
     ( catch(node_facts:node_fact_variants(NFVList), _, NFVList = []) -> true ; NFVList = [] ),
-    ( catch(causal_core:causal_core_cro_variants(RVList), _, RVList = []) -> true ; RVList = [] ),
+    ( catch(causal_core:causal_core_causal_relation_object_variants(RVList), _, RVList = []) -> true ; RVList = [] ),
     length(NFVList, NFV), length(RVList, RV).

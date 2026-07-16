@@ -31,8 +31,8 @@ test(parse_relations_and_hazard_without_game_context) :-
     di_parse(Text, draft_01, Facts, Unparsed),
     % The three content lines yield exactly these three candidate facts, in order.
     assertion(Facts == [ cfact(node, object, [ring, collectible]),
-                         cfact(cro, [press(button)], [light(on)], sufficient, step),
-                         cfact(cro, [touch(spike)], [ends(run)], preventive, hazard) ]),
+                         cfact(causal_relation_object, [press(button)], [light(on)], sufficient, step),
+                         cfact(causal_relation_object, [touch(spike)], [ends(run)], preventive, hazard) ]),
     % The one prose line is reported as unparsed, never silently lost.
     assertion(Unparsed == ["the weather is nice"]).
 
@@ -45,7 +45,7 @@ test(parse_game_context_keys_facts) :-
     di_parse(Text, d2, Facts, Unparsed),
     % The node-fact is prefixed with the game and the relation cause is game-keyed.
     assertion(Facts == [ cfact(node, object, [locksmith, ring]),
-                         cfact(cro, [g(locksmith, press(b_red))], [light(red)], sufficient, step) ]),
+                         cfact(causal_relation_object, [g(locksmith, press(b_red))], [light(red)], sufficient, step) ]),
     % Nothing was unrecognised.
     assertion(Unparsed == []).
 
@@ -53,9 +53,9 @@ test(parse_game_context_keys_facts) :-
 % its delta, and lists the unrecognised line under its section header.
 test(render_report_summarises_and_flags) :-
     % A hand-built result set with one of each status.
-    Results = [ result(cro([press(button)], [light(on)], sufficient), new),
+    Results = [ result(causal_relation_object([press(button)], [light(on)], sufficient), new),
                 result(node(object, [ring]), exact(3)),
-                result(cro([g(game, x)], [y], sufficient), variant(id7, [strength])),
+                result(causal_relation_object([g(game, x)], [y], sufficient), variant(id7, [strength])),
                 result(node(thing, [a]), error) ],
     % A report over those results with one unrecognised line.
     Report = report(draft_01, Results, ["some junk line"]),
@@ -77,9 +77,9 @@ test(render_report_summarises_and_flags) :-
 % AC-DI-004: the JSON-ready report carries the same counts and the draft id as text.
 test(report_json_has_counts_and_draft) :-
     % The same hand-built result set as the render test.
-    Results = [ result(cro([press(button)], [light(on)], sufficient), new),
+    Results = [ result(causal_relation_object([press(button)], [light(on)], sufficient), new),
                 result(node(object, [ring]), exact(3)),
-                result(cro([g(game, x)], [y], sufficient), variant(id7, [strength])),
+                result(causal_relation_object([g(game, x)], [y], sufficient), variant(id7, [strength])),
                 result(node(thing, [a]), error) ],
     % A report over those results with one unrecognised line.
     Report = report(draft_01, Results, ["some junk line"]),

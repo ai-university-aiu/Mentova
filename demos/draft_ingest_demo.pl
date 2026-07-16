@@ -42,7 +42,7 @@ run_draft_demo :-
     format("~n=== Draft-Document Ingestion ===~n~n", []),
     draft(D),
 
-    % AC-001: parsing separates 3 facts (a CRO, a node-fact, a hazard) from 1
+    % AC-001: parsing separates 3 facts (a causal_relation_object, a node-fact, a hazard) from 1
     % unrecognised line.
     report('AC-DI-001',
         ( di_parse(D, d_a, Facts, Unparsed),

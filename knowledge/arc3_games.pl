@@ -12,7 +12,7 @@
       a3_game(Id, Name, Genre, WinLevels).   -- the game's identity
       a3_control(Id, Scheme, Actions).       -- the control scheme + action set
       a3_object(Id, Object, Role).           -- an object and its role
-      a3_rel(Id, Cause, Effect).             -- a cause-effect relation (-> a CRO)
+      a3_rel(Id, Cause, Effect).             -- a cause-effect relation (-> a causal_relation_object)
       a3_hazard(Id, Hazard).                 -- a thing that ends or resets a run
       a3_tip(Id, Text).                      -- a mentor tip
       a3_note(Id, Key, Value).               -- a fact (difficulty, solvability)
