@@ -1,0 +1,37 @@
+Mentova — Causalontology 2.0.0 Lattice Bridge snapshot (type tier)
+
+This is THE LATTICE's causal and relational content expressed in
+Causalontology 2.0.0 form: RFC 8785 canonical JSON, SHA-256 content
+identities, Ed25519-signed provenance. It is self-verifying by hash and
+signature and validates against the seventeen 2.0.0 schemas and the
+107 conformance vectors (Order One's harness).
+
+Signer (Mentova Ed25519 public key):
+  ed25519:5c54eb2765cc34f6a5489ce4119a9bb09c4b9b42d4a737f3516e39e105c1a74b
+
+Record counts by kind:
+  stratum                     : 1
+  continuant                  : 25
+  realizable                  : 25
+  occurrent                   : 555
+  causal_relation_object      : 334
+  bridge                      : 0
+  assertion                   : 334
+  quality                     : 0
+  port                        : 0
+  conduit                     : 0
+
+SCOPING RULE: a Lattice fact is exported IFF it expresses causation
+(causal_relation_object), an enduring thing (continuant), a happening
+(occurrent), a disposition/function/role (realizable), a property
+(quality/state_assertion), a level of description (stratum), a cross-level
+identity (bridge), an interface (port/conduit), or provenance (assertion).
+Perceptual grid/scene machinery, type-checker facts and engine
+scaffolding are NOT exported; they remain native node_facts.
+
+TIER MAPPING: curriculum/world-model laws -> occurrent + causal_relation_object
+  + signed assertion; curriculum grades -> stratum; ARC-AGI-3 games ->
+  continuant + winnable realizable. Episodic memory -> TOKEN TIER, which is
+  LOCAL BY DEFAULT and excluded from this published snapshot.
+
+Regenerate with:  make lattice-snapshot
