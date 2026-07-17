@@ -72,6 +72,7 @@ lco_prolog_root(Root) :-
 :- use_module(library(sha)).
 :- use_module(library(lists)).
 :- use_module(library(apply)).
+:- use_module(library(aggregate)).
 
 % A fixed release timestamp keeps every export byte-for-byte reproducible
 % (a wall-clock time would re-hash and re-sign every record on each run).
@@ -241,11 +242,37 @@ lco_build_records(Records, Stats) :-
     lco_build_bridges(Occurrents, Bridges),
     % Assemble in dependency order: vocabulary first, then laws, then provenance.
     append([Strata, Continuants, Realizables, Occurrents, Cro2, Bridges, Assertions],
-           Records),
+           Records0),
+    % A content-addressed record set is a SET: two native causal facts with
+    % identical causal content (same causes, effects, temporal window and
+    % modality) collapse to one causal_relation_object under content-addressing,
+    % so the exported NDJSON must carry no duplicate line. Drop later duplicates
+    % of any already-emitted content id, preserving first-occurrence order (this
+    % keeps the export deterministic and byte-identical across runs). Every
+    % surviving assertion still references a present causal_relation_object id.
+    lco_dedup_by_id(Records0, Records),
     % Validate every record before it is ever written or published.
     lco_validate_all(Records),
-    % Tally the export for the manifest and the scoping log.
-    lco_stats(Strata, Continuants, Realizables, Occurrents, Cro2, Bridges, Assertions, Stats).
+    % Tally the DISTINCT export for the manifest and the scoping log.
+    lco_stats(Records, Stats).
+
+% -- lco_dedup_by_id(+Records, -Unique): keep the first record of each content
+% id, dropping any later exact content-addressed duplicate, order preserved.
+lco_dedup_by_id(Records, Unique) :-
+    % Fold left, remembering the ids already emitted.
+    lco_dedup_by_id_(Records, [], Unique).
+% The empty list is already a set.
+lco_dedup_by_id_([], _, []).
+% Keep this record when its id is new; otherwise drop it.
+lco_dedup_by_id_([rec(K, D)|T], Seen, Out) :-
+    % The record's content id (present on every built record).
+    get_dict(id, D, Id),
+    % Emit it only the first time its id is seen.
+    ( memberchk(Id, Seen)
+      -> Out = Rest, Seen1 = Seen
+      ;  Out = [rec(K, D)|Rest], Seen1 = [Id|Seen] ),
+    % Continue over the tail.
+    lco_dedup_by_id_(T, Seen1, Rest).
 
 % -- lco_build_strata(+Cros, -Strata, -GradeStratumId): a stratum per grade.
 lco_build_strata(Cros, Strata, GradeStratumId) :-
@@ -499,17 +526,19 @@ lco_write_ndjson(File, Records) :-
                ( causal_core_jcs(Dict, Line), write(S, Line), nl(S) )),
         close(S)).
 
-% -- lco_stats(+St,+Cn,+Rz,+Oc,+Cr,+Br,+As, -Stats): per-kind counts + native log.
-lco_stats(St, Cn, Rz, Oc, Cr, Br, As, Stats) :-
-    % Count each record list.
-    length(St, NSt), length(Cn, NCn), length(Rz, NRz), length(Oc, NOc),
-    length(Cr, NCr), length(Br, NBr), length(As, NAs),
-    % Assemble the tally, including the kinds intentionally left native (0 here).
-    Stats = [ stratum-NSt, continuant-NCn, realizable-NRz, occurrent-NOc,
-              causal_relation_object-NCr, bridge-NBr, assertion-NAs,
-              % These express no grounded causal content in the present lattice
-              % and remain native node_facts per the scoping rule.
-              quality-0, port-0, conduit-0 ].
+% -- lco_stats(+Records, -Stats): per-kind counts over the DISTINCT record set
+% (after content-addressed de-duplication), plus the kinds intentionally left
+% native (quality/port/conduit — no grounded causal content in the present
+% lattice, so they remain native node_facts per the scoping rule and count 0).
+lco_stats(Records, Stats) :-
+    % The reporting order: vocabulary, then laws, then provenance, then natives.
+    Kinds = [stratum, continuant, realizable, occurrent, causal_relation_object,
+             bridge, assertion, quality, port, conduit],
+    % Count the distinct records of each kind actually present in the export.
+    findall(K-N,
+            ( member(K, Kinds),
+              aggregate_all(count, member(rec(K, _), Records), N) ),
+            Stats).
 
 % ---------------------------------------------------------------------------
 % The top-level export: build, validate, write, manifest.
