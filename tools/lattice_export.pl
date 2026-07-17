@@ -133,14 +133,40 @@ le_dump_learned(Dir, GameCount, TermCount) :-
     % learned KNOWLEDGE — goal, priorities, hazards, labels, winning path, causal edges, causal_relation_objects.
     % The telemetry is re-derived at runtime; dropping it keeps the committed snapshot lean.
     maplist(le_prune_learned, Safe, Pruned),
+    % Normalise any legacy cro/8 causal relations to the whole-word
+    % causal_relation_object/8 spelling (P7 alignment). The live runtime store may
+    % still hold pre-rename cro(...) terms; the committed snapshot must always use
+    % the whole word, so the export is deterministic and never reverts the rename.
+    maplist(le_wholeword_cro, Pruned, Whole),
     % Write them back, headed and re-loadable.
     setup_call_cleanup(open(File, write, S),
         ( le_header(S, "Runtime per-game learned store (arc_learned/arc_cog/arc_cog_global) — secret-free, telemetry-pruned snapshot"),
-          forall(member(T, Pruned), ( write_term(S, T, [quoted(true)]), write(S, '.\n') )) ),
+          forall(member(T, Whole), ( write_term(S, T, [quoted(true)]), write(S, '.\n') )) ),
         close(S)),
     % Count the games and the terms captured.
-    aggregate_all(count, ( member(T, Pruned), functor(T, arc_learned, _) ), GameCount),
-    length(Pruned, TermCount).
+    aggregate_all(count, ( member(T, Whole), functor(T, arc_learned, _) ), GameCount),
+    length(Whole, TermCount).
+
+% le_wholeword_cro(+Term0, -Term): rewrite every legacy cro/N functor to
+% causal_relation_object/N and every legacy cro_<n> identifier atom to
+% causal_relation_object_<n>, recursively, leaving all other content untouched.
+% Variables, numbers and strings pass through unchanged.
+le_wholeword_cro(V, V) :- var(V), !.
+% An atom: rename a cro_<n> identifier; keep every other atom verbatim.
+le_wholeword_cro(A, A2) :- atom(A), !,
+    ( atom_concat('cro_', Rest, A) -> atom_concat('causal_relation_object_', Rest, A2) ; A2 = A ).
+% A non-compound, non-atom leaf (number, string): unchanged.
+le_wholeword_cro(T, T) :- \+ compound(T), !.
+% A compound: rename a cro functor and recurse into every argument.
+le_wholeword_cro(T0, T) :-
+    % Decompose into functor and argument list.
+    T0 =.. [F0|Args0],
+    % Rename a cro functor to the whole word; keep every other functor.
+    ( F0 == cro -> F = causal_relation_object ; F = F0 ),
+    % Normalise every argument recursively.
+    maplist(le_wholeword_cro, Args0, Args),
+    % Recompose the whole-word term.
+    T =.. [F|Args].
 
 % le_prune_learned(+Term, -Pruned): blank the raw runtime TELEMETRY in an arc_learned term,
 % preserving the learned KNOWLEDGE. The fields are

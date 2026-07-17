@@ -122,7 +122,7 @@ project was built for, against a real Causalontology store over real HTTP:
 3. It reads the frontier back (GET /gaps) to see the next bricks to lay.
 
 Point CAUSALONTOLOGY_STORE at the store (default http://127.0.0.1:8785). A measured run
-against the reference store published 940 content objects and 334 signed records; the
+against the reference store published 937 content objects and 334 signed records; the
 missing_field frontier was clean (Mentova's laws are well-formed) while the store named
 empty_mechanism gaps — the next mechanism refinements for Mentova to garden. This closes
 the read-frontier -> act -> induce -> sign -> contribute loop against real, 2.0.0,

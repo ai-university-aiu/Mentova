@@ -14,7 +14,7 @@ Record counts by kind:
   continuant                  : 25
   realizable                  : 25
   occurrent                   : 555
-  causal_relation_object      : 334
+  causal_relation_object      : 331
   bridge                      : 0
   assertion                   : 334
   quality                     : 0

@@ -7,13 +7,13 @@ with the open-source repository.
 Counts at export time:
   lattice nexuses      : 3
   lattice node-facts   : 5830
-  Causalontology CROs  : 334
+  Causalontology CausalRelationObjects  : 334
   learned-store games  : 4
   learned-store terms  : 9
 
 Files:
   lattice_<nexus>.pl        node-facts per nexus (via lattice_dump/2)
-  causalontology_cros.pl    every causal_core_cro/8 reasoning object
+  causalontology_causal_relation_objects.pl    every causal_core_causal_relation_object/8 reasoning object
   arc_learnings_snapshot.pl the runtime per-game learned store (secret-free)
 
 Provenance and reproducibility:
