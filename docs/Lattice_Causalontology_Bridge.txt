@@ -1,0 +1,149 @@
+THE LATTICE BRIDGE — CAUSAL CONTENT INTO CAUSALONTOLOGY 2.0.0
+
+This file records how Mentova expresses THE LATTICE's causal and relational
+content in Causalontology 2.0.0 form, signs it, publishes it to the Causalontology
+commons, and reads the frontier back — turning Mentova into a real contributor
+(the first synthetic gardener). It is a companion to Open_Source_Lattice_Compliance.txt.
+
+This bridge is ADDITIVE and read-only. It touches no ARC-AGI-1/2 reasoning path:
+the grid, scene, induction, sequence-inference, perception, tabling and kernel packs
+are untouched, and the ARC-AGI-1 (400/400) and ARC-AGI-2 (120/120) suites are a hard
+regression gate that must still pass before and after any change here.
+
+
+WHAT THE BRIDGE EXPORTS
+
+The exporter (tools/lattice_causalontology_export.pl, run by make lattice-snapshot)
+reads the built Lattice and materialises a complete, schema-valid Causalontology 2.0.0
+record set into data/lattice_snapshot/causalontology_2_0_0/type_tier.ndjson. Every
+record is canonical RFC 8785 JSON with a SHA-256 content identity; every provenance
+record carries an Ed25519 signature. The snapshot is self-verifying by hash and
+signature and validates against the seventeen 2.0.0 schemas and the 107 conformance
+vectors (Order One's harness), checked by make lattice-2_0_0-validate.
+
+
+THE SCOPING RULE (decisive)
+
+A Lattice fact is exported to Causalontology 2.0.0 IF AND ONLY IF it expresses one of:
+
+• causation — a general law becomes a causal_relation_object; a particular one
+  becomes a token_causal_claim
+
+• an enduring thing — a continuant (or, at the token tier, a token_individual)
+
+• a happening — an occurrent (or, at the token tier, a token_occurrence)
+
+• a disposition, function, or role — a realizable
+
+• a property — a quality, or a state_assertion for a particular value
+
+• a level of description — a stratum
+
+• a cross-level identity (same happening at two levels) — a bridge
+
+• an interface or connection — a port or a conduit
+
+• provenance — an assertion, enrichment, retraction, or succession
+
+A Lattice fact is NOT exported if it is perceptual grid or scene machinery,
+type-checker facts, or engine scaffolding. Those remain native node_facts.
+Causalontology models causation, not arbitrary facts; the bridge never forces a
+non-causal fact into it. Every export run logs, in the manifest, what it included
+and what it intentionally left native.
+
+
+THE TIER MAPPING
+
+• World-model laws and curriculum ("X causes Y") map to the TYPE TIER: one occurrent
+  per distinct cause and effect term, one causal_relation_object per law (with its
+  temporal window and modality), and one signed assertion per law carrying the
+  evidence grade, the strength, and the confidence.
+
+• The curriculum grades (levels of description) map to strata in the named scheme
+  "mentova_curriculum"; an occurrent is pitched at a stratum when every law that uses
+  it agrees on one grade.
+
+• The ARC-AGI-3 games (enduring systems) map to continuants, each bearing a
+  "winnable" disposition (a realizable).
+
+• Cross-level identities map to bridges — emitted only when the same happening is
+  genuinely described at two strata, never fabricated.
+
+• Mentova's EPISODIC MEMORY (what actually happened to it) maps to the TOKEN TIER
+  (token_individual, token_occurrence, state_assertion, token_causal_claim). This is
+  exactly what the token tier is for.
+
+Kinds with no grounded source in the present Lattice (quality, port, conduit) export
+zero records and are logged as left-native. They populate as the Lattice acquires
+the corresponding content; the bridge adds them without fabrication.
+
+
+PROVENANCE AND SIGNING
+
+Content objects are content-addressed and unsigned (their identity IS the SHA-256 of
+their canonical bytes). Provenance records — the assertions — are signed with
+Mentova's Ed25519 key. Mentova's key is derived deterministically from the seed
+SHA-256("key:mentova"), the same derivation the reference gardener and the conformance
+harness use for the "mentova" signer, so Mentova's public key is stable across the
+whole project:
+
+  ed25519:5c54eb2765cc34f6a5489ce4119a9bb09c4b9b42d4a737f3516e39e105c1a74b
+
+An operator may override the 32-byte seed by placing raw bytes in
+data/mentova_ed25519.seed. Evidence is graded honestly on the 2.0.0 ladder
+(intervention, observation, simulation, derivation, human_hint, imported): the present
+Lattice laws are imported documentary knowledge (curriculum walls, ARC-AGI-3 guides,
+draft documents), so their honest grade is "imported" (or "human_hint" for the guide),
+and a law induced from particular episodes would cite those token records through the
+assertion's evidenced_by field.
+
+
+THE TOKEN TIER IS LOCAL BY DEFAULT
+
+Mentova's episodic-memory token records are its diary — what happened to it, when.
+They are NOT included in any published or shared snapshot unless the operator
+explicitly opts in per policy (set LATTICE_EXPORT_TOKEN_TIER=1). When opted in they are
+written to a SEPARATE local file, token_tier.local.ndjson, that is never part of the
+published type-tier bundle. The default published snapshot is the type-tier commons —
+the laws — not Mentova's diary.
+
+
+PUBLISHING TO AND READING FROM THE COMMONS (the gardener loop, for real)
+
+tools/lattice_publish.pl (make lattice-2_0_0-publish) closes the loop the whole
+project was built for, against a real Causalontology store over real HTTP:
+
+1. It reads the frontier (GET /gaps) — where the commons still needs bricks.
+
+2. It publishes the type tier: content objects to POST /objects, and Mentova's signed
+   assertions to POST /records — the same endpoints and client the reference gardener
+   uses. Only the type tier (the laws) is published; the token tier stays local.
+
+3. It reads the frontier back (GET /gaps) to see the next bricks to lay.
+
+Point CAUSALONTOLOGY_STORE at the store (default http://127.0.0.1:8785). A measured run
+against the reference store published 940 content objects and 334 signed records; the
+missing_field frontier was clean (Mentova's laws are well-formed) while the store named
+empty_mechanism gaps — the next mechanism refinements for Mentova to garden. This closes
+the read-frontier -> act -> induce -> sign -> contribute loop against real, 2.0.0,
+whole-word records.
+
+
+COMMANDS
+
+• make lattice-snapshot          regenerate the snapshot (native dumps + the 2.0.0 set)
+
+• make lattice-2_0_0-validate    prove the 2.0.0 snapshot is conformant and
+                                 self-verifying, and re-run the 107 vectors
+
+• make lattice-2_0_0-publish     publish the type tier to a running commons store and
+                                 read the frontier back
+
+
+REUSE, NOT DUPLICATION
+
+Identity, RFC 8785 canonicalization, the seventeen 2.0.0 schemas, Ed25519 signing, and
+the 107-vector semantics are REUSED from Order One's conformance harness in the PrologAI
+repository (library(causal_core) and tests/causalontology_conformance/). The Lattice
+pack in PrologAI needed no change for this bridge; all new code lives in Mentova's
+tools/ as additive export, validation, and publish steps.

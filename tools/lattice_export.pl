@@ -28,6 +28,8 @@
 % Directory and list helpers.
 :- use_module(library(filesex)).
 :- use_module(library(lists)).
+% Load the Lattice Bridge: the additive Causalontology 2.0.0 exporter (Order Two).
+:- ensure_loaded('lattice_causalontology_export').
 
 % le_dir(-Dir): the committed snapshot directory.
 le_dir('data/lattice_snapshot').
@@ -47,6 +49,13 @@ le_export :-
     le_dump_learned(Dir, GameCount, TermCount),
     % Write the manifest tying it together.
     le_manifest(Dir, NexusCount, NodeFactCount, CroCount, GameCount, TermCount),
+    % THE LATTICE BRIDGE (Order Two): additionally express the causal content in
+    % Causalontology 2.0.0 form — signed, schema-valid, self-verifying — into a
+    % sibling subdirectory. This is additive and never touches the native dumps
+    % above or any ARC-AGI solving path.
+    atomic_list_concat([Dir, '/causalontology_2_0_0'], CoDir),
+    ignore(catch(lco_export(CoDir, _CoStats),
+                 CoErr, (print_message(error, CoErr), true))),
     % Report to the console.
     format("lattice snapshot written to ~w~n", [Dir]),
     format("  nexuses=~w node_facts=~w causal_relation_objects=~w learned_games=~w learned_terms=~w~n",

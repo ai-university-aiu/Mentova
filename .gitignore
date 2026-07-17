@@ -35,3 +35,8 @@ ARC-AGI-3_Won_Sessions/*.txt
 # in data/lattice_snapshot/ (NOT ignored — see tools/lattice_export.pl / make lattice-snapshot),
 # so the full functioning lattice ships open-source.
 data/arc_learnings.db
+# The episodic-memory TOKEN TIER of the Lattice Bridge is LOCAL BY DEFAULT: it is
+# materialised only on explicit operator opt-in (LATTICE_EXPORT_TOKEN_TIER=1) and is
+# never published or committed. Mentova's optional private signing seed is likewise local.
+data/lattice_snapshot/causalontology_2_0_0/token_tier.local.ndjson
+data/mentova_ed25519.seed
