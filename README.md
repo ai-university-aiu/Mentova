@@ -9,6 +9,7 @@
   <img src="https://img.shields.io/badge/reasoning%20types-48%2F48-B22313?style=for-the-badge" alt="48/48 Reasoning Types">
   <img src="https://img.shields.io/badge/accomplishments-363-670100?style=for-the-badge" alt="363 Accomplishments">
   <img src="https://img.shields.io/badge/glass--box-yes-3A0000?style=for-the-badge" alt="Glass-Box">
+  <img src="https://img.shields.io/badge/Causalontology-2.0.0%20via%20PrologAI-B22313?style=for-the-badge" alt="Causalontology 2.0.0 via PrologAI">
 </p>
 
 <p align="center">
@@ -45,6 +46,8 @@ No black box.
 No guessing.
 
 **Naming.** Identifiers are whole English words, never abbreviations — modules and predicates are whole-word `snake_case`, and the reified causal primitive is spelled `causal_relation_object` (`cro` retired), aligning with the Causalontology standard's whole-word Principle P7. See [NAMING.md](NAMING.md).
+
+**Conformance.** Causalontology **specification 2.0.0** conformance is proven on the PrologAI side (all 107 vectors, V01–V107). Mentova consumes PrologAI's conformant, pack-qualified vocabulary as-is, and validates that its own materialized Lattice snapshot (`data/lattice_snapshot/causalontology_causal_relation_objects.pl`) is 2.0.0-valid — whole-word `causal_relation_object/8` facts, a valid modality and temporal unit, Rule 4 window ordering, strength in [0,1], no retired `cro`/`dmin`/`dmax` (334/334 pass). Gated by `bin/validate_causalontology_snapshot.sh` and `test/test_causalontology_snapshot.pl`. See [NAMING.md](NAMING.md#conformance-to-causalontology-specification-200).
 
 ---
 
