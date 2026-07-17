@@ -44,6 +44,8 @@ No black box.
 
 No guessing.
 
+**Naming.** Identifiers are whole English words, never abbreviations — modules and predicates are whole-word `snake_case`, and the reified causal primitive is spelled `causal_relation_object` (`cro` retired), aligning with the Causalontology standard's whole-word Principle P7. See [NAMING.md](NAMING.md).
+
 ---
 
 ## What Makes Mentova Different
