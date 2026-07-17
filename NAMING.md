@@ -34,6 +34,28 @@ field renames (`dmin` → `minimum_delay`, `dmax` → `maximum_delay`) live in t
 standard's own
 [NAMING.md](https://github.com/ai-university-aiu/causalontology/blob/main/NAMING.md).
 
+## Conformance to Causalontology specification 2.0.0
+
+Conformance to the standard is proven **on the PrologAI side**: PrologAI declares
+Causalontology specification 2.0.0 and passes all 107 conformance vectors
+(V01–V107). Mentova consumes PrologAI's now-conformant, pack-qualified
+Causalontology vocabulary **as-is** — it does not re-abbreviate it and it
+introduces no divergent vocabulary of its own.
+
+What Mentova owns is its **materialized records**. The Lattice snapshot
+[`data/lattice_snapshot/causalontology_causal_relation_objects.pl`](data/lattice_snapshot/causalontology_causal_relation_objects.pl)
+holds Reasoning Objects in PrologAI's native `causal_relation_object/8` term
+form (symbolic causes and effects), not the JSON content-addressed record form.
+A light Mentova-side check
+([`tools/validate_causalontology_snapshot.pl`](tools/validate_causalontology_snapshot.pl),
+run by `bin/validate_causalontology_snapshot.sh` and gated by
+`test/test_causalontology_snapshot.pl`) validates that every fact speaks
+whole-word 2.0.0 vocabulary and obeys the locally decidable rules: the whole-word
+`causal_relation_object/8` functor, a modality from the five-member 2.0.0
+enumeration (adding `enabling`), a temporal unit from the eight-member set, Rule 4
+window ordering (`minimum_delay` ≤ `maximum_delay`), a strength in [0,1], and no
+retired `cro`/`dmin`/`dmax` spellings. The shipped snapshot passes (334/334).
+
 ## Exempt external proper names
 
 Whole-word spelling governs Mentova's own identifiers. It does not rewrite the
