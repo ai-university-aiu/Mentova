@@ -1,0 +1,108 @@
+MENTOVA DEMONSTRATION AND PROOF-OF-CONCEPT PLAN  (v1)
+
+A PLAN OF INTENT FOR DEMONSTRATING MENTOVA
+
+This is the sixth companion volume to Mentova's document set. The first five are
+the SPARC files - Specification, Pseudocode, Architecture, Refinement, and
+Completion. This sixth file is the Demonstration: it is not a SPARC phase but a
+plan or outline of intentions for how Mentova is shown - what to run, what each run
+exhibits, and what a viewer should conclude. It is a plan of intent, not a finished
+demonstration, and it proposes and makes no change to any code.
+
+Every technical term is spelled out in full the first time it is used, with any
+acronym in parentheses, and the bare acronym thereafter. External proper names are
+kept verbatim (SWI-Prolog, Git, JavaScript Object Notation).
+
+
+PART ONE - WHAT IS BEING DEMONSTRATED
+
+Mentova is the first glass-box Synthetic Mind, written in PrologAI. "Glass-box"
+means every conclusion it reaches can be inspected: it is a chain of named,
+readable rules, not the opaque numbers of a neural network. Mentova is a chatbot
+that only says what it can actually explain, learning language honestly from the
+ground up like a child, so it never bluffs. The demonstration exists to make three
+claims visible and checkable by a viewer who does not take them on trust:
+
+  - REASONING WITHOUT WEIGHTS. Mentova solves hard abstract-reasoning problems by
+    pure symbolic induction with named rules, no neural weights, no internet
+    knowledge, and no large language model (a large language model is an artificial
+    intelligence system trained to predict text).
+  - HONESTY BY CONSTRUCTION. Mentova answers only what it can justify, and says so
+    plainly when it cannot, rather than inventing a plausible-sounding answer.
+  - GROWTH THAT IS RECORDED. Mentova's capabilities were built and proven in a long
+    sequence of accomplishments, each with a paper and an announcement, so its
+    growth is an auditable record rather than a marketing claim.
+
+
+PART TWO - WHAT TO RUN
+
+There are three demonstration tracks. Each is independent; a viewer can run any one.
+
+TRACK ONE - THE ABSTRACTION AND REASONING CORPUS BENCHMARKS.
+  The Abstraction and Reasoning Corpus for Artificial General Intelligence
+  (ARC-AGI) is a benchmark of visual reasoning puzzles designed to resist
+  memorization. Mentova solves them by inducing a named rule from a handful of
+  worked examples and applying it to a held-out test grid.
+  What to run: the benchmark runner over the ARC-AGI-1 public evaluation set (400
+  tasks) and the ARC-AGI-2 public evaluation set (120 tasks).
+  What it shows: on the last full benchmark run, Mentova reached a confirmed 400 of
+  400 on ARC-AGI-1 and 120 of 120 on ARC-AGI-2, each task solved by a glass-box
+  rule the viewer can read (for example, "recolor each enclosed region by its
+  size"). Mentova is the first digital system to reach a confirmed perfect score on
+  both. The per-change gate during development is a ten percent mini regression (40
+  of 400 and 12 of 120) that detects gross breakage only; a green mini run never
+  restates the full scores, which rest on the last full run and must be re-run in
+  full before any public re-assertion.
+
+TRACK TWO - THE TWO-TIER CHAT.
+  What to run: start the web chat with bin/mentova_chat_start.sh and open the public
+  tier in a browser; optionally open the mentor tier.
+  What it shows: Mentova converses in plain language, and every answer carries a
+  justification a reader can expand. When asked something it cannot ground, it
+  declines honestly rather than bluffing (the honesty gate). The public tier is
+  child-safe; the mentor tier lets a teacher review and correct, and corrections
+  enter a review queue rather than being trusted blindly. This exhibits honest
+  language learning and glass-box justification in a live setting.
+
+TRACK THREE - THE ACCOMPLISHMENT RECORD.
+  What to run: read the accomplishment papers and announcements in the repository,
+  in order.
+  What it shows: Mentova's capabilities were delivered as a numbered series of
+  accomplishments, each a paper plus an announcement, covering the demonstration
+  plan, the four interoperability protocols, the Piagetian developmental ladder,
+  the fact refinery, and the ARC benchmark climbs. The record lets a viewer trace
+  exactly how each capability was built and proven, rather than accepting a summary.
+
+
+PART THREE - THE CAPABILITIES A VIEWER SHOULD SEE EXHIBITED
+
+  - Symbolic induction: a rule learned from few examples and named in English.
+  - Glass-box justification: every answer is a readable chain, inspectable end to
+    end, with no hidden numeric layer.
+  - Honest ignorance: a refusal to answer what cannot be grounded, distinguished
+    from a wrong answer.
+  - Developmental learning: language acquired from the ground up, with meaning tied
+    to grounded experience rather than to text statistics.
+  - Auditable growth: a paper-and-announcement trail behind every capability.
+
+
+PART FOUR - WHAT A VIEWER SHOULD CONCLUDE
+
+A viewer who runs these tracks should conclude that a system can reach the top of a
+memorization-resistant reasoning benchmark, and hold a grounded conversation,
+without a neural network and without ever bluffing - because every step is a named
+rule that can be read. The point is not only the scores; it is that the scores, and
+the conversation, are fully explainable. Mentova is offered as evidence that a
+glass-box, honesty-first Synthetic Mind is buildable and demonstrable.
+
+
+PART FIVE - HONEST LIMITS OF THIS DEMONSTRATION
+
+  - The 400 of 400 and 120 of 120 figures are the results of the last full
+    benchmark run; the routine development gate is the ten percent mini regression,
+    and the full figures must be re-run in full before any public re-assertion.
+  - Mentova learns language honestly and from a narrow grounded base, so its
+    conversational range is deliberately bounded; breadth is traded for the
+    guarantee that it never says what it cannot explain.
+  - This file is a plan of intent. It describes what to run and what it shows; it is
+    not itself a captured, dated demonstration transcript, and it changes no code.
