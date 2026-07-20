@@ -1,6 +1,6 @@
 /*  Mentova — shared UI rule: pressed buttons show an inverted colour.
 
-    STANDING RULE (see CLAUDE.md, UI BUTTON RULE): every button on every page the
+    STANDING RULE (see CONSTITUTION.md, UI BUTTON RULE): every button on every page the
     Mentova server serves must, while the mouse button is held down on it, show
     an inverted colour scheme; when the mouse button is released the colour first
     goes back to normal and THEN the action fires. Dragging off a held button
